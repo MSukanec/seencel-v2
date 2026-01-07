@@ -17,7 +17,7 @@ export function ProjectProfileTab({ project }: { project: any }) {
 
     const handleSubmit = (formData: FormData) => {
         startTransition(async () => {
-            const result = await updateProject(project.id, formData);
+            const result = await updateProject(formData);
             if (result?.error) {
                 alert(`Error: ${result.error}`);
             } else {
@@ -46,6 +46,8 @@ export function ProjectProfileTab({ project }: { project: any }) {
                                 required
                                 minLength={2}
                             />
+                            {/* Hidden ID for Server Action */}
+                            <input type="hidden" name="id" value={project.id} />
                         </div>
                         <div className="grid w-full gap-1.5">
                             <Label htmlFor="description">Descripción</Label>

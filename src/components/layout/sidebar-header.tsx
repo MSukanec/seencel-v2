@@ -100,10 +100,13 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
                                 <DropdownMenuItem asChild>
                                     <Link href="/settings">{tUser('settings')}</Link>
                                 </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/contact">Contacto</Link>
+                                </DropdownMenuItem>
 
 
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={handleLogout}>
+                                <DropdownMenuItem className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer" onClick={handleLogout}>
                                     {tUser('logout')}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

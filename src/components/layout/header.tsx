@@ -336,9 +336,12 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                                         <DropdownMenuItem asChild>
                                             <Link href="/settings">{tUser('settings')}</Link>
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/contact">Contacto</Link>
+                                        </DropdownMenuItem>
 
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem className="text-red-600">
+                                        <DropdownMenuItem className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer">
                                             {tUser('logout')}
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
