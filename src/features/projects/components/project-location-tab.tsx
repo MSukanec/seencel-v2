@@ -168,8 +168,10 @@ function MapInterface({ project }: { project: any }) {
             formData.append(key, val);
         });
 
+        formData.append("id", project.id);
+
         startTransition(async () => {
-            const result = await updateProject(project.id, formData);
+            const result = await updateProject(formData);
             if (result?.error) {
                 setMessage({ text: result.error, type: 'error' });
             } else {
