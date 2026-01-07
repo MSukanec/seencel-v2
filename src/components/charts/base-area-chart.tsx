@@ -31,7 +31,7 @@ interface BaseAreaChartProps {
     gradient?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label, formatter }: TooltipProps<number, string> & { formatter?: (v: number) => string }) => {
+const CustomTooltip = ({ active, payload, label, formatter }: any) => {
     if (active && payload && payload.length) {
         return (
             <div className="rounded-lg border bg-background p-3 shadow-lg ring-1 ring-black/5">
