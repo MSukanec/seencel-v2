@@ -23,7 +23,7 @@ export default async function ProjectsPage({
 
     const { activeOrgId } = await getUserOrganizations();
     if (!activeOrgId) {
-        redirect('/organization');
+        redirect({ href: '/organization', locale });
     }
 
     const projects = await getOrganizationProjects(activeOrgId);
