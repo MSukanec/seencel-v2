@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HeaderPortal } from "@/components/layout/header-portal";
 import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
-import { GeneralCost, GeneralCostCategory, GeneralCostMonthlySummary, GeneralCostByCategory, GeneralCostPaymentView } from "@/types/general-costs";
+import { GeneralCost, GeneralCostCategory, GeneralCostMonthlySummary, GeneralCostByCategory, GeneralCostPaymentView, EnhancedDashboardData } from "@/types/general-costs";
 
 // Sub-components (Will be implemented next)
 import { DashboardTab } from "./dashboard-tab";
@@ -16,10 +16,7 @@ interface GeneralCostsClientProps {
     categories: GeneralCostCategory[];
     concepts: GeneralCost[];
     payments: GeneralCostPaymentView[];
-    dashboardData: {
-        monthlySummary: GeneralCostMonthlySummary[];
-        byCategory: GeneralCostByCategory[];
-    };
+    dashboardData: EnhancedDashboardData;
 }
 
 export function GeneralCostsClient({ categories, concepts, payments, dashboardData }: GeneralCostsClientProps) {
