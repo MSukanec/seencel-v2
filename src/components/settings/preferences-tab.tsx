@@ -27,7 +27,7 @@ export function PreferencesTab() {
     const onLanguageChange = (newLocale: string) => {
         startTransition(async () => {
             await updateUserPreferences({ language: newLocale as 'en' | 'es' });
-            router.replace(pathname, { locale: newLocale });
+            router.replace(pathname as any, { locale: newLocale });
         });
     };
 
