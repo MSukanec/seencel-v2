@@ -1,0 +1,396 @@
+{
+    "Navigation": {
+        "overview": "Overview",
+        "projects": "Projects",
+        "finance": "Finance",
+        "settings": "Settings"
+    },
+    "Common": {
+        "notifications": "Notifications",
+        "profile": "Profile",
+        "logout": "Log out"
+    },
+    "UserMenu": {
+        "profile": "Profile",
+        "settings": "Settings",
+        "logout": "Log out",
+        "home": "Go to Home"
+    },
+    "Feedback": {
+        "button": "Feedback",
+        "title": "Send Feedback",
+        "description": "Help us improve by sharing your thoughts or reporting issues.",
+        "placeholder": "Your feedback...",
+        "send": "Send",
+        "sending": "Sending",
+        "successTitle": "Thanks for your feedback!",
+        "successMessage": "We appreciate your input."
+    },
+    "MegaMenu": {
+        "Organization": {
+            "title": "Organization",
+            "description": "Manage your team, settings, and global preferences.",
+            "sections": {
+                "management": "Management",
+                "finance": "Finance"
+            },
+            "items": {
+                "overview": "Overview",
+                "projectManagement": "Project Management",
+                "contacts": "Contacts",
+                "technicalCatalog": "Technical Catalog",
+                "team": "Team",
+                "teamDescription": "Manage members and roles.",
+                "settings": "Settings",
+                "settingsDescription": "Organization settings.",
+                "financialControl": "Financial Control"
+            }
+        },
+        "Project": {
+            "title": "Projects",
+            "description": "Track active initiatives and deadlines.",
+            "sections": {
+                "management": "Management",
+                "design": "Design",
+                "construction": "Construction",
+                "commercial": "Commercialization & Sales"
+            },
+            "items": {
+                "overview": "Overview",
+                "basicData": "Basic Data",
+                "filesMedia": "Files & Media",
+                "finance": "Finance",
+                "moodboard": "Moodboard",
+                "computationBudget": "Computation & Budget",
+                "labor": "Labor",
+                "materials": "Materials",
+                "subcontracts": "Subcontracts",
+                "indirects": "Indirects",
+                "siteLog": "Site Log",
+                "clients": "Clients"
+            }
+        },
+        "Finance": {
+            "title": "Finance",
+            "description": "Monitor cash flow, invoices, and expenses.",
+            "items": {
+                "overview": "Overview",
+                "overviewDescription": "Financial health at a glance.",
+                "invoices": "Invoices",
+                "invoicesDescription": "Create and manage client invoices.",
+                "expenses": "Expenses",
+                "financialMovementsDescription": "Income and expense tracking",
+                "taxes": "Taxes",
+                "taxesDescription": "Tax obligations management"
+            }
+        },
+        "Learnings": {
+            "title": "Learnings",
+            "description": "Knowledge base and lessons learned",
+            "items": {
+                "technicalDocs": "Technical Docs",
+                "technicalDocsDescription": "Manuals and specifications",
+                "bestPractices": "Best Practices",
+                "bestPracticesDescription": "Standard execution guides"
+            }
+        },
+        "Community": {
+            "title": "Community",
+            "description": "Connect with other professionals.",
+            "items": {
+                "forums": "Forums",
+                "forumsDescription": "Join the discussion.",
+                "events": "Events",
+                "eventsDescription": "Upcoming webcasts and meetups.",
+                "showcase": "Showcase",
+                "showcaseDescription": "See what others are building."
+            }
+        }
+    },
+    "Settings": {
+        "myAccount": "My Account",
+        "title": "Settings",
+        "description": "Manage your account and preferences.",
+        "tabs": {
+            "profile": "Profile",
+            "organization": "Organizations",
+            "security": "Security",
+            "billing": "Billing",
+            "notifications": "Notifications",
+            "preferences": "Preferences"
+        },
+        "Profile": {
+            "title": "Profile",
+            "description": "This is how others see you on the site.",
+            "Avatar": {
+                "change": "Change picture",
+                "label": "Avatar Actions",
+                "upload": "Upload new photo...",
+                "restore": "Restore from Google",
+                "delete": "Remove current photo",
+                "uploading": "Uploading image...",
+                "successUpload": "Avatar updated successfully.",
+                "errorUpload": "Error uploading image.",
+                "errorSize": "File is too large (Max 5MB).",
+                "deleting": "Deleting...",
+                "successDelete": "Avatar removed.",
+                "errorDelete": "Error removing avatar.",
+                "restoring": "Restoring...",
+                "successRestore": "Avatar restored from Google.",
+                "errorRestore": "Error restoring avatar.",
+                "title": "Profile Picture",
+                "description": "Choose an image that represents you across your team and organizations.",
+                "footer": "We recommend using a clear, professional image."
+            },
+            "displayNameTitle": "Personal Information",
+            "displayNameDescription": "Manage your contact details and how you appear in projects.",
+            "maxCharsDescription": "Make sure your information is accurate.",
+            "firstName": "First Name",
+            "lastName": "Last Name",
+            "username": "Username",
+            "email": "Email",
+            "phone": "Phone",
+            "birthdate": "Birthdate",
+            "nationality": "Nationality",
+            "selectCountry": "Select country...",
+            "searchCountry": "Search country...",
+            "noCountryFound": "No country found.",
+            "bio": "Bio",
+            "language": "Language",
+            "save": "Save changes",
+            "loading": "Loading profile data...",
+            "success": "Profile updated successfully.",
+            "error": "Failed to update profile."
+        },
+        "Preferences": {
+            "title": "Preferences",
+            "description": "Customize your workspace appearance and language.",
+            "appearance": {
+                "title": "Appearance",
+                "description": "Set or customize your preferences for the system"
+            },
+            "language": {
+                "title": "Language",
+                "description": "Select the language of the platform",
+                "placeholder": "Select language",
+                "options": {
+                    "en": "English",
+                    "es": "Español"
+                }
+            },
+            "theme": {
+                "title": "Interface Theme",
+                "description": "Customize your application appearance",
+                "options": {
+                    "system": "Auto",
+                    "light": "Light",
+                    "dark": "Dark"
+                }
+            },
+            "layout": {
+                "title": "Layout Mode",
+                "description": "Choose between the default top navigation or the sidebar layout",
+                "options": {
+                    "default": "Mega Menu",
+                    "sidebar": "Sidebar"
+                }
+            }
+        },
+        "Organization": {
+            "title": "My Organizations",
+            "description": "Manage and switch between your active organizations.",
+            "current": "ACTIVE",
+            "switch": "Switch",
+            "yours": "Your Organizations",
+            "create": "Create New",
+            "notFound": "No organizations found.",
+            "notFoundCreate": "Create Organization"
+        },
+        "PhoneInput": {
+            "search": "Search country...",
+            "empty": "No country found."
+        },
+        "Billing": {
+            "title": "Billing Information",
+            "description": "Set up your billing details for receipts and invoices.",
+            "isCompany": "Bill as a company",
+            "isCompanyDescription": "Enable this if you need invoices under a company name.",
+            "fullName": "Full Name",
+            "fullNamePlaceholder": "John Doe",
+            "companyName": "Company Name",
+            "companyNamePlaceholder": "My Company Inc.",
+            "taxId": "Tax ID / VAT / EIN",
+            "taxIdPlaceholder": "12-3456789",
+            "taxIdDescription": "Your country's tax identification number.",
+            "country": "Country",
+            "countryPlaceholder": "Select country...",
+            "address": "Address",
+            "addressPlaceholder": "123 Main Street",
+            "city": "City",
+            "cityPlaceholder": "New York",
+            "postcode": "Postal Code",
+            "postcodePlaceholder": "10001",
+            "footer": "This information will be used to generate your invoices.",
+            "save": "Save changes",
+            "success": "Billing information updated.",
+            "error": "Error updating billing information."
+        },
+        "Notifications": {
+            "title": "Notifications",
+            "description": "Stay up to date with the latest updates.",
+            "empty": "You have no notifications.",
+            "markAllRead": "Mark all as read",
+            "markRead": "Mark as read",
+            "successAllRead": "All notifications marked as read.",
+            "error": "An error occurred."
+        },
+        "Security": {
+            "title": "Security",
+            "description": "Manage your password and 2-factor authentication.",
+            "twoFactor": "Two-Factor Authentication",
+            "twoFactorDesc": "Add an extra layer of security to your account.",
+            "passkeys": "Passkeys",
+            "passkeysDesc": "Sign in securely without a password.",
+            "addPasskey": "Add Key",
+            "preparing": "Preparing 2FA enrollment...",
+            "scanQR": "1. Scan QR Code",
+            "scanQRDesc": "Use an authenticator app like Google Authenticator or Authy.",
+            "secretLabel": "Secret",
+            "enterCode": "2. Enter Code",
+            "cancel": "Cancel",
+            "enable2FA": "Enable 2FA",
+            "enabled": "Enabled",
+            "disabled": "Disabled",
+            "error": "Error"
+        }
+    },
+    "Landing": {
+        "Hero": {
+            "badge": "v2.0 Now Available",
+            "title": "The Operating System for Construction.",
+            "description": "SEENCEL consolidates your entire construction lifecycle into one powerful platform. Manage projects, finances, and teams with architectural precision.",
+            "getStarted": "Get Started Free",
+            "dashboard": "Go to Dashboard",
+            "howItWorks": "See How It Works",
+            "preview": "Dashboard Preview"
+        },
+        "Brands": {
+            "trustedBy": "TRUSTED BY INNOVATIVE BUILDERS"
+        },
+        "Features": {
+            "title": "Everything you need to build.",
+            "subtitle": "Stop switching between spreadsheets, emails, and disconnected tools.",
+            "items": {
+                "projectManagement": {
+                    "title": "Project Management",
+                    "desc": "Track progress, deadlines, and milestones with Gantt charts and Kanban boards designed for construction."
+                },
+                "financialControl": {
+                    "title": "Financial Control",
+                    "desc": "Real-time budget tracking, automated invoicing, and expense management rooted in project data."
+                },
+                "teamCollaboration": {
+                    "title": "Team Collaboration",
+                    "desc": "Connect architects, engineers, and contractors in a single source of truth."
+                },
+                "globalOperations": {
+                    "title": "Global Operations",
+                    "desc": "Multi-currency support, internationalization (EN/ES), and timezone management."
+                },
+                "enterpriseSecurity": {
+                    "title": "Enterprise Security",
+                    "desc": "Role-based access control, audit logs, and secure data encryption."
+                },
+                "qualityAssurance": {
+                    "title": "Quality Assurance",
+                    "desc": "Manage inspections, punch lists, and compliance documents seamlessly."
+                }
+            }
+        },
+        "Pricing": {
+            "title": "Simple, transparent pricing.",
+            "subtitle": "Start for free, scale as you grow.",
+            "starter": {
+                "title": "Starter",
+                "desc": "Perfect for small teams and freelancers.",
+                "cta": "Get Started"
+            },
+            "pro": {
+                "title": "Professional",
+                "desc": "For growing construction firms.",
+                "popular": "Most Popular",
+                "cta": "Start 14-Day Trial"
+            },
+            "enterprise": {
+                "title": "Enterprise",
+                "desc": "For large-scale operations.",
+                "cta": "Contact Sales"
+            }
+        },
+        "Footer": {
+            "copyright": "© 2026 SEENCEL Inc. All rights reserved."
+        }
+    },
+    "Project": {
+        "title": "Projects",
+        "subtitle": "Manage and track all your ongoing construction projects.",
+        "create": "New Project",
+        "table": {
+            "name": "Name",
+            "status": "Status",
+            "type": "Type",
+            "location": "Location",
+            "dates": "Dates",
+            "active": "Active"
+        },
+        "status": {
+            "Activo": "Active",
+            "Finalizado": "Finished",
+            "Detenido": "On Hold"
+        },
+        "actions": {
+            "open": "Open Project",
+            "settings": "Settings"
+        },
+        "form": {
+            "createTitle": "New Project",
+            "editTitle": "Edit Project",
+            "description": "Complete the information to create a new project.",
+            "basicInfo": "Basic Information",
+            "name": "Project Name",
+            "namePlaceholder": "E.g. Central Building",
+            "code": "Project Code",
+            "codePlaceholder": "E.g. P-2024-001",
+            "status": "Status",
+            "statusActive": "Active",
+            "statusFinished": "Finished",
+            "statusOnHold": "On Hold",
+            "type": "Project Type",
+            "typePlaceholder": "Select type",
+            "modality": "Modality",
+            "modalityPlaceholder": "Select modality",
+            "dates": "Dates & Timeline",
+            "startDate": "Start Date",
+            "endDate": "Estimated End Date",
+            "location": "Location",
+            "address": "Address",
+            "addressPlaceholder": "Street and Number",
+            "city": "City",
+            "cityPlaceholder": "City",
+            "country": "Country",
+            "countryPlaceholder": "Country",
+            "zipCode": "Postal Code",
+            "client": "Client Information",
+            "clientName": "Client Name",
+            "clientNamePlaceholder": "Client or Company Name",
+            "contactPhone": "Contact Phone",
+            "email": "Email",
+            "formDescription": "Description",
+            "descriptionPlaceholder": "Project description...",
+            "cancel": "Cancel",
+            "save": "Save Changes",
+            "creating": "Creating...",
+            "saving": "Saving..."
+        }
+    }
+}

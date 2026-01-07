@@ -1,0 +1,451 @@
+{
+    "Navigation": {
+        "overview": "Visión General",
+        "projects": "Proyectos",
+        "finance": "Finanzas",
+        "settings": "Configuración"
+    },
+    "Common": {
+        "notifications": "Notificaciones",
+        "profile": "Perfil",
+        "logout": "Cerrar sesión"
+    },
+    "UserMenu": {
+        "profile": "Perfil",
+        "settings": "Configuración",
+        "logout": "Cerrar sesión",
+        "home": "Ir al Inicio"
+    },
+    "Feedback": {
+        "button": "Feedback",
+        "title": "Enviar Comentarios",
+        "description": "Ayúdanos a mejorar compartiendo tus ideas o reportando problemas.",
+        "placeholder": "Tu comentario...",
+        "send": "Enviar",
+        "sending": "Enviando",
+        "successTitle": "¡Gracias por tus comentarios!",
+        "successMessage": "Apreciamos mucho tu aporte."
+    },
+    "MegaMenu": {
+        "Organization": {
+            "title": "Organización",
+            "description": "Gestiona tu equipo, configuraciones y preferencias globales.",
+            "sections": {
+                "management": "Gestión",
+                "finance": "Finanzas"
+            },
+            "items": {
+                "overview": "Visión General",
+                "basicData": "Datos Básicos",
+                "projectManagement": "Gestión de Proyectos",
+                "contacts": "Contactos",
+                "technicalCatalog": "Catálogo Técnico",
+                "team": "Equipo",
+                "teamDescription": "Gestiona miembros y roles.",
+                "settings": "Configuración",
+                "settingsDescription": "Ajustes generales de la organización.",
+                "finance": "Finanzas",
+                "capital": "Capital",
+                "generalExpenses": "Gastos Generales",
+                "taxes": "Impuestos"
+            }
+        },
+        "Project": {
+            "title": "Proyectos",
+            "description": "Seguimiento de iniciativas activas y plazos.",
+            "sections": {
+                "management": "Gestión",
+                "design": "Diseño",
+                "construction": "Construcción",
+                "commercial": "Comercialización y Venta"
+            },
+            "items": {
+                "overview": "Visión General",
+                "basicData": "Datos Básicos",
+                "filesMedia": "Archivos y Media",
+                "finance": "Finanzas",
+                "moodboard": "Moodboard",
+                "computationBudget": "Cómputo y Presupuesto",
+                "labor": "Mano de Obra",
+                "materials": "Materiales",
+                "subcontracts": "Subcontratos",
+                "indirects": "Indirectos",
+                "siteLog": "Bitácora de Obra",
+                "clients": "Clientes",
+                "technicalDocs": "Documentación Técnica"
+            }
+        },
+        "Finance": {
+            "title": "Finanzas",
+            "description": "Monitorea flujo de caja, facturas y gastos.",
+            "items": {
+                "overview": "Visión General",
+                "overviewDescription": "Salud financiera en un vistazo.",
+                "invoices": "Facturas",
+                "invoicesDescription": "Crea y gestiona facturas de clientes.",
+                "expenses": "Gastos",
+                "expensesDescription": "Registro de gastos y facturas.",
+                "financialMovementsDescription": "Registro de ingresos y egresos",
+                "taxes": "Impuestos",
+                "taxesDescription": "Gestión de obligaciones fiscales"
+            }
+        },
+        "Learnings": {
+            "title": "Aprendizajes",
+            "description": "Base de conocimiento y lecciones aprendidas",
+            "items": {
+                "technicalDocs": "Documentación Técnica",
+                "technicalDocsDescription": "Manuales y especificaciones",
+                "bestPractices": "Mejores Prácticas",
+                "bestPracticesDescription": "Guías de ejecución estándar",
+                "courses": "Cursos",
+                "coursesDescription": "Cursos interactivos para tu equipo.",
+                "documentation": "Documentación",
+                "documentationDescription": "Guías y manuales técnicos.",
+                "certifications": "Certificaciones",
+                "certificationsDescription": "Logros y certificaciones obtenidas."
+            }
+        },
+        "Community": {
+            "title": "Comunidad",
+            "description": "Conecta con otros usuarios y comparte experiencias.",
+            "items": {
+                "forums": "Foros",
+                "forumsDescription": "Únete a la discusión.",
+                "events": "Eventos",
+                "eventsDescription": "Próximos webcasts y encuentros.",
+                "showcase": "Escaparate",
+                "showcaseDescription": "Mira lo que otros están construyendo."
+            }
+        }
+    },
+    "Settings": {
+        "myAccount": "Mi Cuenta",
+        "title": "Configuración",
+        "description": "Gestiona tu cuenta y preferencias.",
+        "tabs": {
+            "profile": "Perfil",
+            "organization": "Organizaciones",
+            "security": "Seguridad",
+            "billing": "Facturación",
+            "notifications": "Notificaciones",
+            "preferences": "Preferencias"
+        },
+        "Profile": {
+            "title": "Perfil",
+            "description": "Así es como te ven otros en el sitio.",
+            "Avatar": {
+                "change": "Cambiar foto",
+                "label": "Acciones de Avatar",
+                "upload": "Subir nueva foto...",
+                "restore": "Restaurar de Google",
+                "delete": "Eliminar foto actual",
+                "uploading": "Subiendo imagen...",
+                "successUpload": "Avatar actualizado correctamente.",
+                "errorUpload": "Error al subir la imagen.",
+                "errorSize": "El archivo es demasiado grande (Máx 5MB).",
+                "deleting": "Eliminando...",
+                "successDelete": "Avatar eliminado.",
+                "errorDelete": "Error al eliminar el avatar.",
+                "restoring": "Restaurando...",
+                "successRestore": "Avatar restaurado de Google.",
+                "errorRestore": "Error al restaurar avatar.",
+                "title": "Foto de Perfil",
+                "description": "Elige una imagen que te represente en tu equipo y organizaciones.",
+                "footer": "Recomendamos usar una imagen profesional y clara."
+            },
+            "displayNameTitle": "Información Personal",
+            "displayNameDescription": "Administra tus datos de contacto y cómo apareces en los proyectos.",
+            "maxCharsDescription": "Asegúrate de que la información sea correcta.",
+            "firstName": "Nombre",
+            "lastName": "Apellido",
+            "username": "Nombre de usuario",
+            "email": "Correo electrónico",
+            "phone": "Teléfono",
+            "birthdate": "Fecha de Nacimiento",
+            "nationality": "Nacionalidad",
+            "selectCountry": "Seleccionar país...",
+            "searchCountry": "Buscar país...",
+            "noCountryFound": "No se encontró ningún país.",
+            "bio": "Biografía",
+            "language": "Idioma",
+            "save": "Guardar cambios",
+            "changeAvatar": "Cambiar Avatar",
+            "loading": "Cargando datos del perfil...",
+            "success": "Perfil actualizado correctamente.",
+            "error": "Error al actualizar el perfil."
+        },
+        "Preferences": {
+            "title": "Preferencias",
+            "description": "Personaliza la apariencia y el idioma de tu espacio de trabajo.",
+            "appearance": {
+                "title": "Apariencia",
+                "description": "Configura o personaliza tus preferencias para el sistema"
+            },
+            "language": {
+                "title": "Idioma",
+                "description": "Selecciona el idioma de la plataforma",
+                "placeholder": "Seleccionar idioma",
+                "options": {
+                    "en": "English",
+                    "es": "Español"
+                }
+            },
+            "theme": {
+                "title": "Tema de la Interfaz",
+                "description": "Personaliza la apariencia de tu aplicación",
+                "options": {
+                    "system": "Auto",
+                    "light": "Claro",
+                    "dark": "Oscuro"
+                }
+            },
+            "layout": {
+                "title": "Modo de Diseño",
+                "description": "Elige entre la navegación superior predeterminada o la barra lateral",
+                "options": {
+                    "default": "Mega Menu",
+                    "sidebar": "Barra Lateral"
+                }
+            }
+        },
+        "Organization": {
+            "title": "Mis Organizaciones",
+            "description": "Gestiona y cambia entre tus organizaciones activas.",
+            "current": "ACTIVA",
+            "switch": "Cambiar",
+            "yours": "Tus Organizaciones",
+            "create": "Crear Nueva",
+            "notFound": "No se encontraron organizaciones.",
+            "notFoundCreate": "Crear Organización"
+        },
+        "PhoneInput": {
+            "search": "Buscar país...",
+            "empty": "No se encontró ningún país."
+        },
+        "Billing": {
+            "title": "Datos de Facturación",
+            "description": "Configura tu información de facturación para recibos y facturas.",
+            "isCompany": "Facturar como empresa",
+            "isCompanyDescription": "Activa esta opción si necesitas factura a nombre de una empresa.",
+            "fullName": "Nombre Completo",
+            "fullNamePlaceholder": "Juan Pérez",
+            "companyName": "Razón Social",
+            "companyNamePlaceholder": "Mi Empresa S.A.",
+            "taxId": "CUIT / NIF / RFC",
+            "taxIdPlaceholder": "20-12345678-9",
+            "taxIdDescription": "Número de identificación fiscal de tu país.",
+            "country": "País",
+            "countryPlaceholder": "Seleccionar país...",
+            "address": "Dirección",
+            "addressPlaceholder": "Calle Principal 123",
+            "city": "Ciudad",
+            "cityPlaceholder": "Buenos Aires",
+            "postcode": "Código Postal",
+            "postcodePlaceholder": "C1000",
+            "footer": "Esta información se usará para generar tus facturas.",
+            "save": "Guardar cambios",
+            "success": "Datos de facturación actualizados.",
+            "error": "Error al actualizar los datos de facturación."
+        },
+        "Notifications": {
+            "title": "Notificaciones",
+            "description": "Mantente al día con las últimas actualizaciones.",
+            "empty": "No tienes notificaciones.",
+            "markAllRead": "Marcar todas como leídas",
+            "markRead": "Marcar como leída",
+            "successAllRead": "Todas las notificaciones marcadas como leídas.",
+            "error": "Ocurrió un error."
+        },
+        "Security": {
+            "title": "Seguridad",
+            "description": "Gestiona tu contraseña y doble factor.",
+            "twoFactor": "Autenticación de Dos Factores",
+            "twoFactorDesc": "Añade una capa extra de seguridad a tu cuenta.",
+            "passkeys": "Llaves de Acceso (Passkeys)",
+            "passkeysDesc": "Inicia sesión de forma segura sin contraseña.",
+            "addPasskey": "Agregar Llave",
+            "preparing": "Preparando inscripción 2FA...",
+            "scanQR": "1. Escanea el Código QR",
+            "scanQRDesc": "Usa una app de autenticación como Google Authenticator o Authy.",
+            "secretLabel": "Secreto",
+            "enterCode": "2. Ingresa el Código",
+            "cancel": "Cancelar",
+            "enable2FA": "Activar 2FA",
+            "enabled": "Activado",
+            "disabled": "Desactivado",
+            "error": "Error"
+        }
+    },
+    "Landing": {
+        "Hero": {
+            "badge": "v2.0 Disponible Ahora",
+            "title": "El Sistema Operativo para la Construcción.",
+            "description": "SEENCEL consolida todo el ciclo de vida de tu construcción en una plataforma poderosa. Gestiona proyectos, finanzas y equipos con precisión arquitectónica.",
+            "getStarted": "Empieza Gratis",
+            "dashboard": "Ir al Dashboard",
+            "howItWorks": "Ver cómo funciona",
+            "preview": "Vista Previa"
+        },
+        "Brands": {
+            "trustedBy": "CONFIADO POR CONSTRUCTORES INNOVADORES"
+        },
+        "Features": {
+            "title": "Todo lo que necesitas para construir.",
+            "subtitle": "Deja de cambiar entre hojas de cálculo, correos y herramientas desconectadas.",
+            "items": {
+                "projectManagement": {
+                    "title": "Gestión de Proyectos",
+                    "desc": "Seguimiento de progreso, plazos e hitos con diagramas de Gantt y tableros Kanban diseñados para construcción."
+                },
+                "financialControl": {
+                    "title": "Control Financiero",
+                    "desc": "Seguimiento presupuestario en tiempo real, facturación automatizada y gestión de gastos basada en datos del proyecto."
+                },
+                "teamCollaboration": {
+                    "title": "Colaboración de Equipo",
+                    "desc": "Conecta arquitectos, ingenieros y contratistas en una única fuente de verdad."
+                },
+                "globalOperations": {
+                    "title": "Operaciones Globales",
+                    "desc": "Soporte multidivisa, internacionalización (EN/ES) y gestión de husos horarios."
+                },
+                "enterpriseSecurity": {
+                    "title": "Seguridad Empresarial",
+                    "desc": "Control de acceso basado en roles, registros de auditoría y cifrado seguro de datos."
+                },
+                "qualityAssurance": {
+                    "title": "Garantía de Calidad",
+                    "desc": "Gestiona inspecciones, listas de pendientes y documentos de cumplimiento sin problemas."
+                }
+            }
+        },
+        "Pricing": {
+            "title": "Precios simples y transparentes.",
+            "subtitle": "Empieza gratis, escala a medida que creces.",
+            "starter": {
+                "title": "Starter",
+                "desc": "Perfecto para pequeños equipos y freelancers.",
+                "cta": "Empezar"
+            },
+            "pro": {
+                "title": "Profesional",
+                "desc": "Para empresas de construcción en crecimiento.",
+                "popular": "Más Popular",
+                "cta": "Prueba de 14 días"
+            },
+            "enterprise": {
+                "title": "Enterprise",
+                "desc": "Para operaciones a gran escala.",
+                "cta": "Contactar Ventas"
+            }
+        },
+        "Footer": {
+            "copyright": "© 2026 SEENCEL Inc. Todos los derechos reservados."
+        }
+    },
+    "Project": {
+        "title": "Proyectos",
+        "subtitle": "Administra y supervisa tus proyectos de construcción activos.",
+        "create": "Nuevo Proyecto",
+        "table": {
+            "name": "Nombre",
+            "status": "Estado",
+            "type": "Tipo",
+            "location": "Ubicación",
+            "dates": "Fechas",
+            "active": "Activo"
+        },
+        "status": {
+            "Activo": "Activo",
+            "Finalizado": "Finalizado",
+            "Detenido": "Detenido"
+        },
+        "actions": {
+            "open": "Abrir Proyecto",
+            "settings": "Configuración"
+        },
+        "form": {
+            "createTitle": "Nuevo Proyecto",
+            "editTitle": "Editar Proyecto",
+            "description": "Completa la información para crear un nuevo proyecto.",
+            "basicInfo": "Información Básica",
+            "name": "Nombre del Proyecto",
+            "namePlaceholder": "Ej. Edificio Central",
+            "code": "Código del Proyecto",
+            "codePlaceholder": "Ej. P-2024-001",
+            "status": "Estado",
+            "statusActive": "Activo",
+            "statusFinished": "Finalizado",
+            "statusOnHold": "Detenido",
+            "type": "Tipo de Proyecto",
+            "typePlaceholder": "Seleccionar tipo",
+            "modality": "Modalidad",
+            "modalityPlaceholder": "Seleccionar modalidad",
+            "dates": "Fechas y Cronograma",
+            "startDate": "Fecha de Inicio",
+            "endDate": "Fecha Estimada de Finalización",
+            "location": "Ubicación",
+            "address": "Dirección",
+            "addressPlaceholder": "Calle y Número",
+            "city": "Ciudad",
+            "cityPlaceholder": "Ciudad",
+            "country": "País",
+            "countryPlaceholder": "País",
+            "zipCode": "Código Postal",
+            "client": "Información del Cliente",
+            "clientName": "Nombre del Cliente",
+            "clientNamePlaceholder": "Nombre del Cliente o Empresa",
+            "contactPhone": "Teléfono de Contacto",
+            "email": "Correo Electrónico",
+            "formDescription": "Descripción",
+            "descriptionPlaceholder": "Descripción del proyecto...",
+            "cancel": "Cancelar",
+            "save": "Guardar Cambios",
+            "creating": "Creando...",
+            "saving": "Guardando..."
+        }
+    },
+    "OrganizationDashboard": {
+        "greeting": {
+            "morning": "Buenos días",
+            "afternoon": "Buenas tardes",
+            "evening": "Buenas noches"
+        },
+        "status": {
+            "operational": "Operativo"
+        },
+        "header": {
+            "subtitle": "Esto es lo que está pasando en",
+            "subtitleSuffix": "hoy."
+        },
+        "actions": {
+            "inviteTeam": "Invitar Equipo",
+            "newProject": "Nuevo Proyecto"
+        },
+        "kpis": {
+            "activeProjects": "Proyectos Activos",
+            "totalBudget": "Presupuesto Total",
+            "pendingTasks": "Tareas Pendientes",
+            "teamVelocity": "Velocidad del Equipo",
+            "vsLastMonth": "vs mes anterior"
+        },
+        "sections": {
+            "financialOverview": "Resumen Financiero",
+            "financialDescription": "Ingresos vs Gastos de los últimos 30 días.",
+            "activeProjects": "Proyectos Activos",
+            "projectsDescription": "Actualizaciones de estado e hitos recientes.",
+            "viewAll": "Ver Todos",
+            "projectHealth": "Salud de Proyectos",
+            "active": "Activos",
+            "onTrack": "En Tiempo",
+            "delayed": "Retrasados",
+            "liveFeed": "Actividad en Vivo"
+        },
+        "errors": {
+            "unableToLoad": "No se pudo cargar el dashboard",
+            "unknownError": "Ocurrió un error desconocido al obtener los datos de la organización.",
+            "retry": "Reintentar"
+        }
+    }
+}
