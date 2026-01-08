@@ -23,6 +23,10 @@ const badgeVariants = cva(
           "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25",
         info:
           "border-transparent bg-blue-500/15 text-blue-700 dark:text-blue-400 hover:bg-blue-500/25",
+        system:
+          "border-transparent bg-slate-500/15 text-slate-700 dark:text-slate-400 hover:bg-slate-500/25",
+        organization:
+          "border-transparent bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/25",
         // Plan variants
         "plan-free":
           "border-lime-300 bg-lime-50 text-lime-700 dark:border-lime-800 dark:bg-lime-900/30 dark:text-lime-400",

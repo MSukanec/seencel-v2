@@ -15,7 +15,7 @@ export async function getProjectTypes(organizationId: string) {
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
-        .order('is_system', { ascending: false })
+
         .order('name');
 
     if (error) {
@@ -124,7 +124,7 @@ export async function getProjectModalities(organizationId: string) {
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
-        .order('is_system', { ascending: false })
+
         .order('name');
 
     if (error) {

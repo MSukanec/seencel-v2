@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -142,18 +142,28 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>{t("name")}</TableHead>
-                                <TableHead className="w-[100px] text-right">{t("actions")}</TableHead>
+                                <TableHead className="pl-4">{t("name")}</TableHead>
+                                <TableHead className="w-[180px]">{t("type")}</TableHead>
+                                <TableHead className="w-[80px] text-right pr-4">{t("actions")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {types.map((type) => (
                                 <TableRow key={type.id}>
-                                    <TableCell className="font-medium">{type.name}</TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="font-medium pl-4">{type.name}</TableCell>
+                                    <TableCell>
                                         {type.is_system ? (
-                                            <Badge variant="outline" className="text-xs font-normal">System</Badge>
+                                            <Badge variant="system" icon={<Monitor className="h-3 w-3" />}>
+                                                {t("system")}
+                                            </Badge>
                                         ) : (
+                                            <Badge variant="organization" icon={<Building2 className="h-3 w-3" />}>
+                                                {t("organization")}
+                                            </Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right pr-4">
+                                        {!type.is_system && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" className="h-8 w-8 p-0">
