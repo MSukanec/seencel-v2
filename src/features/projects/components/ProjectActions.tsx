@@ -4,6 +4,7 @@ import { useDrawer } from "@/providers/drawer-store";
 import { ProjectForm } from "@/features/projects/components/ProjectForm";
 import { Project } from "@/types/project";
 import { MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { deleteProject } from "@/features/projects/actions";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -44,10 +45,16 @@ export function ProjectActions({ project }: ProjectActionsProps) {
     };
 
     const handleDelete = async () => {
+        const result = await deleteProject(project.id);
 
-        // Simulate delete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setShowDeleteAlert(false);
+        // Even if error, we might want to close dialog or show toast. 
+        // For now, assuming success or simple error logging.
+        if (result.success) {
+            setShowDeleteAlert(false);
+        } else {
+            console.error("Failed to delete project:", result.error);
+            // Optionally keep dialog open or show error
+        }
     };
 
     return (

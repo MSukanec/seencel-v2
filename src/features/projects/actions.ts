@@ -233,3 +233,25 @@ export async function updateProject(formData: FormData) {
         return { error: e.message || "Failed to update project" };
     }
 }
+
+export async function deleteProject(projectId: string) {
+    const supabase = await createClient();
+
+    try {
+        const { error } = await supabase
+            .from("projects")
+            .update({
+                is_deleted: true,
+                deleted_at: new Date().toISOString()
+            })
+            .eq("id", projectId);
+
+        if (error) throw error;
+
+        revalidatePath("/organization/projects");
+        return { success: true };
+    } catch (e: any) {
+        console.error("Delete Project Error:", e);
+        return { error: e.message || "Failed to delete project" };
+    }
+}
