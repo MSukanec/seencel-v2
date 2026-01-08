@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Globe } from "lucide-react";
 
 import * as React from "react";
 
@@ -62,6 +62,22 @@ const PhoneInput = React.forwardRef<
         );
     }, []);
 
+    // Sanitize value to prevent "Expected E.164" error
+    const safeValue = React.useMemo(() => {
+        if (props.value && typeof props.value === 'string') {
+            if (props.value.startsWith('+')) {
+                return props.value as RPNInput.Value;
+            } else {
+                // Try to salvage if it looks like a number but missing +?
+                // For now, to prevent crash, we return undefined for invalid E.164
+                // We could also try to prepend '+' but if country code is missing it's ambiguous.
+                console.warn(`PhoneInput received invalid E.164 value: "${props.value}". Resetting to empty to prevent crash.`);
+                return undefined;
+            }
+        }
+        return props.value as RPNInput.Value | undefined;
+    }, [props.value]);
+
     return (
         <RPNInput.default
             ref={ref}
@@ -70,6 +86,8 @@ const PhoneInput = React.forwardRef<
             countrySelectComponent={CountrySelectWrapper}
             inputComponent={InputComponent}
             labels={locale === 'es' ? es : undefined}
+            {...props}
+            value={safeValue} // Override value with safe version
             /**
              * Handles the onChange event.
              *
@@ -164,7 +182,7 @@ const FlagComponent = ({ country, countryName }: RPNInput.FlagProps) => {
 
     return (
         <span className="flex h-4 w-6 overflow-hidden rounded-sm bg-foreground/20 text-xs items-center justify-center">
-            {Flag && <Flag title={countryName} />}
+            {Flag ? <Flag title={countryName} /> : <Globe className="h-3 w-3 opacity-50" />}
         </span>
     );
 };

@@ -12,6 +12,7 @@
     },
     "UserMenu": {
         "profile": "Perfil",
+        "dashboard": "Espacio de Trabajo",
         "settings": "Configuración",
         "logout": "Cerrar sesión",
         "home": "Ir al Inicio"
@@ -26,6 +27,15 @@
         "successTitle": "¡Gracias por tus comentarios!",
         "successMessage": "Apreciamos mucho tu aporte."
     },
+    "Public": {
+        "nav": {
+            "features": "Características",
+            "pricing": "Precios",
+            "contact": "Contacto",
+            "login": "Iniciar Sesión",
+            "getStarted": "Comenzar"
+        }
+    },
     "MegaMenu": {
         "Organization": {
             "title": "Organización",
@@ -37,6 +47,7 @@
             "items": {
                 "overview": "Visión General",
                 "basicData": "Datos Básicos",
+                "identity": "Identidad y Marca",
                 "projectManagement": "Gestión de Proyectos",
                 "contacts": "Contactos",
                 "technicalCatalog": "Catálogo Técnico",

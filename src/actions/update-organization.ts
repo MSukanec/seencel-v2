@@ -74,7 +74,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
         }
 
         revalidatePath('/organization');
-        revalidatePath('/organization/details');
+        revalidatePath('/organization/identity');
         return { success: true };
     } catch (e: any) {
         return { error: e.message };

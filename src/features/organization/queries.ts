@@ -125,12 +125,13 @@ export async function getDashboardData() {
         movementsRes,
         activityRes
     ] = await Promise.all([
-        // Projects
-        supabase.from('projects')
+        // Projects (using view for image_url and metadata)
+        supabase.from('projects_view')
             .select('*')
             .eq('organization_id', orgId)
             .eq('is_active', true)
-            .order('updated_at', { ascending: false }),
+            .order('updated_at', { ascending: false })
+            .limit(10),
 
         // Stats (Docs & Tasks count)
         supabase.rpc('get_org_dashboard_stats', { org_id: orgId }),
@@ -142,7 +143,7 @@ export async function getDashboardData() {
             .limit(500),
 
         // Activity Feed
-        supabase.from('organization_activity_log_view')
+        supabase.from('organization_activity_logs_view')
             .select('*')
             .eq('organization_id', orgId)
             .order('created_at', { ascending: false })

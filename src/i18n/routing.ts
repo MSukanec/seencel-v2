@@ -26,6 +26,14 @@ export const routing = defineRouting({
             en: '/organization/projects',
             es: '/organizacion/proyectos'
         },
+        '/organization/settings': {
+            en: '/organization/settings',
+            es: '/organizacion/configuracion'
+        },
+        '/organization/identity': {
+            en: '/organization/identity',
+            es: '/organizacion/identidad'
+        },
         '/finance': {
             en: '/finance',
             es: '/finanzas'
@@ -42,7 +50,18 @@ export const routing = defineRouting({
             en: '/learnings/courses/[slug]',
             es: '/aprendizajes/cursos/[slug]'
         },
-        '/contact': '/contact',
+        '/contact': {
+            en: '/contact',
+            es: '/contacto'
+        },
+        '/features': {
+            en: '/features',
+            es: '/caracteristicas'
+        },
+        '/pricing': {
+            en: '/pricing',
+            es: '/precios'
+        },
         // Setup catch-all if needed, but for now specific routes
         '/login': '/login',
         '/signup': '/signup',

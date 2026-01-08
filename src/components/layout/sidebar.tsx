@@ -93,11 +93,10 @@ export function Sidebar() {
             case 'organization':
                 return [
                     { title: tMega('Organization.items.overview'), href: '/organization', icon: LayoutDashboard },
-                    { title: 'Información', href: '/organization/details', icon: Building },
+                    { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building },
                     { title: 'Proyectos', href: '/organization/projects', icon: Briefcase },
                     { title: 'Contactos', href: '/organization/contacts', icon: Users },
                     { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard },
-                    { title: 'Marca', href: '/organization/brand', icon: Palette },
                     { title: 'Configuración', href: '/organization/settings', icon: Settings },
                 ];
             case 'project':
@@ -143,12 +142,10 @@ export function Sidebar() {
             case 'admin':
                 return [
                     { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
-                    { title: 'Usuarios', href: '/admin', icon: Users },
-                    { title: 'Organizaciones', href: '/admin', icon: Building },
-                    { title: 'Facturación', href: '/admin', icon: CreditCard },
-                    { title: 'Estado del Sistema', href: '/admin', icon: Monitor },
-                    { title: 'Registros de Auditoría', href: '/admin', icon: FileText },
-                    { title: 'Configuración', href: '/admin', icon: Settings },
+                    { title: 'Directorio', href: '/admin/directory', icon: Users },
+                    { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
+                    { title: 'Plataforma', href: '/admin/system', icon: Monitor },
+                    { title: 'Configuración', href: '/admin/settings', icon: Settings },
                 ];
             default:
                 return [];

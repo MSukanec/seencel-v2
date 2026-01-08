@@ -90,8 +90,9 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
     const currentMapStyle = resolvedTheme === 'dark' ? darkMapStyle : lightMapStyle;
 
     // Custom Marker Image URL
-    const logoUrl = organization.image_path && organization.image_bucket
-        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${organization.image_bucket}/${organization.image_path}`
+    // Custom Marker Image URL - Corrected to use logo_path from organizations table
+    const logoUrl = organization.logo_path
+        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${organization.logo_path}`
         : "/logo.png";
 
     // Map State

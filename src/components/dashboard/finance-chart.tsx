@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { ExpandableCard } from "@/components/ui/expandable-card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 
 export function FinanceChart({ movements }: { movements: any[] }) {
     const gradientId = useId();
@@ -94,14 +95,11 @@ export function FinanceChart({ movements }: { movements: any[] }) {
                             tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                             tickFormatter={(val) => format(new Date(val), 'dd/MM')}
                         />
-                        <Tooltip
-                            contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                            itemStyle={{ color: 'hsl(var(--foreground))' }}
-                            labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                        />
+                        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#10b981', strokeWidth: 1 }} />
                         <Area
                             type="monotone"
                             dataKey="income"
+                            name="Ingresos"
                             stroke="#10b981"
                             strokeWidth={2}
                             fillOpacity={1}

@@ -1,6 +1,6 @@
 import { getDashboardData } from "@/features/organization/queries";
 import { FinanceChart } from "@/components/dashboard/finance-chart";
-import { ProjectTable, ActivityFeed } from "@/components/dashboard/widgets";
+import { ProjectTable, ActivityFeed, ProjectCardsGrid } from "@/components/dashboard/widgets";
 import {
     Users2,
     Folder,
@@ -11,11 +11,14 @@ import {
     Activity,
     TrendingUp,
     TrendingDown,
-    DollarSign
+    DollarSign,
+    ArrowRight
 } from "lucide-react";
+import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
+import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
 
 export default async function OrganizationPage() {
     const t = await getTranslations('OrganizationDashboard');
@@ -47,6 +50,9 @@ export default async function OrganizationPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+            {/* Set header title to organization name */}
+            <HeaderTitleUpdater title={organization.name} />
+
             {/* 1. Header & Actions */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/40 pb-6">
                 <div>
@@ -118,66 +124,32 @@ export default async function OrganizationPage() {
                 />
             </div>
 
-            {/* 3. Main Dashboard Content (Charts & Tables) */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Left Column: Finance Chart (2/3 width) */}
-                <div className="xl:col-span-2 space-y-6">
-                    <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm p-1">
-                        <div className="p-6">
-                            <h3 className="text-lg font-semibold mb-1">{t('sections.financialOverview')}</h3>
-                            <p className="text-sm text-muted-foreground mb-6">{t('sections.financialDescription')}</p>
-                            <div className="h-[350px]">
-                                <FinanceChart movements={movements} />
-                            </div>
-                        </div>
-                    </div>
+            {/* 3. Main Dashboard Content (2 Columns) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column: Recent Projects */}
+                <ProjectCardsGrid projects={projects} />
 
-                    <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-border/40 flex justify-between items-center">
+                {/* Right Column: Activity Feed */}
+                <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-border/40 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-500/10 rounded-lg">
+                                <Activity className="w-5 h-5 text-orange-500" />
+                            </div>
                             <div>
-                                <h3 className="text-lg font-semibold">{t('sections.activeProjects')}</h3>
-                                <p className="text-sm text-muted-foreground">{t('sections.projectsDescription')}</p>
+                                <h3 className="text-lg font-semibold">Actividad Reciente</h3>
+                                <p className="text-xs text-muted-foreground">Últimas 5 actividades</p>
                             </div>
-                            <Button variant="ghost" size="sm" className="text-xs">{t('sections.viewAll')}</Button>
                         </div>
-                        <ProjectTable projects={projects} />
+                        <Link
+                            href={{ pathname: "/organization/settings", query: { tab: "activity" } }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                        >
+                            Ver Todos
+                            <ArrowRight className="h-3 w-3" />
+                        </Link>
                     </div>
-                </div>
-
-                {/* Right Column: Activity & Quick Stats (1/3 width) */}
-                <div className="space-y-6">
-                    {/* Circular Progress / Status Distribution (Mocked for visual) */}
-                    <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm p-6">
-                        <h3 className="text-lg font-semibold mb-4">{t('sections.projectHealth')}</h3>
-                        <div className="flex items-center justify-center py-8 relative">
-                            {/* Imagine a Donut Chart here, using CSS for simplicity or Recharts if desired later. 
-                                 For now, a CSS ring to keep it lightweight but pretty. */}
-                            <div className="relative h-40 w-40 rounded-full border-[12px] border-muted flex items-center justify-center">
-                                <div className="absolute inset-0 rounded-full border-[12px] border-emerald-500 border-t-transparent border-l-transparent rotate-45"></div>
-                                <div className="text-center">
-                                    <span className="block text-3xl font-bold">{stats.activeProjects}</span>
-                                    <span className="text-xs text-muted-foreground uppercase">{t('sections.active')}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div className="text-center p-3 rounded-lg bg-emerald-500/10">
-                                <span className="block text-xl font-bold text-emerald-500">92%</span>
-                                <span className="text-xs text-muted-foreground">{t('sections.onTrack')}</span>
-                            </div>
-                            <div className="text-center p-3 rounded-lg bg-red-500/10">
-                                <span className="block text-xl font-bold text-red-500">2</span>
-                                <span className="text-xs text-muted-foreground">{t('sections.delayed')}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Team Activity Feed */}
-                    <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm p-6 max-h-[500px] overflow-y-auto">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                            <Activity className="w-4 h-4 text-primary" />
-                            {t('sections.liveFeed')}
-                        </h3>
+                    <div className="flex-1 overflow-y-auto">
                         <ActivityFeed activity={data.activity} />
                     </div>
                 </div>

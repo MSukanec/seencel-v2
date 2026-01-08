@@ -12,7 +12,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell } from "lucide-react";
+import { Bell, Monitor, Sun, Moon } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,7 @@ import { useLayoutStore } from "@/store/layout-store"; // Import store
 import { FeedbackButton } from "@/components/feedback-button";
 
 import { useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
 
 import Image from "next/image"; // Ensure import
 
@@ -28,6 +29,7 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
     const tUser = useTranslations('UserMenu');
     const router = useRouter();
     const supabase = createClient();
+    const { setTheme } = useTheme();
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -64,7 +66,7 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
                         <div className="mr-1">
                             <FeedbackButton />
                         </div>
-                        <ModeToggle />
+                        {/* Removed ModeToggle, moved to dropdown */}
                         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground h-8 w-8">
                             <Bell className="h-4 w-4" />
                             <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-red-600 border border-background" />
@@ -94,18 +96,60 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href="/">{tUser('home')}</Link>
-                                </DropdownMenuItem>
+
                                 <DropdownMenuItem asChild>
                                     <Link href="/settings">{tUser('settings')}</Link>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                {/* Theme Toggle (Inline Style) */}
+                                <div className="flex items-center justify-between px-2 py-1.5 select-none">
+                                    <span className="text-sm font-medium leading-none">Tema</span>
+                                    <div className="flex items-center rounded-full border bg-background">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setTheme("system")}
+                                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                                            title="Sistema"
+                                        >
+                                            <Monitor className="h-3.5 w-3.5" />
+                                            <span className="sr-only">System</span>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setTheme("light")}
+                                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                                            title="Claro"
+                                        >
+                                            <Sun className="h-3.5 w-3.5" />
+                                            <span className="sr-only">Light</span>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setTheme("dark")}
+                                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+                                            title="Oscuro"
+                                        >
+                                            <Moon className="h-3.5 w-3.5" />
+                                            <span className="sr-only">Dark</span>
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem asChild>
+                                    <Link href="/">{tUser('home')}</Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <Link href="/contact">Contacto</Link>
                                 </DropdownMenuItem>
 
 
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer" onClick={handleLogout}>
                                     {tUser('logout')}
                                 </DropdownMenuItem>

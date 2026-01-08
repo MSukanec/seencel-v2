@@ -3,8 +3,13 @@ import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { SettingsClient } from "@/components/organization/settings/settings-client";
 import { redirect } from "next/navigation";
 
-export default async function OrganizationSettingsPage() {
+interface PageProps {
+    searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function OrganizationSettingsPage({ searchParams }: PageProps) {
     const orgId = await getActiveOrganizationId();
+    const params = await searchParams;
 
     if (!orgId) {
         redirect('/');
@@ -14,6 +19,7 @@ export default async function OrganizationSettingsPage() {
     const data = await getOrganizationSettingsData(orgId);
 
     return (
-        <SettingsClient data={data} />
+        <SettingsClient data={data} initialTab={params.tab} />
     );
 }
+

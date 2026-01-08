@@ -25,11 +25,13 @@ const badgeVariants = cva(
           "border-transparent bg-blue-500/15 text-blue-700 dark:text-blue-400 hover:bg-blue-500/25",
         // Plan variants
         "plan-free":
-          "border-transparent bg-[oklch(0.744_0.16_126.36/0.15)] text-[oklch(0.65_0.16_126.36)] dark:text-[oklch(0.78_0.18_126.36)]",
+          "border-lime-300 bg-lime-50 text-lime-700 dark:border-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
         "plan-pro":
-          "border-transparent bg-[oklch(0.55_0.22_260/0.15)] text-[oklch(0.45_0.22_260)] dark:text-[oklch(0.65_0.20_260)]",
+          "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
         "plan-teams":
-          "border-transparent bg-[oklch(0.55_0.25_300/0.15)] text-[oklch(0.45_0.25_300)] dark:text-[oklch(0.65_0.22_300)]",
+          "border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+        "founder":
+          "border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       },
     },
     defaultVariants: {

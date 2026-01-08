@@ -23,9 +23,10 @@ import {
     navigationMenuTriggerStyle,
     NavigationMenuIndicator
 } from "@/components/ui/navigation-menu"
-import { Bell, Briefcase, ChevronDown, LayoutDashboard, Settings, User, Wallet, Building, Users, GraduationCap, ArrowRight, Zap, Target } from "lucide-react";
+import { Bell, Briefcase, ChevronDown, LayoutDashboard, Settings, User, Wallet, Building, Users, GraduationCap, ArrowRight, Zap, Target, Moon, Sun, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { ModeToggle } from "@/components/mode-toggle";
+import { useTheme } from "next-themes";
+import Image from "next/image";
 
 import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,17 +35,26 @@ import { FeedbackButton } from "@/components/feedback-button";
 
 export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', user?: UserProfile | null }) {
     const pathname = usePathname();
-    const t = useTranslations('Navigation');
-    const tCommon = useTranslations('Common');
+    const tPublic = useTranslations('Public.nav');
     const tMega = useTranslations('MegaMenu');
     const tUser = useTranslations('UserMenu');
 
+    const { setTheme, theme } = useTheme();
+
     return (
-        <header className="sticky top-0 z-50 w-screen border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm">
+        <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm">
             <div className="flex h-16 w-full items-center px-8 relative max-w-[1920px] mx-auto">
                 {/* 1. Logo */}
                 <div className="flex flex-1 items-center justify-start">
                     <Link href="/" className="flex items-center space-x-2">
+                        <div className="relative h-8 w-8">
+                            <Image
+                                src="/logo.png"
+                                alt="SEENCEL"
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
                         <span className="font-bold text-xl tracking-tighter">
                             SEENCEL
                         </span>
@@ -278,9 +288,8 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                         <nav className="hidden md:flex items-center justify-center">
                             <ul className="flex items-center space-x-8">
-                                <li><Link href={"#features" as any} className="text-sm font-medium hover:text-primary transition-colors">Features</Link></li>
-                                <li><Link href={"#pricing" as any} className="text-sm font-medium hover:text-primary transition-colors">Pricing</Link></li>
-                                <li><Link href={"#enterprise" as any} className="text-sm font-medium hover:text-primary transition-colors">Enterprise</Link></li>
+                                <li><Link href="/features" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('features')}</Link></li>
+                                <li><Link href="/pricing" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('pricing')}</Link></li>
                             </ul>
                         </nav>
                     </div>
@@ -290,14 +299,30 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                 {/* 3. User Actions / CTA (Right Side) */}
                 <div className="flex flex-1 items-center justify-end space-x-4">
                     <nav className="flex items-center space-x-2">
-                        {(variant === 'app' || user) && <FeedbackButton />}
-                        <ModeToggle />
+                        {/* Hide Feedback on Public Header */}
+                        {variant === 'app' && <FeedbackButton />}
+
                         {variant === 'app' || user ? (
                             <>
                                 {variant === 'public' && (
-                                    <Button variant="ghost" asChild className="mr-2">
-                                        <Link href="/organization">Dashboard</Link>
-                                    </Button>
+                                    <>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                            className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
+                                        >
+                                            <Link href="/contact">{tPublic('contact')}</Link>
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                            className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
+                                        >
+                                            <Link href="/organization">{tUser('dashboard')}</Link>
+                                        </Button>
+                                    </>
                                 )}
 
                                 {variant === 'app' && (
@@ -330,17 +355,71 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                                             </div>
                                         </DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem asChild>
-                                            <Link href="/">{tUser('home')}</Link>
-                                        </DropdownMenuItem>
+
+                                        {/* Public: Show Dashboard/Workspace link */}
+                                        {variant === 'public' && (
+                                            <DropdownMenuItem asChild>
+                                                <Link href="/organization">{tUser('dashboard')}</Link>
+                                            </DropdownMenuItem>
+                                        )}
+
                                         <DropdownMenuItem asChild>
                                             <Link href="/settings">{tUser('settings')}</Link>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem asChild>
-                                            <Link href="/contact">Contacto</Link>
-                                        </DropdownMenuItem>
 
                                         <DropdownMenuSeparator />
+
+                                        {/* Theme Toggle (Inline Style) */}
+                                        <div className="flex items-center justify-between px-2 py-1.5 select-none">
+                                            <span className="text-sm font-medium leading-none">Tema</span>
+                                            <div className="flex items-center rounded-full border bg-background">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setTheme("system")}
+                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", theme === 'system' && "bg-muted text-foreground")}
+                                                    title="Sistema"
+                                                >
+                                                    <Monitor className="h-3.5 w-3.5" />
+                                                    <span className="sr-only">System</span>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setTheme("light")}
+                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", theme === 'light' && "bg-muted text-foreground")}
+                                                    title="Claro"
+                                                >
+                                                    <Sun className="h-3.5 w-3.5" />
+                                                    <span className="sr-only">Light</span>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setTheme("dark")}
+                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", theme === 'dark' && "bg-muted text-foreground")}
+                                                    title="Oscuro"
+                                                >
+                                                    <Moon className="h-3.5 w-3.5" />
+                                                    <span className="sr-only">Dark</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <DropdownMenuSeparator />
+
+                                        {/* App: Show Home and Contact links */}
+                                        {variant === 'app' && (
+                                            <>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href="/">{tUser('home')}</Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href="/contact">Contacto</Link>
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+
                                         <DropdownMenuItem className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer">
                                             {tUser('logout')}
                                         </DropdownMenuItem>
@@ -350,10 +429,10 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                         ) : (
                             <>
                                 <Button variant="ghost" asChild>
-                                    <Link href="/login">Log in</Link>
+                                    <Link href="/login">{tPublic('login')}</Link>
                                 </Button>
-                                <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-                                    <Link href="/signup">Get Started</Link>
+                                <Button asChild>
+                                    <Link href="/signup">{tPublic('getStarted')}</Link>
                                 </Button>
                             </>
                         )}
@@ -363,6 +442,7 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
         </header >
     );
 }
+
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,

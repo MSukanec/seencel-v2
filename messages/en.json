@@ -12,6 +12,7 @@
     },
     "UserMenu": {
         "profile": "Profile",
+        "dashboard": "Dashboard",
         "settings": "Settings",
         "logout": "Log out",
         "home": "Go to Home"
@@ -26,6 +27,15 @@
         "successTitle": "Thanks for your feedback!",
         "successMessage": "We appreciate your input."
     },
+    "Public": {
+        "nav": {
+            "features": "Features",
+            "pricing": "Pricing",
+            "contact": "Contact",
+            "login": "Log in",
+            "getStarted": "Get Started"
+        }
+    },
     "MegaMenu": {
         "Organization": {
             "title": "Organization",
@@ -36,6 +46,7 @@
             },
             "items": {
                 "overview": "Overview",
+                "identity": "Identity & Brand",
                 "projectManagement": "Project Management",
                 "contacts": "Contacts",
                 "technicalCatalog": "Technical Catalog",

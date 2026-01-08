@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils";
 
 export function SidebarLayout({ children, user }: { children: React.ReactNode, user?: UserProfile | null }) {
     const pathname = usePathname();
-    const isFullWidthPage = pathname?.includes('/organization/details') || (pathname?.includes('/project/') && pathname?.includes('/details'));
+    // Check for full-width pages in both EN and ES localized routes
+    const isFullWidthPage = pathname?.includes('/organization/identity')
+        || pathname?.includes('/organizacion/identidad')
+        || (pathname?.includes('/project/') && pathname?.includes('/details'));
 
     return (
         <div className="h-screen flex flex-col bg-background overflow-hidden">

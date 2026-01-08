@@ -23,6 +23,7 @@ import { getBillingProfile } from "@/features/billing/queries";
 import { BillingForm } from "@/features/billing/components/BillingForm";
 import { getUserNotifications } from "@/features/notifications/queries";
 import { NotificationsSettings } from "@/features/notifications/components/NotificationsSettings";
+import { PageLayout } from "@/components/layout/page-layout";
 
 interface Organization {
     id: string;
@@ -71,7 +72,7 @@ export default async function SettingsPage() {
         : "US";
 
     return (
-        <div className="space-y-6 p-10 pb-16 md:block max-w-6xl mx-auto">
+        <PageLayout variant="standard">
             <HeaderTitleUpdater title={
                 <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">{t('myAccount')}</span>
@@ -88,6 +89,7 @@ export default async function SettingsPage() {
             <Separator className="my-6" />
 
             <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col lg:flex-row lg:space-x-12 lg:space-y-0 space-y-8 w-full">
+                {/* ... existing tabs content ... */}
                 <aside className="lg:w-64 flex-shrink-0">
                     <TabsList className="flex flex-col h-auto items-start justify-start bg-transparent p-0 space-y-1 w-full">
                         <TabsTrigger value="profile" className="w-full justify-start px-4 py-2 text-left font-semibold data-[state=active]:bg-muted hover:bg-muted/50 transition-colors">
@@ -237,6 +239,6 @@ export default async function SettingsPage() {
                     </TabsContent>
                 </div>
             </Tabs>
-        </div>
+        </PageLayout>
     );
 }

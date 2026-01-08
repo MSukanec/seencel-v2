@@ -10,12 +10,17 @@ import { FinanceTab } from "./finance-tab";
 import { HeaderPortal } from "@/components/layout/header-portal";
 import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
 
-export function SettingsClient({ data }: { data: OrganizationSettingsData }) {
+interface SettingsClientProps {
+    data: OrganizationSettingsData;
+    initialTab?: string;
+}
+
+export function SettingsClient({ data, initialTab = "members" }: SettingsClientProps) {
     return (
         <div className="flex flex-col h-full">
             <HeaderTitleUpdater title="Configuración" />
 
-            <Tabs defaultValue="members" className="flex flex-col h-full">
+            <Tabs defaultValue={initialTab} className="flex flex-col h-full">
                 <HeaderPortal>
                     <TabsList className="bg-transparent border-b rounded-none h-12 w-full justify-start p-0 space-x-6">
                         <TabsTrigger

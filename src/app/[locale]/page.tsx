@@ -1,4 +1,5 @@
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Globe2, ShieldCheck } from "lucide-react";
 import { Link } from "@/i18n/routing";
@@ -24,7 +25,7 @@ export default async function Home() {
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10">
       <Header variant="public" user={profile} />
 
-      <main className="flex-1">
+      <main className="flex-1 min-h-screen">
         {/* HERO SECTION */}
         <section className="relative pt-20 pb-32 md:pt-32 md:pb-48 overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
@@ -180,11 +181,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="py-12 border-t bg-muted/10">
-        <div className="container px-4 text-center text-sm text-muted-foreground">
-          <p>{t('Footer.copyright')}</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
