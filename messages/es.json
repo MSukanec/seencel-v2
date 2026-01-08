@@ -415,6 +415,67 @@
             "save": "Guardar Cambios",
             "creating": "Creando...",
             "saving": "Guardando..."
+        },
+        "tabs": {
+            "projects": "Proyectos",
+            "settings": "Ajustes"
+        },
+        "breadcrumb": "Gestión de Proyectos",
+        "settings": {
+            "title": "Ajustes de Proyectos",
+            "subtitle": "Configura los tipos y modalidades de proyectos de tu organización.",
+            "types": {
+                "title": "Tipos de Proyecto",
+                "description": "Los tipos de proyecto categorizan tus proyectos (ej: Comercial, Residencial, Industrial).",
+                "add": "Agregar Tipo",
+                "name": "Nombre",
+                "default": "Por defecto",
+                "actions": "Acciones",
+                "edit": "Editar",
+                "delete": "Eliminar",
+                "empty": "No hay tipos de proyecto definidos.",
+                "modal": {
+                    "createTitle": "Nuevo Tipo de Proyecto",
+                    "editTitle": "Editar Tipo de Proyecto",
+                    "namePlaceholder": "Ej: Residencial",
+                    "setDefault": "Establecer como predeterminado",
+                    "cancel": "Cancelar",
+                    "save": "Guardar",
+                    "saving": "Guardando..."
+                },
+                "deleteConfirm": {
+                    "title": "¿Eliminar tipo de proyecto?",
+                    "description": "Esta acción no se puede deshacer. Los proyectos existentes con este tipo no se verán afectados.",
+                    "cancel": "Cancelar",
+                    "confirm": "Eliminar"
+                }
+            },
+            "modalities": {
+                "title": "Modalidades de Proyecto",
+                "description": "Las modalidades definen cómo se ejecuta un proyecto (ej: Obra Nueva, Reforma, Ampliación).",
+                "add": "Agregar Modalidad",
+                "name": "Nombre",
+                "default": "Por defecto",
+                "actions": "Acciones",
+                "edit": "Editar",
+                "delete": "Eliminar",
+                "empty": "No hay modalidades de proyecto definidas.",
+                "modal": {
+                    "createTitle": "Nueva Modalidad",
+                    "editTitle": "Editar Modalidad",
+                    "namePlaceholder": "Ej: Obra Nueva",
+                    "setDefault": "Establecer como predeterminada",
+                    "cancel": "Cancelar",
+                    "save": "Guardar",
+                    "saving": "Guardando..."
+                },
+                "deleteConfirm": {
+                    "title": "¿Eliminar modalidad?",
+                    "description": "Esta acción no se puede deshacer. Los proyectos existentes con esta modalidad no se verán afectados.",
+                    "cancel": "Cancelar",
+                    "confirm": "Eliminar"
+                }
+            }
         }
     },
     "OrganizationDashboard": {

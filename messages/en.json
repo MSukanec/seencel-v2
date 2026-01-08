@@ -402,6 +402,67 @@
             "save": "Save Changes",
             "creating": "Creating...",
             "saving": "Saving..."
+        },
+        "tabs": {
+            "projects": "Projects",
+            "settings": "Settings"
+        },
+        "breadcrumb": "Project Management",
+        "settings": {
+            "title": "Project Settings",
+            "subtitle": "Configure your organization's project types and modalities.",
+            "types": {
+                "title": "Project Types",
+                "description": "Project types categorize your projects (e.g., Commercial, Residential, Industrial).",
+                "add": "Add Type",
+                "name": "Name",
+                "default": "Default",
+                "actions": "Actions",
+                "edit": "Edit",
+                "delete": "Delete",
+                "empty": "No project types defined.",
+                "modal": {
+                    "createTitle": "New Project Type",
+                    "editTitle": "Edit Project Type",
+                    "namePlaceholder": "E.g: Residential",
+                    "setDefault": "Set as default",
+                    "cancel": "Cancel",
+                    "save": "Save",
+                    "saving": "Saving..."
+                },
+                "deleteConfirm": {
+                    "title": "Delete project type?",
+                    "description": "This action cannot be undone. Existing projects with this type will not be affected.",
+                    "cancel": "Cancel",
+                    "confirm": "Delete"
+                }
+            },
+            "modalities": {
+                "title": "Project Modalities",
+                "description": "Modalities define how a project is executed (e.g., New Build, Renovation, Extension).",
+                "add": "Add Modality",
+                "name": "Name",
+                "default": "Default",
+                "actions": "Actions",
+                "edit": "Edit",
+                "delete": "Delete",
+                "empty": "No project modalities defined.",
+                "modal": {
+                    "createTitle": "New Modality",
+                    "editTitle": "Edit Modality",
+                    "namePlaceholder": "E.g: New Build",
+                    "setDefault": "Set as default",
+                    "cancel": "Cancel",
+                    "save": "Save",
+                    "saving": "Saving..."
+                },
+                "deleteConfirm": {
+                    "title": "Delete modality?",
+                    "description": "This action cannot be undone. Existing projects with this modality will not be affected.",
+                    "cancel": "Cancel",
+                    "confirm": "Delete"
+                }
+            }
         }
     }
 }

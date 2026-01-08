@@ -12,7 +12,9 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Monitor, Sun, Moon } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { SidebarContent } from "@/components/layout/sidebar-content";
+import { Bell, Monitor, Sun, Moon, Menu } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +32,7 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
     const router = useRouter();
     const supabase = createClient();
     const { setTheme } = useTheme();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -40,8 +43,25 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border bg-sidebar/95 backdrop-blur-md shadow-sm h-14">
             <div className="flex h-14 w-full items-center pl-0 pr-4">
+                {/* Mobile Menu */}
+                <div className="md:hidden pl-2">
+                    <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                        <SheetTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground">
+                                <Menu className="h-5 w-5" />
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="left" className="p-0 w-[280px] bg-sidebar border-r border-border">
+                            <SidebarContent
+                                mode="mobile"
+                                onLinkClick={() => setIsMobileMenuOpen(false)}
+                            />
+                        </SheetContent>
+                    </Sheet>
+                </div>
+
                 {/* 1. Logo - Centered in 60px to align with collapsed sidebar */}
-                <div className="flex items-center justify-center w-[60px] h-full shrink-0 border-r border-border/50">
+                <div className="hidden md:flex items-center justify-center w-[60px] h-full shrink-0 border-r border-border/50">
                     <Link href="/" className="flex items-center justify-center">
                         <Image
                             src="/logo.png"
@@ -55,7 +75,7 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
 
                 <div className="flex-1 px-4 flex items-center overflow-hidden">
                     {useLayoutStore((state) => state.headerTitle)}
-                    <div id="header-portal-root" className="flex items-center ml-6 flex-1" />
+                    <div id="header-portal-root" className="flex items-center ml-2 md:ml-6 flex-1 overflow-x-auto no-scrollbar" />
                 </div>
 
                 {/* 3. User Actions / CTA (Right Side) */}
