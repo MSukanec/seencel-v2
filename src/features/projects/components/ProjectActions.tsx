@@ -1,9 +1,8 @@
 "use client";
 
-import { useDrawer } from "@/providers/drawer-store";
 import { ProjectForm } from "@/features/projects/components/ProjectForm";
 import { Project } from "@/types/project";
-import { MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { deleteProject } from "@/features/projects/actions";
 import {
     DropdownMenu,
@@ -13,47 +12,52 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useModal } from "@/providers/modal-store";
+import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
 
 interface ProjectActionsProps {
     project: Project;
 }
 
 export function ProjectActions({ project }: ProjectActionsProps) {
-    const { openDrawer } = useDrawer();
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const t = useTranslations('Project.actions');
     const tForm = useTranslations('Project.form');
 
+    const { openModal, closeModal } = useModal();
+
     const handleEdit = () => {
-        openDrawer({
-            title: `${tForm('editTitle')}: ${project.name}`,
-            description: tForm('description'),
-            children: <ProjectForm mode="edit" initialData={project} />
-        });
+        openModal(
+            <ProjectForm
+                mode="edit"
+                initialData={project}
+                organizationId={project.organization_id}
+                onCancel={closeModal}
+                onSuccess={closeModal}
+            />,
+            {
+                title: `${tForm('editTitle')}: ${project.name}`,
+                description: tForm('description')
+            }
+        );
     };
 
     const handleDelete = async () => {
-        const result = await deleteProject(project.id);
-
-        // Even if error, we might want to close dialog or show toast. 
-        // For now, assuming success or simple error logging.
-        if (result.success) {
-            setShowDeleteAlert(false);
-        } else {
-            console.error("Failed to delete project:", result.error);
-            // Optionally keep dialog open or show error
+        setIsDeleting(true);
+        try {
+            const result = await deleteProject(project.id);
+            if (result.success) {
+                setShowDeleteAlert(false);
+            } else {
+                console.error("Failed to delete project:", result.error);
+                // Aquí podríamos añadir un toast de error
+            }
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -62,7 +66,7 @@ export function ProjectActions({ project }: ProjectActionsProps) {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
+                        <span className="sr-only">Abrir menú</span>
                         <MoreHorizontal className="h-4 w-4" />
                     </Button>
                 </DropdownMenuTrigger>
@@ -71,34 +75,30 @@ export function ProjectActions({ project }: ProjectActionsProps) {
                         {t('open')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleEdit}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
+                        Editar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="text-destructive focus:text-destructive">
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
+                        Eliminar
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete
-                            <span className="font-semibold text-foreground"> {project.name}</span> and remove your data from our servers.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete Project
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeleteConfirmationDialog
+                open={showDeleteAlert}
+                onOpenChange={setShowDeleteAlert}
+                onConfirm={handleDelete}
+                isDeleting={isDeleting}
+                title="¿Eliminar Proyecto?"
+                description={
+                    <>
+                        Esta acción no se puede deshacer. Esto eliminará permanentemente al proyecto
+                        <span className="font-semibold text-foreground"> {project.name}</span> y todos sus datos asociados.
+                    </>
+                }
+                validationText={project.name} // ACTIVATING DANGEROUS MODE
+                confirmLabel="Eliminar Proyecto"
+            />
         </>
     );
 }

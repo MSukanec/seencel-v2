@@ -26,8 +26,7 @@ export async function getOrganizationProjects(organizationId: string) {
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
-        .order('is_active', { ascending: false }) // Active first
-        .order('updated_at', { ascending: false }); // Then recent
+        .order('last_active_at', { ascending: false, nullsFirst: false }); // Most recently active first, NULLs last
 
     if (error) {
         console.error('Error fetching projects:', error);

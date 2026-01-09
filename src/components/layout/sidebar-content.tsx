@@ -228,7 +228,7 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
                                     if (ctx.id === 'project') {
                                         const currentProjectId = useLayoutStore.getState().activeProjectId;
                                         if (currentProjectId) {
-                                            router.push(`/project/${currentProjectId}/details` as any);
+                                            router.push(`/project/${currentProjectId}` as any);
                                             return;
                                         }
                                         router.push('/organization/projects' as any);

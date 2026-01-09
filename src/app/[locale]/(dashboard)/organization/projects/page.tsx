@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions/project-settings-actions";
+import { fetchLastActiveProject } from "@/features/projects/actions";
 import { CreateProjectButton } from "@/features/projects/components/CreateProjectButton";
 import { ProjectRow } from "@/features/projects/components/ProjectRow";
 import { ProjectTypesManager } from "@/features/projects/components/project-types-manager";
@@ -31,10 +32,11 @@ export default async function ProjectsPage({
         redirect({ href: '/organization', locale });
     }
 
-    const [projects, projectTypes, projectModalities] = await Promise.all([
+    const [projects, projectTypes, projectModalities, lastActiveProjectId] = await Promise.all([
         getOrganizationProjects(activeOrgId),
         getProjectTypes(activeOrgId),
-        getProjectModalities(activeOrgId)
+        getProjectModalities(activeOrgId),
+        fetchLastActiveProject(activeOrgId)
     ]);
 
     return (
@@ -59,7 +61,7 @@ export default async function ProjectsPage({
                             value="settings"
                             className="relative h-14 rounded-none border-b-2 border-transparent bg-transparent px-2 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
                         >
-                            {t('tabs.settings')}
+                            {t('settings.title')}
                         </TabsTrigger>
                     </TabsList>
                 </HeaderPortal>
@@ -74,7 +76,7 @@ export default async function ProjectsPage({
                                     {t('subtitle')}
                                 </p>
                             </div>
-                            <CreateProjectButton />
+                            <CreateProjectButton organizationId={activeOrgId} />
                         </div>
 
                         <div className="rounded-md border bg-card">
@@ -82,11 +84,11 @@ export default async function ProjectsPage({
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>{t('table.name')}</TableHead>
-                                        <TableHead>{t('table.status')}</TableHead>
                                         <TableHead className="hidden md:table-cell">{t('table.type')}</TableHead>
-                                        <TableHead className="hidden md:table-cell">{t('table.location')}</TableHead>
-                                        <TableHead className="hidden md:table-cell">{t('table.dates')}</TableHead>
-                                        <TableHead className="text-right">{t('table.active')}</TableHead>
+                                        <TableHead className="hidden md:table-cell">Modalidad</TableHead>
+                                        <TableHead className="hidden md:table-cell">Creación</TableHead>
+                                        <TableHead className="hidden md:table-cell">Últ. Actividad</TableHead>
+                                        <TableHead className="text-right">{t('table.status')}</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -98,7 +100,12 @@ export default async function ProjectsPage({
                                             </TableCell>
                                         </TableRow>
                                     ) : projects.map((project) => (
-                                        <ProjectRow key={project.id} project={project} locale={locale} />
+                                        <ProjectRow
+                                            key={project.id}
+                                            project={project}
+                                            locale={locale}
+                                            isLastActive={project.id === lastActiveProjectId}
+                                        />
                                     ))}
                                 </TableBody>
                             </Table>

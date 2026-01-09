@@ -10,8 +10,7 @@ export interface Project {
     last_active_at: string | null;
     color: string | null;
     custom_color_hex: string | null;
-    image_path: string | null;
-    image_bucket: string | null;
+    image_url: string | null;
 
     // Joined fields from View
     city: string | null;

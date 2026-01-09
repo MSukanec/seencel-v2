@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -21,29 +19,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    createProjectType,
-    updateProjectType,
-    deleteProjectType,
-} from "@/features/projects/actions/project-settings-actions";
+import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
+import { useModal } from "@/providers/modal-store";
+import { ProjectTypeForm } from "./ProjectTypeForm";
+import { deleteProjectType } from "@/features/projects/actions/project-settings-actions";
 
 interface ProjectType {
     id: string;
@@ -59,24 +39,43 @@ interface ProjectTypesManagerProps {
 
 export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTypesManagerProps) {
     const t = useTranslations("Project.settings.types");
+    const { openModal } = useModal();
     const [types, setTypes] = useState<ProjectType[]>(initialTypes);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [editingType, setEditingType] = useState<ProjectType | null>(null);
     const [deletingType, setDeletingType] = useState<ProjectType | null>(null);
-    const [name, setName] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleOpenCreate = () => {
-        setEditingType(null);
-        setName("");
-        setIsModalOpen(true);
+        openModal(
+            <ProjectTypeForm
+                organizationId={organizationId}
+                onSuccess={(newType) => {
+                    setTypes(prev => [...prev, newType]);
+                }}
+            />,
+            {
+                title: t("modal.createTitle"),
+                description: t("modal.createDescription")
+            }
+        );
     };
 
     const handleOpenEdit = (type: ProjectType) => {
-        setEditingType(type);
-        setName(type.name);
-        setIsModalOpen(true);
+        openModal(
+            <ProjectTypeForm
+                organizationId={organizationId}
+                initialData={type}
+                onSuccess={(updatedType) => {
+                    setTypes(prev => prev.map(t =>
+                        t.id === updatedType.id ? updatedType : t
+                    ));
+                }}
+            />,
+            {
+                title: t("modal.editTitle"),
+                description: t("modal.editDescription")
+            }
+        );
     };
 
     const handleOpenDelete = (type: ProjectType) => {
@@ -84,41 +83,20 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
         setIsDeleteDialogOpen(true);
     };
 
-    const handleSave = async () => {
-        if (!name.trim()) return;
-        setIsSaving(true);
-
-        try {
-            if (editingType) {
-                const result = await updateProjectType(editingType.id, organizationId, name.trim());
-                if (result.data) {
-                    setTypes(prev => prev.map(t =>
-                        t.id === editingType.id
-                            ? { ...t, name: name.trim() }
-                            : t
-                    ));
-                }
-            } else {
-                const result = await createProjectType(organizationId, name.trim());
-                if (result.data) {
-                    setTypes(prev => [...prev, result.data]);
-                }
-            }
-            setIsModalOpen(false);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleDelete = async () => {
         if (!deletingType) return;
+        setIsDeleting(true);
 
-        const result = await deleteProjectType(deletingType.id);
-        if (result.success) {
-            setTypes(prev => prev.filter(t => t.id !== deletingType.id));
+        try {
+            const result = await deleteProjectType(deletingType.id);
+            if (result.success) {
+                setTypes(prev => prev.filter(t => t.id !== deletingType.id));
+            }
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteDialogOpen(false);
+            setDeletingType(null);
         }
-        setIsDeleteDialogOpen(false);
-        setDeletingType(null);
     };
 
     return (
@@ -194,53 +172,17 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
                 )}
             </CardContent>
 
-            {/* Create/Edit Modal */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingType ? t("modal.editTitle") : t("modal.createTitle")}
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">{t("name")}</Label>
-                            <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder={t("modal.namePlaceholder")}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                            {t("modal.cancel")}
-                        </Button>
-                        <Button onClick={handleSave} disabled={isSaving || !name.trim()}>
-                            {isSaving ? t("modal.saving") : t("modal.save")}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirmation */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>{t("deleteConfirm.title")}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t("deleteConfirm.description")}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>{t("deleteConfirm.cancel")}</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            {t("deleteConfirm.confirm")}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Delete Confirmation using global component */}
+            <DeleteConfirmationDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={handleDelete}
+                title={t("deleteConfirm.title")}
+                description={t("deleteConfirm.description")}
+                confirmLabel={t("deleteConfirm.confirm")}
+                cancelLabel={t("deleteConfirm.cancel")}
+                isDeleting={isDeleting}
+            />
         </Card>
     );
 }

@@ -7,16 +7,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { ProjectActions } from "./ProjectActions";
+import { ProjectStatusBadge } from "./ProjectStatusBadge";
 
 interface ProjectRowProps {
     project: Project;
     locale: string;
+    isLastActive?: boolean;
 }
 
 import { useRouter } from "@/i18n/routing";
 import { useLayoutStore } from "@/store/layout-store";
 
-export function ProjectRow({ project, locale }: ProjectRowProps) {
+export function ProjectRow({ project, locale, isLastActive }: ProjectRowProps) {
     const router = useRouter();
     const { actions } = useLayoutStore();
     const dateLocale = locale === 'es' ? es : enUS;
@@ -29,14 +31,15 @@ export function ProjectRow({ project, locale }: ProjectRowProps) {
 
     return (
         <TableRow
-            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            className={`cursor-pointer transition-colors ${isLastActive ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'}`}
             onClick={handleRowClick}
         >
+            {/* 1. Nombre */}
             <TableCell>
                 <div className="flex items-center space-x-4">
                     <Avatar className="h-9 w-9 rounded-lg">
-                        {project.image_path ? (
-                            <AvatarImage src={`https://${project.image_bucket}.supabase.co/storage/v1/object/public/${project.image_bucket}/${project.image_path}`} />
+                        {project.image_url ? (
+                            <AvatarImage src={project.image_url} />
                         ) : (
                             <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">
                                 {project.name.substring(0, 2).toUpperCase()}
@@ -44,34 +47,59 @@ export function ProjectRow({ project, locale }: ProjectRowProps) {
                         )}
                     </Avatar>
                     <div className="flex flex-col">
-                        <span className="font-medium">{project.name}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">{project.name}</span>
+                            {isLastActive && (
+                                <Badge variant="success" className="h-5 px-1.5 text-[10px] uppercase">
+                                    Activo
+                                </Badge>
+                            )}
+                        </div>
                         {project.code && <span className="text-xs text-muted-foreground font-mono">{project.code}</span>}
                     </div>
                 </div>
             </TableCell>
-            <TableCell>
-                <Badge variant={project.status === 'Activo' ? 'default' : 'secondary'} className="capitalize">
-                    {project.status}
-                </Badge>
-            </TableCell>
+
+            {/* 2. Tipo */}
             <TableCell className="hidden md:table-cell">
-                {project.project_type_name || "-"}
-            </TableCell>
-            <TableCell className="hidden md:table-cell text-muted-foreground">
-                {project.city || project.country ? (
-                    <span>{project.city}{project.city && project.country && ', '}{project.country}</span>
-                ) : "-"}
-            </TableCell>
-            <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                {project.start_date ? format(new Date(project.start_date), 'MMM yyyy', { locale: dateLocale }) : "-"}
-            </TableCell>
-            <TableCell className="text-right">
-                {project.is_active && (
-                    <div className="flex justify-end">
-                        <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
-                    </div>
+                {project.project_type_name ? (
+                    <Badge variant="secondary" className="font-normal">
+                        {project.project_type_name}
+                    </Badge>
+                ) : (
+                    <span className="text-muted-foreground">-</span>
                 )}
             </TableCell>
+
+            {/* 3. Modalidad */}
+            <TableCell className="hidden md:table-cell">
+                {project.project_modality_name ? (
+                    <Badge variant="secondary" className="font-normal">
+                        {project.project_modality_name}
+                    </Badge>
+                ) : (
+                    <span className="text-muted-foreground">-</span>
+                )}
+            </TableCell>
+
+            {/* 4. Fecha Creación */}
+            <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                {project.created_at ? format(new Date(project.created_at), 'dd MMM yyyy', { locale: dateLocale }) : "-"}
+            </TableCell>
+
+            {/* 5. Última Actividad */}
+            <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                {project.last_active_at ? format(new Date(project.last_active_at), 'dd MMM yyyy', { locale: dateLocale }) : "-"}
+            </TableCell>
+
+            {/* 6. Estado (Status) */}
+            <TableCell className="text-right">
+                <div className="flex justify-end">
+                    <ProjectStatusBadge status={project.status} />
+                </div>
+            </TableCell>
+
+            {/* 7. Acciones */}
             <TableCell onClick={(e) => e.stopPropagation()}>
                 <ProjectActions project={project} />
             </TableCell>

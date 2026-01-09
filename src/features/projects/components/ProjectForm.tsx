@@ -1,11 +1,14 @@
 "use client";
 
+import { FormFooter } from "@/components/global/form-footer";
+
+import { createProject, updateProject } from "@/features/projects/actions";
+
 import { useDrawer } from "@/providers/drawer-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
     Select,
@@ -14,202 +17,248 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
+import { ColorPicker } from "./ColorPicker";
+import { FormGroup } from "@/components/ui/form-group";
+
+import { getProjectTypes, getProjectModalities } from "@/features/projects/actions/project-settings-actions";
+import { ProjectType, ProjectModality } from "@/types/project";
+
+// Optimization & Upload
+import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/client-image-compression";
+import { toast } from "sonner";
 
 interface ProjectFormProps {
     mode: 'create' | 'edit';
     initialData?: any;
+    organizationId: string;
+    onCancel?: () => void;
+    onSuccess?: () => void;
 }
 
-export function ProjectForm({ mode, initialData }: ProjectFormProps) {
-    const { closeDrawer } = useDrawer();
+export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuccess }: ProjectFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const t = useTranslations('Project.form');
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // Data states
+    const [types, setTypes] = useState<ProjectType[]>([]);
+    const [modalities, setModalities] = useState<ProjectModality[]>([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!organizationId) return;
+            const [typesData, modalitiesData] = await Promise.all([
+                getProjectTypes(organizationId),
+                getProjectModalities(organizationId)
+            ]);
+            setTypes(typesData);
+            setModalities(modalitiesData);
+        };
+        fetchData();
+    }, [organizationId]);
+
+    // States for new fields
+    const [file, setFile] = useState<File | undefined>();
+    const [color, setColor] = useState(initialData?.color || "#007AFF");
+    const [useCustomColor, setUseCustomColor] = useState(initialData?.use_custom_color || false);
+    const [customHue, setCustomHue] = useState(initialData?.custom_color_h || 258);
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
+        const toastId = toast.loading("Procesando...", { duration: Infinity }); // Persist loading toast
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            const formData = new FormData(e.currentTarget);
+            formData.append('organization_id', organizationId);
 
+            if (mode === 'edit' && initialData?.id) {
+                formData.append('id', initialData.id);
+            }
 
+            // --- IMAGE OPTIMIZATION & UPLOAD ---
+            if (file) {
+                try {
+                    toast.loading("Optimizando imagen...", { id: toastId });
 
-        setIsLoading(false);
-        closeDrawer();
+                    const compressedFile = await compressImage(file, 'project-cover');
+
+                    toast.loading("Subiendo a la nube...", { id: toastId });
+
+                    const supabase = createClient();
+                    const fileExt = compressedFile.name.split('.').pop();
+                    // Bucket: social-assets
+                    // Path: cover/projects/{orgId}/{timestamp}
+                    const fileName = `cover/projects/${organizationId}/${Date.now()}.${fileExt}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('social-assets')
+                        .upload(fileName, compressedFile);
+
+                    if (uploadError) throw new Error("Error al subir imagen: " + uploadError.message);
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('social-assets')
+                        .getPublicUrl(fileName);
+
+                    formData.append('image_url', publicUrl);
+
+                    // We don't send the raw 'image' file to server action anymore
+                    formData.delete('image');
+
+                } catch (imgError: any) {
+                    console.error("Image process error:", imgError);
+                    toast.error("Error procesando imagen: " + imgError.message, { id: toastId });
+                    setIsLoading(false);
+                    return;
+                }
+            }
+            // -----------------------------------
+
+            // Append Color data
+            formData.append('color', color);
+            if (useCustomColor !== undefined) formData.append('use_custom_color', useCustomColor.toString());
+            if (customHue !== undefined) formData.append('custom_color_h', customHue.toString());
+
+            toast.loading(mode === 'create' ? "Creando proyecto..." : "Guardando cambios...", { id: toastId });
+
+            let result;
+            if (mode === 'create') {
+                result = await createProject(formData);
+            } else {
+                result = await updateProject(formData);
+            }
+
+            if (result.error) {
+                console.error("Project Action Error:", result.error);
+                toast.error(result.error, { id: toastId });
+            } else {
+                toast.success(mode === 'create' ? "¡Proyecto creado!" : "¡Cambios guardados!", { id: toastId });
+                onSuccess?.();
+            }
+        } catch (error: any) {
+            console.error("Submission error:", error);
+            toast.error("Error inesperado: " + error.message, { id: toastId });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t('basicInfo')}
-                </h3>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+            {/* Scrollable Content Body */}
+            <div className="flex-1 p-3 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
-                <div className="space-y-2">
-                    <Label htmlFor="name">{t('name')}</Label>
-                    <Input
-                        id="name"
-                        placeholder={t('namePlaceholder')}
-                        defaultValue={initialData?.name}
-                        required
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="code">{t('code')}</Label>
-                        <Input
-                            id="code"
-                            placeholder={t('codePlaceholder')}
-                            defaultValue={initialData?.code}
-                        />
+                    {/* Name: 50% width on desktop */}
+                    <div className="md:col-span-6">
+                        <FormGroup label={t('name')} htmlFor="name">
+                            <Input
+                                id="name"
+                                name="name"
+                                placeholder={t('namePlaceholder')}
+                                defaultValue={initialData?.name}
+                                required
+                            />
+                        </FormGroup>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="status">{t('status')}</Label>
-                        <Select defaultValue={initialData?.status || "Activo"}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Activo">{t('statusActive')}</SelectItem>
-                                <SelectItem value="Finalizado">{t('statusFinished')}</SelectItem>
-                                <SelectItem value="Detenido">{t('statusOnHold')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </div>
-
-            <Separator />
-
-            {/* Dates */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t('dates')}
-                </h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="start_date">{t('startDate')}</Label>
-                        <Input
-                            id="start_date"
-                            type="date"
-                            defaultValue={initialData?.start_date}
-                        />
+                    {/* Status: 50% width on desktop */}
+                    <div className="md:col-span-6">
+                        <FormGroup label={t('status')} htmlFor="status">
+                            <Select name="status" defaultValue={initialData?.status || "active"}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">{t('statusActive')}</SelectItem>
+                                    <SelectItem value="completed">{t('statusCompleted')}</SelectItem>
+                                    <SelectItem value="planning">{t('statusPlanning')}</SelectItem>
+                                    <SelectItem value="inactive">{t('statusInactive')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="estimated_end">{t('endDate')}</Label>
-                        <Input
-                            id="estimated_end"
-                            type="date"
-                            defaultValue={initialData?.estimated_end}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <Separator />
-
-            {/* Location */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t('location')}
-                </h3>
-
-                <div className="space-y-2">
-                    <Label htmlFor="address">{t('address')}</Label>
-                    <Input
-                        id="address"
-                        placeholder={t('addressPlaceholder')}
-                        defaultValue={initialData?.address}
-                    />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="city">{t('city')}</Label>
-                        <Input
-                            id="city"
-                            placeholder={t('cityPlaceholder')}
-                            defaultValue={initialData?.city}
-                        />
+                    {/* Type: 50% width on desktop */}
+                    <div className="md:col-span-6">
+                        <FormGroup label={t('type')} htmlFor="type">
+                            <Select name="project_type_id" defaultValue={initialData?.project_type_id || types.find(x => x.name === initialData?.project_type_name)?.id}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('typePlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {types.map((type) => (
+                                        <SelectItem key={type.id} value={type.id}>
+                                            {type.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="country">{t('country')}</Label>
-                        <Input
-                            id="country"
-                            placeholder={t('countryPlaceholder')}
-                            defaultValue={initialData?.country}
-                        />
+                    {/* Modality: 50% width on desktop */}
+                    <div className="md:col-span-6">
+                        <FormGroup label={t('modality')} htmlFor="modality">
+                            <Select name="project_modality_id" defaultValue={initialData?.project_modality_id || modalities.find(x => x.name === initialData?.project_modality_name)?.id}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('modalityPlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {modalities.map((modality) => (
+                                        <SelectItem key={modality.id} value={modality.id}>
+                                            {modality.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="zip_code">{t('zipCode')}</Label>
-                        <Input
-                            id="zip_code"
-                            placeholder="00000"
-                            defaultValue={initialData?.zip_code}
-                        />
+                    {/* Image Upload: 100% width on desktop */}
+                    <div className="md:col-span-12">
+                        <FormGroup label={t('mainImage')}>
+                            <SingleImageDropzone
+                                height={200}
+                                value={file ?? initialData?.image_url}
+                                onChange={(file) => {
+                                    setFile(file);
+                                }}
+                                className="w-full"
+                                dropzoneLabel={t('dropzoneText')}
+                            />
+                        </FormGroup>
+                    </div>
+
+                    {/* Color Picker: 100% width on desktop */}
+                    <div className="md:col-span-12">
+                        <FormGroup label={t('projectColor')}>
+                            <ColorPicker
+                                color={color}
+                                useCustomColor={useCustomColor}
+                                customHue={customHue}
+                                onChange={(newColor, isCustom, hue) => {
+                                    setColor(newColor);
+                                    if (isCustom !== undefined) setUseCustomColor(isCustom);
+                                    if (hue !== undefined) setCustomHue(hue);
+                                }}
+                            />
+                        </FormGroup>
                     </div>
                 </div>
             </div>
 
-            <Separator />
-
-            {/* Client Information */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {t('client')}
-                </h3>
-
-                <div className="space-y-2">
-                    <Label htmlFor="client_name">{t('clientName')}</Label>
-                    <Input
-                        id="client_name"
-                        placeholder={t('clientNamePlaceholder')}
-                        defaultValue={initialData?.client_name}
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="contact_phone">{t('contactPhone')}</Label>
-                        <Input
-                            id="contact_phone"
-                            type="tel"
-                            placeholder="+1 (555) 123-4567"
-                            defaultValue={initialData?.contact_phone}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="email">{t('email')}</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="client@example.com"
-                            defaultValue={initialData?.email}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-background pb-4">
-                <Button variant="outline" type="button" onClick={closeDrawer}>
-                    {t('cancel')}
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading
-                        ? (mode === 'create' ? t('creating') : t('saving'))
-                        : (mode === 'create' ? t('createTitle') : t('save'))
-                    }
-                </Button>
-            </div>
+            <FormFooter
+                onCancel={onCancel}
+                cancelLabel={t('cancel')}
+                submitLabel={isLoading
+                    ? (mode === 'create' ? t('creating') : t('saving'))
+                    : (mode === 'create' ? t('createTitle') : t('save'))
+                }
+                isLoading={isLoading}
+            />
         </form>
     );
 }

@@ -355,9 +355,10 @@
             "active": "Active"
         },
         "status": {
-            "Activo": "Active",
-            "Finalizado": "Finished",
-            "Detenido": "On Hold"
+            "active": "Active",
+            "completed": "Completed",
+            "planning": "Planning",
+            "inactive": "Inactive"
         },
         "actions": {
             "open": "Open Project",
@@ -374,8 +375,9 @@
             "codePlaceholder": "E.g. P-2024-001",
             "status": "Status",
             "statusActive": "Active",
-            "statusFinished": "Finished",
-            "statusOnHold": "On Hold",
+            "statusCompleted": "Completed",
+            "statusPlanning": "Planning",
+            "statusInactive": "Inactive",
             "type": "Project Type",
             "typePlaceholder": "Select type",
             "modality": "Modality",
@@ -401,7 +403,23 @@
             "cancel": "Cancel",
             "save": "Save Changes",
             "creating": "Creating...",
-            "saving": "Saving..."
+            "saving": "Saving...",
+            "mainImage": "Main Image",
+            "dropzoneText": "Drag or click to upload",
+            "projectColor": "Project Color",
+            "customColor": "Custom Color",
+            "activate": "Activate",
+            "tone": "Hue",
+            "preview": "Preview"
+        },
+        "types": {
+            "Residencial": "Residential",
+            "Comercial": "Commercial",
+            "Industrial": "Industrial"
+        },
+        "modalities": {
+            "Obra Nueva": "New Build",
+            "Remodelación": "Renovation"
         },
         "tabs": {
             "projects": "Projects",
@@ -426,7 +444,10 @@
                 "empty": "No project types defined.",
                 "modal": {
                     "createTitle": "New Project Type",
+                    "createDescription": "Define a new type to categorize your projects.",
                     "editTitle": "Edit Project Type",
+                    "editDescription": "Modify the name of this project type.",
+                    "nameLabel": "Type name",
                     "namePlaceholder": "E.g: Residential",
                     "setDefault": "Set as default",
                     "cancel": "Cancel",
@@ -455,7 +476,10 @@
                 "empty": "No project modalities defined.",
                 "modal": {
                     "createTitle": "New Modality",
+                    "createDescription": "Define a new execution modality for your projects.",
                     "editTitle": "Edit Modality",
+                    "editDescription": "Modify the name of this modality.",
+                    "nameLabel": "Modality name",
                     "namePlaceholder": "E.g: New Build",
                     "setDefault": "Set as default",
                     "cancel": "Cancel",

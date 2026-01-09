@@ -2,21 +2,32 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useDrawer } from "@/providers/drawer-store";
 import { ProjectForm } from "@/features/projects/components/ProjectForm";
 import { useTranslations } from "next-intl";
+import { useModal } from "@/providers/modal-store";
 
-export function CreateProjectButton() {
-    const { openDrawer } = useDrawer();
+interface CreateProjectButtonProps {
+    organizationId: string;
+}
+
+export function CreateProjectButton({ organizationId }: CreateProjectButtonProps) {
     const t = useTranslations('Project');
     const tForm = useTranslations('Project.form');
+    const { openModal, closeModal } = useModal();
 
     const handleCreate = () => {
-        openDrawer({
-            title: tForm('createTitle'),
-            description: tForm('description'),
-            children: <ProjectForm mode="create" />
-        });
+        openModal(
+            <ProjectForm
+                mode="create"
+                organizationId={organizationId}
+                onCancel={closeModal}
+                onSuccess={closeModal}
+            />,
+            {
+                title: tForm('createTitle'),
+                description: tForm('description')
+            }
+        );
     };
 
     return (

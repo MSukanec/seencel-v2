@@ -29,6 +29,12 @@ export async function saveLastActiveProject(projectId: string) {
 
     if (!project) return;
 
+    // Update project's last_active_at timestamp
+    await supabase
+        .from('projects')
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', projectId);
+
     // Check if preference exists
     const { data: existingPref } = await supabase
         .from('user_organization_preferences')
@@ -88,6 +94,95 @@ export async function fetchLastActiveProject(organizationId: string) {
     return data?.last_project_id || null;
 }
 
+// Invalidate Cache attempt 4 (Full Rewrite)
+export async function createProject(formData: FormData) {
+    const supabase = await createClient();
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return { error: "Not authenticated" };
+
+    const organizationId = formData.get("organization_id")?.toString();
+    if (!organizationId) return { error: "Organization ID is required" };
+
+    // Get public user ID
+    const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (!userData) return { error: "User profile not found" };
+
+    // Get Organization Member ID (Required for created_by FK)
+    const { data: memberData } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('user_id', userData.id)
+        .eq('organization_id', organizationId)
+        .single();
+
+    if (!memberData) return { error: "User is not a member of this organization" };
+
+    // Image URL (Handled by Client Upload)
+    const imageUrl = formData.get("image_url")?.toString() || null;
+
+    // Color Handling
+    const color = formData.get("color")?.toString() || null;
+    const useCustomColor = formData.get("use_custom_color") === 'true';
+    const customColorH = formData.get("custom_color_h") ? parseInt(formData.get("custom_color_h")!.toString()) : null;
+
+    // Type and Modality
+    const typeId = formData.get("project_type_id")?.toString() || null;
+    const modalityId = formData.get("project_modality_id")?.toString() || null;
+
+    // Prepare Insert Data (Projects Table)
+    const projectData = {
+        name: formData.get("name")?.toString() || "New Project",
+        status: formData.get("status")?.toString() || "Activo",
+        organization_id: organizationId,
+        project_type_id: typeId,
+        project_modality_id: modalityId,
+        color: color,
+        use_custom_color: useCustomColor,
+        custom_color_h: customColorH,
+        custom_color_hex: color,
+        image_url: imageUrl,
+        created_by: memberData.id,
+        last_active_at: new Date().toISOString() // Set initial activity
+    };
+
+    const { data: newProject, error: insertError } = await supabase
+        .from('projects')
+        .insert(projectData)
+        .select()
+        .single();
+
+    if (insertError) {
+        console.error("Create Project Error:", insertError);
+        return { error: insertError.message };
+    }
+
+    // Insert empty project_data (Types/Modalities removed from here)
+    const { error: dataError } = await supabase
+        .from('project_data')
+        .insert({
+            project_id: newProject.id,
+            organization_id: organizationId,
+            updated_at: new Date().toISOString()
+        });
+
+    if (dataError) {
+        console.error("Create Project Data Error:", dataError);
+        // Non-critical
+    }
+
+    // Auto-activate the new project
+    await saveLastActiveProject(newProject.id);
+
+    revalidatePath(`/organization/projects`);
+    return { success: true, data: newProject };
+}
+
 export async function updateProject(formData: FormData) {
     const supabase = await createClient();
 
@@ -99,9 +194,33 @@ export async function updateProject(formData: FormData) {
     const name = formData.get("name");
     if (name) projectFields.name = name;
 
-    // Status often lives on 'projects' directly in some schemas, or maybe strict
     const status = formData.get("status");
     if (status) projectFields.status = status;
+
+    const typeId = formData.get("project_type_id");
+    if (typeId) projectFields.project_type_id = typeId;
+
+    const modalityId = formData.get("project_modality_id");
+    if (modalityId) projectFields.project_modality_id = modalityId;
+
+    const color = formData.get("color");
+    if (color) {
+        projectFields.color = color;
+        projectFields.custom_color_hex = color;
+    }
+
+    const useCustomColor = formData.get("use_custom_color");
+    if (useCustomColor !== null) projectFields.use_custom_color = useCustomColor === 'true';
+
+    const customColorH = formData.get("custom_color_h");
+    if (customColorH) projectFields.custom_color_h = parseInt(customColorH.toString());
+
+    // Image URL (Client Upload)
+    const imageUrl = formData.get("image_url")?.toString();
+    if (imageUrl) {
+        projectFields.image_url = imageUrl;
+    }
+
 
     // Fields for 'project_data' table
     const dataFields: Record<string, any> = {};
@@ -124,12 +243,14 @@ export async function updateProject(formData: FormData) {
         return val ? val.toString() : null;
     };
 
-    // Map form fields to DB columns
+    // Type/Modality moved to 'projects' table (projectFields), so NOT here.
+
+    // Map other form fields
     const description = getString("description");
     if (description !== null) dataFields.description = description;
 
     const start_date = getDate("start_date");
-    if (start_date) dataFields.start_date = start_date; // Depending on schema, might be on project or project_data. User said project_data.
+    if (start_date) dataFields.start_date = start_date;
 
     const end_date = getDate("end_date");
     if (end_date) dataFields.estimated_end = end_date;
@@ -198,18 +319,8 @@ export async function updateProject(formData: FormData) {
         }
 
         // 2. Upsert project_data
-        // We need organization_id. Usually passed or fetched. 
-        // For upsert, we need key. 
-        // If dataFields is empty, we skip, unless we want to ensure row exists.
-
         if (Object.keys(dataFields).length > 0) {
-            // First we need to know the organization_id if we are inserting for the first time
-            // Or we assume the row exists? 
-            // Better to upsert. But we need org_id.
-            // Let's fetch current project to get org_id if we rely on upsert without it? 
-            // Actually, project_data PK is project_id.
-
-            // Fetch org_id first to be safe for insert
+            // Fetch org_id first to be safe
             const { data: currentProject } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
             if (!currentProject) throw new Error("Project not found");
 
@@ -227,6 +338,7 @@ export async function updateProject(formData: FormData) {
 
         revalidatePath(`/project/${projectId}`);
         revalidatePath(`/project/${projectId}/details`);
+        revalidatePath(`/organization/projects`);
         return { success: true };
     } catch (e: any) {
         console.error("Update Project Error:", e);

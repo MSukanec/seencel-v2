@@ -1,7 +1,7 @@
 import { ProjectDashboardClient } from "@/features/projects/components/project-dashboard-client";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getProjectById } from "@/features/projects/queries";
+import { saveLastActiveProject } from "@/features/projects/actions";
 
 interface PageProps {
     params: Promise<{
@@ -18,21 +18,13 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
         notFound();
     }
 
-    // Generate signed URL for the hero image if it exists
-    let signedImageUrl = null;
-    if (project.project_data?.image_bucket && project.project_data?.image_path) {
-        const supabase = await createClient();
-        const { data } = await supabase
-            .storage
-            .from(project.project_data.image_bucket)
-            .createSignedUrl(project.project_data.image_path, 3600); // 1 hour
+    // Mark this project as the last active (updates projects.last_active_at + user preferences)
+    await saveLastActiveProject(projectId);
 
-        if (data?.signedUrl) {
-            signedImageUrl = data.signedUrl;
-        }
-    }
+    // Use image_url directly (already a public URL from Supabase Storage)
+    const imageUrl = project.image_url || null;
 
     return (
-        <ProjectDashboardClient project={project} signedImageUrl={signedImageUrl} />
+        <ProjectDashboardClient project={project} signedImageUrl={imageUrl} />
     );
 }

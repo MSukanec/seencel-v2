@@ -368,9 +368,10 @@
             "active": "Activo"
         },
         "status": {
-            "Activo": "Activo",
-            "Finalizado": "Finalizado",
-            "Detenido": "Detenido"
+            "active": "Activo",
+            "completed": "Completado",
+            "planning": "En Planificación",
+            "inactive": "Inactivo"
         },
         "actions": {
             "open": "Abrir Proyecto",
@@ -387,8 +388,9 @@
             "codePlaceholder": "Ej. P-2024-001",
             "status": "Estado",
             "statusActive": "Activo",
-            "statusFinished": "Finalizado",
-            "statusOnHold": "Detenido",
+            "statusCompleted": "Completado",
+            "statusPlanning": "En Planificación",
+            "statusInactive": "Inactivo",
             "type": "Tipo de Proyecto",
             "typePlaceholder": "Seleccionar tipo",
             "modality": "Modalidad",
@@ -414,7 +416,23 @@
             "cancel": "Cancelar",
             "save": "Guardar Cambios",
             "creating": "Creando...",
-            "saving": "Guardando..."
+            "saving": "Guardando...",
+            "mainImage": "Imagen Principal",
+            "dropzoneText": "Arrastra o haz click para subir",
+            "projectColor": "Color del Proyecto",
+            "customColor": "Color Personalizado",
+            "activate": "Activar",
+            "tone": "Tono",
+            "preview": "Vista Previa"
+        },
+        "types": {
+            "Residencial": "Residencial",
+            "Comercial": "Comercial",
+            "Industrial": "Industrial"
+        },
+        "modalities": {
+            "Obra Nueva": "Obra Nueva",
+            "Remodelación": "Remodelación"
         },
         "tabs": {
             "projects": "Proyectos",
@@ -439,7 +457,10 @@
                 "empty": "No hay tipos de proyecto definidos.",
                 "modal": {
                     "createTitle": "Nuevo Tipo de Proyecto",
+                    "createDescription": "Define un nuevo tipo para categorizar tus proyectos.",
                     "editTitle": "Editar Tipo de Proyecto",
+                    "editDescription": "Modifica el nombre de este tipo de proyecto.",
+                    "nameLabel": "Nombre del tipo",
                     "namePlaceholder": "Ej: Residencial",
                     "setDefault": "Establecer como predeterminado",
                     "cancel": "Cancelar",
@@ -468,7 +489,10 @@
                 "empty": "No hay modalidades de proyecto definidas.",
                 "modal": {
                     "createTitle": "Nueva Modalidad",
+                    "createDescription": "Define una nueva modalidad de ejecución para tus proyectos.",
                     "editTitle": "Editar Modalidad",
+                    "editDescription": "Modifica el nombre de esta modalidad.",
+                    "nameLabel": "Nombre de la modalidad",
                     "namePlaceholder": "Ej: Obra Nueva",
                     "setDefault": "Establecer como predeterminada",
                     "cancel": "Cancelar",

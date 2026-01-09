@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -21,29 +19,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    createProjectModality,
-    updateProjectModality,
-    deleteProjectModality,
-} from "@/features/projects/actions/project-settings-actions";
+import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
+import { useModal } from "@/providers/modal-store";
+import { ProjectModalityForm } from "./ProjectModalityForm";
+import { deleteProjectModality } from "@/features/projects/actions/project-settings-actions";
 
 interface ProjectModality {
     id: string;
@@ -59,24 +39,43 @@ interface ProjectModalitiesManagerProps {
 
 export function ProjectModalitiesManager({ organizationId, initialModalities }: ProjectModalitiesManagerProps) {
     const t = useTranslations("Project.settings.modalities");
+    const { openModal } = useModal();
     const [modalities, setModalities] = useState<ProjectModality[]>(initialModalities);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [editingModality, setEditingModality] = useState<ProjectModality | null>(null);
     const [deletingModality, setDeletingModality] = useState<ProjectModality | null>(null);
-    const [name, setName] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleOpenCreate = () => {
-        setEditingModality(null);
-        setName("");
-        setIsModalOpen(true);
+        openModal(
+            <ProjectModalityForm
+                organizationId={organizationId}
+                onSuccess={(newModality) => {
+                    setModalities(prev => [...prev, newModality]);
+                }}
+            />,
+            {
+                title: t("modal.createTitle"),
+                description: t("modal.createDescription")
+            }
+        );
     };
 
     const handleOpenEdit = (modality: ProjectModality) => {
-        setEditingModality(modality);
-        setName(modality.name);
-        setIsModalOpen(true);
+        openModal(
+            <ProjectModalityForm
+                organizationId={organizationId}
+                initialData={modality}
+                onSuccess={(updatedModality) => {
+                    setModalities(prev => prev.map(m =>
+                        m.id === updatedModality.id ? updatedModality : m
+                    ));
+                }}
+            />,
+            {
+                title: t("modal.editTitle"),
+                description: t("modal.editDescription")
+            }
+        );
     };
 
     const handleOpenDelete = (modality: ProjectModality) => {
@@ -84,41 +83,20 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
         setIsDeleteDialogOpen(true);
     };
 
-    const handleSave = async () => {
-        if (!name.trim()) return;
-        setIsSaving(true);
-
-        try {
-            if (editingModality) {
-                const result = await updateProjectModality(editingModality.id, organizationId, name.trim());
-                if (result.data) {
-                    setModalities(prev => prev.map(m =>
-                        m.id === editingModality.id
-                            ? { ...m, name: name.trim() }
-                            : m
-                    ));
-                }
-            } else {
-                const result = await createProjectModality(organizationId, name.trim());
-                if (result.data) {
-                    setModalities(prev => [...prev, result.data]);
-                }
-            }
-            setIsModalOpen(false);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     const handleDelete = async () => {
         if (!deletingModality) return;
+        setIsDeleting(true);
 
-        const result = await deleteProjectModality(deletingModality.id);
-        if (result.success) {
-            setModalities(prev => prev.filter(m => m.id !== deletingModality.id));
+        try {
+            const result = await deleteProjectModality(deletingModality.id);
+            if (result.success) {
+                setModalities(prev => prev.filter(m => m.id !== deletingModality.id));
+            }
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteDialogOpen(false);
+            setDeletingModality(null);
         }
-        setIsDeleteDialogOpen(false);
-        setDeletingModality(null);
     };
 
     return (
@@ -194,53 +172,17 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                 )}
             </CardContent>
 
-            {/* Create/Edit Modal */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingModality ? t("modal.editTitle") : t("modal.createTitle")}
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">{t("name")}</Label>
-                            <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder={t("modal.namePlaceholder")}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                            {t("modal.cancel")}
-                        </Button>
-                        <Button onClick={handleSave} disabled={isSaving || !name.trim()}>
-                            {isSaving ? t("modal.saving") : t("modal.save")}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirmation */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>{t("deleteConfirm.title")}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {t("deleteConfirm.description")}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>{t("deleteConfirm.cancel")}</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            {t("deleteConfirm.confirm")}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Delete Confirmation using global component */}
+            <DeleteConfirmationDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={handleDelete}
+                title={t("deleteConfirm.title")}
+                description={t("deleteConfirm.description")}
+                confirmLabel={t("deleteConfirm.confirm")}
+                cancelLabel={t("deleteConfirm.cancel")}
+                isDeleting={isDeleting}
+            />
         </Card>
     );
 }

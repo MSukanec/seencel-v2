@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ModalProvider } from "@/providers/modal-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default async function LocaleLayout({
             disableTransitionOnChange
           >
             {children}
+            <ModalProvider />
             <Toaster />
           </ThemeProvider>
         </NextIntlClientProvider>
@@ -61,4 +63,3 @@ export default async function LocaleLayout({
     </html>
   );
 }
-
