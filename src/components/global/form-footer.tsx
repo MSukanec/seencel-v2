@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { useRef, useEffect } from "react";
 
 type FooterVariant = 'default' | 'equal' | 'single';
 
@@ -79,6 +80,29 @@ export function FormFooter({
         single: "col-span-1"
     };
 
+    const submitBtnRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                if (!submitDisabled && !isLoading && submitBtnRef.current) {
+                    // Only trigger if focus is inside the form connected to this footer
+                    // or if this footer is part of the active dialog
+                    const form = submitBtnRef.current.closest('form');
+                    const activeElement = document.activeElement;
+
+                    if (form && activeElement && form.contains(activeElement)) {
+                        e.preventDefault();
+                        submitBtnRef.current.click();
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [submitDisabled, isLoading]);
+
     return (
         <div className={cn(
             "flex-none p-3 border-t border-border bg-background",
@@ -97,6 +121,7 @@ export function FormFooter({
                     </Button>
                 )}
                 <Button
+                    ref={submitBtnRef}
                     type={isForm ? "submit" : "button"}
                     onClick={!isForm ? onSubmit : undefined}
                     disabled={isLoading || submitDisabled}

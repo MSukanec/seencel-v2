@@ -147,8 +147,8 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            {/* Scrollable Content Body */}
-            <div className="flex-1 p-3 overflow-y-auto">
+            {/* Scrollable Content Body - No internal padding, uses System p-4 */}
+            <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
                     {/* Name: 50% width on desktop */}
@@ -258,6 +258,7 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
                     : (mode === 'create' ? t('createTitle') : t('save'))
                 }
                 isLoading={isLoading}
+                className="-mx-4 -mb-4 mt-6"
             />
         </form>
     );

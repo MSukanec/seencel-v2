@@ -20,10 +20,14 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
+import { DeleteReplacementModal } from "@/components/global/DeleteReplacementModal";
+import dynamic from "next/dynamic";
 import { useModal } from "@/providers/modal-store";
-import { ProjectTypeForm } from "./ProjectTypeForm";
 import { deleteProjectType } from "@/features/projects/actions/project-settings-actions";
+
+const ProjectTypeForm = dynamic(() => import("./ProjectTypeForm").then(mod => mod.ProjectTypeForm), {
+    loading: () => <p className="p-4">Cargando formulario...</p>
+});
 
 interface ProjectType {
     id: string;
@@ -50,13 +54,13 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
             <ProjectTypeForm
                 organizationId={organizationId}
                 onSuccess={(newType) => {
-                    setTypes(prev => [...prev, newType]);
+                    setTypes(prev => [...prev, newType].sort((a, b) => a.name.localeCompare(b.name)));
                 }}
             />,
             {
                 title: t("modal.createTitle"),
                 description: t("modal.createDescription"),
-                size: 'sm'
+                size: 'md'
             }
         );
     };
@@ -69,13 +73,13 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
                 onSuccess={(updatedType) => {
                     setTypes(prev => prev.map(t =>
                         t.id === updatedType.id ? updatedType : t
-                    ));
+                    ).sort((a, b) => a.name.localeCompare(b.name)));
                 }}
             />,
             {
                 title: t("modal.editTitle"),
                 description: t("modal.editDescription"),
-                size: 'sm'
+                size: 'md'
             }
         );
     };
@@ -85,17 +89,19 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
         setIsDeleteDialogOpen(true);
     };
 
-    const handleDelete = async () => {
+    const handleDelete = async (replacementId: string | null) => {
         if (!deletingType) return;
         setIsDeleting(true);
 
         try {
-            const result = await deleteProjectType(deletingType.id);
+            const result = await deleteProjectType(deletingType.id, replacementId || undefined);
             if (result.success) {
                 setTypes(prev => prev.filter(t => t.id !== deletingType.id));
+                // If replaced, we might want to refresh projects or show success message
             }
         } finally {
             setIsDeleting(false);
+            // Modal closes via onClose in component, but good to reset state
             setIsDeleteDialogOpen(false);
             setDeletingType(null);
         }
@@ -174,16 +180,19 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
                 )}
             </CardContent>
 
-            {/* Delete Confirmation using global component */}
-            <DeleteConfirmationDialog
-                open={isDeleteDialogOpen}
-                onOpenChange={setIsDeleteDialogOpen}
+            {/* Delete Confirmation using replacement modal */}
+            <DeleteReplacementModal
+                isOpen={isDeleteDialogOpen}
+                onClose={() => {
+                    setIsDeleteDialogOpen(false);
+                    setDeletingType(null);
+                }}
                 onConfirm={handleDelete}
-                title={t("deleteConfirm.title")}
-                description={t("deleteConfirm.description")}
-                confirmLabel={t("deleteConfirm.confirm")}
-                cancelLabel={t("deleteConfirm.cancel")}
-                isDeleting={isDeleting}
+                itemToDelete={deletingType}
+                replacementOptions={types.filter(t => t.id !== deletingType?.id)}
+                entityLabel={t("modal.deleteConfirm.entityLabel") || "tipo de proyecto"}
+                title={t("modal.deleteConfirm.title")}
+                description={t("modal.deleteConfirm.description")}
             />
         </Card>
     );

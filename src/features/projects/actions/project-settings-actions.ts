@@ -23,6 +23,10 @@ export async function getProjectTypes(organizationId: string) {
         return [];
     }
 
+    if (data) {
+        data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    }
+
     return data || [];
 }
 
@@ -53,12 +57,15 @@ export async function createProjectType(
         .single();
 
 
+    if (!organizationId) return { error: "Organization ID is required" };
+
     const { data, error } = await supabase
         .from('project_types')
         .insert({
             name,
             organization_id: organizationId,
-            created_by: memberData?.id || null
+            created_by: memberData?.id || null,
+            is_system: false // Force user types to be non-system
         })
         .select()
         .single();
@@ -95,21 +102,34 @@ export async function updateProjectType(
     return { data };
 }
 
-export async function deleteProjectType(id: string) {
+export async function deleteProjectType(id: string, replacementId?: string) {
     const supabase = await createClient();
 
-    const { error } = await supabase
-        .from('project_types')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-        .eq('id', id);
+    try {
+        // 1. If replacement selected, migrate projects first
+        if (replacementId) {
+            const { error: updateError } = await supabase
+                .from('projects')
+                .update({ project_type_id: replacementId })
+                .eq('project_type_id', id);
 
-    if (error) {
-        console.error("Error deleting project type:", error);
-        return { error: error.message };
+            if (updateError) throw updateError;
+        }
+
+        // 2. Soft delete the type
+        const { error } = await supabase
+            .from('project_types')
+            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        revalidatePath('/organization/projects');
+        return { success: true };
+    } catch (e: any) {
+        console.error("Error deleting project type:", e);
+        return { error: e.message };
     }
-
-    revalidatePath('/organization/projects');
-    return { success: true };
 }
 
 // ============================================================================
@@ -124,12 +144,15 @@ export async function getProjectModalities(organizationId: string) {
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
-
         .order('name');
 
     if (error) {
         console.error("Error fetching project modalities:", error);
         return [];
+    }
+
+    if (data) {
+        data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
     }
 
     return data || [];
@@ -162,12 +185,15 @@ export async function createProjectModality(
         .single();
 
 
+    if (!organizationId) return { error: "Organization ID is required" };
+
     const { data, error } = await supabase
         .from('project_modalities')
         .insert({
             name,
             organization_id: organizationId,
-            created_by: memberData?.id || null
+            created_by: memberData?.id || null,
+            is_system: false // Force user modalities to be non-system
         })
         .select()
         .single();
@@ -204,19 +230,32 @@ export async function updateProjectModality(
     return { data };
 }
 
-export async function deleteProjectModality(id: string) {
+export async function deleteProjectModality(id: string, replacementId?: string) {
     const supabase = await createClient();
 
-    const { error } = await supabase
-        .from('project_modalities')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-        .eq('id', id);
+    try {
+        // 1. If replacement selected, migrate projects first
+        if (replacementId) {
+            const { error: updateError } = await supabase
+                .from('projects')
+                .update({ project_modality_id: replacementId })
+                .eq('project_modality_id', id);
 
-    if (error) {
-        console.error("Error deleting project modality:", error);
-        return { error: error.message };
+            if (updateError) throw updateError;
+        }
+
+        // 2. Soft delete the modality
+        const { error } = await supabase
+            .from('project_modalities')
+            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        revalidatePath('/organization/projects');
+        return { success: true };
+    } catch (e: any) {
+        console.error("Error deleting project modality:", e);
+        return { error: e.message };
     }
-
-    revalidatePath('/organization/projects');
-    return { success: true };
 }

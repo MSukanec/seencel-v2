@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,87 +20,78 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteReplacementModal } from "@/components/global/DeleteReplacementModal";
-import dynamic from "next/dynamic";
 import { useModal } from "@/providers/modal-store";
-import { deleteProjectModality } from "@/features/projects/actions/project-settings-actions";
+import { deleteContactType } from "@/actions/contacts"; // Need to update this action
+import { ContactType } from "@/types/contact";
+import { ContactTypeForm } from "./ContactTypeForm";
 
-const ProjectModalityForm = dynamic(() => import("./ProjectModalityForm").then(mod => mod.ProjectModalityForm), {
-    loading: () => <p className="p-4">Cargando formulario...</p>
-});
-
-interface ProjectModality {
-    id: string;
-    name: string;
-    is_system: boolean;
-    organization_id: string | null;
-}
-
-interface ProjectModalitiesManagerProps {
+interface ContactTypesManagerProps {
     organizationId: string;
-    initialModalities: ProjectModality[];
+    initialTypes: ContactType[];
 }
 
-export function ProjectModalitiesManager({ organizationId, initialModalities }: ProjectModalitiesManagerProps) {
-    const t = useTranslations("Project.settings.modalities");
+export function ContactTypesManager({ organizationId, initialTypes }: ContactTypesManagerProps) {
     const { openModal } = useModal();
-    const [modalities, setModalities] = useState<ProjectModality[]>(initialModalities);
+    // Use generic keys or hardcoded for now until translations file is updated
+    const title = "Tipos de Contacto";
+    const description = "Gestiona las etiquetas o categorías para tus contactos.";
+
+    const [types, setTypes] = useState<ContactType[]>(initialTypes);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [deletingModality, setDeletingModality] = useState<ProjectModality | null>(null);
+    const [deletingType, setDeletingType] = useState<ContactType | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleOpenCreate = () => {
         openModal(
-            <ProjectModalityForm
+            <ContactTypeForm
                 organizationId={organizationId}
-                onSuccess={(newModality) => {
-                    setModalities(prev => [...prev, newModality].sort((a, b) => a.name.localeCompare(b.name)));
+                onSuccess={(newType) => {
+                    setTypes(prev => [...prev, newType].sort((a, b) => a.name.localeCompare(b.name)));
                 }}
             />,
             {
-                title: t("modal.createTitle"),
-                description: t("modal.createDescription"),
+                title: "Crear Tipo",
+                description: "Define un nuevo tipo para clasificar tus contactos.",
                 size: 'md'
             }
         );
     };
 
-    const handleOpenEdit = (modality: ProjectModality) => {
+    const handleOpenEdit = (type: ContactType) => {
         openModal(
-            <ProjectModalityForm
+            <ContactTypeForm
                 organizationId={organizationId}
-                initialData={modality}
-                onSuccess={(updatedModality) => {
-                    setModalities(prev => prev.map(m =>
-                        m.id === updatedModality.id ? updatedModality : m
+                initialData={type}
+                onSuccess={(updatedType) => {
+                    setTypes(prev => prev.map(t =>
+                        t.id === updatedType.id ? updatedType : t
                     ).sort((a, b) => a.name.localeCompare(b.name)));
                 }}
             />,
             {
-                title: t("modal.editTitle"),
-                description: t("modal.editDescription"),
+                title: "Editar Tipo",
+                description: "Modifica el nombre de este tipo de contacto.",
                 size: 'md'
             }
         );
     };
 
-    const handleOpenDelete = (modality: ProjectModality) => {
-        setDeletingModality(modality);
+    const handleOpenDelete = (type: ContactType) => {
+        setDeletingType(type);
         setIsDeleteDialogOpen(true);
     };
 
     const handleDelete = async (replacementId: string | null) => {
-        if (!deletingModality) return;
+        if (!deletingType) return;
         setIsDeleting(true);
 
         try {
-            const result = await deleteProjectModality(deletingModality.id, replacementId || undefined);
-            if (result.success) {
-                setModalities(prev => prev.filter(m => m.id !== deletingModality.id));
-            }
+            await deleteContactType(deletingType.id, replacementId || undefined);
+            setTypes(prev => prev.filter(t => t.id !== deletingType.id));
         } finally {
             setIsDeleting(false);
             setIsDeleteDialogOpen(false);
-            setDeletingModality(null);
+            setDeletingType(null);
         }
     };
 
@@ -109,63 +99,63 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
         <Card>
             <CardHeader className="flex flex-row items-start justify-between">
                 <div>
-                    <CardTitle className="text-lg">{t("title")}</CardTitle>
-                    <CardDescription>{t("description")}</CardDescription>
+                    <CardTitle className="text-lg">{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
                 </div>
                 <Button size="sm" onClick={handleOpenCreate}>
                     <Plus className="h-4 w-4 mr-2" />
-                    {t("add")}
+                    Agregar
                 </Button>
             </CardHeader>
             <CardContent>
-                {modalities.length === 0 ? (
+                {types.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">
-                        {t("empty")}
+                        No hay tipos definidos.
                     </div>
                 ) : (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="pl-4">{t("name")}</TableHead>
-                                <TableHead className="w-[180px]">{t("type")}</TableHead>
-                                <TableHead className="w-[80px] text-right pr-4">{t("actions")}</TableHead>
+                                <TableHead className="pl-4">Nombre</TableHead>
+                                <TableHead className="w-[180px]">Origen</TableHead>
+                                <TableHead className="w-[80px] text-right pr-4">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {modalities.map((modality) => (
-                                <TableRow key={modality.id}>
-                                    <TableCell className="font-medium pl-4">{modality.name}</TableCell>
+                            {types.map((type) => (
+                                <TableRow key={type.id}>
+                                    <TableCell className="font-medium pl-4">{type.name}</TableCell>
                                     <TableCell>
-                                        {modality.is_system ? (
+                                        {!type.organization_id ? (
                                             <Badge variant="system" icon={<Monitor className="h-3 w-3" />}>
-                                                {t("system")}
+                                                Sistema
                                             </Badge>
                                         ) : (
                                             <Badge variant="organization" icon={<Building2 className="h-3 w-3" />}>
-                                                {t("organization")}
+                                                Organización
                                             </Badge>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right pr-4">
-                                        {!modality.is_system && (
+                                        {!!type.organization_id && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">{t("actions")}</span>
+                                                        <span className="sr-only">Acciones</span>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleOpenEdit(modality)}>
+                                                    <DropdownMenuItem onClick={() => handleOpenEdit(type)}>
                                                         <Pencil className="mr-2 h-4 w-4" />
-                                                        {t("edit")}
+                                                        Editar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => handleOpenDelete(modality)}
+                                                        onClick={() => handleOpenDelete(type)}
                                                         className="text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
-                                                        {t("delete")}
+                                                        Eliminar
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -178,19 +168,18 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                 )}
             </CardContent>
 
-            {/* Delete Confirmation using replacement modal */}
             <DeleteReplacementModal
                 isOpen={isDeleteDialogOpen}
                 onClose={() => {
                     setIsDeleteDialogOpen(false);
-                    setDeletingModality(null);
+                    setDeletingType(null);
                 }}
                 onConfirm={handleDelete}
-                itemToDelete={deletingModality}
-                replacementOptions={modalities.filter(m => m.id !== deletingModality?.id)}
-                entityLabel={t("modal.deleteConfirm.entityLabel") || "modalidad"}
-                title={t("modal.deleteConfirm.title")}
-                description={t("modal.deleteConfirm.description")}
+                itemToDelete={deletingType ? { id: deletingType.id, name: deletingType.name } : null}
+                replacementOptions={types.filter(t => t.id !== deletingType?.id)}
+                entityLabel="tipo de contacto"
+                title="Eliminar Tipo"
+                description="Si eliminas este tipo, puedes elegir otro para reasignar los contactos que lo tenían."
             />
         </Card>
     );

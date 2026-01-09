@@ -89,7 +89,7 @@ export function ColorPicker({
     return (
         <div className={cn("space-y-4", className)}>
             <div className="space-y-3">
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap justify-center gap-3 p-1">
                     {PRESETS.map((preset) => {
                         const isSelected = !useCustomColor && color?.toLowerCase() === preset.hex.toLowerCase();
                         return (

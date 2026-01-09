@@ -45,10 +45,10 @@ export function DeleteConfirmationDialog({
     title,
     description,
     validationText,
-    validationPrompt,
-    confirmLabel,
-    cancelLabel,
-    deletingLabel,
+    validationPrompt = "Escribe {text} para confirmar:",
+    confirmLabel = "Eliminar",
+    cancelLabel = "Cancelar",
+    deletingLabel = "Eliminando...",
     isDeleting = false
 }: DeleteConfirmationDialogProps) {
     const [inputValue, setInputValue] = useState("");
@@ -77,13 +77,12 @@ export function DeleteConfirmationDialog({
                             {validationText && (
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">
-                                        {validationPrompt
-                                            ? validationPrompt.replace('{text}', '')
-                                            : 'Type '}
-                                        <span className="font-bold text-foreground">{validationText}</span>
-                                        {validationPrompt
-                                            ? ''
-                                            : ' to confirm:'}
+                                        {validationPrompt.split('{text}').map((part, i, arr) => (
+                                            <span key={i}>
+                                                {part}
+                                                {i < arr.length - 1 && <span className="font-bold text-foreground">{validationText}</span>}
+                                            </span>
+                                        ))}
                                     </p>
                                     <Input
                                         value={inputValue}

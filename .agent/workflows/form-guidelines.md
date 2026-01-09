@@ -4,122 +4,159 @@ description: Form and Modal UI Guidelines - How to create consistent forms and m
 
 # Form and Modal Guidelines for SEENCEL
 
-## 1. Form Footer Component
+## 1. Modal System (Enterprise)
 
-**ALWAYS** use the `FormFooter` component for form/modal footers.
+We use a **Stacked Modal System** with centralized state management.
 
-```tsx
-import { FormFooter } from "@/components/global/form-footer";
-
-<FormFooter
-    onCancel={closeModal}       // Cancel button handler
-    cancelLabel="Cancelar"       // Cancel button text
-    submitLabel="Guardar"        // Submit button text
-    isLoading={isSaving}         // Loading state
-    submitDisabled={!isValid}    // Disable submit condition
-    variant="default"            // Layout: 'default' | 'equal' | 'single'
-/>
-```
-
-### Variants
-- `default`: 25% cancel, 75% submit (standard layout)
-- `equal`: 50% / 50% buttons
-- `single`: Only submit button (100% width)
-
-## 2. Form Fields (FormGroup)
-
-**ALWAYS** wrap form fields with the `FormGroup` component for consistent spacing, labels, and accessibility:
-
-```tsx
-import { FormGroup } from "@/components/ui/form-group";
-import { Input } from "@/components/ui/input";
-
-<FormGroup 
-    label="Nombre del campo" 
-    htmlFor="fieldId"
-    required           // Shows asterisk
-    error={errors.field}  // Error message (sets aria-invalid)
-    helpText="Texto de ayuda opcional"
->
-    <Input id="fieldId" ... />
-</FormGroup>
-```
-
-### Props
-| Prop | Type | Description |
-|------|------|-------------|
-| `label` | `ReactNode` | Field label |
-| `htmlFor` | `string` | Links label to input |
-| `required` | `boolean` | Shows red asterisk |
-| `error` | `string` | Error message (auto-sets `aria-invalid`) |
-| `helpText` | `string` | Help text below input |
-
-### A11y Features
-- Auto-generates `aria-describedby` linking to error/help text
-- Sets `aria-invalid` on child input when error exists
-- Error has `role="alert"` for screen readers
-
-## 3. Modal System
-
-Use `useModal` from `@/providers/modal-store` to open modals:
+### Basic Usage
+Use `useModal` from `@/providers/modal-store`.
 
 ```tsx
 import { useModal } from "@/providers/modal-store";
 
 const { openModal, closeModal } = useModal();
 
-// Open a form in the modal - BOTH title AND description are REQUIRED
 openModal(
-    <MyFormComponent onSuccess={handleSuccess} />,
+    <MyComponent />, 
     { 
-        title: t("modal.createTitle"),           // REQUIRED
-        description: t("modal.createDescription") // REQUIRED
+        title: t("modal.title"),
+        description: t("modal.description"),
+        size: 'md' // 'sm' | 'md' | 'lg' | 'xl' | 'full'
     }
 );
 ```
+> [!IMPORTANT]
+> The Modal Body has **default padding (p-4)**. 
+> - Your form content should NOT have internal padding (it inherits system padding).
+> - Your `FormFooter` MUST have `className="-mx-4 -mb-4 mt-6"` to break out of the padding and align flush with the bottom.
+> **Spacing Standard**: Use `space-y-4` or `gap-4` (16px) for layout. Never use `space-y-6` (24px) for field separation.
 
-## 4. Form Structure
+> [!CAUTION]
+> **HEADER DESCRIPTION IS MANDATORY**: Never forget the description in the modal header. It is crucial for user context. If a translation key isn't ready, use a hardcoded fallback, but **NEVER** leave it empty.
 
-Standard form structure for modals:
-
+### Standard Form Layout
 ```tsx
-<form onSubmit={handleSubmit}>
-    {/* Form content with padding */}
-    <div className="p-4 space-y-4">
-        <FormGroup label="Campo" htmlFor="field">
-            <Input id="field" ... />
-        </FormGroup>
+<form className="flex flex-col h-full">
+    <div className="flex-1 overflow-y-auto space-y-4"> 
+        {/* Use space-y-4 for vertical rhythm */}
+        
+        {/* Or use Grid gap-4 */}
+        <div className="grid grid-cols-2 gap-4">
+             {...}
+        </div>
     </div>
-
-    {/* Footer */}
-    <FormFooter ... />
+    <FormFooter 
+        className="-mx-4 -mb-4 mt-6"
+        {...props} 
+    />
 </form>
 ```
 
-## 5. Delete Confirmation
+### Advanced Features
 
-Use `DeleteConfirmationDialog` for destructive actions:
+#### 1. Stacked Modals
+You can call `openModal` while another modal is open. The new modal will stack on top. `closeModal` pops the top-most modal.
+
+#### 2. URL Synchronization (Deep Linking)
+To allow a modal to be opened via URL (and persist on refresh):
+1. Register component in `@/providers/modal-registry.tsx`.
+2. Pass `key` to `openModal`:
 
 ```tsx
-import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
+openModal(<MyComponent />, {
+    title: "...",
+    key: "my-modal-key" // Updates URL to ?modal=my-modal-key
+});
+```
 
-<DeleteConfirmationDialog
-    open={isOpen}
-    onOpenChange={setIsOpen}
-    onConfirm={handleDelete}
-    title="¿Eliminar elemento?"
-    description="Esta acción no se puede deshacer."
-    validationText="nombre-a-escribir"  // Optional: type-to-confirm
-    isDeleting={isDeleting}
+#### 3. Protection (Unsaved Changes)
+Prevent accidental closure if form is dirty.
+
+```tsx
+const { setBeforeClose } = useModal();
+const { isDirty } = useFormState();
+
+useEffect(() => {
+    setBeforeClose(async () => {
+        if (!isDirty) return true;
+        // User must confirm
+        return confirm("Discard changes?"); // Or use custom dialog logic
+    });
+}, [isDirty]);
+```
+
+#### 4. Lazy Loading (Performance)
+**ALWAYS** lazy load heavy form components in Manager files:
+
+```tsx
+const ProjectForm = dynamic(() => import('./ProjectForm').then(m => m.ProjectForm), {
+    loading: () => <p>Loading...</p>
+});
+```
+
+## 2. Form Architecture
+
+### Form Footer
+**ALWAYS** use `FormFooter`. It automatically handles **Shortcuts** (`Cmd+Enter` to submit).
+
+```tsx
+import { FormFooter } from "@/components/global/form-footer";
+
+<FormFooter
+    onCancel={closeModal}
+    onSubmit={handleSubmit} // Optional if inside <form>
+    isLoading={isSaving}
+    submitLabel="Guardar"
+    submitLabel="Guardar"
+    variant="default" // 'default' | 'equal' | 'single'
+    className="-mx-4 -mb-4 mt-6" // Required to break out of Modal Body padding
 />
 ```
 
-## 6. Checklist
+### Form Fields (FormGroup)
+**ALWAYS** wrap inputs in `FormGroup` for accessibility (`aria-invalid`, `aria-describedby`).
 
-Before creating any form/modal:
-- [ ] Use `FormGroup` for all form fields
-- [ ] Use `FormFooter` component for footer
-- [ ] Use `useModal` for opening modals
-- [ ] Pass BOTH `title` AND `description` to openModal
-- [ ] Use `DeleteConfirmationDialog` for delete actions
-- [ ] Use `useTranslations` for all user-facing text
+```tsx
+<FormGroup 
+    label="Email" 
+    htmlFor="email"
+    error={errors.email?.message} 
+    required
+>
+    <Input id="email" {...register("email")} />
+</FormGroup>
+```
+
+### Specialized Inputs
+*   **Phone Numbers**: MUST use `<PhoneInput />`.
+*   **Countries**: MUST use `<CountrySelector />` (if available).
+
+```tsx
+import { PhoneInput } from "@/components/ui/phone-input";
+
+<FormGroup label="Phone" htmlFor="phone">
+    <PhoneInput 
+        id="phone" 
+        value={value} 
+        onChange={setValue} 
+        defaultCountry="AR" 
+    />
+</FormGroup>
+```
+
+## 3. Delete Actions
+Use `DeleteConfirmationDialog`.
+
+```tsx
+<DeleteConfirmationDialog 
+    validationText={name} // Require user to type name to confirm
+    ...
+/>
+```
+
+## 4. Checklist for New Features
+- [ ] Registered in `modal-registry.tsx`? (if sharable)
+- [ ] Used `dynamic()` import?
+- [ ] Used `FormGroup` with `error` prop?
+- [ ] Used `FormFooter`?
+- [ ] Handled `setBeforeClose` for dirty states?

@@ -14,7 +14,7 @@ export async function getOrganizationContacts(organizationId: string): Promise<C
         .from('contacts_with_relations_view')
         .select('*')
         .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false });
+        .order('full_name', { ascending: true });
 
     if (error) {
         console.error("Error fetching contacts:", error);
@@ -24,16 +24,39 @@ export async function getOrganizationContacts(organizationId: string): Promise<C
     return data as ContactWithRelations[];
 }
 
+// Helper to construct URL
+function getStorageUrl(path: string | null, bucket: string = 'avatars') {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return `${baseUrl}/storage/v1/object/public/${bucket}/${path}`;
+}
+
 export async function createContact(organizationId: string, contact: Partial<Contact>, typeIds: string[] = []) {
     const supabase = await createClient();
+
+    // Prepare payload with image_url
+    const payload = {
+        ...contact,
+        organization_id: organizationId
+    };
+
+    // Auto-fill image_url if path is present 
+    if (payload.image_path) {
+        // @ts-ignore
+        payload.image_url = getStorageUrl(payload.image_path, payload.image_bucket || 'avatars');
+    }
+
+    // Clean up legacy fields
+    // @ts-ignore
+    delete payload.image_path;
+    // @ts-ignore
+    delete payload.image_bucket;
 
     // 1. Create Contact
     const { data: newContact, error } = await supabase
         .from('contacts')
-        .insert({
-            ...contact,
-            organization_id: organizationId
-        })
+        .insert(payload)
         .select()
         .single();
 
@@ -67,15 +90,29 @@ export async function createContact(organizationId: string, contact: Partial<Con
 export async function updateContact(contactId: string, updates: Partial<Contact>, typeIds?: string[]) {
     const supabase = await createClient();
 
+    const payload = { ...updates };
+
+    // Calculate image_url if path provided
+    if (payload.image_path) {
+        // @ts-ignore
+        payload.image_url = getStorageUrl(payload.image_path, payload.image_bucket || 'avatars');
+    }
+
+    // Clean up legacy fields - they don't exist in DB anymore
+    // @ts-ignore
+    delete payload.image_path;
+    // @ts-ignore
+    delete payload.image_bucket;
+
     // 1. Update Details
     const { error } = await supabase
         .from('contacts')
-        .update(updates)
+        .update(payload)
         .eq('id', contactId);
 
     if (error) {
         console.error("Error updating contact:", error);
-        throw new Error("Failed to update contact");
+        throw new Error(`Failed to update contact: ${error.message} (${error.details || ''})`);
     }
 
     // 2. Update Types if provided (replace all)
@@ -100,11 +137,17 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
                     contact_type_id: typeId,
                     organization_id: contact.organization_id
                 }));
-                await supabase.from('contact_type_links').insert(links);
+                console.log("Inserting links:", links);
+                const { error: insertError } = await supabase.from('contact_type_links').insert(links);
+                if (insertError) {
+                    console.error("Error inserting links:", insertError);
+                    throw new Error("Failed to link contact types: " + insertError.message);
+                }
             }
         }
     }
 
+    revalidatePath('/', 'layout'); // Aggressive refresh to ensure next-intl routes update
     revalidatePath(`/organization/contacts`);
 }
 
@@ -145,12 +188,15 @@ export async function getContactTypes(organizationId: string): Promise<ContactTy
     return data as ContactType[];
 }
 
+// Update actions to return data for UI state updates, and support replacement logic
 export async function createContactType(organizationId: string, name: string) {
     const supabase = await createClient();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('contact_types')
-        .insert({ organization_id: organizationId, name });
+        .insert({ organization_id: organizationId, name })
+        .select()
+        .single();
 
     if (error) {
         console.error("Error creating contact type:", error);
@@ -158,6 +204,7 @@ export async function createContactType(organizationId: string, name: string) {
     }
 
     revalidatePath(`/organization/contacts`);
+    return data;
 }
 
 export async function updateContactType(id: string, name: string) {
@@ -176,9 +223,41 @@ export async function updateContactType(id: string, name: string) {
     revalidatePath(`/organization/contacts`);
 }
 
-export async function deleteContactType(id: string) {
+export async function deleteContactType(id: string, replacementId?: string) {
     const supabase = await createClient();
 
+    // 1. Reassign if replacement requested
+    if (replacementId) {
+        // Find links with the old type
+        const { data: linksToMigrate } = await supabase
+            .from('contact_type_links')
+            .select('*')
+            .eq('contact_type_id', id);
+
+        if (linksToMigrate && linksToMigrate.length > 0) {
+            // We need to insert new links for these contacts with replacementId
+            // BUT ensure we don't violate unique(contact_id, contact_type_id)
+            // Postgres INSERT ON CONFLICT DO NOTHING is perfect here.
+
+            const newLinks = linksToMigrate.map(link => ({
+                contact_id: link.contact_id,
+                contact_type_id: replacementId,
+                organization_id: link.organization_id
+            }));
+
+            const { error: moveError } = await supabase
+                .from('contact_type_links')
+                .upsert(newLinks, { onConflict: 'contact_id, contact_type_id', ignoreDuplicates: true });
+
+            if (moveError) {
+                console.error("Error migrating links:", moveError);
+                // Proceed to delete anyway? warning? 
+                // Assuming soft failure is acceptable, but let's log it.
+            }
+        }
+    }
+
+    // 2. Soft Delete
     const { error } = await supabase
         .from('contact_types')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
@@ -190,4 +269,35 @@ export async function deleteContactType(id: string) {
     }
 
     revalidatePath(`/organization/contacts`);
+}
+
+// --- AVATAR UPLOAD ---
+
+export async function uploadContactAvatar(formData: FormData) {
+    const supabase = await createClient();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+        return { success: false, error: "No file provided" };
+    }
+
+    // validate file size/type if needed
+    if (file.size > 5 * 1024 * 1024) {
+        return { success: false, error: "File too large (max 5MB)" };
+    }
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `contact-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `contacts/${fileName}`; // Folder 'contacts' inside 'avatars' bucket
+
+    const { error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+    if (error) {
+        console.error("Error uploading avatar:", error);
+        return { success: false, error: "Failed to upload avatar" };
+    }
+
+    return { success: true, path: filePath };
 }

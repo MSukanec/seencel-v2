@@ -465,13 +465,16 @@
                     "setDefault": "Establecer como predeterminado",
                     "cancel": "Cancelar",
                     "save": "Guardar",
-                    "saving": "Guardando..."
-                },
-                "deleteConfirm": {
-                    "title": "¿Eliminar tipo de proyecto?",
-                    "description": "Esta acción no se puede deshacer. Los proyectos existentes con este tipo no se verán afectados.",
-                    "cancel": "Cancelar",
-                    "confirm": "Eliminar"
+                    "saving": "Guardando...",
+                    "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres cerrar?",
+                    "requiredError": "El nombre es obligatorio",
+                    "deleteConfirm": {
+                        "title": "¿Eliminar tipo de proyecto?",
+                        "description": "Esta acción no se puede deshacer. Los proyectos existentes con este tipo no se verán afectados.",
+                        "entityLabel": "tipo de proyecto",
+                        "cancel": "Cancelar",
+                        "confirm": "Eliminar"
+                    }
                 }
             },
             "modalities": {
@@ -497,13 +500,16 @@
                     "setDefault": "Establecer como predeterminada",
                     "cancel": "Cancelar",
                     "save": "Guardar",
-                    "saving": "Guardando..."
-                },
-                "deleteConfirm": {
-                    "title": "¿Eliminar modalidad?",
-                    "description": "Esta acción no se puede deshacer. Los proyectos existentes con esta modalidad no se verán afectados.",
-                    "cancel": "Cancelar",
-                    "confirm": "Eliminar"
+                    "saving": "Guardando...",
+                    "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres cerrar?",
+                    "requiredError": "El nombre es obligatorio",
+                    "deleteConfirm": {
+                        "title": "¿Eliminar modalidad?",
+                        "description": "Esta acción no se puede deshacer. Los proyectos existentes con esta modalidad no se verán afectados.",
+                        "entityLabel": "modalidad",
+                        "cancel": "Cancelar",
+                        "confirm": "Eliminar"
+                    }
                 }
             }
         }

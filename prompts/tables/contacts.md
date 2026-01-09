@@ -4,31 +4,49 @@
 
 create table public.contact_type_links (
   id uuid not null default gen_random_uuid (),
-  contact_id uuid null,
-  contact_type_id uuid null,
+  contact_id uuid not null,
+  contact_type_id uuid not null,
   created_at timestamp with time zone null default now(),
-  organization_id uuid null,
+  organization_id uuid not null,
+  updated_at timestamp with time zone null default now(),
   constraint contact_type_links_pkey primary key (id),
   constraint contact_type_links_contact_id_contact_type_id_key unique (contact_id, contact_type_id),
-  constraint contact_type_links_contact_id_fkey foreign KEY (contact_id) references contacts (id) on delete set null,
-  constraint contact_type_links_contact_type_id_fkey foreign KEY (contact_type_id) references contact_types (id) on delete set null,
+  constraint contact_type_links_contact_id_fkey foreign KEY (contact_id) references contacts (id) on delete CASCADE,
+  constraint contact_type_links_contact_type_id_fkey foreign KEY (contact_type_id) references contact_types (id) on delete CASCADE,
   constraint contact_type_links_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
 ) TABLESPACE pg_default;
+
+create trigger trigger_contact_type_links_updated_at BEFORE
+update on contact_type_links for EACH row
+execute FUNCTION update_contact_type_links_updated_at ();
 
 ## Tabla CONTACT_TYPES:
 
 create table public.contact_types (
   id uuid not null default gen_random_uuid (),
   name text not null,
-  created_at timestamp with time zone null default now(),
+  created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
   organization_id uuid null,
   constraint contact_types_pkey primary key (id),
-  constraint contact_types_org_name_key unique (organization_id, name),
   constraint contact_types_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
 ) TABLESPACE pg_default;
+
+create unique INDEX IF not exists idx_contact_types_org_name_active on public.contact_types using btree (organization_id, name) TABLESPACE pg_default
+where
+  (
+    (is_deleted = false)
+    and (organization_id is not null)
+  );
+
+create unique INDEX IF not exists idx_contact_types_global_name_active on public.contact_types using btree (name) TABLESPACE pg_default
+where
+  (
+    (is_deleted = false)
+    and (organization_id is null)
+  );
 
 ## Tabla CONTACTS:
 

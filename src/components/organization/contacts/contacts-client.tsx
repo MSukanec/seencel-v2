@@ -7,6 +7,8 @@ import { ContactsList } from "./contacts-list";
 import { ContactsSettings } from "./contacts-settings";
 import { ContactWithRelations, ContactType } from "@/types/contact";
 
+import { ContactTypesManager } from "./ContactTypesManager";
+
 interface ContactsClientProps {
     organizationId: string;
     initialContacts: ContactWithRelations[];
@@ -44,8 +46,14 @@ export function ContactsClient({ organizationId, initialContacts, initialTypes }
                             contactTypes={initialTypes}
                         />
                     </TabsContent>
-                    <TabsContent value="settings" className="m-0 h-full border-none p-0 outline-none">
-                        <ContactsSettings
+                    <TabsContent value="settings" className="m-0 h-full border-none p-0 outline-none space-y-6">
+                        <div>
+                            <h2 className="text-3xl font-bold tracking-tight">Configuración</h2>
+                            <p className="text-muted-foreground">
+                                Administra las preferencias y elementos de tus contactos.
+                            </p>
+                        </div>
+                        <ContactTypesManager
                             organizationId={organizationId}
                             initialTypes={initialTypes}
                         />

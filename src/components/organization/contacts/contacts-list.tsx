@@ -21,11 +21,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createContact, updateContact, deleteContact } from "@/actions/contacts";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea"; // Assuming you have this
-import { Checkbox } from "@/components/ui/checkbox"; // Assuming you have this
+import { ContactForm } from "./ContactForm";
+import { useModal } from "@/providers/modal-store";
+import { useRouter } from "next/navigation";
+import { deleteContact } from "@/actions/contacts";
 
 interface ContactsListProps {
     organizationId: string;
@@ -35,93 +34,56 @@ interface ContactsListProps {
 
 export function ContactsList({ organizationId, initialContacts, contactTypes }: ContactsListProps) {
     const [searchTerm, setSearchTerm] = useState("");
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
-
-    // Form State (Simple controlled inputs for speed, could use React Hook Form)
-    const [formData, setFormData] = useState({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        company_name: "",
-        location: "",
-        notes: "",
-        typeIds: [] as string[] // Selected type IDs
-    });
+    const { openModal, closeModal } = useModal();
+    const router = useRouter(); // Use router to refresh if needed, though actions revalidate
 
     const filteredContacts = initialContacts.filter(contact =>
         (contact.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || "") ||
         (contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) || "") ||
         (contact.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) || "")
     );
+    console.log("Contacts Data:", filteredContacts);
+
+    const handleSuccess = () => {
+        router.refresh();
+        closeModal();
+    };
 
     const handleOpenCreate = () => {
-        setEditingContact(null);
-        setFormData({
-            first_name: "",
-            last_name: "",
-            email: "",
-            phone: "",
-            company_name: "",
-            location: "",
-            notes: "",
-            typeIds: []
-        });
-        setIsSheetOpen(true);
+        openModal(
+            <ContactForm
+                organizationId={organizationId}
+                contactTypes={contactTypes}
+                onSuccess={handleSuccess}
+            />,
+            {
+                title: "Nuevo Contacto",
+                description: "Agrega un nuevo contacto a tu organización.",
+                size: "lg"
+            }
+        );
     };
 
     const handleOpenEdit = (contact: ContactWithRelations) => {
-        setEditingContact(contact);
-        setFormData({
-            first_name: contact.first_name || "",
-            last_name: contact.last_name || "",
-            email: contact.email || "",
-            phone: contact.phone || "",
-            company_name: contact.company_name || "",
-            location: contact.location || "",
-            notes: contact.notes || "",
-            typeIds: contact.contact_types ? contact.contact_types.map(t => t.id) : []
-        });
-        setIsSheetOpen(true);
-    };
-
-    const handleSubmit = async () => {
-        try {
-            const dataToSave = {
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                full_name: `${formData.first_name} ${formData.last_name}`.trim(),
-                email: formData.email,
-                phone: formData.phone,
-                company_name: formData.company_name,
-                location: formData.location,
-                notes: formData.notes,
-            };
-
-            if (editingContact) {
-                await updateContact(editingContact.id, dataToSave, formData.typeIds);
-            } else {
-                await createContact(organizationId, dataToSave, formData.typeIds);
+        openModal(
+            <ContactForm
+                organizationId={organizationId}
+                contactTypes={contactTypes}
+                initialData={contact}
+                onSuccess={handleSuccess}
+            />,
+            {
+                title: "Editar Contacto",
+                description: `Modificando a ${contact.full_name}`,
+                size: "lg"
             }
-            setIsSheetOpen(false);
-        } catch (error) {
-            console.error("Failed to save contact", error);
-        }
+        );
     };
 
     const handleDelete = async (id: string) => {
         if (confirm("¿Estás seguro de que quieres eliminar este contacto?")) {
             await deleteContact(id);
         }
-    };
-
-    const toggleType = (typeId: string) => {
-        setFormData(prev => {
-            const exists = prev.typeIds.includes(typeId);
-            if (exists) return { ...prev, typeIds: prev.typeIds.filter(id => id !== typeId) };
-            return { ...prev, typeIds: [...prev.typeIds, typeId] };
-        });
     };
 
     return (
@@ -142,7 +104,7 @@ export function ContactsList({ organizationId, initialContacts, contactTypes }: 
                 </Button>
             </div>
 
-            <div className="rounded-md border">
+            <div className="rounded-md border bg-card">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -233,73 +195,6 @@ export function ContactsList({ organizationId, initialContacts, contactTypes }: 
                     </TableBody>
                 </Table>
             </div>
-
-            {/* CREATE / EDIT SHEET */}
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetContent>
-                    <SheetHeader>
-                        <SheetTitle>{editingContact ? "Editar Contacto" : "Nuevo Contacto"}</SheetTitle>
-                        <SheetDescription>
-                            {editingContact ? "Modifica los detalles del contacto existente." : "Agrega un nuevo contacto a tu organización."}
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="first_name">Nombre</Label>
-                                <Input id="first_name" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="last_name">Apellido</Label>
-                                <Input id="last_name" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Teléfono</Label>
-                            <Input id="phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="company">Empresa</Label>
-                            <Input id="company" value={formData.company_name} onChange={e => setFormData({ ...formData, company_name: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="location">Ubicación</Label>
-                            <Input id="location" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Etiquetas / Tipos</Label>
-                            <div className="flex flex-wrap gap-2 border rounded-md p-3">
-                                {contactTypes.length === 0 ? <p className="text-xs text-muted-foreground">No hay tipos disponibles. Crea uno en Configuración.</p> :
-                                    contactTypes.map(type => (
-                                        <div key={type.id} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`type-${type.id}`}
-                                                checked={formData.typeIds.includes(type.id)}
-                                                onCheckedChange={() => toggleType(type.id)}
-                                            />
-                                            <Label htmlFor={`type-${type.id}`} className="text-sm font-normal cursor-pointer">
-                                                {type.name}
-                                            </Label>
-                                        </div>
-                                    ))
-                                }
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="notes">Notas</Label>
-                            <Textarea id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
-                        </div>
-                    </div>
-                    <SheetFooter>
-                        <Button variant="outline" onClick={() => setIsSheetOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSubmit}>Guardar</Button>
-                    </SheetFooter>
-                </SheetContent>
-            </Sheet>
         </div>
     );
 }
