@@ -35,8 +35,8 @@ export interface Contact {
     linked_at: string | null;
     created_at: string;
     updated_at: string;
-    image_bucket: string | null;
-    image_path: string | null;
+    image_url: string | null; // Public URL for avatar
+    avatar_updated_at: string | null;
     is_deleted: boolean;
     deleted_at: string | null;
 }
@@ -45,6 +45,7 @@ export interface ContactWithRelations extends Contact {
     linked_user_full_name: string | null;
     linked_user_email: string | null;
     linked_user_avatar_url: string | null;
+    resolved_avatar_url: string | null; // Computed: COALESCE(linked_user.avatar, contact.image_url)
     contact_types: { id: string; name: string }[];
     is_organization_member: boolean;
 }

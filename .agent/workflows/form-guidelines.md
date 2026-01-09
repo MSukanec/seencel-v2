@@ -144,19 +144,49 @@ import { PhoneInput } from "@/components/ui/phone-input";
 </FormGroup>
 ```
 
-## 3. Delete Actions
-Use `DeleteConfirmationDialog`.
+## 4. Image Uploads
 
+> [!CAUTION]
+> **ALWAYS USE CLIENT-SIDE COMPRESSION**: When building any form or component that uploads images (avatars, covers, photos), you **MUST** use our `compressImage` utility before uploading. This reduces bandwidth, speeds up uploads, and saves storage costs.
+
+### Required Import
 ```tsx
-<DeleteConfirmationDialog 
-    validationText={name} // Require user to type name to confirm
-    ...
-/>
+import { compressImage } from "@/lib/client-image-compression";
 ```
 
-## 4. Checklist for New Features
+### Available Presets
+| Preset | Max Size | Max Dimension | Use Case |
+|---|---|---|---|
+| `'avatar'` | 0.5 MB | 512px | User/Contact profile pictures |
+| `'project-cover'` | 1 MB | 1920px | Project banners, covers |
+| `'sitelog-photo'` | 0.8 MB | 1280px | Site log photos |
+| `'course-cover'` | 1 MB | 1920px | Course covers |
+| `'document'` | 2 MB | 2048px | Document scans (preserves EXIF) |
+| `'default'` | 1 MB | 1600px | General purpose |
+
+### Example Usage
+```tsx
+const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // ALWAYS compress before upload
+    const compressedFile = await compressImage(file, 'avatar');
+
+    const formData = new FormData();
+    formData.append('file', compressedFile);
+
+    await uploadToServer(formData);
+};
+```
+
+> [!NOTE]
+> GIFs are automatically skipped (to preserve animation). The utility returns the original file on error, so uploads still work even if compression fails.
+
+## 5. Checklist for New Features
 - [ ] Registered in `modal-registry.tsx`? (if sharable)
 - [ ] Used `dynamic()` import?
 - [ ] Used `FormGroup` with `error` prop?
 - [ ] Used `FormFooter`?
 - [ ] Handled `setBeforeClose` for dirty states?
+- [ ] **Used `compressImage` for image uploads?**

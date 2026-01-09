@@ -28,6 +28,10 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
     const [isLoading, setIsLoading] = useState(false);
 
     // Form State
+    // Note: image_url holds either:
+    // - A full URL (from existing contact's image_url)
+    // - A relative path (from new upload via ContactAvatarManager)
+    // The server action handles both cases.
     const [formData, setFormData] = useState({
         first_name: initialData?.first_name || "",
         last_name: initialData?.last_name || "",
@@ -36,7 +40,7 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
         company_name: initialData?.company_name || "",
         location: initialData?.location || "",
         notes: initialData?.notes || "",
-        image_path: initialData?.image_path || "",
+        image_url: initialData?.image_url || "",
         typeIds: initialData?.contact_types ? initialData.contact_types.map(t => t.id) : [] as string[]
     });
 
@@ -62,8 +66,7 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
                 company_name: formData.company_name || null,
                 location: formData.location || null,
                 notes: formData.notes || null,
-                image_path: formData.image_path || null,
-                image_bucket: formData.image_path ? 'avatars' : null,
+                image_url: formData.image_url || null,
             };
 
             if (initialData) {
@@ -93,8 +96,8 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
                 <div className="flex justify-center pb-2">
                     <ContactAvatarManager
                         initials={formData.first_name?.[0] || formData.last_name?.[0] || "?"}
-                        currentPath={formData.image_path}
-                        onPathChange={(path) => setFormData(prev => ({ ...prev, image_path: path || "" }))}
+                        currentPath={formData.image_url}
+                        onPathChange={(path) => setFormData(prev => ({ ...prev, image_url: path || "" }))}
                     />
                 </div>
 

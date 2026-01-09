@@ -1,5 +1,5 @@
 import { getActiveOrganizationId } from "@/actions/general-costs";
-import { getContactTypes, getOrganizationContacts } from "@/actions/contacts";
+import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/actions/contacts";
 import { ContactsClient } from "@/components/organization/contacts/contacts-client";
 import { redirect } from "next/navigation";
 
@@ -10,9 +10,10 @@ export default async function ContactsPage() {
         redirect('/');
     }
 
-    const [contacts, types] = await Promise.all([
+    const [contacts, types, summary] = await Promise.all([
         getOrganizationContacts(organizationId),
-        getContactTypes(organizationId)
+        getContactTypes(organizationId),
+        getContactsSummary(organizationId)
     ]);
 
     return (
@@ -20,6 +21,7 @@ export default async function ContactsPage() {
             organizationId={organizationId}
             initialContacts={contacts}
             initialTypes={types}
+            summary={summary}
         />
     );
 }

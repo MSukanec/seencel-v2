@@ -24,6 +24,23 @@ export async function getOrganizationContacts(organizationId: string): Promise<C
     return data as ContactWithRelations[];
 }
 
+export async function getContactsSummary(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('contacts_summary_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .single();
+
+    if (error) {
+        console.error("Error fetching contacts summary:", error);
+        return { total_contacts: 0, linked_contacts: 0, member_contacts: 0 };
+    }
+
+    return data as { total_contacts: number; linked_contacts: number; member_contacts: number };
+}
+
 // Helper to construct URL
 function getStorageUrl(path: string | null, bucket: string = 'avatars') {
     if (!path) return null;
@@ -35,23 +52,16 @@ function getStorageUrl(path: string | null, bucket: string = 'avatars') {
 export async function createContact(organizationId: string, contact: Partial<Contact>, typeIds: string[] = []) {
     const supabase = await createClient();
 
-    // Prepare payload with image_url
+    // Prepare payload
     const payload = {
         ...contact,
         organization_id: organizationId
     };
 
-    // Auto-fill image_url if path is present 
-    if (payload.image_path) {
-        // @ts-ignore
-        payload.image_url = getStorageUrl(payload.image_path, payload.image_bucket || 'avatars');
+    // Convert relative path to full URL if needed
+    if (payload.image_url && !payload.image_url.startsWith('http')) {
+        payload.image_url = getStorageUrl(payload.image_url, 'avatars');
     }
-
-    // Clean up legacy fields
-    // @ts-ignore
-    delete payload.image_path;
-    // @ts-ignore
-    delete payload.image_bucket;
 
     // 1. Create Contact
     const { data: newContact, error } = await supabase
@@ -92,17 +102,10 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
 
     const payload = { ...updates };
 
-    // Calculate image_url if path provided
-    if (payload.image_path) {
-        // @ts-ignore
-        payload.image_url = getStorageUrl(payload.image_path, payload.image_bucket || 'avatars');
+    // Convert relative path to full URL if needed
+    if (payload.image_url && !payload.image_url.startsWith('http')) {
+        payload.image_url = getStorageUrl(payload.image_url, 'avatars');
     }
-
-    // Clean up legacy fields - they don't exist in DB anymore
-    // @ts-ignore
-    delete payload.image_path;
-    // @ts-ignore
-    delete payload.image_bucket;
 
     // 1. Update Details
     const { error } = await supabase

@@ -7,6 +7,7 @@ import { Camera, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { uploadContactAvatar } from "@/actions/contacts";
 import { getStorageUrl } from "@/lib/storage-utils";
+import { compressImage } from "@/lib/client-image-compression";
 
 interface ContactAvatarManagerProps {
     currentPath?: string | null;
@@ -26,10 +27,14 @@ export function ContactAvatarManager({ currentPath, initials, onPathChange }: Co
         if (!file) return;
 
         setIsUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
 
         try {
+            // Compress image using 'avatar' preset (512px, 0.5MB max)
+            const compressedFile = await compressImage(file, 'avatar');
+
+            const formData = new FormData();
+            formData.append('file', compressedFile);
+
             const result = await uploadContactAvatar(formData);
             if (result.success && result.path) {
                 onPathChange(result.path);
@@ -46,44 +51,54 @@ export function ContactAvatarManager({ currentPath, initials, onPathChange }: Co
         }
     };
 
-    const handleRemove = () => {
+    const handleRemove = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent triggering upload
         onPathChange(null);
+    };
+
+    const handleClick = () => {
+        if (!isUploading) {
+            inputRef.current?.click();
+        }
     };
 
     return (
         <div className="flex flex-col items-center gap-4">
             <div className="relative group">
-                <Avatar className="h-24 w-24 border-2 border-border shadow-sm bg-muted">
-                    <AvatarImage src={avatarUrl || ""} className="object-cover" />
-                    <AvatarFallback className="text-2xl font-semibold text-muted-foreground w-full h-full flex items-center justify-center bg-muted/50">
-                        {initials}
-                    </AvatarFallback>
+                {/* Clickable Avatar Container */}
+                <div
+                    onClick={handleClick}
+                    className="relative cursor-pointer"
+                >
+                    <Avatar className="h-24 w-24 border-2 border-border shadow-sm bg-muted transition-opacity group-hover:opacity-80">
+                        <AvatarImage src={avatarUrl || ""} className="object-cover" />
+                        <AvatarFallback className="text-2xl font-semibold text-muted-foreground w-full h-full flex items-center justify-center bg-muted/50">
+                            {initials}
+                        </AvatarFallback>
+                    </Avatar>
 
+                    {/* Hover Overlay with Camera Icon */}
+                    {!isUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="h-8 w-8 text-white" />
+                        </div>
+                    )}
+
+                    {/* Loading Spinner */}
                     {isUploading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
                             <Loader2 className="h-8 w-8 text-white animate-spin" />
                         </div>
                     )}
-                </Avatar>
+                </div>
 
-                {!isUploading && (
-                    <Button
-                        type="button"
-                        size="icon"
-                        variant="secondary"
-                        className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-md border border-background"
-                        onClick={() => inputRef.current?.click()}
-                    >
-                        <Camera className="h-4 w-4" />
-                    </Button>
-                )}
-
+                {/* Remove Button (appears on hover) */}
                 {currentPath && !isUploading && (
                     <Button
                         type="button"
                         size="icon"
                         variant="destructive"
-                        className="absolute top-0 right-0 h-6 w-6 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity -mr-2 -mt-2"
+                        className="absolute -top-1 -right-1 h-6 w-6 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={handleRemove}
                     >
                         <X className="h-3 w-3" />
