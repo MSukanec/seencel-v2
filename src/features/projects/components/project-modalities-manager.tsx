@@ -55,7 +55,8 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
             />,
             {
                 title: t("modal.createTitle"),
-                description: t("modal.createDescription")
+                description: t("modal.createDescription"),
+                size: 'sm'
             }
         );
     };
@@ -73,7 +74,8 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
             />,
             {
                 title: t("modal.editTitle"),
-                description: t("modal.editDescription")
+                description: t("modal.editDescription"),
+                size: 'sm'
             }
         );
     };

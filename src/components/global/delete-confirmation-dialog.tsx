@@ -24,8 +24,17 @@ interface DeleteConfirmationDialogProps {
      * Useful for "Dangerous" deletions (e.g. Project Name).
      */
     validationText?: string;
+    /**
+     * Custom prompt for validation. Use {text} as placeholder for the validation text.
+     * @default "Type {text} to confirm:"
+     */
+    validationPrompt?: string;
     confirmLabel?: string;
     cancelLabel?: string;
+    /**
+     * Label shown while deleting
+     */
+    deletingLabel?: string;
     isDeleting?: boolean;
 }
 
@@ -33,11 +42,13 @@ export function DeleteConfirmationDialog({
     open,
     onOpenChange,
     onConfirm,
-    title = "¿Estás absolutamente seguro?",
+    title,
     description,
     validationText,
-    confirmLabel = "Eliminar",
-    cancelLabel = "Cancelar",
+    validationPrompt,
+    confirmLabel,
+    cancelLabel,
+    deletingLabel,
     isDeleting = false
 }: DeleteConfirmationDialogProps) {
     const [inputValue, setInputValue] = useState("");
@@ -66,7 +77,13 @@ export function DeleteConfirmationDialog({
                             {validationText && (
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">
-                                        Escribe <span className="font-bold text-foreground">{validationText}</span> para confirmar:
+                                        {validationPrompt
+                                            ? validationPrompt.replace('{text}', '')
+                                            : 'Type '}
+                                        <span className="font-bold text-foreground">{validationText}</span>
+                                        {validationPrompt
+                                            ? ''
+                                            : ' to confirm:'}
                                     </p>
                                     <Input
                                         value={inputValue}
@@ -87,7 +104,7 @@ export function DeleteConfirmationDialog({
                         disabled={isConfirmDisabled || isDeleting}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isDeleting ? "Eliminando..." : confirmLabel}
+                        {isDeleting ? (deletingLabel || "Deleting...") : confirmLabel}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

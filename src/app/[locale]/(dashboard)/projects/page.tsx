@@ -75,8 +75,8 @@ export default async function ProjectsPage({
                                 <TableCell>
                                     <div className="flex items-center space-x-4">
                                         <Avatar className="h-9 w-9 rounded-lg">
-                                            {project.image_path ? (
-                                                <AvatarImage src={`https://${project.image_bucket}.supabase.co/storage/v1/object/public/${project.image_bucket}/${project.image_path}`} />
+                                            {project.image_url ? (
+                                                <AvatarImage src={project.image_url} />
                                             ) : (
                                                 <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">
                                                     {project.name.substring(0, 2).toUpperCase()}

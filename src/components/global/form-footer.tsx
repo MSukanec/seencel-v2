@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 type FooterVariant = 'default' | 'equal' | 'single';
 
@@ -99,8 +100,10 @@ export function FormFooter({
                     type={isForm ? "submit" : "button"}
                     onClick={!isForm ? onSubmit : undefined}
                     disabled={isLoading || submitDisabled}
+                    aria-busy={isLoading}
                     className={cn("w-full", submitSpanClasses[variant])}
                 >
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {submitLabel}
                 </Button>
             </div>

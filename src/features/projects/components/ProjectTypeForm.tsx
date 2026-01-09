@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
@@ -22,15 +22,33 @@ interface ProjectTypeFormProps {
 
 export function ProjectTypeForm({ organizationId, initialData, onSuccess }: ProjectTypeFormProps) {
     const t = useTranslations("Project.settings.types.modal");
-    const { closeModal } = useModal();
+    const { closeModal, setBeforeClose } = useModal();
     const [name, setName] = useState(initialData?.name || "");
     const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const isEditing = !!initialData;
+    const isDirty = name.trim() !== (initialData?.name || "");
+
+    useEffect(() => {
+        if (isDirty) {
+            setBeforeClose(async () => {
+                return window.confirm(t("unsavedChanges") || "Tienes cambios sin guardar. ¿Estás seguro de que quieres cerrar?");
+            });
+        } else {
+            setBeforeClose(undefined);
+        }
+        return () => setBeforeClose(undefined);
+    }, [isDirty, setBeforeClose, t]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim()) return;
+
+        if (!name.trim()) {
+            setError(t("requiredError") || "El nombre es obligatorio");
+            return;
+        }
+        setError(null);
 
         setIsSaving(true);
         try {
@@ -55,11 +73,19 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
     return (
         <form onSubmit={handleSubmit}>
             <div className="p-4 space-y-4">
-                <FormGroup label={t("nameLabel")} htmlFor="typeName">
+                <FormGroup
+                    label={t("nameLabel")}
+                    htmlFor="typeName"
+                    error={error || undefined}
+                    required
+                >
                     <Input
                         id="typeName"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                            setName(e.target.value);
+                            if (error) setError(null);
+                        }}
                         placeholder={t("namePlaceholder")}
                         autoFocus
                     />

@@ -28,21 +28,36 @@ import { FormFooter } from "@/components/global/form-footer";
 
 ## 2. Form Fields (FormGroup)
 
-**ALWAYS** wrap form fields with the `FormGroup` component for consistent spacing and labels:
+**ALWAYS** wrap form fields with the `FormGroup` component for consistent spacing, labels, and accessibility:
 
 ```tsx
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 
-<FormGroup label="Nombre del campo" htmlFor="fieldId">
+<FormGroup 
+    label="Nombre del campo" 
+    htmlFor="fieldId"
+    required           // Shows asterisk
+    error={errors.field}  // Error message (sets aria-invalid)
+    helpText="Texto de ayuda opcional"
+>
     <Input id="fieldId" ... />
 </FormGroup>
 ```
 
-### Benefits
-- Consistent `gap-3` spacing between label and input
-- Standardized label styling (`text-foreground/80`)
-- Proper accessibility with `htmlFor` linking
+### Props
+| Prop | Type | Description |
+|------|------|-------------|
+| `label` | `ReactNode` | Field label |
+| `htmlFor` | `string` | Links label to input |
+| `required` | `boolean` | Shows red asterisk |
+| `error` | `string` | Error message (auto-sets `aria-invalid`) |
+| `helpText` | `string` | Help text below input |
+
+### A11y Features
+- Auto-generates `aria-describedby` linking to error/help text
+- Sets `aria-invalid` on child input when error exists
+- Error has `role="alert"` for screen readers
 
 ## 3. Modal System
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useModal } from "@/providers/modal-store";
+import { cn } from "@/lib/utils";
 import {
     Dialog,
     DialogContent,
@@ -12,22 +13,35 @@ import { useEffect, useState } from "react";
 import { CopyPlus, X } from "lucide-react";
 
 export const ModalProvider = () => {
-    const { isOpen, closeModal, view, title, description } = useModal();
+    const { isOpen, closeModal, view, title, description, size = 'md' } = useModal();
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
+    const sizeClasses = {
+        sm: "sm:w-[400px]",
+        md: "sm:w-[600px]",
+        lg: "sm:w-[800px]",
+        xl: "sm:w-[1000px]",
+        full: "sm:w-[calc(100vw-40px)] sm:max-w-none"
+    };
+
     if (!isMounted) return null;
 
     return (
         <Dialog open={isOpen} onOpenChange={closeModal}>
-            <DialogContent className="
-                fixed inset-0 w-screen h-screen max-w-none rounded-none border-0 translate-x-0 translate-y-0 data-[state=open]:slide-in-from-bottom-full sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95
-                sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-[600px] sm:max-w-[90vw] sm:h-auto sm:max-h-[90vh] sm:min-h-0 sm:rounded-lg sm:border
-                !flex !flex-col p-0 !gap-0 overflow-hidden
-            ">
+            <DialogContent
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                showCloseButton={false}
+                className={cn(
+                    "fixed inset-0 w-screen h-screen max-w-none rounded-none border-0 translate-x-0 translate-y-0 data-[state=open]:slide-in-from-bottom-full sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
+                    "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
+                    "sm:max-w-[90vw] sm:h-auto sm:max-h-[90vh] sm:min-h-0 sm:rounded-lg sm:border",
+                    "!flex !flex-col p-0 !gap-0 overflow-hidden",
+                    sizeClasses[size]
+                )}>
                 {/* Fixed Header */}
                 {(title || description) && (
                     <div className="flex-none p-3 border-b border-border bg-background z-10">
@@ -42,6 +56,7 @@ export const ModalProvider = () => {
                                 </div>
                                 <button
                                     onClick={closeModal}
+                                    aria-label="Cerrar modal"
                                     className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                 >
                                     <X className="h-4 w-4" />
