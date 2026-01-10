@@ -1,16 +1,10 @@
 "use client";
 
+import { ColumnDef } from "@tanstack/react-table";
 import { GeneralCostPaymentView } from "@/types/general-costs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table";
 
 interface PaymentsTableProps {
     data: GeneralCostPaymentView[];
@@ -25,57 +19,75 @@ export function PaymentsTable({ data }: PaymentsTableProps) {
         return new Date(dateStr).toLocaleDateString('es-ES');
     };
 
+    const columns: ColumnDef<GeneralCostPaymentView>[] = [
+        {
+            accessorKey: "payment_date",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
+            cell: ({ row }) => formatDate(row.getValue("payment_date")),
+        },
+        {
+            accessorKey: "general_cost_name",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Concepto" />,
+            cell: ({ row }) => (
+                <span className="font-medium">
+                    {row.getValue("general_cost_name") || "Gasto sin concepto"}
+                </span>
+            ),
+        },
+        {
+            accessorKey: "category_name",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Categoría" />,
+            cell: ({ row }) => {
+                const categoryName = row.getValue("category_name") as string | null;
+                return categoryName ? (
+                    <Badge variant="outline" className="text-xs">{categoryName}</Badge>
+                ) : null;
+            },
+        },
+        {
+            accessorKey: "status",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
+            cell: ({ row }) => {
+                const status = row.getValue("status") as string;
+                return (
+                    <Badge variant={status === 'confirmed' ? 'default' : 'secondary'}>
+                        {status === 'confirmed' ? 'Confirmado' : status}
+                    </Badge>
+                );
+            },
+            filterFn: (row, id, value) => value.includes(row.getValue(id)),
+        },
+        {
+            accessorKey: "amount",
+            header: ({ column }) => (
+                <div className="text-right">
+                    <DataTableColumnHeader column={column} title="Monto" />
+                </div>
+            ),
+            cell: ({ row }) => (
+                <span className="text-right font-mono block">
+                    {formatCurrency(row.getValue("amount"))}
+                </span>
+            ),
+        },
+    ];
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Historial de Pagos</CardTitle>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Concepto</TableHead>
-                            <TableHead>Categoría</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead className="text-right">Monto</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
-                                    No hay pagos registrados.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            data.map((payment) => (
-                                <TableRow key={payment.id}>
-                                    <TableCell>{formatDate(payment.payment_date)}</TableCell>
-                                    <TableCell className="font-medium">
-                                        {payment.general_cost_name || "Gasto sin concepto"}
-                                    </TableCell>
-                                    <TableCell>
-                                        {payment.category_name && (
-                                            <Badge variant="outline" className="text-xs">
-                                                {payment.category_name}
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={payment.status === 'confirmed' ? 'default' : 'secondary'}>
-                                            {payment.status === 'confirmed' ? 'Confirmado' : payment.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono">
-                                        {formatCurrency(payment.amount)}
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                <DataTable
+                    columns={columns}
+                    data={data}
+                    searchPlaceholder="Buscar pagos..."
+                    showToolbar={data.length > 5}
+                    showPagination={true}
+                    pageSize={10}
+                />
             </CardContent>
         </Card>
     );
 }
+

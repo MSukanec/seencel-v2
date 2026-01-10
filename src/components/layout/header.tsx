@@ -300,7 +300,11 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                 <div className="flex flex-1 items-center justify-end space-x-4">
                     <nav className="flex items-center space-x-2">
                         {/* Hide Feedback on Public Header */}
-                        {variant === 'app' && <FeedbackButton />}
+                        {variant === 'app' && (
+                            <div className="hidden md:flex">
+                                <FeedbackButton />
+                            </div>
+                        )}
 
                         {variant === 'app' || user ? (
                             <>

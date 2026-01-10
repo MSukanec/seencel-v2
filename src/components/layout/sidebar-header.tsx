@@ -12,7 +12,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/layout/sidebar-content";
 import { Bell, Monitor, Sun, Moon, Menu } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -41,49 +41,59 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
     };
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border bg-sidebar/95 backdrop-blur-md shadow-sm h-14">
-            <div className="flex h-14 w-full items-center pl-0 pr-4">
-                {/* Mobile Menu */}
-                <div className="md:hidden pl-2">
-                    <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                        <SheetTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground">
-                                <Menu className="h-5 w-5" />
-                            </Button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="p-0 w-[280px] bg-sidebar border-r border-border">
-                            <SidebarContent
-                                mode="mobile"
-                                onLinkClick={() => setIsMobileMenuOpen(false)}
+        <header className="sticky top-0 z-50 w-full border-b border-border bg-sidebar/95 backdrop-blur-md shadow-sm min-h-14 transition-[height]">
+            <div className="flex flex-col md:flex-row md:h-14 w-full md:items-center relative">
+
+                {/* 1. Left Section: Menu + Logo + Title */}
+                <div className="flex h-14 w-full md:w-auto items-center pl-0 pr-16 md:pr-0 shrink-0">
+                    {/* Mobile Menu */}
+                    <div className="md:hidden pl-2">
+                        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                            <SheetTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground">
+                                    <Menu className="h-5 w-5" />
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="left" className="p-0 w-full max-w-full sm:max-w-xs bg-sidebar border-r border-border">
+                                <SheetTitle className="sr-only">Menu de navegación</SheetTitle>
+                                <SidebarContent
+                                    mode="mobile"
+                                    onLinkClick={() => setIsMobileMenuOpen(false)}
+                                />
+                            </SheetContent>
+                        </Sheet>
+                    </div>
+
+                    {/* Logo - Centered in 60px on desktop */}
+                    <div className="hidden md:flex items-center justify-center w-[60px] h-full shrink-0 border-r border-border/50">
+                        <Link href="/" className="flex items-center justify-center">
+                            <Image
+                                src="/logo.png"
+                                alt="SEENCEL"
+                                width={32}
+                                height={32}
+                                className="rounded-md object-contain"
                             />
-                        </SheetContent>
-                    </Sheet>
+                        </Link>
+                    </div>
+
+                    <div className="px-4 flex items-center overflow-hidden">
+                        {useLayoutStore((state) => state.headerTitle)}
+                    </div>
                 </div>
 
-                {/* 1. Logo - Centered in 60px to align with collapsed sidebar */}
-                <div className="hidden md:flex items-center justify-center w-[60px] h-full shrink-0 border-r border-border/50">
-                    <Link href="/" className="flex items-center justify-center">
-                        <Image
-                            src="/logo.png"
-                            alt="SEENCEL"
-                            width={32}
-                            height={32}
-                            className="rounded-md object-contain"
-                        />
-                    </Link>
-                </div>
+                {/* 2. Middle Section: Portal Root (Tabs) */}
+                {/* Mobile: Second row. Desktop: Flex-1 inline */}
+                <div
+                    id="header-portal-root"
+                    className="flex w-full md:flex-1 items-center overflow-x-auto no-scrollbar md:ml-4 pb-2 md:pb-0 px-4 md:px-0"
+                />
 
-                <div className="flex-1 px-4 flex items-center overflow-hidden">
-                    {useLayoutStore((state) => state.headerTitle)}
-                    <div id="header-portal-root" className="flex items-center ml-2 md:ml-6 flex-1 overflow-x-auto no-scrollbar" />
-                </div>
-
-                {/* 3. User Actions / CTA (Right Side) */}
-                <div className="flex items-center space-x-2">
-
-
+                {/* 3. Right Section: User Actions */}
+                {/* Mobile: Absolute top-right. Desktop: Relative flex-end */}
+                <div className="absolute top-0 right-0 h-14 flex items-center pr-4 md:static md:h-auto md:ml-auto md:space-x-2 bg-transparent">
                     <nav className="flex items-center space-x-1">
-                        <div className="mr-1">
+                        <div className="mr-1 hidden md:block">
                             <FeedbackButton />
                         </div>
                         {/* Removed ModeToggle, moved to dropdown */}

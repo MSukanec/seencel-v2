@@ -1,47 +1,46 @@
 "use client";
 
+import { Project } from "@/types/project";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MapPin, Calendar, Building2, Hammer, ImageOff } from "lucide-react";
+import { MapPin, Calendar, Building2, Hammer, ImageOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "next-intl";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ProjectCardProps {
-    project: {
-        id: string;
-        name: string;
-        status: string;
-        image_url?: string | null;
-        image_bucket?: string | null;
-        image_path?: string | null;
-        project_type_name?: string | null;
-        project_modality_name?: string | null;
-        city?: string | null;
-        country?: string | null;
-        start_date?: string | null;
-        color?: string | null;
-        custom_color_hex?: string | null;
-        use_custom_color?: boolean;
-    };
+    project: Project;
     className?: string;
+    onEdit?: (project: Project) => void;
+    onDelete?: (project: Project) => void;
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-    "Activo": { bg: "bg-emerald-500/20", text: "text-emerald-400" },
-    "Finalizado": { bg: "bg-blue-500/20", text: "text-blue-400" },
-    "Detenido": { bg: "bg-amber-500/20", text: "text-amber-400" },
-    "Cancelado": { bg: "bg-red-500/20", text: "text-red-400" },
+// Spanish translations for status
+const STATUS_LABELS: Record<string, string> = {
+    "active": "Activo",
+    "completed": "Completado",
+    "paused": "Pausado",
+    "cancelled": "Cancelado",
+    "Activo": "Activo",
+    "Finalizado": "Completado",
+    "Detenido": "Pausado",
+    "Cancelado": "Cancelado",
 };
 
 /**
  * ProjectCard - A beautiful card component for displaying project information
  * Features a hero image with gradient overlay, project name, and key metadata badges
  */
-export function ProjectCard({ project, className }: ProjectCardProps) {
+export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCardProps) {
     const locale = useLocale();
-    const statusStyle = STATUS_COLORS[project.status] || { bg: "bg-muted", text: "text-muted-foreground" };
 
     // Get accent color for the card
     const accentColor = project.use_custom_color && project.custom_color_hex
@@ -55,6 +54,14 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
         ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${project.image_bucket}/${project.image_path}`
         : project.image_url;
 
+    // Get translated status
+    const statusLabel = STATUS_LABELS[project.status] || project.status;
+
+    const handleActionClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
     return (
         <Link href={`/${locale}/project/${project.id}`} className="block group">
             <Card className={cn(
@@ -64,15 +71,15 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
                 "bg-card",
                 className
             )}>
-                {/* Hero Image Section */}
-                <div className="relative h-40 w-full overflow-hidden">
+                {/* Hero Image Section - 1.5x taller (h-60 instead of h-40) */}
+                <div className="relative h-60 w-full overflow-hidden">
                     {imageUrl ? (
                         <Image
                             src={imageUrl}
                             alt={project.name}
                             fill
                             unoptimized
-                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="object-cover"
                         />
                     ) : (
                         <div
@@ -86,15 +93,16 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-                    {/* Status Badge - Top Right */}
+                    {/* Status Badge - Top Right - Uses project color */}
                     <Badge
-                        className={cn(
-                            "absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 border-0",
-                            statusStyle.bg,
-                            statusStyle.text
-                        )}
+                        className="absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 border-0 shadow-lg"
+                        style={{
+                            backgroundColor: `color-mix(in srgb, ${accentColor} 25%, transparent)`,
+                            color: accentColor,
+                            backdropFilter: "blur(8px)",
+                        }}
                     >
-                        {project.status}
+                        {statusLabel}
                     </Badge>
 
                     {/* Project Name - Bottom of Image */}
@@ -117,10 +125,10 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
                     />
                 </div>
 
-                {/* Metadata Section */}
-                <div className="p-4 space-y-3">
+                {/* Footer Section */}
+                <div className="p-4 flex items-center justify-between">
                     {/* Info Chips */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 flex-1">
                         {project.project_type_name && (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-2.5 py-1">
                                 <Building2 className="h-3 w-3" />
@@ -140,8 +148,35 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
                             </div>
                         )}
                     </div>
+
+                    {/* Action Buttons - Visible on Hover */}
+                    {(onEdit || onDelete) && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={handleActionClick}>
+                            {onEdit && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => onEdit(project)}
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            )}
+                            {onDelete && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    onClick={() => onDelete(project)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </Card>
         </Link>
     );
 }
+

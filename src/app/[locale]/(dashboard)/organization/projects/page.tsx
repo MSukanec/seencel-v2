@@ -3,22 +3,13 @@ import { getUserOrganizations } from "@/features/organization/queries";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions/project-settings-actions";
 import { fetchLastActiveProject } from "@/features/projects/actions";
-import { CreateProjectButton } from "@/features/projects/components/CreateProjectButton";
-import { ProjectRow } from "@/features/projects/components/ProjectRow";
+import { ProjectsList } from "@/features/projects/components/projects-list";
 import { ProjectTypesManager } from "@/features/projects/components/project-types-manager";
 import { ProjectModalitiesManager } from "@/features/projects/components/project-modalities-manager";
 import { redirect } from "@/i18n/routing";
 import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HeaderPortal } from "@/components/layout/header-portal";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 
 export default async function ProjectsPage({
     params: { locale }
@@ -69,47 +60,18 @@ export default async function ProjectsPage({
                 {/* Projects Tab */}
                 <TabsContent value="projects" className="mt-6 flex-1 focus-visible:outline-none">
                     <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-3xl font-bold tracking-tight">{t('title')}</h2>
-                                <p className="text-muted-foreground">
-                                    {t('subtitle')}
-                                </p>
-                            </div>
-                            <CreateProjectButton organizationId={activeOrgId} />
+                        <div>
+                            <h2 className="text-3xl font-bold tracking-tight">{t('title')}</h2>
+                            <p className="text-muted-foreground">
+                                {t('subtitle')}
+                            </p>
                         </div>
 
-                        <div className="rounded-md border bg-card">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>{t('table.name')}</TableHead>
-                                        <TableHead className="hidden md:table-cell">{t('table.type')}</TableHead>
-                                        <TableHead className="hidden md:table-cell">Modalidad</TableHead>
-                                        <TableHead className="hidden md:table-cell">Creación</TableHead>
-                                        <TableHead className="hidden md:table-cell">Últ. Actividad</TableHead>
-                                        <TableHead className="text-right">{t('table.status')}</TableHead>
-                                        <TableHead className="w-[50px]"></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {projects.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
-                                                No projects found.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : projects.map((project) => (
-                                        <ProjectRow
-                                            key={project.id}
-                                            project={project}
-                                            locale={locale}
-                                            isLastActive={project.id === lastActiveProjectId}
-                                        />
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                        <ProjectsList
+                            projects={projects}
+                            organizationId={activeOrgId}
+                            lastActiveProjectId={lastActiveProjectId}
+                        />
                     </div>
                 </TabsContent>
 

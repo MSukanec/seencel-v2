@@ -24,10 +24,10 @@ interface ContactsClientProps {
 
 export function ContactsClient({ organizationId, initialContacts, initialTypes, summary }: ContactsClientProps) {
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full relative">
             <HeaderTitleUpdater title="Contactos" />
 
-            <Tabs defaultValue="list" className="flex flex-col h-full">
+            <Tabs defaultValue="list" className="w-full flex-1 flex flex-col overflow-hidden">
                 <HeaderPortal>
                     <TabsList className="bg-transparent border-b rounded-none h-12 w-full justify-start p-0 space-x-6">
                         <TabsTrigger
@@ -45,8 +45,8 @@ export function ContactsClient({ organizationId, initialContacts, initialTypes, 
                     </TabsList>
                 </HeaderPortal>
 
-                <div className="flex-1 w-full p-6">
-                    <TabsContent value="list" className="m-0 h-full border-none p-0 outline-none space-y-6">
+                <TabsContent value="list" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
                         {/* KPI Section */}
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             <KpiCard
@@ -78,8 +78,10 @@ export function ContactsClient({ organizationId, initialContacts, initialTypes, 
                             initialContacts={initialContacts}
                             contactTypes={initialTypes}
                         />
-                    </TabsContent>
-                    <TabsContent value="settings" className="m-0 h-full border-none p-0 outline-none space-y-6">
+                    </div>
+                </TabsContent>
+                <TabsContent value="settings" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
                         <div>
                             <h2 className="text-3xl font-bold tracking-tight">Configuración</h2>
                             <p className="text-muted-foreground">
@@ -90,8 +92,8 @@ export function ContactsClient({ organizationId, initialContacts, initialTypes, 
                             organizationId={organizationId}
                             initialTypes={initialTypes}
                         />
-                    </TabsContent>
-                </div>
+                    </div>
+                </TabsContent>
             </Tabs>
         </div>
     );

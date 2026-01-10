@@ -22,11 +22,11 @@ export function SidebarLayout({ children, user }: { children: React.ReactNode, u
                 <Sidebar />
                 <main className={cn(
                     "flex-1 overflow-y-auto bg-muted/10",
-                    isFullWidthPage ? "p-0" : "p-4"
+                    isFullWidthPage ? "p-0" : "p-2 md:p-6"
                 )}>
                     <div className={cn(
                         "animate-in fade-in slide-in-from-bottom-4 duration-500",
-                        isFullWidthPage ? "w-full h-full" : "mx-auto max-w-[95%]"
+                        isFullWidthPage ? "w-full h-full" : "w-full max-w-full md:mx-auto md:max-w-[95%]"
                     )}>
                         {children}
                     </div>
