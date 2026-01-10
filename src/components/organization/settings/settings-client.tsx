@@ -17,10 +17,10 @@ interface SettingsClientProps {
 
 export function SettingsClient({ data, initialTab = "members" }: SettingsClientProps) {
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full relative">
             <HeaderTitleUpdater title="Configuración" />
 
-            <Tabs defaultValue={initialTab} className="flex flex-col h-full">
+            <Tabs defaultValue={initialTab} className="w-full flex-1 flex flex-col overflow-hidden">
                 <HeaderPortal>
                     <TabsList className="bg-transparent border-b rounded-none h-12 w-full justify-start p-0 space-x-6">
                         <TabsTrigger
@@ -56,31 +56,42 @@ export function SettingsClient({ data, initialTab = "members" }: SettingsClientP
                     </TabsList>
                 </HeaderPortal>
 
-                <div className="flex-1 w-full space-y-6 pt-6">
-                    <TabsContent value="members" className="m-0 h-full border-none p-0 outline-none">
+                <TabsContent value="members" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
                         <MembersTab
                             members={data.members}
                             invitations={data.invitations}
                             roles={data.roles}
                         />
-                    </TabsContent>
-                    <TabsContent value="permissions" className="m-0 h-full border-none p-0 outline-none">
+                    </div>
+                </TabsContent>
+                <TabsContent value="permissions" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
                         <PermissionsTab
                             roles={data.roles}
                             permissions={data.permissions}
                             rolePermissions={data.rolePermissions}
                         />
-                    </TabsContent>
-                    <TabsContent value="activity" className="m-0 h-full border-none p-0 outline-none">
+                    </div>
+                </TabsContent>
+                <TabsContent value="activity" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
                         <ActivityTab logs={data.activityLogs || []} />
-                    </TabsContent>
-                    <TabsContent value="billing" className="m-0 h-full border-none p-0 outline-none">
+                    </div>
+                </TabsContent>
+                <TabsContent value="billing" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
                         <BillingTab
                             subscription={data.subscription}
                             billingCycles={data.billingCycles}
                         />
-                    </TabsContent>
-                </div>
+                    </div>
+                </TabsContent>
+                <TabsContent value="finance" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+                    <div className="space-y-6 pb-6">
+                        <FinanceTab />
+                    </div>
+                </TabsContent>
             </Tabs>
         </div>
     );

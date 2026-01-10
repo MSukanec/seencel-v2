@@ -30,8 +30,12 @@ create table public.contact_types (
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
   organization_id uuid null,
+  updated_by uuid null,
+  created_by uuid null,
   constraint contact_types_pkey primary key (id),
-  constraint contact_types_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
+  constraint contact_types_created_by_fkey foreign KEY (created_by) references organization_members (id),
+  constraint contact_types_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint contact_types_updated_by_fkey foreign KEY (updated_by) references organization_members (id)
 ) TABLESPACE pg_default;
 
 create unique INDEX IF not exists idx_contact_types_org_name_active on public.contact_types using btree (organization_id, name) TABLESPACE pg_default
@@ -47,6 +51,17 @@ where
     (is_deleted = false)
     and (organization_id is null)
   );
+
+create trigger on_contact_type_audit
+after INSERT
+or DELETE
+or
+update on contact_types for EACH row
+execute FUNCTION log_contact_type_activity ();
+
+create trigger set_updated_by_contact_types BEFORE
+update on contact_types for EACH row
+execute FUNCTION handle_updated_by ();
 
 ## Tabla CONTACTS:
 
@@ -73,10 +88,16 @@ create table public.contacts (
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
   image_url text null,
+  import_batch_id uuid null,
+  updated_by uuid null,
+  created_by uuid null,
   constraint contacts_pkey primary key (id),
   constraint contacts_national_id_org_key unique (organization_id, national_id),
   constraint contacts_linked_user_id_fkey foreign KEY (linked_user_id) references users (id) on delete set null,
-  constraint contacts_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
+  constraint contacts_created_by_fkey foreign KEY (created_by) references organization_members (id),
+  constraint contacts_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint contacts_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id),
+  constraint contacts_updated_by_fkey foreign KEY (updated_by) references organization_members (id)
 ) TABLESPACE pg_default;
 
 create unique INDEX IF not exists uniq_contacts_org_linked_user on public.contacts using btree (organization_id, linked_user_id) TABLESPACE pg_default
@@ -91,10 +112,23 @@ create index IF not exists idx_contacts_is_deleted_org on public.contacts using 
 where
   (is_deleted = false);
 
+create index IF not exists idx_contacts_import_batch_id on public.contacts using btree (import_batch_id) TABLESPACE pg_default;
+
+create trigger on_contact_audit
+after INSERT
+or DELETE
+or
+update on contacts for EACH row
+execute FUNCTION log_contact_activity ();
+
 create trigger on_contact_link_user BEFORE INSERT
 or
 update OF email on contacts for EACH row
 execute FUNCTION handle_contact_link_user ();
+
+create trigger set_updated_by_contacts BEFORE
+update on contacts for EACH row
+execute FUNCTION handle_updated_by ();
 
 create trigger trigger_contacts_updated_at BEFORE
 update on contacts for EACH row

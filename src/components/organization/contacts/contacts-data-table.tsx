@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { ContactWithRelations, ContactType } from "@/types/contact";
 import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/components/ui/data-table";
@@ -13,12 +14,14 @@ import { Trash2, Plus } from "lucide-react";
 import { ContactCard } from "./ContactCard";
 import { deleteContact } from "@/actions/contacts";
 import { createImportBatch, importContactsBatch, revertImportBatch } from "@/actions/import-actions";
+import { getContactTypes, createContactType } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
 import { DataTableExport } from "@/components/ui/data-table/data-table-export";
 import { DataTableImport } from "@/components/ui/data-table/data-table-import";
 import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
 import { ImportConfig } from "@/lib/import-utils";
 import { Contact } from "@/types/contact";
+import { DeleteReplacementModal } from "@/components/global/DeleteReplacementModal";
 
 interface ContactsDataTableProps {
     organizationId: string;
@@ -31,6 +34,7 @@ interface ContactsDataTableProps {
 export function ContactsDataTable({ organizationId, contacts, contactTypes, viewMode, viewToggle }: ContactsDataTableProps) {
     const { openModal, closeModal } = useModal();
     const router = useRouter();
+    const [deletingContact, setDeletingContact] = useState<ContactWithRelations | null>(null);
 
     const handleSuccess = () => {
         router.refresh();
@@ -47,6 +51,7 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
                 id: "email",
                 label: "Email",
                 type: "email",
+                unique: true, // Enable duplicate checking in DB
                 normalization: normalizeEmail,
                 validation: (val) => {
                     const normalized = normalizeEmail(val);
@@ -64,10 +69,32 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
             { id: "company_name", label: "Empresa", required: false },
             { id: "location", label: "Ubicación", required: false },
             { id: "notes", label: "Notas", required: false },
-            { id: "contact_types", label: "Tipo", required: false, example: "Cliente" },
+            {
+                id: "contact_types",
+                label: "Tipo",
+                required: false,
+                example: "Cliente",
+                foreignKey: {
+                    table: 'contact_types',
+                    labelField: 'name',
+                    valueField: 'id',
+                    // Fetch existing types for dropdown/matching
+                    fetchOptions: async (orgId) => {
+                        const types = await getContactTypes(orgId);
+                        return types.map(t => ({ id: t.id, label: t.name }));
+                    },
+                    allowCreate: true,
+                    // Create new type inline
+                    createAction: async (orgId, name) => {
+                        const newType = await createContactType(orgId, name);
+                        return { id: newType.id };
+                    }
+                }
+            },
         ],
         onImport: async (data) => {
             try {
+
                 // 1. Create Batch
                 const batch = await createImportBatch(organizationId, "contacts", data.length);
 
@@ -116,11 +143,18 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
         );
     };
 
-    const handleDelete = async (contact: ContactWithRelations) => {
-        if (confirm(`¿Estás seguro de eliminar a ${contact.full_name || 'este contacto'}?`)) {
-            await deleteContact(contact.id);
-            router.refresh();
-        }
+    // Opens the delete modal instead of native confirm
+    const handleDelete = (contact: ContactWithRelations) => {
+        setDeletingContact(contact);
+    };
+
+    // Called by the modal when user confirms
+    const handleConfirmDelete = async (replacementId: string | null) => {
+        if (!deletingContact) return;
+        // Pass replacementId to server action for migration before delete
+        await deleteContact(deletingContact.id, replacementId || undefined);
+        setDeletingContact(null);
+        router.refresh();
     };
 
     const handleBulkDelete = (selectedContacts: ContactWithRelations[], onSuccess?: () => void) => {
@@ -259,69 +293,86 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
     ];
 
     return (
-        <DataTable
-            columns={columns}
-            data={contacts}
-            searchPlaceholder="Buscar contactos..."
-            viewMode={viewMode}
-            enableRowSelection={true}
-            leftActions={viewToggle}
-            pageSize={50}
-            facetedFilters={[
-                {
-                    columnId: "contact_types",
-                    title: "Etiquetas",
-                    options: contactTypes.map((type) => ({
-                        label: type.name,
-                        value: type.name,
-                    })),
-                },
-            ]}
-            renderGridItem={(contact) => (
-                <ContactCard
-                    contact={contact}
-                    onEdit={handleOpenEdit}
-                    onDelete={handleDelete}
-                />
-            )}
-            bulkActions={({ table }) => (
-                <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => {
-                        const selectedRows = table.getFilteredSelectedRowModel().rows;
-                        const selectedContacts = selectedRows.map(row => row.original);
-                        handleBulkDelete(selectedContacts, () => table.resetRowSelection());
-                    }}
-                >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar ({table.getFilteredSelectedRowModel().rows.length})
-                </Button>
-            )}
-            toolbar={({ table }) => (
-                <div className="flex gap-2">
-                    <DataTableImport config={contactImportConfig} organizationId={organizationId} />
-                    <DataTableExport table={table} />
-                    <Button onClick={handleOpenCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nuevo Contacto
+        <>
+            <DataTable
+                columns={columns}
+                data={contacts}
+                searchPlaceholder="Buscar contactos..."
+                viewMode={viewMode}
+                enableRowSelection={true}
+                leftActions={viewToggle}
+                pageSize={50}
+                facetedFilters={[
+                    {
+                        columnId: "contact_types",
+                        title: "Etiquetas",
+                        options: contactTypes.map((type) => ({
+                            label: type.name,
+                            value: type.name,
+                        })),
+                    },
+                ]}
+                renderGridItem={(contact) => (
+                    <ContactCard
+                        contact={contact}
+                        onEdit={handleOpenEdit}
+                        onDelete={handleDelete}
+                    />
+                )}
+                bulkActions={({ table }) => (
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                            const selectedRows = table.getFilteredSelectedRowModel().rows;
+                            const selectedContacts = selectedRows.map(row => row.original);
+                            handleBulkDelete(selectedContacts, () => table.resetRowSelection());
+                        }}
+                    >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar ({table.getFilteredSelectedRowModel().rows.length})
                     </Button>
-                </div>
-            )}
-            initialSorting={[{ id: "full_name", desc: false }]}
-            gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4"
-            emptyState={
-                <div className="flex flex-col items-center justify-center py-12">
-                    <div className="rounded-full bg-muted p-4 mb-4">
-                        <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
+                )}
+                toolbar={({ table }) => (
+                    <div className="flex gap-2">
+                        <DataTableImport config={contactImportConfig} organizationId={organizationId} />
+                        <DataTableExport table={table} />
+                        <Button onClick={handleOpenCreate}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nuevo Contacto
+                        </Button>
                     </div>
-                    <h3 className="font-medium text-lg">No hay contactos</h3>
-                    <p className="text-muted-foreground text-sm mt-1">Agrega tu primer contacto</p>
-                </div>
-            }
-        />
+                )}
+                initialSorting={[{ id: "full_name", desc: false }]}
+                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                emptyState={
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="rounded-full bg-muted p-4 mb-4">
+                            <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <h3 className="font-medium text-lg">No hay contactos</h3>
+                        <p className="text-muted-foreground text-sm mt-1">Agrega tu primer contacto</p>
+                    </div>
+                }
+            />
+
+            {/* Delete Contact Modal */}
+            <DeleteReplacementModal
+                isOpen={deletingContact !== null}
+                onClose={() => setDeletingContact(null)}
+                onConfirm={handleConfirmDelete}
+                itemToDelete={deletingContact ? { id: deletingContact.id, name: deletingContact.full_name || "Sin nombre" } : null}
+                entityLabel="contacto"
+                replacementOptions={contacts
+                    .filter(c => c.id !== deletingContact?.id)
+                    .map(c => ({ id: c.id, name: c.full_name || `${c.first_name} ${c.last_name}` || "Sin nombre" }))
+                }
+                title="Eliminar Contacto"
+                description={`¿Estás seguro de eliminar a "${deletingContact?.full_name || 'este contacto'}"?`}
+            />
+        </>
     );
 }

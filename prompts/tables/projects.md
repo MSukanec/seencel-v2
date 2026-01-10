@@ -30,9 +30,11 @@ create table public.project_data (
   place_id text null,
   timezone text null,
   is_public boolean not null default false,
+  updated_by uuid null,
   constraint project_data_pkey primary key (project_id),
   constraint project_data_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
-  constraint project_data_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE
+  constraint project_data_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint project_data_updated_by_fkey foreign KEY (updated_by) references organization_members (id)
 ) TABLESPACE pg_default;
 
 create index IF not exists project_data_city_idx on public.project_data using btree (city) TABLESPACE pg_default;
@@ -43,9 +45,18 @@ create index IF not exists project_data_org_idx on public.project_data using btr
 
 create index IF not exists project_data_org_project_idx on public.project_data using btree (organization_id, project_id) TABLESPACE pg_default;
 
+create trigger on_project_data_audit
+after
+update on project_data for EACH row
+execute FUNCTION log_project_data_activity ();
+
 create trigger project_data_set_updated_at BEFORE
 update on project_data for EACH row
 execute FUNCTION set_timestamp ();
+
+create trigger set_updated_by_project_data BEFORE
+update on project_data for EACH row
+execute FUNCTION handle_updated_by ();
 
 ## Tabla PROJECT_MODALITIES:
 
@@ -59,9 +70,11 @@ create table public.project_modalities (
   deleted_at timestamp with time zone null,
   updated_at timestamp with time zone not null default now(),
   created_by uuid null,
+  updated_by uuid null,
   constraint project_modalities_pkey primary key (id),
   constraint project_modalities_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
-  constraint project_modalities_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
+  constraint project_modalities_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint project_modalities_updated_by_fkey foreign KEY (updated_by) references organization_members (id)
 ) TABLESPACE pg_default;
 
 create index IF not exists project_modalities_org_idx on public.project_modalities using btree (organization_id) TABLESPACE pg_default;
@@ -81,9 +94,20 @@ where
     and (organization_id is null)
   );
 
+create trigger on_project_modality_audit
+after INSERT
+or DELETE
+or
+update on project_modalities for EACH row
+execute FUNCTION log_project_modality_activity ();
+
 create trigger project_modalities_set_updated_at BEFORE
 update on project_modalities for EACH row
 execute FUNCTION set_timestamp ();
+
+create trigger set_updated_by_project_modalities BEFORE
+update on project_modalities for EACH row
+execute FUNCTION handle_updated_by ();
 
 ## Tabla PROJECT_TYPES:
 
@@ -97,9 +121,11 @@ create table public.project_types (
   deleted_at timestamp with time zone null,
   updated_at timestamp with time zone not null default now(),
   created_by uuid null,
+  updated_by uuid null,
   constraint project_types_pkey primary key (id),
   constraint project_types_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
-  constraint project_types_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
+  constraint project_types_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint project_types_updated_by_fkey foreign KEY (updated_by) references organization_members (id)
 ) TABLESPACE pg_default;
 
 create index IF not exists project_types_not_deleted_idx on public.project_types using btree (is_deleted) TABLESPACE pg_default
@@ -119,9 +145,20 @@ where
     and (organization_id is null)
   );
 
+create trigger on_project_type_audit
+after INSERT
+or DELETE
+or
+update on project_types for EACH row
+execute FUNCTION log_project_type_activity ();
+
 create trigger project_types_set_updated_at BEFORE
 update on project_types for EACH row
 execute FUNCTION set_timestamp ();
+
+create trigger set_updated_by_project_types BEFORE
+update on project_types for EACH row
+execute FUNCTION handle_updated_by ();
 
 ## Tabla PROJECTS:
 
@@ -146,12 +183,14 @@ create table public.projects (
   image_url text null,
   project_type_id uuid null,
   project_modality_id uuid null,
+  updated_by uuid null,
   constraint projects_pkey primary key (id),
   constraint projects_id_key unique (id),
+  constraint projects_updated_by_fkey foreign KEY (updated_by) references organization_members (id),
   constraint projects_project_type_id_fkey foreign KEY (project_type_id) references project_types (id) on delete set null,
-  constraint projects_project_modality_id_fkey foreign KEY (project_modality_id) references project_modalities (id) on delete set null,
   constraint projects_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
   constraint projects_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint projects_project_modality_id_fkey foreign KEY (project_modality_id) references project_modalities (id) on delete set null,
   constraint projects_name_not_blank_chk check ((btrim(name) <> ''::text)),
   constraint projects_custom_color_h_check check (
     (
@@ -187,9 +226,20 @@ create index IF not exists projects_modality_idx on public.projects using btree 
 
 create index IF not exists idx_projects_org_status_active on public.projects using btree (organization_id, status, is_active, is_deleted) TABLESPACE pg_default;
 
+create trigger on_project_audit
+after INSERT
+or DELETE
+or
+update on projects for EACH row
+execute FUNCTION log_project_activity ();
+
 create trigger projects_set_updated_at BEFORE
 update on projects for EACH row
 execute FUNCTION set_timestamp ();
+
+create trigger set_updated_by_projects BEFORE
+update on projects for EACH row
+execute FUNCTION handle_updated_by ();
 
 ## Tabla PROJECTS_VIEW:
 

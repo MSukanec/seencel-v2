@@ -1,5 +1,20 @@
 
 
+// Foreign Key Configuration for import conflict resolution
+export interface ForeignKeyOption {
+    id: string;
+    label: string;
+}
+
+export interface ForeignKeyConfig {
+    table: string;                                                    // Table name for reference
+    labelField: string;                                               // Field used in Excel (e.g., 'name')
+    valueField: string;                                               // Field to use as ID (e.g., 'id')
+    fetchOptions: (orgId: string) => Promise<ForeignKeyOption[]>;     // Get existing options
+    allowCreate?: boolean;                                            // Can user create new values inline?
+    createAction?: (orgId: string, value: string) => Promise<{ id: string }>; // Create new option
+}
+
 export interface ImportColumn<T = any> {
     id: keyof T;
     label: string;
@@ -9,7 +24,10 @@ export interface ImportColumn<T = any> {
     type?: 'string' | 'number' | 'date' | 'email' | 'phone' | 'currency';
     validation?: (value: any) => string | undefined; // Returns error message if invalid
     normalization?: (value: any) => any; // Transform value before validation/import
+    foreignKey?: ForeignKeyConfig; // FK resolution config
+    unique?: boolean; // Check for duplicates in DB
 }
+
 
 export interface ImportConfig<T = any> {
     entityLabel: string;
@@ -107,20 +125,43 @@ export async function parseFile(file: File, options?: ParseOptions): Promise<Par
     });
 }
 
-export function findBestMatch(header: string, columns: ImportColumn[]): string | undefined {
-    const normalizedHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '');
+// Enterprise-grade string normalization
+// Handles accents (diacritics), trimming, casing, and special characters.
+// "Teléfono" -> "telefono"
+// "  Ubicación  " -> "ubicacion"
+export function normalizeString(str: string | null | undefined): string {
+    if (!str) return "";
+    return String(str)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .toLowerCase()
+        .trim();
+}
 
-    // Direct match
+/**
+ * Finds the best column match for a given header.
+ * Uses normalized comparison to handle accents and casing.
+ */
+export function findBestMatch(header: string, columns: ImportColumn[]): string | undefined {
+    // Aggressive normalization for matching (remove all non-alphanumeric)
+    // "E-mail" -> "email", "Teléfono" -> "telefono"
+    const clean = (s: string) => normalizeString(s).replace(/[^a-z0-9]/g, "");
+
+    const normalizedHeader = clean(header);
+
+    // Direct match with normalized strings
     const directMatch = columns.find(col =>
-        col.id.toString().toLowerCase() === normalizedHeader ||
-        col.label.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedHeader
+        clean(col.id.toString()) === normalizedHeader ||
+        clean(col.label) === normalizedHeader
     );
     if (directMatch) return directMatch.id.toString();
 
     // Partial match (simple heuristic)
     const partialMatch = columns.find(col =>
-        normalizedHeader.includes(col.id.toString().toLowerCase()) ||
-        col.id.toString().toLowerCase().includes(normalizedHeader)
+        normalizedHeader.includes(clean(col.id.toString())) ||
+        clean(col.id.toString()).includes(normalizedHeader) ||
+        normalizedHeader.includes(clean(col.label)) ||
+        clean(col.label).includes(normalizedHeader)
     );
 
     if (partialMatch) return partialMatch.id.toString();

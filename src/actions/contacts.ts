@@ -55,7 +55,9 @@ export async function createContact(organizationId: string, contact: Partial<Con
     // Prepare payload
     const payload = {
         ...contact,
-        organization_id: organizationId
+        organization_id: organizationId,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        updated_by: (await supabase.auth.getUser()).data.user?.id
     };
 
     // Convert relative path to full URL if needed
@@ -100,7 +102,10 @@ export async function createContact(organizationId: string, contact: Partial<Con
 export async function updateContact(contactId: string, updates: Partial<Contact>, typeIds?: string[]) {
     const supabase = await createClient();
 
-    const payload = { ...updates };
+    const payload = {
+        ...updates,
+        updated_by: (await supabase.auth.getUser()).data.user?.id
+    };
 
     // Convert relative path to full URL if needed
     if (payload.image_url && !payload.image_url.startsWith('http')) {
@@ -154,13 +159,27 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
     revalidatePath(`/organization/contacts`);
 }
 
-export async function deleteContact(contactId: string) {
+export async function deleteContact(contactId: string, replacementId?: string) {
     const supabase = await createClient();
 
-    // Soft delete as per schema (is_deleted)
+    // 1. If replacement requested, migrate any references
+    if (replacementId) {
+        // Future: Add migrations here if contacts are FK'd from other tables
+        // Example: Update project_data.client_id from contactId to replacementId
+        // For now, contact_type_links uses CASCADE so no migration needed there
+
+        // Placeholder for future FK migrations:
+        // await supabase.from('some_table').update({ contact_id: replacementId }).eq('contact_id', contactId);
+    }
+
+    // 2. Soft delete
     const { error } = await supabase
         .from('contacts')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+            updated_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', contactId);
 
     if (error) {
@@ -197,7 +216,12 @@ export async function createContactType(organizationId: string, name: string) {
 
     const { data, error } = await supabase
         .from('contact_types')
-        .insert({ organization_id: organizationId, name })
+        .insert({
+            organization_id: organizationId,
+            name,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            updated_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .select()
         .single();
 
@@ -215,7 +239,10 @@ export async function updateContactType(id: string, name: string) {
 
     const { error } = await supabase
         .from('contact_types')
-        .update({ name })
+        .update({
+            name,
+            updated_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', id);
 
     if (error) {
@@ -263,7 +290,11 @@ export async function deleteContactType(id: string, replacementId?: string) {
     // 2. Soft Delete
     const { error } = await supabase
         .from('contact_types')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+            updated_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', id);
 
     if (error) {

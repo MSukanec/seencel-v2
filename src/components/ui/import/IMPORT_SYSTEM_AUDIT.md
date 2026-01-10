@@ -28,51 +28,48 @@ Este documento sirve como guía maestra para el desarrollo del "Universal Import
 - [x] **Smart Mapping Automático** (Sugiere columnas basado en uso histórico)
 - [x] **Fuzzy Matching** (Algoritmo de similitud de texto para sugerencias iniciales)
 
----
-
-## 🟡 Fase 1: Robustez de Datos (COMPLETADO) ✅
-
-El sistema Legacy tenía validaciones más estrictas. Necesitamos igualar esa calidad para evitar datos sucios.
-
+### Auditoría y Seguridad del Dato (✅ NUEVO)
+- [x] **Activity Log Robusto**: Sistema de logging basado en triggers de base de datos (infalible).
+- [x] **Historial de Importaciones**:
+    - [x] Log de "Quién importó qué, cuándo y cuántos registros".
+    - [x] **Botón Undo/Deshacer**: Capacidad de revertir (Soft delete) todo un lote de importación con un click.
+    - [x] **UI Profesional**: Tabla de auditoría con filtros, badges semánticos y metadata detallada.
 - [x] **Normalizadores de Datos (`useValueNormalizer`)**
-    - [x] Limpiar teléfonos (quitar espacios, guiones, formateo estándar) *Nota: No forzamos +54 por seguridad*
+    - [x] Limpiar teléfonos (quitar espacios, guiones, formateo estándar)
     - [x] Estandarizar Emails (lowercase, trim)
-    - [x] Parsear Monedas "Sucias" (ej: `$ 1.500,00` -> `1500.00`) - *Ya implementado en `normalizeCurrency`*
-- [ ] **Mejora en Feedback de Validación**
-    - [ ] UI: Resaltar celda exacta con error en rojo
-    - [ ] UI: Mensajes de error más amigables ("Falta el @ en el mail")
+    - [x] Parsear Monedas "Sucias" (ej: `$ 1.500,00` -> `1500.00`)
 
 ---
 
-## 🔴 Fase 2: El Gran Salto - Resolución de Conflictos (CRÍTICO)
+## 🟢 Fase 2: El Gran Salto - Resolución de Conflictos (✅ COMPLETADO)
 
 Esta es la funcionalidad "Killer Feature" que tenía el Legacy y nos falta. Es la diferencia entre un sistema frustrante y uno mágico.
 
-- [ ] **Detección de "Datos Nuevos"**
-    - [ ] Detectar valores Foreign Key que no existen (ej: El Excel dice Billetera: "Caja Chica" pero no existe en DB).
-- [ ] **UI de Resolución de Conflictos (Paso Intermedio)**
-    - [ ] Crear un paso nuevo en el Wizard (después de validar).
-    - [ ] Permitir al usuario decidir al vuelo:
-        - [ ] **Opción A:** Crear el valor nuevo (ej: Crear la billetera "Caja Chica").
-        - [ ] **Opción B:** Mapear a existente (ej: Todo lo que diga "Caja Chica" va a "Efectivo").
-        - [ ] **Opción C:** Ignorar fila.
+- [x] **Detección de "Datos Nuevos"**
+    - [x] Detectar valores Foreign Key que no existen (ej: El Excel dice Billetera: "Caja Chica" pero no existe en DB).
+- [x] **UI de Resolución de Conflictos (Paso Intermedio)**
+    - [x] Crear un paso nuevo en el Wizard (después de validar).
+    - [x] Permitir al usuario decidir al vuelo:
+        - [x] **Opción A:** Crear el valor nuevo (ej: Crear la billetera "Caja Chica").
+        - [x] **Opción B:** Mapear a existente (ej: Todo lo que diga "Caja Chica" va a "Efectivo").
+        - [x] **Opción C:** Ignorar fila.
 
 ---
 
-## 🔵 Fase 3: Innovación & "Nice to Have"
+## 🔵 Fase 3: Innovación & "Nice to Have" (Futuro)
 
 Cosas para superar al sistema anterior una vez que lo básico esté sólido.
 
 - [ ] **AI Fallback con GPT-4 (Opcional)**
     - [ ] Usar LLM solo si el *Fuzzy Match* y la *Memoria* fallan. (Actualmente la Memoria cubre el 80% de los casos).
-- [ ] **Historial de Importaciones**
-    - [ ] Log de "Quién importó qué y cuándo".
-    - [ ] Botón **Undo/Deshacer** (Soft delete de todo un lote de importación).
 - [ ] **Templates de Importación**
     - [ ] Guardar configuraciones complejas (ej: "Importación Mensual de Banco Galicia") para reutilizar con 1 click.
+- [ ] **Mejora en Feedback de Validación (UI)**
+    - [ ] Resaltar celda exacta con error en rojo en la tabla de preview.
+    - [ ] UI: Mensajes de error más amigables ("Falta el @ en el mail").
 
 ---
 
 ### 🧠 Conclusión Técnica
-La base V2 está lista y es sólida. **No necesitamos reescribir nada**, solo *extender*.
-El foco absoluto debe ser la **Fase 2 (Conflictos)**. Si logramos eso, el sistema será world-class.
+La base V2 está **muy sólida**. Ya tenemos Auditoría, Undo, Mapping Inteligente y una UI estable.
+El foco absoluto ahora debe ser la **Fase 2 (Conflictos)**.

@@ -1,6 +1,8 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { cn } from "@/lib/utils";
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Globe2, ShieldCheck } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { getTranslations } from 'next-intl/server';
@@ -42,22 +44,27 @@ export default async function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               {profile ? (
-                <Button size="lg" className="h-12 px-8 text-lg rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" asChild>
-                  <Link href="/organization">
-                    {t('Hero.dashboard')} <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                <Link
+                  href="/organization"
+                  className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20")}
+                >
+                  {t('Hero.dashboard')} <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               ) : (
-                <Button size="lg" className="h-12 px-8 text-lg rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" asChild>
-                  <Link href="/signup">
-                    {t('Hero.getStarted')} <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                <Link
+                  href="/signup"
+                  className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20")}
+                >
+                  {t('Hero.getStarted')} <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               )}
 
-              <Button size="lg" variant="outline" className="h-12 px-8 text-lg rounded-full backdrop-blur-sm bg-background/50 hover:bg-muted/50" asChild>
-                <Link href={"#features" as any}>{t('Hero.howItWorks')}</Link>
-              </Button>
+              <Link
+                href={"#features" as any}
+                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-12 px-8 text-lg rounded-full backdrop-blur-sm bg-background/50 hover:bg-muted/50")}
+              >
+                {t('Hero.howItWorks')}
+              </Link>
             </div>
 
             {/* Hero Image / Mockup Placeholder */}

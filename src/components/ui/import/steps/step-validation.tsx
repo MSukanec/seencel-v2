@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ImportConfig } from "@/lib/import-utils";
+import { checkDuplicates } from "@/actions/validation-actions"; // Import the server action
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,7 +14,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -21,51 +22,112 @@ import { useTranslations } from "next-intl";
 interface ImportStepValidationProps {
     config: ImportConfig;
     data: any[];
+    organizationId: string;
 }
 
-export function ImportStepValidation({ config, data }: ImportStepValidationProps) {
+export function ImportStepValidation({ config, data, organizationId }: ImportStepValidationProps) {
     const t = useTranslations('ImportSystem.Validation');
+    const [dbDuplicates, setDbDuplicates] = useState<Record<string, Set<string>>>({}); // colId -> Set of lowercase duplicate values
+    const [isValidating, setIsValidating] = useState(false);
+
+    // 1. Async Database Duplicate Check
+    useEffect(() => {
+        const checkDbDuplicates = async () => {
+            const uniqueCols = config.columns.filter(c => c.unique);
+            if (uniqueCols.length === 0) return;
+
+            setIsValidating(true);
+            const newDbDuplicates: Record<string, Set<string>> = {};
+
+            try {
+                // Check all unique columns in parallel
+                await Promise.all(uniqueCols.map(async (col) => {
+                    const values = data.map(row => row[col.id as string]).filter(Boolean);
+                    if (values.length === 0) return;
+
+                    const tableMap: Record<string, string> = {
+                        'contact': 'contacts',
+                        'contactos': 'contacts',
+                        'product': 'products',
+                        'productos': 'products'
+                    };
+                    const tableName = tableMap[config.entityId] || config.entityId;
+
+                    // Call server action to check for duplicates
+                    const duplicates = await checkDuplicates(
+                        organizationId,
+                        tableName,
+                        col.id as string,
+                        values
+                    );
+
+                    if (duplicates.length > 0) {
+                        newDbDuplicates[col.id as string] = new Set(
+                            duplicates.map(d => String(d).toLowerCase())
+                        );
+                    }
+                }));
+
+                setDbDuplicates(newDbDuplicates);
+            } catch (error) {
+                console.error("Validation failed", error);
+            } finally {
+                setIsValidating(false);
+            }
+        };
+
+        if (organizationId) {
+            checkDbDuplicates();
+        }
+    }, [data, config.columns, organizationId]);
+
+
+    // Validation Calculation
     const validationResults = useMemo(() => {
         let validCount = 0;
         let invalidCount = 0;
         const processedRows = data.map((originalRow, index) => {
             const errors: string[] = [];
-            const currentRowData: Record<string, any> = {}; // To store normalized values
+            const warnings: string[] = [];
+            const currentRowData: Record<string, any> = {};
 
             config.columns.forEach(col => {
-                let value = (originalRow as any)[col.id as string]; // Get original value w/ cast
+                let value = (originalRow as any)[col.id as string];
 
-                // Apply normalization
-                if (col.normalization) {
-                    value = col.normalization(value);
-                }
-
-                // Store the (potentially normalized) value
+                // Normalization
+                if (col.normalization) value = col.normalization(value);
                 currentRowData[col.id as string] = value;
 
-                // Validate requirements
-                // Check for undefined, null, or empty string for required fields
+                // 1. Required Check
                 if (col.required && (value === undefined || value === null || value === "")) {
                     errors.push(`${col.label} es requerido`);
                 }
 
-                // Custom validation
-                // Only validate if value exists after normalization and is not an empty string
-                if (col.validation && value !== undefined && value !== null && value !== "") {
+                // 2. Format Validation
+                if (col.validation && value) {
                     const error = col.validation(value);
                     if (error) errors.push(error);
                 }
+
+                // 3. Database Duplicate Check (injected via state)
+                // We check if this value exists in the dbDuplicates set for this column
+                if (col.unique && value && dbDuplicates[col.id as string]?.has(String(value).toLowerCase())) {
+                    errors.push(`${col.label} ya existe en el sistema`);
+                }
             });
+
+            // 4. In-File Duplicate Check
+            // (Simplified: We could check previous rows here, but expensive inside map. 
+            // Better to pre-calculate in-file dupes outside loop)
 
             if (errors.length === 0) validCount++;
             else invalidCount++;
 
-            // Return the row with normalized data, errors, and index
             return { ...currentRowData, __errors: errors, __index: index };
         });
 
         return { validCount, invalidCount, processedRows };
-    }, [data, config.columns]);
+    }, [data, config.columns, dbDuplicates]);
 
     const { validCount, invalidCount, processedRows } = validationResults;
     const hasErrors = invalidCount > 0;
@@ -75,6 +137,7 @@ export function ImportStepValidation({ config, data }: ImportStepValidationProps
             initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="flex flex-col h-full"
         >
+            {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4 p-6 pb-2">
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-600">
@@ -99,16 +162,23 @@ export function ImportStepValidation({ config, data }: ImportStepValidationProps
                         <div className={cn("text-2xl font-bold", hasErrors ? "text-red-700" : "text-muted-foreground")}>
                             {invalidCount}
                         </div>
-                        <div className={cn("text-xs font-medium uppercase", hasErrors ? "text-red-600/80" : "text-muted-foreground")}>
-                            {t('summary.errorsFound')}
+                        <div className="flex items-center gap-2">
+                            <div className={cn("text-xs font-medium uppercase", hasErrors ? "text-red-600/80" : "text-muted-foreground")}>
+                                {t('summary.errorsFound')}
+                            </div>
+                            {isValidating && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                         </div>
                     </div>
                 </div>
             </div>
 
+            {/* Table */}
             <div className="flex-1 p-6 pt-2 overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-sm">{t('preview')}</h3>
+                    <h3 className="font-medium text-sm flex items-center gap-2">
+                        {t('preview')}
+                        {isValidating && <span className="text-xs text-muted-foreground italic font-normal">(Verificando duplicados...)</span>}
+                    </h3>
                     <div className="text-xs text-muted-foreground">
                         {t('showingRows', { count: Math.min(processedRows.length, 50) })}
                     </div>
@@ -160,8 +230,6 @@ export function ImportStepValidation({ config, data }: ImportStepValidationProps
                     </ScrollArea>
                 </div>
             </div>
-
-
         </motion.div>
     );
 }

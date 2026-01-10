@@ -1,17 +1,12 @@
 "use client";
 
 import * as React from "react"
-import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { useLayoutStore, NavigationContext, useActiveProjectId } from "@/store/layout-store";
+import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
     LayoutDashboard,
     Building,
@@ -35,9 +30,7 @@ import {
     PanelLeftClose,
     Info,
 } from "lucide-react";
-import { useLayoutStore, NavigationContext, useActiveProjectId } from "@/store/layout-store";
 import { useTranslations } from "next-intl";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NavItem {
     title: string;
@@ -45,51 +38,128 @@ interface NavItem {
     icon: React.ElementType;
 }
 
-interface SidebarContentProps {
-    isHovered?: boolean;
+// ============================================================================
+// ENVIRONMENTS RAIL (Left column - always 60px, icons only)
+// ============================================================================
+
+interface EnvironmentsRailProps {
+    hoveredContext: NavigationContext | null;
+    onHoverContext: (ctx: NavigationContext | null) => void;
+    onLinkClick?: () => void;
+}
+
+const contexts: { id: NavigationContext; label: string; icon: React.ElementType }[] = [
+    { id: 'organization', label: 'Organización', icon: Building },
+    { id: 'project', label: 'Proyecto', icon: Briefcase },
+    { id: 'finance', label: 'Finanzas', icon: Wallet },
+    { id: 'learnings', label: 'Aprendizajes', icon: GraduationCap },
+    { id: 'community', label: 'Comunidad', icon: Users },
+    { id: 'admin', label: 'Admin', icon: Hammer },
+];
+
+const contextRoutes: Record<NavigationContext, string> = {
+    organization: '/organization',
+    project: '/organization/projects',
+    finance: '/finance',
+    learnings: '/learnings',
+    community: '/organization',
+    admin: '/admin'
+};
+
+export function EnvironmentsRail({ hoveredContext, onHoverContext, onLinkClick }: EnvironmentsRailProps) {
+    const { activeContext, actions } = useLayoutStore();
+    const activeProjectId = useActiveProjectId();
+    const router = useRouter();
+
+    const handleContextClick = (ctx: NavigationContext) => {
+        actions.setActiveContext(ctx);
+        if (onLinkClick) onLinkClick();
+
+        if (ctx === 'project') {
+            const currentProjectId = useLayoutStore.getState().activeProjectId;
+            if (currentProjectId) {
+                router.push(`/project/${currentProjectId}` as any);
+                return;
+            }
+            router.push('/organization/projects' as any);
+            return;
+        }
+
+        const route = contextRoutes[ctx];
+        if (route) {
+            router.push(route as any);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full items-center py-4 w-[60px] shrink-0 border-r border-border/50">
+            <TooltipProvider delayDuration={0}>
+                <nav className="flex flex-col items-center gap-2 flex-1">
+                    {contexts.map((ctx) => {
+                        const isActive = activeContext === ctx.id;
+                        const isHovered = hoveredContext === ctx.id;
+
+                        return (
+                            <Tooltip key={ctx.id}>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                            "h-10 w-10 rounded-xl transition-all duration-200",
+                                            isActive
+                                                ? "bg-primary/10 text-primary shadow-sm"
+                                                : isHovered
+                                                    ? "bg-secondary text-foreground"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                        )}
+                                        onClick={() => handleContextClick(ctx.id)}
+                                        onMouseEnter={() => onHoverContext(ctx.id)}
+                                    >
+                                        <ctx.icon className="h-5 w-5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" sideOffset={8}>
+                                    {ctx.label}
+                                </TooltipContent>
+                            </Tooltip>
+                        );
+                    })}
+                </nav>
+            </TooltipProvider>
+        </div>
+    );
+}
+
+// ============================================================================
+// PAGES PANEL (Right column - follows sidebar modes)
+// ============================================================================
+
+interface PagesPanelProps {
+    context: NavigationContext;
+    isHovered: boolean;
     onLinkClick?: () => void;
     mode?: "desktop" | "mobile";
 }
 
-export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop" }: SidebarContentProps) {
+export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }: PagesPanelProps) {
     const pathname = usePathname();
-    const { activeContext, sidebarMode, actions } = useLayoutStore();
+    const { sidebarMode, actions } = useLayoutStore();
     const activeProjectId = useActiveProjectId();
     const tMega = useTranslations('MegaMenu');
-    const router = useRouter();
 
-    // Track if the dropdown is open (only relevant for desktop hover logic really)
-    const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-
-    // Mobile is always "expanded" visually
     const isMobile = mode === "mobile";
 
+    // Panel expansion logic - applies sidebarMode to this panel
     const isExpanded = isMobile ||
         sidebarMode === 'docked' ||
-        (sidebarMode === 'expanded_hover' && (isHovered || isDropdownOpen));
+        (sidebarMode === 'expanded_hover' && isHovered);
 
-    const contexts: { id: NavigationContext; label: string; icon: React.ElementType }[] = [
-        { id: 'organization', label: 'Organización', icon: Building },
-        { id: 'project', label: 'Proyecto', icon: Briefcase },
-        { id: 'finance', label: 'Finanzas', icon: Wallet },
-        { id: 'learnings', label: 'Aprendizajes', icon: GraduationCap },
-        { id: 'community', label: 'Comunidad', icon: Users },
-        { id: 'admin', label: 'Admin', icon: Hammer },
-    ];
+    // Tooltips only when collapsed
+    const showTooltips = !isMobile && !isExpanded && sidebarMode === 'collapsed';
 
-    const currentContext = contexts.find(c => c.id === activeContext) || contexts[0];
-
-    const contextRoutes: Record<NavigationContext, string> = {
-        organization: '/organization',
-        project: '/organization/projects',
-        finance: '/finance',
-        learnings: '/learnings',
-        community: '/organization',
-        admin: '/admin'
-    };
-
-    const getNavItems = (context: NavigationContext): NavItem[] => {
-        switch (context) {
+    const getNavItems = (ctx: NavigationContext): NavItem[] => {
+        switch (ctx) {
             case 'organization':
                 return [
                     { title: tMega('Organization.items.overview'), href: '/organization', icon: LayoutDashboard },
@@ -143,6 +213,7 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
                     { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
                     { title: 'Directorio', href: '/admin/directory', icon: Users },
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
+                    { title: 'Actividad', href: '/admin/audit-logs', icon: FileText },
                     { title: 'Plataforma', href: '/admin/system', icon: Monitor },
                     { title: 'Configuración', href: '/admin/settings', icon: Settings },
                 ];
@@ -151,7 +222,7 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
         }
     };
 
-    const navItems = getNavItems(activeContext);
+    const navItems = getNavItems(context);
 
     const cycleSidebarMode = () => {
         if (sidebarMode === 'collapsed') actions.setSidebarMode('expanded_hover');
@@ -171,9 +242,6 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
         return "Colapsar Barra Lateral";
     };
 
-    // Tooltips only on Desktop + Collapsed
-    const showTooltips = !isMobile && !isExpanded && sidebarMode === 'collapsed';
-
     const ConditionalTooltip = ({ children, title }: { children: React.ReactNode; title: string }) => {
         if (!showTooltips) return <>{children}</>;
         return (
@@ -184,90 +252,40 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
         );
     };
 
+    // Find context label for header
+    const currentContextLabel = contexts.find(c => c.id === context)?.label || context;
+
     return (
-        <div className="flex flex-col h-full items-center py-4 space-y-4 w-full overflow-hidden">
-            {/* 1. CONTEXT SWITCHER */}
-            <div className="w-full px-2">
-                <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen} modal={false}>
-                    <TooltipProvider delayDuration={0}>
-                        <ConditionalTooltip title={`Cambiar Contexto (${currentContext.label})`}>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="secondary"
-                                    size="default"
-                                    className={cn(
-                                        "h-10 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 shadow-sm transition-all duration-300",
-                                        "w-full justify-start pl-3 pr-3"
-                                    )}
-                                >
-                                    <currentContext.icon className="h-5 w-5 shrink-0" />
-                                    <span
-                                        className={cn(
-                                            "font-medium truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
-                                            isExpanded ? "w-auto opacity-100 ml-3" : "w-0 opacity-0 ml-0"
-                                        )}
-                                    >
-                                        {currentContext.label}
-                                    </span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                        </ConditionalTooltip>
-                    </TooltipProvider>
-
-                    <DropdownMenuContent side={isMobile ? "bottom" : "right"} align="start" className="w-56 ml-2 p-2">
-                        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground uppercase tracking-wider mb-1 px-2">
-                            Cambiar Espacio de Trabajo
-                        </DropdownMenuLabel>
-                        {contexts.map((ctx) => (
-                            <DropdownMenuItem
-                                key={ctx.id}
-                                onSelect={async () => {
-                                    actions.setActiveContext(ctx.id);
-                                    if (onLinkClick) onLinkClick();
-
-                                    if (ctx.id === 'project') {
-                                        const currentProjectId = useLayoutStore.getState().activeProjectId;
-                                        if (currentProjectId) {
-                                            router.push(`/project/${currentProjectId}` as any);
-                                            return;
-                                        }
-                                        router.push('/organization/projects' as any);
-                                        return;
-                                    }
-
-                                    const route = contextRoutes[ctx.id];
-                                    if (route) {
-                                        router.push(route as any);
-                                    }
-                                }}
-                                className={cn("flex items-center gap-3 p-2 rounded-md cursor-pointer", activeContext === ctx.id && "bg-accent text-accent-foreground")}
-                            >
-                                <div className="p-1.5 rounded-md bg-muted/50 border border-border/50">
-                                    <ctx.icon className="h-4 w-4" />
-                                </div>
-                                <span className="font-medium">{ctx.label}</span>
-                                {activeContext === ctx.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+        <div
+            className={cn(
+                "flex flex-col h-full py-4 transition-all duration-300 overflow-hidden",
+                isExpanded ? "w-[180px]" : "w-[60px]"
+            )}
+        >
+            {/* Context Title (only when expanded) */}
+            <div className={cn(
+                "px-3 mb-2 transition-all duration-300",
+                isExpanded ? "opacity-100" : "opacity-0"
+            )}>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {currentContextLabel}
+                </span>
             </div>
 
-            <div className="w-[calc(100%-16px)] h-[1px] bg-border/20" />
-
-            {/* 2. NAVIGATION ICONS */}
-            <ScrollArea className="flex-1 w-full px-2" type="scroll">
-                <nav className="flex flex-col items-center gap-2 w-full">
+            {/* Navigation Items */}
+            <ScrollArea className="flex-1 px-2" type="scroll">
+                <nav className="flex flex-col gap-1">
                     <TooltipProvider delayDuration={0}>
                         {navItems.map((item, index) => (
                             <ConditionalTooltip key={index} title={item.title}>
-                                <div className="w-full">
+                                <div>
                                     <Button
                                         asChild
                                         variant={pathname === item.href ? "secondary" : "ghost"}
                                         size="default"
                                         className={cn(
-                                            "h-10 rounded-lg transition-all duration-200 w-full justify-start pl-3 pr-3",
+                                            "h-9 rounded-lg transition-all duration-200 w-full justify-start",
+                                            isExpanded ? "px-3" : "px-0 justify-center",
                                             pathname === item.href
                                                 ? "bg-secondary text-foreground shadow-sm hover:bg-secondary/80"
                                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -277,11 +295,11 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
                                         }}
                                     >
                                         <Link href={item.href as any}>
-                                            <item.icon className="h-5 w-5 shrink-0" />
+                                            <item.icon className="h-4 w-4 shrink-0" />
                                             <span
                                                 className={cn(
-                                                    "font-medium truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
-                                                    isExpanded ? "w-auto opacity-100 ml-3" : "w-0 opacity-0 ml-0"
+                                                    "font-medium text-sm truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
+                                                    isExpanded ? "w-auto opacity-100 ml-2" : "w-0 opacity-0 ml-0"
                                                 )}
                                             >
                                                 {item.title}
@@ -295,24 +313,25 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
                 </nav>
             </ScrollArea>
 
-            {/* Bottom Actions - HIDE ON MOBILE */}
+            {/* Mode Toggle (bottom, desktop only) */}
             {!isMobile && (
-                <div className="mt-auto px-2 pb-4 flex flex-col items-center gap-2 w-full">
+                <div className="mt-auto px-2 pt-2">
                     <TooltipProvider delayDuration={0}>
                         <ConditionalTooltip title={getModeLabel()}>
                             <Button
                                 variant="ghost"
                                 size="default"
                                 className={cn(
-                                    "h-10 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-300 w-full justify-start pl-3 pr-3"
+                                    "h-9 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-300 w-full",
+                                    isExpanded ? "justify-start px-3" : "justify-center px-0"
                                 )}
                                 onClick={cycleSidebarMode}
                             >
-                                {React.createElement(getModeIcon(), { className: "h-5 w-5 shrink-0" })}
+                                {React.createElement(getModeIcon(), { className: "h-4 w-4 shrink-0" })}
                                 <span
                                     className={cn(
-                                        "font-medium truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
-                                        isExpanded ? "w-auto opacity-100 ml-3" : "w-0 opacity-0 ml-0"
+                                        "font-medium text-sm truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
+                                        isExpanded ? "w-auto opacity-100 ml-2" : "w-0 opacity-0 ml-0"
                                     )}
                                 >
                                     {getModeLabel()}
@@ -322,6 +341,57 @@ export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop
                     </TooltipProvider>
                 </div>
             )}
+        </div>
+    );
+}
+
+// ============================================================================
+// LEGACY EXPORT: SidebarContent (for mobile sheet compatibility)
+// Mobile still uses single-column layout
+// ============================================================================
+
+interface SidebarContentProps {
+    isHovered?: boolean;
+    onLinkClick?: () => void;
+    mode?: "desktop" | "mobile";
+}
+
+export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop" }: SidebarContentProps) {
+    const { activeContext } = useLayoutStore();
+    const [hoveredContext, setHoveredContext] = React.useState<NavigationContext | null>(null);
+
+    // For mobile mode, just show full single-column view with active context
+    if (mode === "mobile") {
+        return (
+            <div className="flex flex-col h-full">
+                <PagesPanel
+                    context={activeContext}
+                    isHovered={true}
+                    onLinkClick={onLinkClick}
+                    mode="mobile"
+                />
+            </div>
+        );
+    }
+
+    // Desktop: dual-column layout
+    const displayContext = hoveredContext || activeContext;
+
+    return (
+        <div
+            className="flex h-full"
+            onMouseLeave={() => setHoveredContext(null)}
+        >
+            <EnvironmentsRail
+                hoveredContext={hoveredContext}
+                onHoverContext={setHoveredContext}
+                onLinkClick={onLinkClick}
+            />
+            <PagesPanel
+                context={displayContext}
+                isHovered={isHovered}
+                onLinkClick={onLinkClick}
+            />
         </div>
     );
 }

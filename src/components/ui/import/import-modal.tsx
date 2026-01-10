@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { ImportConfig, ParseResult } from "@/lib/import-utils";
+import { FKConflict, ResolutionMap, detectConflicts, applyResolutions, filterIgnoredRows } from "@/lib/import-conflict-utils";
 import { ImportStepUpload } from "./steps/step-upload";
 import { ImportStepMapping } from "./steps/step-mapping";
 import { ImportStepValidation } from "./steps/step-validation";
+import { ImportStepConflicts } from "./steps/step-conflicts";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -18,7 +20,7 @@ interface BulkImportModalProps<T> {
     organizationId: string;
 }
 
-type Step = 'upload' | 'mapping' | 'validation' | 'importing' | 'result';
+type Step = 'upload' | 'mapping' | 'validation' | 'conflicts' | 'importing' | 'result';
 
 export function BulkImportModal<T>({ config, organizationId }: BulkImportModalProps<T>) {
     const t = useTranslations('ImportSystem.Modal');
@@ -32,11 +34,18 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     const [mapping, setMapping] = useState<Record<string, string>>({}); // Header -> ColumnId
     const [isMappingValid, setIsMappingValid] = useState(false);
     const [mappedData, setMappedData] = useState<any[]>([]);
-    const [importResult, setImportResult] = useState<{ success: number; errors: any[] } | null>(null);
+    const [importResult, setImportResult] = useState<{ success: number; errors: any[]; batchId?: string } | null>(null);
+
+    // NEW: Conflict resolution state
+    const [conflicts, setConflicts] = useState<FKConflict[]>([]);
+    const [resolutions, setResolutions] = useState<ResolutionMap>({});
+    const [conflictsResolved, setConflictsResolved] = useState(false);
+    const [isDetectingConflicts, setIsDetectingConflicts] = useState(false);
 
     const handleBack = () => {
         if (step === 'mapping') setStep('upload');
         if (step === 'validation') setStep('mapping');
+        if (step === 'conflicts') setStep('validation');
     };
 
     const handleFileUpload = (file: File, result: ParseResult) => {
@@ -67,10 +76,54 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
         setStep('validation');
     };
 
+    // NEW: Detect conflicts after validation
+    const handleValidationContinue = async () => {
+        // Check if config has any FK columns
+        const hasFKColumns = config.columns.some(col => col.foreignKey);
+
+        if (!hasFKColumns) {
+            // No FK columns, skip conflict detection
+            handleImport();
+            return;
+        }
+
+        setIsDetectingConflicts(true);
+        try {
+            const detectedConflicts = await detectConflicts(mappedData, config, organizationId);
+
+            if (detectedConflicts.length === 0) {
+                // No conflicts, proceed to import
+                handleImport();
+            } else {
+                setConflicts(detectedConflicts);
+                setStep('conflicts');
+            }
+        } catch (error) {
+            console.error("Conflict detection failed", error);
+            // Proceed anyway
+            handleImport();
+        } finally {
+            setIsDetectingConflicts(false);
+        }
+    };
+
+    const handleResolutionsChange = (newResolutions: ResolutionMap, allResolved: boolean) => {
+        setResolutions(newResolutions);
+        setConflictsResolved(allResolved);
+    };
+
     const handleImport = async () => {
         setStep('importing');
         try {
-            const result = await config.onImport(mappedData);
+            // Apply resolutions if any
+            let dataToImport = mappedData;
+
+            if (Object.keys(resolutions).length > 0) {
+                dataToImport = applyResolutions(mappedData, config, resolutions);
+                dataToImport = filterIgnoredRows(dataToImport, config, resolutions);
+            }
+
+            const result = await config.onImport(dataToImport);
 
             if (result.success > 0) {
                 // Background update patterns - Fire and forget
@@ -81,17 +134,20 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
             setStep('result');
         } catch (error) {
             console.error("Import failed", error);
-            // Handle fatal error
-            setStep('validation'); // Go back to validation?
+            setStep('validation');
         }
+    };
+
+    // Determine step dot completion
+    const isStepCompleted = (s: Step) => {
+        const order: Step[] = ['upload', 'mapping', 'validation', 'conflicts', 'importing', 'result'];
+        return order.indexOf(s) < order.indexOf(step);
     };
 
     return (
         <div className="flex flex-col h-full sm:h-[80vh]">
-            {/* Steps Indicator */}
             {/* Dynamic Step Header */}
             <div className="flex flex-col border-b shrink-0 -mx-4 -mt-4 mb-0 bg-muted/10">
-                {/* Top Bar with Back & Title */}
                 <div className="flex items-center justify-between px-6 py-3">
                     <div className="flex items-center gap-2">
                         {step !== 'upload' && step !== 'result' && step !== 'importing' && (
@@ -104,6 +160,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                                 {step === 'upload' && t('headers.upload', { entity: config.entityLabel })}
                                 {step === 'mapping' && t('headers.mapping')}
                                 {step === 'validation' && t('headers.validation')}
+                                {step === 'conflicts' && 'Resolver Conflictos'}
                                 {step === 'importing' && t('headers.importing')}
                                 {step === 'result' && t('headers.result')}
                             </h2>
@@ -111,22 +168,23 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                                 {step === 'upload' && t('descriptions.upload')}
                                 {step === 'mapping' && t('descriptions.mapping')}
                                 {step === 'validation' && t('descriptions.validation')}
+                                {step === 'conflicts' && 'Algunos valores no existen en el sistema. Decide cómo proceder.'}
                                 {step === 'importing' && t('descriptions.importing')}
                                 {step === 'result' && t('descriptions.result')}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <StepDot active={step === 'upload'} completed={['mapping', 'validation', 'result'].includes(step)} label={t('steps.upload')} />
+                        <StepDot active={step === 'upload'} completed={isStepCompleted('upload')} label={t('steps.upload')} />
                         <div className="w-8 h-[1px] bg-border" />
-                        <StepDot active={step === 'mapping'} completed={['validation', 'result'].includes(step)} label={t('steps.mapping')} />
+                        <StepDot active={step === 'mapping'} completed={isStepCompleted('mapping')} label={t('steps.mapping')} />
                         <div className="w-8 h-[1px] bg-border" />
-                        <StepDot active={step === 'validation'} completed={['result'].includes(step)} label={t('steps.validation')} />
+                        <StepDot active={step === 'validation' || step === 'conflicts'} completed={isStepCompleted('validation')} label={t('steps.validation')} />
                     </div>
                 </div>
             </div>
 
-            {/* Content Area - Scrollable */}
+            {/* Content Area */}
             <div className="flex-1 overflow-hidden relative flex flex-col">
                 <AnimatePresence mode="wait">
                     {step === 'upload' && (
@@ -156,7 +214,17 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                         <ImportStepValidation
                             key="step-validation"
                             config={config}
+                            organizationId={organizationId}
                             data={mappedData}
+                        />
+                    )}
+                    {step === 'conflicts' && (
+                        <ImportStepConflicts
+                            key="step-conflicts"
+                            config={config}
+                            conflicts={conflicts}
+                            organizationId={organizationId}
+                            onResolutionsChange={handleResolutionsChange}
                         />
                     )}
                     {step === 'importing' && (
@@ -195,7 +263,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                 </AnimatePresence>
             </div>
 
-            {/* Standard Footer */}
+            {/* Footer */}
             {step !== 'importing' && step !== 'result' && (
                 <div className="shrink-0 z-50 bg-background relative -mx-4 -mb-4 pt-2">
                     <FormFooter
@@ -206,32 +274,35 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                         onSubmit={() => {
                             if (step === 'upload') setStep('mapping');
                             else if (step === 'mapping') transformDataAndProceed();
-                            else if (step === 'validation') handleImport();
+                            else if (step === 'validation') handleValidationContinue();
+                            else if (step === 'conflicts') handleImport();
                         }}
                         submitLabel={
-                            step === 'validation' ? tActions('import') : tActions('continue')
+                            step === 'validation' || step === 'conflicts'
+                                ? (isDetectingConflicts ? 'Analizando...' : tActions('import'))
+                                : tActions('continue')
                         }
                         submitDisabled={
                             (step === 'upload' && !file) ||
-                            (step === 'mapping' && !isMappingValid)
+                            (step === 'mapping' && !isMappingValid) ||
+                            (step === 'conflicts' && !conflictsResolved) ||
+                            isDetectingConflicts
                         }
-                        variant="default" // 25% - 75%
+                        variant="default"
                     />
                 </div>
             )}
 
-            {/* Result Step Footer */}
+            {/* Result Footer */}
             {step === 'result' && (
                 <div className="shrink-0 z-50 bg-background relative -mx-4 -mb-4 pt-2 flex items-center justify-between p-4 border-t">
                     <Button
                         variant="outline"
                         onClick={async () => {
                             if (importResult?.batchId) {
-                                // Undo Logic
                                 try {
                                     await config.onRevert?.(importResult.batchId);
                                     closeModal();
-                                    // Optional: Toast success "Import reverted"
                                 } catch (e) {
                                     console.error("Revert failed", e);
                                 }
@@ -261,3 +332,4 @@ function StepDot({ active, completed, label }: { active: boolean, completed: boo
         </div>
     );
 }
+

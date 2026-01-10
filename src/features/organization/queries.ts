@@ -38,12 +38,14 @@ export async function getDashboardData() {
 
     // 2. If we have a preference, verify membership. If not, find a default.
     let organization = null;
+    let computedRole = 'member'; // Default role if found via normal membership
 
     if (orgId) {
         const { data: directMember } = await supabase
             .from('organization_members')
             .select(`
-                organizations(
+                role,
+                organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
                     logo_path,
@@ -70,15 +72,50 @@ export async function getDashboardData() {
 
         if (directMember?.organizations) {
             organization = directMember.organizations;
+            computedRole = directMember.role;
+        } else {
+            // FALLBACK: Check if user is the Creator (Legacy Support)
+            const { data: ownedOrg } = await supabase
+                .from('organizations')
+                .select(`
+                    id, 
+                    name, 
+                    logo_path,
+                    settings,
+                    organization_data (
+                        description,
+                        phone,
+                        email,
+                        website,
+                        tax_id,
+                        address,
+                        city,
+                        state,
+                        country,
+                        postal_code,
+                        lat,
+                        lng
+                    )
+                `)
+                .eq('id', orgId)
+                .eq('created_by', publicUserId) // Legacy check
+                .single();
+
+            if (ownedOrg) {
+                organization = ownedOrg;
+                computedRole = 'owner'; // Implicit ownership
+            }
         }
     }
 
     // Fallback if no preference or preference invalid/user removed
     if (!organization) {
+        // 1. Try generic membership
         const { data: fallbackMember } = await supabase
             .from('organization_members')
             .select(`
-                organizations(
+                role,
+                organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
                     logo_path,
@@ -108,7 +145,41 @@ export async function getDashboardData() {
                 ? fallbackMember.organizations[0]
                 : fallbackMember.organizations;
             organization = orgData;
+            computedRole = fallbackMember.role;
             orgId = orgData.id;
+        } else {
+            // 2. Try generic ownership (Legacy Support)
+            const { data: firstOwned } = await supabase
+                .from('organizations')
+                .select(`
+                    id, 
+                    name, 
+                    logo_path,
+                    settings,
+                    organization_data (
+                        description,
+                        phone,
+                        email,
+                        website,
+                        tax_id,
+                        address,
+                        city,
+                        state,
+                        country,
+                        postal_code,
+                        lat,
+                        lng
+                    )
+                `)
+                .eq('created_by', publicUserId)
+                .limit(1)
+                .single();
+
+            if (firstOwned) {
+                organization = firstOwned;
+                computedRole = 'owner';
+                orgId = firstOwned.id;
+            }
         }
     }
 
@@ -211,7 +282,7 @@ export async function getUserOrganizations() {
     const { data: myMemberships, error: orgsError } = await supabase
         .from('organization_members')
         .select(`
-            organizations (
+            organizations:organizations!organization_members_organization_id_fkey (
                 id,
                 name,
                 logo_path,

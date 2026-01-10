@@ -66,6 +66,9 @@ export async function revertImportBatch(batchId: string, entityTable: string = '
 
 export async function importContactsBatch(organizationId: string, contacts: any[], batchId: string) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
 
     // Transform data for insertion
     const records = contacts.map(contact => ({
@@ -81,17 +84,46 @@ export async function importContactsBatch(organizationId: string, contacts: any[
         import_batch_id: batchId,
         is_local: true,
         sync_status: 'synced',
+        created_by: user.id, // Audit trigger requirement
+        updated_by: user.id, // Audit trigger requirement
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
     }));
 
-    const { error } = await supabase
-        .from('contacts')
-        .insert(records);
+    // ROBUST IMPORT STRATEGY: Check -> Filter -> Insert
+    // This avoids "onConflict" complexity with constraints and guarantees "ignore duplicates" behavior.
 
-    if (error) {
-        console.error("Bulk insert failed:", error);
-        throw new Error("Bulk insert failed: " + error.message);
+    // 1. Get all emails from the batch
+    const emails = records.map(r => r.email).filter(Boolean);
+
+    // 2. Find existing emails in this org
+    let existingEmails = new Set<string>();
+    if (emails.length > 0) {
+        // Chunk query if too many emails
+        const { data: existing } = await supabase
+            .from('contacts')
+            .select('email')
+            .eq('organization_id', organizationId)
+            .in('email', emails);
+
+        if (existing) {
+            existing.forEach(r => existingEmails.add(r.email));
+        }
+    }
+
+    // 3. Filter out records that already exist
+    const newRecords = records.filter(r => !existingEmails.has(r.email));
+
+    // 4. Insert only new records
+    if (newRecords.length > 0) {
+        const { error } = await supabase
+            .from('contacts')
+            .insert(newRecords);
+
+        if (error) {
+            console.error("Bulk insert failed:", error);
+            throw new Error("Bulk insert failed: " + error.message);
+        }
     }
 
     revalidatePath('/organization/contacts');

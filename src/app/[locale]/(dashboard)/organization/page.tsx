@@ -2,23 +2,22 @@ import { getDashboardData } from "@/features/organization/queries";
 import { FinanceChart } from "@/components/dashboard/finance-chart";
 import { ProjectTable, ActivityFeed, ProjectCardsGrid } from "@/components/dashboard/widgets";
 import {
-    Users2,
     Folder,
-    FileText,
     Briefcase,
-    Loader2,
     Plus,
     Activity,
     TrendingUp,
     TrendingDown,
     DollarSign,
-    ArrowRight
+    ArrowRight,
+    Users2
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
 import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
+import { ErrorDisplay } from "@/components/dashboard/error-display";
 
 export default async function OrganizationPage() {
     const t = await getTranslations('OrganizationDashboard');
@@ -26,18 +25,11 @@ export default async function OrganizationPage() {
 
     if (!data || data.error) {
         return (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center space-y-4">
-                <div className="p-3 bg-red-500/10 rounded-full">
-                    <TrendingDown className="w-6 h-6 text-red-500" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">{t('errors.unableToLoad')}</h3>
-                    <p className="text-sm text-muted-foreground w-full max-w-sm mx-auto">
-                        {data?.error || t('errors.unknownError')}
-                    </p>
-                </div>
-                <Button variant="outline" onClick={() => window.location.reload()}>{t('errors.retry')}</Button>
-            </div>
+            <ErrorDisplay
+                title={t('errors.unableToLoad')}
+                message={data?.error || t('errors.unknownError')}
+                retryLabel={t('errors.retry')}
+            />
         );
     }
 

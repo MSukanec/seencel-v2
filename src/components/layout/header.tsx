@@ -40,6 +40,11 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
     const tUser = useTranslations('UserMenu');
 
     const { setTheme, theme } = useTheme();
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm">
@@ -381,7 +386,7 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => setTheme("system")}
-                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", theme === 'system' && "bg-muted text-foreground")}
+                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'system' && "bg-muted text-foreground")}
                                                     title="Sistema"
                                                 >
                                                     <Monitor className="h-3.5 w-3.5" />
@@ -391,7 +396,7 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => setTheme("light")}
-                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", theme === 'light' && "bg-muted text-foreground")}
+                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'light' && "bg-muted text-foreground")}
                                                     title="Claro"
                                                 >
                                                     <Sun className="h-3.5 w-3.5" />
@@ -401,7 +406,7 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => setTheme("dark")}
-                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", theme === 'dark' && "bg-muted text-foreground")}
+                                                    className={cn("h-7 w-7 rounded-full text-muted-foreground hover:text-foreground", mounted && theme === 'dark' && "bg-muted text-foreground")}
                                                     title="Oscuro"
                                                 >
                                                     <Moon className="h-3.5 w-3.5" />

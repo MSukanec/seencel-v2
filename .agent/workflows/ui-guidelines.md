@@ -81,3 +81,40 @@ import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/compone
 }
 ```
 
+---
+
+## 📐 Layouts & Scrolling
+
+### Páginas con Tabs (Full Height)
+
+Para evitar el problema de "Doble Scrollbar" en páginas de Dashboard que usan Tabs, es **OBLIGATORIO** seguir esta estructura:
+
+1.  **Contenedor Principal:** `flex flex-col h-full relative`
+2.  **Tabs:** `w-full flex-1 flex flex-col overflow-hidden` (Crucial: `flex-1` y `overflow-hidden` aquí)
+3.  **TabsContent:** `flex-1 focus-visible:outline-none relative min-h-0 overflow-auto`
+
+Esto asegura que el scroll sea manejado **internamente** por cada tab, manteniendo el header y tabs fijos.
+
+**Ejemplo Correcto:**
+
+```tsx
+<div className="flex flex-col h-full relative">
+    <HeaderTitleUpdater title="Pagina" />
+
+    <Tabs defaultValue="tab1" className="w-full flex-1 flex flex-col overflow-hidden">
+        <HeaderPortal>
+            <TabsList>...</TabsList>
+        </HeaderPortal>
+
+        <TabsContent value="tab1" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
+             <div className="space-y-6 pb-6">
+                {/* Contenido scrolleable aquí */}
+             </div>
+        </TabsContent>
+    </Tabs>
+</div>
+```
+
+**❌ NUNCA:**
+*   Poner `overflow-auto` en el contenedor padre de `Tabs`.
+*   Olvidar `flex-1 overflow-hidden` en el componente `Tabs`.

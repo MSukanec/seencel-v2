@@ -646,5 +646,28 @@
             "company_name": "Empresa",
             "notes": "Notas"
         }
+    },
+    "ActivityLogs": {
+        "title": "Actividad Reciente",
+        "subtitle": "Registro de eventos y cambios realizados en la organización.",
+        "emptyTitle": "No hay actividad reciente",
+        "emptyDescription": "Aún no se ha registrado ninguna actividad en esta organización.",
+        "actions": {
+            "create": "creó",
+            "update": "actualizó",
+            "delete": "eliminó",
+            "import_created": "importó un lote",
+            "import_reverted": "deshizo una importación",
+            "add_contact": "agregó un contacto",
+            "update_contact": "actualizó un contacto",
+            "delete_contact": "eliminó un contacto",
+            "unknown": "realizó una acción"
+        },
+        "entities": {
+            "contacts": "Contactos",
+            "import_batches": "Importaciones",
+            "projects": "Proyectos",
+            "unknown": "Desconocido"
+        }
     }
 }
