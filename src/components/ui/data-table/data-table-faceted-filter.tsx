@@ -75,9 +75,18 @@ export function DataTableFacetedFilter<TData, TValue>({
                                             <Badge
                                                 variant="secondary"
                                                 key={option.value}
-                                                className="rounded-sm px-1 font-normal bg-primary/10 text-primary hover:bg-primary/20"
+                                                className="rounded-sm px-1 font-normal bg-primary/10 text-primary hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const next = new Set(selectedValues);
+                                                    next.delete(option.value);
+                                                    column?.setFilterValue(Array.from(next));
+                                                }}
                                             >
                                                 {option.label}
+                                                <span className="ml-1 text-xs opacity-50 group-hover:opacity-100">
+                                                    ×
+                                                </span>
                                             </Badge>
                                         ))
                                 )}

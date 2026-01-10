@@ -34,6 +34,14 @@ export const routing = defineRouting({
             en: '/organization/identity',
             es: '/organizacion/identidad'
         },
+        '/organization/contacts': {
+            en: '/organization/contacts',
+            es: '/organizacion/contactos'
+        },
+        '/organization/team': {
+            en: '/organization/team',
+            es: '/organizacion/equipo'
+        },
         '/finance': {
             en: '/finance',
             es: '/finanzas'

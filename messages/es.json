@@ -555,5 +555,96 @@
             "unknownError": "Ocurrió un error desconocido al obtener los datos de la organización.",
             "retry": "Reintentar"
         }
+    },
+    "ImportSystem": {
+        "Modal": {
+            "title": "Importar {entity}",
+            "steps": {
+                "upload": "1",
+                "mapping": "2",
+                "validation": "3"
+            },
+            "headers": {
+                "upload": "Importar {entity}",
+                "mapping": "Mapeo de Columnas",
+                "validation": "Validación de Datos",
+                "importing": "Importando...",
+                "result": "Resultado de Importación"
+            },
+            "descriptions": {
+                "upload": "Sube tu archivo Excel o CSV para comenzar.",
+                "mapping": "Asocia las columnas de tu archivo con los campos del sistema.",
+                "validation": "Revisa y corrige los datos antes de finalizar.",
+                "importing": "Procesando tus datos, por favor espera.",
+                "result": "Resumen del proceso de importación."
+            }
+        },
+        "Upload": {
+            "title": "Sube tu archivo",
+            "dragActive": "Suelta el archivo aquí...",
+            "dragInactive": "Arrastra y suelta tu archivo aquí, o haz clic para seleccionar",
+            "supports": "Soporta Excel (.xlsx) y CSV",
+            "maxSize": "Máx. 5MB",
+            "changeFile": "Cambiar archivo",
+            "headerSelection": {
+                "title": "Seleccionar Fila de Encabezado",
+                "description": "Parece que tu archivo tiene filas extra al inicio. Por favor selecciona cuál fila contiene los encabezados.",
+                "useRow": "Usar Fila {index}"
+            },
+            "preview": {
+                "title": "Vista Previa del Archivo",
+                "showingRows": "Mostrando primeras {count} filas"
+            }
+        },
+        "Mapping": {
+            "fileColumn": "Columna en tu archivo",
+            "systemField": "Campo en sistema Seencel",
+            "ignoreColumn": "Ignorar columna",
+            "required": "obligatorio",
+            "status": {
+                "allMapped": "Todos los campos requeridos están mapeados",
+                "missing": "Faltan campos requeridos"
+            }
+        },
+        "Validation": {
+            "summary": {
+                "validRecords": "Registros Válidos",
+                "errorsFound": "Errores Encontrados"
+            },
+            "preview": "Vista Previa",
+            "showingRows": "Mostrando primeros {count} registros"
+        },
+        "Result": {
+            "successTitle": "¡Importación Completada!",
+            "successMessage": "Se importaron correctamente <bold>{count}</bold> registros.",
+            "errorsMessage": "Hubo {count} errores que fueron omitidos.",
+            "finish": "Finalizar"
+        },
+        "Actions": {
+            "back": "Atrás",
+            "cancel": "Cancelar",
+            "continue": "Continuar",
+            "import": "Importar"
+        }
+    },
+    "DataTable": {
+        "columns": "Columnas",
+        "showColumns": "Mostrar columnas",
+        "hiddenColumns": "Columnas ocultas",
+        "clearFilters": "Limpiar filtros",
+        "search": "Buscar...",
+        "noResults": "No se encontraron resultados",
+        "reset": "Restablecer",
+        "view": "Vista",
+        "selected": "{count} seleccionados",
+        "columnHeaders": {
+            "email": "Correo Electrónico",
+            "phone": "Teléfono",
+            "location": "Ubicación",
+            "contact_types": "Etiquetas",
+            "full_name": "Nombre Completo",
+            "company_name": "Empresa",
+            "notes": "Notas"
+        }
     }
 }

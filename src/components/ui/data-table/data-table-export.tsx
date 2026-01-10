@@ -93,7 +93,7 @@ export function DataTableExport<TData>({
                 <Button
                     variant="outline"
                     size="sm"
-                    className="hidden h-8 lg:flex"
+                    className="hidden h-9 lg:flex"
                 >
                     <Download className="mr-2 h-4 w-4" />
                     Exportar

@@ -1,0 +1,6 @@
+first_name,last_name,email,phone,company_name,location,notes,contact_types
+Ana,García,ana.garcia@empresa.com,+5491112345678,Tech Solutions,Buenos Aires,Cliente VIP,Cliente
+Carlos,Rodríguez,carlos.r@constructora.com,+5491187654321,Constructora Norte,Córdoba,Interesado en proyecto X,Proveedor
+María,López,maria.lopez@estudio.com,+5493512345678,Estudio López,Rosario,Reunión pendiente,Arquitecto
+Juan,Pérez,juan.perez@consulting.com,+5491111223344,Global Consulting,Mendoza,Llamar el lunes,Inversor
+Sofía,Martínez,sofia.m@design.com,+5492615556666,Design Studio,La Plata,,Cliente

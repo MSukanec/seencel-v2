@@ -339,3 +339,13 @@ select:focus-visible,
   box-shadow: 0 0 0 1px var(--ring);
   animation: ring-pulse 2s ease-in-out infinite;
 }
+
+@keyframes tremble {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px) rotate(-3deg); }
+  75% { transform: translateX(3px) rotate(3deg); }
+}
+
+.animate-tremble {
+  animation: tremble 0.4s ease-in-out;
+}

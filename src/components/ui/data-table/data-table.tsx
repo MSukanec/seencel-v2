@@ -59,6 +59,7 @@ interface DataTableProps<TData, TValue> {
     emptyState?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
     enableRowSelection?: boolean;
     bulkActions?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
+    initialSorting?: SortingState;
 }
 
 
@@ -83,8 +84,9 @@ export function DataTable<TData, TValue>({
     gridClassName = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
     enableRowSelection = false,
     bulkActions,
+    initialSorting,
 }: DataTableProps<TData, TValue>) {
-    const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});

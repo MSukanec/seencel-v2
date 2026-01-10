@@ -12,7 +12,7 @@
     },
     "UserMenu": {
         "profile": "Profile",
-        "dashboard": "Dashboard",
+        "dashboard": "Workspace",
         "settings": "Settings",
         "logout": "Log out",
         "home": "Go to Home"
@@ -20,19 +20,19 @@
     "Feedback": {
         "button": "Feedback",
         "title": "Send Feedback",
-        "description": "Help us improve by sharing your thoughts or reporting issues.",
-        "placeholder": "Your feedback...",
+        "description": "Help us improve by sharing your ideas or reporting issues.",
+        "placeholder": "Your comment...",
         "send": "Send",
         "sending": "Sending",
         "successTitle": "Thanks for your feedback!",
-        "successMessage": "We appreciate your input."
+        "successMessage": "We really appreciate your input."
     },
     "Public": {
         "nav": {
             "features": "Features",
             "pricing": "Pricing",
             "contact": "Contact",
-            "login": "Log in",
+            "login": "Log In",
             "getStarted": "Get Started"
         }
     },
@@ -46,6 +46,7 @@
             },
             "items": {
                 "overview": "Overview",
+                "basicData": "Basic Data",
                 "identity": "Identity & Brand",
                 "projectManagement": "Project Management",
                 "contacts": "Contacts",
@@ -53,8 +54,11 @@
                 "team": "Team",
                 "teamDescription": "Manage members and roles.",
                 "settings": "Settings",
-                "settingsDescription": "Organization settings.",
-                "financialControl": "Financial Control"
+                "settingsDescription": "General organization settings.",
+                "finance": "Finance",
+                "capital": "Capital",
+                "generalExpenses": "General Expenses",
+                "taxes": "Taxes"
             }
         },
         "Project": {
@@ -64,7 +68,7 @@
                 "management": "Management",
                 "design": "Design",
                 "construction": "Construction",
-                "commercial": "Commercialization & Sales"
+                "commercial": "Sales & Marketing"
             },
             "items": {
                 "overview": "Overview",
@@ -72,13 +76,14 @@
                 "filesMedia": "Files & Media",
                 "finance": "Finance",
                 "moodboard": "Moodboard",
-                "computationBudget": "Computation & Budget",
+                "computationBudget": "Compute & Budget",
                 "labor": "Labor",
                 "materials": "Materials",
                 "subcontracts": "Subcontracts",
                 "indirects": "Indirects",
                 "siteLog": "Site Log",
-                "clients": "Clients"
+                "clients": "Clients",
+                "technicalDocs": "Technical Docs"
             }
         },
         "Finance": {
@@ -88,9 +93,10 @@
                 "overview": "Overview",
                 "overviewDescription": "Financial health at a glance.",
                 "invoices": "Invoices",
-                "invoicesDescription": "Create and manage client invoices.",
+                "invoicesDescription": "Create and manage invoices.",
                 "expenses": "Expenses",
-                "financialMovementsDescription": "Income and expense tracking",
+                "expensesDescription": "Track expenses and bills.",
+                "financialMovementsDescription": "Track income and expenses",
                 "taxes": "Taxes",
                 "taxesDescription": "Tax obligations management"
             }
@@ -102,12 +108,18 @@
                 "technicalDocs": "Technical Docs",
                 "technicalDocsDescription": "Manuals and specifications",
                 "bestPractices": "Best Practices",
-                "bestPracticesDescription": "Standard execution guides"
+                "bestPracticesDescription": "Standard execution guides",
+                "courses": "Courses",
+                "coursesDescription": "Interactive training for your team.",
+                "documentation": "Documentation",
+                "documentationDescription": "Technical guides and manuals.",
+                "certifications": "Certifications",
+                "certificationsDescription": "Achievements and certifications."
             }
         },
         "Community": {
             "title": "Community",
-            "description": "Connect with other professionals.",
+            "description": "Connect with other builders and share experiences.",
             "items": {
                 "forums": "Forums",
                 "forumsDescription": "Join the discussion.",
@@ -134,7 +146,7 @@
             "title": "Profile",
             "description": "This is how others see you on the site.",
             "Avatar": {
-                "change": "Change picture",
+                "change": "Change photo",
                 "label": "Avatar Actions",
                 "upload": "Upload new photo...",
                 "restore": "Restore from Google",
@@ -149,13 +161,13 @@
                 "restoring": "Restoring...",
                 "successRestore": "Avatar restored from Google.",
                 "errorRestore": "Error restoring avatar.",
-                "title": "Profile Picture",
-                "description": "Choose an image that represents you across your team and organizations.",
+                "title": "Profile Photo",
+                "description": "Choose an image that represents you across teams.",
                 "footer": "We recommend using a clear, professional image."
             },
             "displayNameTitle": "Personal Information",
-            "displayNameDescription": "Manage your contact details and how you appear in projects.",
-            "maxCharsDescription": "Make sure your information is accurate.",
+            "displayNameDescription": "Manage your contact info and how you appear in projects.",
+            "maxCharsDescription": "Ensure this information is accurate.",
             "firstName": "First Name",
             "lastName": "Last Name",
             "username": "Username",
@@ -169,20 +181,21 @@
             "bio": "Bio",
             "language": "Language",
             "save": "Save changes",
+            "changeAvatar": "Change Avatar",
             "loading": "Loading profile data...",
             "success": "Profile updated successfully.",
-            "error": "Failed to update profile."
+            "error": "Error updating profile."
         },
         "Preferences": {
             "title": "Preferences",
             "description": "Customize your workspace appearance and language.",
             "appearance": {
                 "title": "Appearance",
-                "description": "Set or customize your preferences for the system"
+                "description": "Configure or customize your system preferences"
             },
             "language": {
                 "title": "Language",
-                "description": "Select the language of the platform",
+                "description": "Select platform language",
                 "placeholder": "Select language",
                 "options": {
                     "en": "English",
@@ -200,7 +213,7 @@
             },
             "layout": {
                 "title": "Layout Mode",
-                "description": "Choose between the default top navigation or the sidebar layout",
+                "description": "Choose between default top navigation or sidebar",
                 "options": {
                     "default": "Mega Menu",
                     "sidebar": "Sidebar"
@@ -223,28 +236,28 @@
         },
         "Billing": {
             "title": "Billing Information",
-            "description": "Set up your billing details for receipts and invoices.",
-            "isCompany": "Bill as a company",
-            "isCompanyDescription": "Enable this if you need invoices under a company name.",
+            "description": "Configure billing details for invoices and receipts.",
+            "isCompany": "Bill as company",
+            "isCompanyDescription": "Enable this if you need invoices issued to a company.",
             "fullName": "Full Name",
             "fullNamePlaceholder": "John Doe",
             "companyName": "Company Name",
             "companyNamePlaceholder": "My Company Inc.",
-            "taxId": "Tax ID / VAT / EIN",
-            "taxIdPlaceholder": "12-3456789",
-            "taxIdDescription": "Your country's tax identification number.",
+            "taxId": "Tax ID / VAT",
+            "taxIdPlaceholder": "12-3456789-0",
+            "taxIdDescription": "Tax identification number for your country.",
             "country": "Country",
             "countryPlaceholder": "Select country...",
             "address": "Address",
-            "addressPlaceholder": "123 Main Street",
+            "addressPlaceholder": "123 Main St",
             "city": "City",
             "cityPlaceholder": "New York",
             "postcode": "Postal Code",
             "postcodePlaceholder": "10001",
             "footer": "This information will be used to generate your invoices.",
             "save": "Save changes",
-            "success": "Billing information updated.",
-            "error": "Error updating billing information."
+            "success": "Billing details updated.",
+            "error": "Error updating billing details."
         },
         "Notifications": {
             "title": "Notifications",
@@ -257,12 +270,12 @@
         },
         "Security": {
             "title": "Security",
-            "description": "Manage your password and 2-factor authentication.",
+            "description": "Manage your password and 2FA.",
             "twoFactor": "Two-Factor Authentication",
             "twoFactorDesc": "Add an extra layer of security to your account.",
             "passkeys": "Passkeys",
-            "passkeysDesc": "Sign in securely without a password.",
-            "addPasskey": "Add Key",
+            "passkeysDesc": "Log in securely without a password.",
+            "addPasskey": "Add Passkey",
             "preparing": "Preparing 2FA enrollment...",
             "scanQR": "1. Scan QR Code",
             "scanQRDesc": "Use an authenticator app like Google Authenticator or Authy.",
@@ -277,13 +290,13 @@
     },
     "Landing": {
         "Hero": {
-            "badge": "v2.0 Now Available",
+            "badge": "v2.0 Available Now",
             "title": "The Operating System for Construction.",
-            "description": "SEENCEL consolidates your entire construction lifecycle into one powerful platform. Manage projects, finances, and teams with architectural precision.",
+            "description": "SEENCEL consolidates your entire build lifecycle into one powerful platform. Manage projects, finance, and teams with architectural precision.",
             "getStarted": "Get Started Free",
             "dashboard": "Go to Dashboard",
-            "howItWorks": "See How It Works",
-            "preview": "Dashboard Preview"
+            "howItWorks": "How it works",
+            "preview": "Preview"
         },
         "Brands": {
             "trustedBy": "TRUSTED BY INNOVATIVE BUILDERS"
@@ -298,7 +311,7 @@
                 },
                 "financialControl": {
                     "title": "Financial Control",
-                    "desc": "Real-time budget tracking, automated invoicing, and expense management rooted in project data."
+                    "desc": "Real-time budget tracking, automated invoicing, and project-based expense management."
                 },
                 "teamCollaboration": {
                     "title": "Team Collaboration",
@@ -320,7 +333,7 @@
         },
         "Pricing": {
             "title": "Simple, transparent pricing.",
-            "subtitle": "Start for free, scale as you grow.",
+            "subtitle": "Start free, upgrade as you grow.",
             "starter": {
                 "title": "Starter",
                 "desc": "Perfect for small teams and freelancers.",
@@ -330,7 +343,7 @@
                 "title": "Professional",
                 "desc": "For growing construction firms.",
                 "popular": "Most Popular",
-                "cta": "Start 14-Day Trial"
+                "cta": "14-Day Trial"
             },
             "enterprise": {
                 "title": "Enterprise",
@@ -344,7 +357,7 @@
     },
     "Project": {
         "title": "Projects",
-        "subtitle": "Manage and track all your ongoing construction projects.",
+        "subtitle": "Manage and oversee your active construction projects.",
         "create": "New Project",
         "table": {
             "name": "Name",
@@ -367,24 +380,24 @@
         "form": {
             "createTitle": "New Project",
             "editTitle": "Edit Project",
-            "description": "Complete the information to create a new project.",
+            "description": "Fill in the details to create a new project.",
             "basicInfo": "Basic Information",
             "name": "Project Name",
-            "namePlaceholder": "E.g. Central Building",
+            "namePlaceholder": "Ex. Central Building",
             "code": "Project Code",
-            "codePlaceholder": "E.g. P-2024-001",
+            "codePlaceholder": "Ex. P-2024-001",
             "status": "Status",
             "statusActive": "Active",
             "statusCompleted": "Completed",
-            "statusPlanning": "Planning",
+            "statusPlanning": "In Planning",
             "statusInactive": "Inactive",
             "type": "Project Type",
             "typePlaceholder": "Select type",
             "modality": "Modality",
             "modalityPlaceholder": "Select modality",
-            "dates": "Dates & Timeline",
+            "dates": "Dates & Schedule",
             "startDate": "Start Date",
-            "endDate": "Estimated End Date",
+            "endDate": "Estimated Completion",
             "location": "Location",
             "address": "Address",
             "addressPlaceholder": "Street and Number",
@@ -392,12 +405,12 @@
             "cityPlaceholder": "City",
             "country": "Country",
             "countryPlaceholder": "Country",
-            "zipCode": "Postal Code",
+            "zipCode": "Zip Code",
             "client": "Client Information",
             "clientName": "Client Name",
-            "clientNamePlaceholder": "Client or Company Name",
+            "clientNamePlaceholder": "Client Name or Company",
             "contactPhone": "Contact Phone",
-            "email": "Email",
+            "email": "Email Address",
             "formDescription": "Description",
             "descriptionPlaceholder": "Project description...",
             "cancel": "Cancel",
@@ -409,7 +422,7 @@
             "projectColor": "Project Color",
             "customColor": "Custom Color",
             "activate": "Activate",
-            "tone": "Hue",
+            "tone": "Tone",
             "preview": "Preview"
         },
         "types": {
@@ -419,7 +432,7 @@
         },
         "modalities": {
             "Obra Nueva": "New Build",
-            "Remodelación": "Renovation"
+            "Remodelación": "Remodel"
         },
         "tabs": {
             "projects": "Projects",
@@ -428,10 +441,10 @@
         "breadcrumb": "Project Management",
         "settings": {
             "title": "Project Settings",
-            "subtitle": "Configure your organization's project types and modalities.",
+            "subtitle": "Configure project types and modalities for your organization.",
             "types": {
                 "title": "Project Types",
-                "description": "Project types categorize your projects (e.g., Commercial, Residential, Industrial).",
+                "description": "Project types help categorize work (e.g., Commercial, Residential, Industrial).",
                 "add": "Add Type",
                 "name": "Name",
                 "type": "Type",
@@ -447,23 +460,26 @@
                     "createDescription": "Define a new type to categorize your projects.",
                     "editTitle": "Edit Project Type",
                     "editDescription": "Modify the name of this project type.",
-                    "nameLabel": "Type name",
-                    "namePlaceholder": "E.g: Residential",
+                    "nameLabel": "Type Name",
+                    "namePlaceholder": "Ex: Residential",
                     "setDefault": "Set as default",
                     "cancel": "Cancel",
                     "save": "Save",
-                    "saving": "Saving..."
-                },
-                "deleteConfirm": {
-                    "title": "Delete project type?",
-                    "description": "This action cannot be undone. Existing projects with this type will not be affected.",
-                    "cancel": "Cancel",
-                    "confirm": "Delete"
+                    "saving": "Saving...",
+                    "unsavedChanges": "You have unsaved changes. Are you sure you want to close?",
+                    "requiredError": "Name is required",
+                    "deleteConfirm": {
+                        "title": "Delete project type?",
+                        "description": "This action cannot be undone. Existing projects with this type will not be affected.",
+                        "entityLabel": "project type",
+                        "cancel": "Cancel",
+                        "confirm": "Delete"
+                    }
                 }
             },
             "modalities": {
                 "title": "Project Modalities",
-                "description": "Modalities define how a project is executed (e.g., New Build, Renovation, Extension).",
+                "description": "Modalities define execution methods (e.g., New Build, Remodel, Extension).",
                 "add": "Add Modality",
                 "name": "Name",
                 "type": "Type",
@@ -479,20 +495,156 @@
                     "createDescription": "Define a new execution modality for your projects.",
                     "editTitle": "Edit Modality",
                     "editDescription": "Modify the name of this modality.",
-                    "nameLabel": "Modality name",
-                    "namePlaceholder": "E.g: New Build",
+                    "nameLabel": "Modality Name",
+                    "namePlaceholder": "Ex: New Build",
                     "setDefault": "Set as default",
                     "cancel": "Cancel",
                     "save": "Save",
-                    "saving": "Saving..."
-                },
-                "deleteConfirm": {
-                    "title": "Delete modality?",
-                    "description": "This action cannot be undone. Existing projects with this modality will not be affected.",
-                    "cancel": "Cancel",
-                    "confirm": "Delete"
+                    "saving": "Saving...",
+                    "unsavedChanges": "You have unsaved changes. Are you sure you want to close?",
+                    "requiredError": "Name is required",
+                    "deleteConfirm": {
+                        "title": "Delete modality?",
+                        "description": "This action cannot be undone. Existing projects with this modality will not be affected.",
+                        "entityLabel": "modality",
+                        "cancel": "Cancel",
+                        "confirm": "Delete"
+                    }
                 }
             }
+        }
+    },
+    "OrganizationDashboard": {
+        "greeting": {
+            "morning": "Good morning",
+            "afternoon": "Good afternoon",
+            "evening": "Good evening"
+        },
+        "status": {
+            "operational": "Operational"
+        },
+        "header": {
+            "subtitle": "Here's what's happening at",
+            "subtitleSuffix": "today."
+        },
+        "actions": {
+            "inviteTeam": "Invite Team",
+            "newProject": "New Project"
+        },
+        "kpis": {
+            "activeProjects": "Active Projects",
+            "totalBudget": "Total Budget",
+            "pendingTasks": "Pending Tasks",
+            "teamVelocity": "Team Velocity",
+            "vsLastMonth": "vs last month"
+        },
+        "sections": {
+            "financialOverview": "Financial Overview",
+            "financialDescription": "Income vs Expenses for the last 30 days.",
+            "activeProjects": "Active Projects",
+            "projectsDescription": "Recent status updates and milestones.",
+            "viewAll": "View All",
+            "projectHealth": "Project Health",
+            "active": "Active",
+            "onTrack": "On Track",
+            "delayed": "Delayed",
+            "liveFeed": "Live Activity"
+        },
+        "errors": {
+            "unableToLoad": "Unable to load dashboard",
+            "unknownError": "An unknown error occurred while delivering organization data.",
+            "retry": "Retry"
+        }
+    },
+    "ImportSystem": {
+        "Modal": {
+            "title": "Import {entity}",
+            "steps": {
+                "upload": "1",
+                "mapping": "2",
+                "validation": "3"
+            },
+            "headers": {
+                "upload": "Import {entity}",
+                "mapping": "Column Mapping",
+                "validation": "Data Validation",
+                "importing": "Importing...",
+                "result": "Import Result"
+            },
+            "descriptions": {
+                "upload": "Upload your Excel or CSV file to start.",
+                "mapping": "Associate your file columns with system fields.",
+                "validation": "Review and correct data before finishing.",
+                "importing": "Processing your data, please wait.",
+                "result": "Summary of import process."
+            }
+        },
+        "Upload": {
+            "title": "Upload your file",
+            "dragActive": "Drop file here...",
+            "dragInactive": "Drag and drop your file here, or click to select",
+            "supports": "Supports Excel (.xlsx) and CSV",
+            "maxSize": "Max 5MB",
+            "changeFile": "Change file",
+            "headerSelection": {
+                "title": "Select Header Row",
+                "description": "It looks like your file has extra rows at the top. Please select which row contains the headers.",
+                "useRow": "Use Row {index}"
+            },
+            "preview": {
+                "title": "File Preview",
+                "showingRows": "Showing first {count} rows"
+            }
+        },
+        "Mapping": {
+            "fileColumn": "File Column",
+            "systemField": "System Field",
+            "ignoreColumn": "Ignore column",
+            "required": "required",
+            "status": {
+                "allMapped": "All required fields are mapped",
+                "missing": "Required fields missing"
+            }
+        },
+        "Validation": {
+            "summary": {
+                "validRecords": "Valid Records",
+                "errorsFound": "Errors Found"
+            },
+            "preview": "Preview",
+            "showingRows": "Showing first {count} records"
+        },
+        "Result": {
+            "successTitle": "Import Complete!",
+            "successMessage": "<bold>{count}</bold> records imported successfully.",
+            "errorsMessage": "{count} errors were skipped.",
+            "finish": "Finish"
+        },
+        "Actions": {
+            "back": "Back",
+            "cancel": "Cancel",
+            "continue": "Continue",
+            "import": "Import"
+        }
+    },
+    "DataTable": {
+        "columns": "Columns",
+        "showColumns": "Show columns",
+        "hiddenColumns": "Hidden columns",
+        "clearFilters": "Clear filters",
+        "search": "Search...",
+        "noResults": "No results found",
+        "reset": "Reset",
+        "view": "View",
+        "selected": "{count} selected",
+        "columnHeaders": {
+            "email": "Email",
+            "phone": "Phone",
+            "location": "Location",
+            "contact_types": "Tags",
+            "full_name": "Full Name",
+            "company_name": "Company",
+            "notes": "Notes"
         }
     }
 }

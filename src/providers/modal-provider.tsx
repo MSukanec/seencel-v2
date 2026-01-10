@@ -29,6 +29,7 @@ export const ModalProvider = () => {
         md: "sm:w-[600px]",
         lg: "sm:w-[800px]",
         xl: "sm:w-[1000px]",
+        "2xl": "sm:w-[1200px]",
         full: "sm:w-[calc(100vw-40px)] sm:max-w-none"
     };
 
@@ -87,7 +88,7 @@ export const ModalProvider = () => {
                                     )}
 
                                     {/* Body */}
-                                    <div className="overflow-auto p-4">
+                                    <div className="flex-1 overflow-hidden p-4 flex flex-col relative">
                                         {modal.view}
                                     </div>
                                 </motion.div>
@@ -130,7 +131,7 @@ export const ModalProvider = () => {
                             )}
 
                             {/* Body - auto height, scrolls when needed */}
-                            <div className="overflow-auto p-4">
+                            <div className="flex-1 overflow-hidden p-4 flex flex-col relative w-full h-full">
                                 {modal.view}
                             </div>
                         </DialogContent>

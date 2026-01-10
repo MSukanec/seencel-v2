@@ -12,8 +12,13 @@ import { useRouter } from "next/navigation";
 import { Trash2, Plus } from "lucide-react";
 import { ContactCard } from "./ContactCard";
 import { deleteContact } from "@/actions/contacts";
+import { createImportBatch, importContactsBatch, revertImportBatch } from "@/actions/import-actions";
 import { Button } from "@/components/ui/button";
 import { DataTableExport } from "@/components/ui/data-table/data-table-export";
+import { DataTableImport } from "@/components/ui/data-table/data-table-import";
+import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
+import { ImportConfig } from "@/lib/import-utils";
+import { Contact } from "@/types/contact";
 
 interface ContactsDataTableProps {
     organizationId: string;
@@ -30,6 +35,54 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
     const handleSuccess = () => {
         router.refresh();
         closeModal();
+    };
+
+    const contactImportConfig: ImportConfig<any> = {
+        entityLabel: "Contactos",
+        entityId: "contactos",
+        columns: [
+            { id: "first_name", label: "Nombre", required: true, example: "Juan" },
+            { id: "last_name", label: "Apellido", required: false, example: "Pérez" },
+            {
+                id: "email",
+                label: "Email",
+                type: "email",
+                normalization: normalizeEmail,
+                validation: (val) => {
+                    const normalized = normalizeEmail(val);
+                    if (!normalized) return undefined; // Optional handled by required flag
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(normalized)) return "Email inválido";
+                }
+            },
+            {
+                id: "phone",
+                label: "Teléfono",
+                type: "phone",
+                normalization: normalizePhone
+            },
+            { id: "company_name", label: "Empresa", required: false },
+            { id: "location", label: "Ubicación", required: false },
+            { id: "notes", label: "Notas", required: false },
+            { id: "contact_types", label: "Tipo", required: false, example: "Cliente" },
+        ],
+        onImport: async (data) => {
+            try {
+                // 1. Create Batch
+                const batch = await createImportBatch(organizationId, "contacts", data.length);
+
+                // 2. Insert Contacts
+                await importContactsBatch(organizationId, data, batch.id);
+
+                return { success: data.length, errors: [], batchId: batch.id };
+            } catch (error) {
+                console.error("Import error:", error);
+                throw error;
+            }
+        },
+        onRevert: async (batchId) => {
+            await revertImportBatch(batchId, 'contacts');
+        }
     };
 
     const handleOpenCreate = () => {
@@ -248,6 +301,7 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
             )}
             toolbar={({ table }) => (
                 <div className="flex gap-2">
+                    <DataTableImport config={contactImportConfig} organizationId={organizationId} />
                     <DataTableExport table={table} />
                     <Button onClick={handleOpenCreate}>
                         <Plus className="mr-2 h-4 w-4" />
@@ -255,6 +309,7 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
                     </Button>
                 </div>
             )}
+            initialSorting={[{ id: "full_name", desc: false }]}
             gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4"
             emptyState={
                 <div className="flex flex-col items-center justify-center py-12">

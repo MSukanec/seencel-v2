@@ -1,0 +1,7 @@
+Nombre Completo;Correo Electrónico;Tel.;Notas
+"Juan Carlos",juan@carlos.com,12345,Separado por punto y coma en vez de coma
+"Maria; Ines",maria@ines.com,5678,Tiene punto y coma en el nombre
+,,No tiene nombre ni mail,
+SoloNombre,,,Faltan datos
+,solo@mail.com,,Solo mail
+"Rompiendo, todo",rompiendo@todo.com,9999,"Comillas, extras, y desastre"
