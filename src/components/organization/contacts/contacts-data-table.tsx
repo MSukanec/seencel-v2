@@ -100,8 +100,7 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
             </div>,
             {
                 title: "Eliminar contactos",
-                description: "Estás a punto de eliminar múltiples registros.",
-                size: "default"
+                description: "Estás a punto de eliminar múltiples registros."
             }
         );
     };
