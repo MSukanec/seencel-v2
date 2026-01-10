@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import React from 'react';
 
 export type ModalType = 'PROJECT_FORM' | 'CONFIRMATION' | 'CUSTOM';
-export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 
 interface ModalOptions {
     title?: string;
