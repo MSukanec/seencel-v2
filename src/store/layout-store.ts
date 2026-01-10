@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 import { SidebarMode } from '@/types/preferences';
 
 export type LayoutMode = 'default' | 'sidebar';
-export type NavigationContext = 'organization' | 'project' | 'finance' | 'learnings' | 'community' | 'admin';
+export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin';
 
 interface LayoutState {
     layoutMode: LayoutMode;

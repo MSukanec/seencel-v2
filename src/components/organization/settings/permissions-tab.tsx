@@ -5,18 +5,75 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useMemo, useState } from "react";
-import { Info, ShieldCheck, Database } from "lucide-react";
+import { Info, ShieldCheck, Database, Shield, Edit, Eye, User, Settings, FileText, Wallet, Briefcase } from "lucide-react";
 import { seedPermissions } from "@/actions/organization-settings";
 import { useRouter } from "@/i18n/routing";
+import { cn } from "@/lib/utils";
 
 interface PermissionsTabProps {
     roles: Role[];
     permissions?: Permission[];
     rolePermissions?: RolePermission[];
 }
+
+// Map technical keys to user-friendly Spanish titles
+const PermissionTranslations: Record<string, string> = {
+    // Admin
+    'admin.access': 'Acceso Administrativo',
+    'plans.view': 'Ver Planes',
+    'plans.manage': 'Gestionar Planes',
+    'billing.view': 'Ver Facturación',
+    'billing.manage': 'Gestionar Facturación',
+
+    // Organization
+    'organization.view': 'Ver Organización',
+    'organization.manage': 'Editar Organización',
+    'members.view': 'Ver Miembros',
+    'members.manage': 'Gestionar Miembros',
+    'roles.view': 'Ver Roles',
+    'roles.manage': 'Gestionar Roles',
+
+    // Contacts
+    'contacts.view': 'Ver Contactos',
+    'contacts.manage': 'Gestionar Contactos',
+    'contact_types.view': 'Ver Tipos de Contacto',
+    'contact_types.manage': 'Gestionar Tipos de Contacto',
+
+    // Projects
+    'projects.view': 'Ver Proyectos',
+    'projects.manage': 'Gestionar Proyectos',
+    'project_types.view': 'Ver Tipos de Proyecto',
+    'project_types.manage': 'Gestionar Tipos de Proyecto',
+
+    // Finance / Costs
+    'general_costs.view': 'Ver Costos Generales',
+    'general_costs.manage': 'Gestionar Costos Generales',
+    'wallets.view': 'Ver Billeteras',
+    'wallets.manage': 'Gestionar Billeteras',
+};
+
+// Map categories to user-friendly Spanish titles
+const CategoryTranslations: Record<string, string> = {
+    'admin': 'Administración del Sistema',
+    'organization': 'Configuración de Organización',
+    'contacts': 'Gestión de Contactos',
+    'projects': 'Gestión de Proyectos',
+    'general_costs': 'Finanzas y Costos',
+    'system': 'Sistema'
+};
+
+// Helper to get icon for role
+const getRoleIcon = (roleName: string) => {
+    const name = roleName.toLowerCase();
+    if (name.includes('admin')) return Shield;
+    if (name.includes('edit') || name.includes('editor')) return Edit;
+    if (name.includes('view') || name.includes('lector') || name.includes('ver')) return Eye;
+    if (name.includes('manager') || name.includes('gestor')) return Briefcase;
+    return User;
+};
 
 export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }: PermissionsTabProps) {
     const router = useRouter();
@@ -26,8 +83,7 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
     const filteredRoles = useMemo(() => {
         const strictMatches = roles.filter(r => (r.type === 'organization' || r.type === 'ORGANIZATION') && !r.is_system);
         if (strictMatches.length > 0) return strictMatches;
-        // Fallback to show something if strict is empty, but preferring strict
-        return roles.filter(r => !r.is_system); // Broaden slightly if needed
+        return roles.filter(r => !r.is_system);
     }, [roles]);
 
     // Group permissions by category
@@ -39,14 +95,13 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
             }
             grouped[p.category].push(p);
         });
+        // Sort keys if needed, specific order
         return grouped;
     }, [permissions]);
 
     const handleSeed = async () => {
         try {
             setIsSeeding(true);
-            // We need an ID, but the seed function in action currently takes orgId but doesn't strictly use it for global permissions
-            // Assuming global permissions for now as per schema
             await seedPermissions("global");
             router.refresh();
         } catch (error) {
@@ -58,14 +113,15 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
 
     const hasRoles = filteredRoles.length > 0;
     const hasPermissions = permissions.length > 0;
+    const firstCategory = Object.keys(permissionsByCategory)[0] || '';
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center px-1">
                 <div>
-                    <h2 className="text-xl font-semibold tracking-tight">Matriz de Permisos</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Configura los accesos para cada rol personalizado de la organización.
+                    <h2 className="text-xl font-semibold tracking-tight text-foreground">Matriz de Permisos</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Define con precisión qué acciones puede realizar cada rol en la organización.
                     </p>
                 </div>
                 {!hasPermissions && (
@@ -77,9 +133,9 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
             </div>
 
             {!hasPermissions ? (
-                <div className="p-12 text-center border rounded-lg bg-muted/10 dashed border-2 border-dashed">
+                <div className="p-12 text-center border rounded-xl bg-muted/10 dashed border-2 border-dashed border-muted">
                     <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium">No hay permisos definidos</h3>
+                    <h3 className="text-lg font-medium text-foreground">No hay permisos definidos</h3>
                     <p className="text-muted-foreground mt-2 max-w-md mx-auto mb-6">
                         La base de datos de permisos está vacía. Genera los permisos predeterminados para comenzar a configurar tu organización.
                     </p>
@@ -88,87 +144,93 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
                     </Button>
                 </div>
             ) : !hasRoles ? (
-                <div className="p-8 text-center border rounded-lg bg-muted/20">
+                <div className="p-8 text-center border rounded-xl bg-muted/20">
                     <Info className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium">No se encontraron roles personalizados</h3>
+                    <h3 className="text-lg font-medium text-foreground">No se encontraron roles personalizados</h3>
                     <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                        Crea un rol personalizado (ej. "Manager") para ver la matriz de permisos.
+                        Crea un rol personalizado (ej. "Manager") para ver la matriz de permisos y empezar a configurar accesos.
                     </p>
                 </div>
             ) : (
-                <Card className="border shadow-sm overflow-hidden bg-white">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent border-b bg-muted/30">
-                                    <TableHead className="w-[300px] min-w-[200px]">Permiso</TableHead>
-                                    {filteredRoles.map(role => (
-                                        <TableHead key={role.id} className="text-center min-w-[120px] pb-4 pt-4">
-                                            <div className="flex flex-col items-center justify-center">
-                                                <Badge variant="outline" className="mb-1 bg-background">
-                                                    {role.name}
-                                                </Badge>
-                                                {role.description && (
-                                                    <span className="text-[10px] text-muted-foreground font-normal line-clamp-1 max-w-[120px]">
-                                                        {role.description}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            </TableHeader>
-                        </Table>
-
-                        <Accordion type="multiple" defaultValue={Object.keys(permissionsByCategory)} className="w-full">
-                            {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
-                                <AccordionItem key={category} value={category} className="border-b-0">
-                                    <div className="border-b bg-muted/5">
-                                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/10">
-                                            <span className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center">
-                                                {category}
-                                                <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px]">
-                                                    {categoryPermissions.length}
-                                                </Badge>
-                                            </span>
-                                        </AccordionTrigger>
-                                    </div>
-                                    <AccordionContent className="p-0">
-                                        <Table>
-                                            <TableBody>
-                                                {categoryPermissions.map(permission => (
-                                                    <TableRow key={permission.id} className="hover:bg-muted/5 border-b border-border/5">
-                                                        <TableCell className="w-[300px] min-w-[200px] py-4 pl-6 align-top">
-                                                            <div className="flex flex-col gap-1">
-                                                                <span className="font-medium text-sm">{permission.description}</span>
-                                                                <span className="text-[11px] text-muted-foreground font-mono bg-muted/30 w-fit px-1.5 rounded">
-                                                                    {permission.key}
-                                                                </span>
-                                                            </div>
-                                                        </TableCell>
+                <Card className="border shadow-none bg-card overflow-hidden rounded-xl">
+                    <Accordion type="single" collapsible defaultValue={firstCategory} className="w-full">
+                        {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
+                            <AccordionItem key={category} value={category} className="border-b last:border-0">
+                                <AccordionTrigger className="hover:no-underline py-4 px-6 bg-muted/40 hover:bg-muted/50 transition-all border-b border-border/50">
+                                    <span className="font-bold text-sm uppercase tracking-wider text-foreground">
+                                        {CategoryTranslations[category] || category}
+                                    </span>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-0">
+                                    <Card className="border-0 shadow-none rounded-none bg-transparent">
+                                        <div className="overflow-x-auto">
+                                            <Table className="w-full">
+                                                <TableHeader>
+                                                    <TableRow className="hover:bg-transparent border-b">
+                                                        <TableHead className="w-[45%] text-xs uppercase tracking-wider font-semibold text-muted-foreground py-3 pl-6">
+                                                            Permiso / Descripción
+                                                        </TableHead>
                                                         {filteredRoles.map(role => {
-                                                            const hasPermission = rolePermissions.some(rp => rp.role_id === role.id && rp.permission_id === permission.id);
+                                                            const RoleIcon = getRoleIcon(role.name);
                                                             return (
-                                                                <TableCell key={`${role.id}-${permission.id}`} className="text-center p-0 align-middle">
-                                                                    <div className="flex items-center justify-center h-full w-full">
-                                                                        <Checkbox
-                                                                            checked={hasPermission}
-                                                                            disabled
-                                                                            className="h-5 w-5 border-2 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 rounded-sm"
-                                                                        />
+                                                                <TableHead key={role.id} className="text-center w-[150px] py-3 align-bottom">
+                                                                    <div className="flex flex-col items-center gap-1.5">
+                                                                        <Badge
+                                                                            variant="secondary"
+                                                                            className="bg-background border-border text-foreground font-medium px-4 py-1.5 text-xs whitespace-nowrap shadow-sm flex items-center gap-2"
+                                                                        >
+                                                                            <RoleIcon className="w-3 h-3 text-primary/80" />
+                                                                            {role.name}
+                                                                        </Badge>
                                                                     </div>
-                                                                </TableCell>
+                                                                </TableHead>
                                                             );
                                                         })}
                                                     </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
-                    </div>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {categoryPermissions.map(permission => (
+                                                        <TableRow key={permission.id} className="hover:bg-muted/50 transition-colors border-b last:border-0">
+                                                            <TableCell className="w-[45%] py-4 pl-6 align-top">
+                                                                <div className="flex flex-col gap-1 pr-6">
+                                                                    <span className="font-semibold text-sm text-foreground hover:text-primary transition-colors">
+                                                                        {PermissionTranslations[permission.key] || permission.key}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground leading-relaxed">
+                                                                        {permission.description}
+                                                                    </span>
+                                                                </div>
+                                                            </TableCell>
+                                                            {filteredRoles.map(role => {
+                                                                const hasPermission = rolePermissions.some(rp => rp.role_id === role.id && rp.permission_id === permission.id);
+                                                                return (
+                                                                    <TableCell key={`${role.id}-${permission.id}`} className="text-center p-0 align-middle">
+                                                                        <div className="flex items-center justify-center h-full w-full py-4 transition-colors">
+                                                                            <Checkbox
+                                                                                checked={hasPermission}
+                                                                                disabled
+                                                                                className={cn(
+                                                                                    "h-5 w-5 transition-all border-2 rounded-[4px]",
+                                                                                    "disabled:cursor-not-allowed disabled:opacity-100",
+                                                                                    hasPermission
+                                                                                        ? "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
+                                                                                        : "border-input bg-card opacity-100"
+                                                                                )}
+                                                                            />
+                                                                        </div>
+                                                                    </TableCell>
+                                                                );
+                                                            })}
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </Card>
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
                 </Card>
             )}
         </div>

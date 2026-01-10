@@ -1,16 +1,27 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getUserProfile } from "@/features/profile/queries";
+import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
+import { PlansComparison } from "@/components/global/plans-comparison";
+import { getPlanPurchaseFlags } from "@/actions/feature-flags";
 
 export default async function PricingPage() {
     const { profile } = await getUserProfile();
+    const [plans, purchaseFlags, currentPlanId] = await Promise.all([
+        getPlans(),
+        getPlanPurchaseFlags(),
+        getCurrentOrganizationPlanId(),
+    ]);
 
     return (
         <div className="flex min-h-screen flex-col">
             <Header variant="public" user={profile} />
-            <main className="flex-1 min-h-screen flex flex-col items-center justify-center p-24">
-                <h1 className="text-4xl font-bold mb-4">Pricing</h1>
-                <p className="text-muted-foreground">Coming soon...</p>
+            <main className="flex-1">
+                <PlansComparison
+                    plans={plans}
+                    purchaseFlags={purchaseFlags}
+                    currentPlanId={currentPlanId}
+                />
             </main>
             <Footer />
         </div>

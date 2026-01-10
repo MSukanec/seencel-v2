@@ -1,0 +1,91 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+
+export interface PlanFeatures {
+    max_members: number;
+    max_projects: number;
+    max_storage_mb: number;
+    max_file_size_mb: number;
+    export_pdf_custom: boolean;
+    custom_pdf_templates: boolean;
+    export_excel: boolean;
+    analytics_level: "basic" | "advanced" | "custom";
+    api_access: boolean;
+    webhooks: boolean;
+    support_level: "community" | "priority" | "dedicated";
+}
+
+export interface Plan {
+    id: string;
+    name: string;
+    slug: string | null;
+    monthly_amount: number | null;
+    annual_amount: number | null;
+    billing_type: string | null;
+    features: PlanFeatures | null;
+    status: string;
+}
+
+/**
+ * Fetches all available plans from the database.
+ * Only returns plans with status = 'available'.
+ */
+export async function getPlans(): Promise<Plan[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("plans")
+        .select("id, name, slug, monthly_amount, annual_amount, billing_type, features, status")
+        .eq("status", "available")
+        .order("monthly_amount", { ascending: true });
+
+    if (error) {
+        console.error("Error fetching plans:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+/**
+ * Gets the current user's active organization plan_id.
+ * Returns null if user is not logged in or has no organization.
+ */
+export async function getCurrentOrganizationPlanId(): Promise<string | null> {
+    const supabase = await createClient();
+
+    // 1. Get Current User
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // 2. Get User's active organization ID from preferences
+    const { data: userData } = await supabase
+        .from('users')
+        .select(`
+            id,
+            user_preferences!inner (
+                last_organization_id
+            )
+        `)
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData || !userData.user_preferences) return null;
+
+    const pref = Array.isArray(userData.user_preferences)
+        ? (userData.user_preferences as any)[0]
+        : (userData.user_preferences as any);
+
+    const orgId = pref?.last_organization_id;
+    if (!orgId) return null;
+
+    // 3. Get the organization's plan_id
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('plan_id')
+        .eq('id', orgId)
+        .single();
+
+    return orgData?.plan_id || null;
+}

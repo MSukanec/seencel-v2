@@ -13,9 +13,10 @@ import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
 interface SettingsClientProps {
     data: OrganizationSettingsData;
     initialTab?: string;
+    organizationId: string;
 }
 
-export function SettingsClient({ data, initialTab = "members" }: SettingsClientProps) {
+export function SettingsClient({ data, initialTab = "members", organizationId }: SettingsClientProps) {
     return (
         <div className="flex flex-col h-full relative">
             <HeaderTitleUpdater title="Configuración" />
@@ -89,7 +90,14 @@ export function SettingsClient({ data, initialTab = "members" }: SettingsClientP
                 </TabsContent>
                 <TabsContent value="finance" className="mt-6 flex-1 focus-visible:outline-none relative min-h-0 overflow-auto">
                     <div className="space-y-6 pb-6">
-                        <FinanceTab />
+                        <FinanceTab
+                            organizationId={organizationId}
+                            preferences={data.preferences}
+                            orgCurrencies={data.contactCurrencies}
+                            orgWallets={data.contactWallets}
+                            availableCurrencies={data.availableCurrencies}
+                            availableWallets={data.availableWallets}
+                        />
                     </div>
                 </TabsContent>
             </Tabs>

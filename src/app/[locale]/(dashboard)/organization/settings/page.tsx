@@ -19,7 +19,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
     const data = await getOrganizationSettingsData(orgId);
 
     return (
-        <SettingsClient data={data} initialTab={params.tab} />
+        <SettingsClient data={data} initialTab={params.tab} organizationId={orgId} />
     );
 }
 

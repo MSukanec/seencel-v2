@@ -4,8 +4,26 @@ import { OrganizationPreferences, OrganizationCurrency, OrganizationWallet, Curr
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Wallet as WalletIcon, Settings2, Plus } from "lucide-react";
+import { Coins, Wallet as WalletIcon, Settings2, Plus, Trash2, Check, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormGroup } from "@/components/ui/form-group";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { ManagedList } from "@/components/ui/managed-list";
+import { useTransition, useState } from "react";
+import { updateOrganizationPreferences, addOrganizationCurrency, removeOrganizationCurrency, addOrganizationWallet, removeOrganizationWallet } from "@/actions/organization-settings";
+
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { toast } from "sonner";
+import { useRouter } from "@/i18n/routing";
+import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
 
 interface FinanceTabProps {
     preferences?: OrganizationPreferences | null;
@@ -13,6 +31,7 @@ interface FinanceTabProps {
     orgWallets?: OrganizationWallet[];
     availableCurrencies?: Currency[];
     availableWallets?: Wallet[];
+    organizationId: string;
 }
 
 export function FinanceTab({
@@ -20,12 +39,100 @@ export function FinanceTab({
     orgCurrencies = [],
     orgWallets = [],
     availableCurrencies = [],
-    availableWallets = []
+    availableWallets = [],
+    organizationId
 }: FinanceTabProps) {
+    const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const [itemToDelete, setItemToDelete] = useState<{ type: 'currency' | 'wallet', id: string } | null>(null);
+
+    const handleConfirmDelete = () => {
+        if (!itemToDelete || !organizationId) return;
+
+        startTransition(async () => {
+            try {
+                if (itemToDelete.type === 'currency') {
+                    await removeOrganizationCurrency(organizationId, itemToDelete.id);
+                    toast.success("Moneda removida");
+                } else {
+                    await removeOrganizationWallet(organizationId, itemToDelete.id);
+                    toast.success("Billetera removida");
+                }
+                router.refresh();
+            } catch (error) {
+                toast.error("Error al remover elemento");
+            } finally {
+                setItemToDelete(null);
+            }
+        });
+    };
 
     // Helper to find name via ID
     const getCurrencyName = (id?: string | null) => availableCurrencies.find(c => c.id === id)?.name || "Sin seleccionar";
     const getWalletName = (id?: string | null) => availableWallets.find(w => w.id === id)?.name || "Sin seleccionar";
+
+    // Filtering available currencies for secondary: Exclude default currency 
+    const availableSecondaryCurrencies = availableCurrencies.filter(c =>
+        c.id !== preferences?.default_currency_id
+    );
+
+    const availableSecondaryCurrencyOptions = availableSecondaryCurrencies.map(c => ({
+        label: `${c.name} (${c.code})`,
+        value: c.id
+    }));
+
+    const secondaryCurrencies = orgCurrencies.filter(oc => !oc.is_default);
+
+
+    // WALLETS LOGIC
+    // Exclude default wallet from options
+    const availableWalletOptions = availableWallets
+        .filter(w => w.id !== preferences?.default_wallet_id)
+        .map(w => ({ label: w.name, value: w.id }));
+
+    const selectedWalletIds = orgWallets
+        .filter(ow => !ow.is_default && ow.wallet_id !== preferences?.default_wallet_id)
+        .map(ow => ow.wallet_id);
+
+    const handleWalletsChange = (newValues: string[]) => {
+        if (!organizationId) return;
+
+        // Check for additions
+        const addedId = newValues.find(id => !selectedWalletIds.includes(id));
+        if (addedId) {
+            startTransition(async () => {
+                try {
+                    await addOrganizationWallet(organizationId, addedId, false);
+                    toast.success("Billetera agregada");
+                    router.refresh();
+                } catch (error) {
+                    toast.error("Error al agregar billetera");
+                }
+            });
+            return;
+        }
+
+        // Check for removals
+        const removedId = selectedWalletIds.find(id => !newValues.includes(id));
+        if (removedId) {
+            setItemToDelete({ type: 'wallet', id: removedId });
+            return;
+        }
+    };
+
+    const handleUpdatePreference = (key: keyof OrganizationPreferences, value: any) => {
+        if (!organizationId) return;
+
+        startTransition(async () => {
+            try {
+                await updateOrganizationPreferences(organizationId, { [key]: value });
+                toast.success("Preferencia actualizada");
+                router.refresh();
+            } catch (error) {
+                toast.error("Error al actualizar preferencia");
+            }
+        });
+    };
 
     return (
         <div className="space-y-6">
@@ -52,11 +159,15 @@ export function FinanceTab({
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Default Currency */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Moneda Por Defecto
-                            </label>
-                            <Select disabled defaultValue={preferences?.default_currency_id || undefined}>
+                        <FormGroup
+                            label="Moneda Por Defecto"
+                            helpText="Esta es la moneda base para todos los cálculos financieros."
+                        >
+                            <Select
+                                disabled={isPending || !preferences}
+                                value={preferences?.default_currency_id || undefined}
+                                onValueChange={(val) => handleUpdatePreference('default_currency_id', val)}
+                            >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Selecciona una moneda" />
                                 </SelectTrigger>
@@ -68,33 +179,43 @@ export function FinanceTab({
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <p className="text-[10px] text-muted-foreground">
-                                Esta es la moneda base para todos los cálculos financieros.
-                            </p>
-                        </div>
+                        </FormGroup>
 
                         {/* Secondary Currencies */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium">Monedas Secundarias</label>
-                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Agregar
-                                </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {orgCurrencies.length === 0 ? (
-                                    <span className="text-sm text-muted-foreground italic">No hay monedas secundarias activas.</span>
-                                ) : (
-                                    orgCurrencies.map(oc => (
-                                        <Badge key={oc.id} variant="secondary" className="flex gap-1 items-center px-3 py-1">
-                                            {oc.currency_code}
-                                            {oc.is_default && <span className="text-[10px] ml-1 bg-primary/10 text-primary px-1 rounded">DEFAULT</span>}
-                                        </Badge>
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                        {/* Secondary Currencies */}
+                        <FormGroup
+                            label="Monedas Secundarias"
+                            helpText="Selecciona una moneda adicional (máximo 1)."
+                        >
+                            <ManagedList
+                                items={secondaryCurrencies.map(oc => {
+                                    const c = availableCurrencies.find(ac => ac.id === oc.currency_id);
+                                    return {
+                                        id: oc.currency_id,
+                                        label: c ? `${c.name} (${c.code})` : "Desconocido",
+                                    };
+                                })}
+                                availableOptions={availableSecondaryCurrencyOptions}
+                                onAdd={(val) => {
+                                    if (!organizationId) return;
+                                    startTransition(async () => {
+                                        try {
+                                            await addOrganizationCurrency(organizationId, val, false);
+                                            toast.success("Moneda agregada");
+                                            router.refresh();
+                                        } catch (error: any) {
+                                            toast.error(error.message || "Error al agregar moneda");
+                                        }
+                                    });
+                                }}
+                                onRemove={(id) => setItemToDelete({ type: 'currency', id })}
+                                maxItems={1}
+                                disabled={isPending}
+                                dialogTitle="Agregar Moneda Secundaria"
+                                dialogDescription="Selecciona una moneda adicional para usar en la organización."
+                                selectLabel="Moneda"
+                            />
+                        </FormGroup>
                     </CardContent>
                 </Card>
 
@@ -111,11 +232,15 @@ export function FinanceTab({
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Default Wallet */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none">
-                                Billetera Por Defecto
-                            </label>
-                            <Select disabled defaultValue={preferences?.default_wallet_id || undefined}>
+                        <FormGroup
+                            label="Billetera Por Defecto"
+                            helpText="Billetera preseleccionada para nuevos movimientos."
+                        >
+                            <Select
+                                disabled={isPending || !preferences}
+                                value={preferences?.default_wallet_id || undefined}
+                                onValueChange={(val) => handleUpdatePreference('default_wallet_id', val)}
+                            >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Selecciona una billetera" />
                                 </SelectTrigger>
@@ -127,35 +252,42 @@ export function FinanceTab({
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <p className="text-[10px] text-muted-foreground">
-                                Billetera preseleccionada para nuevos movimientos.
-                            </p>
-                        </div>
+                        </FormGroup>
 
                         {/* Secondary Wallets */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium">Billeteras Habilitadas</label>
-                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Agregar
-                                </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {orgWallets.length === 0 ? (
-                                    <span className="text-sm text-muted-foreground italic">No hay billeteras extra activas.</span>
-                                ) : (
-                                    orgWallets.map(ow => (
-                                        <Badge key={ow.id} variant="outline" className="flex gap-1 items-center px-3 py-1 bg-background hover:bg-muted/50 cursor-pointer">
-                                            {ow.wallet_name}
-                                        </Badge>
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                        <FormGroup
+                            label="Billeteras Habilitadas"
+                            helpText="Selecciona cuentas adicionales para usar en transacciones."
+                        >
+                            <MultiSelect
+                                options={availableWalletOptions}
+                                selected={selectedWalletIds}
+                                onChange={handleWalletsChange}
+                                disabled={isPending}
+                                placeholder="Seleccionar billeteras..."
+                                searchPlaceholder="Buscar billetera..."
+                                emptyText="No se encontraron billeteras."
+                            />
+                        </FormGroup>
                     </CardContent>
                 </Card>
             </div>
+
+            <DeleteConfirmationDialog
+                open={!!itemToDelete}
+                onOpenChange={(open) => !open && setItemToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title="Deshabilitar Elemento"
+                description={
+                    <span>
+                        Al deshabilitar este elemento, dejará de aparecer como opción para nuevos movimientos.
+                        <br /><br />
+                        Los registros históricos y saldos existentes <strong>no se verán afectados</strong> y permanecerán intactos.
+                    </span>
+                }
+                confirmLabel="Deshabilitar"
+                isDeleting={isPending}
+            />
         </div>
     );
 }

@@ -29,10 +29,20 @@ export async function seedPermissions(organizationId: string) {
 export async function getOrganizationSettingsData(organizationId: string): Promise<OrganizationSettingsData> {
     const supabase = await createClient();
 
+    // 1. Fetch roles first to know which IDs to filter permissions for (avoiding 1000 row limit)
+    const { data: rolesData } = await supabase
+        .from('roles')
+        .select('*')
+        .or(`organization_id.eq.${organizationId},is_system.eq.true`)
+        .order('name');
+
+    const roles = (rolesData || []) as Role[];
+    const roleIds = roles.map(r => r.id);
+
+    // 2. Fetch the rest of the data in parallel
     const [
         membersRes,
         invitationsRes,
-        rolesRes,
         permissionsRes,
         rolePermissionsRes,
         activityLogsRes,
@@ -40,9 +50,9 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         billingCyclesRes,
         preferencesRes,
         orgCurrenciesRes,
-        orgWalletsRes,
-        allCurrenciesRes,
-        allWalletsRes
+        orgWalletsRes, // organization_currencies_view
+        allCurrenciesRes, // currencies
+        allWalletsRes // wallets
     ] = await Promise.all([
         supabase
             .from('organization_members_full_view')
@@ -58,20 +68,15 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .order('created_at', { ascending: false }),
 
         supabase
-            .from('roles')
-            .select('*')
-            .or(`organization_id.eq.${organizationId},is_system.eq.true`)
-            .order('name'),
-
-        supabase
             .from('permissions')
             .select('*')
             .order('category', { ascending: true })
             .order('description', { ascending: true }),
 
-        supabase
-            .from('role_permissions')
-            .select('*'),
+        // Fix: Filter role_permissions by the relevant role IDs to avoid global limit
+        roleIds.length > 0
+            ? supabase.from('role_permissions').select('*').in('role_id', roleIds)
+            : Promise.resolve({ data: [] }),
 
         supabase
             .from('organization_activity_logs_view')
@@ -121,7 +126,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
     return {
         members: (membersRes.data || []) as OrganizationMemberDetail[],
         invitations: (invitationsRes.data || []) as OrganizationInvitation[],
-        roles: (rolesRes.data || []) as Role[],
+        roles: roles,
         permissions: (permissionsRes.data || []) as Permission[],
         rolePermissions: (rolePermissionsRes.data || []) as RolePermission[],
         activityLogs: (activityLogsRes.data || []) as OrganizationActivityLog[],
@@ -133,4 +138,141 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         availableCurrencies: (allCurrenciesRes.data || []) as Currency[],
         availableWallets: (allWalletsRes.data || []) as Wallet[]
     };
+}
+
+// ----------------------------------------------------------------------
+// MUTATIONS
+// ----------------------------------------------------------------------
+
+export async function updateOrganizationPreferences(
+    organizationId: string,
+    updates: Partial<OrganizationPreferences>
+) {
+    const supabase = await createClient();
+
+    // Check if preferences exist first
+    const { data: existing } = await supabase
+        .from('organization_preferences')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .single();
+
+    let error;
+
+    if (!existing) {
+        const { error: insertError } = await supabase
+            .from('organization_preferences')
+            .insert({
+                organization_id: organizationId,
+                ...updates
+            });
+        error = insertError;
+    } else {
+        const { error: updateError } = await supabase
+            .from('organization_preferences')
+            .update(updates)
+            .eq('organization_id', organizationId);
+        error = updateError;
+    }
+
+    if (error) {
+        console.error('Error updating preferences:', error);
+        throw new Error('Failed to update preferences');
+    }
+
+    return { success: true };
+}
+
+export async function addOrganizationCurrency(
+    organizationId: string,
+    currencyId: string,
+    isDefault: boolean = false
+) {
+    const supabase = await createClient();
+
+    // Constraint: Max 1 secondary currency (non-default)
+    if (!isDefault) {
+        // Count existing non-default currencies
+        const { count, error: countError } = await supabase
+            .from('organization_currencies')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', organizationId)
+            .eq('is_default', false)
+            .eq('is_active', true);
+
+        if (countError) {
+            console.error("Error checking currency limit:", countError);
+            throw new Error("Error checking currency limit");
+        }
+
+        if (count && count >= 1) {
+            throw new Error("Maximum of 1 secondary currency allowed.");
+        }
+    }
+
+    const { error } = await supabase
+        .from('organization_currencies')
+        .insert({
+            organization_id: organizationId,
+            currency_id: currencyId,
+            is_default: isDefault,
+            is_active: true
+        });
+
+    if (error) {
+        console.error('Error adding currency:', error);
+        throw new Error('Failed to add currency');
+    }
+}
+
+export async function removeOrganizationCurrency(organizationId: string, currencyId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('organization_currencies')
+        .delete()
+        .eq('organization_id', organizationId)
+        .eq('currency_id', currencyId);
+
+    if (error) {
+        console.error('Error removing currency:', error);
+        throw new Error('Failed to remove currency');
+    }
+}
+
+export async function addOrganizationWallet(
+    organizationId: string,
+    walletId: string,
+    isDefault: boolean = false
+) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('organization_wallets')
+        .insert({
+            organization_id: organizationId,
+            wallet_id: walletId,
+            is_default: isDefault,
+            is_active: true
+        });
+
+    if (error) {
+        console.error('Error adding wallet:', error);
+        throw new Error('Failed to add wallet');
+    }
+}
+
+export async function removeOrganizationWallet(organizationId: string, walletId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('organization_wallets')
+        .delete()
+        .eq('organization_id', organizationId)
+        .eq('wallet_id', walletId);
+
+    if (error) {
+        console.error('Error removing wallet:', error);
+        throw new Error('Failed to remove wallet');
+    }
 }

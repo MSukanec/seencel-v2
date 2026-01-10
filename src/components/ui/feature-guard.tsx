@@ -9,6 +9,7 @@ import {
     HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "@/i18n/routing";
 
 interface FeatureGuardProps {
     /** Whether the feature is enabled for the current plan */
@@ -23,7 +24,7 @@ interface FeatureGuardProps {
     customMessage?: string;
     /** Optional: Whether to show locked badge */
     showBadge?: boolean;
-    /** Optional: Link to upgrade */
+    /** Optional: Link to upgrade (uses i18n routing) */
     upgradeHref?: string;
 }
 
@@ -41,7 +42,7 @@ export function FeatureGuard({
     children,
     customMessage,
     showBadge = true,
-    upgradeHref = "/organization/settings/billing"
+    upgradeHref = "/organization/billing/plans"
 }: FeatureGuardProps) {
     if (isEnabled) {
         // Feature is enabled, render children normally
@@ -101,8 +102,8 @@ export function FeatureGuard({
                     <p className="text-xs text-muted-foreground leading-relaxed">
                         {customMessage || `"${featureName}" no está disponible en tu plan actual. Actualiza a ${requiredPlan} para desbloquear esta funcionalidad.`}
                     </p>
-                    <a
-                        href={upgradeHref}
+                    <Link
+                        href={upgradeHref as any}
                         className={cn(
                             "mt-1 w-full inline-flex items-center justify-center",
                             "text-xs font-medium py-1.5 px-3 rounded-md",
@@ -110,9 +111,10 @@ export function FeatureGuard({
                         )}
                     >
                         Actualizar a {requiredPlan}
-                    </a>
+                    </Link>
                 </div>
             </HoverCardContent>
         </HoverCard>
     );
 }
+

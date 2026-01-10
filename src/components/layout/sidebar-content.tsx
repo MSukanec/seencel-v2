@@ -51,7 +51,6 @@ interface EnvironmentsRailProps {
 const contexts: { id: NavigationContext; label: string; icon: React.ElementType }[] = [
     { id: 'organization', label: 'Organización', icon: Building },
     { id: 'project', label: 'Proyecto', icon: Briefcase },
-    { id: 'finance', label: 'Finanzas', icon: Wallet },
     { id: 'learnings', label: 'Aprendizajes', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
     { id: 'admin', label: 'Admin', icon: Hammer },
@@ -60,7 +59,6 @@ const contexts: { id: NavigationContext; label: string; icon: React.ElementType 
 const contextRoutes: Record<NavigationContext, string> = {
     organization: '/organization',
     project: '/organization/projects',
-    finance: '/finance',
     learnings: '/learnings',
     community: '/organization',
     admin: '/admin'
@@ -166,6 +164,7 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
                     { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building },
                     { title: 'Proyectos', href: '/organization/projects', icon: Briefcase },
                     { title: 'Contactos', href: '/organization/contacts', icon: Users },
+                    { title: 'Finanzas', href: '/organization/finance', icon: Wallet },
                     { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard },
                     { title: 'Configuración', href: '/organization/settings', icon: Settings },
                 ];
@@ -189,13 +188,6 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
                     { title: 'Documentación', href: `${projectBase}/docs`, icon: BookOpen },
                     { title: 'Construcción', href: `${projectBase}/construction`, icon: HardHat },
                     { title: 'Volver a la Lista', href: '/organization/projects', icon: Briefcase },
-                ];
-            case 'finance':
-                return [
-                    { title: 'Visión General', href: '/finance', icon: LayoutDashboard },
-                    { title: 'Facturas', href: '/finance', icon: FileText },
-                    { title: 'Gastos', href: '/finance', icon: CreditCard },
-                    { title: 'Impuestos', href: '/finance', icon: PieChart },
                 ];
             case 'learnings':
                 return [
