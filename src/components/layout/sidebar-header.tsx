@@ -20,6 +20,7 @@ import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLayoutStore } from "@/store/layout-store"; // Import store
 import { FeedbackButton } from "@/components/feedback-button";
+import { PlanStatusButton } from "@/components/plan-status-button";
 
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
@@ -93,7 +94,8 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
                 {/* Mobile: Absolute top-right. Desktop: Relative flex-end */}
                 <div className="absolute top-0 right-0 h-14 flex items-center pr-4 md:static md:h-auto md:ml-auto md:space-x-2 bg-transparent">
                     <nav className="flex items-center space-x-1">
-                        <div className="mr-1 hidden md:block">
+                        <div className="mr-1 hidden md:flex items-center gap-2">
+                            <PlanStatusButton />
                             <FeedbackButton />
                         </div>
                         {/* Removed ModeToggle, moved to dropdown */}

@@ -36,6 +36,7 @@ export default async function GeneralCostsPage() {
 
     return (
         <GeneralCostsClient
+            organizationId={organizationId}
             categories={categories}
             concepts={concepts}
             payments={payments}

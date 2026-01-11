@@ -164,7 +164,7 @@ export function FinanceTab({
                             helpText="Esta es la moneda base para todos los cálculos financieros."
                         >
                             <Select
-                                disabled={isPending || !preferences}
+                                disabled={isPending}
                                 value={preferences?.default_currency_id || undefined}
                                 onValueChange={(val) => handleUpdatePreference('default_currency_id', val)}
                             >
@@ -237,7 +237,7 @@ export function FinanceTab({
                             helpText="Billetera preseleccionada para nuevos movimientos."
                         >
                             <Select
-                                disabled={isPending || !preferences}
+                                disabled={isPending}
                                 value={preferences?.default_wallet_id || undefined}
                                 onValueChange={(val) => handleUpdatePreference('default_wallet_id', val)}
                             >

@@ -214,23 +214,56 @@ export async function getContactTypes(organizationId: string): Promise<ContactTy
 export async function createContactType(organizationId: string, name: string) {
     const supabase = await createClient();
 
+    // 1. Get Auth User
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        console.error("Error getting user for createContactType:", authError);
+        throw new Error("Authentication failed");
+    }
+
+    // 2. Get Public User ID
+    const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (userError || !userData) {
+        console.error("Error fetching public user profile:", userError);
+        throw new Error("User profile not found");
+    }
+
+    // 3. Get Organization Member ID
+    const { data: memberData, error: memberError } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('user_id', userData.id)
+        .eq('organization_id', organizationId)
+        .single();
+
+    if (memberError || !memberData) {
+        console.error("Error fetching organization member:", memberError);
+        throw new Error("You are not a member of this organization");
+    }
+
     const { data, error } = await supabase
         .from('contact_types')
         .insert({
             organization_id: organizationId,
             name,
-            created_by: (await supabase.auth.getUser()).data.user?.id,
-            updated_by: (await supabase.auth.getUser()).data.user?.id
+            created_by: memberData.id,
+            updated_by: memberData.id
         })
         .select()
         .single();
 
     if (error) {
         console.error("Error creating contact type:", error);
-        throw new Error("Failed to create contact type");
+        throw new Error(`Failed to create contact type: ${error.message} (${error.details || ''})`);
     }
 
     revalidatePath(`/organization/contacts`);
+    revalidatePath(`/organization/contacts/settings`); // Assuming there might be a settings page
     return data;
 }
 

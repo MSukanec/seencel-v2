@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react"
-import { usePathname } from "@/i18n/routing";
-import { Link } from "@/i18n/routing";
+import { usePathname, useRouter, Link } from "@/i18n/routing";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,9 +32,11 @@ import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLayoutStore } from "@/store/layout-store";
 import { FeedbackButton } from "@/components/feedback-button";
+import { PlanStatusButton } from "@/components/plan-status-button";
 
 export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', user?: UserProfile | null }) {
     const pathname = usePathname();
+    const router = useRouter();
     const tPublic = useTranslations('Public.nav');
     const tMega = useTranslations('MegaMenu');
     const tUser = useTranslations('UserMenu');
@@ -306,7 +308,8 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                     <nav className="flex items-center space-x-2">
                         {/* Hide Feedback on Public Header */}
                         {variant === 'app' && (
-                            <div className="hidden md:flex">
+                            <div className="hidden md:flex items-center gap-2">
+                                <PlanStatusButton />
                                 <FeedbackButton />
                             </div>
                         )}
@@ -429,7 +432,16 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                                             </>
                                         )}
 
-                                        <DropdownMenuItem className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer">
+
+                                        <DropdownMenuItem
+                                            className="text-foreground hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-950/20 data-[highlighted]:text-red-600 cursor-pointer"
+                                            onClick={async () => {
+                                                const supabase = createClient();
+                                                await supabase.auth.signOut();
+                                                router.refresh();
+                                                router.push('/login');
+                                            }}
+                                        >
                                             {tUser('logout')}
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>

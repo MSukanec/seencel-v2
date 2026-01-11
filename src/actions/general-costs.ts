@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
     GeneralCost,
@@ -195,4 +196,182 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
         insights: insights,
         recentActivity: recentPayments
     };
+}
+
+// --- Mutations ---
+
+
+// Categories Mutations
+
+export async function createGeneralCostCategory(data: Partial<GeneralCostCategory>) {
+    const supabase = await createClient();
+    const { data: newCategory, error } = await supabase
+        .from('general_cost_categories')
+        .insert({
+            organization_id: data.organization_id,
+            name: data.name,
+            description: data.description,
+            is_system: data.is_system || false
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return newCategory;
+}
+
+export async function updateGeneralCostCategory(id: string, data: Partial<GeneralCostCategory>) {
+    const supabase = await createClient();
+    const { data: updatedCategory, error } = await supabase
+        .from('general_cost_categories')
+        .update({
+            name: data.name,
+            description: data.description,
+            // Prevent updating system flag or organization_id if not intended
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return updatedCategory;
+}
+
+export async function deleteGeneralCostCategory(id: string) {
+    const supabase = await createClient();
+    // Soft delete
+    const { error } = await supabase
+        .from('general_cost_categories')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return true;
+}
+
+// Concepts (General Costs) Mutations
+
+export async function createGeneralCost(data: Partial<GeneralCost>) {
+    const supabase = await createClient();
+    const { data: newCost, error } = await supabase
+        .from('general_costs')
+        .insert({
+            organization_id: data.organization_id,
+            name: data.name,
+            description: data.description,
+            category_id: data.category_id,
+            is_recurring: data.is_recurring || false,
+            recurrence_interval: data.recurrence_interval,
+            expected_day: data.expected_day
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return newCost;
+}
+
+export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) {
+    const supabase = await createClient();
+    const { data: updatedCost, error } = await supabase
+        .from('general_costs')
+        .update({
+            name: data.name,
+            description: data.description,
+            category_id: data.category_id,
+            is_recurring: data.is_recurring,
+            recurrence_interval: data.recurrence_interval,
+            expected_day: data.expected_day
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return updatedCost;
+}
+
+export async function deleteGeneralCost(id: string) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from('general_costs')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return true;
+}
+
+// Payments Mutations
+
+export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentView>) {
+    const supabase = await createClient();
+    // We must map from the View type (potentially) to the Table schema
+    // data.general_cost_id, data.amount, etc.
+    const { data: newPayment, error } = await supabase
+        .from('general_costs_payments')
+        .insert({
+            organization_id: data.organization_id,
+            general_cost_id: data.general_cost_id,
+            amount: data.amount,
+            currency_id: data.currency_id,
+            wallet_id: data.wallet_id,
+            payment_date: data.payment_date,
+            status: data.status || 'confirmed',
+            // fields from view might not map 1:1, ensure we use basic fields
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return newPayment;
+}
+
+export async function updateGeneralCostPayment(id: string, data: Partial<GeneralCostPaymentView>) {
+    const supabase = await createClient();
+    const { data: updatedPayment, error } = await supabase
+        .from('general_costs_payments')
+        .update({
+            general_cost_id: data.general_cost_id,
+            amount: data.amount,
+            currency_id: data.currency_id,
+            wallet_id: data.wallet_id,
+            payment_date: data.payment_date,
+            status: data.status,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return updatedPayment;
+}
+
+export async function deleteGeneralCostPayment(id: string) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from('general_costs_payments')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/organization/general-costs');
+    return true;
 }

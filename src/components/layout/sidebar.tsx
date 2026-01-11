@@ -22,7 +22,7 @@ export function Sidebar() {
     return (
         <aside
             className={cn(
-                "hidden md:flex flex-col border-r border-border bg-sidebar/95 backdrop-blur-xl transition-all duration-300 z-40 h-full shrink-0",
+                "hidden md:flex flex-col border-r border-border bg-sidebar/95 backdrop-blur-xl z-40 h-full shrink-0",
                 isExpanded ? "w-[240px]" : "w-[120px]",
             )}
             onMouseEnter={() => setIsHovered(true)}

@@ -1,17 +1,79 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { ColumnDef } from "@tanstack/react-table";
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
 import { GeneralCost, GeneralCostCategory } from "@/types/general-costs";
+import { deleteGeneralCost } from "@/actions/general-costs";
+import { ConceptFormDialog } from "./concept-form-dialog";
+
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ConceptsTableProps {
     data: GeneralCost[];
     categories: GeneralCostCategory[];
+    organizationId: string;
 }
 
-export function ConceptsTable({ data }: ConceptsTableProps) {
+export function ConceptsTable({ data, categories, organizationId }: ConceptsTableProps) {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [selectedConcept, setSelectedConcept] = useState<GeneralCost | undefined>(undefined);
+
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [conceptToDelete, setConceptToDelete] = useState<GeneralCost | null>(null);
+    const [isDeleting, startDeleteTransition] = useTransition();
+
+    const handleCreate = () => {
+        setSelectedConcept(undefined);
+        setIsDialogOpen(true);
+    };
+
+    const handleEdit = (concept: GeneralCost) => {
+        setSelectedConcept(concept);
+        setIsDialogOpen(true);
+    };
+
+    const handleDeleteClick = (concept: GeneralCost) => {
+        setConceptToDelete(concept);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (!conceptToDelete) return;
+
+        startDeleteTransition(async () => {
+            try {
+                await deleteGeneralCost(conceptToDelete.id);
+                toast.success("Concepto eliminado");
+                setIsDeleteDialogOpen(false);
+            } catch (error) {
+                console.error(error);
+                toast.error("Error al eliminar el concepto");
+            }
+        });
+    };
+
     const columns: ColumnDef<GeneralCost>[] = [
         {
             accessorKey: "name",
@@ -37,7 +99,10 @@ export function ConceptsTable({ data }: ConceptsTableProps) {
             cell: ({ row }) => {
                 const cost = row.original;
                 return cost.is_recurring ? (
-                    <Badge variant="secondary">Recurrente: {cost.recurrence_interval}</Badge>
+                    <Badge variant="secondary">
+                        {cost.recurrence_interval === 'monthly' ? 'Mensual' : cost.recurrence_interval}
+                        {cost.expected_day ? ` (Día ${cost.expected_day})` : ''}
+                    </Badge>
                 ) : (
                     <span className="text-muted-foreground">Único</span>
                 );
@@ -52,24 +117,100 @@ export function ConceptsTable({ data }: ConceptsTableProps) {
                 </span>
             ),
         },
+        {
+            id: "actions",
+            cell: ({ row }) => {
+                const concept = row.original;
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(concept)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => handleDeleteClick(concept)}
+                                className="text-destructive focus:text-destructive"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
+        },
     ];
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Conceptos de Gasto</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    searchPlaceholder="Buscar conceptos..."
-                    showToolbar={data.length > 5}
-                    showPagination={true}
-                    pageSize={10}
-                />
-            </CardContent>
-        </Card>
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h3 className="text-lg font-medium">Conceptos de Gasto</h3>
+                    <p className="text-sm text-muted-foreground">Define los tipos de gastos recurrentes o eventuales.</p>
+                </div>
+                <Button onClick={handleCreate}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Concepto
+                </Button>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Listado de Conceptos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        searchPlaceholder="Buscar conceptos..."
+                        showToolbar={true}
+                        showPagination={true}
+                        pageSize={10}
+                    />
+                </CardContent>
+            </Card>
+
+            <ConceptFormDialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                conceptToEdit={selectedConcept}
+                categories={categories}
+                organizationId={organizationId}
+            />
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará el concepto
+                            <strong> {conceptToDelete?.name}</strong>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault(); // Prevent auto-close
+                                confirmDelete();
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     );
 }
 

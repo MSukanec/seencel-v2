@@ -104,7 +104,7 @@ export function EnvironmentsRail({ hoveredContext, onHoverContext, onLinkClick }
                                         variant="ghost"
                                         size="icon"
                                         className={cn(
-                                            "h-10 w-10 rounded-xl transition-all duration-200",
+                                            "h-10 w-10 rounded-xl",
                                             isActive
                                                 ? "bg-primary/10 text-primary shadow-sm"
                                                 : isHovered
@@ -250,13 +250,13 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
     return (
         <div
             className={cn(
-                "flex flex-col h-full py-4 transition-all duration-300 overflow-hidden",
+                "flex flex-col h-full py-4 overflow-hidden",
                 isExpanded ? "w-[180px]" : "w-[60px]"
             )}
         >
             {/* Context Title (only when expanded) */}
             <div className={cn(
-                "px-3 mb-2 transition-all duration-300",
+                "px-3 mb-2",
                 isExpanded ? "opacity-100" : "opacity-0"
             )}>
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -276,8 +276,8 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
                                         variant={pathname === item.href ? "secondary" : "ghost"}
                                         size="default"
                                         className={cn(
-                                            "h-9 rounded-lg transition-all duration-200 w-full justify-start",
-                                            isExpanded ? "px-3" : "px-0 justify-center",
+                                            "h-9 rounded-lg w-full px-2.5", // Fixed horizontal padding
+                                            "justify-start", // Always start aligned
                                             pathname === item.href
                                                 ? "bg-secondary text-foreground shadow-sm hover:bg-secondary/80"
                                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -286,11 +286,11 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
                                             if (onLinkClick) onLinkClick();
                                         }}
                                     >
-                                        <Link href={item.href as any}>
-                                            <item.icon className="h-4 w-4 shrink-0" />
+                                        <Link href={item.href as any} className="flex items-center w-full"> {/* Ensure Link takes full width */}
+                                            <item.icon className="h-4 w-4 shrink-0" /> {/* Icon size fixed */}
                                             <span
                                                 className={cn(
-                                                    "font-medium text-sm truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
+                                                    "font-medium text-sm truncate overflow-hidden whitespace-nowrap",
                                                     isExpanded ? "w-auto opacity-100 ml-2" : "w-0 opacity-0 ml-0"
                                                 )}
                                             >
@@ -314,15 +314,15 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
                                 variant="ghost"
                                 size="default"
                                 className={cn(
-                                    "h-9 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-300 w-full",
-                                    isExpanded ? "justify-start px-3" : "justify-center px-0"
+                                    "h-9 rounded-lg text-muted-foreground hover:text-foreground w-full px-2.5", // Fixed padding
+                                    "justify-start" // Always start aligned
                                 )}
                                 onClick={cycleSidebarMode}
                             >
                                 {React.createElement(getModeIcon(), { className: "h-4 w-4 shrink-0" })}
                                 <span
                                     className={cn(
-                                        "font-medium text-sm truncate transition-all duration-300 overflow-hidden whitespace-nowrap",
+                                        "font-medium text-sm truncate overflow-hidden whitespace-nowrap",
                                         isExpanded ? "w-auto opacity-100 ml-2" : "w-0 opacity-0 ml-0"
                                     )}
                                 >

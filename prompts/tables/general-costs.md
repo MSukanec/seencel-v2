@@ -12,8 +12,12 @@ create table public.general_cost_categories (
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
   updated_at timestamp with time zone not null default now(),
+  created_by uuid null,
+  updated_by uuid null,
   constraint general_cost_categories_pkey primary key (id),
   constraint fk_gc_cat_org foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint general_cost_categories_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint general_cost_categories_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
   constraint general_cost_categories_system_org_check check (
     (
       (
@@ -43,6 +47,17 @@ where
   );
 
 create index IF not exists idx_gc_categories_list on public.general_cost_categories using btree (is_system, organization_id, is_deleted, name) TABLESPACE pg_default;
+
+create trigger on_general_cost_categories_audit
+after INSERT
+or DELETE
+or
+update on general_cost_categories for EACH row
+execute FUNCTION log_general_cost_category_activity ();
+
+create trigger set_updated_by_general_cost_categories BEFORE
+update on general_cost_categories for EACH row
+execute FUNCTION handle_updated_by ();
 
 create trigger trg_set_updated_at_general_cost_categories BEFORE
 update on general_cost_categories for EACH row

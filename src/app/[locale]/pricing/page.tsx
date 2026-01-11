@@ -3,6 +3,7 @@ import { Footer } from "@/components/layout/footer";
 import { getUserProfile } from "@/features/profile/queries";
 import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
 import { PlansComparison } from "@/components/global/plans-comparison";
+import { PricingFaq } from "@/components/global/pricing-faq";
 import { getPlanPurchaseFlags } from "@/actions/feature-flags";
 
 export default async function PricingPage() {
@@ -22,6 +23,7 @@ export default async function PricingPage() {
                     purchaseFlags={purchaseFlags}
                     currentPlanId={currentPlanId}
                 />
+                <PricingFaq />
             </main>
             <Footer />
         </div>

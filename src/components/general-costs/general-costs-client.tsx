@@ -13,13 +13,14 @@ import { PaymentsTable } from "./payments-table";
 import { SettingsTab } from "./settings-tab";
 
 interface GeneralCostsClientProps {
+    organizationId: string;
     categories: GeneralCostCategory[];
     concepts: GeneralCost[];
     payments: GeneralCostPaymentView[];
     dashboardData: EnhancedDashboardData;
 }
 
-export function GeneralCostsClient({ categories, concepts, payments, dashboardData }: GeneralCostsClientProps) {
+export function GeneralCostsClient({ organizationId, categories, concepts, payments, dashboardData }: GeneralCostsClientProps) {
     const [activeTab, setActiveTab] = useState("dashboard");
 
     return (
@@ -71,7 +72,7 @@ export function GeneralCostsClient({ categories, concepts, payments, dashboardDa
                         <PaymentsTable data={payments} />
                     </TabsContent>
                     <TabsContent value="settings" className="m-0 h-full">
-                        <SettingsTab categories={categories} />
+                        <SettingsTab categories={categories} organizationId={organizationId} />
                     </TabsContent>
                 </div>
             </Tabs>

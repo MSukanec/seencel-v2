@@ -1,5 +1,6 @@
 import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
 import { PlansComparison } from "@/components/global/plans-comparison";
+import { PricingFaq } from "@/components/global/pricing-faq";
 import { getPlanPurchaseFlags } from "@/actions/feature-flags";
 
 export default async function BillingPlansPage() {
@@ -17,6 +18,7 @@ export default async function BillingPlansPage() {
                 purchaseFlags={purchaseFlags}
                 currentPlanId={currentPlanId}
             />
+            <PricingFaq />
         </div>
     );
 }

@@ -646,5 +646,34 @@
             "company_name": "Company",
             "notes": "Notes"
         }
+    },
+    "PricingFAQ": {
+        "title": "Frequently Asked Questions",
+        "items": {
+            "change_plan": {
+                "question": "Can I switch plans at any time?",
+                "answer": "Yes, you can upgrade, downgrade or switch between plans at any time without penalties. When you change plans in the middle of a billing cycle, we apply automatic proration: if you upgrade to a higher plan, your next billing will reflect the proportional cost of the time remaining at the new price. If you downgrade to a lower plan, a credit is accumulated and applied to your next billing. You don't lose data or access: the change is applied immediately."
+            },
+            "payment_methods": {
+                "question": "What payment methods do you accept?",
+                "answer": "We accept all major credit cards (Visa, Mastercard, Amex) via Stripe for international customers. In Argentina, we process local payments via MercadoPago (account balance, cards) and offer direct bank transfer for annual plans."
+            },
+            "data_retention": {
+                "question": "What happens to my data if I cancel?",
+                "answer": "Your data is retained on our servers for 90 days after cancellation, allowing you to reactivate your account without losing information. After 90 days, the data is permanently deleted. You can export your data at any time before cancellation."
+            },
+            "billing_cycle": {
+                "question": "Can I change my billing cycle?",
+                "answer": "Yes. You can change your billing cycle at any time from your plan settings. If you switch from monthly to annual, a price adjustment is applied to your next billing. If you switch from annual to monthly, the change takes effect at the end of your current annual cycle."
+            },
+            "user_roles": {
+                "question": "How do user limits and roles work?",
+                "answer": "For the Free plan (1 user), only you have access. In Pro (1 user) it is also individual but with more capabilities. In Teams (unlimited users), you can add members and assign them roles with specific permissions. If you downgrade from Teams to Pro or Free, additional members automatically lose access, but their data is preserved if you reinvite more users later."
+            },
+            "enterprise": {
+                "question": "What is included in the Enterprise plan?",
+                "answer": "The Enterprise plan is designed for large organizations that need a customized solution. Includes: unlimited users at no additional cost per seat, on-premise deployment if necessary, SSO with your identity provider, custom training for your team, a dedicated account manager, and 99.9% SLA with 24/7 priority support. This is ideal for construction companies with more than 50 employees or real estate developers that handle multiple projects simultaneously. For prices and options, <contact>contact our sales team</contact>."
+            }
+        }
     }
 }

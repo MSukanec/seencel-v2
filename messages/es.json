@@ -669,5 +669,34 @@
             "projects": "Proyectos",
             "unknown": "Desconocido"
         }
+    },
+    "PricingFAQ": {
+        "title": "Preguntas Frecuentes",
+        "items": {
+            "change_plan": {
+                "question": "¿Puedo cambiar de plan en cualquier momento?",
+                "answer": "Sí, puedes actualizar, degradar o cambiar entre planes en cualquier momento sin penalidades. Cuando cambias de plan en medio de un ciclo de facturación, aplicamos prorrateo automático: si actualizas a un plan superior, tu próxima facturación reflejará el costo proporcional del tiempo restante al nuevo precio. Si degradas a un plan inferior, se acumula un crédito que se aplica a tu próxima facturación. No pierdes datos ni acceso: el cambio se aplica inmediatamente."
+            },
+            "payment_methods": {
+                "question": "¿Qué métodos de pago aceptan?",
+                "answer": "Aceptamos todas las principales tarjetas de crédito (Visa, Mastercard, Amex) a través de Stripe para clientes internacionales. En Argentina, procesamos pagos locales mediante MercadoPago (dinero en cuenta, tarjetas) y ofrecemos transferencia bancaria directa para planes anuales."
+            },
+            "data_retention": {
+                "question": "¿Qué sucede con mis datos si cancelo?",
+                "answer": "Tus datos se conservan en nuestros servidores durante 90 días después de la cancelación, lo que te permite reactivar tu cuenta sin perder información. Pasados 90 días, los datos se eliminan permanentemente. Puedes exportar tus datos en cualquier momento antes de la cancelación."
+            },
+            "billing_cycle": {
+                "question": "¿Puedo cambiar mi ciclo de facturación?",
+                "answer": "Sí. Puedes cambiar tu ciclo de facturación en cualquier momento desde la configuración de tu plan. Si pasas de mensual a anual, se aplica un ajuste de precio en tu próxima facturación. Si pasas de anual a mensual, el cambio toma efecto al final de tu ciclo anual actual."
+            },
+            "user_roles": {
+                "question": "¿Cómo funcionan los límites de usuarios y roles?",
+                "answer": "Para el plan Free (1 usuario), solo tú tienes acceso. En Pro (1 usuario) también es individual pero con más capacidades. En Teams (usuarios ilimitados), puedes agregar miembros y asignarles roles con permisos específicos. Si degradas desde Teams a Pro o Free, los miembros adicionales pierden acceso automáticamente, pero sus datos se preservan por si reinvitas a más usuarios después."
+            },
+            "enterprise": {
+                "question": "¿Qué incluye el plan Enterprise?",
+                "answer": "El plan Enterprise está diseñado para grandes organizaciones. Incluye usuarios ilimitados sin costo adicional por asiento, implementación on-premise, SSO, capacitación personalizada, gerente de cuenta dedicado y SLA del 99.9% con soporte prioritario 24/7. Es ideal para constructoras con más de 50 empleados o desarrolladoras inmobiliarias que manejan múltiples proyectos. Para conocer precios y opciones, <contact>contacta con nuestro equipo de ventas</contact>."
+            }
+        }
     }
 }
