@@ -9,10 +9,12 @@ import { UserProfile } from "@/types/user";
 
 export function LayoutSwitcher({
     children,
-    user
+    user,
+    activeOrgId
 }: {
     children: React.ReactNode;
     user?: UserProfile | null;
+    activeOrgId?: string;
 }) {
     const { layoutMode } = useLayoutStore();
     const [mounted, setMounted] = React.useState(false);
@@ -44,7 +46,7 @@ export function LayoutSwitcher({
     // Default Layout
     return (
         <div className="flex min-h-screen flex-col bg-background">
-            <Header variant="app" user={user} />
+            <Header variant="app" user={user} activeOrgId={activeOrgId} />
             <GlobalDrawer />
             <div className="flex-1 flex flex-col">
                 <main className="flex-1">

@@ -15,10 +15,11 @@ import { ContentLayout } from "@/components/layout/content-layout";
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
 export default async function ProjectsPage({
-    params: { locale }
+    params
 }: {
-    params: { locale: string }
+    params: Promise<{ locale: string }>
 }) {
+    const { locale } = await params;
     const t = await getTranslations('Project');
 
     const { activeOrgId } = await getUserOrganizations();

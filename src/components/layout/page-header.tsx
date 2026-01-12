@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { ProjectSelectorWrapper } from "@/components/layout/project-selector-wrapper";
 
 export interface BreadcrumbItem {
     label: string
@@ -43,12 +44,16 @@ export function PageHeader({
                         {titleItem?.label}
                     </h1>
 
-                    {/* Actions */}
-                    {actions && (
-                        <div className="flex items-center gap-2">
-                            {actions}
-                        </div>
-                    )}
+                    <div className="flex items-center gap-4">
+                        <ProjectSelectorWrapper />
+
+                        {/* Actions */}
+                        {actions && (
+                            <div className="flex items-center gap-2">
+                                {actions}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Tabs - negative margin to overlap with header border */}

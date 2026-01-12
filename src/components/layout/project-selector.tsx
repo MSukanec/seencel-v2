@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRouter, useParams } from "next/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectSeparator } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 
 interface Project {
     id: string;
@@ -34,29 +35,54 @@ function getInitials(name: string) {
 
 export function ProjectSelector({ projects, currentProjectId, basePath }: ProjectSelectorProps) {
     const router = useRouter();
+    const params = useParams();
+    const locale = params?.locale as string;
+
+    console.log("ProjectSelector: Render", { count: projects.length, current: currentProjectId });
+
+    // Find current project object
     const currentProject = projects.find(p => p.id === currentProjectId);
 
-    // Effect to ensure we always have a project if available (though URL should handle this)
-    // This is purely visual fallback or for initial load edge cases
+    // Fallback logic for display if currentProject is somehow missing
+    const displayProject = currentProject || (projects.length > 0 ? projects[0] : null);
+
+    // Effect to ensure we always have a project if available
     useEffect(() => {
         if (!currentProjectId && projects.length > 0) {
             const firstId = projects[0].id;
-            const newPath = basePath.replace("[projectId]", firstId);
+            const rawPath = basePath.replace("[projectId]", firstId);
+            // Ensure locale is included if missing from basePath
+            const newPath = (locale && !rawPath.startsWith(`/${locale}`))
+                ? `/${locale}${rawPath}`
+                : rawPath;
+
             router.replace(newPath);
         }
-    }, [currentProjectId, projects, basePath, router]);
+    }, [currentProjectId, projects, basePath, router, locale]);
 
-    const handleProjectChange = (projectId: string) => {
+    const handleProjectChange = (value: string) => {
+        if (value === "__NEW_PROJECT__") {
+            const projectsPath = `/organization/projects`;
+            const newPath = (locale && !projectsPath.startsWith(`/${locale}`))
+                ? `/${locale}${projectsPath}`
+                : projectsPath;
+            router.push(newPath);
+            return;
+        }
+
+        const projectId = value;
         if (projectId === currentProjectId) return;
-        const newPath = basePath.replace("[projectId]", projectId);
+
+        const rawPath = basePath.replace("[projectId]", projectId);
+        // Ensure locale is included if missing from basePath (and if we have a locale)
+        const newPath = (locale && !rawPath.startsWith(`/${locale}`))
+            ? `/${locale}${rawPath}`
+            : rawPath;
+
         router.push(newPath);
     };
 
     if (projects.length === 0) return null;
-
-    // Fallback for visual display if currentProject is somehow missing but ID exists (unlikely) 
-    // or if purely waiting for redirect.
-    const displayProject = currentProject || projects[0];
 
     return (
         <Select value={currentProjectId || displayProject?.id} onValueChange={handleProjectChange}>
@@ -82,7 +108,7 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
                     </span>
                 </div>
             </SelectTrigger>
-            <SelectContent align="end">
+            <SelectContent align="end" className="z-[100]">
                 {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                         <div className="flex items-center gap-2">
@@ -102,6 +128,15 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
                         </div>
                     </SelectItem>
                 ))}
+
+                <SelectSeparator />
+
+                <SelectItem value="__NEW_PROJECT__" className="text-primary focus:text-primary cursor-pointer">
+                    <div className="flex items-center gap-2 font-medium">
+                        <Plus className="h-4 w-4" />
+                        <span>Crear Nuevo Proyecto</span>
+                    </div>
+                </SelectItem>
             </SelectContent>
         </Select>
     );

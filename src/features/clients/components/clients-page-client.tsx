@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
-import { ProjectSelector } from "@/components/layout/project-selector";
+
 
 import { ProjectClientView, ClientFinancialSummary, ClientPaymentView, ClientRole } from "@/features/clients/types";
 import { ClientsOverview } from "./clients-overview";
@@ -15,17 +15,11 @@ import { ClientSettings } from "./client-settings";
 
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
-interface Project {
-    id: string;
-    name: string;
-    color?: string | null;
-    image_url?: string | null;
-}
+
 
 interface ClientsPageClientProps {
     projectId: string;
     orgId: string;
-    projects: Project[];
     clients: ProjectClientView[];
     financialSummary: ClientFinancialSummary[];
     commitments: any[];
@@ -38,7 +32,6 @@ interface ClientsPageClientProps {
 export function ClientsPageClient({
     projectId,
     orgId,
-    projects,
     clients,
     financialSummary,
     commitments,
@@ -61,13 +54,6 @@ export function ClientsPageClient({
                         <TabsTrigger value="schedules" className={tabTriggerClass}>Cronogramas</TabsTrigger>
                         <TabsTrigger value="settings" className={tabTriggerClass}>Ajustes</TabsTrigger>
                     </TabsList>
-                }
-                actions={
-                    <ProjectSelector
-                        projects={projects}
-                        currentProjectId={projectId}
-                        basePath="/project/[projectId]/clients"
-                    />
                 }
             >
                 <ContentLayout variant="wide">

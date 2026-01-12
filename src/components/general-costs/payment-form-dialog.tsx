@@ -41,9 +41,7 @@ import { GeneralCost, GeneralCostPaymentView } from "@/types/general-costs";
 import { createGeneralCostPayment, updateGeneralCostPayment } from "@/actions/general-costs";
 
 const formSchema = z.object({
-    payment_date: z.date({
-        required_error: "La fecha es obligatoria",
-    }),
+    payment_date: z.date(),
     general_cost_id: z.string().optional(),
     amount: z.coerce.number().min(0.01, "El monto debe ser mayor a 0"),
     status: z.enum(["pending", "confirmed", "overdue", "cancelled"]),

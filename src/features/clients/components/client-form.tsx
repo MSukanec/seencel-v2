@@ -28,7 +28,7 @@ const formSchema = z.object({
     organization_id: z.string().min(1),
     client_role_id: z.string().optional(),
     notes: z.string().optional(),
-    is_primary: z.boolean().default(true),
+    is_primary: z.boolean().optional(),
 });
 
 type ClientFormValues = z.infer<typeof formSchema>;
@@ -50,6 +50,8 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
         defaultValues: {
             organization_id: orgId,
             project_id: projectId || "",
+            contact_id: "",
+            client_role_id: "",
             is_primary: true,
             notes: "",
         },

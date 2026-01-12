@@ -17,14 +17,12 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
     const resolvedSearchParams = await searchParams;
     const defaultTab = resolvedSearchParams.view || "overview";
 
-    // Fetch all data
-    const { clients, financialSummary, commitments, payments, schedules, roles, orgId, projects } = await getData(projectId);
+    const { clients, financialSummary, commitments, payments, schedules, roles, orgId } = await getData(projectId);
 
     return (
         <ClientsPageClient
             projectId={projectId}
             orgId={orgId}
-            projects={projects}
             clients={clients}
             financialSummary={financialSummary}
             commitments={commitments}
@@ -38,7 +36,7 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
 
 async function getData(projectId: string) {
     const { activeOrgId } = await getUserOrganizations();
-    if (!activeOrgId) return { clients: [], financialSummary: [], commitments: [], payments: [], schedules: [], roles: [], orgId: "", projects: [] };
+    if (!activeOrgId) return { clients: [], financialSummary: [], commitments: [], payments: [], schedules: [], roles: [], orgId: "" };
 
     const [
         clientsRes,
@@ -46,16 +44,14 @@ async function getData(projectId: string) {
         commitmentsRes,
         paymentsRes,
         schedulesRes,
-        rolesRes,
-        projectsRes
+        rolesRes
     ] = await Promise.all([
         getClients(projectId),
         getClientFinancialSummary(projectId),
         getClientCommitments(projectId),
         getClientPayments(projectId),
         getClientPaymentSchedules(projectId),
-        getClientRoles(activeOrgId),
-        getOrganizationProjects(activeOrgId)
+        getClientRoles(activeOrgId)
     ]);
 
     return {
@@ -65,13 +61,7 @@ async function getData(projectId: string) {
         payments: paymentsRes.data || [],
         schedules: schedulesRes.data || [],
         roles: rolesRes.data || [],
-        orgId: activeOrgId,
-        projects: projectsRes.map(p => ({
-            id: p.id,
-            name: p.name,
-            color: p.color,
-            image_url: p.image_url
-        }))
+        orgId: activeOrgId
     };
 }
 

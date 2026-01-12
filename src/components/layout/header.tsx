@@ -34,7 +34,9 @@ import { useLayoutStore } from "@/store/layout-store";
 import { FeedbackButton } from "@/components/feedback-button";
 import { PlanStatusButton } from "@/components/plan-status-button";
 
-export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', user?: UserProfile | null }) {
+import { ProjectSelectorWrapper } from "@/components/layout/project-selector-wrapper";
+
+export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'public' | 'app', user?: UserProfile | null, activeOrgId?: string }) {
     const pathname = usePathname();
     const router = useRouter();
     const tPublic = useTranslations('Public.nav');
@@ -52,7 +54,7 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
         <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm">
             <div className="flex h-16 w-full items-center px-8 relative max-w-[1920px] mx-auto">
                 {/* 1. Logo */}
-                <div className="flex flex-1 items-center justify-start">
+                <div className="flex items-center justify-start mr-8">
                     <Link href="/" className="flex items-center space-x-2">
                         <div className="relative h-8 w-8">
                             <Image
@@ -67,6 +69,11 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                         </span>
                     </Link>
                 </div>
+
+                {/* PROJECT SELECTOR (Automatically visible in project context) */}
+                {variant === 'app' && (
+                    <ProjectSelectorWrapper />
+                )}
 
                 {/* 2. Navigation */}
                 {variant === 'app' ? (
