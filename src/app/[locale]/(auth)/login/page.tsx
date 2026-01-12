@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "@/i18n/routing";
+import { useRouter, Link } from "@/i18n/routing";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -136,9 +136,9 @@ export default function LoginPage() {
                             <div className="grid gap-2">
                                 <div className="flex items-center justify-between">
                                     <Label htmlFor="password">Contraseña</Label>
-                                    <a href="#" className="text-xs text-primary hover:underline" tabIndex={-1}>
+                                    <Link href="/forgot-password" className="text-xs text-primary hover:underline" tabIndex={-1}>
                                         ¿Olvidaste tu contraseña?
-                                    </a>
+                                    </Link>
                                 </div>
                                 <Input
                                     id="password"

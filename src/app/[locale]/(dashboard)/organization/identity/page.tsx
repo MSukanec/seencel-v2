@@ -1,14 +1,15 @@
 import { getDashboardData } from "@/features/organization/queries";
-import { HeaderPortal } from "@/components/layout/header-portal";
 import { OrganizationDetailsForm } from "@/components/organization/organization-details-form";
 import { OrganizationLocationManager } from "@/components/organization/location-manager";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganizationTabsWrapper } from "@/components/organization/organization-tabs-wrapper";
-import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
-import { PageLayout } from "@/components/layout/page-layout";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { ContentLayout } from "@/components/layout/content-layout";
 import { BrandDigitalExperience } from "@/features/organization/components/brand/brand-digital-experience";
-import { BrandPortalSettings } from "@/features/organization/components/brand/brand-portal-settings";
 import { BrandPdfTemplates } from "@/features/organization/components/brand/brand-pdf-templates";
+
+// Reusable tab trigger style
+const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
 export default async function OrganizationDetailsPage() {
     const data = await getDashboardData();
@@ -19,65 +20,55 @@ export default async function OrganizationDetailsPage() {
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <HeaderTitleUpdater title={
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                    Organización <span className="text-muted-foreground/40">/</span> <span className="text-foreground font-medium">Información y Marca</span>
-                </span>
-            } />
-            <OrganizationTabsWrapper defaultValue="general">
-
-                <HeaderPortal>
-                    {/* Tabs portalled up to Global Header - RESTORED AS REQUESTED */}
-                    <TabsList className="h-full bg-transparent p-0 gap-6 flex items-end">
-                        <TabsTrigger
-                            value="general"
-                            className="relative h-14 rounded-none border-b-2 border-transparent bg-transparent px-2 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                        >
+        <OrganizationTabsWrapper defaultValue="general">
+            <PageWrapper
+                type="page"
+                title="Identidad y Marca"
+                tabs={
+                    <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
+                        <TabsTrigger value="general" className={tabTriggerClass}>
                             Información
                         </TabsTrigger>
-                        <TabsTrigger
-                            value="location"
-                            className="relative h-14 rounded-none border-b-2 border-transparent bg-transparent px-2 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                        >
+                        <TabsTrigger value="location" className={tabTriggerClass}>
                             Ubicación
                         </TabsTrigger>
-                        <TabsTrigger
-                            value="digital"
-                            className="relative h-14 rounded-none border-b-2 border-transparent bg-transparent px-2 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                        >
+                        <TabsTrigger value="digital" className={tabTriggerClass}>
                             Experiencia Digital
                         </TabsTrigger>
-                        <TabsTrigger
-                            value="pdf"
-                            className="relative h-14 rounded-none border-b-2 border-transparent bg-transparent px-2 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                        >
+                        <TabsTrigger value="pdf" className={tabTriggerClass}>
                             Documentos PDF
                         </TabsTrigger>
                     </TabsList>
-                </HeaderPortal>
+                }
+            >
+                {/* Tab: Información - narrow layout for form */}
+                <TabsContent value="general" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="narrow">
+                        <OrganizationDetailsForm organization={organization} />
+                    </ContentLayout>
+                </TabsContent>
 
-                {/* Content Areas */}
-                <div className="flex-1 bg-muted/5 p-0 flex flex-col min-h-0">
-                    <TabsContent value="general" className="m-0 focus-visible:outline-none">
-                        <PageLayout variant="standard">
-                            <OrganizationDetailsForm organization={organization} />
-                        </PageLayout>
-                    </TabsContent>
-
-                    <TabsContent value="location" className="m-0 flex-1 h-full min-h-[600px] focus-visible:outline-none flex flex-col">
+                {/* Tab: Ubicación - full layout for map */}
+                <TabsContent value="location" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="full">
                         <OrganizationLocationManager organization={organization} />
-                    </TabsContent>
+                    </ContentLayout>
+                </TabsContent>
 
-                    <TabsContent value="digital" className="m-0 flex-1 h-full min-h-[600px] focus-visible:outline-none flex flex-col">
+                {/* Tab: Experiencia Digital - full layout for canvas */}
+                <TabsContent value="digital" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="full">
                         <BrandDigitalExperience />
-                    </TabsContent>
+                    </ContentLayout>
+                </TabsContent>
 
-                    <TabsContent value="pdf" className="m-0 flex-1 h-full min-h-[600px] focus-visible:outline-none flex flex-col">
+                {/* Tab: Documentos PDF - full layout for editor */}
+                <TabsContent value="pdf" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="full">
                         <BrandPdfTemplates />
-                    </TabsContent>
-                </div>
-            </OrganizationTabsWrapper>
-        </div>
+                    </ContentLayout>
+                </TabsContent>
+            </PageWrapper>
+        </OrganizationTabsWrapper>
     );
 }

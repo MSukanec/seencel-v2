@@ -16,6 +16,11 @@ import {
     Layers,
     Building,
     Receipt,
+    Kanban,
+    SquareKanban,
+    MessageSquare,
+    CheckCheck,
+    ArrowRightLeft,
     LucideIcon
 } from "lucide-react";
 
@@ -111,6 +116,32 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
         label: 'Organización',
         icon: Building,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+    },
+    // Kanban Module
+    'kanban_boards': {
+        label: 'Kanban - Tableros',
+        icon: Kanban,
+        color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
+    },
+    'kanban_cards': {
+        label: 'Kanban - Tarjetas',
+        icon: SquareKanban,
+        color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
+    },
+    'kanban_lists': {
+        label: 'Kanban - Columnas',
+        icon: Kanban,
+        color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
+    },
+    'kanban_labels': {
+        label: 'Kanban - Etiquetas',
+        icon: Tag,
+        color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
+    },
+    'kanban_comments': {
+        label: 'Kanban - Comentarios',
+        icon: MessageSquare,
+        color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     }
 };
 
@@ -161,6 +192,16 @@ export const actionConfigs: Record<string, ActionConfig> = {
         label: 'Desarchivó',
         icon: RotateCcw,
         color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
+    },
+    'complete': {
+        label: 'Completó',
+        icon: CheckCheck,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    'move': {
+        label: 'Movió',
+        icon: ArrowRightLeft,
+        color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
     }
 };
 

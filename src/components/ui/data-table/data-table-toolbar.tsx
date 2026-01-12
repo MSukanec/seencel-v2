@@ -9,14 +9,22 @@ import { DataTableBulkActions } from "./data-table-bulk-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
+import { cn } from "@/lib/utils";
 
-interface DataTableToolbarProps<TData> {
-    table: Table<TData>;
-    globalFilter: string;
-    setGlobalFilter: (value: string) => void;
+export interface ToolbarProps<TData> {
+    // Generic Mode
+    searchQuery?: string;
+    onSearchChange?: (value: string) => void;
     searchPlaceholder?: string;
-    children?: React.ReactNode;
-    leftActions?: React.ReactNode;
+
+    // Slots
+    filterContent?: React.ReactNode;
+    viewOptions?: React.ReactNode;
+
+    // Data Table Mode (Legacy/Auto-wired)
+    table?: Table<TData>;
+    globalFilter?: string;
+    setGlobalFilter?: (value: string) => void;
     facetedFilters?: {
         columnId: string;
         title: string;
@@ -26,22 +34,39 @@ interface DataTableToolbarProps<TData> {
             icon?: React.ComponentType<{ className?: string }>;
         }[];
     }[];
+
+    // Common
+    children?: React.ReactNode; // Right side actions
+    leftActions?: React.ReactNode; // Left side actions (before search)
+    bulkActions?: React.ReactNode;
+    className?: string; // Added className prop
 }
 
 export function DataTableToolbar<TData>({
     table,
     globalFilter,
     setGlobalFilter,
+    searchQuery,
+    onSearchChange,
     searchPlaceholder = "Buscar...",
     children,
     leftActions,
     facetedFilters,
     bulkActions,
-}: DataTableToolbarProps<TData> & { bulkActions?: React.ReactNode }) {
-    const isFiltered = globalFilter.length > 0;
-    const isSelectionMode = table.getFilteredSelectedRowModel().rows.length > 0;
+    filterContent,
+    viewOptions,
+    className, // Added className to destructuring
+}: ToolbarProps<TData>) {
+    // Resolve search state (Table vs Generic)
+    const searchValue = globalFilter ?? searchQuery ?? "";
+    const onSearch = setGlobalFilter ?? onSearchChange ?? (() => { });
 
-    if (isSelectionMode && bulkActions) {
+    const isFiltered = searchValue.length > 0;
+
+    // Selection mode only applies if table is present
+    const isSelectionMode = table ? table.getFilteredSelectedRowModel().rows.length > 0 : false;
+
+    if (isSelectionMode && bulkActions && table) {
         return (
             <DataTableBulkActions table={table}>
                 {bulkActions}
@@ -50,17 +75,18 @@ export function DataTableToolbar<TData>({
     }
 
     return (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            {/* Left side: Search + Filters */}
-            <div className="flex flex-1 items-center gap-2">
+        <div className={cn("flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4", className)}>
+            {/* Left side: Actions + Search + Filters */}
+            <div className="flex flex-1 items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade max-w-full">
                 {leftActions}
+
                 {/* Global Search */}
-                <div className="relative w-full sm:w-64 lg:w-80">
+                <div className="relative w-full sm:w-64 lg:w-80 shrink-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder={searchPlaceholder}
-                        value={globalFilter}
-                        onChange={(e) => setGlobalFilter(e.target.value)}
+                        value={searchValue}
+                        onChange={(e) => onSearch(e.target.value)}
                         className="pl-9 pr-8 h-9"
                     />
                     {isFiltered && (
@@ -68,7 +94,7 @@ export function DataTableToolbar<TData>({
                             variant="ghost"
                             size="icon"
                             className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-                            onClick={() => setGlobalFilter("")}
+                            onClick={() => onSearch("")}
                         >
                             <X className="h-3 w-3" />
                             <span className="sr-only">Limpiar búsqueda</span>
@@ -76,7 +102,8 @@ export function DataTableToolbar<TData>({
                     )}
                 </div>
 
-                {facetedFilters?.map((filter) => (
+                {/* Table Faceted Filters */}
+                {table && facetedFilters?.map((filter) => (
                     table.getColumn(filter.columnId) && (
                         <DataTableFacetedFilter
                             key={filter.columnId}
@@ -87,14 +114,17 @@ export function DataTableToolbar<TData>({
                     )
                 ))}
 
-                {/* Filter indicator */}
+                {/* Generic Filter Content */}
+                {filterContent}
+
+                {/* Filter indicator (Only checks search for now if table missing) */}
                 {isFiltered && (
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                            setGlobalFilter("");
-                            table.resetColumnFilters();
+                            onSearch("");
+                            table?.resetColumnFilters();
                         }}
                         className="h-8 px-2 lg:px-3"
                     >
@@ -105,10 +135,13 @@ export function DataTableToolbar<TData>({
             </div>
 
             {/* Right side: Actions + View Options */}
-            <div className="flex items-center gap-2">
-                <DataTableViewOptions table={table} />
+            <div className="flex items-center gap-2 shrink-0">
+                {table ? <DataTableViewOptions table={table} /> : viewOptions}
                 {children}
             </div>
         </div>
     );
 }
+
+// Export Generic Alias if preferred
+export const Toolbar = DataTableToolbar;

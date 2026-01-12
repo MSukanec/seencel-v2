@@ -1,15 +1,14 @@
-import { PageHeader } from "@/components/layout/page-header";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { ContentLayout } from "@/components/layout/content-layout";
 
 export default function AdminSettingsPage() {
     return (
-        <div className="space-y-6">
-            <PageHeader
-                title="Configuración Admin"
-                description="Ajustes globales del panel de administración."
-            />
-            <div className="p-4 border border-dashed rounded-lg">
-                <p className="text-muted-foreground text-sm">Contenido en construcción...</p>
-            </div>
-        </div>
+        <PageWrapper type="page" title="Configuración">
+            <ContentLayout variant="wide">
+                <div className="p-4 border border-dashed rounded-lg">
+                    <p className="text-muted-foreground text-sm">Contenido en construcción...</p>
+                </div>
+            </ContentLayout>
+        </PageWrapper>
     );
 }

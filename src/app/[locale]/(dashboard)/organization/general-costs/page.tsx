@@ -6,17 +6,14 @@ import {
     getGeneralCostsDashboard,
     getActiveOrganizationId
 } from "@/actions/general-costs";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { ContentLayout } from "@/components/layout/content-layout";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Reusable tab trigger style
+const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
 export default async function GeneralCostsPage() {
-    // In a real app, you'd get the organization ID from the context or session.
-    // For now, mirroring other pages, we might need to assume or fetch a default org.
-    // However, looking at the codebase, current pages often access organization details via a layout or hardcoded/fetched ID.
-    // I'll assume we need to pass a specific Organization ID. 
-    // Since I don't have the context hook here (server component), I will rely on the pattern used in other pages.
-    // Checking `src/app/[locale]/(dashboard)/organization/page.tsx` might help, but I'll use a placeholder or best guess based on `organization_id` being required.
-
-    // NOTE: Replace this with the actual Organization ID retrieval mechanism.
-    // Often passed via params or fetched based on user session.
     const organizationId = await getActiveOrganizationId();
 
     if (!organizationId) {
@@ -35,12 +32,37 @@ export default async function GeneralCostsPage() {
     ]);
 
     return (
-        <GeneralCostsClient
-            organizationId={organizationId}
-            categories={categories}
-            concepts={concepts}
-            payments={payments}
-            dashboardData={dashboardData}
-        />
+        <Tabs defaultValue="dashboard" className="h-full flex flex-col">
+            <PageWrapper
+                type="page"
+                title="Gastos Generales"
+                tabs={
+                    <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
+                        <TabsTrigger value="dashboard" className={tabTriggerClass}>
+                            Visión General
+                        </TabsTrigger>
+                        <TabsTrigger value="concepts" className={tabTriggerClass}>
+                            Conceptos
+                        </TabsTrigger>
+                        <TabsTrigger value="payments" className={tabTriggerClass}>
+                            Pagos
+                        </TabsTrigger>
+                        <TabsTrigger value="settings" className={tabTriggerClass}>
+                            Ajustes
+                        </TabsTrigger>
+                    </TabsList>
+                }
+            >
+                <ContentLayout variant="wide">
+                    <GeneralCostsClient
+                        organizationId={organizationId}
+                        categories={categories}
+                        concepts={concepts}
+                        payments={payments}
+                        dashboardData={dashboardData}
+                    />
+                </ContentLayout>
+            </PageWrapper>
+        </Tabs>
     );
 }

@@ -29,7 +29,7 @@ export const useLayoutStore = create<LayoutState>()(
             layoutMode: 'default', // Default to existing layout initially
             activeContext: 'organization',
             activeProjectId: null,
-            sidebarMode: 'collapsed',
+            sidebarMode: 'expanded_hover',
             headerTitle: null,
             actions: {
                 setLayoutMode: (mode) => set({ layoutMode: mode }),

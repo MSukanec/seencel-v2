@@ -1,9 +1,12 @@
 "use client";
 
-import * as React from "react"
+import * as React from "react";
+import NextImage from "next/image";
 import { cn } from "@/lib/utils";
 import { useLayoutStore, NavigationContext, useActiveProjectId } from "@/store/layout-store";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
+import { SidebarButton } from "./sidebar-button";
+import { SidebarAccordion } from "./sidebar-accordion";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,7 +20,6 @@ import {
     Settings,
     FileText,
     CreditCard,
-    PieChart,
     Hammer,
     HardHat,
     Video,
@@ -29,6 +31,7 @@ import {
     PanelLeftOpen,
     PanelLeftClose,
     Info,
+    Kanban,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -39,19 +42,13 @@ interface NavItem {
 }
 
 // ============================================================================
-// ENVIRONMENTS RAIL (Left column - always 60px, icons only)
+// CONFIGURATION
 // ============================================================================
-
-interface EnvironmentsRailProps {
-    hoveredContext: NavigationContext | null;
-    onHoverContext: (ctx: NavigationContext | null) => void;
-    onLinkClick?: () => void;
-}
 
 const contexts: { id: NavigationContext; label: string; icon: React.ElementType }[] = [
     { id: 'organization', label: 'Organización', icon: Building },
     { id: 'project', label: 'Proyecto', icon: Briefcase },
-    { id: 'learnings', label: 'Aprendizajes', icon: GraduationCap },
+    { id: 'learnings', label: 'Academia', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
     { id: 'admin', label: 'Admin', icon: Hammer },
 ];
@@ -64,97 +61,65 @@ const contextRoutes: Record<NavigationContext, string> = {
     admin: '/admin'
 };
 
-export function EnvironmentsRail({ hoveredContext, onHoverContext, onLinkClick }: EnvironmentsRailProps) {
-    const { activeContext, actions } = useLayoutStore();
-    const activeProjectId = useActiveProjectId();
+// ============================================================================
+// UNIFIED SIDEBAR CONTENT
+// ============================================================================
+
+interface SidebarContentProps {
+    onLinkClick?: () => void;
+    mode?: "desktop" | "mobile";
+    isExpanded?: boolean;
+}
+
+export function SidebarContent({ onLinkClick, mode = "desktop", isExpanded: propIsExpanded }: SidebarContentProps) {
+    const pathname = usePathname();
     const router = useRouter();
+    const { activeContext, sidebarMode, actions } = useLayoutStore();
+    const activeProjectId = useActiveProjectId();
+    const tMega = useTranslations('MegaMenu');
 
-    const handleContextClick = (ctx: NavigationContext) => {
-        actions.setActiveContext(ctx);
-        if (onLinkClick) onLinkClick();
+    // Sidebar Expansion Logic
+    const isMobile = mode === "mobile";
+    const isExpanded = propIsExpanded ?? isMobile;
 
-        if (ctx === 'project') {
-            const currentProjectId = useLayoutStore.getState().activeProjectId;
-            if (currentProjectId) {
-                router.push(`/project/${currentProjectId}` as any);
-                return;
-            }
-            router.push('/organization/projects' as any);
-            return;
+    // When sidebar is collapsed, we only show icons. Opening an accordion should trigger expansion or mode change.
+    // However, the user requested "Never more than one accordion open".
+
+    // Derived state for which accordion is open based on active context
+    // We can allow users to manually toggle them, but syncing with activeContext is good default
+    const [openContext, setOpenContext] = React.useState<NavigationContext | null>(activeContext);
+
+    // Sync open context with active context when it changes externally (e.g. navigation)
+    React.useEffect(() => {
+        setOpenContext(activeContext);
+    }, [activeContext]);
+
+    const handleAccordionToggle = (ctx: NavigationContext) => {
+        // Mini-Accordion Logic: We DO NOT expand the sidebar. We just toggle the context.
+        // User wants icon-only expansion in collapsed mode.
+
+        // Single accordion exclusive open logic
+        if (openContext === ctx) {
+            // Already open, do nothing or toggle off? Usually sidebar nav keeps one open.
+            // Let's just set it active.
+        } else {
+            setOpenContext(ctx);
         }
 
+        // Also Update Global Context
+        actions.setActiveContext(ctx);
+
+        // Optional: Navigate to base route of context if not already there?
+        // For now, we just expand the menu.
+    };
+
+    const handleContextMainClick = (ctx: NavigationContext) => {
+        // Navigate to the main route of the context
         const route = contextRoutes[ctx];
         if (route) {
             router.push(route as any);
         }
     };
-
-    return (
-        <div className="flex flex-col h-full items-center py-4 w-[60px] shrink-0 border-r border-border/50">
-            <TooltipProvider delayDuration={0}>
-                <nav className="flex flex-col items-center gap-2 flex-1">
-                    {contexts.map((ctx) => {
-                        const isActive = activeContext === ctx.id;
-                        const isHovered = hoveredContext === ctx.id;
-
-                        return (
-                            <Tooltip key={ctx.id}>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={cn(
-                                            "h-10 w-10 rounded-xl",
-                                            isActive
-                                                ? "bg-primary/10 text-primary shadow-sm"
-                                                : isHovered
-                                                    ? "bg-secondary text-foreground"
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                                        )}
-                                        onClick={() => handleContextClick(ctx.id)}
-                                        onMouseEnter={() => onHoverContext(ctx.id)}
-                                    >
-                                        <ctx.icon className="h-5 w-5" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="right" sideOffset={8}>
-                                    {ctx.label}
-                                </TooltipContent>
-                            </Tooltip>
-                        );
-                    })}
-                </nav>
-            </TooltipProvider>
-        </div>
-    );
-}
-
-// ============================================================================
-// PAGES PANEL (Right column - follows sidebar modes)
-// ============================================================================
-
-interface PagesPanelProps {
-    context: NavigationContext;
-    isHovered: boolean;
-    onLinkClick?: () => void;
-    mode?: "desktop" | "mobile";
-}
-
-export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }: PagesPanelProps) {
-    const pathname = usePathname();
-    const { sidebarMode, actions } = useLayoutStore();
-    const activeProjectId = useActiveProjectId();
-    const tMega = useTranslations('MegaMenu');
-
-    const isMobile = mode === "mobile";
-
-    // Panel expansion logic - applies sidebarMode to this panel
-    const isExpanded = isMobile ||
-        sidebarMode === 'docked' ||
-        (sidebarMode === 'expanded_hover' && isHovered);
-
-    // Tooltips only when collapsed
-    const showTooltips = !isMobile && !isExpanded && sidebarMode === 'collapsed';
 
     const getNavItems = (ctx: NavigationContext): NavItem[] => {
         switch (ctx) {
@@ -175,7 +140,7 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
 
                 return [
                     {
-                        title: activeProjectId ? 'Visión General' : 'Seleccionar Proyecto',
+                        title: 'Visión General',
                         href: projectBase,
                         icon: LayoutDashboard
                     },
@@ -184,21 +149,21 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
                         href: activeProjectId ? `${projectBase}/details` : '/organization/projects',
                         icon: Info
                     },
-                    { title: 'Archivos', href: `${projectBase}/files`, icon: FileText },
-                    { title: 'Documentación', href: `${projectBase}/docs`, icon: BookOpen },
-                    { title: 'Construcción', href: `${projectBase}/construction`, icon: HardHat },
-                    { title: 'Volver a la Lista', href: '/organization/projects', icon: Briefcase },
+                    {
+                        title: 'Clientes',
+                        href: activeProjectId ? `${projectBase}/clients` : '/organization/projects',
+                        icon: Users
+                    },
                 ];
             case 'learnings':
                 return [
                     { title: 'Visión General', href: '/learnings', icon: LayoutDashboard },
                     { title: 'Cursos', href: '/learnings/courses', icon: Video },
-                    { title: 'Documentación', href: '/learnings/docs', icon: BookOpen },
                 ];
             case 'community':
                 return [
-                    { title: 'Foros', href: '/organization', icon: MessageSquare },
-                    { title: 'Eventos', href: '/organization', icon: Calendar },
+                    { title: 'Foros', href: '/community/forums', icon: MessageSquare }, // Changed from /organization
+                    { title: 'Eventos', href: '/community/events', icon: Calendar },    // Changed from /organization
                 ];
             case 'admin':
                 return [
@@ -214,176 +179,129 @@ export function PagesPanel({ context, isHovered, onLinkClick, mode = "desktop" }
         }
     };
 
-    const navItems = getNavItems(context);
-
     const cycleSidebarMode = () => {
-        if (sidebarMode === 'collapsed') actions.setSidebarMode('expanded_hover');
-        else if (sidebarMode === 'expanded_hover') actions.setSidebarMode('docked');
-        else actions.setSidebarMode('collapsed');
+        if (sidebarMode === 'docked') actions.setSidebarMode('expanded_hover');
+        else actions.setSidebarMode('docked');
     };
 
     const getModeIcon = () => {
-        if (sidebarMode === 'collapsed') return PanelLeft;
-        if (sidebarMode === 'expanded_hover') return PanelLeftOpen;
-        return PanelLeftClose;
+        if (sidebarMode === 'docked') return PanelLeftClose;
+        return PanelLeft;
     };
 
     const getModeLabel = () => {
-        if (sidebarMode === 'collapsed') return "Expandir al pasar el mouse";
-        if (sidebarMode === 'expanded_hover') return "Fijar Barra Lateral";
-        return "Colapsar Barra Lateral";
+        if (sidebarMode === 'docked') return "Colapsar Barra Lateral";
+        return "Fijar Barra Lateral";
     };
 
-    const ConditionalTooltip = ({ children, title }: { children: React.ReactNode; title: string }) => {
-        if (!showTooltips) return <>{children}</>;
-        return (
-            <Tooltip>
-                <TooltipTrigger asChild>{children}</TooltipTrigger>
-                <TooltipContent side="right">{title}</TooltipContent>
-            </Tooltip>
-        );
-    };
+    // Logic to ensure exclusive focus: If a Right Sidebar tool is active, Left Sidebar should NOT be active.
+    const RIGHT_SIDEBAR_PATHS = ['/organization/kanban'];
+    const isRightSidebarActive = RIGHT_SIDEBAR_PATHS.some(path => pathname?.startsWith(path));
 
-    // Find context label for header
-    const currentContextLabel = contexts.find(c => c.id === context)?.label || context;
+    // Width classes based on state
+    const widthClass = isExpanded ? "w-[240px]" : "w-[50px]";
+
+    // Tooltips should only be shown in strictly collapsed mode.
+    // In 'expanded_hover' mode, the sidebar expands on interaction, so tooltips are redundant/annoying.
+    const showTooltips = false; // Disable tooltips as we rely on hover expansion
 
     return (
         <div
             className={cn(
-                "flex flex-col h-full py-4 overflow-hidden",
-                isExpanded ? "w-[180px]" : "w-[60px]"
+                "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
+                widthClass
             )}
+            onMouseEnter={() => {
+                if (sidebarMode === 'expanded_hover' && !isMobile) {
+                    // Handled by CSS/State usually
+                }
+            }}
         >
-            {/* Context Title (only when expanded) */}
-            <div className={cn(
-                "px-3 mb-2",
-                isExpanded ? "opacity-100" : "opacity-0"
-            )}>
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {currentContextLabel}
-                </span>
+            {/* Top Logo Section */}
+            <div className="w-full flex items-center mb-2 px-2">
+                <Link href="/organization" className="flex items-center rounded-lg hover:bg-secondary/50 transition-colors h-8 w-full p-0 gap-0">
+                    <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                        <NextImage src="/logo.png" alt="Seencel" width={20} height={20} className="object-contain" />
+                    </div>
+
+                    <span className={cn(
+                        "font-bold text-lg tracking-tight text-foreground/90 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out",
+                        isExpanded ? "w-auto opacity-100 pl-3" : "w-0 opacity-0 pl-0"
+                    )}>
+                        SEENCEL
+                    </span>
+                </Link>
             </div>
 
-            {/* Navigation Items */}
-            <ScrollArea className="flex-1 px-2" type="scroll">
-                <nav className="flex flex-col gap-1">
-                    <TooltipProvider delayDuration={0}>
-                        {navItems.map((item, index) => (
-                            <ConditionalTooltip key={index} title={item.title}>
-                                <div>
-                                    <Button
-                                        asChild
-                                        variant={pathname === item.href ? "secondary" : "ghost"}
-                                        size="default"
-                                        className={cn(
-                                            "h-9 rounded-lg w-full px-2.5", // Fixed horizontal padding
-                                            "justify-start", // Always start aligned
-                                            pathname === item.href
-                                                ? "bg-secondary text-foreground shadow-sm hover:bg-secondary/80"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                                        )}
+            {/* Separator */}
+            <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
+
+            <ScrollArea className="flex-1" type="scroll">
+                <nav className="flex flex-col gap-2 px-2">
+                    {contexts.map((ctx) => {
+                        const navItems = getNavItems(ctx.id);
+                        const isOpen = openContext === ctx.id && isExpanded;
+                        const isActiveContext = activeContext === ctx.id;
+
+                        // Calculate if any child is active
+                        const isChildActive = navItems.some(item => pathname === item.href);
+
+                        // Master Switch: If Right Sidebar is active, Left Sidebar is OFF.
+                        // FIX: Only highlight if a child is active. Opening the accordion (isActiveContext) should NOT make it active color.
+                        const shouldHighlight = isChildActive && !isRightSidebarActive;
+
+                        return (
+                            <SidebarAccordion
+                                key={ctx.id}
+                                icon={ctx.icon as any}
+                                label={ctx.label}
+                                isOpen={isOpen}
+                                onToggle={() => handleAccordionToggle(ctx.id)}
+                                isSidebarExpanded={isExpanded}
+                                isActive={shouldHighlight}
+                                tooltipDisabled={!showTooltips}
+                            >
+                                {navItems.map((item, idx) => (
+                                    <SidebarButton
+                                        key={idx}
+                                        icon={item.icon}
+                                        label={item.title}
+                                        href={item.href}
+                                        // Also apply exclusivity to individual buttons
+                                        isActive={pathname === item.href && !isRightSidebarActive}
+                                        activeVariant="secondary"
+                                        isExpanded={isExpanded} // Dynamic expansion based on sidebar state
+                                        className="h-8 w-full p-0 pl-[4px]"
+                                        size="default" // Use full width with text
                                         onClick={() => {
                                             if (onLinkClick) onLinkClick();
                                         }}
-                                    >
-                                        <Link href={item.href as any} className="flex items-center w-full"> {/* Ensure Link takes full width */}
-                                            <item.icon className="h-4 w-4 shrink-0" /> {/* Icon size fixed */}
-                                            <span
-                                                className={cn(
-                                                    "font-medium text-sm truncate overflow-hidden whitespace-nowrap",
-                                                    isExpanded ? "w-auto opacity-100 ml-2" : "w-0 opacity-0 ml-0"
-                                                )}
-                                            >
-                                                {item.title}
-                                            </span>
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </ConditionalTooltip>
-                        ))}
-                    </TooltipProvider>
+                                    />
+                                ))}
+                            </SidebarAccordion>
+                        );
+                    })}
                 </nav>
             </ScrollArea>
 
             {/* Mode Toggle (bottom, desktop only) */}
             {!isMobile && (
-                <div className="mt-auto px-2 pt-2">
-                    <TooltipProvider delayDuration={0}>
-                        <ConditionalTooltip title={getModeLabel()}>
-                            <Button
-                                variant="ghost"
-                                size="default"
-                                className={cn(
-                                    "h-9 rounded-lg text-muted-foreground hover:text-foreground w-full px-2.5", // Fixed padding
-                                    "justify-start" // Always start aligned
-                                )}
-                                onClick={cycleSidebarMode}
-                            >
-                                {React.createElement(getModeIcon(), { className: "h-4 w-4 shrink-0" })}
-                                <span
-                                    className={cn(
-                                        "font-medium text-sm truncate overflow-hidden whitespace-nowrap",
-                                        isExpanded ? "w-auto opacity-100 ml-2" : "w-0 opacity-0 ml-0"
-                                    )}
-                                >
-                                    {getModeLabel()}
-                                </span>
-                            </Button>
-                        </ConditionalTooltip>
-                    </TooltipProvider>
+                <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-[9px]">
+                    <SidebarButton
+                        icon={getModeIcon()}
+                        label={getModeLabel()}
+                        isExpanded={isExpanded}
+                        // size="icon" when collapsed, "default" when expanded
+                        size={isExpanded ? "default" : "icon"}
+                        onClick={cycleSidebarMode}
+                        tooltip={showTooltips ? getModeLabel() : undefined}
+                        className={cn(
+                            "h-8 transition-all duration-200",
+                            "w-full justify-start pl-[4px]"
+                        )}
+                    />
                 </div>
             )}
-        </div>
-    );
-}
-
-// ============================================================================
-// LEGACY EXPORT: SidebarContent (for mobile sheet compatibility)
-// Mobile still uses single-column layout
-// ============================================================================
-
-interface SidebarContentProps {
-    isHovered?: boolean;
-    onLinkClick?: () => void;
-    mode?: "desktop" | "mobile";
-}
-
-export function SidebarContent({ isHovered = false, onLinkClick, mode = "desktop" }: SidebarContentProps) {
-    const { activeContext } = useLayoutStore();
-    const [hoveredContext, setHoveredContext] = React.useState<NavigationContext | null>(null);
-
-    // For mobile mode, just show full single-column view with active context
-    if (mode === "mobile") {
-        return (
-            <div className="flex flex-col h-full">
-                <PagesPanel
-                    context={activeContext}
-                    isHovered={true}
-                    onLinkClick={onLinkClick}
-                    mode="mobile"
-                />
-            </div>
-        );
-    }
-
-    // Desktop: dual-column layout
-    const displayContext = hoveredContext || activeContext;
-
-    return (
-        <div
-            className="flex h-full"
-            onMouseLeave={() => setHoveredContext(null)}
-        >
-            <EnvironmentsRail
-                hoveredContext={hoveredContext}
-                onHoverContext={setHoveredContext}
-                onLinkClick={onLinkClick}
-            />
-            <PagesPanel
-                context={displayContext}
-                isHovered={isHovered}
-                onLinkClick={onLinkClick}
-            />
         </div>
     );
 }

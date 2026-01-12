@@ -200,8 +200,7 @@ export function BrandPdfTemplates() {
     return (
         <SplitEditorLayout
             sidebarPosition="right"
-            className="min-h-0 overflow-hidden"
-            style={{ height: 'calc(100vh - 160px)' }}
+            className="h-full overflow-hidden"
             sidebar={
                 <SplitEditorSidebar
                     header={
@@ -621,10 +620,11 @@ function ColorPicker({ label, color, onChange, disabled }: { label: string, colo
 }
 
 function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
-    const [scale, setScale] = useState(0.8);
+    const [scale, setScale] = useState(0.6);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const dragStartRef = useRef({ x: 0, y: 0 });
 
     // Zoom Constraints
@@ -645,7 +645,6 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
         };
 
         container.addEventListener('wheel', onWheel, { passive: false });
-        // NOTE: React 18+ might already handle passive events differently, but this manual binding ensures non-passive for preventDefault
         return () => container.removeEventListener('wheel', onWheel);
     }, []);
 
@@ -664,7 +663,32 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
     const handleMouseUp = () => setIsDragging(false);
 
     const fitToScreen = () => {
-        setScale(0.8);
+        const container = containerRef.current;
+        const content = contentRef.current;
+        if (!container || !content) {
+            setScale(0.6);
+            setPosition({ x: 0, y: 0 });
+            return;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+        const contentRect = content.getBoundingClientRect();
+
+        // Calculate scale to fit content in container with padding
+        const padding = 40;
+        const availableWidth = containerRect.width - padding * 2;
+        const availableHeight = containerRect.height - padding * 2;
+
+        // Get the original (unscaled) content size
+        const originalWidth = contentRect.width / scale;
+        const originalHeight = contentRect.height / scale;
+
+        // Calculate the scale that fits the content
+        const scaleX = availableWidth / originalWidth;
+        const scaleY = availableHeight / originalHeight;
+        const newScale = Math.min(scaleX, scaleY, 1); // Don't scale above 100%
+
+        setScale(Math.max(newScale, MIN_SCALE));
         setPosition({ x: 0, y: 0 });
     };
 
@@ -687,10 +711,12 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
                 onMouseLeave={handleMouseUp}
             >
                 <motion.div
+                    ref={contentRef}
                     style={{
                         scale,
                         x: position.x,
-                        y: position.y
+                        y: position.y,
+                        transformOrigin: 'center center'
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="shadow-2xl"

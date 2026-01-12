@@ -5,7 +5,7 @@ import { useLayoutStore, NavigationContext } from "@/store/layout-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Users, FileText, Calendar, Clock, AlertCircle, MapPin, Loader2 } from "lucide-react";
-import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
+
 import { GoogleMap, useLoadScript, MarkerF } from "@react-google-maps/api";
 import { useTheme } from "next-themes";
 import Image from "next/image";
@@ -36,8 +36,6 @@ export function ProjectDashboardClient({ project, signedImageUrl }: ProjectDashb
 
     return (
         <div className="space-y-6 pb-20">
-            <HeaderTitleUpdater title={project.name} />
-
             {/* HERO SECTION */}
             <ProjectHero project={project} imageUrl={signedImageUrl} />
 

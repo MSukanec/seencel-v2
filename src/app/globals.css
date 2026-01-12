@@ -297,7 +297,7 @@
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Minimalist & Theme Aware */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -308,13 +308,21 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+  /* Extremely subtle - 5% opacity of foreground */
+  background-color: oklch(from var(--foreground) l c h / 0.05);
+  @apply rounded-full transition-colors;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  /* Slightly more visible on hover - 15% opacity */
+  background-color: oklch(from var(--foreground) l c h / 0.15);
 }
 
 /* For Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--muted-foreground) transparent;
+  /* Track transparent, Thumb extremely subtle */
+  scrollbar-color: oklch(from var(--foreground) l c h / 0.05) transparent;
 }
 
 /* Animated Focus Ring - Pulse Effect */
@@ -341,9 +349,19 @@ select:focus-visible,
 }
 
 @keyframes tremble {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-3px) rotate(-3deg); }
-  75% { transform: translateX(3px) rotate(3deg); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-3px) rotate(-3deg);
+  }
+
+  75% {
+    transform: translateX(3px) rotate(3deg);
+  }
 }
 
 .animate-tremble {

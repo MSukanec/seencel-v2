@@ -18,7 +18,7 @@ export function OrganizationTabsWrapper({ defaultValue, children }: Organization
     // Title is now controlled by the page component (HeaderTitleUpdater) to keep context stable.
 
     return (
-        <Tabs defaultValue={defaultValue} className="w-full flex-1 flex flex-col" onValueChange={setActiveTab}>
+        <Tabs defaultValue={defaultValue} className="w-full h-full flex flex-col" onValueChange={setActiveTab}>
             {children}
         </Tabs>
     );

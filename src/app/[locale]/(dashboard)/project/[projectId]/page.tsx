@@ -2,6 +2,8 @@ import { ProjectDashboardClient } from "@/features/projects/components/project-d
 import { notFound } from "next/navigation";
 import { getProjectById } from "@/features/projects/queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { ContentLayout } from "@/components/layout/content-layout";
 
 interface PageProps {
     params: Promise<{
@@ -25,6 +27,10 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
     const imageUrl = project.image_url || null;
 
     return (
-        <ProjectDashboardClient project={project} signedImageUrl={imageUrl} />
+        <PageWrapper type="dashboard">
+            <ContentLayout variant="wide">
+                <ProjectDashboardClient project={project} signedImageUrl={imageUrl} />
+            </ContentLayout>
+        </PageWrapper>
     );
 }

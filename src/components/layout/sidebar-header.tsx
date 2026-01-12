@@ -42,8 +42,9 @@ export function SidebarHeader({ user }: { user?: UserProfile | null }) {
     };
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border bg-sidebar/95 backdrop-blur-md shadow-sm min-h-14 transition-[height]">
-            <div className="flex flex-col md:flex-row md:h-14 w-full md:items-center relative">
+        <header
+            className="h-[50px] border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 shrink-0 z-50 sticky top-0 animate-in fade-in slide-in-from-top-2 duration-300"
+        >    <div className="flex flex-col md:flex-row md:h-14 w-full md:items-center relative">
 
                 {/* 1. Left Section: Menu + Logo + Title */}
                 <div className="flex h-14 w-full md:w-auto items-center pl-0 pr-16 md:pr-0 shrink-0">

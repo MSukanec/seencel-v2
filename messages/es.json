@@ -10,12 +10,81 @@
         "profile": "Perfil",
         "logout": "Cerrar sesión"
     },
+    "Auth": {
+        "Register": {
+            "title": "Crear una cuenta",
+            "subtitle": "Comienza a gestionar tus proyectos de construcción hoy mismo.",
+            "googleButton": "Registrarse con Google",
+            "orEmail": "O con correo electrónico",
+            "emailLabel": "Email",
+            "emailPlaceholder": "nombre@empresa.com",
+            "passwordLabel": "Contraseña",
+            "passwordPlaceholder": "••••••••",
+            "submitButton": "Registrarse con Email",
+            "successTitle": "Registro exitoso",
+            "successMessage": "Por favor revisa tu email para confirmar tu cuenta.",
+            "weakPassword": "La contraseña es débil. Usa mayúsculas, minúsculas y números (mínimo 8 caracteres).",
+            "invalidEmail": "El correo electrónico no es válido.",
+            "emailTaken": "Este correo ya está registrado.",
+            "genericError": "Ocurrió un error al registrarse. Inténtalo de nuevo."
+        },
+        "ForgotPassword": {
+            "title": "¿Olvidaste tu contraseña?",
+            "subtitle": "No te preocupes. Ingresa tu email y te enviaremos un enlace para restablecerla.",
+            "emailLabel": "Email",
+            "emailPlaceholder": "nombre@empresa.com",
+            "submitButton": "Enviar enlace de recuperación",
+            "success": "Si existe una cuenta con ese email, recibirás un enlace de recuperación en breve.",
+            "backToLogin": "Volver a iniciar sesión"
+        },
+        "UpdatePassword": {
+            "title": "Actualizar contraseña",
+            "subtitle": "Ingresa tu nueva contraseña para asegurar tu cuenta.",
+            "passwordLabel": "Nueva contraseña",
+            "passwordPlaceholder": "••••••••",
+            "submitButton": "Actualizar contraseña",
+            "success": "Tu contraseña ha sido actualizada correctamente.",
+            "error": "Error al actualizar la contraseña.",
+            "backToDashboard": "Ir al Dashboard"
+        }
+    },
+    "Onboarding": {
+        "title": "Bienvenido a Seencel",
+        "subtitle": "Para comenzar, necesitamos conocerte un poco mejor. Completa tu perfil y configura tu organización.",
+        "steps": {
+            "personal": "Datos Personales",
+            "organization": "Organización",
+            "theme": "Tema"
+        },
+        "form": {
+            "firstName": "Nombre",
+            "lastName": "Apellido",
+            "birthdate": "Fecha de Nacimiento",
+            "country": "País",
+            "countryPlaceholder": "Seleccionar país...",
+            "orgName": "Nombre de la Organización",
+            "orgNamePlaceholder": "Ej. Constructora SRL",
+            "orgHelper": "No te preocupes, podrás cambiar esto más adelante en la configuración.",
+            "submit": "Comenzar a Construir",
+            "themeLabel": "Apariencia",
+            "themeHelper": "Elige el tema que más te guste para tu espacio de trabajo.",
+            "steps": {
+                "personal": "Datos Personales",
+                "organization": "Organización",
+                "theme": "Tema"
+            },
+            "success": "¡Todo listo! Redirigiendo...",
+            "error": "Ocurrió un error al guardar tus datos.",
+            "logout": "¿No eres tú? Cerrar sesión"
+        }
+    },
     "UserMenu": {
         "profile": "Perfil",
         "dashboard": "Espacio de Trabajo",
         "settings": "Configuración",
         "logout": "Cerrar sesión",
-        "home": "Ir al Inicio"
+        "home": "Ir al Inicio",
+        "contact": "Contacto"
     },
     "Feedback": {
         "button": "Feedback",
@@ -698,5 +767,14 @@
                 "answer": "El plan Enterprise está diseñado para grandes organizaciones. Incluye usuarios ilimitados sin costo adicional por asiento, implementación on-premise, SSO, capacitación personalizada, gerente de cuenta dedicado y SLA del 99.9% con soporte prioritario 24/7. Es ideal para constructoras con más de 50 empleados o desarrolladoras inmobiliarias que manejan múltiples proyectos. Para conocer precios y opciones, <contact>contacta con nuestro equipo de ventas</contact>."
             }
         }
+    },
+    "NotFound": {
+        "title": "¡Ups! Se nos perdieron los planos...",
+        "subtitle": "Parece que esta página está en obra o nunca se construyó.",
+        "description": "Tal vez un arquitecto la borró por error, o se nos cayó un ladrillo encima del enlace. Mientras buscamos la mezcladora, te sugerimos volver a tierra firme.",
+        "goHome": "Volver a la Base",
+        "goDashboard": "Ir al Tablero de Control",
+        "contactSupport": "Pedir Ayuda por Radio",
+        "errorCode": "Código de error: 404 (Obra en Suspensión)"
     }
 }

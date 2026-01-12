@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
+import { cn } from "@/lib/utils";
 
 interface AuthLayoutProps {
     children: React.ReactNode;
     title: string;
     description: string;
-    mode: "login" | "register";
+    mode: "login" | "register" | "onboarding";
 }
 
 export function AuthLayout({ children, title, description, mode }: AuthLayoutProps) {
@@ -60,7 +61,10 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
-                <div className="mx-auto w-full max-w-[400px] gap-6 flex flex-col relative z-10">
+                <div className={cn(
+                    "mx-auto w-full gap-6 flex flex-col relative z-10",
+                    mode === "onboarding" ? "max-w-[600px]" : "max-w-[400px]"
+                )}>
                     <div className="flex flex-col gap-2 text-center mb-6">
                         <div className="mx-auto mb-4 h-12 w-12 relative flex items-center justify-center">
                             <Image
@@ -80,14 +84,15 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                     {children}
 
                     <div className="mt-6 text-center text-sm">
-                        {mode === "login" ? (
+                        {mode === "login" && (
                             <p className="text-muted-foreground">
                                 ¿No tienes una cuenta?{" "}
                                 <Link href="/signup" className="font-medium text-primary hover:underline underline-offset-4">
                                     Regístrate
                                 </Link>
                             </p>
-                        ) : (
+                        )}
+                        {mode === "register" && (
                             <p className="text-muted-foreground">
                                 ¿Ya tienes una cuenta?{" "}
                                 <Link href="/login" className="font-medium text-primary hover:underline underline-offset-4">
@@ -96,11 +101,13 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                             </p>
                         )}
                     </div>
-                    <div className="mt-8 text-center text-xs text-muted-foreground">
-                        <Link href="/" className="hover:text-primary transition-colors">
-                            Volver al inicio
-                        </Link>
-                    </div>
+                    {mode !== "onboarding" && (
+                        <div className="mt-8 text-center text-xs text-muted-foreground">
+                            <Link href="/" className="hover:text-primary transition-colors">
+                                Volver al inicio
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
 

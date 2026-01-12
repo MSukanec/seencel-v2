@@ -21,6 +21,10 @@ The following tables have been fully configured with audit logging:
 | `contacts`             | ✅           | ✅                          | `log_contact_activity`         | ✅       |
 | `contact_types`        | ✅           | ✅                          | `log_contact_type_activity`    | ✅       |
 | `organization_data`    | ✅           | ✅                          | `log_organization_data_activity`| ✅       |
+| `kanban_boards`        | ✅           | ✅                          | `log_kanban_board_activity`    | ✅       |
+| `kanban_cards`         | ✅           | ✅                          | `log_kanban_card_activity`     | ✅       |
+| `kanban_labels`        | ✅           | ✅                          | `log_kanban_label_activity`    | ✅       |
+| `kanban_comments`      | ✅           | ✅                          | `log_kanban_comment_activity`  | ✅       |
 
 ### Pending (TODO):
 - [ ] `tasks`

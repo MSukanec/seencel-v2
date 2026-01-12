@@ -1,5 +1,5 @@
 
-export function getStorageUrl(path: string | null, bucket: 'avatars' | 'organizations' | 'projects' | 'tasks' | 'public-assets' = 'organizations') {
+export function getStorageUrl(path: string | null, bucket: 'avatars' | 'organizations' | 'projects' | 'tasks' | 'public-assets' | 'kanban-covers' = 'organizations') {
     if (!path) return null;
 
     // If it's already a full URL (e.g., Google Auth avatar or legacy absolute URL), return it as is

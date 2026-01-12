@@ -13,7 +13,13 @@ import { Loader2, MessageSquarePlus, Send } from "lucide-react";
 import { submitFeedback } from "@/actions/submit-feedback";
 import { useTranslations } from "next-intl";
 
-export function FeedbackButton() {
+interface FeedbackButtonProps {
+    customTrigger?: React.ReactNode;
+    side?: "top" | "right" | "bottom" | "left";
+    align?: "start" | "center" | "end";
+}
+
+export function FeedbackButton({ customTrigger, side = "bottom", align = "end" }: FeedbackButtonProps) {
     const t = useTranslations('Feedback');
     const [isOpen, setIsOpen] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(false);
@@ -51,15 +57,17 @@ export function FeedbackButton() {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-2 px-3 text-xs font-medium"
-                >
-                    {t('button')}
-                </Button>
+                {customTrigger ? customTrigger : (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-2 px-3 text-xs font-medium"
+                    >
+                        {t('button')}
+                    </Button>
+                )}
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
+            <PopoverContent className="w-80 p-0" align={align} side={side} sideOffset={8}>
                 {isSuccess ? (
                     <div className="flex flex-col items-center justify-center p-8 space-y-2 text-center animate-in fade-in zoom-in duration-300">
                         <div className="h-10 w-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">

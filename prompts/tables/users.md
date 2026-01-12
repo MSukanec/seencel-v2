@@ -346,5 +346,3 @@ begin
 
   return result;
 end;
-
-# Funcion 

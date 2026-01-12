@@ -1,7 +1,13 @@
-import { getActiveOrganizationId } from "@/actions/general-costs"; // Reusing this helper
+import { getActiveOrganizationId } from "@/actions/general-costs";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { SettingsClient } from "@/components/organization/settings/settings-client";
 import { redirect } from "next/navigation";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { ContentLayout } from "@/components/layout/content-layout";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Reusable tab trigger style
+const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
 interface PageProps {
     searchParams: Promise<{ tab?: string }>;
@@ -10,16 +16,43 @@ interface PageProps {
 export default async function OrganizationSettingsPage({ searchParams }: PageProps) {
     const orgId = await getActiveOrganizationId();
     const params = await searchParams;
+    const initialTab = params.tab || "members";
 
     if (!orgId) {
         redirect('/');
     }
 
-    // Fetch all settings data in parallel
     const data = await getOrganizationSettingsData(orgId);
 
     return (
-        <SettingsClient data={data} initialTab={params.tab} organizationId={orgId} />
+        <Tabs defaultValue={initialTab} className="h-full flex flex-col">
+            <PageWrapper
+                type="page"
+                title="Configuración"
+                tabs={
+                    <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
+                        <TabsTrigger value="members" className={tabTriggerClass}>
+                            Miembros
+                        </TabsTrigger>
+                        <TabsTrigger value="permissions" className={tabTriggerClass}>
+                            Permisos
+                        </TabsTrigger>
+                        <TabsTrigger value="activity" className={tabTriggerClass}>
+                            Actividad
+                        </TabsTrigger>
+                        <TabsTrigger value="billing" className={tabTriggerClass}>
+                            Facturación
+                        </TabsTrigger>
+                        <TabsTrigger value="finance" className={tabTriggerClass}>
+                            Finanzas
+                        </TabsTrigger>
+                    </TabsList>
+                }
+            >
+                <ContentLayout variant="wide">
+                    <SettingsClient data={data} organizationId={orgId} />
+                </ContentLayout>
+            </PageWrapper>
+        </Tabs>
     );
 }
-

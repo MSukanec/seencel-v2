@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 
 interface PageLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
     children: React.ReactNode;
+    header?: React.ReactNode;
     variant?: "standard" | "wide" | "narrow" | "full";
 }
 
-export function PageLayout({ children, variant = "standard", className, ...props }: PageLayoutProps) {
+export function PageLayout({ children, header, variant = "standard", className, ...props }: PageLayoutProps) {
     const maxWidthClass = {
         standard: "max-w-6xl",        // Settings, Org Details
         wide: "max-w-[1600px]",       // Dashboards
@@ -18,13 +19,16 @@ export function PageLayout({ children, variant = "standard", className, ...props
     return (
         <div
             className={cn(
-                "w-full mx-auto p-8 space-y-6 animate-in fade-in-0 duration-500",
+                "w-full mx-auto animate-in fade-in-0 duration-500",
                 maxWidthClass,
                 className
             )}
             {...props}
         >
-            {children}
+            {header}
+            <div className={cn("space-y-6", header ? "p-8 pt-6" : "p-8")}>
+                {children}
+            </div>
         </div>
     );
 }

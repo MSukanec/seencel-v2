@@ -37,13 +37,13 @@ export function ActivityLogsDataTable({ data }: ActivityLogsDataTableProps) {
             id: "member",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Usuario" />,
             cell: ({ row }) => {
+                const log = row.original;
                 const isSystem = !log.full_name && !log.email;
 
                 if (isSystem) {
                     return (
                         <div className="flex items-center gap-3">
-                            <Badge variant="system" className="h-8 px-3">
-                                <Receipt className="h-3.5 w-3.5 mr-2" />
+                            <Badge variant="outline" className="h-8 px-3">
                                 Sistema
                             </Badge>
                         </div>

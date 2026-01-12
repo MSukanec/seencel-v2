@@ -1,36 +1,65 @@
-import { cn } from "@/lib/utils";
-import React from "react";
+"use client";
+
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+export interface BreadcrumbItem {
+    label: string
+    href?: string
+}
 
 interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-    title: string;
-    description?: string;
-    children?: React.ReactNode;
+    /** Breadcrumb items - only the LAST item is displayed as page title */
+    breadcrumbs: BreadcrumbItem[]
+    /** Action buttons on the right */
+    actions?: React.ReactNode
+    /** Tab navigation below the title */
+    tabs?: React.ReactNode
 }
 
 export function PageHeader({
-    title,
-    description,
-    children,
+    breadcrumbs,
+    actions,
+    tabs,
     className,
+    children,
     ...props
 }: PageHeaderProps) {
+    // Only display the last item as the page title
+    const titleItem = breadcrumbs[breadcrumbs.length - 1];
+
     return (
-        <div className={cn("flex flex-col space-y-4 pb-4", className)} {...props}>
-            <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                    <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
-                    {description && (
-                        <p className="text-muted-foreground">
-                            {description}
-                        </p>
+        <div
+            className={cn(
+                "sticky top-0 z-10 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border",
+                className
+            )}
+            {...props}
+        >
+            <div className="px-8 pt-2 pb-0">
+                <div className="flex items-center justify-between gap-4">
+                    {/* Page Title */}
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                        {titleItem?.label}
+                    </h1>
+
+                    {/* Actions */}
+                    {actions && (
+                        <div className="flex items-center gap-2">
+                            {actions}
+                        </div>
                     )}
                 </div>
+
+                {/* Tabs - negative margin to overlap with header border */}
+                {tabs && (
+                    <div className="-mb-[2px] mt-2">
+                        {tabs}
+                    </div>
+                )}
+
+                {children}
             </div>
-            {children}
-            {/* If we strictly want tabs *in* the header visually, we might render them here or let the parent do it. 
-                Common pattern is header + separator + content. 
-                For now, children can be anything (buttons, tabs).
-            */}
         </div>
-    );
+    )
 }

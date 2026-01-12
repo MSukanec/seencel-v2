@@ -10,6 +10,74 @@
         "profile": "Profile",
         "logout": "Log out"
     },
+    "Auth": {
+        "Register": {
+            "title": "Create an account",
+            "subtitle": "Start managing your construction projects today.",
+            "googleButton": "Sign up with Google",
+            "orEmail": "Or with email",
+            "emailLabel": "Email",
+            "emailPlaceholder": "name@company.com",
+            "passwordLabel": "Password",
+            "passwordPlaceholder": "••••••••",
+            "submitButton": "Sign up with Email",
+            "successTitle": "Registration successful",
+            "successMessage": "Please check your email to confirm your account.",
+            "weakPassword": "Password is weak. Use uppercase, lowercase, and numbers (min 8 chars).",
+            "invalidEmail": "Email address is invalid.",
+            "emailTaken": "This email is already registered.",
+            "genericError": "An error occurred during registration. Please try again."
+        },
+        "ForgotPassword": {
+            "title": "Forgot your password?",
+            "subtitle": "Don't worry. Enter your email and we'll send you a reset link.",
+            "emailLabel": "Email",
+            "emailPlaceholder": "name@company.com",
+            "submitButton": "Send recovery link",
+            "success": "If an account exists with that email, you will receive a recovery link shortly.",
+            "backToLogin": "Return to log in"
+        },
+        "UpdatePassword": {
+            "title": "Update password",
+            "subtitle": "Enter your new password to secure your account.",
+            "passwordLabel": "New password",
+            "passwordPlaceholder": "••••••••",
+            "submitButton": "Update password",
+            "success": "Your password has been updated successfully.",
+            "error": "Error updating password.",
+            "backToDashboard": "Go to Dashboard"
+        }
+    },
+    "Onboarding": {
+        "title": "Welcome to Seencel",
+        "subtitle": "To get started, we need to know a bit about you. Complete your profile and set up your organization.",
+        "steps": {
+            "personal": "Personal Data",
+            "organization": "Organization",
+            "theme": "Theme"
+        },
+        "form": {
+            "firstName": "First Name",
+            "lastName": "Last Name",
+            "birthdate": "Date of Birth",
+            "country": "Country",
+            "countryPlaceholder": "Select country...",
+            "orgName": "Organization Name",
+            "orgNamePlaceholder": "Ex. Construction Ltd.",
+            "orgHelper": "Don't worry, you can change this later in settings.",
+            "submit": "Start Building",
+            "themeLabel": "Appearance",
+            "themeHelper": "Choose the theme you like best for your workspace.",
+            "steps": {
+                "personal": "Personal Data",
+                "organization": "Organization",
+                "theme": "Theme"
+            },
+            "success": "All set! Redirecting...",
+            "error": "An error occurred while saving your data.",
+            "logout": "Not you? Log out"
+        }
+    },
     "UserMenu": {
         "profile": "Profile",
         "dashboard": "Workspace",
@@ -675,5 +743,14 @@
                 "answer": "The Enterprise plan is designed for large organizations that need a customized solution. Includes: unlimited users at no additional cost per seat, on-premise deployment if necessary, SSO with your identity provider, custom training for your team, a dedicated account manager, and 99.9% SLA with 24/7 priority support. This is ideal for construction companies with more than 50 employees or real estate developers that handle multiple projects simultaneously. For prices and options, <contact>contact our sales team</contact>."
             }
         }
+    },
+    "NotFound": {
+        "title": "Oops! We lost the blueprints...",
+        "subtitle": "This page is under construction or was never built.",
+        "description": "Maybe an architect accidentally deleted it, or a brick fell on the link. While we look for the cement mixer, head back to solid ground.",
+        "goHome": "Back to Base",
+        "goDashboard": "Go to Control Center",
+        "contactSupport": "Call for Backup",
+        "errorCode": "Error code: 404 (Construction Suspended)"
     }
 }

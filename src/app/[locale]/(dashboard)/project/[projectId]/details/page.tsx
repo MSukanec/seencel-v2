@@ -2,9 +2,13 @@ import { ProjectDetailsClient } from "@/features/projects/components/project-det
 import { getProjectById } from "@/features/projects/queries";
 import { getProjectFiles } from "@/features/projects/file-queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
-import { ProjectFilesClient } from "@/features/projects/components/project-files-client";
 import { notFound } from "next/navigation";
-import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Reusable tab trigger style
+const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
 interface PageProps {
     params: Promise<{
@@ -16,29 +20,35 @@ interface PageProps {
 export default async function ProjectDetailsPage({ params }: PageProps) {
     const { projectId } = await params;
 
-    // Fetch project for title context and files for content
     const [project, files] = await Promise.all([
         getProjectById(projectId),
         getProjectFiles(projectId)
     ]);
 
-    // Track this as the last active project for the user
     if (project) {
         await saveLastActiveProject(projectId);
-    }
-
-    if (!project) {
+    } else {
         notFound();
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <HeaderTitleUpdater title={
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                    Proyecto <span className="text-muted-foreground/40">/</span> <span className="text-foreground font-medium">{project.name}</span> <span className="text-muted-foreground/40">/</span> <span className="text-foreground font-medium">Información</span>
-                </span>
-            } />
-            <ProjectDetailsClient project={project} />
-        </div>
+        <Tabs defaultValue="general" className="h-full flex flex-col">
+            <PageWrapper
+                type="page"
+                title="Información"
+                tabs={
+                    <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
+                        <TabsTrigger value="general" className={tabTriggerClass}>
+                            Perfil
+                        </TabsTrigger>
+                        <TabsTrigger value="location" className={tabTriggerClass}>
+                            Ubicación
+                        </TabsTrigger>
+                    </TabsList>
+                }
+            >
+                <ProjectDetailsClient project={project} />
+            </PageWrapper>
+        </Tabs>
     );
 }
