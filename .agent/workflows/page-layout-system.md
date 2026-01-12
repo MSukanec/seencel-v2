@@ -176,3 +176,73 @@ export default async function MyPage() {
 3. **TabsContent inside ContentLayout** - The tab content goes inside the ContentLayout
 4. **Use `m-0 h-full focus-visible:outline-none`** on TabsContent for proper spacing
 5. **Client components** - If the page has tabs with state, split into server page + client component
+
+---
+
+## Modal & Form Standards (Must Read)
+
+All modals and forms must adhere to the following strict guidelines to maintain consistency across the enterprise application.
+
+### 1. Mandatory Header Description
+> [!CAUTION]
+> **This is non-negotiable.** Every Modal Header **MUST** include a `description`.
+> It provides critical context to the user. Never leave it empty.
+
+```tsx
+openModal(<MyComponent />, { 
+    title: "Crear Nuevo Rol",
+    description: "Define un nuevo rol para segmentar tus clientes." // MANDATORY
+});
+```
+
+### 2. Standard Form Architecture
+Do not invent your own layouts. Use our global components.
+
+*   **Wrapper**: Use standard spacing (e.g., `space-y-4`).
+*   **Fields**: ALWAYS use **`<FormGroup>`** (`@/components/ui/form-group`).
+    *   Handles labels, error states, and accessibility automatically.
+*   **Footer**: ALWAYS use **`<FormFooter>`** (`@/components/global/form-footer`).
+    *   Handles loading state, `Cmd+Enter` shortcuts, and button grouping.
+    *   **Style**: You MUST use the className `"-mx-4 -mb-4 mt-6"` to align it flush with the modal bottom (breaking the default padding).
+
+```tsx
+<form className="flex h-full flex-col">
+    <div className="flex-1 space-y-4">
+        <FormGroup label="Nombre" htmlFor="name" error={state.errors?.name}>
+            <Input id="name" ... />
+        </FormGroup>
+    </div>
+    
+    <FormFooter 
+        className="-mx-4 -mb-4 mt-6"
+        onCancel={closeModal}
+        onSubmit={handleSubmit}
+        isLoading={isPending}
+        submitLabel="Guardar"
+    />
+</form>
+```
+
+### 3. Deletion Patterns
+We have two distinct patterns for deletion. Choose the correct one:
+
+#### A. Soft Delete with Reassignment (Catalog Items)
+**Use Case:** Deleting a Category, Role, Type, or any "Catalog" item that might be in use.
+**Component:** **`<DeleteReplacementModal>`** (`@/components/global/DeleteReplacementModal`).
+
+*   Allows the user to **reassign** dependent items to another category before deletion.
+*   Required for data integrity in an enterprise system.
+
+```tsx
+<DeleteReplacementModal
+    entityName={deletingItem.name}
+    replacementOptions={allItems.filter(i => i.id !== deletingItem.id)}
+    onConfirm={async (replacementId) => {
+        await deleteAction(deletingItem.id, replacementId);
+    }}
+/>
+```
+
+#### B. Simple Delete (Leaf Nodes)
+**Use Case:** Deleting a specific Project, Task, or Contact that has no dependents.
+**Component:** `DeleteDialog` or simple confirmation (with care).

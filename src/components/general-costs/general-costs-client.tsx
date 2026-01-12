@@ -22,10 +22,10 @@ export function GeneralCostsClient({ organizationId, categories, concepts, payme
                 <DashboardTab data={dashboardData} />
             </TabsContent>
             <TabsContent value="concepts" className="m-0 h-full focus-visible:outline-none">
-                <ConceptsTable data={concepts} categories={categories} />
+                <ConceptsTable data={concepts} categories={categories} organizationId={organizationId} />
             </TabsContent>
             <TabsContent value="payments" className="m-0 h-full focus-visible:outline-none">
-                <PaymentsTable data={payments} />
+                <PaymentsTable data={payments} concepts={concepts} organizationId={organizationId} />
             </TabsContent>
             <TabsContent value="settings" className="m-0 h-full focus-visible:outline-none">
                 <SettingsTab categories={categories} organizationId={organizationId} />

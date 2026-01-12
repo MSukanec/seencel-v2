@@ -271,7 +271,7 @@ export async function getClientRoles(orgId?: string) {
     const { data, error } = await supabase
         .from('client_roles')
         .select('*')
-        .eq('organization_id', organizationId)
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
         .order('name');
 

@@ -86,7 +86,7 @@ export async function createClientRoleAction(input: z.infer<typeof createRoleSch
             organization_id: input.organization_id,
             name: input.name,
             description: input.description,
-            is_default: false
+            is_system: false
         })
         .select()
         .single();
@@ -98,6 +98,62 @@ export async function createClientRoleAction(input: z.infer<typeof createRoleSch
 
     revalidatePath('/organization/clients');
     return data;
+}
+
+const updateRoleSchema = createRoleSchema.partial().extend({
+    id: z.string().uuid(),
+});
+
+export async function updateClientRoleAction(input: z.infer<typeof updateRoleSchema>) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('client_roles')
+        .update({
+            name: input.name,
+            description: input.description,
+        })
+        .eq('id', input.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating role:", error);
+        throw new Error("Error al actualizar el rol.");
+    }
+
+    revalidatePath('/organization/clients');
+    return data;
+}
+
+export async function deleteClientRoleAction(roleId: string, replacementId?: string) {
+    const supabase = await createClient();
+
+    // 1. If replacementId is provided, migrate clients
+    if (replacementId) {
+        const { error: migrationError } = await supabase
+            .from('project_clients')
+            .update({ client_role_id: replacementId })
+            .eq('client_role_id', roleId);
+
+        if (migrationError) {
+            console.error("Error migrating clients:", migrationError);
+            throw new Error("Error al reasignar clientes antes de eliminar.");
+        }
+    }
+
+    // 2. Perform Soft Delete
+    const { error } = await supabase
+        .from('client_roles')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', roleId);
+
+    if (error) {
+        console.error("Error deleting role:", error);
+        throw new Error("Error al eliminar el rol.");
+    }
+
+    revalidatePath('/organization/clients');
 }
 
 // ===============================================

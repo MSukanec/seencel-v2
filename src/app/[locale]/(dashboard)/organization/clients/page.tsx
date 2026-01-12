@@ -29,16 +29,18 @@ import {
 } from "@/features/clients/types";
 
 interface PageProps {
-    searchParams: {
+    searchParams: Promise<{
         view?: string;
-    };
+    }>;
 }
 
 export default async function ClientsPage({ searchParams }: PageProps) {
+    const resolvedSearchParams = await searchParams;
+
     // 1. Resolve Data
     const { clients, financialSummary, commitments, payments, schedules, roles, orgId } = await getData();
 
-    const currentTab = searchParams.view || "overview";
+    const currentTab = resolvedSearchParams.view || "overview";
 
     return (
         <div className="flex flex-col h-full space-y-6 pt-6">

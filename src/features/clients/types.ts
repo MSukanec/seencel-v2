@@ -41,7 +41,7 @@ export const clientRoleSchema = z.object({
     organization_id: z.string().uuid().nullable(),
     name: z.string().min(1, "El nombre es requerido"),
     description: z.string().nullable(),
-    is_default: z.boolean().default(false),
+    is_system: z.boolean().default(false),
     created_at: z.string().nullable(),
     updated_at: z.string(),
     is_deleted: z.boolean().default(false),

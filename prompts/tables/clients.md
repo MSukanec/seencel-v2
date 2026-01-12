@@ -204,14 +204,25 @@ create table public.client_roles (
   organization_id uuid null,
   name text not null,
   description text null,
-  is_default boolean null default true,
+  is_system boolean null default false,
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone not null default now(),
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
+  created_by uuid null,
+  updated_by uuid null,
   constraint client_roles_pkey primary key (id),
-  constraint client_roles_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
+  constraint client_roles_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint client_roles_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint client_roles_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null
 ) TABLESPACE pg_default;
+
+create trigger on_client_role_audit
+after INSERT or DELETE or update on client_roles for EACH row
+execute FUNCTION log_client_role_activity ();
+
+create trigger set_audit_client_roles BEFORE INSERT or update on client_roles for EACH row
+execute FUNCTION handle_updated_by ();
 
 ## Tabla project_clients:
 

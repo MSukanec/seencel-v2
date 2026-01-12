@@ -4,6 +4,13 @@ description: Standards for implementing Activity Logs via DB Triggers
 
 # Activity Logging Guidelines
 
+## ⚠️ Rule #0: SQL Delivery Standard (CRITICAL)
+
+**Whenever you request/generate SQL for audit logging or schema changes:**
+1. **DO NOT** output the SQL directly in the chat.
+2. **CREATE A FILE** in `/scripts2/[descriptive_name].sql`.
+3. Provide the path to that file.
+
 SEENCEL V2 uses a **Trigger-based** architecture for all audit trails. We do NOT log activities manually from the frontend or server actions to ensure data integrity and full coverage.
 
 ---
@@ -84,9 +91,14 @@ ALTER TABLE public.[TABLE_NAME]
 ADD COLUMN IF NOT EXISTS updated_by uuid REFERENCES public.organization_members(id);
 ```
 
-### B. Auto-Populate `updated_by` (Reusable Function)
+### Rule #4: SQL Scripts Delivery
+**IMPORTANT:** Whenever you request SQL for audit logging or schema changes, **DO NOT** output the SQL in the chat. Instead, **CREATE A FILE** in `/scripts2/[descriptive_name].sql` and provide the path.
 
-This function works for ANY table with `organization_id` and `updated_by` columns.
+---
+
+### B. Auto-Populate `updated_by` AND `created_by` (Unified Function)
+
+This function works for ANY table with `organization_id`, `created_by`, and `updated_by` columns. It handles **BOTH** fields in a single trigger.
 
 ```sql
 CREATE OR REPLACE FUNCTION public.handle_updated_by()
@@ -97,10 +109,12 @@ DECLARE
 BEGIN
     current_uid := auth.uid();
     
+    -- Si no hay usuario logueado (ej. seeders o sistema), no hacemos nada
     IF current_uid IS NULL THEN
         RETURN NEW;
     END IF;
 
+    -- Buscamos el ID del miembro dentro de la organización
     -- CORRECT JOIN: auth.uid -> users.auth_id -> users.id -> organization_members.user_id
     SELECT om.id INTO resolved_member_id
     FROM public.organization_members om
@@ -109,7 +123,13 @@ BEGIN
       AND om.organization_id = NEW.organization_id
     LIMIT 1;
 
+    -- Si encontramos al miembro, sellamos el registro
     IF resolved_member_id IS NOT NULL THEN
+        -- Si es INSERT, llenamos el creador
+        IF (TG_OP = 'INSERT') THEN
+            NEW.created_by := resolved_member_id;
+        END IF;
+        -- SIEMPRE actualizamos el editor
         NEW.updated_by := resolved_member_id;
     END IF;
 
@@ -124,7 +144,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 DROP TRIGGER IF EXISTS set_updated_by_[TABLE_NAME] ON public.[TABLE_NAME];
 
 CREATE TRIGGER set_updated_by_[TABLE_NAME]
-BEFORE UPDATE ON public.[TABLE_NAME]
+BEFORE INSERT OR UPDATE ON public.[TABLE_NAME]
 FOR EACH ROW EXECUTE FUNCTION public.handle_updated_by();
 ```
 

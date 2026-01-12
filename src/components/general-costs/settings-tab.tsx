@@ -81,23 +81,18 @@ export function SettingsTab({ categories, organizationId }: SettingsTabProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-medium">Configuración de Gastos</h3>
-                    <p className="text-sm text-muted-foreground">Administra las categorías y preferencias de tus gastos.</p>
-                </div>
-                <Button onClick={handleCreate}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nueva Categoría
-                </Button>
-            </div>
-
             <Card>
-                <CardHeader>
-                    <CardTitle>Categorías de Gastos</CardTitle>
-                    <CardDescription>
-                        Las categorías te ayudan a organizar y filtrar tus egresos.
-                    </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div className="space-y-1.5">
+                        <CardTitle>Categorías de Gastos</CardTitle>
+                        <CardDescription>
+                            Las categorías te ayudan a organizar y filtrar tus egresos.
+                        </CardDescription>
+                    </div>
+                    <Button onClick={handleCreate}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nueva Categoría
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <Table>
