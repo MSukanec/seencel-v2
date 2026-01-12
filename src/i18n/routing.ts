@@ -74,9 +74,22 @@ export const routing = defineRouting({
             en: '/pricing',
             es: '/precios'
         },
+        '/founders': {
+            en: '/founders',
+            es: '/fundadores'
+        },
+        '/organization/billing/founders': {
+            en: '/organization/billing/founders',
+            es: '/organizacion/facturacion/fundadores'
+        },
+        '/organization/billing/checkout': {
+            en: '/organization/billing/checkout',
+            es: '/organizacion/facturacion/checkout'
+        },
         // Setup catch-all if needed, but for now specific routes
         '/login': '/login',
         '/signup': '/signup',
+        '/forgot-password': '/forgot-password',
         '/admin': '/admin'
     }
 });

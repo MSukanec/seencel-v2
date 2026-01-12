@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 interface ContentLayoutProps {
     /** Layout variant */
-    variant: 'wide' | 'full' | 'narrow'
+    variant: 'wide' | 'full' | 'narrow' | 'settings'
     /** Content */
     children: React.ReactNode
     /** Additional className */
@@ -28,6 +28,16 @@ export function ContentLayout({
         return (
             <div className={cn("h-full w-full overflow-y-auto bg-transparent", className)}>
                 <div className="mx-auto max-w-4xl px-6 py-8 md:px-8">
+                    {children}
+                </div>
+            </div>
+        )
+    }
+
+    if (variant === 'settings') {
+        return (
+            <div className={cn("h-full w-full overflow-y-auto bg-transparent", className)}>
+                <div className="mx-auto max-w-5xl px-6 py-8 md:px-8">
                     {children}
                 </div>
             </div>

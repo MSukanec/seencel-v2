@@ -89,3 +89,25 @@ export async function getCurrentOrganizationPlanId(): Promise<string | null> {
 
     return orgData?.plan_id || null;
 }
+
+/**
+ * Fetches a single plan by its slug.
+ * Used for checkout page to get specific plan details.
+ */
+export async function getPlanBySlug(slug: string): Promise<Plan | null> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("plans")
+        .select("id, name, slug, monthly_amount, annual_amount, billing_type, features, status")
+        .eq("slug", slug)
+        .eq("status", "available")
+        .single();
+
+    if (error) {
+        console.error("Error fetching plan by slug:", error);
+        return null;
+    }
+
+    return data;
+}

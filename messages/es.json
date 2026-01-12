@@ -99,6 +99,7 @@
     "Public": {
         "nav": {
             "features": "Características",
+            "founders": "Fundadores",
             "pricing": "Precios",
             "contact": "Contacto",
             "login": "Iniciar Sesión",
@@ -776,5 +777,125 @@
         "goDashboard": "Ir al Tablero de Control",
         "contactSupport": "Pedir Ayuda por Radio",
         "errorCode": "Código de error: 404 (Obra en Suspensión)"
+    },
+    "Founders": {
+        "nav": "Fundadores",
+        "hero": {
+            "badge": "El Círculo Exclusivo de Seencel",
+            "title": "Programa de Miembros Fundadores",
+            "subtitle": "Únete a los pioneros que están dando forma al futuro de la gestión de la construcción y accede a beneficios vitalicios exclusivos.",
+            "cta": "Quiero ser Fundador"
+        },
+        "essence": {
+            "badge": "LA ESENCIA",
+            "title": "Una oportunidad única e irrepetible",
+            "description1": "El Programa de Miembros Fundadores es una <bold>oferta de tiempo limitado</bold> diseñada para formar un grupo selecto de usuarios comprometidos que actuarán como asesores estratégicos del producto.",
+            "description2": "Tu feedback directo nos ayudará a <bold>acelerar el desarrollo</bold> y priorizar las funcionalidades que realmente importan a los profesionales de la construcción.",
+            "description3": "A cambio de tu compromiso, recibirás <bold>beneficios exclusivos vitalicios</bold> que nunca más estarán disponibles para nuevos usuarios.",
+            "urgency": "El programa cerrará pronto"
+        },
+        "benefits": {
+            "title": "Beneficios Exclusivos",
+            "subtitle": "8 beneficios únicos que solo los miembros fundadores disfrutarán",
+            "items": {
+                "organizational": {
+                    "title": "Beneficio Organizacional",
+                    "description": "El estatus de Fundador aplica a toda tu Organización, no solo a ti. Todos los miembros de tu equipo heredan los beneficios automáticamente."
+                },
+                "training": {
+                    "title": "Acceso Vitalicio al Bonus de Capacitación",
+                    "description": "Acceso gratuito y permanente al bonus de capacitación incluido en la suscripción. Actualmente: Curso completo de Archicad."
+                },
+                "roadmap": {
+                    "title": "Voz y Voto en el Roadmap",
+                    "description": "Canal directo con el equipo de desarrollo. Participa en votaciones para priorizar las funcionalidades que más te importan."
+                },
+                "labMode": {
+                    "title": "Acceso Anticipado (Modo Lab)",
+                    "description": "Sé el primero en probar nuevas funcionalidades en modo beta antes de su lanzamiento oficial al público."
+                },
+                "discord": {
+                    "title": "Comunidad Privada en Discord",
+                    "description": "Acceso exclusivo a un canal privado donde conectar con otros fundadores, compartir experiencias y recibir soporte prioritario."
+                },
+                "badge": {
+                    "title": "Insignia de Fundador Pública",
+                    "description": "Una insignia visible en tu perfil que te identifica como miembro fundador de Seencel ante toda la comunidad."
+                },
+                "directory": {
+                    "title": "Listado de Organizaciones Fundadoras",
+                    "description": "Tu organización será incluida en nuestro directorio público de fundadores, visible en la web de Seencel."
+                },
+                "permanent": {
+                    "title": "Estatus Permanente",
+                    "description": "Una vez fundador, siempre fundador. El estatus es vitalicio mientras mantengas tu suscripción activa."
+                }
+            }
+        },
+        "course": {
+            "badge": "Bonus de Capacitación Actual",
+            "title": "Curso Completo de Archicad",
+            "description": "Como miembro fundador, tienes acceso <bold>gratuito e incluido</bold> al bonus de capacitación vigente. Actualmente es el curso más completo de Archicad en español, un programa valorado en <bold>USD $169/año</bold> que podrás disfrutar sin costo adicional mientras mantengas tu suscripción activa.",
+            "stats": {
+                "students": "+3.000 estudiantes de habla hispana",
+                "endorsement": "Avalado por Graphisoft Argentina"
+            },
+            "price": {
+                "original": "Valor del curso",
+                "originalValue": "$169/año",
+                "new": "Con tu suscripción",
+                "newValue": "GRATIS"
+            },
+            "cta": "Ver detalles del curso"
+        },
+        "howToJoin": {
+            "title": "Cómo Unirse",
+            "subtitle": "El proceso es simple y directo",
+            "steps": {
+                "subscription": {
+                    "title": "Suscripción Anual",
+                    "description": "El programa está disponible exclusivamente para usuarios con suscripción anual (Plan Pro o Teams). Al suscribirte anualmente, automáticamente te conviertes en miembro fundador."
+                },
+                "activation": {
+                    "title": "Activación Inmediata",
+                    "description": "Una vez completada tu suscripción, todos los beneficios de fundador se activan automáticamente para ti y para toda tu organización."
+                },
+                "limited": {
+                    "title": "Oferta por Tiempo Limitado",
+                    "description": "El programa de fundadores cerrará pronto y nunca volverá a abrirse. Esta es tu única oportunidad de asegurar estos beneficios vitalicios."
+                }
+            }
+        },
+        "cta": {
+            "title": "¿Listo para ser parte de la historia?",
+            "subtitle": "Únete al selecto grupo de fundadores y ayúdanos a construir el futuro de la gestión de la construcción.",
+            "button": "Convertirme en Fundador",
+            "note": "Plan anual requerido • Beneficios vitalicios • Cupos limitados"
+        },
+        "checkout": {
+            "title": "Finalizar Compra",
+            "orderSummary": "Resumen del Pedido",
+            "selectPlan": "Selecciona tu Plan",
+            "billingCycle": "Ciclo de Facturación",
+            "monthly": "Mensual",
+            "annual": "Anual",
+            "annualDiscount": "Ahorra 20%",
+            "founderBadge": "Incluye estatus de Fundador",
+            "paymentMethod": "Método de Pago",
+            "paymentMethods": {
+                "card": "Tarjeta de Crédito/Débito",
+                "mercadopago": "MercadoPago",
+                "transfer": "Transferencia Bancaria"
+            },
+            "subtotal": "Subtotal",
+            "discount": "Descuento Fundador",
+            "total": "Total",
+            "perYear": "/año",
+            "perMonth": "/mes",
+            "terms": "Al completar la compra, aceptas nuestros Términos de Servicio y Política de Privacidad.",
+            "complete": "Completar Compra",
+            "secure": "Pago 100% seguro",
+            "guarantee": "Garantía de satisfacción de 14 días"
+        }
     }
 }

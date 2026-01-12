@@ -1,7 +1,14 @@
 
 import { Suspense } from "react";
-import { getClients, getClientFinancialSummary, getClientCommitments, getClientPayments, getClientPaymentSchedules, getClientRoles } from "@/features/clients/queries";
-import { getUserOrganizations } from "@/features/organization/queries"; // Reuse to get Active Org ID safely if needed
+import {
+    getClientsByOrganization,
+    getFinancialSummaryByOrganization,
+    getCommitmentsByOrganization,
+    getPaymentsByOrganization,
+    getSchedulesByOrganization,
+    getClientRoles
+} from "@/features/clients/queries";
+import { getUserOrganizations } from "@/features/organization/queries";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientsOverview } from "@/features/clients/components/clients-overview";
 import { ClientsListTable } from "@/features/clients/components/clients-list-table";
@@ -150,11 +157,11 @@ async function getData() {
         schedulesRes,
         rolesRes
     ] = await Promise.all([
-        getClients(activeOrgId),
-        getClientFinancialSummary(activeOrgId),
-        getClientCommitments(activeOrgId),
-        getClientPayments(activeOrgId),
-        getClientPaymentSchedules(activeOrgId),
+        getClientsByOrganization(activeOrgId),
+        getFinancialSummaryByOrganization(activeOrgId),
+        getCommitmentsByOrganization(activeOrgId),
+        getPaymentsByOrganization(activeOrgId),
+        getSchedulesByOrganization(activeOrgId),
         getClientRoles(activeOrgId)
     ]);
 

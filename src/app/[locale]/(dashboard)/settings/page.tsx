@@ -74,7 +74,7 @@ export default async function SettingsPage() {
 
     return (
         <PageWrapper type="page" title={t('title')}>
-            <ContentLayout variant="narrow">
+            <ContentLayout variant="settings">
                 <HeaderTitleUpdater title={
                     <div className="flex items-center gap-2 text-sm">
                         <span className="text-muted-foreground">{t('myAccount')}</span>

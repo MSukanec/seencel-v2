@@ -98,6 +98,7 @@
     "Public": {
         "nav": {
             "features": "Features",
+            "founders": "Founders",
             "pricing": "Pricing",
             "contact": "Contact",
             "login": "Log In",
@@ -752,5 +753,125 @@
         "goDashboard": "Go to Control Center",
         "contactSupport": "Call for Backup",
         "errorCode": "Error code: 404 (Construction Suspended)"
+    },
+    "Founders": {
+        "nav": "Founders",
+        "hero": {
+            "badge": "The Exclusive Seencel Circle",
+            "title": "Founding Members Program",
+            "subtitle": "Join the pioneers shaping the future of construction management and access exclusive lifetime benefits.",
+            "cta": "I Want to Be a Founder"
+        },
+        "essence": {
+            "badge": "THE ESSENCE",
+            "title": "A unique and unrepeatable opportunity",
+            "description1": "The Founding Members Program is a <bold>limited-time offer</bold> designed to form a select group of committed users who will act as strategic product advisors.",
+            "description2": "Your direct feedback will help us <bold>accelerate development</bold> and prioritize the features that really matter to construction professionals.",
+            "description3": "In exchange for your commitment, you will receive <bold>exclusive lifetime benefits</bold> that will never again be available to new users.",
+            "urgency": "The program will close soon"
+        },
+        "benefits": {
+            "title": "Exclusive Benefits",
+            "subtitle": "8 unique benefits that only founding members will enjoy",
+            "items": {
+                "organizational": {
+                    "title": "Organizational Benefit",
+                    "description": "Founder status applies to your entire Organization, not just you. All team members automatically inherit the benefits."
+                },
+                "training": {
+                    "title": "Lifetime Access to Training Bonus",
+                    "description": "Free and permanent access to the training bonus included in the subscription. Currently: Complete Archicad Course."
+                },
+                "roadmap": {
+                    "title": "Voice and Vote on the Roadmap",
+                    "description": "Direct channel with the development team. Participate in votes to prioritize the features that matter most to you."
+                },
+                "labMode": {
+                    "title": "Early Access (Lab Mode)",
+                    "description": "Be the first to test new features in beta mode before their official public launch."
+                },
+                "discord": {
+                    "title": "Private Discord Community",
+                    "description": "Exclusive access to a private channel to connect with other founders, share experiences, and receive priority support."
+                },
+                "badge": {
+                    "title": "Public Founder Badge",
+                    "description": "A visible badge on your profile that identifies you as a founding member of Seencel to the entire community."
+                },
+                "directory": {
+                    "title": "Founding Organizations Directory",
+                    "description": "Your organization will be included in our public founder directory, visible on the Seencel website."
+                },
+                "permanent": {
+                    "title": "Permanent Status",
+                    "description": "Once a founder, always a founder. The status is lifetime as long as you maintain your active subscription."
+                }
+            }
+        },
+        "course": {
+            "badge": "Current Training Bonus",
+            "title": "Complete Archicad Course",
+            "description": "As a founding member, you get <bold>free and included</bold> access to the current training bonus. It's currently the most complete Archicad course in Spanish, a program valued at <bold>USD $169/year</bold> that you can enjoy at no additional cost while you maintain your active subscription.",
+            "stats": {
+                "students": "+3,000 Spanish-speaking students",
+                "endorsement": "Endorsed by Graphisoft Argentina"
+            },
+            "price": {
+                "original": "Course value",
+                "originalValue": "$169/year",
+                "new": "With your subscription",
+                "newValue": "FREE"
+            },
+            "cta": "View course details"
+        },
+        "howToJoin": {
+            "title": "How to Join",
+            "subtitle": "The process is simple and direct",
+            "steps": {
+                "subscription": {
+                    "title": "Annual Subscription",
+                    "description": "The program is available exclusively for users with an annual subscription (Pro or Teams Plan). By subscribing annually, you automatically become a founding member."
+                },
+                "activation": {
+                    "title": "Immediate Activation",
+                    "description": "Once your subscription is completed, all founder benefits are automatically activated for you and your entire organization."
+                },
+                "limited": {
+                    "title": "Limited Time Offer",
+                    "description": "The founders program will close soon and will never reopen. This is your only opportunity to secure these lifetime benefits."
+                }
+            }
+        },
+        "cta": {
+            "title": "Ready to be part of history?",
+            "subtitle": "Join the select group of founders and help us build the future of construction management.",
+            "button": "Become a Founder",
+            "note": "Annual plan required • Lifetime benefits • Limited spots"
+        },
+        "checkout": {
+            "title": "Complete Purchase",
+            "orderSummary": "Order Summary",
+            "selectPlan": "Select Your Plan",
+            "billingCycle": "Billing Cycle",
+            "monthly": "Monthly",
+            "annual": "Annual",
+            "annualDiscount": "Save 20%",
+            "founderBadge": "Includes Founder status",
+            "paymentMethod": "Payment Method",
+            "paymentMethods": {
+                "card": "Credit/Debit Card",
+                "mercadopago": "MercadoPago",
+                "transfer": "Bank Transfer"
+            },
+            "subtotal": "Subtotal",
+            "discount": "Founder Discount",
+            "total": "Total",
+            "perYear": "/year",
+            "perMonth": "/month",
+            "terms": "By completing your purchase, you accept our Terms of Service and Privacy Policy.",
+            "complete": "Complete Purchase",
+            "secure": "100% secure payment",
+            "guarantee": "14-day satisfaction guarantee"
+        }
     }
 }

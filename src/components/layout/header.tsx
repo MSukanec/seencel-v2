@@ -296,6 +296,7 @@ export function Header({ variant = 'app', user }: { variant?: 'public' | 'app', 
                         <nav className="hidden md:flex items-center justify-center">
                             <ul className="flex items-center space-x-8">
                                 <li><Link href="/features" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('features')}</Link></li>
+                                <li><Link href="/founders" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('founders')}</Link></li>
                                 <li><Link href="/pricing" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('pricing')}</Link></li>
                             </ul>
                         </nav>
