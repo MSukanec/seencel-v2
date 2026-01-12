@@ -34,7 +34,7 @@ import { useLayoutStore } from "@/store/layout-store";
 import { FeedbackButton } from "@/components/feedback-button";
 import { PlanStatusButton } from "@/components/plan-status-button";
 
-import { ProjectSelectorWrapper } from "@/components/layout/project-selector-wrapper";
+
 
 export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'public' | 'app', user?: UserProfile | null, activeOrgId?: string }) {
     const pathname = usePathname();
@@ -70,10 +70,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                     </Link>
                 </div>
 
-                {/* PROJECT SELECTOR (Automatically visible in project context) */}
-                {variant === 'app' && (
-                    <ProjectSelectorWrapper />
-                )}
+
 
                 {/* 2. Navigation */}
                 {variant === 'app' ? (

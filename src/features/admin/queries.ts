@@ -56,6 +56,7 @@ export interface AdminOrganization {
     id: string;
     name: string;
     logo_path: string | null;
+    last_activity_at?: string | Date;
     created_at: string | null;
     settings: { is_founder?: boolean; founder_since?: string } | null;
     owner: {

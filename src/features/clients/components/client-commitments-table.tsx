@@ -59,7 +59,8 @@ function CommitmentForm({ clients, onSuccess, projectId, orgId }: CommitmentForm
                 await createCommitmentAction({
                     ...values,
                     currency_id: "00000000-0000-0000-0000-000000000000",
-                    exchange_rate: 1
+                    exchange_rate: 1,
+                    commitment_method: "fixed"
                 });
                 toast.success("Compromiso creado");
                 onSuccess();

@@ -108,7 +108,7 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
                     </span>
                 </div>
             </SelectTrigger>
-            <SelectContent align="end" className="z-[100]">
+            <SelectContent align="end" position="popper" sideOffset={4} className="z-[9999] w-[var(--radix-select-trigger-width)]">
                 {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                         <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
 
                 <SelectSeparator />
 
-                <SelectItem value="__NEW_PROJECT__" className="text-primary focus:text-primary cursor-pointer">
+                <SelectItem value="__NEW_PROJECT__" className="text-emerald-600 focus:text-emerald-700 cursor-pointer">
                     <div className="flex items-center gap-2 font-medium">
                         <Plus className="h-4 w-4" />
                         <span>Crear Nuevo Proyecto</span>
