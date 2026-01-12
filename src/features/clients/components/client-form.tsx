@@ -46,7 +46,7 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
     const [projects, setProjects] = useState<any[]>([]);
 
     const form = useForm<ClientFormValues>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             organization_id: orgId,
             project_id: projectId || "",

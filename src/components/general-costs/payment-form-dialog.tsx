@@ -67,7 +67,7 @@ export function PaymentFormDialog({
     const [isPending, startTransition] = useTransition();
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             payment_date: new Date(),
             general_cost_id: "",

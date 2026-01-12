@@ -41,12 +41,13 @@ function CommitmentForm({ clients, onSuccess, projectId, orgId }: CommitmentForm
     const [isPending, startTransition] = useTransition();
 
     const form = useForm<z.infer<typeof commitmentFormSchema>>({
-        resolver: zodResolver(commitmentFormSchema),
+        resolver: zodResolver(commitmentFormSchema) as any,
         defaultValues: {
             amount: 0,
             project_id: projectId || "",
             organization_id: orgId || "",
-            // currency default?
+            client_id: "",
+            currency_id: "",
         },
         mode: "onChange"
     });
