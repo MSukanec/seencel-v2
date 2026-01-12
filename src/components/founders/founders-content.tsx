@@ -73,12 +73,10 @@ export function FoundersContent({ isDashboard = false }: FoundersContentProps) {
             {/* Hero Section */}
             <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
                 {/* Background Image */}
-                <Image
+                <img
                     src="/images/founders-hero-bg.webp"
-                    alt="Founders Background"
-                    fill
-                    priority
-                    className="object-cover"
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
                 />
 
                 {/* Dark overlay */}

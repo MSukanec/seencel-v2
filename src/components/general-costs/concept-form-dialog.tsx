@@ -43,10 +43,12 @@ const formSchema = z.object({
     name: z.string().min(1, "El nombre es obligatorio"),
     description: z.string().optional(),
     category_id: z.string().min(1, "La categoría es obligatoria"),
-    is_recurring: z.boolean().default(false),
+    is_recurring: z.boolean(),
     recurrence_interval: z.string().optional(),
     expected_day: z.coerce.number().min(1).max(31).optional(),
 });
+
+type FormData = z.infer<typeof formSchema>;
 
 interface ConceptFormDialogProps {
     open?: boolean;
@@ -65,15 +67,15 @@ export function ConceptFormDialog({
 }: ConceptFormDialogProps) {
     const [isPending, startTransition] = useTransition();
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<FormData>({
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             name: "",
             description: "",
             category_id: "",
             is_recurring: false,
             recurrence_interval: "monthly",
-            expected_day: 1, // Default to 1 instead of undefined to satisfy stricter types if needed, or handle undefined better
+            expected_day: 1,
         },
     });
 

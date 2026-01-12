@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
     // BUT if they are logged in, we verify onboarding.
     const isAuthPath = ["/login", "/signup", "/auth/callback"].some(p => pathWithoutLocale.startsWith(p));
     const isOnboardingPath = pathWithoutLocale.startsWith("/onboarding");
-    const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static"].some(p => pathname.startsWith(p));
+    const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static", "/images"].some(p => pathname.startsWith(p));
 
     if (isPublicStatic) return response;
 
@@ -97,5 +97,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|favicon.ico).*)", "/((?!api|_next/static|_next/image|favicon.ico).*)"],
+    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico).*)", "/((?!api|_next/static|_next/image|images|favicon.ico).*)"],
 };
