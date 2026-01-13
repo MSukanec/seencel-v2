@@ -8,7 +8,10 @@
     "Common": {
         "notifications": "Notifications",
         "profile": "Profile",
-        "logout": "Log out"
+        "logout": "Log out",
+        "privacyPolicy": "Privacy Policy",
+        "termsOfService": "Terms of Service",
+        "cookiesPolicy": "Cookies Policy"
     },
     "Auth": {
         "Register": {
@@ -992,6 +995,93 @@
         "testimonials": {
             "title": "What our students say",
             "subtitle": "Real stories from professionals who transformed their careers"
+        }
+    },
+    "Privacy": {
+        "title": "Privacy and Data Protection Policy",
+        "lastUpdated": "Last updated: November 2025",
+        "intro": "At Seencel, we respect your privacy and are committed to protecting your personal data. This policy explains how we collect, use, share, and protect your information.",
+        "about": {
+            "title": "About Seencel",
+            "description": "Seencel is a comprehensive management platform for construction and architecture. We offer tools for project management, budget tracking, team management, documentation, financial analysis, and professional training.",
+            "services": "Our services include: Project management, multi-currency financial tracking, staff management, documentation, training, AI analysis, geolocation, and payments."
+        },
+        "applicability": {
+            "title": "Applicability",
+            "description": "This Policy applies when you visit our website, register, use our services, participate in training, make payments, interact with our AI, or contact us."
+        },
+        "collection": {
+            "title": "Data We Collect",
+            "direct": {
+                "title": "Information You Provide Directly",
+                "items": [
+                    "Contact Information: Name, email, phone, country, date of birth.",
+                    "Professional Information: Organization, job title, specialization.",
+                    "Account Information: Username, password (encrypted), photo, preferences.",
+                    "Transactional Information: Billing data, purchase history.",
+                    "User Content: Documents, files, images, notes.",
+                    "Project Information: Budgets, tasks, personnel, schedules."
+                ]
+            },
+            "automatic": {
+                "title": "Information Collected Automatically",
+                "items": [
+                    "Usage: Pages visited, time spent, navigation patterns.",
+                    "Device: IP, browser, operating system.",
+                    "Location: Approximate by IP or precise if you authorize GPS.",
+                    "Cookies & Performance: Server logs, metrics."
+                ]
+            }
+        },
+        "google": {
+            "title": "Google Data We Access",
+            "description": "When you sign in with Google, we access:",
+            "items": [
+                "Basic Profile: Name, surname, email.",
+                "Profile Picture: Your public image.",
+                "User ID: Unique identifier for authentication."
+            ],
+            "disclaimer": "We only access the minimum necessary information. We do not access your Gmail emails, Drive, or Calendar. We do not store your Google password.",
+            "maps": "When you use Google Maps, we process GPS coordinates and map visualization data for project geolocation."
+        },
+        "usage": {
+            "title": "How We Use Your Data",
+            "items": [
+                "Service Provision: Create accounts, authentication, process project data.",
+                "Service Improvement: Analyze usage, A/B testing, train AI models.",
+                "Communication: Account notifications, support, updates.",
+                "Security: Prevent fraud, comply with legal obligations."
+            ]
+        },
+        "sharing": {
+            "title": "Sharing Data with Third Parties",
+            "policy": "We do not sell or rent your information. We only share data with trusted service providers under strict confidentiality obligations:",
+            "providers": [
+                "Supabase (Auth/DB)",
+                "Neon Database (PostgreSQL)",
+                "Vercel (Hosting)",
+                "OpenAI (AI)",
+                "Google Maps Platform",
+                "Mercado Pago / PayPal (Payments)",
+                "Vimeo (Video Hosting)"
+            ],
+            "legal": "We may disclose information if required by law or to protect rights and safety."
+        },
+        "security": {
+            "title": "Storage and Protection",
+            "description": "We use TLS/SSL encryption in transit and industry standards at rest. We implement Row Level Security (RLS), robust authentication, and regular encrypted backups."
+        },
+        "retention": {
+            "title": "Retention and Deletion",
+            "description": "We retain data while the account is active. You can request full deletion (processed in 30 days) via 'Delete Account' in Profile or by contacting privacy@seencel.com."
+        },
+        "rights": {
+            "title": "Your Rights",
+            "description": "You have the right to access, rectify, delete, restrict, and port your data. Contact us at privacy@seencel.com to exercise them."
+        },
+        "contact": {
+            "title": "Contact",
+            "description": "For privacy inquiries: privacy@seencel.com or contact@seencel.com."
         }
     }
 }

@@ -27,6 +27,9 @@ import { toast } from "sonner";
 import { updateCourseGeneral } from "@/features/courses/course-actions";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { ImageIcon, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { Course } from "@/components/course/mock-course-data";
 
 const formSchema = z.object({
@@ -36,7 +39,12 @@ const formSchema = z.object({
     status: z.string(),
     visibility: z.string(),
     instructor_id: z.string().min(1, "Debes seleccionar un instructor"),
+    endorsement_title: z.string().optional(),
+    endorsement_description: z.string().optional(),
+    endorsement_image_path: z.string().optional().nullable(),
 });
+
+type GeneralFormValues = z.infer<typeof formSchema>;
 
 interface GeneralFormProps {
     course: Course;
@@ -47,7 +55,7 @@ export function GeneralForm({ course, instructors }: GeneralFormProps) {
     const router = useRouter();
     const [isPending, setIsPending] = useState(false);
 
-    const form = useForm<z.infer<typeof formSchema>>({
+    const form = useForm<GeneralFormValues>({
         // @ts-ignore
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -57,8 +65,38 @@ export function GeneralForm({ course, instructors }: GeneralFormProps) {
             status: course.status || "available",
             visibility: course.visibility || "public",
             instructor_id: course.instructorId || "",
-        },
+            endorsement_title: course.endorsement?.title || "",
+            endorsement_description: course.endorsement?.description || "",
+            endorsement_image_path: course.endorsement?.imagePath || null,
+        } as GeneralFormValues,
     });
+
+    const [uploading, setUploading] = useState(false);
+
+    async function navigateAndUpload(file: File) {
+        setUploading(true);
+        try {
+            const supabase = createClient();
+            const fileExt = file.name.split('.').pop();
+            const fileName = `endorsement-${Date.now()}.${fileExt}`;
+            const filePath = `courses/endorsements/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('public-assets')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            // Set the path in the form
+            form.setValue("endorsement_image_path", filePath, { shouldDirty: true });
+            toast.success("Imagen subida correctamente");
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            toast.error("Error al subir imagen");
+        } finally {
+            setUploading(false);
+        }
+    }
 
     // Map instructors for SearchableSelect
     const instructorOptions = instructors.map((inst) => ({
@@ -66,7 +104,7 @@ export function GeneralForm({ course, instructors }: GeneralFormProps) {
         value: inst.id,
     }));
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: any) {
         if (!course.id) return;
         setIsPending(true);
 
@@ -205,6 +243,91 @@ export function GeneralForm({ course, instructors }: GeneralFormProps) {
                                                 <SelectItem value="unlisted">No listado</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* ENDORSEMENT SECTION */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Respaldo Profesional (Aval)</CardTitle>
+                        <CardDescription>
+                            Configura la tarjeta de "Avalado por..." que aparece junto al instructor.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {/* Image Upload */}
+                        <div className="space-y-2">
+                            <FormLabel>Logo / Imagen del Aval</FormLabel>
+                            <div className="flex items-center gap-4">
+                                {form.watch("endorsement_image_path") ? (
+                                    <div className="relative w-32 h-20 rounded-md overflow-hidden border bg-zinc-900 flex items-center justify-center">
+                                        <img
+                                            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${form.watch("endorsement_image_path")}`}
+                                            alt="Preview"
+                                            className="w-full h-full object-contain p-2"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => form.setValue("endorsement_image_path", null, { shouldDirty: true })}
+                                            className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 m-1 shadow-sm hover:bg-red-600 transition-colors"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="w-32 h-20 rounded-md bg-muted flex items-center justify-center border-dashed border-2">
+                                        <ImageIcon className="text-muted-foreground h-6 w-6" />
+                                    </div>
+                                )}
+
+                                <div>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={uploading}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) navigateAndUpload(file);
+                                        }}
+                                        className="w-full max-w-xs"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">Recomendado: Logo horizontal o cuadrado con fondo transparente</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="endorsement_title"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Título del Aval</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Avalado por Graphisoft" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="endorsement_description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Descripción</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Ej: Nuestro curso cuenta con el aval de..."
+                                                className="min-h-[100px]"
+                                                {...field}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}

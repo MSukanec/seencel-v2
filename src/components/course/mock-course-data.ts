@@ -32,12 +32,14 @@ export interface Module {
 
 export interface Testimonial {
     id: string;
-    name: string;
-    role: string;
-    company: string;
-    avatar: string;
+    course_id?: string | null;
+    author_name: string;
+    author_title?: string | null;
+    author_avatar_url?: string | null;
     content: string;
-    rating: number;
+    rating?: number | null;
+    is_featured?: boolean | null;
+    is_active?: boolean | null;
 }
 
 export interface FAQ {
@@ -139,6 +141,11 @@ export interface Course {
     studentWorks: StudentWork[];
     masterclasses: Masterclass[];
     details: CourseDetails;
+    endorsement?: {
+        title: string | null;
+        description: string | null;
+        imagePath: string | null;
+    };
     // Section visibility configuration
     enabledSections?: EnabledSections;
 }
@@ -277,39 +284,37 @@ export const MOCK_ARCHICAD_COURSE: Course = {
     testimonials: [
         {
             id: "t1",
-            name: "Carolina Méndez",
-            role: "Arquitecta",
-            company: "Estudio CM Arquitectura",
-            avatar: "/images/testimonials/carolina.webp",
+            author_name: "Carolina Méndez",
+            author_title: "Arquitecta - Estudio CM Arquitectura",
+            author_avatar_url: "/images/testimonials/carolina.webp",
             content: "Este curso transformó completamente mi forma de trabajar. Pasé de hacer planos 2D a entregar proyectos BIM completos en la mitad del tiempo. La inversión se pagó sola en el primer mes.",
-            rating: 5
+            rating: 5,
+            is_featured: true
         },
         {
             id: "t2",
-            name: "Roberto Álvarez",
-            role: "Ingeniero Civil",
-            company: "Constructora del Norte",
-            avatar: "/images/testimonials/roberto.webp",
+            author_name: "Roberto Álvarez",
+            author_title: "Ingeniero Civil - Constructora del Norte",
+            author_avatar_url: "/images/testimonials/roberto.webp",
             content: "Excelente estructura del curso. Matías explica todo con claridad y los ejercicios prácticos son muy útiles. Lo recomiendo 100%.",
             rating: 5
         },
         {
             id: "t3",
-            name: "María José Torres",
-            role: "Estudiante de Arquitectura",
-            company: "Universidad de Buenos Aires",
-            avatar: "/images/testimonials/mariajose.webp",
+            author_name: "María José Torres",
+            author_title: "Estudiante de Arquitectura - UBA",
+            author_avatar_url: "/images/testimonials/mariajose.webp",
             content: "Como estudiante, este curso me dio una ventaja enorme. Ahora consigo trabajos freelance porque manejo ArchiCAD mejor que muchos profesionales.",
             rating: 5
         },
         {
             id: "t4",
-            name: "Andrés Peña",
-            role: "Director de Proyectos",
-            company: "DYPSA Desarrollos",
-            avatar: "/images/testimonials/andres.webp",
+            author_name: "Andrés Peña",
+            author_title: "Director de Proyectos - DYPSA Desarrollos",
+            author_avatar_url: "/images/testimonials/andres.webp",
             content: "Capacitamos a todo nuestro equipo con este curso. La productividad aumentó significativamente y la calidad de documentación mejoró muchísimo.",
-            rating: 5
+            rating: 5,
+            is_featured: true
         }
     ],
 

@@ -198,12 +198,48 @@ export function CourseContent({ course, isDashboard = false }: CourseContentProp
             {sections.instructor && (
                 <section className="py-24 bg-muted/30">
                     <div className="container mx-auto px-4">
-                        <div className="max-w-5xl mx-auto">
-                            <div className="grid md:grid-cols-3 gap-12 items-center">
-                                {/* Avatar */}
-                                <div className="md:col-span-1 flex justify-center">
-                                    <div className="relative">
-                                        <div className="w-48 h-48 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl bg-zinc-800">
+                        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+
+                            <Card className="bg-zinc-900 border-zinc-800 overflow-hidden relative group h-full">
+                                <CardContent className="p-8 md:p-12 flex flex-col h-full bg-zinc-900">
+                                    <div className="flex justify-center mb-10">
+                                        <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-zinc-800 shadow-xl bg-zinc-900 flex items-center justify-center">
+                                            {course.endorsement?.imagePath ? (
+                                                <img
+                                                    src={course.endorsement.imagePath}
+                                                    alt={course.endorsement.title || "Endorsement"}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center text-center p-2">
+                                                    <h4 className="text-xl font-bold text-white tracking-widest uppercase leading-none">
+                                                        {course.endorsement?.title?.split(' ')[0] || "AVAL"}
+                                                    </h4>
+                                                    <span className="text-[10px] font-normal text-zinc-400 mt-1 tracking-wider uppercase">OFICIAL</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto">
+                                        <p className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
+                                            RESPALDO PROFESIONAL
+                                        </p>
+                                        <h3 className="text-3xl font-bold text-white mb-6">
+                                            {course.endorsement?.title || "Avalado por..."}
+                                        </h3>
+                                        <p className="text-zinc-400 leading-relaxed whitespace-pre-wrap">
+                                            {course.endorsement?.description || "Este curso cuenta con respaldo oficial internacional."}
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Col 2: Instructor */}
+                            <Card className="bg-zinc-900 border-zinc-800 overflow-hidden relative h-full">
+                                <CardContent className="p-8 md:p-12 flex flex-col h-full bg-zinc-900">
+                                    <div className="flex justify-center mb-8">
+                                        <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-zinc-800 shadow-xl">
                                             {course.instructor.avatar ? (
                                                 <img
                                                     src={course.instructor.avatar}
@@ -212,63 +248,26 @@ export function CourseContent({ course, isDashboard = false }: CourseContentProp
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
-                                                    <GraduationCap className="h-20 w-20 text-zinc-500" />
+                                                    <GraduationCap className="h-16 w-16 text-zinc-500" />
                                                 </div>
                                             )}
                                         </div>
-                                        {/* Badge */}
-                                        <div className="absolute -bottom-2 -right-2 px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-semibold shadow-lg">
-                                            {t("instructor.badge")}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info */}
-                                <div className="md:col-span-2 text-center md:text-left">
-                                    <p className="text-primary font-medium mb-2">{t("instructor.meetYour")}</p>
-                                    <h2 className="text-3xl md:text-4xl font-bold mb-2">
-                                        {course.instructor.name}
-                                    </h2>
-                                    <p className="text-lg text-muted-foreground mb-6">
-                                        {course.instructor.title}
-                                    </p>
-                                    <p className="text-muted-foreground leading-relaxed mb-6">
-                                        {course.instructor.bio}
-                                    </p>
-
-                                    {/* Credentials */}
-                                    <div className="space-y-2 mb-6">
-                                        {course.instructor.credentials.map((cred, idx) => (
-                                            <div key={idx} className="flex items-center gap-2">
-                                                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                                                <span className="text-sm">{cred}</span>
-                                            </div>
-                                        ))}
                                     </div>
 
-                                    {/* Social */}
-                                    <div className="flex gap-3 justify-center md:justify-start">
-                                        {course.instructor.social.linkedin && (
-                                            <a href={course.instructor.social.linkedin} target="_blank" rel="noopener noreferrer"
-                                                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary/20 transition-colors">
-                                                <Linkedin className="h-5 w-5" />
-                                            </a>
-                                        )}
-                                        {course.instructor.social.youtube && (
-                                            <a href={course.instructor.social.youtube} target="_blank" rel="noopener noreferrer"
-                                                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary/20 transition-colors">
-                                                <Youtube className="h-5 w-5" />
-                                            </a>
-                                        )}
-                                        {course.instructor.social.instagram && (
-                                            <a href={course.instructor.social.instagram} target="_blank" rel="noopener noreferrer"
-                                                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-primary/20 transition-colors">
-                                                <Instagram className="h-5 w-5" />
-                                            </a>
-                                        )}
+                                    <div className="text-center md:text-left mt-auto">
+                                        <p className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
+                                            SOBRE EL DOCENTE
+                                        </p>
+                                        <h3 className="text-3xl font-bold text-white mb-6">
+                                            {course.instructor.name}
+                                        </h3>
+                                        <p className="text-zinc-400 leading-relaxed mb-6">
+                                            {course.instructor.bio}
+                                        </p>
                                     </div>
-                                </div>
-                            </div>
+                                </CardContent>
+                            </Card>
+
                         </div>
                     </div>
                 </section>
@@ -614,9 +613,9 @@ export function CourseContent({ course, isDashboard = false }: CourseContentProp
             }
 
             {/* ============================================ */}
-            {/* SECTION 6: STUDENT WORKS */}
+            {/* SECTION 6: STUDENT WORKS (Temporarily disabled) */}
             {/* ============================================ */}
-            {
+            {/* {
                 sections.studentWorks && (
                     <section className="py-24 bg-muted/30">
                         <div className="container mx-auto px-4">
@@ -648,7 +647,7 @@ export function CourseContent({ course, isDashboard = false }: CourseContentProp
                         </div>
                     </section>
                 )
-            }
+            } */}
 
             {/* ============================================ */}
             {/* SECTION 7: FREE MASTERCLASSES */}
@@ -973,53 +972,81 @@ export function CourseContent({ course, isDashboard = false }: CourseContentProp
                 )
             }
 
+
+
             {/* ============================================ */}
-            {/* SECTION 14: TESTIMONIALS */}
+            {/* SECTION 11: TESTIMONIALS */}
             {/* ============================================ */}
             {
                 sections.testimonials && (
-                    <section className="py-24 bg-muted/30">
-                        <div className="container mx-auto px-4">
-                            <div className="text-center mb-16">
-                                <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                                    {t("testimonials.title")}
-                                </h2>
-                                <p className="text-lg text-muted-foreground">
+                    <section id="testimonials" className="py-24 relative overflow-hidden">
+                        {/* Background Blobs for specific "innovation" feel */}
+                        <div className="absolute top-1/4 left-0 w-96 h-96 bg-primary/10 rounded-full blur-[128px] pointer-events-none" />
+                        <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-chart-2/10 rounded-full blur-[128px] pointer-events-none" />
+
+                        <div className="container mx-auto px-4 relative z-10">
+                            <div className="mb-16 text-left max-w-3xl">
+                                <p className="text-sm font-bold text-primary uppercase tracking-wider mb-2">
                                     {t("testimonials.subtitle")}
                                 </p>
+                                <h2 className="text-4xl md:text-5xl font-bold text-zinc-800 dark:text-white mb-4">
+                                    {t("testimonials.title")}
+                                </h2>
                             </div>
 
-                            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
                                 {course.testimonials.map((testimonial) => (
-                                    <Card key={testimonial.id} className="relative">
-                                        <CardContent className="p-8">
-                                            {/* Quote icon */}
-                                            <Quote className="h-8 w-8 text-primary/20 absolute top-6 right-6" />
+                                    <Card key={testimonial.id} className="relative break-inside-avoid bg-zinc-900/40 backdrop-blur-md border-white/10 hover:border-primary/30 transition-all duration-300 shadow-xl overflow-hidden group">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                        <CardContent className="p-8 relative">
+                                            {/* Quote icon - large and subtle bg */}
+                                            <Quote className="h-12 w-12 text-primary/10 absolute top-4 right-4 fill-primary/5" />
+
+                                            {/* Author Header */}
+                                            <div className="flex items-center gap-4 mb-6">
+                                                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/20 shadow-lg shrink-0">
+                                                    {testimonial.author_avatar_url ? (
+                                                        <img
+                                                            src={testimonial.author_avatar_url}
+                                                            alt={testimonial.author_name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-bold">
+                                                            {testimonial.author_name.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-zinc-100 leading-tight">{testimonial.author_name}</p>
+                                                    {testimonial.author_title && (
+                                                        <p className="text-xs text-primary font-medium mt-0.5">
+                                                            {testimonial.author_title}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
 
                                             {/* Stars */}
-                                            <div className="flex gap-1 mb-4">
-                                                {Array.from({ length: testimonial.rating }).map((_, i) => (
-                                                    <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                                            <div className="flex gap-0.5 mb-4">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={cn(
+                                                            "h-3.5 w-3.5",
+                                                            i < (testimonial.rating || 5)
+                                                                ? "fill-amber-400 text-amber-400"
+                                                                : "fill-zinc-800 text-zinc-800"
+                                                        )}
+                                                    />
                                                 ))}
                                             </div>
 
                                             {/* Content */}
-                                            <p className="text-muted-foreground mb-6 leading-relaxed">
+                                            <p className="text-zinc-300 leading-relaxed text-sm italic">
                                                 "{testimonial.content}"
                                             </p>
-
-                                            {/* Author */}
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/50 to-chart-2/50 flex items-center justify-center text-white font-bold">
-                                                    {testimonial.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold">{testimonial.name}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {testimonial.role} · {testimonial.company}
-                                                    </p>
-                                                </div>
-                                            </div>
                                         </CardContent>
                                     </Card>
                                 ))}

@@ -18,6 +18,9 @@ export async function updateCourseGeneral(
         status: string;
         visibility: string;
         instructor_id: string; // from course_details
+        endorsement_title?: string;
+        endorsement_description?: string;
+        endorsement_image_path?: string;
     }
 ): Promise<UpdateCourseState> {
     const supabase = await createClient();
@@ -37,11 +40,14 @@ export async function updateCourseGeneral(
 
         if (courseError) throw courseError;
 
-        // 2. Update instructor in course_details
+        // 2. Update instructor and endorsement in course_details
         const { error: detailsError } = await supabase
             .from("course_details")
             .update({
                 instructor_id: formData.instructor_id,
+                endorsement_title: formData.endorsement_title,
+                endorsement_description: formData.endorsement_description,
+                endorsement_image_path: formData.endorsement_image_path,
             })
             .eq("course_id", courseId);
 

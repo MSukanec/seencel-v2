@@ -32,7 +32,10 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
             badge_text,
             preview_video_id,
             landing_sections,
-            instructor_id
+            instructor_id,
+            endorsement_title,
+            endorsement_description,
+            endorsement_image_path
         `)
         .eq("course_id", course.id)
         .single();
@@ -128,17 +131,36 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
         answerKey: f.answer      // Using raw text for now as the schema has 'answer' text
     }));
 
-    // 6. Parse JSONB fields from course_details.landing_sections
+    // 7. Parse JSONB fields from course_details.landing_sections
     const landingSections = details?.landing_sections as any || {};
 
-    // 7. Check if included in Founders Program
+    // 8. Fetch Testimonials (Real Data)
+    const { data: testimonialsData } = await supabase
+        .from("testimonials")
+        .select("*")
+        .eq("course_id", course.id)
+        .eq("is_active", true)
+        .eq("is_deleted", false)
+        .order("sort_index", { ascending: true });
+
+    const testimonials: Testimonial[] = (testimonialsData || []).map(t => ({
+        id: t.id,
+        course_id: t.course_id,
+        author_name: t.author_name,
+        author_title: t.author_title,
+        author_avatar_url: t.author_avatar_url, // Direct URL or check if relative? Assuming direct URL from DB or absolute
+        content: t.content,
+        rating: t.rating,
+        is_featured: t.is_featured,
+        is_active: t.is_active
+    }));
+
+    // 9. Check if included in Founders Program
     const { data: foundersSetting } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", "founder_bonus_course_id")
         .single();
-
-
 
 
     return {
@@ -154,10 +176,8 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
         isFoundersIncluded: foundersSetting?.value === course.id,
         instructor,
         modules,
-        faqs, // Note: The UI component expects generic keys for i18n, but we'll pass direct text and handle it in the component if needed, or simply pass text.
-        // Actually, looking at mock data, it expects keys. If real data is text, we might need to adjust the component to accept text directly.
-
-        testimonials: landingSections.testimonials || [],
+        faqs,
+        testimonials: testimonials.length > 0 ? testimonials : (landingSections.testimonials || []), // Fallback to mock/landing if DB empty
         trustedCompanies: landingSections.trustedCompanies || [],
         studentWorks: landingSections.studentWorks || [],
         masterclasses: landingSections.masterclasses || [],
@@ -171,7 +191,13 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
             updates: true,
             requirements: []
         },
-        enabledSections: landingSections.enabledSections || DEFAULT_ENABLED_SECTIONS
+
+        enabledSections: landingSections.enabledSections || DEFAULT_ENABLED_SECTIONS,
+        endorsement: {
+            title: details?.endorsement_title || null,
+            description: details?.endorsement_description || null,
+            imagePath: details?.endorsement_image_path ? getStorageUrlHero(details.endorsement_image_path) : null
+        }
     };
 }
 
@@ -306,7 +332,12 @@ export async function getCourseById(id: string, options: { includeContent?: bool
         details: landingSections.details || {},
         // Extra admin fields
         status: course.status,
-        visibility: course.visibility
+        visibility: course.visibility,
+        endorsement: {
+            title: details?.endorsement_title || null,
+            description: details?.endorsement_description || null,
+            imagePath: details?.endorsement_image_path || null
+        }
     } as any;
 }
 

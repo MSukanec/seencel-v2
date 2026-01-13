@@ -90,6 +90,10 @@ export const routing = defineRouting({
             en: '/organization/billing/checkout',
             es: '/organizacion/facturacion/checkout'
         },
+        '/privacy': {
+            en: '/privacy',
+            es: '/privacidad'
+        },
         // Setup catch-all if needed, but for now specific routes
         '/login': '/login',
         '/signup': '/signup',

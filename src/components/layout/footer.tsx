@@ -76,13 +76,15 @@ export function Footer() {
                         <h4 className="font-semibold text-foreground tracking-tight">Legal</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
-                                <a href="#" className="hover:text-primary transition-colors">Términos de Servicio</a>
+                                <a href="#" className="hover:text-primary transition-colors">{t('termsOfService')}</a>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-primary transition-colors">Política de Privacidad</a>
+                                <Link href="/privacy" className="hover:text-primary transition-colors">
+                                    {t('privacyPolicy')}
+                                </Link>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-primary transition-colors">Política de Cookies</a>
+                                <a href="#" className="hover:text-primary transition-colors">{t('cookiesPolicy')}</a>
                             </li>
                         </ul>
                     </div>
