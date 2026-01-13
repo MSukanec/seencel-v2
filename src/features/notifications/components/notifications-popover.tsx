@@ -41,10 +41,19 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
 
     const dateLocale = locale === 'es' ? es : enUS;
 
-    // Calculate unread count
+    // Calculate unread count & App Badge
     React.useEffect(() => {
         const count = notifications.filter(n => !n.read_at).length;
         setUnreadCount(count);
+
+        // PWA App Badging API
+        if ('setAppBadge' in navigator) {
+            if (count > 0) {
+                navigator.setAppBadge(count).catch((e) => console.error("Error setting badge", e));
+            } else {
+                navigator.clearAppBadge().catch((e) => console.error("Error clearing badge", e));
+            }
+        }
     }, [notifications]);
 
     // Initial Fetch (if empty) & Realtime Subscription
@@ -143,8 +152,18 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
                                 return (
                                     <div
                                         key={notification.id}
+                                        onClick={() => {
+                                            if (notification.notification.data && typeof notification.notification.data === 'object' && 'url' in notification.notification.data) {
+                                                const url = (notification.notification.data as any).url;
+                                                if (typeof url === 'string') {
+                                                    setOpen(false);
+                                                    router.push(url as any);
+                                                    if (!notification.read_at) handleMarkRead(notification.id);
+                                                }
+                                            }
+                                        }}
                                         className={cn(
-                                            "flex items-start gap-3 p-3 transition-colors hover:bg-muted/50 border-b last:border-0",
+                                            "flex items-start gap-3 p-3 transition-colors hover:bg-muted/50 border-b last:border-0 cursor-pointer", // Added cursor-pointer
                                             !isRead && "bg-primary/5"
                                         )}
                                     >

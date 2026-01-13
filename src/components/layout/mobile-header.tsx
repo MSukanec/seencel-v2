@@ -34,7 +34,7 @@ export function MobileHeader({
                 </h1>
                 <div className="flex items-center gap-2">
                     {/* Mobile Actions could go here, but usually just the menu */}
-                    <MobileNav user={user} />
+                    <MobileNav />
                 </div>
             </div>
 
