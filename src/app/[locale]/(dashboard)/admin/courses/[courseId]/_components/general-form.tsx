@@ -56,8 +56,7 @@ export function GeneralForm({ course, instructors }: GeneralFormProps) {
     const [isPending, setIsPending] = useState(false);
 
     const form = useForm<GeneralFormValues>({
-        // @ts-ignore
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             title: course.title,
             slug: course.slug,
@@ -68,7 +67,7 @@ export function GeneralForm({ course, instructors }: GeneralFormProps) {
             endorsement_title: course.endorsement?.title || "",
             endorsement_description: course.endorsement?.description || "",
             endorsement_image_path: course.endorsement?.imagePath || null,
-        } as GeneralFormValues,
+        },
     });
 
     const [uploading, setUploading] = useState(false);
