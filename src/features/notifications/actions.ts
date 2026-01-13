@@ -2,6 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getUserNotifications } from "./queries";
+
+export async function fetchUserNotifications() {
+    return await getUserNotifications();
+}
 
 export async function markNotificationAsRead(notificationId: string) {
     const supabase = await createClient();

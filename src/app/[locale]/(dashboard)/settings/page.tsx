@@ -57,7 +57,11 @@ function getPlanBadgeInfo(planSlug?: string | null) {
     }
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+    searchParams,
+}: {
+    searchParams: { [key: string]: string | string[] | undefined };
+}) {
     const t = await getTranslations('Settings');
     const { organizations, activeOrgId } = (await getUserOrganizations()) as unknown as { organizations: Organization[], activeOrgId: string | null };
     const { profile } = await getUserProfile();
@@ -72,6 +76,8 @@ export default async function SettingsPage() {
         ? profile.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
         : "US";
 
+    const defaultTab = typeof searchParams.tab === 'string' ? searchParams.tab : 'profile';
+
     return (
         <PageWrapper type="page" title={t('title')}>
             <ContentLayout variant="settings">
@@ -83,7 +89,7 @@ export default async function SettingsPage() {
                     </div>
                 } />
 
-                <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col lg:flex-row lg:space-x-12 lg:space-y-0 space-y-8 w-full">
+                <Tabs defaultValue={defaultTab} orientation="vertical" className="flex flex-col lg:flex-row lg:space-x-12 lg:space-y-0 space-y-8 w-full">
                     <aside className="lg:w-64 flex-shrink-0">
                         <TabsList className="flex flex-col h-auto items-start justify-start bg-transparent p-0 space-y-1 w-full">
                             <TabsTrigger value="profile" className="w-full justify-start px-4 py-2 text-left font-semibold data-[state=active]:bg-muted hover:bg-muted/50 transition-colors">

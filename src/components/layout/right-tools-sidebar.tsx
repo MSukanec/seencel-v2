@@ -91,6 +91,7 @@ const tools: ToolItem[] = [
 // ============================================================================
 
 import { SidebarButton } from "./sidebar-button";
+import { NotificationsPopover } from "@/features/notifications/components/notifications-popover";
 
 // ... (keep ToolItem interface and tools array unchanged)
 
@@ -209,16 +210,7 @@ export function RightToolsSidebar({ user }: { user?: any }) { // TODO: Proper Us
                 </DropdownMenu>
 
                 {/* Notifications */}
-                <SidebarButton
-                    icon={Bell}
-                    label="Notificaciones"
-                    isExpanded={false}
-                    tooltip="Notificaciones"
-                    tooltipSide="left"
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground shrink-0"
-                />
+                <NotificationsPopover />
             </div>
 
             {/* Separator */}
