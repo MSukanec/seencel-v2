@@ -56,7 +56,7 @@ export function MarketingForm({ course, details }: MarketingFormProps) {
     const initialMasterclasses = course.masterclasses || [];
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             badge_text: (course as any).badgeText || "", // Handle mapped name or raw
             preview_video_id: course.heroVideo || "",
