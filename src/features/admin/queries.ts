@@ -87,7 +87,7 @@ export async function getAdminOrganizations(): Promise<AdminOrganization[]> {
             plan:plans (
                 name
             ),
-            members:organization_members(count)
+            members:organization_members!organization_members_org_id_fkey(count)
         `);
 
     if (error) {
