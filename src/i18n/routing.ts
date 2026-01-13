@@ -78,6 +78,10 @@ export const routing = defineRouting({
             en: '/founders',
             es: '/fundadores'
         },
+        '/courses/[slug]': {
+            en: '/courses/[slug]',
+            es: '/cursos/[slug]'
+        },
         '/organization/billing/founders': {
             en: '/organization/billing/founders',
             es: '/organizacion/facturacion/fundadores'

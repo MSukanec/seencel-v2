@@ -103,7 +103,8 @@
             "pricing": "Precios",
             "contact": "Contacto",
             "login": "Iniciar Sesión",
-            "getStarted": "Comenzar"
+            "getStarted": "Comenzar",
+            "courseArchicad": "Curso ArchiCAD"
         }
     },
     "MegaMenu": {
@@ -896,6 +897,126 @@
             "complete": "Completar Compra",
             "secure": "Pago 100% seguro",
             "guarantee": "Garantía de satisfacción de 14 días"
+        }
+    },
+    "Course": {
+        "hero": {
+            "badge": "Curso Online Profesional",
+            "modules": "módulos",
+            "lessons": "lecciones",
+            "cta": "Inscribirme Ahora",
+            "watchFree": "Ver Clase Gratis"
+        },
+        "instructor": {
+            "badge": "Instructor",
+            "meetYour": "Conoce a tu instructor"
+        },
+        "howItWorks": {
+            "title": "¿Cómo funciona?",
+            "subtitle": "Un proceso simple para transformar tu carrera",
+            "steps": {
+                "enroll": {
+                    "title": "Inscríbete",
+                    "description": "Completa tu inscripción de forma segura y obtén acceso instantáneo."
+                },
+                "watch": {
+                    "title": "Aprende a tu ritmo",
+                    "description": "Accede a las clases cuando quieras, desde cualquier dispositivo."
+                },
+                "practice": {
+                    "title": "Practica",
+                    "description": "Descarga los archivos de ejercicios y aplica lo aprendido."
+                },
+                "certify": {
+                    "title": "Certifícate",
+                    "description": "Completa el curso y obtén tu certificado profesional."
+                }
+            }
+        },
+        "curriculum": {
+            "title": "Lo que vas a aprender",
+            "subtitle": "Un programa completo diseñado para llevarte de principiante a profesional",
+            "module": "Módulo",
+            "lessons": "lecciones"
+        },
+        "community": {
+            "badge": "Comunidad Exclusiva",
+            "title": "Únete a nuestra comunidad",
+            "description": "Conecta con otros estudiantes y profesionales. Resuelve dudas, comparte proyectos y crece junto a una comunidad activa.",
+            "features": {
+                "networking": "Networking con profesionales del sector",
+                "support": "Soporte y resolución de dudas en tiempo real",
+                "events": "Eventos exclusivos y masterclasses",
+                "resources": "Recursos adicionales y plantillas"
+            },
+            "members": "miembros activos",
+            "support": "soporte"
+        },
+        "studentWorks": {
+            "title": "Proyectos de Nuestros Alumnos",
+            "subtitle": "Mira lo que nuestros estudiantes han logrado aplicando lo aprendido"
+        },
+        "masterclasses": {
+            "badge": "Contenido Gratuito",
+            "title": "Masterclasses Gratuitas",
+            "subtitle": "Prueba nuestro contenido antes de inscribirte",
+            "playlistTitle": "Clases Disponibles"
+        },
+        "license": {
+            "title": "¿Interesado en licencias empresariales?",
+            "subtitle": "Capacita a todo tu equipo con precios especiales.",
+            "cta": "Contactar Ventas"
+        },
+        "modules": {
+            "title": "Contenido del Curso",
+            "subtitle": "Explora cada módulo y lección en detalle",
+            "module": "Módulo",
+            "lessons": "lecciones",
+            "free": "Gratis"
+        },
+        "details": {
+            "title": "Detalles del Curso",
+            "duration": "Duración",
+            "format": "Formato",
+            "level": "Nivel",
+            "language": "Idioma",
+            "certificate": "Certificado de finalización",
+            "lifetime": "Acceso de por vida",
+            "updates": "Actualizaciones incluidas",
+            "included": "Incluido",
+            "notIncluded": "No incluido",
+            "requirements": "Requisitos"
+        },
+        "finalCta": {
+            "title": "¿Comenzamos?",
+            "subtitle": "Transforma tu carrera profesional con las habilidades más demandadas del mercado.",
+            "cta": "Quiero Inscribirme",
+            "guarantee": "30 días de garantía de devolución"
+        },
+        "trustedBy": {
+            "title": "Empresas que ya confían en nosotros"
+        },
+        "faqs": {
+            "title": "Preguntas Frecuentes",
+            "subtitle": "¿Tienes dudas? Aquí respondemos las más comunes.",
+            "items": {
+                "whatIsIncluded": "¿Qué incluye el curso?",
+                "whatIsIncludedAnswer": "El curso incluye acceso completo a todos los módulos y lecciones, archivos de práctica descargables, acceso a la comunidad exclusiva de Discord, certificado de finalización y actualizaciones futuras sin costo adicional.",
+                "howLongAccess": "¿Por cuánto tiempo tengo acceso?",
+                "howLongAccessAnswer": "El acceso es de por vida. Una vez que te inscribes, puedes ver el contenido las veces que quieras, cuando quieras, sin límites de tiempo.",
+                "needPriorKnowledge": "¿Necesito conocimientos previos?",
+                "needPriorKnowledgeAnswer": "No es necesario tener experiencia previa. El curso está diseñado para llevarte desde cero hasta un nivel profesional, paso a paso.",
+                "whichVersion": "¿Qué versión del software necesito?",
+                "whichVersionAnswer": "Recomendamos usar la versión más reciente del software. El curso es compatible con las versiones 24, 25 y 26.",
+                "getCertificate": "¿Cómo obtengo mi certificado?",
+                "getCertificateAnswer": "Al completar todas las lecciones del curso, se generará automáticamente tu certificado digital que podrás descargar y compartir en LinkedIn.",
+                "moneyBack": "¿Hay garantía de devolución?",
+                "moneyBackAnswer": "Sí, ofrecemos 30 días de garantía. Si el curso no cumple tus expectativas, te devolvemos el 100% de tu dinero, sin preguntas."
+            }
+        },
+        "testimonials": {
+            "title": "Lo que dicen nuestros alumnos",
+            "subtitle": "Historias reales de profesionales que transformaron su carrera"
         }
     }
 }

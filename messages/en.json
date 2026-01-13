@@ -102,7 +102,8 @@
             "pricing": "Pricing",
             "contact": "Contact",
             "login": "Log In",
-            "getStarted": "Get Started"
+            "getStarted": "Get Started",
+            "courseArchicad": "ArchiCAD Course"
         }
     },
     "MegaMenu": {
@@ -872,6 +873,125 @@
             "complete": "Complete Purchase",
             "secure": "100% secure payment",
             "guarantee": "14-day satisfaction guarantee"
+        }
+    },
+    "Course": {
+        "hero": {
+            "badge": "Professional Online Course",
+            "modules": "modules",
+            "lessons": "lessons",
+            "cta": "Enroll Now",
+            "watchFree": "Watch Free Class"
+        },
+        "instructor": {
+            "badge": "Instructor",
+            "meetYour": "Meet your instructor"
+        },
+        "howItWorks": {
+            "title": "How does it work?",
+            "subtitle": "A simple process to transform your career",
+            "steps": {
+                "enroll": {
+                    "title": "Enroll",
+                    "description": "Complete your enrollment securely and get instant access."
+                },
+                "watch": {
+                    "title": "Learn at your pace",
+                    "description": "Access classes anytime, from any device."
+                },
+                "practice": {
+                    "title": "Practice",
+                    "description": "Download exercise files and apply what you've learned."
+                },
+                "certify": {
+                    "title": "Get Certified",
+                    "description": "Complete the course and get your professional certificate."
+                }
+            }
+        },
+        "curriculum": {
+            "title": "What you'll learn",
+            "subtitle": "A complete program designed to take you from beginner to professional",
+            "module": "Module",
+            "lessons": "lessons"
+        },
+        "community": {
+            "badge": "Exclusive Community",
+            "title": "Join our community",
+            "description": "Connect with other students and professionals. Get answers, share projects, and grow with an active community.",
+            "features": {
+                "networking": "Networking with industry professionals",
+                "support": "Real-time support and Q&A",
+                "events": "Exclusive events and masterclasses",
+                "resources": "Additional resources and templates"
+            },
+            "members": "active members",
+            "support": "support"
+        },
+        "studentWorks": {
+            "title": "Student Projects",
+            "subtitle": "See what our students have achieved applying what they learned"
+        },
+        "masterclasses": {
+            "badge": "Free Content",
+            "title": "Free Masterclasses",
+            "subtitle": "Try our content before enrolling"
+        },
+        "license": {
+            "title": "Interested in enterprise licenses?",
+            "subtitle": "Train your entire team with special pricing.",
+            "cta": "Contact Sales"
+        },
+        "modules": {
+            "title": "Course Content",
+            "subtitle": "Explore each module and lesson in detail",
+            "module": "Module",
+            "lessons": "lessons",
+            "free": "Free"
+        },
+        "details": {
+            "title": "Course Details",
+            "duration": "Duration",
+            "format": "Format",
+            "level": "Level",
+            "language": "Language",
+            "certificate": "Certificate of completion",
+            "lifetime": "Lifetime access",
+            "updates": "Updates included",
+            "included": "Included",
+            "notIncluded": "Not included",
+            "requirements": "Requirements"
+        },
+        "finalCta": {
+            "title": "Ready to start?",
+            "subtitle": "Transform your professional career with the most in-demand skills in the market.",
+            "cta": "I Want to Enroll",
+            "guarantee": "30-day money-back guarantee"
+        },
+        "trustedBy": {
+            "title": "Companies that trust us"
+        },
+        "faqs": {
+            "title": "Frequently Asked Questions",
+            "subtitle": "Have questions? Here are the most common answers.",
+            "items": {
+                "whatIsIncluded": "What's included in the course?",
+                "whatIsIncludedAnswer": "The course includes full access to all modules and lessons, downloadable practice files, access to the exclusive Discord community, certificate of completion, and future updates at no extra cost.",
+                "howLongAccess": "How long do I have access?",
+                "howLongAccessAnswer": "Access is lifetime. Once you enroll, you can watch the content as many times as you want, whenever you want, with no time limits.",
+                "needPriorKnowledge": "Do I need prior knowledge?",
+                "needPriorKnowledgeAnswer": "No prior experience is necessary. The course is designed to take you from zero to professional level, step by step.",
+                "whichVersion": "Which software version do I need?",
+                "whichVersionAnswer": "We recommend using the latest version of the software. The course is compatible with versions 24, 25, and 26.",
+                "getCertificate": "How do I get my certificate?",
+                "getCertificateAnswer": "Upon completing all course lessons, your digital certificate will be automatically generated for you to download and share on LinkedIn.",
+                "moneyBack": "Is there a money-back guarantee?",
+                "moneyBackAnswer": "Yes, we offer a 30-day guarantee. If the course doesn't meet your expectations, we'll refund 100% of your money, no questions asked."
+            }
+        },
+        "testimonials": {
+            "title": "What our students say",
+            "subtitle": "Real stories from professionals who transformed their careers"
         }
     }
 }

@@ -100,6 +100,7 @@ export function useSidebarNavigation() {
             case 'admin':
                 return [
                     { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
+                    { title: 'Academia', href: '/admin/courses', icon: GraduationCap },
                     { title: 'Directorio', href: '/admin/directory', icon: Users },
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
                     { title: 'Actividad', href: '/admin/audit-logs', icon: FileText },
