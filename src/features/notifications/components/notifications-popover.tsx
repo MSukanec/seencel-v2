@@ -56,15 +56,18 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
         }
     }, [notifications]);
 
-    // Initial Fetch (if empty) & Realtime Subscription
+    // Initial Fetch & Realtime Subscription
     React.useEffect(() => {
         if (!user) return;
 
-        // Fetch fresh if we opened or just mounted to be sure
+        // Fetch notifications when component mounts
         const refresh = async () => {
             const { notifications: fresh } = await fetchUserNotifications();
             setNotifications(fresh);
         };
+
+        // CALL IMMEDIATELY ON MOUNT
+        refresh();
 
         // Use Supabase Realtime
         const supabase = createClient();

@@ -3,7 +3,7 @@ import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
-import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Globe2, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Globe2, ShieldCheck, Building2, HardHat, Layers } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { getTranslations } from 'next-intl/server';
 import { getUserProfile } from "@/features/profile/queries";
@@ -21,8 +21,6 @@ export default async function Home() {
     { icon: CheckCircle2, title: t('Features.items.qualityAssurance.title'), desc: t('Features.items.qualityAssurance.desc') }
   ];
 
-  const brands = ['Acme Build', 'Vertex Construction', 'Nexus Architects', 'Solid Foundations', 'Elevate Group'];
-
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10">
       <Header variant="public" user={profile} />
@@ -30,12 +28,8 @@ export default async function Home() {
       <main className="flex-1 min-h-screen">
         {/* HERO SECTION */}
         <section className="relative pt-20 pb-32 md:pt-32 md:pb-48 overflow-hidden">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(163,230,53,0.12),rgba(255,255,255,0))]" />
           <div className="container px-4 md:px-6 mx-auto relative z-10 text-center">
-            <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 mb-8">
-              <span className="flex h-2 w-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
-              {t('Hero.badge')}
-            </div>
             <h1 className="text-4xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/50 mb-6">
               {t('Hero.title')}
             </h1>
@@ -46,14 +40,14 @@ export default async function Home() {
               {profile ? (
                 <Link
                   href="/organization"
-                  className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20")}
+                  className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20")}
                 >
                   {t('Hero.dashboard')} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               ) : (
                 <Link
                   href="/signup"
-                  className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20")}
+                  className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20")}
                 >
                   {t('Hero.getStarted')} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -67,26 +61,24 @@ export default async function Home() {
               </Link>
             </div>
 
-            {/* Hero Image / Mockup Placeholder */}
+            {/* Hero Visual - Construction themed */}
             <div className="mt-20 relative mx-auto max-w-5xl rounded-xl border bg-background/50 shadow-2xl overflow-hidden backdrop-blur-sm">
-              <div className="aspect-[16/9] bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center text-muted-foreground">
-                <div className="space-y-4 text-center">
-                  <BarChart3 className="h-16 w-16 mx-auto opacity-20" />
-                  <p className="text-sm uppercase tracking-widest opacity-40">{t('Hero.preview')}</p>
+              <div className="aspect-[16/9] bg-gradient-to-br from-primary/5 via-muted/50 to-muted flex items-center justify-center">
+                <div className="grid grid-cols-3 gap-8 p-8 opacity-30">
+                  <div className="flex flex-col items-center gap-2">
+                    <Building2 className="h-12 w-12" />
+                    <span className="text-xs uppercase tracking-widest">Proyectos</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <HardHat className="h-12 w-12" />
+                    <span className="text-xs uppercase tracking-widest">Equipos</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <Layers className="h-12 w-12" />
+                    <span className="text-xs uppercase tracking-widest">Finanzas</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* BRANDS / TRUST SECTION */}
-        <section className="py-12 border-y border-border/5 bg-muted/20">
-          <div className="container px-4 text-center">
-            <p className="text-sm text-muted-foreground mb-8 font-medium">{t('Brands.trustedBy')}</p>
-            <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-              {brands.map((brand) => (
-                <span key={brand} className="text-xl md:text-2xl font-bold font-serif">{brand}</span>
-              ))}
             </div>
           </div>
         </section>
@@ -128,13 +120,13 @@ export default async function Home() {
               <div className="rounded-2xl border bg-background p-8 flex flex-col">
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold">{t('Pricing.starter.title')}</h3>
-                  <div className="text-4xl font-bold mt-4">$0 <span className="text-lg font-normal text-muted-foreground">/mo</span></div>
+                  <div className="text-4xl font-bold mt-4">$0 <span className="text-lg font-normal text-muted-foreground">/mes</span></div>
                   <p className="text-muted-foreground mt-2">{t('Pricing.starter.desc')}</p>
                 </div>
                 <ul className="space-y-4 mb-8 flex-1">
-                  {['Up to 3 active projects', 'Basic Financial Tools', '5 Team Members', 'Community Support'].map((item) => (
+                  {['Hasta 3 proyectos activos', 'Control de gastos básico', '5 miembros de equipo', 'Soporte por comunidad'].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" /> {item}
+                      <CheckCircle2 className="h-4 w-4 text-primary" /> {item}
                     </li>
                   ))}
                 </ul>
@@ -150,11 +142,11 @@ export default async function Home() {
                 </div>
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold">{t('Pricing.pro.title')}</h3>
-                  <div className="text-4xl font-bold mt-4">$49 <span className="text-lg font-normal text-muted-foreground">/mo</span></div>
+                  <div className="text-4xl font-bold mt-4">$49 <span className="text-lg font-normal text-muted-foreground">/mes</span></div>
                   <p className="text-muted-foreground mt-2">{t('Pricing.pro.desc')}</p>
                 </div>
                 <ul className="space-y-4 mb-8 flex-1">
-                  {['Unlimited Projects', 'Advanced Analytics', 'Unlimited Team Members', 'Priority Support', 'Custom Branding'].map((item) => (
+                  {['Proyectos ilimitados', 'Certificaciones de avance', 'Reportes financieros avanzados', 'Soporte prioritario', 'Personalización de marca'].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-primary" /> {item}
                     </li>
@@ -173,14 +165,14 @@ export default async function Home() {
                   <p className="text-muted-foreground mt-2">{t('Pricing.enterprise.desc')}</p>
                 </div>
                 <ul className="space-y-4 mb-8 flex-1">
-                  {['Dedicated Account Manager', 'SLA Guarantees', 'On-premise Deployment', 'Custom Integrations', 'SSO & Advanced Security'].map((item) => (
+                  {['Gerente de cuenta dedicado', 'SLA garantizado 99.9%', 'Implementación on-premise', 'Integraciones personalizadas (ERP)', 'SSO y seguridad avanzada'].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" /> {item}
+                      <CheckCircle2 className="h-4 w-4 text-primary" /> {item}
                     </li>
                   ))}
                 </ul>
                 <Button className="w-full" variant="outline" asChild>
-                  <Link href="/contact" className="pointer-events-none opacity-50">{t('Pricing.enterprise.cta')}</Link>
+                  <Link href="/contact">{t('Pricing.enterprise.cta')}</Link>
                 </Button>
               </div>
             </div>
