@@ -51,7 +51,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
     }, []);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm">
+        <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm hidden md:block">
             <div className="flex h-16 w-full items-center px-8 relative max-w-[1920px] mx-auto">
                 {/* 1. Logo */}
                 <div className="flex items-center justify-start mr-8">

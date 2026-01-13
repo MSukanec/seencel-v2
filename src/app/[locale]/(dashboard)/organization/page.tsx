@@ -44,7 +44,7 @@ export default async function OrganizationPage() {
     const greeting = hour < 12 ? t('greeting.morning') : hour < 18 ? t('greeting.afternoon') : t('greeting.evening');
 
     return (
-        <PageWrapper type="dashboard">
+        <PageWrapper type="dashboard" user={user}>
             <ContentLayout variant="wide">
                 <HeaderTitleUpdater title={organization.name} />
 

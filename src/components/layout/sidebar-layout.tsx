@@ -9,11 +9,17 @@ export function SidebarLayout({ children, user }: { children: React.ReactNode, u
     return (
         <div className="h-screen flex flex-col bg-background overflow-hidden">
             <div className="flex flex-1 overflow-hidden relative">
-                <Sidebar />
+                {/* Desktop Sidebar - Hidden on Mobile */}
+                <div className="hidden md:block h-full">
+                    <Sidebar />
+                </div>
+
                 <main className="flex-1 overflow-hidden flex flex-col">
                     {children}
                 </main>
-                <RightToolsSidebar user={user} />
+                <div className="hidden md:block">
+                    <RightToolsSidebar user={user} />
+                </div>
             </div>
         </div>
     );

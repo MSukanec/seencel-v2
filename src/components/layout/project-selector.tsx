@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectSeparator } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ function getInitials(name: string) {
 export function ProjectSelector({ projects, currentProjectId, basePath }: ProjectSelectorProps) {
     const router = useRouter();
     const params = useParams();
+    const pathname = usePathname();
     const locale = params?.locale as string;
 
     console.log("ProjectSelector: Render", { count: projects.length, current: currentProjectId });
@@ -73,20 +74,26 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
         const projectId = value;
         if (projectId === currentProjectId) return;
 
-        const rawPath = basePath.replace("[projectId]", projectId);
-        // Ensure locale is included if missing from basePath (and if we have a locale)
-        const newPath = (locale && !rawPath.startsWith(`/${locale}`))
-            ? `/${locale}${rawPath}`
-            : rawPath;
+        // Preserves current path, just swap ID
+        if (pathname && pathname.includes(currentProjectId)) {
+            const newPath = pathname.replace(currentProjectId, projectId);
+            router.push(newPath);
+        } else {
+            // Fallback to basePath logic if for some reason ID is not in path
+            const rawPath = basePath.replace("[projectId]", projectId);
+            const newPath = (locale && !rawPath.startsWith(`/${locale}`))
+                ? `/${locale}${rawPath}`
+                : rawPath;
 
-        router.push(newPath);
+            router.push(newPath);
+        }
     };
 
     if (projects.length === 0) return null;
 
     return (
         <Select value={currentProjectId || displayProject?.id} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[260px] h-9 bg-background border-border">
+            <SelectTrigger className="w-full h-9 bg-background border-border">
                 <div className="flex items-center gap-2 w-full overflow-hidden">
                     <Avatar className="h-5 w-5 rounded-md border border-border/50">
                         <AvatarImage src={displayProject?.image_url || undefined} alt={displayProject?.name} />
@@ -131,7 +138,7 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
 
                 <SelectSeparator />
 
-                <SelectItem value="__NEW_PROJECT__" className="text-emerald-600 focus:text-emerald-700 cursor-pointer">
+                <SelectItem value="__NEW_PROJECT__" className="text-muted-foreground focus:text-foreground cursor-pointer">
                     <div className="flex items-center gap-2 font-medium">
                         <Plus className="h-4 w-4" />
                         <span>Crear Nuevo Proyecto</span>

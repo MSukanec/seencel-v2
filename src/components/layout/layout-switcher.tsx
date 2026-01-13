@@ -7,6 +7,8 @@ import { GlobalDrawer } from "@/components/layout/global-drawer";
 import { useLayoutStore } from "@/store/layout-store";
 import { UserProfile } from "@/types/user";
 
+import { UserProvider } from "@/context/user-context";
+
 export function LayoutSwitcher({
     children,
     user,
@@ -34,27 +36,29 @@ export function LayoutSwitcher({
 
     if (layoutMode === 'sidebar') {
         return (
-            <>
+            <UserProvider user={user}>
                 <SidebarLayout user={user}>
                     {children}
                 </SidebarLayout>
                 <GlobalDrawer />
-            </>
+            </UserProvider>
         );
     }
 
     // Default Layout
     return (
-        <div className="flex min-h-screen flex-col bg-background">
-            <Header variant="app" user={user} activeOrgId={activeOrgId} />
-            <GlobalDrawer />
-            <div className="flex-1 flex flex-col">
-                <main className="flex-1">
-                    <div className="w-full mx-auto max-w-[1800px] p-4 animate-in fade-in py-6">
-                        {children}
-                    </div>
-                </main>
+        <UserProvider user={user}>
+            <div className="flex min-h-screen flex-col bg-background">
+                <Header variant="app" user={user} activeOrgId={activeOrgId} />
+                <GlobalDrawer />
+                <div className="flex-1 flex flex-col">
+                    <main className="flex-1">
+                        <div className="w-full mx-auto max-w-[1800px] p-4 animate-in fade-in py-6">
+                            {children}
+                        </div>
+                    </main>
+                </div>
             </div>
-        </div>
+        </UserProvider>
     );
 }

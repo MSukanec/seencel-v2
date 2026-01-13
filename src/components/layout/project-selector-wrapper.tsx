@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { ProjectSelector } from "@/components/layout/project-selector";
 import { fetchProjectsAction } from "@/features/projects/actions/fetch-projects";
+import { cn } from "@/lib/utils";
 
 interface Project {
     id: string;
@@ -15,7 +16,7 @@ interface Project {
 
 import { useOrganization } from "@/context/organization-context";
 
-export function ProjectSelectorWrapper() {
+export function ProjectSelectorWrapper({ className }: { className?: string }) {
     const params = useParams();
     const pathname = usePathname();
     const [projects, setProjects] = useState<Project[]>([]);
@@ -56,7 +57,7 @@ export function ProjectSelectorWrapper() {
     }
 
     return (
-        <div className="mr-4 hidden md:block z-50 pointer-events-auto relative">
+        <div className={cn("mr-4 hidden md:block z-50 pointer-events-auto relative", className)}>
             {/* DEBUG INDICATOR */}
             {/* <div className="text-xs text-red-500 absolute top-0 left-0 bg-white z-[100]">
                 Debug: O={activeOrgId?.substring(0,4)} P={projectId?.substring(0,4)} C={projects.length}
