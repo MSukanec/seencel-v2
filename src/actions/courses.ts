@@ -58,10 +58,12 @@ export async function getCourseBySlug(slug: string): Promise<CourseWithDetails |
       details:course_details(*)
     `)
         .eq('slug', slug)
-        .single();
+        .eq('is_deleted', false)
+        .eq('is_active', true)
+        .maybeSingle();
 
     if (error) {
-        console.error('Error fetching course by slug:', error);
+        console.error('Error fetching course by slug:', JSON.stringify(error, null, 2));
         return null;
     }
 

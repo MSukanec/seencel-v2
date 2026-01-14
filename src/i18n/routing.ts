@@ -42,26 +42,27 @@ export const routing = defineRouting({
             en: '/organization/team',
             es: '/organizacion/equipo'
         },
+        "/academy": {
+            es: "/academia",
+            en: "/academy"
+        },
+        "/academy/courses": {
+            es: "/academia/cursos",
+            en: "/academy/courses"
+        },
+        "/academy/courses/[slug]": {
+            es: "/academia/cursos/[slug]",
+            en: "/academy/courses/[slug]"
+        },
         '/organization/billing/plans': {
             en: '/organization/billing/plans',
             es: '/organizacion/facturacion/planes'
         },
-        '/finance': {
-            en: '/finance',
-            es: '/finanzas'
+        '/organization/finance': {
+            en: '/organization/finance',
+            es: '/organizacion/finanzas'
         },
-        '/learnings': {
-            en: '/learnings',
-            es: '/aprendizajes'
-        },
-        '/learnings/courses': {
-            en: '/learnings/courses',
-            es: '/aprendizajes/cursos'
-        },
-        '/learnings/courses/[slug]': {
-            en: '/learnings/courses/[slug]',
-            es: '/aprendizajes/cursos/[slug]'
-        },
+
         '/contact': {
             en: '/contact',
             es: '/contacto'
@@ -78,10 +79,7 @@ export const routing = defineRouting({
             en: '/founders',
             es: '/fundadores'
         },
-        '/courses/[slug]': {
-            en: '/courses/[slug]',
-            es: '/cursos/[slug]'
-        },
+
         '/organization/billing/founders': {
             en: '/organization/billing/founders',
             es: '/organizacion/facturacion/fundadores'

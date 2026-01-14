@@ -15,12 +15,12 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/layout/sidebar-content";
 import { Bell, Monitor, Sun, Moon, Menu } from "lucide-react";
-import { ModeToggle } from "@/components/mode-toggle";
+import { ModeToggle } from "@/components/shared/mode-toggle";
 import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLayoutStore } from "@/store/layout-store"; // Import store
-import { FeedbackButton } from "@/components/feedback-button";
-import { PlanStatusButton } from "@/components/plan-status-button";
+import { FeedbackButton } from "@/features/feedback/components/feedback-button";
+import { PlanStatusButton } from "@/features/billing/components/plan-status-button";
 
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";

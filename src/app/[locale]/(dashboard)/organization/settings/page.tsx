@@ -1,6 +1,6 @@
 import { getActiveOrganizationId } from "@/actions/general-costs";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
-import { SettingsClient } from "@/components/organization/settings/settings-client";
+import { SettingsClient } from "@/features/organization/components/settings/settings-client";
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";

@@ -2,9 +2,9 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 
 // Lazy load heavy components
-const ProjectTypeForm = dynamic(() => import('@/features/projects/components/ProjectTypeForm').then(mod => mod.ProjectTypeForm));
-const ProjectModalityForm = dynamic(() => import('@/features/projects/components/ProjectModalityForm').then(mod => mod.ProjectModalityForm));
-const ProjectForm = dynamic(() => import('@/features/projects/components/ProjectForm').then(mod => mod.ProjectForm));
+const ProjectTypeForm = dynamic(() => import('@/features/projects/components/project-type-form').then(mod => mod.ProjectTypeForm));
+const ProjectModalityForm = dynamic(() => import('@/features/projects/components/project-modality-form').then(mod => mod.ProjectModalityForm));
+const ProjectForm = dynamic(() => import('@/features/projects/components/project-form').then(mod => mod.ProjectForm));
 
 export interface ModalRegistryItem {
     component: React.ComponentType<any>;

@@ -12,9 +12,9 @@ import { createClientRoleAction, updateClientRoleAction, deleteClientRoleAction 
 import { toast } from "sonner";
 import { useModal } from "@/providers/modal-store";
 import { Plus, Monitor, Building2, MoreHorizontal, Pencil, Trash2, AlertTriangle } from "lucide-react";
-import { FormFooter } from "@/components/global/form-footer";
+import { FormFooter } from "@/components/shared/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
-import { DeleteReplacementModal } from "@/components/global/DeleteReplacementModal";
+import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
 
 interface ClientSettingsProps {
     roles: ClientRole[];

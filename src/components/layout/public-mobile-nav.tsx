@@ -12,7 +12,7 @@ import {
     SheetClose
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Rocket, Users, CreditCard, LayoutDashboard, LogOut, User as UserIcon, Mail } from "lucide-react";
+import { Menu, X, Rocket, Users, CreditCard, LayoutDashboard, LogOut, User as UserIcon, Mail, GraduationCap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { UserProfile } from "@/types/user";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +31,7 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
     const publicLinks = [
         ...(user ? [{ href: "/organization", label: tUser('dashboard'), icon: LayoutDashboard }] : []),
         { href: "/features", label: tPublic('features'), icon: Rocket },
+        { href: "/academy", label: tPublic('academy'), icon: GraduationCap },
         { href: "/founders", label: tPublic('founders'), icon: Users },
         { href: "/pricing", label: tPublic('pricing'), icon: CreditCard },
         { href: "/contact", label: tPublic('contact'), icon: Mail },

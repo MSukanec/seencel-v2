@@ -5,6 +5,15 @@
         "finance": "Finance",
         "settings": "Settings"
     },
+    "Learning": {
+        "title": "Learning",
+        "description": "Knowledge base and lessons learned",
+        "items": {
+            "courses": "Courses",
+            "documentation": "Documentation",
+            "certifications": "Certifications"
+        }
+    },
     "Common": {
         "notifications": "Notifications",
         "profile": "Profile",
@@ -106,7 +115,7 @@
             "contact": "Contact",
             "login": "Log In",
             "getStarted": "Get Started",
-            "courseArchicad": "ArchiCAD Course"
+            "academy": "Learning"
         }
     },
     "MegaMenu": {
@@ -174,8 +183,8 @@
                 "taxesDescription": "Tax obligations management"
             }
         },
-        "Learnings": {
-            "title": "Learnings",
+        "Learning": {
+            "title": "Learning",
             "description": "Knowledge base and lessons learned",
             "items": {
                 "technicalDocs": "Technical Docs",

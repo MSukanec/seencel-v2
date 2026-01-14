@@ -1,8 +1,8 @@
 import { getDashboardData } from "@/features/organization/queries";
-import { OrganizationDetailsForm } from "@/components/organization/organization-details-form";
-import { OrganizationLocationManager } from "@/components/organization/location-manager";
+import { OrganizationDetailsForm } from "@/features/organization/components/organization-details-form";
+import { OrganizationLocationManager } from "@/features/organization/components/location-manager";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OrganizationTabsWrapper } from "@/components/organization/organization-tabs-wrapper";
+import { OrganizationTabsWrapper } from "@/features/organization/components/organization-tabs-wrapper";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
 import { BrandDigitalExperience } from "@/features/organization/components/brand/brand-digital-experience";

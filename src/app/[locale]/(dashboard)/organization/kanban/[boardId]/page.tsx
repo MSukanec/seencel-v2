@@ -1,5 +1,5 @@
 import { getBoardWithData } from "@/features/kanban/queries";
-import { KanbanBoard } from "@/components/kanban/kanban-board";
+import { KanbanBoard } from "@/features/kanban/components/kanban-board";
 import { notFound } from "next/navigation";
 
 interface KanbanBoardPageProps {

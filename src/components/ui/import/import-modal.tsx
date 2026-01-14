@@ -12,7 +12,7 @@ import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useModal } from "@/providers/modal-store";
 import { updateMappingPatterns } from "@/actions/import-mapping";
-import { FormFooter } from "@/components/global/form-footer";
+import { FormFooter } from "@/components/shared/form-footer";
 import { useTranslations } from "next-intl";
 
 interface BulkImportModalProps<T> {

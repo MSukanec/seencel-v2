@@ -1,8 +1,8 @@
 "use client";
 
 import { KanbanBoard } from "@/features/kanban/types";
-import { KanbanBoardSelector } from "@/components/kanban/kanban-board-selector";
-import { KanbanBoardForm } from "@/components/kanban/kanban-board-form";
+import { KanbanBoardSelector } from "@/features/kanban/components/kanban-board-selector";
+import { KanbanBoardForm } from "@/features/kanban/components/kanban-board-form";
 import { useModal } from "@/providers/modal-store";
 import { useCallback } from "react";
 

@@ -5,6 +5,15 @@
         "finance": "Finanzas",
         "settings": "Configuración"
     },
+    "Learning": {
+        "title": "Academia",
+        "description": "Base de conocimiento y lecciones aprendidas",
+        "items": {
+            "courses": "Cursos",
+            "documentation": "Documentación",
+            "certifications": "Certificaciones"
+        }
+    },
     "Common": {
         "notifications": "Notificaciones",
         "profile": "Perfil",
@@ -107,7 +116,7 @@
             "contact": "Contacto",
             "login": "Iniciar Sesión",
             "getStarted": "Comenzar",
-            "courseArchicad": "Curso ArchiCAD"
+            "academy": "Academia"
         }
     },
     "MegaMenu": {
@@ -175,8 +184,8 @@
                 "taxesDescription": "Gestión de obligaciones fiscales"
             }
         },
-        "Learnings": {
-            "title": "Aprendizajes",
+        "Learning": {
+            "title": "Academia",
             "description": "Base de conocimiento y lecciones aprendidas",
             "items": {
                 "technicalDocs": "Documentación Técnica",

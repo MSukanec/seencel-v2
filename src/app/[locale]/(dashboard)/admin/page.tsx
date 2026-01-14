@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminDashboardData } from "@/features/admin/queries";
-import { AdminCharts } from "./admin-charts";
+import { AdminCharts } from "@/features/admin/components/admin-charts";
 import { Activity, Users, Building, Folder, ArrowRight, UserPlus, Zap, UserMinus, Timer, TrendingDown, Route } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

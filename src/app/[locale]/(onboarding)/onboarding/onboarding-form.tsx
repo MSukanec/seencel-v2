@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
 import { Loader2, Building2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AuthLayout } from "@/components/auth/auth-layout";
+import { AuthLayout } from "@/features/auth/components/auth-layout";
 
 export default function OnboardingForm({ countryCode }: { countryCode?: string }) {
     const t = useTranslations("Onboarding");

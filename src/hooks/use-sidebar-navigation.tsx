@@ -44,7 +44,7 @@ const contexts: ContextItem[] = [
 export const contextRoutes: Record<NavigationContext, string> = {
     organization: '/organization',
     project: '/organization/projects',
-    learnings: '/learnings',
+    learnings: '/academy',
     community: '/organization',
     admin: '/admin'
 };
@@ -89,8 +89,8 @@ export function useSidebarNavigation() {
                 ];
             case 'learnings':
                 return [
-                    { title: 'Visión General', href: '/learnings', icon: LayoutDashboard },
-                    { title: 'Cursos', href: '/learnings/courses', icon: Video },
+                    { title: 'Visión General', href: '/academy', icon: LayoutDashboard },
+                    { title: 'Cursos', href: '/academy/courses', icon: Video },
                 ];
             case 'community':
                 return [
@@ -100,7 +100,7 @@ export function useSidebarNavigation() {
             case 'admin':
                 return [
                     { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
-                    { title: 'Academia', href: '/admin/courses', icon: GraduationCap },
+                    { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
                     { title: 'Directorio', href: '/admin/directory', icon: Users },
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
                     { title: 'Actividad', href: '/admin/audit-logs', icon: FileText },

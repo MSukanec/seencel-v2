@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { AuthLayout } from "@/components/auth/auth-layout";
+import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/routing";
 

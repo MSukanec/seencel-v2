@@ -1,6 +1,6 @@
 import { getActiveOrganizationId } from "@/actions/general-costs";
 import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/actions/contacts";
-import { ContactsClient } from "@/components/organization/contacts/contacts-client";
+import { ContactsClient } from "@/features/organization/components/contacts/contacts-client";
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";

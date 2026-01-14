@@ -17,7 +17,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FeedbackButton } from "@/components/feedback-button";
+import { FeedbackButton } from "@/features/feedback/components/feedback-button";
 import {
     Kanban,
     Calendar,

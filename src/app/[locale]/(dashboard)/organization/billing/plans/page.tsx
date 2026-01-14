@@ -1,6 +1,6 @@
 import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
-import { PlansComparison } from "@/components/global/plans-comparison";
-import { PricingFaq } from "@/components/global/pricing-faq";
+import { PlansComparison } from "@/features/billing/components/plans-comparison";
+import { PricingFaq } from "@/features/billing/components/pricing-faq";
 import { getPlanPurchaseFlags } from "@/actions/feature-flags";
 
 export default async function BillingPlansPage() {

@@ -1,4 +1,4 @@
-import { GeneralCostsClient } from "@/components/general-costs/general-costs-client";
+import { GeneralCostsClient } from "@/features/finance/components/general-costs-client";
 import {
     getGeneralCostCategories,
     getGeneralCosts,

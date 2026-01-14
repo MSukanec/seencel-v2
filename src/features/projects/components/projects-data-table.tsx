@@ -3,26 +3,26 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Project } from "@/types/project";
 import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/components/ui/data-table";
-import { DeleteConfirmationDialog } from "@/components/global/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useRouter } from "@/i18n/routing";
 import { useLayoutStore } from "@/store/layout-store";
-import { ProjectStatusBadge } from "./ProjectStatusBadge";
+import { ProjectStatusBadge } from "./project-status-badge";
 import { deleteProject } from "@/features/projects/actions";
 import { useModal } from "@/providers/modal-store";
-import { CreateProjectButton } from "./CreateProjectButton";
+import { CreateProjectButton } from "./create-project-button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ProjectCard } from "@/components/projects/project-card";
+import { ProjectCard } from "@/features/projects/components/project-card";
 
 import { Circle, Timer, CheckCircle2, Ban, FolderSearch } from "lucide-react";
 import { DataTableEmptyState } from "@/components/ui/data-table/data-table-empty-state";
 import { Button } from "@/components/ui/button";
 
-import { ProjectForm } from "./ProjectForm";
+import { ProjectForm } from "./project-form";
 
 interface ProjectsDataTableProps {
     projects: Project[];

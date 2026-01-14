@@ -13,7 +13,7 @@ import { getUserOrganizations } from "@/features/organization/queries";
 import { SwitchOrganizationButton } from "@/features/organization/components/SwitchOrganizationButton";
 import { getUserProfile } from "@/features/profile/queries";
 import { ProfileForm } from "@/features/profile/components/ProfileForm";
-import { PreferencesTab } from "@/components/settings/preferences-tab";
+import { PreferencesTab } from "@/features/preferences/components/preferences-tab";
 import { getStorageUrl } from "@/lib/storage-utils";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import { AvatarManager } from "@/features/profile/components/AvatarManager";

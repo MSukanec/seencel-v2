@@ -43,12 +43,6 @@ export function Footer() {
                             <li>
                                 <Link href="/pricing" className="hover:text-primary transition-colors">Precios</Link>
                             </li>
-                            <li>
-                                <a href="#" className="hover:text-primary transition-colors">Roadmap</a>
-                            </li>
-                            <li>
-                                <a href="#" className="hover:text-primary transition-colors">Enterprise</a>
-                            </li>
                         </ul>
                     </div>
 
@@ -56,15 +50,6 @@ export function Footer() {
                     <div className="space-y-4">
                         <h4 className="font-semibold text-foreground tracking-tight">Compañía</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li>
-                                <a href="#" className="hover:text-primary transition-colors">Sobre Nosotros</a>
-                            </li>
-                            <li>
-                                <a href="#" className="hover:text-primary transition-colors">Blog</a>
-                            </li>
-                            <li>
-                                <a href="#" className="hover:text-primary transition-colors">Carreras</a>
-                            </li>
                             <li>
                                 <Link href="/contact" className="hover:text-primary transition-colors">Contacto</Link>
                             </li>
@@ -76,15 +61,9 @@ export function Footer() {
                         <h4 className="font-semibold text-foreground tracking-tight">Legal</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
-                                <a href="#" className="hover:text-primary transition-colors">{t('termsOfService')}</a>
-                            </li>
-                            <li>
                                 <Link href="/privacy" className="hover:text-primary transition-colors">
                                     {t('privacyPolicy')}
                                 </Link>
-                            </li>
-                            <li>
-                                <a href="#" className="hover:text-primary transition-colors">{t('cookiesPolicy')}</a>
                             </li>
                         </ul>
                     </div>
@@ -95,24 +74,6 @@ export function Footer() {
                     <p className="text-xs text-muted-foreground">
                         © {currentYear} Seencel Inc. Todos los derechos reservados.
                     </p>
-                    <div className="flex items-center space-x-4">
-                        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <Twitter className="h-4 w-4" />
-                            <span className="sr-only">Twitter</span>
-                        </a>
-                        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <Linkedin className="h-4 w-4" />
-                            <span className="sr-only">LinkedIn</span>
-                        </a>
-                        <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <Github className="h-4 w-4" />
-                            <span className="sr-only">GitHub</span>
-                        </a>
-                        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <Instagram className="h-4 w-4" />
-                            <span className="sr-only">Instagram</span>
-                        </a>
-                    </div>
                 </div>
             </div>
         </footer>

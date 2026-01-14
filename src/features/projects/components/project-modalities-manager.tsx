@@ -20,12 +20,12 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DeleteReplacementModal } from "@/components/global/DeleteReplacementModal";
+import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
 import dynamic from "next/dynamic";
 import { useModal } from "@/providers/modal-store";
 import { deleteProjectModality } from "@/features/projects/actions/project-settings-actions";
 
-const ProjectModalityForm = dynamic(() => import("./ProjectModalityForm").then(mod => mod.ProjectModalityForm), {
+const ProjectModalityForm = dynamic(() => import("./project-modality-form").then(mod => mod.ProjectModalityForm), {
     loading: () => <p className="p-4">Cargando formulario...</p>
 });
 

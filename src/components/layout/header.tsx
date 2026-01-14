@@ -31,8 +31,8 @@ import Image from "next/image";
 import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLayoutStore } from "@/store/layout-store";
-import { FeedbackButton } from "@/components/feedback-button";
-import { PlanStatusButton } from "@/components/plan-status-button";
+import { FeedbackButton } from "@/features/feedback/components/feedback-button";
+import { PlanStatusButton } from "@/features/billing/components/plan-status-button";
 import { PublicMobileHeader } from "./public-mobile-header";
 
 
@@ -118,7 +118,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
 
                                             <div className="flex flex-col space-y-2">
                                                 <h4 className="font-medium leading-none mb-2 text-sm text-foreground/80 tracking-wide uppercase">{tMega('Organization.sections.finance')}</h4>
-                                                <ListItem href="/finance" title={tMega('Organization.items.finance')} />
+                                                <ListItem href="/organization/finance" title={tMega('Organization.items.finance')} />
                                                 <ListItem href="#" title={tMega('Organization.items.capital')} />
                                                 <ListItem href="#" title={tMega('Organization.items.generalExpenses')} />
                                                 <ListItem href="#" title={tMega('Organization.items.taxes')} />
@@ -193,7 +193,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                                 <NavigationMenuLink asChild>
                                                     <Link
                                                         className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-green-500/10 to-green-500/5 p-6 no-underline outline-none focus:shadow-md hover:bg-green-500/20 transition-colors"
-                                                        href="/finance"
+                                                        href="/organization/finance"
                                                     >
                                                         <Wallet className="h-8 w-8 mb-4 text-green-500" />
                                                         <div className="mb-2 mt-4 text-lg font-medium text-foreground">
@@ -206,7 +206,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                                     </Link>
                                                 </NavigationMenuLink>
                                             </li>
-                                            <ListItem href="/finance" title={tMega('Finance.items.overview')}>
+                                            <ListItem href="/organization/finance" title={tMega('Finance.items.overview')}>
                                                 {tMega('Finance.items.overviewDescription')}
                                             </ListItem>
                                             <ListItem href="#" title={tMega('Finance.items.invoices')}>
@@ -219,10 +219,10 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                     </NavigationMenuContent>
                                 </NavigationMenuItem>
 
-                                {/* LEARNINGS */}
+                                {/* LEARNING */}
                                 <NavigationMenuItem>
                                     <NavigationMenuTrigger className="bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted/50">
-                                        {tMega('Learnings.title')}
+                                        {tMega('Learning.title')}
                                     </NavigationMenuTrigger>
                                     <NavigationMenuContent>
                                         <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
@@ -234,23 +234,23 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                                     >
                                                         <GraduationCap className="h-8 w-8 mb-4 text-purple-500" />
                                                         <div className="mb-2 mt-4 text-lg font-medium text-foreground">
-                                                            {tMega('Learnings.title')}
+                                                            {tMega('Learning.title')}
                                                         </div>
                                                         <p className="text-sm leading-tight text-muted-foreground">
-                                                            {tMega('Learnings.description')}
+                                                            {tMega('Learning.description')}
                                                         </p>
                                                         <ArrowRight className="ml-auto h-4 w-4 mt-4 opacity-50" />
                                                     </Link>
                                                 </NavigationMenuLink>
                                             </li>
-                                            <ListItem href="#" title={tMega('Learnings.items.courses')}>
-                                                {tMega('Learnings.items.coursesDescription')}
+                                            <ListItem href="#" title={tMega('Learning.items.courses')}>
+                                                {tMega('Learning.items.coursesDescription')}
                                             </ListItem>
-                                            <ListItem href="#" title={tMega('Learnings.items.documentation')}>
-                                                {tMega('Learnings.items.documentationDescription')}
+                                            <ListItem href="#" title={tMega('Learning.items.documentation')}>
+                                                {tMega('Learning.items.documentationDescription')}
                                             </ListItem>
-                                            <ListItem href="#" title={tMega('Learnings.items.certifications')}>
-                                                {tMega('Learnings.items.certificationsDescription')}
+                                            <ListItem href="#" title={tMega('Learning.items.certifications')}>
+                                                {tMega('Learning.items.certificationsDescription')}
                                             </ListItem>
                                         </ul>
                                     </NavigationMenuContent>
@@ -302,8 +302,8 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                             <nav className="hidden md:flex items-center justify-center">
                                 <ul className="flex items-center space-x-8">
-                                    <li><Link href={{ pathname: "/courses/[slug]", params: { slug: "master-archicad" } }} className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">{tPublic('courseArchicad')}</Link></li>
                                     <li><Link href="/features" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('features')}</Link></li>
+                                    <li><Link href="/academy" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('academy')}</Link></li>
                                     <li><Link href="/founders" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('founders')}</Link></li>
                                     <li><Link href="/pricing" className="text-sm font-medium hover:text-primary transition-colors">{tPublic('pricing')}</Link></li>
                                 </ul>
@@ -355,7 +355,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                     {/* User Dropdown */}
                                     <DropdownMenu modal={false}>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="relative h-8 w-8 rounded-full ml-2">
+                                            <Button variant="ghost" className="relative h-8 w-8 rounded-full ml-2" suppressHydrationWarning>
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src={user?.avatar_url || ""} alt={user?.full_name || "User"} />
                                                     <AvatarFallback>

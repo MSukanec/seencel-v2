@@ -1,4 +1,4 @@
-import { FoundersContent } from "@/components/founders/founders-content";
+import { FoundersContent } from "@/features/founders/components/founders-content";
 
 export default function DashboardFoundersPage() {
     return (

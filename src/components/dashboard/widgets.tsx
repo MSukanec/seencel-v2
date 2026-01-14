@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Briefcase, Activity, Calendar, ArrowRight, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ProjectCard } from "@/components/projects/project-card";
+import { ProjectCard } from "@/features/projects/components/project-card";
 import { Link } from "@/i18n/routing";
 
 // --- Project Cards Grid (NEW - Shows 3 recent projects as cards) ---

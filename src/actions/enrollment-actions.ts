@@ -89,7 +89,7 @@ export async function createEnrollment(data: CreateEnrollmentData) {
         throw new Error(error.message);
     }
 
-    revalidatePath("/admin/courses");
+    revalidatePath("/admin/academy");
     return enrollment;
 }
 

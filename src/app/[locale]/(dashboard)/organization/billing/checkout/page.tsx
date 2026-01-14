@@ -1,5 +1,5 @@
 import { getPlans } from "@/actions/plans";
-import { CheckoutContent } from "@/components/checkout/checkout-content";
+import { CheckoutContent } from "@/features/billing/components/checkout-content";
 
 interface CheckoutPageProps {
     searchParams: Promise<{

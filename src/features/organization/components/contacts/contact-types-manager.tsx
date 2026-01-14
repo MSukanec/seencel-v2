@@ -1,0 +1,186 @@
+"use client";
+
+import { useState } from "react";
+import { Plus, Pencil, Trash2, MoreHorizontal, Monitor, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { useModal } from "@/providers/modal-store";
+import { deleteContactType } from "@/actions/contacts"; // Need to update this action
+import { ContactType } from "@/types/contact";
+import { ContactTypeForm } from "./contact-type-form";
+
+interface ContactTypesManagerProps {
+    organizationId: string;
+    initialTypes: ContactType[];
+}
+
+export function ContactTypesManager({ organizationId, initialTypes }: ContactTypesManagerProps) {
+    const { openModal } = useModal();
+    // Use generic keys or hardcoded for now until translations file is updated
+    const title = "Tipos de Contacto";
+    const description = "Gestiona las etiquetas o categorías para tus contactos.";
+
+    const [types, setTypes] = useState<ContactType[]>(initialTypes);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deletingType, setDeletingType] = useState<ContactType | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleOpenCreate = () => {
+        openModal(
+            <ContactTypeForm
+                organizationId={organizationId}
+                onSuccess={(newType) => {
+                    setTypes(prev => [...prev, newType].sort((a, b) => a.name.localeCompare(b.name)));
+                }}
+            />,
+            {
+                title: "Crear Tipo",
+                description: "Define un nuevo tipo para clasificar tus contactos.",
+                size: 'md'
+            }
+        );
+    };
+
+    const handleOpenEdit = (type: ContactType) => {
+        openModal(
+            <ContactTypeForm
+                organizationId={organizationId}
+                initialData={type}
+                onSuccess={(updatedType) => {
+                    setTypes(prev => prev.map(t =>
+                        t.id === updatedType.id ? updatedType : t
+                    ).sort((a, b) => a.name.localeCompare(b.name)));
+                }}
+            />,
+            {
+                title: "Editar Tipo",
+                description: "Modifica el nombre de este tipo de contacto.",
+                size: 'md'
+            }
+        );
+    };
+
+    const handleOpenDelete = (type: ContactType) => {
+        setDeletingType(type);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDelete = async (replacementId: string | null) => {
+        if (!deletingType) return;
+        setIsDeleting(true);
+
+        try {
+            await deleteContactType(deletingType.id, replacementId || undefined);
+            setTypes(prev => prev.filter(t => t.id !== deletingType.id));
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteDialogOpen(false);
+            setDeletingType(null);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                    <CardTitle className="text-lg">{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </div>
+                <Button size="sm" onClick={handleOpenCreate}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar
+                </Button>
+            </CardHeader>
+            <CardContent>
+                {types.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                        No hay tipos definidos.
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="pl-4">Nombre</TableHead>
+                                <TableHead className="w-[180px]">Origen</TableHead>
+                                <TableHead className="w-[80px] text-right pr-4">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {types.map((type) => (
+                                <TableRow key={type.id}>
+                                    <TableCell className="font-medium pl-4">{type.name}</TableCell>
+                                    <TableCell>
+                                        {!type.organization_id ? (
+                                            <Badge variant="system" icon={<Monitor className="h-3 w-3" />}>
+                                                Sistema
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="organization" icon={<Building2 className="h-3 w-3" />}>
+                                                Organización
+                                            </Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right pr-4">
+                                        {!!type.organization_id && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Acciones</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleOpenEdit(type)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Editar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleOpenDelete(type)}
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Eliminar
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+
+            <DeleteReplacementModal
+                isOpen={isDeleteDialogOpen}
+                onClose={() => {
+                    setIsDeleteDialogOpen(false);
+                    setDeletingType(null);
+                }}
+                onConfirm={handleDelete}
+                itemToDelete={deletingType ? { id: deletingType.id, name: deletingType.name } : null}
+                replacementOptions={types.filter(t => t.id !== deletingType?.id)}
+                entityLabel="tipo de contacto"
+                title="Eliminar Tipo"
+                description="Si eliminas este tipo, puedes elegir otro para reasignar los contactos que lo tenían."
+            />
+        </Card>
+    );
+}
