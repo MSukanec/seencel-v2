@@ -26,9 +26,8 @@ export function useCashFlowData(movements: any[], days = 14) {
             const date = m.payment_date?.split('T')[0];
             if (result.has(date)) {
                 const entry = result.get(date)!;
-                // Unified view uses 'amount' (usually positive) and 'amount_sign' (1 or -1)
-                // Fallback to simple amount if sign not present
-                const rawAmount = Number(m.amount);
+                // Prefer functional_amount if available, else fallback to amount
+                const rawAmount = Number(m.functional_amount ?? m.amount);
                 const sign = Number(m.amount_sign ?? 1);
                 const signedAmount = rawAmount * sign;
 
@@ -39,18 +38,12 @@ export function useCashFlowData(movements: any[], days = 14) {
             }
         });
 
-        // Calculate running balance or daily balance? 
-        // Original code seemed to just sum daily balance.
-        // If we want cash flow over time (accumulated), we'd need running total.
-        // But the chart seems to show "Trend" so daily flux or area. 
-        // Original code returns Array.from(result.values()) which are daily aggregates.
-
         return Array.from(result.values());
     }, [movements, days]);
 
     const totalBalance = useMemo(() => {
         return movements.reduce((acc, m) => {
-            const rawAmount = Number(m.amount);
+            const rawAmount = Number(m.functional_amount ?? m.amount);
             const sign = Number(m.amount_sign ?? 1);
             return acc + (rawAmount * sign);
         }, 0);

@@ -2,13 +2,19 @@
 
 import { useCashFlowData } from "@/features/finance/hooks/use-cash-flow-data";
 import { BaseAreaChart } from "@/components/charts/base-area-chart";
-import { formatCurrency } from "@/components/charts/chart-config";
 import { DollarSign, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrencyOptional } from "@/providers/currency-context";
+import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
 
 export function FinanceCashFlowWidget({ movements, className }: { movements: any[], className?: string }) {
     const { data, totalBalance } = useCashFlowData(movements);
+    const currencyContext = useCurrencyOptional();
+
+    const formatCurrency = (amount: number) => {
+        return formatCurrencyUtil(amount, currencyContext?.primaryCurrency || 'ARS');
+    };
 
     return (
         <Card className={cn("p-6 flex flex-col h-full border rounded-2xl bg-card/50 backdrop-blur-sm shadow-sm", className)}>

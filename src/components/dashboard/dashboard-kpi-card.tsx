@@ -5,6 +5,15 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
+/** Currency breakdown item for bi-monetary display */
+export interface CurrencyBreakdownItem {
+    currencyCode: string;
+    symbol: string;
+    nativeTotal: number;
+    functionalTotal: number;
+    isPrimary: boolean;
+}
+
 interface DashboardKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     title: string;
     value: string | number;
@@ -16,6 +25,8 @@ interface DashboardKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     };
     description?: string;
     iconClassName?: string;
+    /** Optional currency breakdown for bi-monetary KPIs */
+    currencyBreakdown?: CurrencyBreakdownItem[];
 }
 
 export function DashboardKpiCard({
@@ -26,8 +37,11 @@ export function DashboardKpiCard({
     className,
     iconClassName,
     description,
+    currencyBreakdown,
     ...props
 }: DashboardKpiCardProps) {
+    // Only show breakdown if there are 2+ currencies
+    const showBreakdown = currencyBreakdown && currencyBreakdown.length > 1;
 
     return (
         <Card className={cn("overflow-hidden transition-all hover:shadow-md", className)} {...props}>
@@ -36,6 +50,23 @@ export function DashboardKpiCard({
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">{title}</p>
                         <h2 className="text-3xl font-bold tracking-tight mt-2">{value}</h2>
+
+                        {/* Currency Breakdown */}
+                        {showBreakdown && (
+                            <div className="mt-1.5 space-y-0.5">
+                                {currencyBreakdown.map((item) => (
+                                    <p key={item.currencyCode} className="text-xs text-muted-foreground">
+                                        {item.isPrimary ? (
+                                            <span>{item.symbol} {item.nativeTotal.toLocaleString('es-AR')} nativo</span>
+                                        ) : (
+                                            <span className="text-primary/80">
+                                                + {item.currencyCode} {item.nativeTotal.toLocaleString('es-AR')}
+                                            </span>
+                                        )}
+                                    </p>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     {icon && (
                         <div className={cn("p-3 rounded-xl bg-primary/10 text-primary transition-colors", iconClassName)}>
@@ -70,3 +101,4 @@ export function DashboardKpiCard({
         </Card>
     );
 }
+

@@ -19,7 +19,7 @@ export function GeneralCostsClient({ organizationId, categories, concepts, payme
     return (
         <>
             <TabsContent value="dashboard" className="m-0 h-full focus-visible:outline-none">
-                <DashboardTab data={dashboardData} />
+                <DashboardTab data={dashboardData} payments={payments} />
             </TabsContent>
             <TabsContent value="concepts" className="m-0 h-full focus-visible:outline-none">
                 <ConceptsTable data={concepts} categories={categories} organizationId={organizationId} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { EnhancedDashboardData } from "@/types/general-costs";
+import { EnhancedDashboardData, GeneralCostPaymentView } from "@/types/general-costs";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { InsightCard } from "@/components/dashboard/dashboard-insight-card";
 import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock } from "lucide-react";
@@ -8,17 +8,27 @@ import { Badge } from "@/components/ui/badge";
 import { BaseAreaChart } from "@/components/charts/base-area-chart";
 import { BaseDonutChart } from "@/components/charts/base-donut-chart";
 import { Card, CardContent, CardHeader } from "@/components/ui/card"; // Kept for Activity List only
+import { useCurrencyOptional } from "@/providers/currency-context";
+import { formatCurrency as formatCurrencyUtil, getAmountsByCurrency } from "@/lib/currency-utils";
 
 interface DashboardTabProps {
     data: EnhancedDashboardData;
+    payments?: GeneralCostPaymentView[];
 }
 
-export function DashboardTab({ data }: DashboardTabProps) {
+export function DashboardTab({ data, payments }: DashboardTabProps) {
     const { kpis, charts, insights, recentActivity } = data;
+    const currencyContext = useCurrencyOptional();
+    const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+        return formatCurrencyUtil(amount, currencyContext?.primaryCurrency || 'ARS');
     };
+
+    // Calculate currency breakdown for expenses
+    // Use full payments if available, otherwise fallback to recentActivity
+    const expensePayments = payments || recentActivity;
+    const expenseBreakdown = getAmountsByCurrency(expensePayments as any, primaryCurrencyCode);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
@@ -34,6 +44,7 @@ export function DashboardTab({ data }: DashboardTabProps) {
                     icon={<DollarSign className="w-5 h-5" />}
                     description={kpis.totalExpense.description}
                     trend={{ value: "-93.2%", direction: "down" }}
+                    currencyBreakdown={expenseBreakdown}
                 />
                 <DashboardKpiCard
                     title={kpis.monthlyAverage.label}

@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
+import { useCurrencyOptional } from "@/providers/currency-context";
+import { formatCurrency as formatCurrencyUtil, sumMonetaryAmounts, getAmountsByCurrency } from "@/lib/currency-utils";
 
 interface ClientsOverviewProps {
     summary: ClientFinancialSummary[];
@@ -19,20 +21,30 @@ interface ClientsOverviewProps {
 }
 
 export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
+    const currencyContext = useCurrencyOptional();
+
     // ========================================
-    // HELPERS
+    // HELPERS - Use context currency or fallback to ARS
     // ========================================
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+    const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
+
+    const formatCurrency = (amount: number, currencyCode?: string) => {
+        return formatCurrencyUtil(amount, currencyCode || currencyContext?.primaryCurrency || 'ARS');
     };
 
     // ========================================
     // KPI CALCULATIONS
     // ========================================
     const kpis = useMemo(() => {
+        // Use bi-currency aware sum for proper multi-currency handling
+        // Note: summary should ideally have currency_code and exchange_rate
+        // For now, we sum the amounts as they're stored (should be in functional currency)
         const totalCommitted = summary.reduce((acc, curr) => acc + (Number(curr.total_committed_amount) || 0), 0);
         const totalPaid = summary.reduce((acc, curr) => acc + (Number(curr.total_paid_amount) || 0), 0);
         const totalBalance = summary.reduce((acc, curr) => acc + (Number(curr.balance_due) || 0), 0);
+
+        // Get breakdown by currency from payments (for future KPI breakdown display)
+        const currencyBreakdown = getAmountsByCurrency(payments as any, primaryCurrencyCode);
 
         // Calculate monthly average from payments
         const paymentsByMonth = payments.reduce((acc, p) => {
@@ -203,6 +215,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                     value={formatCurrency(kpis.totalCommitted)}
                     icon={<FileText className="w-5 h-5" />}
                     description="Valor total de contratos"
+                    currencyBreakdown={getAmountsByCurrency(summary as any, primaryCurrencyCode)}
                 />
                 <DashboardKpiCard
                     title="Cobrado a la Fecha"
@@ -214,6 +227,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                         label: "vs mes anterior",
                         direction: kpis.trendDirection
                     }}
+                    currencyBreakdown={getAmountsByCurrency(payments as any, primaryCurrencyCode)}
                 />
                 <DashboardKpiCard
                     title="Saldo a la Fecha"
@@ -221,6 +235,11 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                     icon={<Clock className="w-5 h-5" />}
                     iconClassName="bg-amber-500/10 text-amber-600"
                     description="Por cobrar"
+                    currencyBreakdown={getAmountsByCurrency(summary.map(s => ({
+                        amount: s.balance_due,
+                        currency_code: s.currency_code,
+                        currency_symbol: s.currency_symbol
+                    })) as any, primaryCurrencyCode)}
                 />
                 <DashboardKpiCard
                     title="Promedio Mensual"
