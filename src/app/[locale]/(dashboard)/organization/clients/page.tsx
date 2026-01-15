@@ -94,7 +94,13 @@ export default async function ClientsPage({ searchParams }: PageProps) {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ClientCommitmentsTable data={commitments} clients={clients} />
+                                <ClientCommitmentsTable
+                                    data={commitments}
+                                    clients={clients}
+                                    payments={payments}
+                                    financialData={{}}
+                                    orgId={orgId}
+                                />
                             </CardContent>
                         </Card>
                     </TabsContent>

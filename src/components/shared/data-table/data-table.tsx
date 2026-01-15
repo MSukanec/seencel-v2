@@ -146,7 +146,7 @@ export function DataTable<TData, TValue>({
             baseColumns.push({
                 id: "actions",
                 header: () => <span className="sr-only">Acciones</span>,
-                cell: ({ row }) => (
+                cell: ({ row }: { row: any }) => (
                     <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                         <DataTableRowActions
                             row={row}

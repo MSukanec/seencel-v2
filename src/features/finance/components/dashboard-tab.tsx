@@ -28,36 +28,31 @@ export function DashboardTab({ data }: DashboardTabProps) {
         <div className="space-y-6">
             {/* 1. KPI Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                import {DashboardKpiCard} from "@/components/dashboard/dashboard-kpi-card";
-                // ...
-                {/* 1. KPI Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <DashboardKpiCard
-                        title={kpis.totalExpense.label}
-                        value={formatCurrency(Number(kpis.totalExpense.value))}
-                        icon={<DollarSign className="w-5 h-5" />}
-                        description={kpis.totalExpense.description}
-                        trend={{ value: "-93.2%", direction: "down" }} // Placeholder
-                    />
-                    <DashboardKpiCard
-                        title={kpis.monthlyAverage.label}
-                        value={formatCurrency(Number(kpis.monthlyAverage.value))}
-                        icon={<TrendingUp className="w-5 h-5" />}
-                        description={kpis.monthlyAverage.description}
-                    />
-                    <DashboardKpiCard
-                        title={kpis.totalPayments.label}
-                        value={kpis.totalPayments.value}
-                        icon={<CreditCard className="w-5 h-5" />}
-                        description={kpis.totalPayments.description}
-                    />
-                    <DashboardKpiCard
-                        title={kpis.expenseConcentration.label}
-                        value={kpis.expenseConcentration.value}
-                        icon={<PieChartIcon className="w-5 h-5" />}
-                        description={kpis.expenseConcentration.description}
-                    />
-                </div>
+                <DashboardKpiCard
+                    title={kpis.totalExpense.label}
+                    value={formatCurrency(Number(kpis.totalExpense.value))}
+                    icon={<DollarSign className="w-5 h-5" />}
+                    description={kpis.totalExpense.description}
+                    trend={{ value: "-93.2%", direction: "down" }}
+                />
+                <DashboardKpiCard
+                    title={kpis.monthlyAverage.label}
+                    value={formatCurrency(Number(kpis.monthlyAverage.value))}
+                    icon={<TrendingUp className="w-5 h-5" />}
+                    description={kpis.monthlyAverage.description}
+                />
+                <DashboardKpiCard
+                    title={kpis.totalPayments.label}
+                    value={kpis.totalPayments.value}
+                    icon={<CreditCard className="w-5 h-5" />}
+                    description={kpis.totalPayments.description}
+                />
+                <DashboardKpiCard
+                    title={kpis.expenseConcentration.label}
+                    value={kpis.expenseConcentration.value}
+                    icon={<PieChartIcon className="w-5 h-5" />}
+                    description={kpis.expenseConcentration.description}
+                />
             </div>
 
             {/* 2. Charts Row */}

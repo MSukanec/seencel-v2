@@ -46,7 +46,7 @@ export function CourseCard({ course, className, basePath = '/academy' }: CourseC
                 <div className="flex justify-between items-start gap-2">
                     <CardTitle className="text-lg font-semibold line-clamp-2 leading-tight">
                         <Link
-                            href={`${basePath}/${course.slug}`}
+                            href={`${basePath}/${course.slug}` as any}
                             className="hover:underline"
                         >
                             {course.title}
@@ -73,7 +73,7 @@ export function CourseCard({ course, className, basePath = '/academy' }: CourseC
                 </div>
                 <Button size="sm" variant="outline" asChild>
                     <Link
-                        href={`${basePath}/${course.slug}`}
+                        href={`${basePath}/${course.slug}` as any}
                     >
                         Ver detalles
                     </Link>

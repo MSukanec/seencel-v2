@@ -21,8 +21,8 @@ const commitmentFormSchema = z.object({
     organization_id: z.string().min(1),
     amount: z.coerce.number().positive("El monto debe ser mayor a 0"),
     currency_id: z.string().min(1, "La moneda es requerida"),
-    exchange_rate: z.coerce.number().optional(),
-    commitment_method: z.enum(["fixed"]).default("fixed"),
+    exchange_rate: z.coerce.number().positive().default(1),
+    commitment_method: z.literal("fixed").default("fixed"),
     unit_name: z.string().optional(),
     unit_description: z.string().optional(),
 });
@@ -42,14 +42,14 @@ export function CommitmentForm({ clients, financialData, onSuccess, projectId, o
     const { currencies, defaultCurrencyId } = financialData;
 
     const form = useForm<z.infer<typeof commitmentFormSchema>>({
-        resolver: zodResolver(commitmentFormSchema),
+        resolver: zodResolver(commitmentFormSchema) as any,
         defaultValues: {
             amount: 0,
             project_id: projectId || "",
             organization_id: orgId || "",
             client_id: "",
             currency_id: defaultCurrencyId || "",
-            // exchange_rate default removed to show placeholder
+            exchange_rate: 1,
             commitment_method: "fixed",
             unit_name: "",
             unit_description: "",

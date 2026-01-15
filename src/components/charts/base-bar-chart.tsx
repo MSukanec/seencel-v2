@@ -93,7 +93,7 @@ export function BaseBarChart({
                 />
                 <ChartTooltip
                     cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
-                    content={<ChartTooltipContent formatter={tooltipFormatter} hideLabel={false} />}
+                    content={<ChartTooltipContent formatter={tooltipFormatter as any} hideLabel={false} />}
                 />
                 <Bar
                     dataKey={yKey}

@@ -93,7 +93,7 @@ export function BaseAreaChart({
                 />
                 <ChartTooltip
                     cursor={{ stroke: `var(--color-${yKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
-                    content={<ChartTooltipContent formatter={tooltipFormatter} />}
+                    content={<ChartTooltipContent formatter={tooltipFormatter as any} />}
                 />
                 <Area
                     type="monotone"

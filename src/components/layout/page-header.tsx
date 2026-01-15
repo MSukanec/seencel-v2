@@ -81,8 +81,8 @@ export function PageHeader({
                     {/* Page Title & Icon */}
                     <div className="flex items-center gap-3">
                         {icon ? (
-                            React.cloneElement(icon, {
-                                className: cn("h-6 w-6 text-primary", icon.props.className)
+                            React.cloneElement(icon as any, {
+                                className: cn("h-6 w-6 text-primary", (icon as any).props?.className)
                             })
                         ) : ActiveIcon ? (
                             <ActiveIcon className="h-6 w-6 text-primary" />

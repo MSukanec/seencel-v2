@@ -1,6 +1,6 @@
 "use client";
 
-import { ProjectForm } from "@/features/projects/components/ProjectForm";
+import { ProjectForm } from "@/features/projects/components/project-form";
 import { Project } from "@/types/project";
 import { MoreHorizontal } from "lucide-react";
 import { deleteProject } from "@/features/projects/actions";
