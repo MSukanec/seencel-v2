@@ -295,3 +295,84 @@ export async function getPortalSettings(projectId: string) {
     if (error) return { data: null, error };
     return { data: data as ClientPortalSettings, error: null };
 }
+
+/**
+ * Fetch all data needed for the public client portal
+ */
+export async function getClientPortalData(projectId: string, clientId: string) {
+    const supabase = await createClient();
+
+    // Fetch all data in parallel
+    const [
+        projectResult,
+        clientResult,
+        settingsResult,
+        brandingResult,
+        paymentsResult,
+        schedulesResult,
+        summaryResult
+    ] = await Promise.all([
+        // Project info
+        supabase
+            .from('projects')
+            .select('id, name, organization_id, image_url, color')
+            .eq('id', projectId)
+            .single(),
+
+        // Client info
+        supabase
+            .from('project_clients_view')
+            .select('*')
+            .eq('id', clientId)
+            .single(),
+
+        // Portal settings
+        supabase
+            .from('client_portal_settings')
+            .select('*')
+            .eq('project_id', projectId)
+            .single(),
+
+        // Portal branding (may not exist)
+        supabase
+            .from('client_portal_branding')
+            .select('*')
+            .eq('project_id', projectId)
+            .single(),
+
+        // Payments for this client
+        supabase
+            .from('client_payments_view')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('client_id', clientId)
+            .order('payment_date', { ascending: false }),
+
+        // Payment schedules
+        supabase
+            .from('client_payment_schedule')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('client_id', clientId)
+            .order('due_date', { ascending: true }),
+
+        // Financial summary
+        supabase
+            .from('client_financial_summary_view')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('client_id', clientId)
+    ]);
+
+    return {
+        project: projectResult.data,
+        client: clientResult.data,
+        settings: settingsResult.data,
+        branding: brandingResult.data,  // Will be null if no custom branding
+        payments: paymentsResult.data || [],
+        schedules: schedulesResult.data || [],
+        summary: summaryResult.data?.[0] || null,
+        error: projectResult.error || clientResult.error
+    };
+}
+

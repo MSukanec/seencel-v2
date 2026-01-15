@@ -65,94 +65,91 @@ export function AdminCharts({ charts }: AdminChartsProps) {
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {/* 1. Engagement por Vista */}
-                <DashboardCard
-                    title="Engagement por Vista"
-                    description="Tiempo promedio"
-                    icon={<BarChartIcon className="h-4 w-4" />}
-                    className="col-span-1"
-                >
-                    <div className="h-[250px] w-full">
-                        <BaseBarChart
-                            data={charts.engagement}
-                            xKey="name"
-                            yKey="value"
-                            layout="vertical"
-                            height={250}
-                            showGrid={false}
-                            config={engagementConfig}
-                            color="var(--primary)"
-                            chartClassName="h-full"
-                        />
-                    </div>
-                </DashboardCard>
+            {/* 1. Engagement por Vista */}
+            <DashboardCard
+                title="Engagement por Vista"
+                description="Tiempo promedio"
+                icon={<BarChartIcon className="h-4 w-4" />}
+                className="col-span-1"
+            >
+                <div className="h-[250px] w-full">
+                    <BaseBarChart
+                        data={charts.engagement}
+                        xKey="name"
+                        yKey="value"
+                        layout="vertical"
+                        height={250}
+                        showGrid={false}
+                        config={engagementConfig}
+                        color="var(--primary)"
+                        chartClassName="h-full"
+                    />
+                </div>
+            </DashboardCard>
 
-                {/* 2. Actividad por Hora */}
-                <DashboardCard
-                    title="Actividad por Hora"
-                    description="Sesiones por hora del día"
-                    icon={<Clock className="h-4 w-4" />}
-                    className="col-span-1"
-                >
-                    <div className="h-[250px] w-full">
-                        <BaseAreaChart
-                            data={charts.activityByHour}
-                            xKey="hour"
-                            yKey="value"
-                            height={250}
-                            showGrid={false}
-                            config={activityConfig}
-                            color="var(--primary)"
-                            chartClassName="h-full"
-                        />
-                    </div>
-                </DashboardCard>
+            {/* 2. Actividad por Hora */}
+            <DashboardCard
+                title="Actividad por Hora"
+                description="Sesiones por hora del día"
+                icon={<Clock className="h-4 w-4" />}
+                className="col-span-1"
+            >
+                <div className="h-[250px] w-full">
+                    <BaseAreaChart
+                        data={charts.activityByHour}
+                        xKey="hour"
+                        yKey="value"
+                        height={250}
+                        showGrid={false}
+                        config={activityConfig}
+                        color="var(--primary)"
+                        chartClassName="h-full"
+                    />
+                </div>
+            </DashboardCard>
 
-                {/* 3. Crecimiento de Usuarios */}
-                <DashboardCard
-                    title="Crecimiento"
-                    description="Registros por mes"
-                    icon={<TrendingUp className="h-4 w-4" />}
-                    className="col-span-1"
-                >
-                    <div className="h-[250px] w-full">
-                        <BaseAreaChart
-                            data={charts.userGrowth}
-                            xKey="name"
-                            yKey="users"
-                            height={250}
-                            showGrid={false}
-                            config={growthConfig}
-                            gradient={true}
-                            color="var(--primary)"
-                            chartClassName="h-full"
-                        />
-                    </div>
-                </DashboardCard>
+            {/* 3. Crecimiento de Usuarios */}
+            <DashboardCard
+                title="Crecimiento"
+                description="Registros por mes"
+                icon={<TrendingUp className="h-4 w-4" />}
+                className="col-span-1"
+            >
+                <div className="h-[250px] w-full">
+                    <BaseAreaChart
+                        data={charts.userGrowth}
+                        xKey="name"
+                        yKey="users"
+                        height={250}
+                        showGrid={false}
+                        config={growthConfig}
+                        gradient={true}
+                        color="var(--primary)"
+                        chartClassName="h-full"
+                    />
+                </div>
+            </DashboardCard>
 
-                {/* 4. Fuentes de Adquisición */}
-                <DashboardCard
-                    title="Adquisición"
-                    description="Fuentes de tráfico"
-                    icon={<PieChartIcon className="h-4 w-4" />}
-                    className="col-span-1"
-                >
-                    <div className="h-[250px] w-full">
-                        <BasePieChart
-                            data={sourcesData}
-                            nameKey="name"
-                            valueKey="value"
-                            height={250}
-                            innerRadius={60}
-                            config={sourcesConfig}
-                            chartClassName="h-full"
-                        />
-                    </div>
-                </DashboardCard>
-            </div>
-            );
+            {/* 4. Fuentes de Adquisición */}
+            <DashboardCard
+                title="Adquisición"
+                description="Fuentes de tráfico"
+                icon={<PieChartIcon className="h-4 w-4" />}
+                className="col-span-1"
+            >
+                <div className="h-[250px] w-full">
+                    <BasePieChart
+                        data={sourcesData}
+                        nameKey="name"
+                        valueKey="value"
+                        height={250}
+                        innerRadius={60}
+                        config={sourcesConfig}
+                        chartClassName="h-full"
+                    />
+                </div>
+            </DashboardCard>
         </div>
     );
+
 }

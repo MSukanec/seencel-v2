@@ -21,7 +21,20 @@ export function FinanceOverview({ movements }: FinanceOverviewProps) {
     const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
 
     const formatCurrency = (amount: number, currencyCode?: string) => {
-        return formatCurrencyUtil(amount, currencyCode || currencyContext?.primaryCurrency || 'ARS');
+        // If a specific currency code is provided, use it
+        if (currencyCode) {
+            return formatCurrencyUtil(amount, currencyCode);
+        }
+
+        // Otherwise, respect the global display preference
+        const displayCurrency = currencyContext?.displayCurrency || 'primary';
+        if (displayCurrency === 'secondary' && currencyContext?.secondaryCurrency) {
+            const converted = currencyContext.convertFromFunctional(amount, currencyContext.secondaryCurrency);
+            return formatCurrencyUtil(converted, currencyContext.secondaryCurrency);
+        }
+
+        // Default: Primary (Functional)
+        return formatCurrencyUtil(amount, currencyContext?.primaryCurrency || 'ARS');
     };
 
     const kpis = useMemo(() => {

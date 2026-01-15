@@ -14,6 +14,9 @@ export interface PlanFeatures {
     api_access: boolean;
     webhooks: boolean;
     support_level: "community" | "priority" | "dedicated";
+    custom_portal_branding: boolean;
+    max_org_boards?: number;
+    max_project_boards?: number;
 }
 
 export interface Plan {

@@ -75,7 +75,7 @@ export function SplitEditorSidebar({ children, header }: { children: ReactNode, 
 // Subcomponent for Preview Area centering
 export function SplitEditorPreview({ children, className }: { children: ReactNode, className?: string }) {
     return (
-        <div className={cn("flex-1 w-full h-full flex items-center justify-center p-8 overflow-hidden", className)}>
+        <div className={cn("flex-1 w-full h-full flex items-center justify-center p-8 overflow-auto", className)}>
             {children}
         </div>
     );

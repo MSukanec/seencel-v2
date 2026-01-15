@@ -26,7 +26,8 @@ Estos son los JSONs actuales almacenados en la columna `features` de la tabla `p
   "max_file_size_mb": 50,
   "export_pdf_custom": false,
   "max_project_boards": 1,
-  "custom_pdf_templates": false
+  "custom_pdf_templates": false,
+  "custom_portal_branding": false
 }
 ```
 
@@ -46,7 +47,8 @@ Estos son los JSONs actuales almacenados en la columna `features` de la tabla `p
   "max_file_size_mb": 500,
   "export_pdf_custom": true,
   "max_project_boards": 5,
-  "custom_pdf_templates": true
+  "custom_pdf_templates": true,
+  "custom_portal_branding": true
 }
 ```
 
@@ -66,7 +68,8 @@ Estos son los JSONs actuales almacenados en la columna `features` de la tabla `p
   "max_file_size_mb": 1024,
   "export_pdf_custom": true,
   "max_project_boards": 999,
-  "custom_pdf_templates": true
+  "custom_pdf_templates": true,
+  "custom_portal_branding": true
 }
 ```
 

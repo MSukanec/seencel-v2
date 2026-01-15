@@ -86,7 +86,7 @@ export async function middleware(request: NextRequest) {
         // If trying to access protected routes (organization, onboarding, etc)
         // Allowing public landing page (root /) and auth paths
         // Also allow specific public information pages
-        const publicPrefixes = ["/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/about"];
+        const publicPrefixes = ["/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/about", "/portal"];
         const isPublicPage = pathWithoutLocale === "/" || isAuthPath || publicPrefixes.some(p => pathWithoutLocale.startsWith(p));
 
         if (!isPublicPage) {

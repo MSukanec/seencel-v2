@@ -53,9 +53,9 @@ export function FeatureGuard({
     return (
         <HoverCard openDelay={100} closeDelay={100}>
             <HoverCardTrigger asChild>
-                <div className="relative inline-flex cursor-not-allowed group">
+                <div className="relative w-full cursor-not-allowed group">
                     {/* Disabled children */}
-                    <div className="pointer-events-none opacity-50 select-none">
+                    <div className="pointer-events-none opacity-50 select-none w-full">
                         {children}
                     </div>
 

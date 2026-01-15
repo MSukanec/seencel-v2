@@ -72,11 +72,11 @@ export function ClientsPageClient({
         <Tabs value={currentTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <PageWrapper
                 type="page"
-                title="Clientes y Compromisos"
+                title="Compromisos y Pagos"
                 tabs={tabs}
                 icon={<Handshake />}
             >
-                <ContentLayout variant="wide">
+                <ContentLayout variant="wide" className="pb-6">
                     <TabsContent value="overview" className="m-0 h-full focus-visible:outline-none">
                         <ClientsOverview summary={financialSummary} payments={payments} />
                     </TabsContent>

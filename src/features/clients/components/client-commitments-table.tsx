@@ -12,6 +12,10 @@ import { useModal } from "@/providers/modal-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CommitmentForm } from "./commitment-form";
+import { deleteCommitmentAction } from "@/features/clients/actions";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 
 // ------------------------------------------------------------------------
@@ -36,13 +40,19 @@ export function ClientCommitmentsTable({
     orgId
 }: ClientCommitmentsTableProps) {
     const { openModal, closeModal } = useModal();
+    const router = useRouter();
+    const [commitmentToDelete, setCommitmentToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleCreate = () => {
         openModal(
             <CommitmentForm
                 clients={clients}
                 financialData={financialData}
-                onSuccess={closeModal}
+                onSuccess={() => {
+                    closeModal();
+                    router.refresh();
+                }}
                 projectId={projectId}
                 orgId={orgId}
             />,
@@ -75,6 +85,29 @@ export function ClientCommitmentsTable({
             }
         },
         {
+            id: "concept",
+            header: "Concepto",
+            cell: ({ row }) => {
+                const concept = row.original.concept || row.original.unit_description;
+                return (
+                    <span className="text-muted-foreground">
+                        {concept || "---"}
+                    </span>
+                );
+            }
+        },
+        {
+            accessorKey: "description",
+            header: "Descripción",
+            cell: ({ row }) => {
+                return (
+                    <span className="text-muted-foreground italic truncate max-w-[200px] block" title={row.original.description}>
+                        {row.original.description || "---"}
+                    </span>
+                );
+            }
+        },
+        {
             accessorKey: "amount",
             header: "Total Comprometido",
             cell: ({ row }) => {
@@ -87,24 +120,35 @@ export function ClientCommitmentsTable({
             id: "paid",
             header: "Pagado a la fecha",
             cell: ({ row }) => {
-                const commitmentId = row.original.id;
-                // Filter payments linked to this commitment OR (heuristic) payments for this client with same currency if commitment_id not strict?
-                // Strict linkage is better: payments.commitment_id === row.original.id
-                // But initially payments might not be strictly linked if created loosely. 
-                // Let's assume strict link if available, or if we want to show 'paid so far' for this deal.
-                // Re-reading logic: Payments usually link to a commitment or schedule.
-                // Fallback: If no direct link, maybe we don't show it? Or we show general client payments?
-                // For this component "Commitments View", user likely wants to see progress of THAT commitment.
-                // So filter by commitment_id.
+                const commitment = row.original;
+                const commitmentCurrencyCode = commitment.currency?.code || "ARS"; // Fallback to base
+                const connectedPayments = payments.filter(p => p.commitment_id === commitment.id);
 
-                // NOTE: payments array might be ClientPaymentView[]
-                const connectedPayments = payments.filter(p => p.commitment_id === commitmentId);
-                const paidAmount = connectedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                const currency = row.original.currency?.symbol || "$";
+                const paidAmount = connectedPayments.reduce((sum, p) => {
+                    // 1. Same Currency -> Add Face Value
+                    if (p.currency_id === commitment.currency_id) {
+                        return sum + Number(p.amount);
+                    }
+
+                    // 2. Different Currency -> specialized logic
+                    // If Target (Commitment) is ARS (Base):
+                    // Payment (USD) -> functional_amount is ARS value.
+                    if (commitmentCurrencyCode !== 'USD') {
+                        return sum + (p.functional_amount || 0);
+                    }
+
+                    // If Target (Commitment) is USD:
+                    // Payment (ARS) -> functional_amount is ARS. Need to divide by rate.
+                    // We use commitment.exchange_rate as the reference "Deal Rate" if generic conversion unavailable
+                    const rate = commitment.exchange_rate || 1;
+                    return sum + ((p.functional_amount || 0) / rate);
+                }, 0);
+
+                const currencySymbol = commitment.currency?.symbol || "$";
 
                 return (
                     <span className="font-mono text-muted-foreground">
-                        {currency} {paidAmount.toLocaleString()}
+                        {currencySymbol} {paidAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </span>
                 );
             }
@@ -113,21 +157,31 @@ export function ClientCommitmentsTable({
             id: "balance",
             header: "Saldo",
             cell: ({ row }) => {
-                const commitmentId = row.original.id;
-                const connectedPayments = payments.filter(p => p.commitment_id === commitmentId);
-                const paidAmount = connectedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                const total = Number(row.original.amount);
-                const balance = total - paidAmount;
-                const currency = row.original.currency?.symbol || "$";
+                const commitment = row.original;
+                const commitmentCurrencyCode = commitment.currency?.code || "ARS";
+                const connectedPayments = payments.filter(p => p.commitment_id === commitment.id);
 
-                // Color logic: Red if balance > 0? Or neutral?
-                // Usually balance > 0 means they owe money.
+                const paidAmount = connectedPayments.reduce((sum, p) => {
+                    if (p.currency_id === commitment.currency_id) {
+                        return sum + Number(p.amount);
+                    }
+                    if (commitmentCurrencyCode !== 'USD') {
+                        return sum + (p.functional_amount || 0);
+                    }
+                    const rate = commitment.exchange_rate || 1;
+                    return sum + ((p.functional_amount || 0) / rate);
+                }, 0);
+
+                const total = Number(commitment.amount);
+                const balance = total - paidAmount;
+                const currencySymbol = commitment.currency?.symbol || "$";
+
                 return (
                     <span className={cn(
                         "font-mono font-bold",
                         balance > 0 ? "text-orange-600" : "text-green-600"
                     )}>
-                        {currency} {balance.toLocaleString()}
+                        {currencySymbol} {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </span>
                 );
             }
@@ -135,27 +189,69 @@ export function ClientCommitmentsTable({
     ];
 
     return (
-        <DataTable
-            columns={columns}
-            data={data}
-            searchKey="client.contact.full_name"
-            searchPlaceholder="Buscar por cliente..."
-            enableRowActions={true}
-            toolbar={() => (
-                <Button onClick={handleCreate} size="sm">
-                    <Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso
-                </Button>
-            )}
-            onDelete={(row) => {
-                // TODO: Implement delete action
-                if (confirm("¿Eliminar este compromiso?")) {
-                    toast.info("Función de eliminar pendiente de implementación final")
+        <>
+            <DataTable
+                columns={columns}
+                data={data}
+                searchKey="client.contact.full_name"
+                searchPlaceholder="Buscar por cliente..."
+                enableRowActions={true}
+                toolbar={() => (
+                    <Button onClick={handleCreate} size="sm">
+                        <Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso
+                    </Button>
+                )}
+                onDelete={(row) => {
+                    setCommitmentToDelete(row);
+                }}
+                onEdit={(row) => {
+                    openModal(
+                        <CommitmentForm
+                            key={row.id}
+                            clients={clients}
+                            financialData={financialData}
+                            initialData={row}
+                            onSuccess={() => {
+                                closeModal();
+                                router.refresh();
+                            }}
+                            projectId={projectId}
+                            orgId={orgId}
+                        />,
+                        {
+                            title: "Editar Compromiso",
+                            description: "Modifica los detalles del compromiso."
+                        }
+                    );
+                }}
+            />
+
+            <DeleteConfirmationDialog
+                open={!!commitmentToDelete}
+                onOpenChange={(open) => !open && setCommitmentToDelete(null)}
+                onConfirm={async () => {
+                    if (!commitmentToDelete) return;
+                    setIsDeleting(true);
+                    try {
+                        await deleteCommitmentAction(commitmentToDelete.id);
+                        toast.success("Compromiso eliminado");
+                        router.refresh();
+                    } catch (error) {
+                        toast.error("Error al eliminar compromiso");
+                    } finally {
+                        setIsDeleting(false);
+                        setCommitmentToDelete(null);
+                    }
+                }}
+                title="¿Eliminar compromiso?"
+                description={
+                    <span>
+                        Estás a punto de eliminar un compromiso de <strong>{Number(commitmentToDelete?.amount).toLocaleString()}</strong>. Esta acción no se puede deshacer.
+                    </span>
                 }
-            }}
-            onEdit={(row) => {
-                // TODO: Implement edit action
-                toast.info("Función de editar pendiente de implementación final")
-            }}
-        />
+                confirmLabel="Eliminar"
+                isDeleting={isDeleting}
+            />
+        </>
     );
 }

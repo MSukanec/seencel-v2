@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
-import { createPaymentAction } from "@/features/clients/actions";
+import { createPaymentAction, updatePaymentAction, getCommitmentsByClientAction } from "@/features/clients/actions";
 
 interface PaymentFormProps {
     projectId: string;
@@ -54,23 +54,28 @@ export function PaymentForm({
     const [status, setStatus] = useState(initialData?.status || "confirmed");
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [reference, setReference] = useState(initialData?.reference || "");
+    const [commitmentId, setCommitmentId] = useState(initialData?.commitment_id || "");
+    const [commitments, setCommitments] = useState<any[]>([]);
+    const [loadingCommitments, setLoadingCommitments] = useState(false);
     const [file, setFile] = useState<File | undefined>();
     const [imageUrl, setImageUrl] = useState(initialData?.image_url || ""); // For receipts
+
+    useEffect(() => {
+        if (clientId) {
+            setLoadingCommitments(true);
+            getCommitmentsByClientAction(clientId)
+                .then(setCommitments)
+                .catch(err => console.error(err))
+                .finally(() => setLoadingCommitments(false));
+        } else {
+            setCommitments([]);
+        }
+    }, [clientId]);
 
     // Auto-select currency if wallet changes and has a currency
     useEffect(() => {
         if (walletId) {
             const wallet = wallets.find((w: any) => w.id === walletId);
-            // In unified query we map wallet.currency_id but let's check structure
-            // We mapped: currency_symbol, currency_code, NOT currency_id directly in the top level of formattedWallets
-            // But we can infer it or we should add it to formattedWallets in queries.ts if strictly needed.
-            // Using logic: find currency with matching symbol/code?
-            // Actually, let's fix queries.ts to include currency_id in the formatted wallet if possible, or just look up by symbol.
-
-            // Allow manual override, but hint default.
-            // If the wallet has a specific currency related to it in the system, we might want to auto-select it.
-            // For now, let's assume the user selects currency manually if default isn't enough, 
-            // OR if we want to be smart:
             if (wallet?.currency_code) {
                 const matchingCurrency = currencies.find((c: any) => c.code === wallet.currency_code);
                 if (matchingCurrency) {
@@ -96,14 +101,32 @@ export function PaymentForm({
             formData.append('exchange_rate', exchangeRate);
             formData.append('status', status);
             if (notes) formData.append('notes', notes);
+            if (notes) formData.append('notes', notes);
             if (reference) formData.append('reference', reference);
+            if (commitmentId) formData.append('commitment_id', commitmentId);
+
+            // Pass currency_code directly to avoid backend RLS/Lookup issues
+            const selectedCurrency = currencies.find((c: any) => c.id === currencyId);
+            if (selectedCurrency?.code) {
+                formData.append('currency_code', selectedCurrency.code);
+            }
 
             // TODO: Handle file upload logic for receipts if needed, similar to ProjectForm
             // For now assuming basic form submission logic exists in actions
 
-            await createPaymentAction(formData as any);
-
-            toast.success("Pago registrado correctamente");
+            // Check if we are editing or creating
+            if (initialData?.id) {
+                // Editing
+                formData.append('id', initialData.id);
+                // We need to import updatePaymentAction at the top, I'll assume it's imported or I need to add it.
+                // Wait, I need to check imports.
+                await updatePaymentAction(formData as any);
+                toast.success("Pago actualizado correctamente");
+            } else {
+                // Creating
+                await createPaymentAction(formData as any);
+                toast.success("Pago registrado correctamente");
+            }
             if (onSuccess) onSuccess();
             closeModal();
 
@@ -221,13 +244,21 @@ export function PaymentForm({
 
                 {/* Row 4: Commitment & Status */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Compromiso" helpText="Selecciona un cliente primero">
-                        <Select disabled>
+                    <FormGroup label="Compromiso" helpText={!clientId ? "Selecciona un cliente primero" : ""}>
+                        <Select
+                            disabled={!clientId || loadingCommitments}
+                            value={commitmentId === null ? undefined : commitmentId}
+                            onValueChange={setCommitmentId}
+                        >
                             <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar compromiso" />
+                                <SelectValue placeholder={loadingCommitments ? "Cargando..." : "Seleccionar compromiso"} />
                             </SelectTrigger>
                             <SelectContent>
-                                {/* Future: Dynamic commitments based on client */}
+                                {commitments.map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                        {c.concept || c.unit_description || c.unit_name || "Compromiso"} - {c.currency?.symbol}{c.amount}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </FormGroup>

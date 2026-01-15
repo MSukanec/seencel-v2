@@ -81,7 +81,7 @@ export default async function AdminPage() {
                     </div>
 
                     {/* Lists Row */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
                         {/* 1. Actividad Reciente */}
                         <DashboardCard
                             title="Actividad Reciente"

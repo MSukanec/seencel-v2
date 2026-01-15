@@ -20,6 +20,7 @@ interface NavItem {
     title: string;
     href: string;
     icon: React.ElementType;
+    sectionHeader?: string;
 }
 
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
@@ -175,21 +176,27 @@ export function SidebarContent({ onLinkClick, mode = "desktop", isExpanded: prop
                                 tooltipDisabled={!showTooltips}
                             >
                                 {navItems.map((item, idx) => (
-                                    <SidebarButton
-                                        key={idx}
-                                        icon={item.icon}
-                                        label={item.title}
-                                        href={item.href}
-                                        // Also apply exclusivity to individual buttons
-                                        isActive={pathname === item.href && !isRightSidebarActive}
-                                        activeVariant="secondary"
-                                        isExpanded={isExpanded} // Dynamic expansion based on sidebar state
-                                        className="h-8 w-full p-0 pl-[4px]"
-                                        size="default" // Use full width with text
-                                        onClick={() => {
-                                            if (onLinkClick) onLinkClick();
-                                        }}
-                                    />
+                                    <React.Fragment key={idx}>
+                                        {item.sectionHeader && isExpanded && (
+                                            <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                                {item.sectionHeader}
+                                            </div>
+                                        )}
+                                        <SidebarButton
+                                            icon={item.icon}
+                                            label={item.title}
+                                            href={item.href}
+                                            // Also apply exclusivity to individual buttons
+                                            isActive={pathname === item.href && !isRightSidebarActive}
+                                            activeVariant="secondary"
+                                            isExpanded={isExpanded} // Dynamic expansion based on sidebar state
+                                            className="h-8 w-full p-0 pl-[4px]"
+                                            size="default" // Use full width with text
+                                            onClick={() => {
+                                                if (onLinkClick) onLinkClick();
+                                            }}
+                                        />
+                                    </React.Fragment>
                                 ))}
                             </SidebarAccordion>
                         );

@@ -108,8 +108,10 @@ export const clientCommitmentSchema = z.object({
     exchange_rate: z.number().positive(),
     commitment_method: z.enum([COMMITMENT_METHOD.FIXED]).default(COMMITMENT_METHOD.FIXED),
     unit_name: z.string().nullable(),
-    unit_description: z.string().nullable(),
+    concept: z.string().nullable(), // Was unit_description
+    description: z.string().nullable(),
     created_by: z.string().uuid().nullable(),
+    functional_amount: z.number().nullable(),
     created_at: z.string(),
     updated_at: z.string(),
     is_deleted: z.boolean().default(false),
@@ -214,6 +216,9 @@ export const clientFinancialSummarySchema = z.object({
     total_committed_amount: z.number(),
     total_paid_amount: z.number(),
     balance_due: z.number(),
+    total_functional_committed_amount: z.number(),
+    total_functional_paid_amount: z.number(),
+    functional_balance_due: z.number(),
 });
 
 export type ClientFinancialSummary = z.infer<typeof clientFinancialSummarySchema>;

@@ -5,6 +5,7 @@ export interface Currency {
     name: string;
     symbol: string;
     is_default?: boolean;
+    exchange_rate?: number;
 }
 
 export interface MonetaryBreakdown {

@@ -467,6 +467,10 @@ export async function getOrganizationFinancialData(orgId: string) {
         walletsDetails = details || [];
     }
 
+    // Determine effective default ID
+    const effectiveDefaultId = preferences?.default_currency_id
+        || orgCurrencies?.find((c: any) => c.is_default)?.currency_id;
+
     // Format Currencies
     const formattedCurrencies = (orgCurrencies || [])
         .map((oc: any) => ({
@@ -474,8 +478,9 @@ export async function getOrganizationFinancialData(orgId: string) {
             name: oc.currency_name || oc.currency_code,
             code: oc.currency_code,
             symbol: oc.currency_symbol,
-            // Check if it's default either by flag or by preference match
-            is_default: Boolean(oc.is_default || (preferences?.default_currency_id === oc.currency_id))
+            // Strict check: only true if it matches the effective default
+            is_default: oc.currency_id === effectiveDefaultId,
+            exchange_rate: Number(oc.exchange_rate) || 1
         }))
         .sort((a, b) => (Number(b.is_default) - Number(a.is_default))); // Default first
 

@@ -25,6 +25,7 @@ export interface NavItem {
     title: string;
     href: string;
     icon: React.ElementType;
+    sectionHeader?: string;
 }
 
 export interface ContextItem {
@@ -74,7 +75,8 @@ export function useSidebarNavigation() {
                     {
                         title: 'Visión General',
                         href: projectBase,
-                        icon: LayoutDashboard
+                        icon: LayoutDashboard,
+                        sectionHeader: 'General'
                     },
                     {
                         title: 'Información',
@@ -82,8 +84,14 @@ export function useSidebarNavigation() {
                         icon: Info
                     },
                     {
-                        title: 'Clientes',
+                        title: 'Compromisos y Pagos',
                         href: activeProjectId ? `${projectBase}/clients` : '/organization/projects',
+                        icon: Users,
+                        sectionHeader: 'Clientes'
+                    },
+                    {
+                        title: 'Portal de Clientes',
+                        href: activeProjectId ? `${projectBase}/portal` : '/organization/projects',
                         icon: Users
                     },
                 ];

@@ -25,15 +25,20 @@ export default async function DashboardLayout({
                 name: c.name,
                 symbol: c.symbol,
                 is_default: c.is_default,
+                exchange_rate: c.exchange_rate,
             }));
         } catch {
             // Fallback: empty currencies (MoneyDisplay will use defaults)
         }
     }
 
+    // Determine default exchange rate (from secondary currency)
+    const secondaryCurrency = currencies.find(c => !c.is_default);
+    const defaultExchangeRate = secondaryCurrency?.exchange_rate || 1;
+
     return (
         <OrganizationProvider activeOrgId={activeOrgId || null}>
-            <CurrencyProvider currencies={currencies}>
+            <CurrencyProvider currencies={currencies} defaultExchangeRate={defaultExchangeRate}>
                 <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
                     {children}
                 </LayoutSwitcher>

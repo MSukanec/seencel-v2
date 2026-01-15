@@ -12,6 +12,7 @@ import { PaymentForm } from "./payment-form";
 import { deletePaymentAction } from "@/features/clients/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface PaymentsDataTableProps {
     data: ClientPaymentView[];
@@ -29,6 +30,7 @@ export function PaymentsDataTable({
     orgId
 }: PaymentsDataTableProps) {
     const { openModal } = useModal();
+    const router = useRouter();
 
     const handleNewPayment = () => {
         openModal(
@@ -39,7 +41,7 @@ export function PaymentsDataTable({
                 financialData={financialData}
                 onSuccess={() => {
                     // Ideally revalidate path or refresh data
-                    window.location.reload();
+                    router.refresh();
                 }}
             />,
             {
@@ -60,7 +62,7 @@ export function PaymentsDataTable({
                 initialData={payment as any} // Cast safely or map types
                 onSuccess={() => {
                     toast.success("Pago actualizado");
-                    window.location.reload();
+                    router.refresh();
                 }}
             />,
             {
@@ -84,7 +86,7 @@ export function PaymentsDataTable({
         try {
             await deletePaymentAction(paymentToDelete.id);
             toast.success("Pago eliminado");
-            window.location.reload();
+            router.refresh();
         } catch (error) {
             toast.error("Error al eliminar el pago");
         } finally {
