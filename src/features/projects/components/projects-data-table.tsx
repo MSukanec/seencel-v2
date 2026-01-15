@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Project } from "@/types/project";
-import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/components/ui/data-table";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { ProjectCard } from "@/features/projects/components/project-card";
 
 import { Circle, Timer, CheckCircle2, Ban, FolderSearch } from "lucide-react";
-import { DataTableEmptyState } from "@/components/ui/data-table/data-table-empty-state";
+import { DataTableEmptyState } from "@/components/shared/data-table/data-table-empty-state";
 import { Button } from "@/components/ui/button";
 
 import { ProjectForm } from "./project-form";
@@ -233,22 +233,6 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                 return value.includes(row.getValue(id));
             },
         },
-        {
-            id: "actions",
-            header: () => <span className="sr-only">Acciones</span>,
-            cell: ({ row }) => (
-                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                    <DataTableRowActions
-                        row={row}
-                        onView={handleNavigateToProject}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                    />
-                </div>
-            ),
-            size: 50,
-            enableHiding: false,
-        },
     ];
 
     return (
@@ -279,6 +263,10 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                 ]}
                 pageSize={50}
                 viewMode={viewMode}
+                enableRowActions={true}
+                onView={handleNavigateToProject}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
                 renderGridItem={(project: Project) => (
                     <ProjectCard
                         project={project}

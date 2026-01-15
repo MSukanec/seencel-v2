@@ -17,6 +17,7 @@ export default async function AdminDirectoryPage() {
             <PageWrapper
                 type="page"
                 title="Directorio"
+                icon={<Users />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
                         <TabsTrigger

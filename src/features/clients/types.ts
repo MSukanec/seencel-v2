@@ -194,6 +194,8 @@ export const clientPaymentViewSchema = clientPaymentSchema.extend({
     wallet_name: z.string().nullable(),
     currency_symbol: z.string().nullable(),
     currency_code: z.string().nullable(),
+    commitment_concept: z.string().nullable(),
+    schedule_notes: z.string().nullable(),
 });
 
 export type ClientPaymentView = z.infer<typeof clientPaymentViewSchema>;

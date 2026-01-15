@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { AdminUser } from "../queries";
-import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/components/ui/data-table";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Monitor, Mail } from "lucide-react";
@@ -95,29 +95,6 @@ export function UsersTable({ users }: UsersTableProps) {
                 </Badge>
             ),
         },
-        {
-            id: "actions",
-            header: () => <span className="sr-only">Acciones</span>,
-            cell: ({ row }) => (
-                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                    <DataTableRowActions
-                        row={row}
-                        customActions={[
-                            {
-                                label: "Copiar ID",
-                                onClick: (user) => navigator.clipboard.writeText(user.id),
-                            },
-                            {
-                                label: "Copiar Email",
-                                onClick: (user) => navigator.clipboard.writeText(user.email),
-                            },
-                        ]}
-                    />
-                </div>
-            ),
-            size: 50,
-            enableHiding: false,
-        },
     ];
 
     return (
@@ -126,6 +103,17 @@ export function UsersTable({ users }: UsersTableProps) {
             data={users}
             searchPlaceholder="Buscar usuarios..."
             pageSize={25}
+            enableRowActions={true}
+            customActions={[
+                {
+                    label: "Copiar ID",
+                    onClick: (user) => navigator.clipboard.writeText(user.id),
+                },
+                {
+                    label: "Copiar Email",
+                    onClick: (user) => navigator.clipboard.writeText(user.email),
+                },
+            ]}
         />
     );
 }

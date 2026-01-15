@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useParams, usePathname } from "next/navigation";
+import { useRouter, useParams, usePathname, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectSeparator } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
+import { saveLastActiveProject } from "@/features/projects/actions";
 
 interface Project {
     id: string;
@@ -37,6 +38,7 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
     const router = useRouter();
     const params = useParams();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const locale = params?.locale as string;
 
     console.log("ProjectSelector: Render", { count: projects.length, current: currentProjectId });
@@ -77,7 +79,9 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
         // Preserves current path, just swap ID
         if (pathname && pathname.includes(currentProjectId)) {
             const newPath = pathname.replace(currentProjectId, projectId);
-            router.push(newPath);
+            const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
+            router.push(newPath + queryString);
+            saveLastActiveProject(projectId);
         } else {
             // Fallback to basePath logic if for some reason ID is not in path
             const rawPath = basePath.replace("[projectId]", projectId);
@@ -85,7 +89,9 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
                 ? `/${locale}${rawPath}`
                 : rawPath;
 
-            router.push(newPath);
+            const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
+            router.push(newPath + queryString);
+            saveLastActiveProject(projectId);
         }
     };
 
@@ -93,7 +99,7 @@ export function ProjectSelector({ projects, currentProjectId, basePath }: Projec
 
     return (
         <Select value={currentProjectId || displayProject?.id} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-full h-9 bg-background border-border">
+            <SelectTrigger className="w-[240px] h-9 bg-background border-border">
                 <div className="flex items-center gap-2 w-full overflow-hidden">
                     <Avatar className="h-5 w-5 rounded-md border border-border/50">
                         <AvatarImage src={displayProject?.image_url || undefined} alt={displayProject?.name} />

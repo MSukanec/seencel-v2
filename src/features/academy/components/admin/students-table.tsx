@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/components/ui/data-table";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -284,21 +284,6 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
                 );
             },
         },
-        {
-            id: "actions",
-            header: () => <span className="sr-only">Acciones</span>,
-            cell: ({ row }) => (
-                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                    <DataTableRowActions
-                        row={row}
-                        onEdit={handleOpenEdit}
-                        onDelete={handleDelete}
-                    />
-                </div>
-            ),
-            size: 50,
-            enableHiding: false,
-        },
     ];
 
     // Build faceted filters
@@ -320,6 +305,9 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
             data={enrollments}
             searchPlaceholder="Buscar alumnos..."
             enableRowSelection={true}
+            enableRowActions={true}
+            onEdit={handleOpenEdit}
+            onDelete={handleDelete}
             pageSize={50}
             facetedFilters={[
                 {

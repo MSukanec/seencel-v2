@@ -5,10 +5,11 @@ import { ContentLayout } from "@/components/layout/content-layout";
 
 export default function AdminFinancePage() {
     return (
-        <Tabs defaultValue="subscriptions" className="w-full h-full flex flex-col">
+        <Tabs defaultValue="subscriptions" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Finanzas"
+                icon={<Wallet />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
                         <TabsTrigger

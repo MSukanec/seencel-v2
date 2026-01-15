@@ -20,6 +20,8 @@ interface PageWrapperProps {
     className?: string
     /** Current user for mobile nav context */
     user?: any
+    /** Optional icon to override header icon */
+    icon?: React.ReactElement
 }
 
 export function PageWrapper({
@@ -29,7 +31,8 @@ export function PageWrapper({
     actions,
     children,
     className,
-    user
+    user,
+    icon
 }: PageWrapperProps) {
     return (
         <div className={cn("flex flex-col h-full overflow-hidden", className)}>
@@ -47,6 +50,7 @@ export function PageWrapper({
                     breadcrumbs={[{ label: title }]}
                     tabs={tabs}
                     actions={actions}
+                    icon={icon}
                 />
             )}
 

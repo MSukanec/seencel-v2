@@ -2,46 +2,182 @@
 
 This document serves as the **Single Source of Truth** for all developers and AI agents working on the SEENCEL v2 project. Follow these guidelines strictly to maintain consistency and "Enterprise" quality.
 
-## 1. user Interface (UI/UX)
+---
 
-### Notifications
-- **System**: We use **Sonner** (`sonner`) for all application notifications.
-- **Rule**: **NEVER** display inline success/error messages (e.g., text below a button).
-- **Usage**:
-  ```tsx
-  import { toast } from "sonner";
-  // Success
-  toast.success(t('success'));
-  // Error
-  toast.error(t('error'));
-  ```
+## 1. Project Architecture (Feature-First)
 
-### Form Components
-- **Phone Numbers**: ALWAYS use the custom `PhoneInput` component.
-  - Path: `@/components/ui/phone-input`
-  - Features: Automatic E.164 formatting, country flags, spanish search.
-- **Avatars**: For lists of users/members, usage the `AvatarStack` component.
+### Directory Structure
 
-### Design System
-- **Library**: Shadcn/ui is the core library.
-- **Theme**: Ensure all components support **Dark Mode**. Text on primary buttons must be readable (white text on accent color).
+#### `src/components` (UI Agnostic)
+Reserved **EXCLUSIVELY** for generic components:
+| Folder | Purpose |
+|--------|---------|
+| `ui/` | Atomic primitives (Button, Input, Select). Shadcn components. |
+| `layout/` | Visual structure (Header, Sidebar, Footer, PageWrapper). |
+| `shared/` | Complex reusable components (DeleteModal, FormFooter, DataTable). |
+| `charts/` | Chart components (BaseBarChart, BasePieChart, etc.). |
+| `dashboard/` | Dashboard-specific components (DashboardCard, DashboardKpiCard). |
 
-## 2. Internationalization (i18n)
-- **Library**: `next-intl`.
-- **Rule**: **NO HARDCODED STRINGS** in the UI. All user-facing text must be extracted to `messages/es.json`.
-- **Locale**: The default and primary locale is Spanish (`es`).
+⛔ **FORBIDDEN**: Creating business folders here (e.g., `src/components/users`).
+⛔ **FORBIDDEN**: Using `src/components/global`. Use `shared` instead.
 
-## 3. Data & Backend (Supabase)
+#### `src/features` (Domain & Business)
+All feature-specific logic lives here:
+- Structure: `src/features/[feature-name]/components`
+- Examples: `auth`, `finance`, `projects`, `kanban`, `organization`, `clients`
+- If a component imports business logic (actions, queries) → it belongs in a Feature.
 
-### Row Level Security (RLS)
-- **Profile Updates**: The `user_data` table often has strict RLS preventing direct `INSERT` from the client context if the row implies system creation.
-- **Pattern**: Use `.update()` instead of `.upsert()` when modifying existing user profiles to avoid 403 errors.
+### Naming Conventions
 
-### Assets & Storage
-- **Logos/Images**: Always use the `getStorageUrl` utility to generate public URLs.
-- **Uploads**: ALL user uploads (avatars, attachments) MUST be processed via `src/lib/image-optimizer.ts` before creating the Supabase record.
-  - Standard: WebP, 80% quality, max 1024px.
-- **Storage Strategy**: Prefer `logo_path` column over legacy bucket configurations.
+| Type | Convention | Example |
+|------|------------|---------|
+| Files/Dirs | ✅ kebab-case | `delete-confirmation-modal.tsx` |
+| Components | ✅ PascalCase | `export function UserProfile()` |
+| ❌ Wrong | PascalCase files | `DeleteConfirmationModal.tsx` |
 
-## 4. Workflows
-- **Changes**: When adding new "Enterprise" features, update this document to reflect the new standard.
+---
+
+## 2. Page Layout System
+
+### PageWrapper
+**Location:** `@/components/layout/page-wrapper`
+
+| Prop | Values | Description |
+|------|--------|-------------|
+| `type` | `"page"` / `"dashboard"` | `page` = header; `dashboard` = no header |
+| `title` | String | Page title |
+| `tabs` | ReactNode | Tabs below title |
+
+### ContentLayout
+**Location:** `@/components/layout/content-layout`
+
+| Variant | Use Case |
+|---------|----------|
+| `wide` | Tables, lists, dashboards |
+| `narrow` | Forms, profiles, settings |
+| `full` | Canvas, maps, editors |
+
+### Layout Rules
+1. **Title in PageWrapper**, not as `<h1>` in content.
+2. **Tabs wrap PageWrapper** - `<Tabs>` goes OUTSIDE.
+3. **TabsContent inside ContentLayout**.
+
+---
+
+## 3. Forms & Modal System
+
+### Modal Usage
+```tsx
+import { useModal } from "@/providers/modal-store";
+openModal(<MyComponent />, { 
+    title: "...",
+    description: "...", // MANDATORY - never leave empty
+    size: 'md'
+});
+```
+
+### Form Architecture
+- **FormFooter**: `@/components/shared/form-footer` (handles `Cmd+Enter`).
+- **FormGroup**: ALWAYS wrap inputs for accessibility.
+- **FormFooter class**: `className="-mx-4 -mb-4 mt-6"`.
+- **Grid Layout**: `grid grid-cols-1 md:grid-cols-2 gap-4`.
+- **Agnostic**: Forms receive `onSuccess` and `initialData` as props.
+
+### Specialized Inputs
+- **Phone**: `PhoneInput` - NEVER native inputs.
+- **Date**: `DatePicker`.
+
+### Deletion Patterns
+| Pattern | Use Case | Component |
+|---------|----------|-----------|
+| **Soft Delete + Reassign** | Categories, Roles (in use) | `DeleteReplacementModal` |
+| **Simple Delete** | Projects, Tasks (leaf nodes) | `DeleteDialog` |
+
+---
+
+## 4. Financial Data Handling
+
+For forms with transactions, payments, or financial movements:
+
+1. **Single Source**: NEVER query `wallets` or `currencies` directly. Use `getOrganizationFinancialData(orgId)`.
+2. **Default Logic**: Returns lists + default IDs (`defaultCurrencyId`, `defaultWalletId`).
+3. **Pre-selection**: Use defaults to pre-fill Currency/Wallet selectors.
+
+```tsx
+// In Page.tsx
+const financialData = await getOrganizationFinancialData(orgId);
+<PaymentForm financialData={financialData} />
+
+// In Form
+const [walletId] = useState(initialData?.wallet_id || financialData.defaultWalletId);
+```
+
+---
+
+## 5. User Interface (UI/UX)
+
+### Dialogs
+**NEVER** use `window.confirm()`. Use `AlertDialog`.
+
+### Toasts
+- **System**: Sonner (`toast.success()`, `toast.error()`).
+- **Rule**: No inline success/error messages.
+
+### Image Uploads
+**CRITICAL**: Compress before upload.
+```tsx
+import { compressImage } from "@/lib/client-image-compression";
+const file = await compressImage(rawFile, 'avatar');
+```
+
+---
+
+## 6. Data Tables
+
+**Location**: `@/components/shared/data-table/`
+
+### Usage
+```tsx
+<DataTable
+    columns={columns}  // NO manual "actions" column
+    data={data}
+    enableRowActions={true}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+/>
+```
+
+### When to Use
+- ✅ Entity lists, > 20 items, sortable/filterable
+- ❌ Tables < 5 rows, inside modals
+
+---
+
+## 7. Internationalization (i18n)
+- **Library**: `next-intl`
+- **Rule**: **NO HARDCODED STRINGS**. Extract to `messages/es.json`.
+- **Locale**: Default is Spanish (`es`).
+
+---
+
+## 8. Backend (Supabase)
+
+### RLS
+- Use `.update()` not `.upsert()` for existing profiles.
+
+### Storage
+- Use `getStorageUrl` for public URLs.
+- Prefer `logo_path` column.
+
+---
+
+## 9. Implementation Checklist
+- [ ] **Architecture**: Component in correct folder (`features/` or `components/`)?
+- [ ] **Naming**: File is kebab-case?
+- [ ] **Layout**: Used `PageWrapper` + `ContentLayout`?
+- [ ] **Modal**: Has description?
+- [ ] **Form**: Used `FormGroup`, `FormFooter`?
+- [ ] **Financial**: Used `getOrganizationFinancialData`?
+- [ ] **Images**: Used `compressImage`?
+- [ ] **Tables**: Used `DataTable`?
+- [ ] **I18n**: No hardcoded strings?

@@ -204,11 +204,12 @@
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.744 0.16 126.36);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Safe HEX Colors */
+  --chart-1: #96cc00;
+  --chart-2: #38bdf8;
+  --chart-3: #f472b6;
+  --chart-4: #c084fc;
+  --chart-5: #fb923c;
   --sidebar: oklch(0.97 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.744 0.16 126.36);
@@ -243,11 +244,17 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.744 0.16 126.36);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Safe HEX Colors for Recharts Compatibility */
+  --chart-1: #96cc00;
+  /* Primary Lime */
+  --chart-2: #38bdf8;
+  /* Cyan/Blue-400 */
+  --chart-3: #f472b6;
+  /* Pink-400 */
+  --chart-4: #c084fc;
+  /* Violet-400 */
+  --chart-5: #fb923c;
+  /* Orange-400 */
   --sidebar: oklch(0.25 0 0);
   /* HSL 0 0 14 */
   --sidebar-foreground: oklch(0.985 0 0);

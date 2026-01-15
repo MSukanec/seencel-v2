@@ -3,7 +3,7 @@
 import { TabsContent } from "@/components/ui/tabs";
 import { ContactsList } from "./contacts-list";
 import { ContactWithRelations, ContactType } from "@/types/contact";
-import { KpiCard } from "@/components/dashboard/kpi-card";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { Users, UserCheck, Building2 } from "lucide-react";
 import { ContactTypesManager } from "./contact-types-manager";
 
@@ -25,25 +25,22 @@ export function ContactsClient({ organizationId, initialContacts, initialTypes, 
                 <div className="space-y-6">
                     {/* KPI Section */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <KpiCard
+                        <DashboardKpiCard
                             title="Total Contactos"
                             value={summary.total_contacts}
-                            icon={Users}
-                            iconColor="text-blue-500"
+                            icon={<Users className="w-5 h-5" />}
                             description="Contactos activos en tu organización"
                         />
-                        <KpiCard
+                        <DashboardKpiCard
                             title="Con Cuenta Vinculada"
                             value={summary.linked_contacts}
-                            icon={UserCheck}
-                            iconColor="text-emerald-500"
+                            icon={<UserCheck className="w-5 h-5" />}
                             description="Conectados a un usuario de Seencel"
                         />
-                        <KpiCard
+                        <DashboardKpiCard
                             title="Miembros del Equipo"
                             value={summary.member_contacts}
-                            icon={Building2}
-                            iconColor="text-violet-500"
+                            icon={<Building2 className="w-5 h-5" />}
                             description="Forman parte de tu organización"
                         />
                     </div>

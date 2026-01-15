@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { ContactWithRelations, ContactType } from "@/types/contact";
-import { DataTable, DataTableColumnHeader, DataTableRowActions } from "@/components/ui/data-table";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, MapPin } from "lucide-react";
@@ -16,8 +16,8 @@ import { deleteContact } from "@/actions/contacts";
 import { createImportBatch, importContactsBatch, revertImportBatch } from "@/actions/import-actions";
 import { getContactTypes, createContactType } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
-import { DataTableExport } from "@/components/ui/data-table/data-table-export";
-import { DataTableImport } from "@/components/ui/data-table/data-table-import";
+import { DataTableExport } from "@/components/shared/data-table/data-table-export";
+import { DataTableImport } from "@/components/shared/data-table/data-table-import";
 import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
 import { ImportConfig } from "@/lib/import-utils";
 import { Contact } from "@/types/contact";
@@ -275,21 +275,6 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
             },
             filterFn: "arrIncludesSome",
         },
-        {
-            id: "actions",
-            header: () => <span className="sr-only">Acciones</span>,
-            cell: ({ row }) => (
-                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                    <DataTableRowActions
-                        row={row}
-                        onEdit={handleOpenEdit}
-                        onDelete={handleDelete}
-                    />
-                </div>
-            ),
-            size: 50,
-            enableHiding: false,
-        },
     ];
 
     return (
@@ -300,6 +285,9 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
                 searchPlaceholder="Buscar contactos..."
                 viewMode={viewMode}
                 enableRowSelection={true}
+                enableRowActions={true}
+                onEdit={handleOpenEdit}
+                onDelete={handleDelete}
                 leftActions={viewToggle}
                 pageSize={50}
                 facetedFilters={[

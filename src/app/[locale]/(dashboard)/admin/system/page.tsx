@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Database, Shield } from "lucide-react";
+import { Activity, Database, Shield, Monitor } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
 
@@ -9,6 +9,7 @@ export default function AdminSystemPage() {
             <PageWrapper
                 type="page"
                 title="Plataforma"
+                icon={<Monitor />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
                         <TabsTrigger
@@ -17,7 +18,7 @@ export default function AdminSystemPage() {
                         >
                             <div className="flex items-center gap-2">
                                 <Activity className="h-4 w-4" />
-                                <span>Estado du Sistema</span>
+                                <span>Estado del Sistema</span>
                             </div>
                         </TabsTrigger>
                         <TabsTrigger

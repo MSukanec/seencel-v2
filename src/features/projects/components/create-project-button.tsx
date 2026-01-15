@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { ProjectForm } from "@/features/projects/components/ProjectForm";
+import { ProjectForm } from "@/features/projects/components/project-form";
 import { useTranslations } from "next-intl";
 import { useModal } from "@/providers/modal-store";
 import { motion } from "framer-motion";

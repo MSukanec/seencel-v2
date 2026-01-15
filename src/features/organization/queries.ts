@@ -426,3 +426,92 @@ export async function getFinancialMovements() {
 
     return { movements: data || [] };
 }
+
+// Unified query for financial contexts (Forms, etc.)
+export async function getOrganizationFinancialData(orgId: string) {
+    const supabase = await createClient();
+
+    // 1. Fetch Preferences (Defaults)
+    const { data: preferences } = await supabase
+        .from('organization_preferences')
+        // Using 'maybeSingle' to avoid error if no preferences found (just returns null)
+        .select('default_currency_id, default_wallet_id')
+        .eq('organization_id', orgId)
+        .maybeSingle();
+
+    // 2. Fetch Enabled Currencies (Use View)
+    const { data: orgCurrencies } = await supabase
+        .from('organization_currencies_view')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
+        .order('currency_code', { ascending: true });
+
+    // 3. Fetch Enabled Wallets (Use View)
+    // Using the view ensures we bypass RLS issues on the raw 'organization_wallets' table if any.
+    const { data: orgWalletsView } = await supabase
+        .from('organization_wallets_view')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('is_active', true);
+
+    // 4. Fetch Details for these wallets manually. 
+    // We only fetch 'currency_id' and map it to the already fetched 'orgCurrencies' to avoid double-fetching or RLS issues on the 'currencies' relation.
+    let walletsDetails: any[] = [];
+    if (orgWalletsView && orgWalletsView.length > 0) {
+        const walletIds = orgWalletsView.map((ow: any) => ow.wallet_id);
+        const { data: details } = await supabase
+            .from('wallets')
+            .select('id, name, currency_id')
+            .in('id', walletIds);
+        walletsDetails = details || [];
+    }
+
+    // Format Currencies
+    const formattedCurrencies = (orgCurrencies || [])
+        .map((oc: any) => ({
+            id: oc.currency_id, // View uses currency_id
+            name: oc.currency_name || oc.currency_code,
+            code: oc.currency_code,
+            symbol: oc.currency_symbol,
+            // Check if it's default either by flag or by preference match
+            is_default: Boolean(oc.is_default || (preferences?.default_currency_id === oc.currency_id))
+        }))
+        .sort((a, b) => (Number(b.is_default) - Number(a.is_default))); // Default first
+
+    // Format Wallets
+    const formattedWallets = (orgWalletsView || [])
+        .map((ow: any) => {
+            const detail = walletsDetails.find(d => d.id === ow.wallet_id);
+            // Resolve currency from the orgCurrencies list if possible
+            const walletCurrency = detail?.currency_id
+                ? formattedCurrencies.find(c => c.id === detail.currency_id)
+                : null;
+
+            return {
+                id: ow.id, // organization_wallet id (from view)
+                wallet_id: ow.wallet_id, // pure wallet definition id (useful for comparisons)
+                name: ow.wallet_name || detail?.name || "Unknown Wallet",
+                balance: ow.balance || 0,
+                // Use resolved currency info, fallback to view data or defaults
+                currency_symbol: walletCurrency?.symbol || "$",
+                currency_code: walletCurrency?.code,
+                // Check if it's default either by flag or by preference match
+                is_default: Boolean(ow.is_default || (preferences?.default_wallet_id === ow.wallet_id))
+            };
+        })
+        .sort((a, b) => (Number(b.is_default) - Number(a.is_default))); // Default first
+
+    return {
+        defaultCurrencyId: preferences?.default_currency_id || formattedCurrencies[0]?.id, // Fallback to first if no default set
+        defaultWalletId: formattedWallets.find(w => w.is_default)?.id || formattedWallets[0]?.id, // Return organization_wallet.id
+        currencies: formattedCurrencies,
+        wallets: formattedWallets
+    };
+}
+
+// Keeping this for backward compatibility if needed, but it should likely be deprecated
+export async function getOrganizationWallets(orgId: string) {
+    const data = await getOrganizationFinancialData(orgId);
+    return data.wallets;
+}

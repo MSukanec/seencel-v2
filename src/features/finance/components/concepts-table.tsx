@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { GeneralCost, GeneralCostCategory } from "@/types/general-costs";
@@ -12,13 +12,8 @@ import { ConceptFormDialog } from "./concept-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -117,35 +112,6 @@ export function ConceptsTable({ data, categories, organizationId }: ConceptsTabl
                 </span>
             ),
         },
-        {
-            id: "actions",
-            cell: ({ row }) => {
-                const concept = row.original;
-                return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(concept)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => handleDeleteClick(concept)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                );
-            },
-        },
     ];
 
     return (
@@ -173,6 +139,9 @@ export function ConceptsTable({ data, categories, organizationId }: ConceptsTabl
                         showToolbar={true}
                         showPagination={true}
                         pageSize={10}
+                        enableRowActions={true}
+                        onEdit={handleEdit}
+                        onDelete={handleDeleteClick}
                     />
                 </CardContent>
             </Card>

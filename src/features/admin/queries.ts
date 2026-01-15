@@ -212,9 +212,9 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
 
     // Charts: Sources (Placeholder - requires attribution tracking)
     const sources = [
-        { name: "Direct", value: 65, fill: "hsl(var(--chart-1))" },
-        { name: "Google", value: 25, fill: "hsl(var(--chart-2))" },
-        { name: "Referral", value: 10, fill: "hsl(var(--chart-3))" },
+        { name: "Directo", value: 65, fill: "var(--chart-1)" },
+        { name: "Orgánico", value: 25, fill: "var(--chart-2)" },
+        { name: "Referido", value: 10, fill: "var(--chart-3)" },
     ];
 
     // Lists transformation

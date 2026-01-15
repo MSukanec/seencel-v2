@@ -332,49 +332,54 @@ where
 
 ## Tabla client_payments_view:
 
-create view public.client_payments_view as
-select
-  cp.id,
-  cp.organization_id,
-  cp.project_id,
-  cp.client_id,
-  cp.commitment_id,
-  cp.amount,
-  cp.currency_id,
-  cp.exchange_rate,
-  cp.payment_date,
-  cp.status,
-  cp.wallet_id,
-  cp.reference,
-  cp.notes,
-  cp.created_at,
-  cp.created_by,
-  cp.schedule_id,
-  date_trunc(
-    'month'::text,
-    cp.payment_date::timestamp without time zone
-  ) as payment_month,
-  pcv.contact_full_name as client_name,
-  pcv.contact_first_name as client_first_name,
-  pcv.contact_last_name as client_last_name,
-  pcv.contact_company_name as client_company_name,
-  pcv.contact_email as client_email,
-  pcv.contact_phone as client_phone,
-  pcv.role_name as client_role_name,
-  pcv.contact_image_url as client_image_url,
-  pcv.linked_user_avatar_url as client_linked_user_avatar_url,
-  pcv.contact_avatar_url as client_avatar_url,
-  w.name as wallet_name,
-  cur.symbol as currency_symbol,
-  cur.code as currency_code
-from
-  client_payments cp
-  left join project_clients_view pcv on pcv.id = cp.client_id
-  left join organization_wallets ow on ow.id = cp.wallet_id
-  left join wallets w on w.id = ow.wallet_id
-  left join currencies cur on cur.id = cp.currency_id
-where
-  cp.is_deleted = false;
+DROP VIEW IF EXISTS public.client_payments_view;
+
+CREATE VIEW public.client_payments_view AS
+SELECT
+    cp.id,
+    cp.organization_id,
+    cp.project_id,
+    cp.client_id,
+    cp.commitment_id,
+    cp.amount,
+    cp.currency_id,
+    cp.exchange_rate,
+    cp.payment_date,
+    cp.status,
+    cp.wallet_id,
+    cp.reference,
+    cp.notes,
+    cp.created_at,
+    cp.created_by,
+    cp.schedule_id,
+    date_trunc('month'::text, cp.payment_date::timestamp without time zone) AS payment_month,
+    pcv.contact_full_name AS client_name,
+    pcv.contact_first_name AS client_first_name,
+    pcv.contact_last_name AS client_last_name,
+    pcv.contact_company_name AS client_company_name,
+    pcv.contact_email AS client_email,
+    pcv.contact_phone AS client_phone,
+    pcv.role_name AS client_role_name,
+    pcv.contact_image_url AS client_image_url,
+    pcv.linked_user_avatar_url AS client_linked_user_avatar_url,
+    pcv.contact_avatar_url AS client_avatar_url,
+    w.name AS wallet_name,
+    cur.symbol AS currency_symbol,
+    cur.code AS currency_code,
+    -- NUEVOS CAMPOS JOIN
+    cc.unit_name AS commitment_concept,
+    cps.notes AS schedule_notes
+FROM
+    client_payments cp
+    LEFT JOIN project_clients_view pcv ON pcv.id = cp.client_id
+    LEFT JOIN organization_wallets ow ON ow.id = cp.wallet_id
+    LEFT JOIN wallets w ON w.id = ow.wallet_id
+    LEFT JOIN currencies cur ON cur.id = cp.currency_id
+    -- JOINS AGREGADOS
+    LEFT JOIN client_commitments cc ON cc.id = cp.commitment_id
+    LEFT JOIN client_payment_schedule cps ON cps.id = cp.schedule_id
+WHERE
+    cp.is_deleted = false;
 
 ## Tabla project_clients_view:
 

@@ -1,6 +1,7 @@
 
 "use client";
 
+import { Link } from '@/i18n/routing';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,9 +12,6 @@ import {
     Form,
     FormControl,
     FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { createClientAction } from "@/features/clients/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { ClientRole } from "../types";
+import { useModal } from "@/providers/modal-store";
+import { FormGroup } from "@/components/ui/form-group";
+import { FormFooter } from "@/components/shared/form-footer";
 
 const formSchema = z.object({
     project_id: z.string().min(1, "El proyecto es requerido"),
@@ -41,6 +42,7 @@ interface ClientFormProps {
 }
 
 export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormProps) {
+    const { closeModal } = useModal();
     const [isPending, startTransition] = useTransition();
     const [contacts, setContacts] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
@@ -52,7 +54,7 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
             project_id: projectId || "",
             contact_id: "",
             client_role_id: "",
-            is_primary: true,
+            is_primary: false,
             notes: "",
         },
     });
@@ -93,7 +95,8 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
             try {
                 await createClientAction(values);
                 toast.success("Cliente agregado correctamente");
-                onSuccess();
+                if (onSuccess) onSuccess();
+                closeModal();
             } catch (error: any) {
                 toast.error(error.message || "Error al agregar el cliente");
             }
@@ -102,106 +105,120 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+                <div className="flex-1 overflow-y-auto space-y-4 p-1 px-2">
 
-                {/* Project Selection - Conditional */}
-                {!projectId && (
+                    {/* Project Selection - Conditional */}
+                    {!projectId && (
+                        <FormField
+                            control={form.control}
+                            name="project_id"
+                            render={({ field }) => (
+                                <FormGroup label="Proyecto" required>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Seleccionar proyecto..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {projects.map((p) => (
+                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+                            )}
+                        />
+                    )}
+                    {/* Hidden input if projectId is fixed */}
+                    {projectId && <input type="hidden" {...form.register("project_id")} />}
+
+                    {/* 1. Cliente (Contacto) */}
                     <FormField
                         control={form.control}
-                        name="project_id"
+                        name="contact_id"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Proyecto</FormLabel>
+                            <FormGroup label="Cliente" required>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar proyecto..." />
+                                            <SelectValue placeholder="Seleccionar cliente (contacto)..." />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {projects.map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        {contacts.map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>
+                                                {c.full_name} {c.company_name ? `(${c.company_name})` : ''}
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <FormMessage />
-                            </FormItem>
+                            </FormGroup>
                         )}
                     />
-                )}
-                {/* Hidden input if projectId is fixed */}
-                {projectId && <input type="hidden" {...form.register("project_id")} />}
 
-                {/* Contact Selection */}
-                <FormField
-                    control={form.control}
-                    name="contact_id"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Contacto</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar contacto..." />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {contacts.map((c) => (
-                                        <SelectItem key={c.id} value={c.id}>
-                                            {c.full_name} {c.company_name ? `(${c.company_name})` : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                    {/* 2. Rol y Cliente Principal */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="client_role_id"
+                            render={({ field }) => (
+                                <FormGroup label="Rol (Opcional)">
+                                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Seleccionar rol..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {roles.map((r) => (
+                                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+                            )}
+                        />
 
-                {/* Role Selection */}
-                <FormField
-                    control={form.control}
-                    name="client_role_id"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Rol del Cliente</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar rol (opcional)..." />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {roles.map((r) => (
-                                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                        <FormField
+                            control={form.control}
+                            name="is_primary"
+                            render={({ field }) => (
+                                <FormGroup label="Cliente Principal">
+                                    <div className="flex items-center space-x-2 h-10">
+                                        <Input
+                                            type="checkbox"
+                                            className="h-4 w-4"
+                                            checked={field.value}
+                                            onChange={field.onChange}
+                                        />
+                                        <span className="text-sm text-muted-foreground">Marcar como principal</span>
+                                    </div>
+                                </FormGroup>
+                            )}
+                        />
+                    </div>
 
-                <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Notas</FormLabel>
-                            <FormControl>
+                    {/* 3. Notas */}
+                    <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                            <FormGroup label="Notas">
                                 <Textarea placeholder="Notas adicionales sobre el cliente..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                            </FormGroup>
+                        )}
+                    />
 
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={onSuccess}>Cancelar</Button>
-                    <Button type="submit" disabled={isPending}>
-                        {isPending ? "Agregando..." : "Agregar Cliente"}
-                    </Button>
                 </div>
+
+                <FormFooter
+                    onCancel={closeModal}
+                    isLoading={isPending}
+                    submitLabel="Agregar Cliente"
+                    className="-mx-4 -mb-4 mt-6"
+                />
             </form>
         </Form>
     );

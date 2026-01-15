@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Info } from "lucide-react";
 
 // Reusable tab trigger style
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -36,6 +37,7 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
             <PageWrapper
                 type="page"
                 title="Información"
+                icon={<Info />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
                         <TabsTrigger value="general" className={tabTriggerClass}>

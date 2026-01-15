@@ -1,134 +1,18 @@
 
 "use client";
 
-import { DataTable } from "@/components/ui/data-table/data-table";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { ColumnDef } from "@tanstack/react-table";
 import { ClientCommitment, ProjectClientView } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useModal } from "@/providers/modal-store";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTransition } from "react";
 import { toast } from "sonner";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createCommitmentAction } from "@/features/clients/actions";
+import { cn } from "@/lib/utils";
+import { CommitmentForm } from "./commitment-form";
 
-// ------------------------------------------------------------------------
-// COMMITMENT FORM
-// ------------------------------------------------------------------------
-
-const commitmentFormSchema = z.object({
-    project_id: z.string().min(1),
-    client_id: z.string().min(1),
-    organization_id: z.string().min(1),
-    amount: z.coerce.number().positive(),
-    currency_id: z.string().min(1),
-});
-
-interface CommitmentFormProps {
-    clients: ProjectClientView[];
-    onSuccess: () => void;
-    projectId?: string;
-    orgId?: string;
-}
-
-function CommitmentForm({ clients, onSuccess, projectId, orgId }: CommitmentFormProps) {
-    const [isPending, startTransition] = useTransition();
-
-    const form = useForm<z.infer<typeof commitmentFormSchema>>({
-        resolver: zodResolver(commitmentFormSchema) as any,
-        defaultValues: {
-            amount: 0,
-            project_id: projectId || "",
-            organization_id: orgId || "",
-            client_id: "",
-            currency_id: "",
-        },
-        mode: "onChange"
-    });
-
-    const onSubmit = (values: z.infer<typeof commitmentFormSchema>) => {
-        startTransition(async () => {
-            try {
-                // Placeholder currency until we have selector
-                await createCommitmentAction({
-                    ...values,
-                    currency_id: "00000000-0000-0000-0000-000000000000",
-                    exchange_rate: 1,
-                    commitment_method: "fixed"
-                });
-                toast.success("Compromiso creado");
-                onSuccess();
-            } catch (e) {
-                toast.error("Error al crear (currency placeholder)");
-            }
-        });
-    };
-
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="client_id"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Cliente</FormLabel>
-                            <Select onValueChange={(val) => {
-                                field.onChange(val);
-                                const client = clients.find(c => c.id === val);
-                                if (client) {
-                                    // If we didn't have projectId passed, we trust client data
-                                    if (!projectId) form.setValue("project_id", client.project_id);
-                                    if (!orgId) form.setValue("organization_id", client.organization_id);
-                                }
-                            }} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar cliente..." />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {clients.map(c => (
-                                        <SelectItem key={c.id} value={c.id}>{c.contact_full_name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Monto Total</FormLabel>
-                            <FormControl>
-                                <Input type="number" {...field} />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
-
-                <div className="text-xs text-muted-foreground bg-yellow-100 p-2 rounded text-yellow-800">
-                    Nota: La selección de moneda está pendiente de integración.
-                </div>
-
-                <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={onSuccess}>Cancelar</Button>
-                    <Button type="submit" disabled={isPending}>Guardar</Button>
-                </div>
-            </form>
-        </Form>
-    )
-}
 
 // ------------------------------------------------------------------------
 // TABLE
@@ -137,17 +21,35 @@ function CommitmentForm({ clients, onSuccess, projectId, orgId }: CommitmentForm
 interface ClientCommitmentsTableProps {
     data: any[];
     clients: ProjectClientView[];
+    payments?: any[]; // Passed from parent
+    financialData: any;
     projectId?: string;
     orgId?: string;
 }
 
-export function ClientCommitmentsTable({ data, clients, projectId, orgId }: ClientCommitmentsTableProps) {
+export function ClientCommitmentsTable({
+    data,
+    clients,
+    payments = [],
+    financialData,
+    projectId,
+    orgId
+}: ClientCommitmentsTableProps) {
     const { openModal, closeModal } = useModal();
 
     const handleCreate = () => {
         openModal(
-            <CommitmentForm clients={clients} onSuccess={closeModal} projectId={projectId} orgId={orgId} />,
-            { title: "Nuevo Compromiso" }
+            <CommitmentForm
+                clients={clients}
+                financialData={financialData}
+                onSuccess={closeModal}
+                projectId={projectId}
+                orgId={orgId}
+            />,
+            {
+                title: "Nuevo Compromiso",
+                description: "Registra un nuevo compromiso de pago para un cliente."
+            }
         );
     };
 
@@ -155,16 +57,26 @@ export function ClientCommitmentsTable({ data, clients, projectId, orgId }: Clie
         {
             accessorKey: "client.contact.full_name",
             header: "Cliente",
-            cell: ({ row }) => row.original.client?.contact?.full_name || "N/A"
-        },
-        {
-            accessorKey: "project.name", // Still useful if we view cross-project (but we are filtering now)
-            header: "Proyecto",
-            cell: ({ row }) => row.original.project?.name || "N/A"
+            cell: ({ row }) => {
+                const commitment = row.original;
+                // Look up the full client details from the passed 'clients' prop to get the role
+                const fullClient = clients.find(c => c.id === commitment.client_id);
+                const clientName = fullClient?.contact_full_name || commitment.client?.contact?.full_name || "N/A";
+                const clientRole = fullClient?.role_name || "Sin rol";
+
+                return (
+                    <DataTableAvatarCell
+                        title={clientName}
+                        subtitle={clientRole}
+                        src={fullClient?.contact_avatar_url}
+                        fallback={clientName[0]}
+                    />
+                );
+            }
         },
         {
             accessorKey: "amount",
-            header: "Monto",
+            header: "Total Comprometido",
             cell: ({ row }) => {
                 const amount = Number(row.original.amount);
                 const currency = row.original.currency?.symbol || "$";
@@ -172,18 +84,78 @@ export function ClientCommitmentsTable({ data, clients, projectId, orgId }: Clie
             }
         },
         {
-            accessorKey: "created_at",
-            header: "Fecha",
-            cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString()
+            id: "paid",
+            header: "Pagado a la fecha",
+            cell: ({ row }) => {
+                const commitmentId = row.original.id;
+                // Filter payments linked to this commitment OR (heuristic) payments for this client with same currency if commitment_id not strict?
+                // Strict linkage is better: payments.commitment_id === row.original.id
+                // But initially payments might not be strictly linked if created loosely. 
+                // Let's assume strict link if available, or if we want to show 'paid so far' for this deal.
+                // Re-reading logic: Payments usually link to a commitment or schedule.
+                // Fallback: If no direct link, maybe we don't show it? Or we show general client payments?
+                // For this component "Commitments View", user likely wants to see progress of THAT commitment.
+                // So filter by commitment_id.
+
+                // NOTE: payments array might be ClientPaymentView[]
+                const connectedPayments = payments.filter(p => p.commitment_id === commitmentId);
+                const paidAmount = connectedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                const currency = row.original.currency?.symbol || "$";
+
+                return (
+                    <span className="font-mono text-muted-foreground">
+                        {currency} {paidAmount.toLocaleString()}
+                    </span>
+                );
+            }
+        },
+        {
+            id: "balance",
+            header: "Saldo",
+            cell: ({ row }) => {
+                const commitmentId = row.original.id;
+                const connectedPayments = payments.filter(p => p.commitment_id === commitmentId);
+                const paidAmount = connectedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                const total = Number(row.original.amount);
+                const balance = total - paidAmount;
+                const currency = row.original.currency?.symbol || "$";
+
+                // Color logic: Red if balance > 0? Or neutral?
+                // Usually balance > 0 means they owe money.
+                return (
+                    <span className={cn(
+                        "font-mono font-bold",
+                        balance > 0 ? "text-orange-600" : "text-green-600"
+                    )}>
+                        {currency} {balance.toLocaleString()}
+                    </span>
+                );
+            }
         }
     ];
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-end">
-                <Button onClick={handleCreate}><Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso</Button>
-            </div>
-            <DataTable columns={columns} data={data} searchKey="project.name" />
-        </div>
+        <DataTable
+            columns={columns}
+            data={data}
+            searchKey="client.contact.full_name"
+            searchPlaceholder="Buscar por cliente..."
+            enableRowActions={true}
+            toolbar={() => (
+                <Button onClick={handleCreate} size="sm">
+                    <Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso
+                </Button>
+            )}
+            onDelete={(row) => {
+                // TODO: Implement delete action
+                if (confirm("¿Eliminar este compromiso?")) {
+                    toast.info("Función de eliminar pendiente de implementación final")
+                }
+            }}
+            onEdit={(row) => {
+                // TODO: Implement edit action
+                toast.info("Función de editar pendiente de implementación final")
+            }}
+        />
     );
 }

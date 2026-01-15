@@ -23,7 +23,8 @@ export default async function OrganizationDetailsPage() {
         <OrganizationTabsWrapper defaultValue="general">
             <PageWrapper
                 type="page"
-                title="Identidad y Marca"
+                title="Identidad Corporativa"
+                icon={<Building />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
                         <TabsTrigger value="general" className={tabTriggerClass}>

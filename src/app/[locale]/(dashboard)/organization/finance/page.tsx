@@ -1,5 +1,5 @@
 import { getFinancialMovements } from "@/features/organization/queries";
-import { FinanceChart } from "@/components/dashboard/finance-chart";
+import { FinanceCashFlowWidget } from "@/features/finance/components/dashboard/finance-cash-flow-widget";
 import { Card } from "@/components/ui/card";
 import {
     ArrowUpRight,
@@ -39,7 +39,7 @@ export default async function FinancePage() {
     const balance = totalIncome - totalExpense;
 
     return (
-        <PageWrapper type="page" title="Finanzas">
+        <PageWrapper type="page" title="Finanzas" icon={<Wallet />}>
             <ContentLayout variant="wide">
                 <div className="space-y-8">
                     {/* KPI Cards */}
@@ -83,7 +83,7 @@ export default async function FinancePage() {
 
                     {/* Main Chart */}
                     <div className="h-[400px]">
-                        <FinanceChart movements={movements} />
+                        <FinanceCashFlowWidget movements={movements} />
                     </div>
 
                     {/* Transactions List */}

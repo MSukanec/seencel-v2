@@ -3,14 +3,23 @@ import { Project } from "@/types/project";
 
 export async function getLastActiveProject(organizationId: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    if (!user) return null;
+    if (!authUser) return null;
+
+    // Get PUBLIC user ID from users table
+    const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (!userData) return null;
 
     const { data } = await supabase
         .from('user_organization_preferences')
         .select('last_project_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
         .single();
 

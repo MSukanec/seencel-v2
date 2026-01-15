@@ -253,3 +253,48 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
     revalidatePath('/organization/clients');
     return data;
 }
+
+const updatePaymentSchema = createPaymentSchema.partial().extend({
+    id: z.string().uuid(),
+});
+
+export async function updatePaymentAction(input: z.infer<typeof updatePaymentSchema>) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('client_payments')
+        .update({
+            ...input,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', input.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating payment:", error);
+        throw new Error("Error al actualizar el pago.");
+    }
+
+    revalidatePath('/organization/clients');
+    return data;
+}
+
+export async function deletePaymentAction(paymentId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('client_payments')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', paymentId);
+
+    if (error) {
+        console.error("Error deleting payment:", error);
+        throw new Error("Error al eliminar el pago.");
+    }
+
+    revalidatePath('/organization/clients');
+}

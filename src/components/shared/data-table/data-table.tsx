@@ -28,6 +28,7 @@ import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { DataTableSkeleton } from "./data-table-skeleton";
 import { cn } from "@/lib/utils";
+import { DataTableRowActions } from "./data-table-row-actions";
 
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -60,6 +61,17 @@ interface DataTableProps<TData, TValue> {
     enableRowSelection?: boolean;
     bulkActions?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
     initialSorting?: SortingState;
+    enableRowActions?: boolean;
+    onView?: (row: TData) => void;
+    onEdit?: (row: TData) => void;
+    onDuplicate?: (row: TData) => void;
+    onDelete?: (row: TData) => void;
+    customActions?: {
+        label: string;
+        icon?: React.ReactNode;
+        onClick: (data: TData) => void;
+        variant?: "default" | "destructive";
+    }[];
 }
 
 
@@ -85,7 +97,14 @@ export function DataTable<TData, TValue>({
     enableRowSelection = false,
     bulkActions,
     initialSorting,
-}: DataTableProps<TData, TValue>) {
+    meta,
+    enableRowActions = false,
+    onView,
+    onEdit,
+    onDuplicate,
+    onDelete,
+    customActions,
+}: DataTableProps<TData, TValue> & { meta?: any }) {
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -93,35 +112,59 @@ export function DataTable<TData, TValue>({
     const [globalFilter, setGlobalFilter] = React.useState("");
 
     const tableColumns = React.useMemo(() => {
-        if (!enableRowSelection) return columns;
+        const baseColumns = [...columns];
 
-        const selectionColumn: ColumnDef<TData, TValue> = {
-            id: "select",
-            header: ({ table }) => (
-                <Checkbox
-                    checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                    aria-label="Seleccionar todo"
-                    className="translate-y-[2px]"
-                />
-            ),
-            cell: ({ row }) => (
-                <div onClick={(e) => e.stopPropagation()}>
+        if (enableRowSelection) {
+            const selectionColumn: ColumnDef<TData, TValue> = {
+                id: "select",
+                header: ({ table }) => (
                     <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
-                        aria-label="Seleccionar fila"
+                        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+                        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                        aria-label="Seleccionar todo"
                         className="translate-y-[2px]"
                     />
-                </div>
-            ),
-            enableSorting: false,
-            enableHiding: false,
-            size: 40,
-        };
+                ),
+                cell: ({ row }) => (
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                            checked={row.getIsSelected()}
+                            onCheckedChange={(value) => row.toggleSelected(!!value)}
+                            aria-label="Seleccionar fila"
+                            className="translate-y-[2px]"
+                        />
+                    </div>
+                ),
+                enableSorting: false,
+                enableHiding: false,
+                size: 40,
+            };
+            baseColumns.unshift(selectionColumn);
+        }
 
-        return [selectionColumn, ...columns];
-    }, [columns, enableRowSelection]);
+        if (enableRowActions) {
+            baseColumns.push({
+                id: "actions",
+                header: () => <span className="sr-only">Acciones</span>,
+                cell: ({ row }) => (
+                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        <DataTableRowActions
+                            row={row}
+                            onView={onView}
+                            onEdit={onEdit}
+                            onDuplicate={onDuplicate}
+                            onDelete={onDelete}
+                            customActions={customActions}
+                        />
+                    </div>
+                ),
+                size: 50,
+                enableHiding: false,
+            } as any);
+        }
+
+        return baseColumns;
+    }, [columns, enableRowSelection, enableRowActions, onView, onEdit, onDuplicate, onDelete, customActions]);
 
     const table = useReactTable({
         data,
@@ -136,6 +179,7 @@ export function DataTable<TData, TValue>({
         onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: "includesString",
+        meta,
         state: {
             sorting,
             columnFilters,

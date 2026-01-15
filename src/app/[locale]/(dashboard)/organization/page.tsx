@@ -1,16 +1,16 @@
 // This is a test comment to verify file content.
 import { getDashboardData } from "@/features/organization/queries";
-import { FinanceChart } from "@/components/dashboard/finance-chart";
-import { ProjectTable, ActivityFeed, ProjectCardsGrid } from "@/components/dashboard/widgets";
+import { FinanceCashFlowWidget } from "@/features/finance/components/dashboard/finance-cash-flow-widget";
+import { ProjectStatusCard } from "@/features/projects/components/dashboard/project-status-card";
+import { RecentProjectsCard } from "@/features/projects/components/dashboard/recent-projects-card";
+import { ActivityFeedCard } from "@/features/activity/components/dashboard/activity-feed-card";
 import {
     Folder,
     Briefcase,
     Plus,
     Activity,
-    TrendingUp,
-    TrendingDown,
+    LayoutDashboard,
     DollarSign,
-    ArrowRight,
     Users2
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
@@ -18,9 +18,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
 import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
-import { ErrorDisplay } from "@/components/dashboard/error-display";
+import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 
 export default async function OrganizationPage() {
     const t = await getTranslations('OrganizationDashboard');
@@ -28,11 +29,13 @@ export default async function OrganizationPage() {
 
     if (!data || data.error) {
         return (
-            <ErrorDisplay
-                title={t('errors.unableToLoad')}
-                message={data?.error || t('errors.unknownError')}
-                retryLabel={t('errors.retry')}
-            />
+            <div className="h-full w-full flex items-center justify-center">
+                <ErrorDisplay
+                    title={t('errors.unableToLoad')}
+                    message={data?.error || t('errors.unknownError')}
+                    retryLabel={t('errors.retry')}
+                />
+            </div>
         );
     }
 
@@ -44,7 +47,7 @@ export default async function OrganizationPage() {
     const greeting = hour < 12 ? t('greeting.morning') : hour < 18 ? t('greeting.afternoon') : t('greeting.evening');
 
     return (
-        <PageWrapper type="dashboard" user={user}>
+        <PageWrapper type="page" title="Visión General" icon={<LayoutDashboard />}>
             <ContentLayout variant="wide">
                 <HeaderTitleUpdater title={organization.name} />
 
@@ -78,109 +81,42 @@ export default async function OrganizationPage() {
 
                     {/* 2. KPI Grid (Spectacular Glass Cards) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <KpiCard
+                        <DashboardKpiCard
                             title={t('kpis.activeProjects')}
                             value={stats.activeProjects}
-                            icon={Folder}
-                            trend="+12%"
-                            trendUp={true}
-                            className="bg-gradient-to-br from-blue-500/5 to-transparent border-blue-500/10"
-                            iconColor="text-blue-500"
-                            vsLabel={t('kpis.vsLastMonth')}
+                            icon={<Folder className="w-5 h-5" />}
+                            trend={{ value: "+12%", direction: "up", label: t('kpis.vsLastMonth') }}
                         />
-                        <KpiCard
+                        <DashboardKpiCard
                             title={t('kpis.totalBudget')}
                             value="$2.4M"
-                            icon={DollarSign}
-                            trend="+5.2%"
-                            trendUp={true}
-                            className="bg-gradient-to-br from-emerald-500/5 to-transparent border-emerald-500/10"
-                            iconColor="text-emerald-500"
-                            vsLabel={t('kpis.vsLastMonth')}
+                            icon={<DollarSign className="w-5 h-5" />}
+                            trend={{ value: "+5.2%", direction: "up", label: t('kpis.vsLastMonth') }}
                         />
-                        <KpiCard
+                        <DashboardKpiCard
                             title={t('kpis.pendingTasks')}
                             value={stats.totalTasks}
-                            icon={Briefcase}
-                            trend="-2"
-                            trendUp={true} // Less tasks is good
-                            className="bg-gradient-to-br from-purple-500/5 to-transparent border-purple-500/10"
-                            iconColor="text-purple-500"
-                            vsLabel={t('kpis.vsLastMonth')}
+                            icon={<Briefcase className="w-5 h-5" />}
+                            trend={{ value: "-2", direction: "up", label: t('kpis.vsLastMonth') }} // Less tasks is good
                         />
-                        <KpiCard
+                        <DashboardKpiCard
                             title={t('kpis.teamVelocity')}
                             value="87%"
-                            icon={Activity}
-                            trend="+3%"
-                            trendUp={true}
-                            className="bg-gradient-to-br from-amber-500/5 to-transparent border-amber-500/10"
-                            iconColor="text-amber-500"
-                            vsLabel={t('kpis.vsLastMonth')}
+                            icon={<Activity className="w-5 h-5" />}
+                            trend={{ value: "+3%", direction: "up", label: t('kpis.vsLastMonth') }}
                         />
                     </div>
 
                     {/* 3. Main Dashboard Content (2 Columns) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Left Column: Recent Projects */}
-                        <ProjectCardsGrid projects={projects} />
+                        <RecentProjectsCard projects={projects} />
 
                         {/* Right Column: Activity Feed */}
-                        <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden flex flex-col">
-                            <div className="p-6 border-b border-border/40 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-orange-500/10 rounded-lg">
-                                        <Activity className="w-5 h-5 text-orange-500" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-semibold">Actividad Reciente</h3>
-                                        <p className="text-xs text-muted-foreground">Últimas 5 actividades</p>
-                                    </div>
-                                </div>
-                                <Link
-                                    href={{ pathname: "/organization/settings", query: { tab: "activity" } }}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                                >
-                                    Ver Todos
-                                    <ArrowRight className="h-3 w-3" />
-                                </Link>
-                            </div>
-                            <div className="flex-1 overflow-y-auto">
-                                <ActivityFeed activity={data.activity} />
-                            </div>
-                        </div>
+                        <ActivityFeedCard activity={data.activity} className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden flex flex-col items-stretch" />
                     </div>
                 </div>
             </ContentLayout>
         </PageWrapper>
     );
-}
-
-// ----------------------------------------------------------------------------
-// Components (Internal)
-// ----------------------------------------------------------------------------
-
-function KpiCard({ title, value, icon: Icon, trend, trendUp, className, iconColor, vsLabel }: any) {
-    return (
-        <div className={cn("relative overflow-hidden rounded-2xl border bg-card p-6 transition-all hover:shadow-md", className)}>
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">{title}</p>
-                    <h2 className="text-3xl font-bold tracking-tight mt-2">{value}</h2>
-                </div>
-                <div className={cn("p-3 rounded-xl bg-background/50 backdrop-blur-md", iconColor)}>
-                    <Icon className="w-6 h-6" />
-                </div>
-            </div>
-            {trend && (
-                <div className="mt-4 flex items-center gap-2">
-                    <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1", trendUp ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600")}>
-                        {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        {trend}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{vsLabel}</span>
-                </div>
-            )}
-        </div>
-    )
 }

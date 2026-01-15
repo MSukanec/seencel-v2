@@ -10,6 +10,7 @@ import { redirect } from "@/i18n/routing";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
+import { Briefcase } from "lucide-react";
 
 // Reusable tab trigger style
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -39,6 +40,7 @@ export default async function ProjectsPage({
             <PageWrapper
                 type="page"
                 title={t('breadcrumb')}
+                icon={<Briefcase />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
                         <TabsTrigger value="projects" className={tabTriggerClass}>

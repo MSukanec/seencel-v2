@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Users, Video } from "lucide-react";
+import { LayoutDashboard, Users, Video, GraduationCap } from "lucide-react";
 import { getCoursesDashboardData, getAdminCourseEnrollments, getAdminCourses } from "@/features/admin/academy-queries";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
@@ -19,10 +19,12 @@ export default async function AdminCoursesPage() {
     ]);
 
     return (
+
         <Tabs defaultValue="dashboard" className="w-full h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Academia"
+                icon={<GraduationCap />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
                         <TabsTrigger

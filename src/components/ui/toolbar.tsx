@@ -3,12 +3,12 @@
 import { Table } from "@tanstack/react-table";
 import { Search, X } from "lucide-react";
 import * as React from "react";
-import { DataTableFacetedFilter } from "@/components/ui/data-table/data-table-faceted-filter";
-import { DataTableBulkActions } from "@/components/ui/data-table/data-table-bulk-actions";
+import { DataTableFacetedFilter } from "@/components/shared/data-table/data-table-faceted-filter";
+import { DataTableBulkActions } from "@/components/shared/data-table/data-table-bulk-actions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataTableViewOptions } from "@/components/ui/data-table/data-table-view-options";
+import { DataTableViewOptions } from "@/components/shared/data-table/data-table-view-options";
 import { cn } from "@/lib/utils";
 
 export interface ToolbarProps<TData> {

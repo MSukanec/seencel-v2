@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { OrganizationActivityLog } from "@/types/organization";
-import { DataTable, DataTableColumnHeader } from "@/components/ui/data-table";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";

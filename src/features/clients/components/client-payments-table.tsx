@@ -1,7 +1,7 @@
 
 "use client";
 
-import { DataTable } from "@/components/ui/data-table/data-table";
+import { DataTable } from "@/components/shared/data-table/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { ClientPaymentView } from "../types";
 import { Badge } from "@/components/ui/badge";

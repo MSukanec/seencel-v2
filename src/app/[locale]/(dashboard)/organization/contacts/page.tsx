@@ -2,6 +2,7 @@ import { getActiveOrganizationId } from "@/actions/general-costs";
 import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/actions/contacts";
 import { ContactsClient } from "@/features/organization/components/contacts/contacts-client";
 import { redirect } from "next/navigation";
+import { Users } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +28,7 @@ export default async function ContactsPage() {
             <PageWrapper
                 type="page"
                 title="Contactos"
+                icon={<Users />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
                         <TabsTrigger value="list" className={tabTriggerClass}>

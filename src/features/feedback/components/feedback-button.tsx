@@ -62,6 +62,7 @@ export function FeedbackButton({ customTrigger, side = "bottom", align = "end" }
                         variant="outline"
                         size="sm"
                         className="h-8 gap-2 px-3 text-xs font-medium"
+                        suppressHydrationWarning
                     >
                         {t('button')}
                     </Button>

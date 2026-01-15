@@ -2,6 +2,7 @@ import { ProjectDashboardClient } from "@/features/projects/components/project-d
 import { notFound } from "next/navigation";
 import { getProjectById } from "@/features/projects/queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
+import { LayoutDashboard } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
 
@@ -27,7 +28,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
     const imageUrl = project.image_url || null;
 
     return (
-        <PageWrapper type="dashboard">
+        <PageWrapper type="dashboard" icon={<LayoutDashboard />}>
             <ContentLayout variant="wide">
                 <ProjectDashboardClient project={project} signedImageUrl={imageUrl} />
             </ContentLayout>

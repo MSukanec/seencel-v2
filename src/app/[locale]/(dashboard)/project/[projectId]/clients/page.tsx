@@ -1,3 +1,4 @@
+import { getOrganizationFinancialData } from "@/features/organization/queries"; // Unified fetch
 import { getClients, getClientFinancialSummary, getClientCommitments, getClientPayments, getClientPaymentSchedules, getClientRoles } from "@/features/clients/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getOrganizationProjects } from "@/features/projects/queries";
@@ -17,7 +18,7 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
     const resolvedSearchParams = await searchParams;
     const defaultTab = resolvedSearchParams.view || "overview";
 
-    const { clients, financialSummary, commitments, payments, schedules, roles, orgId } = await getData(projectId);
+    const { clients, financialSummary, commitments, payments, schedules, roles, orgId, financialData } = await getData(projectId);
 
     return (
         <ClientsPageClient
@@ -29,6 +30,7 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
             payments={payments}
             schedules={schedules}
             roles={roles}
+            financialData={financialData}
             defaultTab={defaultTab}
         />
     );
@@ -36,7 +38,7 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
 
 async function getData(projectId: string) {
     const { activeOrgId } = await getUserOrganizations();
-    if (!activeOrgId) return { clients: [], financialSummary: [], commitments: [], payments: [], schedules: [], roles: [], orgId: "" };
+    if (!activeOrgId) return { clients: [], financialSummary: [], commitments: [], payments: [], schedules: [], roles: [], orgId: "", financialData: { currencies: [], wallets: [] } };
 
     const [
         clientsRes,
@@ -44,14 +46,16 @@ async function getData(projectId: string) {
         commitmentsRes,
         paymentsRes,
         schedulesRes,
-        rolesRes
+        rolesRes,
+        financialData
     ] = await Promise.all([
         getClients(projectId),
         getClientFinancialSummary(projectId),
         getClientCommitments(projectId),
         getClientPayments(projectId),
         getClientPaymentSchedules(projectId),
-        getClientRoles(activeOrgId)
+        getClientRoles(activeOrgId),
+        getOrganizationFinancialData(activeOrgId)
     ]);
 
     return {
@@ -61,7 +65,8 @@ async function getData(projectId: string) {
         payments: paymentsRes.data || [],
         schedules: schedulesRes.data || [],
         roles: rolesRes.data || [],
-        orgId: activeOrgId
+        orgId: activeOrgId,
+        financialData
     };
 }
 

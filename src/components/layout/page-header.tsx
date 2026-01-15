@@ -35,9 +35,8 @@ interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     actions?: React.ReactNode
     /** Tab navigation below the title */
     tabs?: React.ReactNode
-    /** User profile for mobile nav */
-    // We might need to pass User here or fetch it. Since this is client component, we might need context or props.
-    // Ideally PageHeader shouldn't deal with fetch. For now let's assume we can rely on what we have.
+    /** Optional manual icon override */
+    icon?: React.ReactElement
 }
 
 export function PageHeader({
@@ -46,6 +45,7 @@ export function PageHeader({
     tabs,
     className,
     children,
+    icon,
     ...props
 }: PageHeaderProps) {
     const pathname = usePathname();
@@ -63,7 +63,8 @@ export function PageHeader({
     };
 
     const activeItem = findActiveItem();
-    const PageIcon = activeItem?.icon;
+    // Do not mix types. 'icon' is ReactElement, 'activeItem.icon' is ComponentType.
+    const ActiveIcon = activeItem?.icon;
     const titleItem = breadcrumbs[breadcrumbs.length - 1];
 
     return (
@@ -79,9 +80,13 @@ export function PageHeader({
                 <div className="flex items-center justify-between gap-4">
                     {/* Page Title & Icon */}
                     <div className="flex items-center gap-3">
-                        {PageIcon && (
-                            <PageIcon className="h-6 w-6 text-primary" />
-                        )}
+                        {icon ? (
+                            React.cloneElement(icon, {
+                                className: cn("h-6 w-6 text-primary", icon.props.className)
+                            })
+                        ) : ActiveIcon ? (
+                            <ActiveIcon className="h-6 w-6 text-primary" />
+                        ) : null}
                         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                             {/* Prefer activeItem title if it matches user intent of 'sidebar title', else breadcrumb */}
                             {activeItem?.title || titleItem?.label}

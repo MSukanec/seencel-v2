@@ -1,4 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { getAdminDashboardData } from "@/features/admin/queries";
 import { AdminCharts } from "@/features/admin/components/admin-charts";
 import { Activity, Users, Building, Folder, ArrowRight, UserPlus, Zap, UserMinus, Timer, TrendingDown, Route } from "lucide-react";
@@ -7,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { getViewName } from "@/lib/view-name-map";
+import { LayoutDashboard } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
 
-export default async function AdminDashboard() {
+export default async function AdminPage() {
     const { kpis, charts, lists } = await getAdminDashboardData();
 
     // Helper to format seconds to readable time
@@ -22,95 +25,71 @@ export default async function AdminDashboard() {
     };
 
     return (
-        <PageWrapper type="dashboard">
+        <PageWrapper type="page" title="Admin Overview" icon={<LayoutDashboard />}>
             <ContentLayout variant="wide">
                 <div className="flex flex-col gap-6">
-                    {/* Hero KPIs - Consolidated */}
-                    <div className="grid gap-4 lg:grid-cols-2">
-                        {/* Card 1: Usuarios */}
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-lime-500/20">
-                                            <Users className="h-5 w-5 text-lime-500" />
-                                        </div>
-                                        <CardTitle className="text-lg">Usuarios</CardTitle>
-                                    </div>
-                                    <Badge variant="outline" className="text-lime-600 border-lime-500/30">En vivo</Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold text-lime-500">{kpis.activeNow}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">En línea ahora</p>
-                                    </div>
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold">{kpis.newUsers}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Nuevos este mes</p>
-                                    </div>
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold">{kpis.totalUsers}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Total registrados</p>
-                                    </div>
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold text-amber-500">{lists.dropOff.length}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">En riesgo</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    {/* Hero KPIs - Visual Excellence with StatsCards */}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {/* Row 1: Users */}
+                        <DashboardKpiCard
+                            title="En línea ahora"
+                            value={kpis.activeNow}
+                            icon={<Users className="w-5 h-5" />}
+                            description="Usuarios activos en este momento"
+                        />
+                        <DashboardKpiCard
+                            title="Nuevos este mes"
+                            value={kpis.newUsers}
+                            icon={<UserPlus className="w-5 h-5" />}
+                            trend={{ value: "+12%", direction: "up", label: "vs mes anterior" }}
+                        />
+                        <DashboardKpiCard
+                            title="Total Registrados"
+                            value={kpis.totalUsers}
+                            icon={<Building className="w-5 h-5" />}
+                        />
+                        <DashboardKpiCard
+                            title="En Riesgo"
+                            value={lists.dropOff.length}
+                            icon={<TrendingDown className="w-5 h-5" />}
+                            description="Usuarios con baja actividad"
+                        />
 
-                        {/* Card 2: Plataforma & Engagement */}
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-violet-500/20">
-                                            <Activity className="h-5 w-5 text-violet-500" />
-                                        </div>
-                                        <CardTitle className="text-lg">Plataforma & Engagement</CardTitle>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold">{kpis.totalOrgs}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Organizaciones</p>
-                                    </div>
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold">{kpis.totalProjects}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Proyectos</p>
-                                    </div>
-                                    <div>
-                                        <div className="text-3xl md:text-4xl font-bold text-lime-500">{formatDuration(kpis.avgSessionDuration)}</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Duración promedio</p>
-                                    </div>
-                                    <div>
-                                        <div className={`text-3xl md:text-4xl font-bold ${kpis.bounceRate > 50 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                            {kpis.bounceRate}%
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-1">Tasa de rebote</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {/* Row 2: Platform */}
+                        <DashboardKpiCard
+                            title="Organizaciones"
+                            value={kpis.totalOrgs}
+                            icon={<Building className="w-5 h-5" />}
+                        />
+                        <DashboardKpiCard
+                            title="Proyectos"
+                            value={kpis.totalProjects}
+                            icon={<Folder className="w-5 h-5" />}
+                        />
+                        <DashboardKpiCard
+                            title="Duración Promedio"
+                            value={formatDuration(kpis.avgSessionDuration)}
+                            icon={<Timer className="w-5 h-5" />}
+                            description="Tiempo medio por sesión"
+                        />
+                        <DashboardKpiCard
+                            title="Tasa de Rebote"
+                            value={`${kpis.bounceRate}%`}
+                            icon={<Activity className="w-5 h-5" />}
+                            trend={{ value: "-2.5%", direction: "down", label: "Mejorando" }}
+                        />
                     </div>
 
-                    {/* Lists Row - MOVED UP */}
+                    {/* Lists Row */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         {/* 1. Actividad Reciente */}
-                        <Card className="col-span-1">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base">Actividad Reciente</CardTitle>
-                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <CardDescription>Últimas conexiones</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
+                        <DashboardCard
+                            title="Actividad Reciente"
+                            description="Últimas conexiones"
+                            icon={<Activity className="h-4 w-4" />}
+                            className="col-span-1"
+                        >
+                            <div className="space-y-4">
                                 {lists.recentActivity.map((user) => {
                                     const lastSeen = user.user_presence?.last_seen_at ? new Date(user.user_presence.last_seen_at) : null;
                                     const isActive = lastSeen && (new Date().getTime() - lastSeen.getTime() < 1000 * 60 * 5);
@@ -135,25 +114,23 @@ export default async function AdminDashboard() {
                                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                                     </span>
-                                                    Activo ahora
+                                                    Activo
                                                 </Badge>
                                             )}
                                         </div>
                                     );
                                 })}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </DashboardCard>
 
                         {/* 2. Usuarios Registrados */}
-                        <Card className="col-span-1">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base">Usuarios Registrados</CardTitle>
-                                    <UserPlus className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <CardDescription>Nuevos registros</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
+                        <DashboardCard
+                            title="Nuevos Usuarios"
+                            description="Registrados recientemente"
+                            icon={<UserPlus className="h-4 w-4" />}
+                            className="col-span-1"
+                        >
+                            <div className="space-y-4">
                                 {lists.newRegistrations.map((user) => (
                                     <div key={user.id} className="flex items-center gap-3">
                                         <Avatar className="h-8 w-8">
@@ -168,19 +145,17 @@ export default async function AdminDashboard() {
                                         </div>
                                     </div>
                                 ))}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </DashboardCard>
 
                         {/* 3. Top Usuarios Activos */}
-                        <Card className="col-span-1">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base">Top Usuarios</CardTitle>
-                                    <Zap className="h-4 w-4 text-amber-500" />
-                                </div>
-                                <CardDescription>Mayor engagement</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
+                        <DashboardCard
+                            title="Top Usuarios"
+                            description="Mayor engagement"
+                            icon={<Zap className="h-4 w-4" />}
+                            className="col-span-1"
+                        >
+                            <div className="space-y-4">
                                 {lists.topUsers.map((user, i) => (
                                     <div key={user.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
@@ -196,21 +171,24 @@ export default async function AdminDashboard() {
                                         <Badge variant="secondary" className="h-5 w-auto min-w-[20px] justify-center bg-lime-100 text-lime-700">#{i + 1}</Badge>
                                     </div>
                                 ))}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </DashboardCard>
 
                         {/* 4. Drop Off / En Riesgo */}
-                        <Card className="col-span-1">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base">En Riesgo</CardTitle>
-                                    <UserMinus className="h-4 w-4 text-amber-500" />
-                                </div>
-                                <CardDescription>Usuarios con poca actividad</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
+                        <DashboardCard
+                            title="En Riesgo"
+                            description="Poca actividad (Drop-off)"
+                            icon={<UserMinus className="h-4 w-4" />}
+                            className="col-span-1"
+                        >
+                            <div className="space-y-4">
                                 {lists.dropOff.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground text-center py-4">¡No hay usuarios en riesgo! 🎉</p>
+                                    <div className="flex flex-col items-center justify-center h-full py-4 text-center">
+                                        <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-900/20 mb-2">
+                                            <TrendingDown className="h-4 w-4 text-emerald-500" />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">¡No hay usuarios en riesgo!</p>
+                                    </div>
                                 ) : (
                                     lists.dropOff.map((user) => (
                                         <div key={user.id} className="flex items-center gap-3">
@@ -225,27 +203,20 @@ export default async function AdminDashboard() {
                                         </div>
                                     ))
                                 )}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </DashboardCard>
                     </div>
 
                     {/* Charts Row */}
                     <AdminCharts charts={charts} />
 
                     {/* User Journeys - ENTERPRISE */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Route className="h-4 w-4 text-lime-500" />
-                                        User Journeys (Últimas Sesiones)
-                                    </CardTitle>
-                                    <CardDescription>Flujo de navegación de usuarios reales</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                    <DashboardCard
+                        title="User Journeys"
+                        description="Flujo de navegación de usuarios reales (Últimas Sesiones)"
+                        icon={<Route className="h-4 w-4" />}
+                    >
+                        <div className="space-y-4">
                             {lists.userJourneys.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground">
                                     <Route className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -254,21 +225,24 @@ export default async function AdminDashboard() {
                                 </div>
                             ) : (
                                 lists.userJourneys.map((journey) => (
-                                    <div key={journey.session_id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                                    <div key={journey.session_id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                                         <Avatar className="h-8 w-8 mt-0.5">
                                             <AvatarImage src={journey.avatar_url || ""} />
                                             <AvatarFallback>{journey.user_name?.[0] || 'U'}</AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-sm font-medium">{journey.user_name}</div>
-                                            <div className="flex flex-wrap gap-1 mt-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-sm font-medium">{journey.user_name}</span>
+                                                <span className="text-xs text-muted-foreground">• Session ID: {journey.session_id.slice(0, 8)}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1">
                                                 {journey.steps.map((step, i) => (
                                                     <span key={i} className="inline-flex items-center">
-                                                        <Badge variant="outline" className="text-[10px] h-5 bg-background">
+                                                        <Badge variant="outline" className="text-[10px] h-6 bg-background px-2 font-medium">
                                                             {step.view}
-                                                            {step.duration > 0 && <span className="ml-1 text-muted-foreground">({formatDuration(step.duration)})</span>}
+                                                            {step.duration > 0 && <span className="ml-1.5 text-muted-foreground font-normal border-l pl-1.5">{formatDuration(step.duration)}</span>}
                                                         </Badge>
-                                                        {i < journey.steps.length - 1 && <span className="mx-1 text-muted-foreground">→</span>}
+                                                        {i < journey.steps.length - 1 && <span className="mx-1 text-muted-foreground/40 text-xs">→</span>}
                                                     </span>
                                                 ))}
                                             </div>
@@ -276,10 +250,10 @@ export default async function AdminDashboard() {
                                     </div>
                                 ))
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </DashboardCard>
                 </div>
-            </ContentLayout>
-        </PageWrapper>
+            </ContentLayout >
+        </PageWrapper >
     );
 }

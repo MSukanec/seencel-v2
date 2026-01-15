@@ -56,3 +56,20 @@ export async function getBillingProfile(): Promise<{ profile: BillingProfile | n
 
     return { profile: profile as BillingProfile | null };
 }
+
+export async function getCurrencies() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('currencies')
+        .select('*')
+        .eq('is_active', true)
+        .order('order', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching currencies:", error);
+        return [];
+    }
+
+    return data || [];
+}

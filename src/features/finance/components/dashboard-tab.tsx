@@ -1,8 +1,8 @@
 "use client";
 
 import { EnhancedDashboardData } from "@/types/general-costs";
-import { KpiCard } from "@/components/dashboard/kpi-card";
-import { InsightCard } from "@/components/insights/insight-card";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { InsightCard } from "@/components/dashboard/dashboard-insight-card";
 import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BaseAreaChart } from "@/components/charts/base-area-chart";
@@ -28,40 +28,36 @@ export function DashboardTab({ data }: DashboardTabProps) {
         <div className="space-y-6">
             {/* 1. KPI Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard
-                    title={kpis.totalExpense.label}
-                    value={formatCurrency(Number(kpis.totalExpense.value))}
-                    icon={DollarSign}
-                    description={kpis.totalExpense.description}
-                    iconColor="text-emerald-500"
-                    trend="-93.2%" // Placeholder trend, can be computed if historical data allows
-                    trendUp={false} // Placeholder
-                    className="bg-white dark:bg-card"
-                />
-                <KpiCard
-                    title={kpis.monthlyAverage.label}
-                    value={formatCurrency(Number(kpis.monthlyAverage.value))}
-                    icon={TrendingUp}
-                    description={kpis.monthlyAverage.description}
-                    iconColor="text-blue-500"
-                    className="bg-white dark:bg-card"
-                />
-                <KpiCard
-                    title={kpis.totalPayments.label}
-                    value={kpis.totalPayments.value}
-                    icon={CreditCard}
-                    description={kpis.totalPayments.description}
-                    iconColor="text-purple-500"
-                    className="bg-white dark:bg-card"
-                />
-                <KpiCard
-                    title={kpis.expenseConcentration.label}
-                    value={kpis.expenseConcentration.value}
-                    icon={PieChartIcon}
-                    description={kpis.expenseConcentration.description}
-                    iconColor="text-amber-500"
-                    className="bg-white dark:bg-card"
-                />
+                import {DashboardKpiCard} from "@/components/dashboard/dashboard-kpi-card";
+                // ...
+                {/* 1. KPI Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <DashboardKpiCard
+                        title={kpis.totalExpense.label}
+                        value={formatCurrency(Number(kpis.totalExpense.value))}
+                        icon={<DollarSign className="w-5 h-5" />}
+                        description={kpis.totalExpense.description}
+                        trend={{ value: "-93.2%", direction: "down" }} // Placeholder
+                    />
+                    <DashboardKpiCard
+                        title={kpis.monthlyAverage.label}
+                        value={formatCurrency(Number(kpis.monthlyAverage.value))}
+                        icon={<TrendingUp className="w-5 h-5" />}
+                        description={kpis.monthlyAverage.description}
+                    />
+                    <DashboardKpiCard
+                        title={kpis.totalPayments.label}
+                        value={kpis.totalPayments.value}
+                        icon={<CreditCard className="w-5 h-5" />}
+                        description={kpis.totalPayments.description}
+                    />
+                    <DashboardKpiCard
+                        title={kpis.expenseConcentration.label}
+                        value={kpis.expenseConcentration.value}
+                        icon={<PieChartIcon className="w-5 h-5" />}
+                        description={kpis.expenseConcentration.description}
+                    />
+                </div>
             </div>
 
             {/* 2. Charts Row */}
