@@ -53,19 +53,14 @@ export function DashboardKpiCard({
 
                         {/* Currency Breakdown */}
                         {showBreakdown && (
-                            <div className="mt-1.5 space-y-0.5">
-                                {currencyBreakdown.map((item) => (
-                                    <p key={item.currencyCode} className="text-xs text-muted-foreground">
-                                        {item.isPrimary ? (
-                                            <span>{item.symbol} {item.nativeTotal.toLocaleString('es-AR')} nativo</span>
-                                        ) : (
-                                            <span className="text-primary/80">
-                                                + {item.currencyCode} {item.nativeTotal.toLocaleString('es-AR')}
-                                            </span>
-                                        )}
-                                    </p>
+                            <p className="mt-1 text-xs text-muted-foreground font-medium">
+                                {currencyBreakdown.map((item, index) => (
+                                    <span key={item.currencyCode}>
+                                        {index > 0 && " + "}
+                                        {item.symbol} {item.nativeTotal.toLocaleString('es-AR')}
+                                    </span>
                                 ))}
-                            </div>
+                            </p>
                         )}
                     </div>
                     {icon && (

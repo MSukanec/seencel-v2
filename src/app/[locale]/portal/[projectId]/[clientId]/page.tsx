@@ -56,7 +56,8 @@ export default async function PublicClientPortalPage({ params }: PageProps) {
             data={{
                 payments: data.payments,
                 schedules: data.schedules,
-                summary: data.summary
+                summary: data.summary,
+                logs: data.logs || []
             }}
         />
     );

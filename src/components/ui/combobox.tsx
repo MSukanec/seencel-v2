@@ -93,14 +93,15 @@ export function Combobox({
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="p-0 w-[--radix-popover-trigger-width]"
+                className="p-0"
                 align="start"
                 sideOffset={4}
+                style={{ minWidth: 'var(--radix-popover-trigger-width)', width: 'var(--radix-popover-trigger-width)' }}
             >
-                <Command>
+                <Command className="[&_[data-slot=command-input-wrapper]]:border-none">
                     <CommandInput
                         placeholder={searchPlaceholder}
-                        className="border-none focus:ring-0 shadow-none h-9"
+                        className="border-none focus:ring-0 focus:outline-none shadow-none h-9"
                     />
                     <CommandList>
                         <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -108,24 +109,19 @@ export function Combobox({
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.label} // Filtering by label as before. Consider changing to option.value + label if needed.
+                                    value={option.label}
                                     onSelect={() => {
                                         onValueChange(option.value);
                                         setOpen(false);
                                     }}
-                                    className={cn(
-                                        "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer" // Force cursor-pointer
-                                    )}
                                 >
                                     {option.content || option.label}
-                                    <span className="absolute right-2 flex size-3.5 items-center justify-center">
-                                        <Check
-                                            className={cn(
-                                                "size-4",
-                                                value === option.value ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                    </span>
+                                    <Check
+                                        className={cn(
+                                            "ml-auto size-4",
+                                            value === option.value ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
                                 </CommandItem>
                             ))}
                         </CommandGroup>

@@ -89,13 +89,7 @@ export interface DashboardKpi {
     description?: string;
 }
 
-export interface Insight {
-    id: string;
-    title: string;
-    description: string;
-    severity: 'info' | 'warning' | 'critical' | 'positive';
-    actionLabel?: string;
-}
+import { Insight } from "@/features/insights/types";
 
 export interface EnhancedDashboardData {
     kpis: {

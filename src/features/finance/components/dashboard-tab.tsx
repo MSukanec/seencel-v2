@@ -2,7 +2,7 @@
 
 import { EnhancedDashboardData, GeneralCostPaymentView } from "@/types/general-costs";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { InsightCard } from "@/components/dashboard/dashboard-insight-card";
+import { InsightCard } from "@/features/insights/components/insight-card";
 import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BaseAreaChart } from "@/components/charts/base-area-chart";

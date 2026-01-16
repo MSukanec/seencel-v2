@@ -1,13 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { DashboardKpiCard, CurrencyBreakdownItem } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
-import { InsightCard, Insight, InsightSeverity } from "@/components/dashboard/dashboard-insight-card";
+import { InsightCard } from "@/features/insights/components/insight-card";
+import { Insight } from "@/features/insights/types";
+import { generateClientInsights } from "@/features/insights/logic/clients";
 import { BaseAreaChart } from "@/components/charts/base-area-chart";
 import { BaseDonutChart } from "@/components/charts/base-donut-chart";
 import { ClientFinancialSummary, ClientPaymentView } from "../types";
-import { FileText, DollarSign, Clock, TrendingUp, BarChart3, PieChart, Lightbulb, Activity } from "lucide-react";
+import { FileText, DollarSign, Clock, TrendingUp, BarChart3, PieChart, Lightbulb, Activity, CheckCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -51,7 +53,13 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // ========================================
     const kpis = useMemo(() => {
         // Use current exchange rate from context if not available in data
-        const currentRate = currencyContext?.currentExchangeRate || 1;
+        // FALLBACK: If currentExchangeRate is 1 (default) or 0, try to use the static rate from secondary currency definition
+        // This prevents showing ARS amounts as USD 1:1 when context rate isn't explicitly set by a date filter
+        let currentRate = currencyContext?.currentExchangeRate || 0;
+        if (currentRate <= 1 && currencyContext?.secondaryCurrency?.exchange_rate) {
+            currentRate = currencyContext.secondaryCurrency.exchange_rate;
+        }
+        if (currentRate <= 0) currentRate = 1; // Last resort safety
 
         // ========================================
         // LOGICAL HELPERS FOR SMART AGGREGATION
@@ -104,17 +112,17 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             currencyCode: s.currency_code || undefined
         })));
 
-        const totalPaid = calculateSmartTotal(summary.map(s => ({
+        const totalPaid = payments.length === 0 ? 0 : calculateSmartTotal(summary.map(s => ({
             functional: s.total_functional_paid_amount,
             original: s.total_paid_amount,
-            currencyCode: s.currency_code || undefined
+            // Force conversion from functional for payments to avoid mixed-currency sum issues in 'original'
+            // treating all payments as effectively needing normalization to current rate if looking at USD.
+            currencyCode: undefined
         })));
 
-        const totalBalance = calculateSmartTotal(summary.map(s => ({
-            functional: s.functional_balance_due,
-            original: s.balance_due,
-            currencyCode: s.currency_code || undefined
-        })));
+        // Derive Balance from the calculated totals to ensure Visual Consistency (A - B = C)
+        // This avoids data drift between DB-cached balance and real-time converted Paid/Committed
+        const totalBalance = totalCommitted - totalPaid;
 
         // Mapping for Currency Breakdown (Hover)
         // To match the main total, we need these to align.
@@ -154,6 +162,54 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             return acc;
         }, {} as Record<string, number>);
 
+        // ========================================
+        // BREAKDOWN HELPER
+        // ========================================
+        const calculateBreakdown = (
+            items: { amount: number, functional: number, currencyCode?: string, symbol?: string }[]
+        ): CurrencyBreakdownItem[] => {
+            const grouped = items.reduce((acc, item) => {
+                const code = item.currencyCode || primaryCurrencyCode;
+                if (!acc[code]) {
+                    acc[code] = {
+                        currencyCode: code,
+                        symbol: item.symbol || '$',
+                        nativeTotal: 0,
+                        functionalTotal: 0,
+                        isPrimary: code === primaryCurrencyCode
+                    };
+                }
+                acc[code].nativeTotal += Number(item.amount) || 0;
+                acc[code].functionalTotal += Number(item.functional) || 0;
+                return acc;
+            }, {} as Record<string, CurrencyBreakdownItem>);
+
+            return Object.values(grouped).filter(g => g.nativeTotal !== 0);
+        };
+
+        const committedBreakdown = calculateBreakdown(summary.map(s => ({
+            amount: s.total_committed_amount,
+            functional: s.total_functional_committed_amount,
+            currencyCode: s.currency_code || undefined,
+            symbol: s.currency_symbol || undefined
+        })));
+
+        // Use Payments for Paid Breakdown as it's more grounded in transaction reality
+        const paidBreakdown = calculateBreakdown(payments.map(p => ({
+            amount: p.amount,
+            functional: p.functional_amount || p.amount, // Fallback if functional missing? Usually present.
+            currencyCode: p.currency_code || undefined,
+            symbol: p.currency_symbol || undefined
+        })));
+
+        const balanceBreakdown = calculateBreakdown(summary.map(s => ({
+            amount: s.balance_due,
+            functional: s.functional_balance_due,
+            currencyCode: s.currency_code || undefined,
+            symbol: s.currency_symbol || undefined
+        })));
+
+
         const monthsWithPayments = Object.keys(paymentsByMonth).length || 1;
         const monthlyAverage = totalPaid / monthsWithPayments; // TotalPaid is already smart
 
@@ -174,8 +230,11 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             monthlyAverage,
             trendPercent,
             trendDirection: trendPercent > 0 ? "up" : trendPercent < 0 ? "down" : "neutral" as "up" | "down" | "neutral",
-            committedMapped: mappedCommitted,
-            paidMapped: [], // Simplified for now, breakdown might be slightly off if mixed
+            committedBreakdown,
+            paidBreakdown,
+            balanceBreakdown,
+            committedMapped: mappedCommitted, // Keep for legacy if needed, or remove? Keeping for safety.
+            paidMapped: [],
             balanceMapped: []
         };
     }, [summary, payments, primaryCurrencyCode, currencyContext?.currentExchangeRate, displayCurrency, currencyContext?.secondaryCurrency]);
@@ -249,56 +308,17 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // INSIGHTS GENERATION
     // ========================================
     const insights = useMemo<Insight[]>(() => {
-        const result: Insight[] = [];
-
-        // Clients with balance
-        const clientsWithBalance = summary.filter(s => s.balance_due > 0).length;
-        if (clientsWithBalance > 0) {
-            result.push({
-                id: "balance-pending",
-                title: `${clientsWithBalance} clientes con saldo pendiente`,
-                description: `Hay ${formatCurrency(kpis.totalBalance)} por cobrar en total.`,
-                severity: clientsWithBalance > 3 ? "warning" : "info"
-            });
-        }
-
-        // No recent payments
-        const recentPayments = payments.filter(p => {
-            const daysDiff = (Date.now() - new Date(p.payment_date).getTime()) / (1000 * 60 * 60 * 24);
-            return daysDiff <= 30;
+        return generateClientInsights({
+            summary,
+            payments,
+            kpis,
+            primaryCurrencyCode,
+            displayCurrency: displayCurrency as 'primary' | 'secondary',
+            currentRate: currencyContext?.currentExchangeRate || 1,
+            formatCurrency: (amount, code) => formatCurrency(amount, code),
+            secondaryCurrencyCode: currencyContext?.secondaryCurrency?.code
         });
-        if (recentPayments.length === 0 && payments.length > 0) {
-            result.push({
-                id: "no-recent",
-                title: "Sin pagos en los últimos 30 días",
-                description: "No se han registrado cobros recientemente. Considera hacer seguimiento.",
-                severity: "critical"
-            });
-        }
-
-        // Good collection rate
-        const collectionRate = kpis.totalCommitted > 0 ? (kpis.totalPaid / kpis.totalCommitted) * 100 : 0;
-        if (collectionRate >= 80) {
-            result.push({
-                id: "good-rate",
-                title: `Tasa de cobranza: ${collectionRate.toFixed(0)}%`,
-                description: "Excelente porcentaje de cobro respecto a compromisos.",
-                severity: "positive"
-            });
-        }
-
-        // Monthly trend
-        if (kpis.trendPercent > 20) {
-            result.push({
-                id: "trend-up",
-                title: `Cobros +${kpis.trendPercent.toFixed(0)}% vs mes anterior`,
-                description: "Los ingresos están creciendo respecto al mes pasado.",
-                severity: "positive"
-            });
-        }
-
-        return result.slice(0, 3); // Max 3 insights
-    }, [summary, payments, kpis]);
+    }, [summary, payments, kpis, primaryCurrencyCode, currencyContext?.currentExchangeRate, displayCurrency, currencyContext?.secondaryCurrency]);
 
     // ========================================
     // RECENT ACTIVITY
@@ -320,7 +340,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                     value={formatCurrencyUtil(kpis.totalCommitted, (displayCurrency === 'secondary' ? currencyContext?.secondaryCurrency : primaryCurrencyCode) || undefined)}
                     icon={<FileText className="w-5 h-5" />}
                     description="Valor total de contratos"
-                // Breakdown simplified or disabled for now as it needs complex logic
+                    currencyBreakdown={kpis.committedBreakdown}
                 />
                 <DashboardKpiCard
                     title="Cobrado a la Fecha"
@@ -329,16 +349,18 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                     iconClassName="bg-emerald-500/10 text-emerald-600"
                     trend={{
                         value: `${kpis.trendPercent >= 0 ? '+' : ''}${kpis.trendPercent.toFixed(0)}%`,
-                        label: "vs mes anterior",
                         direction: kpis.trendDirection
                     }}
+                    currencyBreakdown={kpis.paidBreakdown}
                 />
                 <DashboardKpiCard
-                    title="Saldo a la Fecha"
-                    value={formatCurrencyUtil(kpis.totalBalance, (displayCurrency === 'secondary' ? currencyContext?.secondaryCurrency : primaryCurrencyCode) || undefined)}
-                    icon={<Clock className="w-5 h-5" />}
-                    iconClassName="bg-amber-500/10 text-amber-600"
-                    description="Por cobrar"
+                    title={kpis.totalBalance < 0 ? "Saldo a Favor" : "Saldo a la Fecha"}
+                    // Show absolute value
+                    value={formatCurrencyUtil(kpis.totalBalance < 0 ? Math.abs(kpis.totalBalance) : kpis.totalBalance, (displayCurrency === 'secondary' ? currencyContext?.secondaryCurrency : primaryCurrencyCode) || undefined)}
+                    icon={kpis.totalBalance < 0 ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                    iconClassName={kpis.totalBalance < 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}
+                    description={kpis.totalBalance < 0 ? "Cobrado en exceso" : "Por cobrar"}
+                    currencyBreakdown={kpis.balanceBreakdown}
                 />
                 <DashboardKpiCard
                     title="Promedio Mensual"
@@ -448,7 +470,8 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                                         </p>
                                     </div>
                                     <span className="text-sm font-semibold text-emerald-600">
-                                        +{formatCurrency(payment.functional_amount || payment.amount)}
+                                        {/* ALWAYS show Original Amount in Activity List */}
+                                        +{payment.currency_symbol || "$"} {Number(payment.amount).toLocaleString('es-AR')}
                                     </span>
                                 </div>
                             ))}

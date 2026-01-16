@@ -113,7 +113,18 @@ export function ClientCommitmentsTable({
             cell: ({ row }) => {
                 const amount = Number(row.original.amount);
                 const currency = row.original.currency?.symbol || "$";
-                return <span className="font-mono font-medium">{currency} {amount.toLocaleString()}</span>
+                const rate = row.original.exchange_rate;
+
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-mono font-medium">{currency} {amount.toLocaleString()}</span>
+                        {rate && (
+                            <span className="text-xs text-muted-foreground">
+                                Cotiz: {rate}
+                            </span>
+                        )}
+                    </div>
+                );
             }
         },
         {

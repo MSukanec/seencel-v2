@@ -51,6 +51,37 @@ export async function createClientAction(input: z.infer<typeof createClientSchem
     return data;
 }
 
+const updateClientSchema = createClientSchema.partial().extend({
+    id: z.string().uuid(),
+});
+
+export async function updateClientAction(input: z.infer<typeof updateClientSchema>) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('project_clients')
+        .update({
+            project_id: input.project_id,
+            contact_id: input.contact_id,
+            organization_id: input.organization_id,
+            client_role_id: input.client_role_id,
+            notes: input.notes,
+            is_primary: input.is_primary,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', input.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating client:", error);
+        throw new Error("Error al actualizar el cliente.");
+    }
+
+    revalidatePath('/organization/clients');
+    return data;
+}
+
 export async function deleteClientAction(clientId: string) {
     const supabase = await createClient();
 

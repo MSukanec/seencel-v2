@@ -46,16 +46,16 @@ export function CommitmentForm({ clients, financialData, onSuccess, projectId, o
     const form = useForm<z.infer<typeof commitmentFormSchema>>({
         resolver: zodResolver(commitmentFormSchema) as any,
         defaultValues: {
-            amount: 0,
-            project_id: projectId || "",
-            organization_id: orgId || "",
-            client_id: "",
-            currency_id: defaultCurrencyId || "",
-            exchange_rate: 1,
-            commitment_method: "fixed",
-            unit_name: "",
-            concept: "",
-            description: "",
+            amount: initialData ? Number(initialData.amount) : 0,
+            project_id: initialData?.project_id || projectId || "",
+            organization_id: initialData?.organization_id || orgId || "",
+            client_id: initialData?.client_id || initialData?.client?.id || "",
+            currency_id: initialData?.currency_id || initialData?.currency?.id || defaultCurrencyId || "",
+            exchange_rate: initialData ? Number(initialData.exchange_rate) : 1,
+            commitment_method: initialData?.commitment_method || "fixed",
+            unit_name: initialData?.unit_name || "",
+            concept: initialData?.concept || initialData?.unit_description || "",
+            description: initialData?.description || "",
         },
     });
 

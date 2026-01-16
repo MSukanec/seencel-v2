@@ -11,7 +11,7 @@ import {
     EnhancedDashboardData
 } from "@/types/general-costs";
 
-import { generateGeneralCostsInsights } from "@/lib/insights/general-costs-insights";
+import { generateGeneralCostsInsights } from "@/features/insights/logic/general-costs";
 import { CHART_COLORS } from "@/components/charts/chart-config";
 
 export async function getActiveOrganizationId(): Promise<string | null> {

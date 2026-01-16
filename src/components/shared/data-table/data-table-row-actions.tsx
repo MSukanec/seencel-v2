@@ -70,7 +70,7 @@ export function DataTableRowActions<TData>({
                 {/* Custom Actions */}
                 {customActions && customActions.length > 0 && (
                     <>
-                        <DropdownMenuSeparator />
+                        {(onView || onEdit || onDuplicate) && <DropdownMenuSeparator />}
                         {customActions.map((action, index) => (
                             <DropdownMenuItem
                                 key={index}

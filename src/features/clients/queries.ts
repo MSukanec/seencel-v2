@@ -53,7 +53,7 @@ export async function getClients(projectId: string) {
         .select('*')
         .eq('project_id', projectId)
         .eq('is_deleted', false)
-        .order('created_at', { ascending: false });
+        .order('contact_full_name', { ascending: true });
 
     if (error) {
         console.error("Error fetching clients:", JSON.stringify(error, null, 2));
@@ -74,7 +74,7 @@ export async function getClientsByOrganization(organizationId: string) {
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
-        .order('created_at', { ascending: false });
+        .order('contact_full_name', { ascending: true });
 
     if (error) {
         console.error("Error fetching clients by organization:", JSON.stringify(error, null, 2));

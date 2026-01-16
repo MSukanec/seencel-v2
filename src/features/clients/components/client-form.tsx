@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
-import { createClientAction } from "@/features/clients/actions";
+import { createClientAction, updateClientAction } from "@/features/clients/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
-import { ClientRole } from "../types";
+import { ClientRole, ProjectClientView } from "../types";
 import { useModal } from "@/providers/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/form-footer";
@@ -39,9 +40,12 @@ interface ClientFormProps {
     orgId: string;
     roles: ClientRole[];
     projectId?: string;
+    /** If provided, form is in EDIT mode */
+    initialData?: ProjectClientView;
 }
 
-export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormProps) {
+export function ClientForm({ onSuccess, orgId, roles, projectId, initialData }: ClientFormProps) {
+    const isEditMode = !!initialData;
     const { closeModal } = useModal();
     const [isPending, startTransition] = useTransition();
     const [contacts, setContacts] = useState<any[]>([]);
@@ -51,11 +55,11 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             organization_id: orgId,
-            project_id: projectId || "",
-            contact_id: "",
-            client_role_id: "",
-            is_primary: false,
-            notes: "",
+            project_id: initialData?.project_id || projectId || "",
+            contact_id: initialData?.contact_id || "",
+            client_role_id: initialData?.client_role_id || "",
+            is_primary: true, // Always true, hidden from UI
+            notes: initialData?.notes || "",
         },
     });
 
@@ -93,12 +97,17 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
     const onSubmit = (values: ClientFormValues) => {
         startTransition(async () => {
             try {
-                await createClientAction(values);
-                toast.success("Cliente agregado correctamente");
+                if (isEditMode && initialData) {
+                    await updateClientAction({ ...values, id: initialData.id });
+                    toast.success("Cliente actualizado correctamente");
+                } else {
+                    await createClientAction(values);
+                    toast.success("Cliente agregado correctamente");
+                }
                 if (onSuccess) onSuccess();
                 closeModal();
             } catch (error: any) {
-                toast.error(error.message || "Error al agregar el cliente");
+                toast.error(error.message || "Error al guardar el cliente");
             }
         });
     };
@@ -134,71 +143,49 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
                     {/* Hidden input if projectId is fixed */}
                     {projectId && <input type="hidden" {...form.register("project_id")} />}
 
-                    {/* 1. Cliente (Contacto) */}
+                    {/* 1. Contacto - Using Combobox for searchable selection */}
                     <FormField
                         control={form.control}
                         name="contact_id"
                         render={({ field }) => (
-                            <FormGroup label="Cliente" required>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormGroup label="Contacto" required>
+                                <Combobox
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                    options={contacts.map((c) => ({
+                                        value: c.id,
+                                        label: c.full_name + (c.company_name ? ` (${c.company_name})` : ''),
+                                        searchTerms: c.email || ''
+                                    }))}
+                                    placeholder="Buscar contacto..."
+                                    searchPlaceholder="Escribí para buscar..."
+                                    emptyMessage="No se encontraron contactos."
+                                />
+                            </FormGroup>
+                        )}
+                    />
+
+                    {/* 2. Rol */}
+                    <FormField
+                        control={form.control}
+                        name="client_role_id"
+                        render={({ field }) => (
+                            <FormGroup label="Rol (Opcional)">
+                                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar cliente (contacto)..." />
+                                            <SelectValue placeholder="Seleccionar rol..." />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {contacts.map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>
-                                                {c.full_name} {c.company_name ? `(${c.company_name})` : ''}
-                                            </SelectItem>
+                                        {roles.map((r) => (
+                                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </FormGroup>
                         )}
                     />
-
-                    {/* 2. Rol y Cliente Principal */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="client_role_id"
-                            render={({ field }) => (
-                                <FormGroup label="Rol (Opcional)">
-                                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar rol..." />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {roles.map((r) => (
-                                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </FormGroup>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="is_primary"
-                            render={({ field }) => (
-                                <FormGroup label="Cliente Principal">
-                                    <div className="flex items-center space-x-2 h-10">
-                                        <Input
-                                            type="checkbox"
-                                            className="h-4 w-4"
-                                            checked={field.value}
-                                            onChange={field.onChange}
-                                        />
-                                        <span className="text-sm text-muted-foreground">Marcar como principal</span>
-                                    </div>
-                                </FormGroup>
-                            )}
-                        />
-                    </div>
 
                     {/* 3. Notas */}
                     <FormField
@@ -216,7 +203,7 @@ export function ClientForm({ onSuccess, orgId, roles, projectId }: ClientFormPro
                 <FormFooter
                     onCancel={closeModal}
                     isLoading={isPending}
-                    submitLabel="Agregar Cliente"
+                    submitLabel={isEditMode ? "Guardar Cambios" : "Agregar Cliente"}
                     className="-mx-4 -mb-4 mt-6"
                 />
             </form>
