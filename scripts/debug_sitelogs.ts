@@ -12,10 +12,11 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-console.log("Fetching site logs with media...");
-const { data, error } = await supabase
-    .from('site_logs')
-    .select(`
+async function inspectSiteLogs() {
+    console.log("Fetching site logs with media...");
+    const { data, error } = await supabase
+        .from('site_logs')
+        .select(`
             id,
             comments,
             media_links (
@@ -28,22 +29,22 @@ const { data, error } = await supabase
                 )
             )
         `)
-    .limit(5);
+        .limit(5);
 
-if (error) {
-    console.error("Error:", error);
-    return;
-}
+    if (error) {
+        console.error("Error:", error);
+        return;
+    }
 
-if (!data || data.length === 0) {
-    console.log("No site logs found.");
-} else {
-    console.log(`Found ${data.length} logs.`);
-    data.forEach((log: any, i: number) => {
-        console.log(`Log ${i}:`, log.comments?.substring(0, 20));
-        console.log(`Media Links:`, JSON.stringify(log.media_links, null, 2));
-    });
-}
+    if (!data || data.length === 0) {
+        console.log("No site logs found.");
+    } else {
+        console.log(`Found ${data.length} logs.`);
+        data.forEach((log: any, i: number) => {
+            console.log(`Log ${i}:`, log.comments?.substring(0, 20));
+            console.log(`Media Links:`, JSON.stringify(log.media_links, null, 2));
+        });
+    }
 }
 
 inspectSiteLogs();

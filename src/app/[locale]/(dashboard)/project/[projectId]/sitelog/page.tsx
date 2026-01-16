@@ -15,6 +15,7 @@ export default async function SitelogPage({ params }: Props) {
     setRequestLocale(locale);
 
     const organizationId = await getActiveOrganizationId();
+    if (!organizationId) return null;
     // Use types (getSiteLogTypes) AND logs (getSiteLogs)
     const [types, logs] = await Promise.all([
         getSiteLogTypes(organizationId),

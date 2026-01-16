@@ -21,7 +21,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
 import { useModal } from "@/providers/modal-store";
-import { deleteSiteLogType, SiteLogType } from "@/actions/sitelog";
+import { deleteSiteLogType } from "@/actions/sitelog";
+import { SiteLogType } from "@/types/sitelog";
 import { SiteLogTypeForm } from "./sitelog-type-form";
 
 interface SiteLogTypesManagerProps {

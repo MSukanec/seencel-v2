@@ -23,15 +23,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FormFooter } from "@/components/shared/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
-import {
-    Form, // Kept to silence potential hook errors if used implicitly, but primary usage is now FormGroup
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-    FormDescription
-} from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -101,7 +93,7 @@ export function SitelogForm({
     const [mediaFiles, setMediaFiles] = useState<UploadedFile[]>([]);
 
     const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             comments: "",
             log_date: new Date(),
@@ -277,12 +269,13 @@ export function SitelogForm({
                     </FormGroup>
 
                     {/* Row 5: Visibility */}
+                    {/* Row 5: Visibility */}
                     <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                            <FormLabel className="text-base">Visible para cliente</FormLabel>
-                            <FormDescription>
+                            <Label className="text-base text-foreground">Visible para cliente</Label>
+                            <p className="text-sm text-muted-foreground">
                                 Si se desactiva, este registro solo será visible para el equipo interno.
-                            </FormDescription>
+                            </p>
                         </div>
                         <Switch
                             checked={form.watch("is_public")}

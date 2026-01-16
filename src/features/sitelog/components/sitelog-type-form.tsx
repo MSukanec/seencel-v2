@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { FormFooter } from "@/components/shared/form-footer";
 import { toast } from "sonner";
 import { useModal } from "@/providers/modal-store";
-import { createSiteLogType, updateSiteLogType, SiteLogType } from "@/actions/sitelog";
+import { createSiteLogType, updateSiteLogType } from "@/actions/sitelog";
+import { SiteLogType } from "@/types/sitelog";
 
 interface SiteLogTypeFormProps {
     organizationId: string;
