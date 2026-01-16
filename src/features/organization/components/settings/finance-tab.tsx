@@ -22,7 +22,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner";
-import { useRouter } from "@/i18n/routing";
+import { useRouter, Link } from "@/i18n/routing";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 
 interface FinanceTabProps {
@@ -158,17 +158,15 @@ export function FinanceTab({
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {/* Default Currency */}
+                        {/* Default Currency - LOCKED */}
                         <FormGroup
-                            label="Moneda Por Defecto"
-                            helpText="Esta es la moneda base para todos los cálculos financieros."
+                            label="Moneda Principal"
                         >
                             <Select
-                                disabled={isPending}
+                                disabled={true}
                                 value={preferences?.default_currency_id || undefined}
-                                onValueChange={(val) => handleUpdatePreference('default_currency_id', val)}
                             >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger className="w-full opacity-70 cursor-not-allowed">
                                     <SelectValue placeholder="Selecciona una moneda" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -179,6 +177,16 @@ export function FinanceTab({
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <p className="text-[0.8rem] text-muted-foreground mt-2">
+                                La moneda base de la organización no puede ser modificada una vez configurada. Si la moneda seleccionada no es correcta, por favor escríbenos a{" "}
+                                <a href="mailto:contacto@seencel.com" className="text-primary hover:underline transition-colors font-medium">
+                                    contacto@seencel.com
+                                </a>
+                                {" "}o{" "}
+                                <Link href="/contact" className="text-primary hover:underline transition-colors font-medium">
+                                    contáctate con nosotros
+                                </Link>.
+                            </p>
                         </FormGroup>
 
                         {/* Secondary Currencies */}

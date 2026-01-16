@@ -98,6 +98,20 @@ openModal(<MyComponent />, {
 | **Soft Delete + Reassign** | Categories, Roles (in use) | `DeleteReplacementModal` |
 | **Simple Delete** | Projects, Tasks (leaf nodes) | `DeleteDialog` |
 
+### File Uploads & MIME Types
+**CRITICAL**: Database tables (like `media_files`) often use restricted ENUMs for `file_type`.
+**ALWAYS** map the raw MIME type to the allowed DB value before insertion in Server Actions:
+
+| Raw MIME Type | DB Value |
+|---------------|----------|
+| `image/*` (png, jpeg, etc.) | `'image'` |
+| `video/*` (mp4, webm) | `'video'` |
+| `application/pdf` | `'pdf'` |
+| `application/msword`, etc. | `'doc'` |
+| Everything else | `'other'` |
+
+**NEVER** insert `file.type` (e.g., `'image/png'`) directly into `file_type` columns. Use a helper function like `getMediaType(mime)`.
+
 ---
 
 ## 4. Financial Data Handling
@@ -184,5 +198,6 @@ const file = await compressImage(rawFile, 'avatar');
 - [ ] **Form**: Used `FormGroup`, `FormFooter`?
 - [ ] **Financial**: Used `getOrganizationFinancialData`?
 - [ ] **Images**: Used `compressImage`?
+- [ ] **MIME**: Mapped file types for DB?
 - [ ] **Tables**: Used `DataTable`?
 - [ ] **I18n**: No hardcoded strings?

@@ -7,7 +7,6 @@ interface EmptyStateProps {
     icon: LucideIcon;
     action?: React.ReactNode;
     className?: string;
-    variant?: "default" | "dashed";
 }
 
 export function EmptyState({
@@ -16,13 +15,12 @@ export function EmptyState({
     icon: Icon,
     action,
     className,
-    variant = "default",
 }: EmptyStateProps) {
     return (
         <div
             className={cn(
                 "relative flex flex-col items-center justify-center h-full p-8 text-center animate-in fade-in-50 zoom-in-95 duration-500 overflow-hidden",
-                variant === "dashed" && "border-2 border-dashed border-primary/25 rounded-xl",
+                "border-2 border-dashed border-primary/25 rounded-xl",
                 className
             )}
         >

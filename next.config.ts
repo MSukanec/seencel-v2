@@ -14,6 +14,10 @@ const nextConfig = {
                 protocol: 'https' as const,
                 hostname: 'wtatvsgeivymcppowrfy.supabase.co',
             },
+            {
+                protocol: 'https' as const,
+                hostname: 'private-assets.s3.auto.amazonaws.com',
+            },
         ],
     },
     serverExternalPackages: ['sharp'],

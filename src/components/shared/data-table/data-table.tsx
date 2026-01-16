@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { DataTableRowActions } from "./data-table-row-actions";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import { Paperclip } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -62,6 +63,7 @@ interface DataTableProps<TData, TValue> {
     bulkActions?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
     initialSorting?: SortingState;
     enableRowActions?: boolean;
+    enableAttachmentIndicator?: boolean;
     onView?: (row: TData) => void;
     onEdit?: (row: TData) => void;
     onDuplicate?: (row: TData) => void;
@@ -99,6 +101,7 @@ export function DataTable<TData, TValue>({
     initialSorting,
     meta,
     enableRowActions = false,
+    enableAttachmentIndicator = true,
     onView,
     onEdit,
     onDuplicate,
@@ -146,18 +149,31 @@ export function DataTable<TData, TValue>({
             baseColumns.push({
                 id: "actions",
                 header: () => <span className="sr-only">Acciones</span>,
-                cell: ({ row }: { row: any }) => (
-                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                        <DataTableRowActions
-                            row={row}
-                            onView={onView}
-                            onEdit={onEdit}
-                            onDuplicate={onDuplicate}
-                            onDelete={onDelete}
-                            customActions={customActions}
-                        />
-                    </div>
-                ),
+                cell: ({ row }: { row: any }) => {
+                    // Check for attachments automatically
+                    const hasAttachments = enableAttachmentIndicator && (
+                        (Array.isArray(row.original.attachments) && row.original.attachments.length > 0) ||
+                        (Array.isArray(row.original.media_links) && row.original.media_links.length > 0) ||
+                        (Array.isArray(row.original.files) && row.original.files.length > 0) ||
+                        (typeof row.original.image_url === 'string' && row.original.image_url.length > 0 && row.original.image_url.startsWith('http'))
+                    );
+
+                    return (
+                        <div className="flex justify-end items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            {hasAttachments && (
+                                <Paperclip className="h-3.5 w-3.5 text-muted-foreground/70" />
+                            )}
+                            <DataTableRowActions
+                                row={row}
+                                onView={onView}
+                                onEdit={onEdit}
+                                onDuplicate={onDuplicate}
+                                onDelete={onDelete}
+                                customActions={customActions}
+                            />
+                        </div>
+                    );
+                },
                 size: 50,
                 enableHiding: false,
             } as any);

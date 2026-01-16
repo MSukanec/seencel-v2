@@ -12,6 +12,12 @@ declare
   v_avatar_url text;
   v_full_name text;
   v_provider text;
+  
+  -- Variables para IDs dinámicos
+  v_default_currency_id uuid;
+  v_default_wallet_id uuid;
+  v_free_plan_id uuid;
+  v_pdf_template_id uuid;
 begin
   ----------------------------------------------------------------
   -- 🔒 GUARD: evitar doble ejecución del signup
@@ -23,6 +29,42 @@ begin
   ) THEN
     RETURN NEW;
   END IF;
+
+  ----------------------------------------------------------------
+  -- 🔍 BUSQUEDA DINÁMICA DE IDs (Adiós hardcode!)
+  ----------------------------------------------------------------
+  
+  -- 1. Moneda inicial técnica (Se usa USD para crear la estructura, el usuario la define en Onboarding)
+  SELECT id INTO v_default_currency_id 
+  FROM public.currencies 
+  WHERE code = 'USD' 
+  LIMIT 1;
+
+  -- 2. Billetera por defecto (Efectivo)
+  SELECT id INTO v_default_wallet_id 
+  FROM public.wallets 
+  WHERE type = 'cash' -- Asumiendo que tienes un tipo o un código para buscar
+  LIMIT 1;
+  -- Fallback defensivo
+  IF v_default_wallet_id IS NULL THEN
+      SELECT id INTO v_default_wallet_id FROM public.wallets LIMIT 1;
+  END IF;
+
+  -- 3. Plan Free
+  SELECT id INTO v_free_plan_id
+  FROM public.plans
+  WHERE name ILIKE '%free%' OR name ILIKE '%gratuito%'
+  LIMIT 1;
+  -- Fallback defensivo
+  IF v_free_plan_id IS NULL THEN
+      SELECT id INTO v_free_plan_id FROM public.plans LIMIT 1;
+  END IF;
+
+  -- 4. Template PDF
+  SELECT id INTO v_pdf_template_id
+  FROM public.pdf_templates
+  ORDER BY created_at ASC
+  LIMIT 1;
 
   ----------------------------------------------------------------
   -- 🧠 Provider real (fuente confiable)
@@ -71,7 +113,7 @@ begin
     v_full_name,
     v_avatar_url,
     v_avatar_source,
-    'e6cc68d2-fc28-421b-8bd3-303326ef91b8'
+    NULL
   );
 
   ----------------------------------------------------------------
@@ -93,7 +135,7 @@ begin
   v_org_id := public.step_create_organization(
     v_user_id,
     'Organización de ' || v_full_name,
-    '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2'
+    v_free_plan_id
   );
 
   ----------------------------------------------------------------
@@ -138,24 +180,28 @@ begin
   ----------------------------------------------------------------
   -- 9) Monedas y billeteras
   ----------------------------------------------------------------
-  PERFORM public.step_create_organization_currencies(
-    v_org_id,
-    '58c50aa7-b8b1-4035-b509-58028dd0e33f'
-  );
+  IF v_default_currency_id IS NOT NULL THEN
+      PERFORM public.step_create_organization_currencies(
+        v_org_id,
+        v_default_currency_id
+      );
+  END IF;
 
-  PERFORM public.step_create_organization_wallets(
-    v_org_id,
-    '2658c575-0fa8-4cf6-85d7-6430ded7e188'
-  );
+  IF v_default_wallet_id IS NOT NULL THEN
+      PERFORM public.step_create_organization_wallets(
+        v_org_id,
+        v_default_wallet_id
+      );
+  END IF;
 
   ----------------------------------------------------------------
   -- 10) Organization preferences
   ----------------------------------------------------------------
   PERFORM public.step_create_organization_preferences(
     v_org_id,
-    '58c50aa7-b8b1-4035-b509-58028dd0e33f',
-    '2658c575-0fa8-4cf6-85d7-6430ded7e188',
-    'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b'
+    v_default_currency_id,
+    v_default_wallet_id,
+    v_pdf_template_id
   );
 
   ----------------------------------------------------------------

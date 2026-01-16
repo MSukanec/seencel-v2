@@ -10,28 +10,31 @@ const onboardingSchema = z.object({
     birthdate: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date").optional(),
     country: z.string().uuid("Invalid country").optional(),
     orgName: z.string().min(1, "Organization name is required"), // Strict min 1 char
-    theme: z.enum(["light", "dark", "system"]).optional(), // New theme field
-    timezone: z.string().optional(), // New timezone field
     countryCode: z.string().length(2).optional(), // 2 letter country code
+    baseCurrency: z.string().min(3).max(3).optional(), // Currency code (e.g., ARS, USD)
 });
 
 export async function submitOnboarding(prevState: any, formData: FormData) {
     const validatedFields = onboardingSchema.safeParse({
         firstName: formData.get("firstName"),
         lastName: formData.get("lastName"),
-        birthdate: formData.get("birthdate"),
-        country: formData.get("country"),
+        birthdate: formData.get("birthdate") || undefined, // Convert null/empty to undefined
+        country: formData.get("country") || undefined,
         orgName: formData.get("orgName"),
-        theme: formData.get("theme"),
-        timezone: formData.get("timezone"),
-        countryCode: formData.get("countryCode"),
+        countryCode: formData.get("countryCode") || undefined,
+        baseCurrency: formData.get("baseCurrency") || undefined,
     });
 
     if (!validatedFields.success) {
-        return { error: "validation_error", details: validatedFields.error.flatten().fieldErrors };
+        const fieldErrors = validatedFields.error.flatten().fieldErrors;
+        const errorMessage = Object.entries(fieldErrors)
+            .map(([field, errors]) => `${field}: ${errors?.join(", ")}`)
+            .join("; ");
+        console.error("Validation errors:", errorMessage);
+        return { error: "validation_error", message: `Validation failed: ${errorMessage}`, details: fieldErrors };
     }
 
-    const { firstName, lastName, birthdate, country, orgName, theme, timezone, countryCode } = validatedFields.data;
+    const { firstName, lastName, birthdate, country, orgName, baseCurrency } = validatedFields.data;
     const supabase = await createClient();
 
     const {
@@ -52,7 +55,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
 
     if (userError) {
         console.error("Error updating users:", userError);
-        return { error: "update_failed" };
+        return { error: "update_failed", message: `Users update failed: ${userError.message}` };
     }
 
     // 2. Update/Upsert User Data (user_data table)
@@ -63,7 +66,10 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         .eq("auth_id", user.id)
         .single();
 
-    if (!internalUser) return { error: "user_not_found" };
+    if (!internalUser) {
+        console.error("Internal user not found for auth_id:", user.id);
+        return { error: "user_not_found", message: "Internal user record not found" };
+    }
 
     const { error: userDataError } = await supabase
         .from("user_data")
@@ -77,11 +83,11 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
 
     if (userDataError) {
         console.error("Error updating user_data:", userDataError);
-        return { error: "update_failed" };
+        return { error: "update_failed", message: `User Data update failed: ${userDataError.message}` };
     }
 
     // 3. Update Organization Name
-    const { data: org } = await supabase
+    const { data: org, error: orgFetchError } = await supabase
         .from("organizations")
         .select("id")
         .eq("owner_id", internalUser.id)
@@ -89,80 +95,95 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         .limit(1)
         .single();
 
+    if (orgFetchError) {
+        console.error("Error fetching organization:", orgFetchError);
+        // Don't fail hard here yet, but log it.
+    }
+
     if (org) {
-        await supabase
+        const { error: orgUpdateError } = await supabase
             .from("organizations")
             .update({ name: orgName })
             .eq("id", org.id);
+
+        if (orgUpdateError) {
+            console.error("Error updating organization:", orgUpdateError);
+            return { error: "update_failed", message: `Org update failed: ${orgUpdateError.message}` };
+        }
+    } else {
+        console.warn("No organization found for user:", internalUser.id);
     }
 
-    // 4. Update Organization Default Currency (Based on Country)
-    if (org && countryCode) {
-        // Map of common countries to their currency codes
-        const countryToCurrencyMap: Record<string, string> = {
-            'AR': 'ARS', // Argentina -> Peso Argentino
-            'CL': 'CLP', // Chile -> Peso Chileno
-            'MX': 'MXN', // Mexico -> Peso Mexicano
-            'CO': 'COP', // Colombia -> Peso Colombiano
-            'PE': 'PEN', // Peru -> Sol
-            'UY': 'UYU', // Uruguay -> Peso Uruguayo
-            'US': 'USD', // USA -> US Dollar
-            'ES': 'EUR', // Spain -> Euro
-            'BR': 'BRL', // Brazil -> Real
-        };
+    // 4. Update Organization Default Currency (Based on User Selection)
+    if (org && baseCurrency) {
+        console.log("Setting currency:", baseCurrency);
+        // Find the currency ID in the database by code
+        const { data: currencyData, error: currencyFetchError } = await supabase
+            .from("currencies")
+            .select("id")
+            .eq("code", baseCurrency)
+            .single();
 
-        const targetCurrencyCode = countryToCurrencyMap[countryCode.toUpperCase()];
+        if (currencyFetchError) {
+            console.error("Error fetching currency:", currencyFetchError);
+            return { error: "update_failed", message: `Currency fetch failed: ${currencyFetchError.message}` };
+        }
 
-        if (targetCurrencyCode) {
-            // Find the currency ID in the database
-            const { data: currencyData } = await supabase
-                .from("currencies")
-                .select("id")
-                .eq("code", targetCurrencyCode)
-                .single();
+        if (currencyData) {
+            // A. Add to Organization Currencies (if not exists)
+            // We use upsert to handle potential duplicates safely
+            // Note: The unique constraint is (organization_id, currency_id)
+            const { error: orgCurrError } = await supabase
+                .from("organization_currencies")
+                .upsert({
+                    organization_id: org.id,
+                    currency_id: currencyData.id,
+                    is_active: true,
+                    is_default: true
+                }, { onConflict: "organization_id, currency_id" });
 
-            if (currencyData) {
-                // A. Add to Organization Currencies (if not exists)
-                // We use upsert to handle potential duplicates safely
-                // Note: The unique constraint is (organization_id, currency_id)
-                await supabase
-                    .from("organization_currencies")
-                    .upsert({
-                        organization_id: org.id,
-                        currency_id: currencyData.id,
-                        is_active: true,
-                        is_default: true
-                    }, { onConflict: "organization_id, currency_id" });
+            if (orgCurrError) {
+                console.error("Error upserting org currency:", orgCurrError);
+                return { error: "update_failed", message: `Org Currency upsert failed: ${orgCurrError.message}` };
+            }
 
-                // B. Update Organization Preferences (Source of Truth for Default)
-                await supabase
-                    .from("organization_preferences")
-                    .update({ default_currency_id: currencyData.id })
-                    .eq("organization_id", org.id);
+            // B. Update Organization Preferences (Source of Truth for Default)
+            const { error: prefUpdateError } = await supabase
+                .from("organization_preferences")
+                .update({ default_currency_id: currencyData.id })
+                .eq("organization_id", org.id);
 
-                // C. Unset other defaults in organization_currencies list
-                await supabase
-                    .from("organization_currencies")
-                    .update({ is_default: false })
-                    .eq("organization_id", org.id)
-                    .neq("currency_id", currencyData.id);
+            if (prefUpdateError) {
+                console.error("Error updating org preferences:", prefUpdateError);
+                return { error: "update_failed", message: `Org Prefs update failed: ${prefUpdateError.message}` };
+            }
+
+            // C. Unset other defaults in organization_currencies list
+            const { error: unsetError } = await supabase
+                .from("organization_currencies")
+                .update({ is_default: false })
+                .eq("organization_id", org.id)
+                .neq("currency_id", currencyData.id);
+
+            if (unsetError) {
+                console.error("Error unsetting defaults:", unsetError);
+                // Warning only
             }
         }
     }
 
-    // 5. Update Preferences (Theme & Onboarding Completion)
+    // 5. Update Preferences (Onboarding Completion only)
     const { error: prefError } = await supabase
         .from("user_preferences")
         .update({
             onboarding_completed: true,
-            theme: theme || 'system',
-            timezone: timezone || 'UTC'
+            // REMOVED theme and timezone updates
         })
         .eq("user_id", internalUser.id);
 
     if (prefError) {
         console.error("Error updating preferences:", prefError);
-        return { error: "update_failed" };
+        return { error: "update_failed", message: `User Prefs update failed: ${prefError.message}` };
     }
 
     revalidatePath("/", "layout");

@@ -7,7 +7,8 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ProjectClientView, ClientRole } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useModal } from "@/providers/modal-store";
 import { ClientForm } from "./client-form";
 import { deleteClientAction } from "../actions";
@@ -118,6 +119,22 @@ export function ClientsListTable({ data, roles, orgId, projectId }: ClientsListT
             )
         },
     ];
+
+    // Empty State when no clients
+    if (data.length === 0) {
+        return (
+            <EmptyState
+                icon={Users}
+                title="Sin clientes"
+                description="Agregá el primer cliente a este proyecto para comenzar a gestionar compromisos y pagos."
+                action={
+                    <Button onClick={handleCreate} size="lg">
+                        <Plus className="mr-2 h-4 w-4" /> Agregar Cliente
+                    </Button>
+                }
+            />
+        );
+    }
 
     return (
         <>

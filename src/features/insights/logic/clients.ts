@@ -1,6 +1,7 @@
 import { Insight, InsightContext } from "../types";
 import { allInsightRules } from "./rules";
 import { ClientFinancialSummary, ClientPaymentView } from "@/features/clients/types";
+import { MonetaryItem } from "@/hooks/use-smart-currency";
 
 // Helper Interface for KPI structure needed
 export interface KPISummary {
@@ -21,44 +22,48 @@ interface ClientInsightsContext {
     // Current rate for internal conversions
     currentRate: number;
     secondaryCurrencyCode?: string;
+    // NEW: Smart calculation helper
+    calculateDisplayAmount: (item: MonetaryItem) => number;
 }
 
 export function generateClientInsights(context: ClientInsightsContext): Insight[] {
-    const { summary, payments, kpis, formatCurrency, primaryCurrencyCode, displayCurrency, currentRate, secondaryCurrencyCode } = context;
+    const {
+        summary,
+        payments,
+        kpis,
+        formatCurrency,
+        calculateDisplayAmount,
+        primaryCurrencyCode
+    } = context;
+
     const manualInsights: Insight[] = [];
 
     // --- 1. PRESERVE SPECIFIC DOMAIN RULES (Manual) ---
-    // (These are specific to collections/debt and not covered by generic financial rules)
 
     // A. Debtors Analysis
-    const debtors = summary.filter(s => s.balance_due > 0);
-    const clientsWithBalance = debtors.length;
+    const clientBalances = summary.reduce((acc, s) => {
+        if (!acc[s.client_id]) {
+            acc[s.client_id] = 0;
+        }
+
+        const val = calculateDisplayAmount({
+            amount: s.balance_due,
+            functional_amount: s.functional_balance_due,
+            currency_code: s.currency_code
+        });
+
+        acc[s.client_id] += val;
+        return acc;
+    }, {} as Record<string, number>);
+
+    // 2. Filter clients with actual positive debt (net balance > 0)
+    const debtThreshold = 1;
+    const debtValues = Object.values(clientBalances).filter(balance => balance > debtThreshold);
+
+    const clientsWithBalance = debtValues.length;
+    const totalPendingDebt = debtValues.reduce((sum, val) => sum + val, 0);
 
     if (clientsWithBalance > 0) {
-        // Smart calc for total pending
-        const totalPendingDebt = debtors.reduce((acc, s) => {
-            const itemCode = s.currency_code || primaryCurrencyCode;
-            const targetCurrencyCode = displayCurrency === 'secondary' && secondaryCurrencyCode
-                ? secondaryCurrencyCode
-                : primaryCurrencyCode;
-
-            const functional = s.functional_balance_due;
-            const original = s.balance_due;
-
-            let val = 0;
-            if (displayCurrency === 'secondary') {
-                if (itemCode === targetCurrencyCode) {
-                    val = original;
-                } else {
-                    const rate = currentRate === 0 ? 1 : currentRate;
-                    val = functional / rate;
-                }
-            } else {
-                val = functional;
-            }
-            return acc + val;
-        }, 0);
-
         manualInsights.push({
             id: "balance-pending",
             title: `${clientsWithBalance} clientes con saldo pendiente`,
@@ -69,15 +74,13 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
                     id: 'filter-debtors',
                     label: 'Ver deudores',
                     type: 'filter',
-                    payload: { status: 'pending' } // Hypothetical payload
+                    payload: { status: 'pending' }
                 }
             ]
         });
     }
 
     // B. No Recent Payments
-    // We can let the generic "Operational Load" rule handle low volume? 
-    // But this specific "No payments in 30 days" is quite specific critical alert.
     const recentPayments = payments.filter(p => {
         const daysDiff = (Date.now() - new Date(p.payment_date).getTime()) / (1000 * 60 * 60 * 24);
         return daysDiff <= 30;
@@ -100,50 +103,33 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
     }
 
     // --- 2. ADAPTER: MAP TO GENERIC CONTEXT FOR ADVANCED RULES ---
-    // We treat "Clients" as "Categories" to use the Concentration Rule (Whale Client detection)
 
     // Group payments by month for Time Series Analysis
-    // We need to normalize amounts to the display currency first to be consistent
     const monthlyGroups: Record<string, number> = {};
     payments.forEach(p => {
         const month = p.payment_month || p.payment_date.substring(0, 7);
-        // Normalize amount logic
-        let val = Number(p.amount); // Default
-        const pCode = p.currency_code || primaryCurrencyCode;
-        if (displayCurrency === 'secondary') {
-            // If not target currency, convert
-            const targetCode = secondaryCurrencyCode || 'USD';
-            if (pCode !== targetCode) {
-                val = (Number(p.functional_amount) || val) / (currentRate || 1);
-            }
-        } else {
-            // Primary: use functional
-            val = Number(p.functional_amount) || val;
-        }
+        const val = calculateDisplayAmount({
+            amount: Number(p.amount),
+            functional_amount: Number(p.functional_amount),
+            currency_code: p.currency_code
+        });
 
         monthlyGroups[month] = (monthlyGroups[month] || 0) + val;
     });
 
-    // Convert to array
     const monthlyData = Object.entries(monthlyGroups)
         .map(([month, value]) => ({ month, value }))
         .sort((a, b) => a.month.localeCompare(b.month));
 
-    // Group by Client for Concentration Analysis (Using Payments to ensure we have Names)
+    // Group by Client
     const clientConcentrationMap: Record<string, number> = {};
     payments.forEach(p => {
         const name = p.client_name || "Desconocido";
-        // Normalize amount
-        let val = Number(p.amount);
-        const pCode = p.currency_code || primaryCurrencyCode;
-        if (displayCurrency === 'secondary') {
-            const targetCode = secondaryCurrencyCode || 'USD';
-            if (pCode !== targetCode) {
-                val = (Number(p.functional_amount) || val) / (currentRate || 1);
-            }
-        } else {
-            val = Number(p.functional_amount) || val;
-        }
+        const val = calculateDisplayAmount({
+            amount: Number(p.amount),
+            functional_amount: Number(p.functional_amount),
+            currency_code: p.currency_code
+        });
         clientConcentrationMap[name] = (clientConcentrationMap[name] || 0) + val;
     });
 
@@ -156,25 +142,20 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
         totalGasto: kpis.totalPaid, // Mapped to "Total Value" (Income)
 
         monthlyData: monthlyData,
-        categoryData: clientConcentration, // Clients = Categories
+        categoryData: clientConcentration,
 
         paymentCount: payments.length,
         monthCount: monthlyData.length,
 
-        // Optional: Income/Expense context if we had egresos
         totalIngresos: kpis.totalPaid,
-        totalEgresos: 0 // We are in Clients view (Revenue only usually)
+        totalEgresos: 0
     };
 
     // --- 3. RUN GENERIC RULES ---
     const genericInsights = allInsightRules
         .map(rule => rule(genericContext))
         .filter((i): i is Insight => i !== null)
-        // Post-processing: Tweaking titles for "Revenue" context instead of "Expense"
         .map(insight => {
-            // Quick text replacement hack to adapt "Gasto" rules to "Ingreso" context
-            // A better way would be passing 'contextType': 'income' | 'expense' to context.
-            // For now, simple string replacement works wonders for immediate value.
             return {
                 ...insight,
                 title: insight.title.replace(/gasto/gi, 'ingreso'),
@@ -183,6 +164,5 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
             };
         });
 
-    // Merge Manual + Generic
     return [...manualInsights, ...genericInsights].sort((a, b) => (a.priority || 99) - (b.priority || 99)).slice(0, 5);
 }

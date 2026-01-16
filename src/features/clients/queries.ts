@@ -133,6 +133,78 @@ export async function getCommitmentsByOrganization(organizationId: string) {
 }
 
 /**
+ * Helper to enrich payments with media signed URLs
+ */
+async function enrichPaymentsWithMedia(payments: any[]) {
+    if (!payments || payments.length === 0) return [];
+
+    const supabase = await createClient();
+    const paymentIds = payments.map(p => p.id);
+
+    const { data: mediaLinks } = await supabase
+        .from('media_links')
+        .select(`
+            client_payment_id,
+            media_file:media_files (
+                bucket,
+                file_path,
+                file_name,
+                file_type,
+                file_size
+            )
+        `)
+        .in('client_payment_id', paymentIds);
+
+    return await Promise.all(payments.map(async (payment) => {
+        const links = mediaLinks?.filter((l: any) => l.client_payment_id === payment.id) || [];
+
+        const attachedFiles = await Promise.all(links.map(async (link: any) => {
+            const fileData = link.media_file;
+            if (!fileData) return null;
+
+            let image_url = "";
+            if (fileData.bucket && fileData.file_path) {
+                try {
+                    const command = new GetObjectCommand({
+                        Bucket: fileData.bucket,
+                        Key: fileData.file_path,
+                    });
+                    image_url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+                } catch (e) {
+                    console.error("Error signing payment media url:", e);
+                }
+            }
+
+            let mime = 'application/octet-stream';
+            if (fileData.file_type === 'image') mime = 'image/*';
+            else if (fileData.file_type === 'pdf') mime = 'application/pdf';
+            else if (fileData.file_type === 'video') mime = 'video/*';
+            else if (fileData.file_type === 'doc') mime = 'application/msword';
+
+            return {
+                id: fileData.id, // Use real ID if needed, or mapped later
+                url: image_url,
+                name: fileData.file_name,
+                mime: mime,
+                size: fileData.file_size
+            };
+        }));
+
+        const validAttachments = attachedFiles.filter((f: any) => f !== null);
+        const primary = validAttachments[0];
+
+        return {
+            ...payment,
+            image_url: primary?.url || (payment as any).image_url || null,
+            media_mime: primary?.mime,
+            media_name: primary?.name,
+            media_size: primary?.size,
+            attachments: validAttachments
+        };
+    }));
+}
+
+/**
  * Get all payments for an organization
  */
 export async function getPaymentsByOrganization(organizationId: string) {
@@ -149,7 +221,8 @@ export async function getPaymentsByOrganization(organizationId: string) {
         return { data: [] as ClientPaymentView[], error };
     }
 
-    return { data: data as ClientPaymentView[], error: null };
+    const enriched = await enrichPaymentsWithMedia(data);
+    return { data: enriched as ClientPaymentView[], error: null };
 }
 
 /**
@@ -240,7 +313,8 @@ export async function getClientPayments(projectId: string) {
         return { data: [] as ClientPaymentView[], error };
     }
 
-    return { data: data as ClientPaymentView[], error: null };
+    const enriched = await enrichPaymentsWithMedia(data);
+    return { data: enriched as ClientPaymentView[], error: null };
 }
 
 export async function getClientPaymentSchedules(projectId: string) {

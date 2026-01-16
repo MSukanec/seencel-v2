@@ -40,11 +40,8 @@ export const CHART_DEFAULTS = {
 };
 
 export const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0
-    }).format(value);
+    // Use es-AR for number formatting (1.000,00) but with USD symbol prefix
+    return `US$ ${value.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
 };
 
 export const formatCompactNumber = (value: number) => {

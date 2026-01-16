@@ -40,5 +40,11 @@ export function ClientPaymentsTable({ data }: { data: ClientPaymentView[] }) {
         }
     ];
 
-    return <DataTable columns={columns} data={data} searchKey="client_name" />;
+    return (
+        <DataTable
+            columns={columns}
+            data={data}
+            searchKey="client_name"
+        />
+    );
 }

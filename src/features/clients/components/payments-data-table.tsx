@@ -5,7 +5,7 @@ import { DataTable } from "@/components/shared/data-table/data-table";
 import { ClientPaymentView } from "../types";
 import { columns } from "./payments-columns";
 import { Button } from "@/components/ui/button";
-import { Plus, Download } from "lucide-react";
+import { Plus, Upload, Banknote } from "lucide-react";
 import { DataTableExport } from "@/components/shared/data-table/data-table-export";
 import { useModal } from "@/providers/modal-store";
 import { PaymentForm } from "./payment-form";
@@ -13,6 +13,7 @@ import { deletePaymentAction } from "@/features/clients/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface PaymentsDataTableProps {
     data: ClientPaymentView[];
@@ -50,6 +51,10 @@ export function PaymentsDataTable({
                 size: "lg"
             }
         );
+    };
+
+    const handleImport = () => {
+        toast.info("Próximamente: Importar pagos desde CSV");
     };
 
     const handleEdit = (payment: ClientPaymentView) => {
@@ -103,6 +108,27 @@ export function PaymentsDataTable({
         { label: "Anulado", value: "void" },
     ];
 
+    // Empty State when no payments
+    if (data.length === 0) {
+        return (
+            <EmptyState
+                icon={Banknote}
+                title="Sin pagos registrados"
+                description="Registrá el primer pago de tus clientes o importalos desde un archivo CSV."
+                action={
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleImport}>
+                            <Upload className="mr-2 h-4 w-4" /> Importar
+                        </Button>
+                        <Button onClick={handleNewPayment}>
+                            <Plus className="mr-2 h-4 w-4" /> Nuevo Pago
+                        </Button>
+                    </div>
+                }
+            />
+        );
+    }
+
     return (
         <div className="h-full flex flex-col">
             <DataTable
@@ -124,24 +150,17 @@ export function PaymentsDataTable({
                 toolbar={({ table }) => (
                     <div className="flex gap-2">
                         <DataTableExport table={table} />
-                        <Button size="sm" onClick={handleNewPayment}>
+                        <Button size="sm" variant="outline" className="h-9" onClick={handleImport}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Importar
+                        </Button>
+                        <Button size="sm" className="h-9" onClick={handleNewPayment}>
                             <Plus className="mr-2 h-4 w-4" />
                             Nuevo Pago
                         </Button>
                     </div>
                 )}
                 initialSorting={[{ id: "payment_date", desc: true }]}
-                emptyState={
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="rounded-full bg-muted/50 p-4 mb-4">
-                            <Download className="h-8 w-8 text-muted-foreground/50" />
-                        </div>
-                        <h3 className="font-medium text-lg">No hay pagos registrados</h3>
-                        <p className="text-muted-foreground text-sm mt-1 max-w-sm">
-                            No se encontraron pagos que coincidan con los filtros aplicados.
-                        </p>
-                    </div>
-                }
             />
 
             <DeleteConfirmationDialog

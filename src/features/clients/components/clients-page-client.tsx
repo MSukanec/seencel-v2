@@ -1,12 +1,14 @@
 "use client";
 
+import { useMemo, useState, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Handshake } from "lucide-react";
+import { Handshake, FilterX } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ContentLayout } from "@/components/layout/content-layout";
-
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 import { ProjectClientView, ClientFinancialSummary, ClientPaymentView, ClientRole } from "@/features/clients/types";
 import { ClientsOverview } from "./clients-overview";
@@ -15,10 +17,10 @@ import { ClientCommitmentsTable } from "./client-commitments-table";
 import { PaymentsDataTable } from "./payments-data-table";
 import { ClientSchedulesTable } from "./client-schedules-table";
 import { ClientSettings } from "./client-settings";
+import { HealthMonitorBanner } from "@/features/health/components/health-monitor-banner";
+import { analyzePaymentsHealth } from "@/features/health/modules/payments";
 
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
-
-
 
 interface ClientsPageClientProps {
     projectId: string;
@@ -29,7 +31,7 @@ interface ClientsPageClientProps {
     payments: ClientPaymentView[];
     schedules: any[];
     roles: ClientRole[];
-    financialData: any; // Unified data
+    financialData: any;
     defaultTab?: string;
 }
 
@@ -51,11 +53,41 @@ export function ClientsPageClient({
 
     const currentTab = searchParams.get("view") || defaultTab;
 
+    // --- HEALTH FILTER STATE ---
+    const [healthFilterActive, setHealthFilterActive] = useState(false);
+
+    // Analyze payments health
+    const healthReport = useMemo(() => analyzePaymentsHealth(payments), [payments]);
+
+    // Get the IDs of affected payments
+    const affectedPaymentIds = useMemo(() => {
+        return new Set(healthReport.issues.map(issue => issue.paymentId));
+    }, [healthReport.issues]);
+
+    // Filtered payments when health filter is active
+    const displayedPayments = useMemo(() => {
+        if (!healthFilterActive) return payments;
+        return payments.filter(p => affectedPaymentIds.has(p.id));
+    }, [payments, healthFilterActive, affectedPaymentIds]);
+
     const handleTabChange = (value: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("view", value);
         router.replace(`${pathname}?${params.toString()}`);
     };
+
+    // Handler for "Mostrar" button - navigates to payments tab and activates filter
+    const handleShowAffected = useCallback(() => {
+        setHealthFilterActive(true);
+        if (currentTab !== "payments") {
+            handleTabChange("payments");
+        }
+    }, [currentTab]);
+
+    // Handler to clear the filter
+    const handleClearFilter = useCallback(() => {
+        setHealthFilterActive(false);
+    }, []);
 
     const tabs = (
         <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
@@ -77,6 +109,36 @@ export function ClientsPageClient({
                 icon={<Handshake />}
             >
                 <ContentLayout variant="wide" className="pb-6">
+                    {/* DATA HEALTH BANNER */}
+                    <HealthMonitorBanner
+                        report={healthReport}
+                        moduleName="pagos"
+                        storageKey={`clients-health-${projectId}`}
+                        onShowAffected={handleShowAffected}
+                        isFilterActive={healthFilterActive}
+                        onClearFilter={handleClearFilter}
+                    />
+
+                    {/* FILTER INDICATOR - Shows when health filter is active */}
+                    {healthFilterActive && currentTab === "payments" && (
+                        <Alert className="mb-4 bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400">
+                            <FilterX className="h-4 w-4 !text-orange-500" />
+                            <AlertDescription className="flex items-center justify-between w-full">
+                                <span>
+                                    Mostrando solo los <strong>{displayedPayments.length}</strong> pagos con problemas de datos.
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-current hover:bg-orange-500/20"
+                                    onClick={handleClearFilter}
+                                >
+                                    Mostrar todos
+                                </Button>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
                     <TabsContent value="overview" className="m-0 h-full focus-visible:outline-none">
                         <ClientsOverview summary={financialSummary} payments={payments} />
                     </TabsContent>
@@ -95,7 +157,7 @@ export function ClientsPageClient({
                     </TabsContent>
                     <TabsContent value="payments" className="m-0 h-full focus-visible:outline-none">
                         <PaymentsDataTable
-                            data={payments}
+                            data={displayedPayments}
                             clients={clients}
                             financialData={financialData}
                             projectId={projectId}
@@ -113,4 +175,3 @@ export function ClientsPageClient({
         </Tabs >
     );
 }
-

@@ -54,12 +54,17 @@ export function DashboardKpiCard({
                         {/* Currency Breakdown */}
                         {showBreakdown && (
                             <p className="mt-1 text-xs text-muted-foreground font-medium">
-                                {currencyBreakdown.map((item, index) => (
-                                    <span key={item.currencyCode}>
-                                        {index > 0 && " + "}
-                                        {item.symbol} {item.nativeTotal.toLocaleString('es-AR')}
-                                    </span>
-                                ))}
+                                {currencyBreakdown.map((item, index) => {
+                                    const isNegative = item.nativeTotal < 0;
+                                    const displayValue = Math.abs(item.nativeTotal);
+                                    return (
+                                        <span key={item.currencyCode}>
+                                            {index > 0 && (isNegative ? " - " : " + ")}
+                                            {index === 0 && isNegative && "-"}
+                                            {item.symbol} {displayValue.toLocaleString('es-AR')}
+                                        </span>
+                                    );
+                                })}
                             </p>
                         )}
                     </div>

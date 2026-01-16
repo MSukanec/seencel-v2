@@ -64,31 +64,29 @@ export const ModalProvider = () => {
                                 >
                                     {/* Fixed Header */}
                                     {(modal.title || modal.description) && (
-                                        <div className="flex-none p-3 border-b border-border bg-background z-10">
-                                            <DialogHeader className="space-y-3">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <CopyPlus className="h-5 w-5 text-primary" />
-                                                        <div className="space-y-0.5">
-                                                            {modal.title && <DialogTitle className="text-sm font-medium text-foreground leading-snug">{modal.title}</DialogTitle>}
-                                                            {modal.description && <DialogDescription className="text-xs text-muted-foreground leading-normal">{modal.description}</DialogDescription>}
-                                                        </div>
+                                        <DialogHeader className="flex-none p-3 border-b space-y-1.5">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <CopyPlus className="h-5 w-5 text-primary" />
+                                                    <div className="space-y-0.5">
+                                                        {modal.title && <DialogTitle className="text-sm font-medium text-foreground leading-snug">{modal.title}</DialogTitle>}
+                                                        {modal.description && <DialogDescription className="text-xs text-muted-foreground leading-normal">{modal.description}</DialogDescription>}
                                                     </div>
-                                                    <button
-                                                        onClick={() => closeModal()}
-                                                        aria-label="Cerrar modal"
-                                                        className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                        <span className="sr-only">Close</span>
-                                                    </button>
                                                 </div>
-                                            </DialogHeader>
-                                        </div>
+                                                <button
+                                                    onClick={() => closeModal()}
+                                                    aria-label="Cerrar modal"
+                                                    className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                    <span className="sr-only">Close</span>
+                                                </button>
+                                            </div>
+                                        </DialogHeader>
                                     )}
 
-                                    {/* Body */}
-                                    <div className="flex-1 overflow-hidden p-4 flex flex-col relative">
+                                    {/* Body - let children handle their own scroll */}
+                                    <div className="flex-1 flex flex-col relative min-h-0 overflow-hidden">
                                         {modal.view}
                                     </div>
                                 </motion.div>
@@ -108,31 +106,29 @@ export const ModalProvider = () => {
                         >
                             {/* Fixed Header */}
                             {(modal.title || modal.description) && (
-                                <div className="flex-none p-3 border-b border-border bg-background z-10">
-                                    <DialogHeader className="space-y-3">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="flex items-center gap-3">
-                                                <CopyPlus className="h-5 w-5 text-primary" />
-                                                <div className="space-y-0.5">
-                                                    {modal.title && <DialogTitle className="text-sm font-medium text-foreground leading-snug">{modal.title}</DialogTitle>}
-                                                    {modal.description && <DialogDescription className="text-xs text-muted-foreground leading-normal">{modal.description}</DialogDescription>}
-                                                </div>
+                                <DialogHeader className="flex-none p-3 border-b space-y-1.5">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <CopyPlus className="h-5 w-5 text-primary" />
+                                            <div className="space-y-0.5">
+                                                {modal.title && <DialogTitle className="text-sm font-medium text-foreground leading-snug">{modal.title}</DialogTitle>}
+                                                {modal.description && <DialogDescription className="text-xs text-muted-foreground leading-normal">{modal.description}</DialogDescription>}
                                             </div>
-                                            <button
-                                                onClick={() => closeModal()}
-                                                aria-label="Cerrar modal"
-                                                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                            >
-                                                <X className="h-4 w-4" />
-                                                <span className="sr-only">Close</span>
-                                            </button>
                                         </div>
-                                    </DialogHeader>
-                                </div>
+                                        <button
+                                            onClick={() => closeModal()}
+                                            aria-label="Cerrar modal"
+                                            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                        >
+                                            <X className="h-4 w-4" />
+                                            <span className="sr-only">Close</span>
+                                        </button>
+                                    </div>
+                                </DialogHeader>
                             )}
 
-                            {/* Body - auto height, scrolls when needed */}
-                            <div className="flex-1 overflow-hidden p-4 flex flex-col relative w-full min-h-0">
+                            {/* Body - let children handle their own scroll */}
+                            <div className="flex-1 flex flex-col relative w-full min-h-0 overflow-hidden">
                                 {modal.view}
                             </div>
                         </DialogContent>

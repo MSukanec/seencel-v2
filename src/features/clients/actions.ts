@@ -448,10 +448,12 @@ const createPaymentSchema = z.object({
 
 export async function createPaymentAction(input: z.infer<typeof createPaymentSchema>) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Handling FormData input if necessary
     let payload = input as any;
     let currencyCodeToCheck: string | null = null;
+    let mediaFilesJson: string | null = null;
 
     if (input instanceof FormData) {
         const raw = Object.fromEntries(input.entries());
@@ -465,9 +467,11 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
             client_id: raw.client_id === '' ? null : raw.client_id,
         };
         currencyCodeToCheck = raw.currency_code as string || null;
+        mediaFilesJson = raw.media_files as string || null;
     } else {
         // Assume it's an object, check if currency_code was passed (even if not in schema type definition)
         currencyCodeToCheck = (input as any).currency_code || null;
+        mediaFilesJson = (input as any).media_files || null;
     }
 
     // 1. Fetch currency to check code for Latam Rule
@@ -535,6 +539,54 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
         throw new Error("Error al registrar el pago.");
     }
 
+    // 3. Handle Media Attachment
+    if (mediaFilesJson && data?.id && user?.id) {
+        try {
+            const mediaList = JSON.parse(mediaFilesJson);
+            if (Array.isArray(mediaList)) {
+                for (const mediaData of mediaList) {
+                    if (mediaData.id === 'existing') continue;
+                    if (!mediaData.path || !mediaData.bucket) continue;
+
+                    const dbType = mediaData.type.startsWith('image/') ? 'image' : mediaData.type === 'application/pdf' ? 'pdf' : 'other';
+
+                    // Insert Media File
+                    const { data: fileData, error: fileError } = await supabase
+                        .from('media_files')
+                        .insert({
+                            organization_id: payload.organization_id,
+                            bucket: mediaData.bucket,
+                            file_path: mediaData.path,
+                            file_name: mediaData.name,
+                            file_type: dbType,
+                            file_size: mediaData.size,
+                            created_by: user.id,
+                            is_public: false
+                        })
+                        .select()
+                        .single();
+
+                    if (!fileError && fileData) {
+                        // Link
+                        await supabase.from('media_links').insert({
+                            media_file_id: fileData.id,
+                            client_payment_id: data.id,
+                            organization_id: payload.organization_id,
+                            project_id: payload.project_id,
+                            created_by: user.id,
+                            category: 'financial',
+                            visibility: 'private'
+                        });
+                    } else {
+                        console.error("Error creating media file record:", fileError);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error processing media file:", e);
+        }
+    }
+
     // If it's linked to a schedule, update the schedule status!
     if (input.schedule_id && input.status === 'confirmed') {
         const { error: scheduleError } = await supabase
@@ -559,11 +611,13 @@ const updatePaymentSchema = createPaymentSchema.partial().extend({
 
 export async function updatePaymentAction(input: z.infer<typeof updatePaymentSchema>) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Handling FormData input
     let payload = input as any;
     let currencyCodeToCheck: string | null = null;
     let paymentId: string | null = null;
+    let mediaFilesJson: string | null = null;
 
     if (input instanceof FormData) {
         const raw = Object.fromEntries(input.entries());
@@ -579,9 +633,11 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
         // ID is crucial for update
         paymentId = raw.id as string || (input as any).id;
         currencyCodeToCheck = raw.currency_code as string || null;
+        mediaFilesJson = raw.media_files as string || null;
     } else {
         paymentId = input.id;
         currencyCodeToCheck = (input as any).currency_code || null;
+        mediaFilesJson = (input as any).media_files || null;
     }
 
     if (!paymentId) {
@@ -665,6 +721,55 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
     if (error) {
         console.error("Error updating payment:", error);
         throw new Error("Error al actualizar el pago.");
+    }
+
+    // 4. Handle Media Attachment (New)
+    if (mediaFilesJson && data?.id && user?.id) {
+        try {
+            const mediaList = JSON.parse(mediaFilesJson);
+            if (Array.isArray(mediaList)) {
+                for (const mediaData of mediaList) {
+                    // Skip existing
+                    if (mediaData.id === 'existing') continue;
+                    if (!mediaData.path || !mediaData.bucket) continue;
+
+                    const dbType = mediaData.type.startsWith('image/') ? 'image' : mediaData.type === 'application/pdf' ? 'pdf' : 'other';
+
+                    // Insert Media File
+                    const { data: fileData, error: fileError } = await supabase
+                        .from('media_files')
+                        .insert({
+                            organization_id: currentPayment.organization_id,
+                            bucket: mediaData.bucket,
+                            file_path: mediaData.path,
+                            file_name: mediaData.name,
+                            file_type: dbType,
+                            file_size: mediaData.size,
+                            created_by: user.id,
+                            is_public: false
+                        })
+                        .select()
+                        .single();
+
+                    if (!fileError && fileData) {
+                        // Link
+                        await supabase.from('media_links').insert({
+                            media_file_id: fileData.id,
+                            client_payment_id: data.id,
+                            organization_id: currentPayment.organization_id,
+                            project_id: payload.project_id, // Assuming payload has it or is optional
+                            created_by: user.id,
+                            category: 'financial',
+                            visibility: 'private'
+                        });
+                    } else {
+                        console.error("Error creating media file record in update:", fileError);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error processing media file in update:", e);
+        }
     }
 
     revalidatePath('/organization/clients');

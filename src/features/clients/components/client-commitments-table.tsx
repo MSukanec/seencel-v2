@@ -7,7 +7,8 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ClientCommitment, ProjectClientView } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useModal } from "@/providers/modal-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -198,6 +199,22 @@ export function ClientCommitmentsTable({
             }
         }
     ];
+
+    // Empty State when no commitments
+    if (data.length === 0) {
+        return (
+            <EmptyState
+                icon={FileText}
+                title="Sin compromisos"
+                description="Creá el primer compromiso de pago para comenzar a gestionar los cobros de tus clientes."
+                action={
+                    <Button onClick={handleCreate} size="lg">
+                        <Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso
+                    </Button>
+                }
+            />
+        );
+    }
 
     return (
         <>

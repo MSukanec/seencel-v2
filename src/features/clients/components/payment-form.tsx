@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useModal } from "@/providers/modal-store";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -16,8 +16,8 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
 import { createPaymentAction, updatePaymentAction, getCommitmentsByClientAction } from "@/features/clients/actions";
+import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
 
 interface PaymentFormProps {
     projectId: string;
@@ -39,6 +39,7 @@ export function PaymentForm({
     const { closeModal } = useModal();
     const t = useTranslations('Clients.payments'); // Assuming translations exist or fallback
     const [isLoading, setIsLoading] = useState(false);
+    const uploadRef = useRef<MultiFileUploadRef>(null);
 
     const { wallets, currencies, defaultWalletId, defaultCurrencyId } = financialData;
 
@@ -57,18 +58,58 @@ export function PaymentForm({
     const [commitmentId, setCommitmentId] = useState(initialData?.commitment_id || "");
     const [commitments, setCommitments] = useState<any[]>([]);
     const [loadingCommitments, setLoadingCommitments] = useState(false);
-    const [file, setFile] = useState<File | undefined>();
-    const [imageUrl, setImageUrl] = useState(initialData?.image_url || ""); // For receipts
+
+    // File Upload State (MultiFileUpload)
+    const [files, setFiles] = useState<UploadedFile[]>(
+        (initialData?.attachments && initialData.attachments.length > 0)
+            ? initialData.attachments.map((att: any) => ({
+                id: att.id || `existing-${Math.random()}`, // Use real ID or random fallback
+                url: att.url,
+                name: att.name || 'Adjunto',
+                type: att.mime || 'application/octet-stream',
+                size: att.size || 0,
+                path: '',
+                bucket: ''
+            }))
+            : initialData?.image_url ? [{
+                id: 'existing-legacy',
+                url: initialData.image_url,
+                name: initialData.media_name || 'Comprobante adjunto',
+                type: initialData.media_mime || 'application/octet-stream',
+                size: initialData.media_size || 0,
+                path: '',
+                bucket: ''
+            }] : []
+    );
+
+    // Helper to get current image url (takes the last uploaded file)
+    const currentImageUrl = files.length > 0 ? files[files.length - 1].url : "";
 
     useEffect(() => {
         if (clientId) {
             setLoadingCommitments(true);
             getCommitmentsByClientAction(clientId)
-                .then(setCommitments)
+                .then(data => {
+                    setCommitments(data);
+
+                    // Auto-select the latest commitment by created_at
+                    if (data && data.length > 0) {
+                        // Sort by created_at descending and pick the first (latest)
+                        const sorted = [...data].sort((a, b) => {
+                            const dateA = new Date(a.created_at || 0).getTime();
+                            const dateB = new Date(b.created_at || 0).getTime();
+                            return dateB - dateA; // Descending (latest first)
+                        });
+                        setCommitmentId(sorted[0].id);
+                    } else {
+                        setCommitmentId("");
+                    }
+                })
                 .catch(err => console.error(err))
                 .finally(() => setLoadingCommitments(false));
         } else {
             setCommitments([]);
+            setCommitmentId("");
         }
     }, [clientId]);
 
@@ -90,6 +131,13 @@ export function PaymentForm({
         setIsLoading(true);
 
         try {
+            // 1. Upload pending files first
+            let finalFiles = files;
+            if (uploadRef.current) {
+                const uploaded = await uploadRef.current.startUpload();
+                if (uploaded) finalFiles = uploaded;
+            }
+
             const formData = new FormData();
             formData.append('project_id', projectId);
             formData.append('organization_id', organizationId);
@@ -101,7 +149,6 @@ export function PaymentForm({
             formData.append('exchange_rate', exchangeRate);
             formData.append('status', status);
             if (notes) formData.append('notes', notes);
-            if (notes) formData.append('notes', notes);
             if (reference) formData.append('reference', reference);
             if (commitmentId) formData.append('commitment_id', commitmentId);
 
@@ -111,15 +158,16 @@ export function PaymentForm({
                 formData.append('currency_code', selectedCurrency.code);
             }
 
-            // TODO: Handle file upload logic for receipts if needed, similar to ProjectForm
-            // For now assuming basic form submission logic exists in actions
+            // Append media_file JSON using finalFiles
+            // Append media_files JSON using finalFiles
+            if (finalFiles && finalFiles.length > 0) {
+                formData.append('media_files', JSON.stringify(finalFiles));
+            }
 
             // Check if we are editing or creating
             if (initialData?.id) {
                 // Editing
                 formData.append('id', initialData.id);
-                // We need to import updatePaymentAction at the top, I'll assume it's imported or I need to add it.
-                // Wait, I need to check imports.
                 await updatePaymentAction(formData as any);
                 toast.success("Pago actualizado correctamente");
             } else {
@@ -139,8 +187,8 @@ export function PaymentForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto space-y-4 p-1 px-2">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
+            <div className="flex-1 overflow-y-auto space-y-4 p-6">
                 {/* Row 1: Date & Client */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormGroup label="Fecha de Pago" required>
@@ -298,12 +346,14 @@ export function PaymentForm({
                 </FormGroup>
 
                 {/* File Upload (Receipt) */}
-                <FormGroup>
-                    <SingleImageDropzone
-                        height={150}
-                        value={file}
-                        onChange={setFile}
-                        dropzoneLabel="Arrastra el comprobante o haz clic para seleccionar"
+                <FormGroup label="Comprobante (opcional)">
+                    <MultiFileUpload
+                        ref={uploadRef}
+                        folderPath={`organizations/${organizationId}/finance/client-payments`}
+                        onUploadComplete={setFiles}
+                        initialFiles={files}
+                        autoUpload={false}
+                        maxSizeMB={5}
                         className="w-full"
                     />
                 </FormGroup>
@@ -314,7 +364,6 @@ export function PaymentForm({
                 onCancel={closeModal}
                 isLoading={isLoading}
                 submitLabel="Registrar Pago"
-                className="-mx-4 -mb-4 mt-6"
             />
         </form>
     );

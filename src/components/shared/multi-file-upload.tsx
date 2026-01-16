@@ -60,7 +60,7 @@ const MultiFileUpload = forwardRef<MultiFileUploadRef, MultiFileUploadProps>(({
         'application/pdf': []
     },
     className,
-    autoUpload = true
+    autoUpload = false
 }, ref) => {
     const [activeUploads, setActiveUploads] = useState<FileState[]>([]);
     const [completedFiles, setCompletedFiles] = useState<UploadedFile[]>(initialFiles);
@@ -129,7 +129,7 @@ const MultiFileUpload = forwardRef<MultiFileUploadRef, MultiFileUploadProps>(({
                 // Only notify if autoUpload is true, otherwise let the caller handle the final list?
                 // Actually, standard behavior is to notify whenever a file is done.
                 if (autoUpload) {
-                    onUploadComplete(newFiles);
+                    setTimeout(() => onUploadComplete(newFiles), 0);
                 }
                 return newFiles;
             });
@@ -211,7 +211,8 @@ const MultiFileUpload = forwardRef<MultiFileUploadRef, MultiFileUploadProps>(({
         // If it was completed
         setCompletedFiles(prev => {
             const next = prev.filter(f => f.id !== fileId);
-            onUploadComplete(next); // Notify removal
+            // Defer the callback to avoid setState during render
+            setTimeout(() => onUploadComplete(next), 0);
             return next;
         });
         onRemove?.(fileId);

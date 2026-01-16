@@ -53,7 +53,7 @@ export function FormGroup({
             {label && (
                 <Label htmlFor={htmlFor} className="text-foreground/80">
                     {label}
-                    {required && <span className="text-destructive ml-1">*</span>}
+                    {required && <span className="text-primary ml-1">*</span>}
                 </Label>
             )}
 

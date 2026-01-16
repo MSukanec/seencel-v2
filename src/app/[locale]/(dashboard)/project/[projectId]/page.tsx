@@ -15,6 +15,8 @@ interface PageProps {
 
 export default async function ProjectDashboardPage({ params }: PageProps) {
     const { projectId } = await params;
+
+    // Note: Org validation is handled in layout.tsx
     const project = await getProjectById(projectId);
 
     if (!project) {

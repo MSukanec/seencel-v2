@@ -104,10 +104,13 @@ export function FormFooter({
     }, [submitDisabled, isLoading]);
 
     return (
-        <div className={cn(
-            "flex-none p-3 border-t border-border bg-background",
-            className
-        )}>
+        <div
+            data-slot="form-footer"
+            className={cn(
+                "flex-none p-3 border-t border-border bg-background",
+                className
+            )}
+        >
             <div className={cn("grid gap-3", gridClasses[variant])}>
                 {showCancel && (
                     <Button

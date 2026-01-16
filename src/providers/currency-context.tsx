@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import { Currency, CurrencyContextValue, DisplayCurrency, MonetaryAmount, MonetaryBreakdown } from '@/types/currency';
 import {
     formatCurrency as formatCurrencyUtil,
@@ -58,7 +58,26 @@ export function CurrencyProvider({
     }, []);
 
     // Current exchange rate for real-time conversions
-    const [currentExchangeRate, setCurrentExchangeRate] = useState(defaultExchangeRate);
+    // Initialize with secondary currency rate if available, otherwise default
+    const [currentExchangeRate, setCurrentExchangeRate] = useState(() => {
+        const secondary = currencies.find(c => !c.is_default);
+        if (secondary?.exchange_rate && secondary.exchange_rate > 1) {
+            return secondary.exchange_rate;
+        }
+        return defaultExchangeRate;
+    });
+
+    // Sync state if currencies load later or change
+    // Only update if current rate is at default (1) to avoid overwriting user overrides
+    useEffect(() => {
+        if (secondaryCurrency?.exchange_rate && secondaryCurrency.exchange_rate > 1) {
+            setCurrentExchangeRate(prev => {
+                // If we are effectively uninitialized (<= 1), assume the stored rate is better
+                if (prev <= 1) return secondaryCurrency.exchange_rate!;
+                return prev;
+            });
+        }
+    }, [secondaryCurrency]);
 
     // Formatting function
     const formatAmount = useCallback((amount: number, currency?: Currency | string) => {
