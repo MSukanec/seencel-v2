@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTranslations } from "next-intl";
 
 // Types
 export interface PortalProject {
@@ -75,11 +76,11 @@ interface PortalShellProps {
 type Section = 'dashboard' | 'payments' | 'schedule' | 'logs' | 'messages';
 
 const SECTION_CONFIG = {
-    dashboard: { icon: LayoutDashboard, label: 'Dashboard', setting: 'show_dashboard' },
-    payments: { icon: CreditCard, label: 'Pagos', setting: 'show_payments' },
-    schedule: { icon: Calendar, label: 'Cronograma', setting: 'show_installments' },
-    logs: { icon: FileText, label: 'Bitácora', setting: 'show_logs' },
-    messages: { icon: MessageSquare, label: 'Mensajes', setting: 'allow_comments' },
+    dashboard: { icon: LayoutDashboard, setting: 'show_dashboard' },
+    payments: { icon: CreditCard, setting: 'show_payments' },
+    schedule: { icon: Calendar, setting: 'show_installments' },
+    logs: { icon: FileText, setting: 'show_logs' },
+    messages: { icon: MessageSquare, setting: 'allow_comments' },
 } as const;
 
 function getInitials(name: string | null | undefined) {
@@ -94,11 +95,12 @@ export function PortalShell({ mode, project, client, settings, data, branding, c
     // If in preview mobile mode, we force mobile layout regardless of viewport width
     const forceMobile = mode === 'preview' && isMobileProp;
 
+    const t = useTranslations('Portal');
     const primaryColor = branding?.primary_color || project.color || "#83cc16";
     const bgColor = branding?.background_color || "#09090b";
     const showFooter = branding?.show_footer ?? true;
     const showPoweredBy = branding?.show_powered_by ?? true;
-    const welcomeMessage = branding?.welcome_message || "Bienvenido a tu portal";
+    const welcomeMessage = branding?.welcome_message || t('Defaults.welcome');
     const portalName = branding?.portal_name || project.name;
 
     // Filter visible sections based on settings
@@ -136,7 +138,7 @@ export function PortalShell({ mode, project, client, settings, data, branding, c
                         style={isActive ? { backgroundColor: `${primaryColor}20`, color: primaryColor } : undefined}
                     >
                         <Icon className="h-5 w-5" />
-                        <span>{config.label}</span>
+                        <span>{t(`Sections.${key}`)}</span>
                     </button>
                 );
             })}
@@ -165,7 +167,7 @@ export function PortalShell({ mode, project, client, settings, data, branding, c
                         </div>
                         <div className="flex-1 min-w-0">
                             <h1 className="font-semibold truncate">{portalName}</h1>
-                            <p className="text-xs text-zinc-500 truncate">Portal de Cliente</p>
+                            <p className="text-xs text-zinc-500 truncate">{t('Sidebar.subtitle')}</p>
                         </div>
                     </div>
                 </div>
@@ -208,7 +210,7 @@ export function PortalShell({ mode, project, client, settings, data, branding, c
                         </SheetTrigger>
                         <SheetContent side="right" className="w-72 bg-zinc-900 border-zinc-800 p-0">
                             <div className="p-6 border-b border-zinc-800">
-                                <h2 className="font-semibold text-white">Menú</h2>
+                                <h2 className="font-semibold text-white">{t('Sidebar.menu')}</h2>
                             </div>
                             {renderSidebar(true)}
                         </SheetContent>
@@ -237,7 +239,7 @@ export function PortalShell({ mode, project, client, settings, data, branding, c
                         )}
                         {showPoweredBy && (
                             <p className="text-xs text-zinc-600">
-                                Powered by <span style={{ color: primaryColor }}>SEENCEL</span>
+                                {t('Sidebar.poweredBy')} <span style={{ color: primaryColor }}>SEENCEL</span>
                             </p>
                         )}
                     </footer>
@@ -296,6 +298,7 @@ function DashboardSection({ project, settings, data, primaryColor, isMobile, por
     portalName: string;
     welcomeMessage: string;
 }) {
+    const t = useTranslations('Portal.Dashboard');
     const { summary } = data;
     const currencySymbol = summary?.currency_symbol || "$";
     const totalCommitted = summary?.total_committed_amount || 0;
@@ -339,7 +342,7 @@ function DashboardSection({ project, settings, data, primaryColor, isMobile, por
                 {settings.show_progress && (
                     <div className="bg-zinc-800/50 rounded-xl p-5 border border-zinc-700/50">
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-zinc-400 text-sm">Progreso</span>
+                            <span className="text-zinc-400 text-sm">{t('progress')}</span>
                             <span className="text-2xl font-bold" style={{ color: primaryColor }}>{progress}%</span>
                         </div>
                         <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
@@ -353,14 +356,14 @@ function DashboardSection({ project, settings, data, primaryColor, isMobile, por
 
                 {nextSchedule && (
                     <div className="bg-zinc-800/50 rounded-xl p-5 border border-zinc-700/50">
-                        <span className="text-zinc-400 text-sm block mb-2">Próximo Pago</span>
+                        <span className="text-zinc-400 text-sm block mb-2">{t('nextPayment')}</span>
                         <div className="text-2xl font-bold text-white">{formatAmount(nextSchedule.amount || 0)}</div>
                         <div className="text-xs text-zinc-500 mt-1">{nextSchedule.due_date}</div>
                     </div>
                 )}
 
                 <div className="bg-zinc-800/50 rounded-xl p-5 border border-zinc-700/50">
-                    <span className="text-zinc-400 text-sm block mb-2">Saldo Pendiente</span>
+                    <span className="text-zinc-400 text-sm block mb-2">{t('balanceDue')}</span>
                     <div className="text-2xl font-bold text-white">{formatAmount(balanceDue)}</div>
                 </div>
             </div>
@@ -370,6 +373,7 @@ function DashboardSection({ project, settings, data, primaryColor, isMobile, por
 
 // Payments Section
 function PaymentsSection({ data, settings }: { data: PortalData; settings: PortalSettings }) {
+    const t = useTranslations('Portal.Payments');
     const currencySymbol = data.summary?.currency_symbol || "$";
 
     const formatAmount = (amount: number) => {
@@ -381,14 +385,14 @@ function PaymentsSection({ data, settings }: { data: PortalData; settings: Porta
         return (
             <div className="p-6 text-center py-16">
                 <CreditCard className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500">No hay pagos registrados</p>
+                <p className="text-zinc-500">{t('empty')}</p>
             </div>
         );
     }
 
     return (
         <div className="p-6 space-y-3">
-            <h2 className="text-xl font-semibold mb-4">Pagos Realizados</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('title')}</h2>
             {data.payments.map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/50">
                     <div className="flex items-center gap-3">
@@ -401,7 +405,7 @@ function PaymentsSection({ data, settings }: { data: PortalData; settings: Porta
                         </div>
                     </div>
                     <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        Confirmado
+                        {t('confirmed')}
                     </span>
                 </div>
             ))}
@@ -411,6 +415,7 @@ function PaymentsSection({ data, settings }: { data: PortalData; settings: Porta
 
 // Schedule Section
 function ScheduleSection({ data, settings }: { data: PortalData; settings: PortalSettings }) {
+    const t = useTranslations('Portal.Schedule');
     const currencySymbol = data.summary?.currency_symbol || "$";
 
     const formatAmount = (amount: number) => {
@@ -422,14 +427,14 @@ function ScheduleSection({ data, settings }: { data: PortalData; settings: Porta
         return (
             <div className="p-6 text-center py-16">
                 <Calendar className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500">No hay cuotas programadas</p>
+                <p className="text-zinc-500">{t('empty')}</p>
             </div>
         );
     }
 
     return (
         <div className="p-6 space-y-3">
-            <h2 className="text-xl font-semibold mb-4">Cronograma de Pagos</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('title')}</h2>
             {data.schedules.map((schedule) => {
                 const isPaid = schedule.status === 'paid';
                 const isOverdue = schedule.status === 'overdue';
@@ -463,7 +468,7 @@ function ScheduleSection({ data, settings }: { data: PortalData; settings: Porta
                             isOverdue && "bg-red-500/10 text-red-400 border-red-500/20",
                             !isPaid && !isOverdue && "bg-amber-500/10 text-amber-400 border-amber-500/20"
                         )}>
-                            {isPaid ? 'Pagado' : isOverdue ? 'Vencido' : 'Pendiente'}
+                            {isPaid ? t('paid') : isOverdue ? t('overdue') : t('pending')}
                         </span>
                     </div>
                 );
@@ -474,19 +479,21 @@ function ScheduleSection({ data, settings }: { data: PortalData; settings: Porta
 
 // Placeholder sections
 function LogsSection() {
+    const t = useTranslations('Portal.Logs');
     return (
         <div className="p-6 text-center py-16">
             <FileText className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
-            <p className="text-zinc-500">No hay actualizaciones en la bitácora</p>
+            <p className="text-zinc-500">{t('empty')}</p>
         </div>
     );
 }
 
 function MessagesSection() {
+    const t = useTranslations('Portal.Messages');
     return (
         <div className="p-6 text-center py-16">
             <MessageSquare className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
-            <p className="text-zinc-500">Los mensajes estarán disponibles próximamente</p>
+            <p className="text-zinc-500">{t('empty')}</p>
         </div>
     );
 }

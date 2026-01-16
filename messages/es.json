@@ -3,7 +3,117 @@
         "overview": "Visión General",
         "projects": "Proyectos",
         "finance": "Finanzas",
-        "settings": "Configuración"
+        "settings": "Configuración",
+        "portal": "Portal de Clientes"
+    },
+    "Sidebar": {
+        "tools": {
+            "kanban": "Kanban",
+            "files": "Archivos y Media"
+        },
+        "construction": "CONSTRUCCION",
+        "items": {
+            "sitelog": "Bitácora de Obra"
+        }
+    },
+    "Sitelog": {
+        "title": "Bitácora de Obra",
+        "tabs": {
+            "entries": "Registros",
+            "reports": "Reportes",
+            "settings": "Ajustes"
+        },
+        "entries": {
+            "emptyTitle": "Sin registros diarios",
+            "emptyDescription": "No hay entradas en la bitácora todavía. Comienza creando el primer registro del día."
+        },
+        "reports": {
+            "emptyTitle": "Reportes no disponibles",
+            "emptyDescription": "Genera registros para visualizar métricas y reportes de avance de obra."
+        },
+        "weather": {
+            "placeholder": "Seleccionar clima...",
+            "sunny": "Soleado",
+            "partly_cloudy": "Parcialmente nublado",
+            "cloudy": "Nublado",
+            "windy": "Ventoso",
+            "fog": "Niebla",
+            "rain": "Lluvia",
+            "storm": "Tormenta",
+            "snow": "Nieve",
+            "hail": "Granizo"
+        }
+    },
+    "Portal": {
+        "Config": {
+            "Customization": {
+                "title": "Personalización",
+                "portalName": "Nombre del Portal",
+                "welcomeMessage": "Mensaje de Bienvenida",
+                "welcomePlaceholder": "Bienvenido a tu portal",
+                "branding": "Marca y Colores",
+                "primaryColor": "Color Primario",
+                "backgroundColor": "Color de Fondo",
+                "heroImage": "Imagen de Portada",
+                "heroImagePlaceholder": "Imagen de fondo para el encabezado",
+                "footer": "Pie de Página",
+                "showFooter": "Mostrar Pie de Página",
+                "footerText": "Texto del Pie de Página",
+                "footerTextPlaceholder": "© 2026 Mi Empresa. Todos los derechos reservados.",
+                "poweredBy": "Mostrar \"Powered by SEENCEL\"",
+                "save": "Guardar Personalización",
+                "saveSections": "Guardar Secciones",
+                "saving": "Guardando..."
+            },
+            "Sections": {
+                "title": "Secciones Disponibles",
+                "description": "Elige qué información pueden ver tus clientes."
+            }
+        },
+        "FeatureGuard": {
+            "locked": "Función Bloqueada",
+            "availableIn": "Disponible en {plan}",
+            "upgrade": "Actualizar a {plan}",
+            "description": "\"{feature}\" no está disponible en tu plan actual. Actualiza a {plan} para desbloquear esta funcionalidad."
+        },
+        "Defaults": {
+            "welcome": "Bienvenido a tu portal"
+        },
+        "Sidebar": {
+            "subtitle": "Portal de Cliente",
+            "menu": "Menú",
+            "poweredBy": "Powered by"
+        },
+        "Sections": {
+            "dashboard": "Dashboard",
+            "payments": "Pagos",
+            "schedule": "Cronograma",
+            "logs": "Bitácora",
+            "messages": "Mensajes"
+        },
+        "Dashboard": {
+            "progress": "Progreso",
+            "nextPayment": "Próximo Pago",
+            "balanceDue": "Saldo Pendiente"
+        },
+        "Payments": {
+            "title": "Pagos Realizados",
+            "empty": "No hay pagos registrados",
+            "confirmed": "Confirmado"
+        },
+        "Schedule": {
+            "title": "Cronograma de Pagos",
+            "empty": "No hay cuotas programadas",
+            "paid": "Pagado",
+            "overdue": "Vencido",
+            "pending": "Pendiente"
+        },
+        "Logs": {
+            "empty": "No hay actualizaciones en la bitácora"
+        },
+        "Messages": {
+            "empty": "Los mensajes estarán disponibles próximamente"
+        }
     },
     "Learning": {
         "title": "Academia",

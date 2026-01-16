@@ -12,6 +12,7 @@ import { PortalPreview } from "./portal-preview";
 import { updatePortalSettings, PortalSettings } from "../actions";
 import { SplitEditorLayout, SplitEditorPreview, SplitEditorSidebar } from "@/components/layout/split-editor-layout";
 import { FeatureGuard } from "@/components/ui/feature-guard";
+import { useTranslations } from "next-intl";
 import {
     LayoutDashboard,
     CreditCard,
@@ -63,6 +64,7 @@ const defaultSettings: Omit<PortalSettings, 'project_id' | 'organization_id'> = 
 
 const defaultBranding: PortalBranding = {
     portal_name: '',
+    // Use a placeholder that will be replaced by translation in component if empty, or handle default there
     welcome_message: 'Bienvenido a tu portal',
     primary_color: '#83cc16',
     background_color: '#09090b',
@@ -76,6 +78,9 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
     const [isPending, startTransition] = useTransition();
     const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
     const [activeTab, setActiveTab] = useState<'brand' | 'sections'>('brand');
+    const t = useTranslations('Portal.Config');
+    const tCommon = useTranslations('Portal.Config.Customization');
+    const tDefaults = useTranslations('Portal.Defaults');
 
     const [settings, setSettings] = useState<Omit<PortalSettings, 'project_id' | 'organization_id'>>({
         show_dashboard: initialSettings?.show_dashboard ?? defaultSettings.show_dashboard,
@@ -115,8 +120,8 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
     };
 
     const toggleOptions = [
-        { key: 'show_dashboard' as const, label: 'Dashboard', description: 'Resumen del proyecto con métricas clave', icon: LayoutDashboard },
-        { key: 'show_progress' as const, label: 'Mostrar Progreso', description: 'Barra de progreso del proyecto', icon: TrendingUp },
+        { key: 'show_dashboard' as const, label: t('Sections.dashboard', { default: 'Dashboard' }), description: 'Resumen del proyecto con métricas clave', icon: LayoutDashboard },
+        { key: 'show_progress' as const, label: t('Sections.showProgress', { default: 'Mostrar Progreso' }), description: 'Barra de progreso del proyecto', icon: TrendingUp },
         { key: 'show_amounts' as const, label: 'Mostrar Montos', description: 'Valores en moneda (vs ocultos)', icon: DollarSign },
         { key: 'show_payments' as const, label: 'Pagos Realizados', description: 'Historial de pagos del cliente', icon: CreditCard },
         { key: 'show_installments' as const, label: 'Cronograma de Cuotas', description: 'Próximos pagos y cuotas pendientes', icon: Calendar },
@@ -132,8 +137,8 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
                     header={
                         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'brand' | 'sections')} className="w-full">
                             <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-xl h-9">
-                                <TabsTrigger value="brand" className="rounded-lg text-xs h-7">Personalización</TabsTrigger>
-                                <TabsTrigger value="sections" className="rounded-lg text-xs h-7">Secciones</TabsTrigger>
+                                <TabsTrigger value="brand" className="rounded-lg text-xs h-7">{t('Customization.title')}</TabsTrigger>
+                                <TabsTrigger value="sections" className="rounded-lg text-xs h-7">{t('Sections.title')}</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     }
@@ -144,7 +149,7 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
                             <motion.div key="brand-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
                                 {/* Portal Name */}
                                 <section className="space-y-3">
-                                    <Label className="uppercase text-xs font-bold text-muted-foreground tracking-wider">Nombre del Portal</Label>
+                                    <Label className="uppercase text-xs font-bold text-muted-foreground tracking-wider">{t('Customization.portalName')}</Label>
                                     <Input
                                         placeholder="Dejar vacío para usar el nombre del proyecto"
                                         value={branding.portal_name || ''}
@@ -155,9 +160,9 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
 
                                 {/* Welcome Message */}
                                 <section className="space-y-3">
-                                    <Label className="uppercase text-xs font-bold text-muted-foreground tracking-wider">Mensaje de Bienvenida</Label>
+                                    <Label className="uppercase text-xs font-bold text-muted-foreground tracking-wider">{t('Customization.welcomeMessage')}</Label>
                                     <Input
-                                        placeholder="Bienvenido a tu portal"
+                                        placeholder={t('Customization.welcomePlaceholder')}
                                         value={branding.welcome_message || ''}
                                         onChange={(e) => setBranding({ ...branding, welcome_message: e.target.value })}
                                         className="bg-card"
@@ -166,15 +171,15 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
 
                                 {/* Colors */}
                                 <section className="space-y-3">
-                                    <Label className="uppercase text-xs font-bold text-muted-foreground tracking-wider">Colores</Label>
+                                    <Label className="uppercase text-xs font-bold text-muted-foreground tracking-wider">{t('Customization.branding')}</Label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <ColorPicker
-                                            label="Primario"
+                                            label={t('Customization.primaryColor')}
                                             color={branding.primary_color || '#83cc16'}
                                             onChange={(c) => setBranding({ ...branding, primary_color: c })}
                                         />
                                         <ColorPicker
-                                            label="Fondo"
+                                            label={t('Customization.backgroundColor')}
                                             color={branding.background_color || '#09090b'}
                                             onChange={(c) => setBranding({ ...branding, background_color: c })}
                                         />
@@ -285,13 +290,13 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
                             >
                                 <Button onClick={handleSave} disabled={isPending} className="w-full gap-2">
                                     <Save className="h-4 w-4" />
-                                    {isPending ? "Guardando..." : "Guardar Personalización"}
+                                    {isPending ? t('Customization.saving') : t('Customization.save')}
                                 </Button>
                             </FeatureGuard>
                         ) : (
                             <Button onClick={handleSave} disabled={isPending} className="w-full gap-2">
                                 <Save className="h-4 w-4" />
-                                {isPending ? "Guardando..." : "Guardar Secciones"}
+                                {isPending ? t('Customization.saving') : t('Customization.saveSections')}
                             </Button>
                         )}
                     </div>

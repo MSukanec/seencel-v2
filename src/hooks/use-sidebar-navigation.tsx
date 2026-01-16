@@ -53,6 +53,7 @@ export const contextRoutes: Record<NavigationContext, string> = {
 export function useSidebarNavigation() {
     const activeProjectId = useActiveProjectId();
     const tMega = useTranslations('MegaMenu');
+    const tSidebar = useTranslations('Sidebar');
 
     const getNavItems = (ctx: NavigationContext): NavItem[] => {
         switch (ctx) {
@@ -82,6 +83,12 @@ export function useSidebarNavigation() {
                         title: 'Información',
                         href: activeProjectId ? `${projectBase}/details` : '/organization/projects',
                         icon: Info
+                    },
+                    {
+                        title: tSidebar('items.sitelog'),
+                        href: activeProjectId ? `${projectBase}/sitelog` : '/organization/projects',
+                        icon: FileText,
+                        sectionHeader: tSidebar('construction')
                     },
                     {
                         title: 'Compromisos y Pagos',

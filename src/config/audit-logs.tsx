@@ -21,7 +21,8 @@ import {
     MessageSquare,
     CheckCheck,
     ArrowRightLeft,
-    LucideIcon
+    LucideIcon,
+    NotebookPen
 } from "lucide-react";
 
 // Module configuration with icons and colors
@@ -53,14 +54,29 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'contacts': {
-        label: 'Contactos',
+        label: 'Clientes',
         icon: Users,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'contact_types': {
-        label: 'Contactos - Tipos',
+        label: 'Clientes - Tipos',
         icon: Tag,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    },
+    'client_payments': {
+        label: 'Clientes - Pagos',
+        icon: Wallet,
+        color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    },
+    'site_logs': {
+        label: 'Bitácora',
+        icon: NotebookPen,
+        color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800'
+    },
+    'site_log_types': {
+        label: 'Bitácora - Tipos',
+        icon: Tag,
+        color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800'
     },
     'organization_members': {
         label: 'Organización - Miembros',

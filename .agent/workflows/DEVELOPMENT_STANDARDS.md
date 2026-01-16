@@ -46,7 +46,8 @@ All feature-specific logic lives here:
 |------|--------|-------------|
 | `type` | `"page"` / `"dashboard"` | `page` = header; `dashboard` = no header |
 | `title` | String | Page title |
-| `tabs` | ReactNode | Tabs below title |
+| `icon` | ReactElement | **MANDATORY**: Must match sidebar icon |
+| `tabs` | ReactNode | Tabs below title (pass `TabsList` here) |
 
 ### ContentLayout
 **Location:** `@/components/layout/content-layout`
@@ -59,8 +60,12 @@ All feature-specific logic lives here:
 
 ### Layout Rules
 1. **Title in PageWrapper**, not as `<h1>` in content.
-2. **Tabs wrap PageWrapper** - `<Tabs>` goes OUTSIDE.
-3. **TabsContent inside ContentLayout**.
+2. **Icons**: Always pass the `icon` prop to `PageWrapper`. Use the SAME icon as the sidebar.
+3. **Tabs Structure**: 
+   - Root `<Tabs>` wraps `PageWrapper`.
+   - Pass `<TabsList>` to `PageWrapper`'s `tabs` prop.
+   - Use standard transparent tab styles (reference `ContactsPage`).
+4. **TabsContent inside ContentLayout**.
 
 ---
 

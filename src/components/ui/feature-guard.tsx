@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 
 interface FeatureGuardProps {
     /** Whether the feature is enabled for the current plan */
@@ -44,6 +45,8 @@ export function FeatureGuard({
     showBadge = true,
     upgradeHref = "/organization/billing/plans"
 }: FeatureGuardProps) {
+    const t = useTranslations('Portal.FeatureGuard');
+
     if (isEnabled) {
         // Feature is enabled, render children normally
         return <>{children}</>;
@@ -92,15 +95,15 @@ export function FeatureGuard({
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-semibold leading-tight">
-                                Función Bloqueada
+                                {t('locked')}
                             </p>
                             <p className="text-[10px] text-muted-foreground">
-                                Disponible en {requiredPlan}
+                                {t('availableIn', { plan: requiredPlan })}
                             </p>
                         </div>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                        {customMessage || `"${featureName}" no está disponible en tu plan actual. Actualiza a ${requiredPlan} para desbloquear esta funcionalidad.`}
+                        {customMessage || t('description', { feature: featureName, plan: requiredPlan })}
                     </p>
                     <Link
                         href={upgradeHref as any}
@@ -110,7 +113,7 @@ export function FeatureGuard({
                             "bg-[var(--plan-pro)] text-white hover:opacity-90 transition-opacity"
                         )}
                     >
-                        Actualizar a {requiredPlan}
+                        {t('upgrade', { plan: requiredPlan })}
                     </Link>
                 </div>
             </HoverCardContent>

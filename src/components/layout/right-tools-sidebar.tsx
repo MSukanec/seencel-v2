@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useLayoutStore, NavigationContext } from "@/store/layout-store";
+import { useLayoutStore, NavigationContext, useActiveProjectId } from "@/store/layout-store";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +32,7 @@ import {
     Moon,
     Home,
     Mail,
+    FolderOpen,
     type LucideIcon,
 } from "lucide-react";
 
@@ -55,6 +56,13 @@ const tools: ToolItem[] = [
         href: '/organization/kanban',
         icon: Kanban,
         contexts: ['organization', 'project']
+    },
+    {
+        id: 'files',
+        title: 'Archivos y Media',
+        href: '/files', // Dynamic path handled in render
+        icon: FolderOpen,
+        contexts: ['project']
     },
     // {
     //     id: 'calendar',
@@ -97,10 +105,12 @@ import { NotificationsPopover } from "@/features/notifications/components/notifi
 
 export function RightToolsSidebar({ user }: { user?: any }) { // TODO: Proper UserProfile type
     const { activeContext } = useLayoutStore();
+    const activeProjectId = useActiveProjectId();
     const pathname = usePathname();
     const supabase = createClient();
     const router = useRouter();
     const tUser = useTranslations('UserMenu');
+    const tTools = useTranslations('Sidebar.tools');
     const { setTheme } = useTheme();
 
     const handleLogout = async () => {
@@ -219,17 +229,23 @@ export function RightToolsSidebar({ user }: { user?: any }) { // TODO: Proper Us
             {/* 2. MIDDLE SECTION: Tools */}
             <div className="flex flex-col gap-2 items-center flex-1 w-full overflow-y-auto no-scrollbar"> {/* Changed gap-1 to gap-2 */}
                 {visibleTools.map((tool) => {
+                    // Dynamic href generation
+                    let href = tool.href;
+                    if (tool.id === 'files' && activeProjectId) {
+                        href = `/project/${activeProjectId}/files`;
+                    }
+
                     // Robust active check: exact match OR subpath match (but ensure we don't match partial strings loosely)
-                    const isActive = pathname === tool.href || pathname?.startsWith(`${tool.href}/`);
+                    const isActive = pathname === href || pathname?.startsWith(`${href}/`);
                     return (
                         <SidebarButton
                             key={tool.id}
                             icon={tool.icon}
-                            label={tool.title}
-                            href={tool.href}
+                            label={tTools(tool.id as any) || tool.title}
+                            href={href}
                             isActive={isActive}
                             isExpanded={false}
-                            tooltip={tool.title}
+                            tooltip={tTools(tool.id as any) || tool.title}
                             tooltipSide="left"
                             size="icon"
                             activeVariant="primary"
