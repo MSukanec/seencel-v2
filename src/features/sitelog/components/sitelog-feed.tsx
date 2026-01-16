@@ -30,6 +30,7 @@ interface SitelogFeedProps {
 import * as React from "react";
 // ... imports
 import { MediaLightbox, MediaItem } from "@/components/shared/media-lightbox";
+import { WEATHER_CONFIG } from "../constants";
 
 // ... SitelogFeed component start
 
@@ -161,32 +162,40 @@ function LogCard({
                     </div>
 
                     <div className="flex gap-2 items-center">
-                        {/* Actions (Visible on Hover) */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">Open menu</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => onEdit?.(log)}>
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        Editar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => onToggleFavorite?.(log)}>
-                                        <Star className={cn("mr-2 h-4 w-4", log.is_favorite ? "fill-yellow-400 text-yellow-400" : "")} />
-                                        {log.is_favorite ? "Quitar de favoritos" : "Marcar como favorita"}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete?.(log)}>
-                                        <Trash className="mr-2 h-4 w-4" />
-                                        Eliminar
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                        {/* Actions (Visible on Hover) - Only if actions are provided */}
+                        {(onEdit || onDelete || onToggleFavorite) && (
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Open menu</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {onEdit && (
+                                            <DropdownMenuItem onClick={() => onEdit(log)}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                Editar
+                                            </DropdownMenuItem>
+                                        )}
+                                        {onToggleFavorite && (
+                                            <DropdownMenuItem onClick={() => onToggleFavorite(log)}>
+                                                <Star className={cn("mr-2 h-4 w-4", log.is_favorite ? "fill-yellow-400 text-yellow-400" : "")} />
+                                                {log.is_favorite ? "Quitar de favoritos" : "Marcar como favorita"}
+                                            </DropdownMenuItem>
+                                        )}
+                                        {(onEdit || onToggleFavorite) && onDelete && <DropdownMenuSeparator />}
+                                        {onDelete && (
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(log)}>
+                                                <Trash className="mr-2 h-4 w-4" />
+                                                Eliminar
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        )}
 
                         {/* Status Indicators */}
                         {log.is_favorite && (
@@ -322,6 +331,7 @@ function LogCard({
 }
 
 // Helpers
+// Helpers
 function getSeverityColor(severity: string | null) {
     switch (severity) {
         case 'high': return 'bg-destructive';
@@ -332,27 +342,21 @@ function getSeverityColor(severity: string | null) {
 }
 
 function getWeatherIcon(weather: string) {
-    const w = weather.toLowerCase();
+    const w = weather.toLowerCase().trim();
+    const config = WEATHER_CONFIG.find(c => c.value === w);
+
+    if (config) {
+        const Icon = config.icon;
+        return <Icon className={cn("h-3.5 w-3.5", config.color)} />;
+    }
+
+    // Legacy fallback
     if (w.includes('sun') || w.includes('sunny') || w.includes('clear')) return <Sun className="h-3.5 w-3.5 text-yellow-500" />;
-    if (w.includes('cloud')) return <Cloud className="h-3.5 w-3.5 text-blue-400" />;
-    if (w.includes('rain')) return <CloudRain className="h-3.5 w-3.5 text-blue-600" />;
-    if (w.includes('fog') || w.includes('mist')) return <CloudFog className="h-3.5 w-3.5 text-gray-400" />;
     return <CloudSun className="h-3.5 w-3.5 text-yellow-500" />;
 }
 
 function translateWeather(weather: string) {
-    const map: Record<string, string> = {
-        'sunny': 'Soleado',
-        'partly_cloudy': 'Parcialmente Nublado',
-        'cloudy': 'Nublado',
-        'rain': 'Lluvioso',
-        'storm': 'Tormenta',
-        'snow': 'Nieve',
-        'fog': 'Niebla',
-        'windy': 'Ventoso',
-        'hail': 'Granizo',
-        'clear': 'Despejado',
-        'none': ''
-    };
-    return map[weather.toLowerCase().trim()] || weather;
+    const w = weather.toLowerCase().trim();
+    const config = WEATHER_CONFIG.find(c => c.value === w);
+    return config ? config.label : weather;
 }

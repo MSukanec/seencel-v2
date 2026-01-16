@@ -192,7 +192,8 @@ const MediaGalleryUpload = forwardRef<MediaGalleryUploadRef, MediaGalleryUploadP
             // Completed
             setCompletedFiles(prev => {
                 const next = prev.filter(f => f.id !== fileId);
-                onUploadComplete(next);
+                // Defer parent update to prevent update-during-render error
+                setTimeout(() => onUploadComplete(next), 0);
                 return next;
             });
             onRemove?.(fileId);

@@ -6,10 +6,10 @@ create table public.media_files (
   id uuid not null default gen_random_uuid (),
   organization_id uuid null,
   created_by uuid null,
+  updated_by uuid null,
   bucket text not null,
   file_path text not null,
   file_name text null,
-  file_url text null,
   file_type text not null,
   file_size bigint null,
   is_public boolean not null default false,
@@ -38,14 +38,6 @@ create trigger trigger_cleanup_media_file_hard_delete
 after DELETE on media_files for EACH row
 execute FUNCTION cleanup_media_file_storage ();
 
-create trigger trigger_cleanup_media_file_soft_delete
-after
-update OF is_deleted on media_files for EACH row when (
-  new.is_deleted = true
-  and old.is_deleted = false
-)
-execute FUNCTION cleanup_media_file_storage ();
-
 # Tabla media_links:
 
 create table public.media_links (
@@ -57,6 +49,7 @@ create table public.media_links (
   contact_id uuid null,
   general_cost_payment_id uuid null,
   created_by uuid null,
+  updated_by uuid null,
   created_at timestamp with time zone not null default now(),
   visibility text null,
   description text null,

@@ -67,7 +67,8 @@
             },
             "Sections": {
                 "title": "Secciones Disponibles",
-                "description": "Elige qué información pueden ver tus clientes."
+                "description": "Elige qué información pueden ver tus clientes.",
+                "dashboard": "Tablero"
             }
         },
         "FeatureGuard": {

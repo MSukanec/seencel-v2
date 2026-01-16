@@ -293,6 +293,11 @@
                     "dark": "Dark"
                 }
             },
+            "Sections": {
+                "title": "Available Sections",
+                "description": "Choose what information your clients can see.",
+                "dashboard": "Dashboard"
+            },
             "layout": {
                 "title": "Layout Mode",
                 "description": "Choose between default top navigation or sidebar",

@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 import { useTranslations } from "next-intl";
+import { SitelogFeed } from "@/features/sitelog/components/sitelog-feed";
+import { SiteLog } from "@/types/sitelog";
 
 // Types
 export interface PortalProject {
@@ -48,6 +51,7 @@ export interface PortalData {
         balance_due?: number;
         currency_symbol?: string;
     } | null;
+    logs: SiteLog[];
 }
 
 export interface PortalBranding {
@@ -280,7 +284,7 @@ function PortalContent({ section, project, settings, data, primaryColor, isMobil
         case 'schedule':
             return <ScheduleSection data={data} settings={settings} />;
         case 'logs':
-            return <LogsSection />;
+            return <LogsSection data={data} />;
         case 'messages':
             return <MessagesSection />;
         default:
@@ -478,12 +482,22 @@ function ScheduleSection({ data, settings }: { data: PortalData; settings: Porta
 }
 
 // Placeholder sections
-function LogsSection() {
+function LogsSection({ data }: { data: PortalData }) {
     const t = useTranslations('Portal.Logs');
+
+    if (!data.logs || data.logs.length === 0) {
+        return (
+            <div className="p-6 text-center py-16">
+                <FileText className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
+                <p className="text-zinc-500">{t('empty')}</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="p-6 text-center py-16">
-            <FileText className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
-            <p className="text-zinc-500">{t('empty')}</p>
+        <div className="p-6">
+            <h2 className="text-xl font-semibold mb-6">{t('title')}</h2>
+            <SitelogFeed logs={data.logs} />
         </div>
     );
 }

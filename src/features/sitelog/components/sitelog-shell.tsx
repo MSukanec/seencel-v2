@@ -250,15 +250,6 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                             />
                         </TabsContent>
 
-                        <TabsContent value="reports" className="mt-0 h-full">
-                            <EmptyState
-                                title={t('reports.emptyTitle')}
-                                description={t('reports.emptyDescription')}
-                                icon={BarChart2}
-                                variant="dashed"
-                            />
-                        </TabsContent>
-
                         <TabsContent value="settings" className="mt-0 h-full">
                             <div className="space-y-6">
                                 <SiteLogTypesManager

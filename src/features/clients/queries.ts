@@ -9,6 +9,18 @@ import {
     ClientRole,
     ClientPortalSettings
 } from "./types";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { SiteLog } from "@/types/sitelog";
+
+const s3Client = new S3Client({
+    region: process.env.R2_REGION || "auto",
+    endpoint: process.env.R2_ENDPOINT,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    },
+});
 
 /**
  * Helper to get the current authenticated user's active organization
@@ -296,6 +308,90 @@ export async function getPortalSettings(projectId: string) {
     return { data: data as ClientPortalSettings, error: null };
 }
 
+export async function getClientPortalSiteLogs(projectId: string) {
+    const supabase = await createClient();
+
+    const { data: logs, error } = await supabase
+        .from('site_logs')
+        .select(`
+            *,
+            entry_type:site_log_types(id, name, color, icon),
+            author:project_members(
+                id,
+                user:users(full_name, email, avatar_url)
+            ),
+            media:media_links(
+                id,
+                media_file:media_files(
+                    id,
+                    bucket,
+                    file_path,
+                    file_name,
+                    file_type,
+                    file_size,
+                    is_public,
+                    width,
+                    height
+                )
+            )
+        `)
+        .eq('project_id', projectId)
+        .eq('is_deleted', false)
+        .eq('is_public', true)
+        .order('log_date', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching portal logs:", error);
+        return { data: [] as SiteLog[], error };
+    }
+
+    // Process media and sign URLs
+    const formattedData = await Promise.all(logs.map(async (log) => {
+        const mediaItems = await Promise.all(log.media.map(async (link: any) => {
+            const file = link.media_file;
+            if (!file) return null;
+
+            let finalUrl = "";
+
+            // If it's a public bucket, constructing the URL might be different, 
+            // but here we assume all media access via Signed URL for consistency and security
+            // unless we prefer public URLs for public buckets.
+            // Following shared logic: sign if bucket private, or just sign everything for safety + expiry.
+            // But we must check if file_path exists.
+
+            if (file.bucket && file.file_path) {
+                try {
+                    const command = new GetObjectCommand({
+                        Bucket: file.bucket,
+                        Key: file.file_path,
+                    });
+                    finalUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+                } catch (e) {
+                    console.error("Error signing URL:", e);
+                }
+            }
+
+            return {
+                id: file.id,
+                url: finalUrl,
+                type: file.file_type,
+                name: file.file_name,
+                bucket: file.bucket,
+                path: file.file_path,
+                // Add extra fields for the UI
+                size: file.file_size
+            };
+        }));
+
+        return {
+            ...log,
+            media: mediaItems.filter((m: any) => m !== null)
+        };
+    }));
+
+    return { data: formattedData as SiteLog[], error: null };
+}
+
 /**
  * Fetch all data needed for the public client portal
  */
@@ -310,7 +406,8 @@ export async function getClientPortalData(projectId: string, clientId: string) {
         brandingResult,
         paymentsResult,
         schedulesResult,
-        summaryResult
+        summaryResult,
+        logsResult
     ] = await Promise.all([
         // Project info
         supabase
@@ -361,7 +458,10 @@ export async function getClientPortalData(projectId: string, clientId: string) {
             .from('client_financial_summary_view')
             .select('*')
             .eq('project_id', projectId)
-            .eq('client_id', clientId)
+            .eq('client_id', clientId),
+
+        // Site Logs
+        getClientPortalSiteLogs(projectId)
     ]);
 
     return {
@@ -372,6 +472,7 @@ export async function getClientPortalData(projectId: string, clientId: string) {
         payments: paymentsResult.data || [],
         schedules: schedulesResult.data || [],
         summary: summaryResult.data?.[0] || null,
+        logs: logsResult.data || [],
         error: projectResult.error || clientResult.error
     };
 }

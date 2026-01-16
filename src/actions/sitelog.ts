@@ -22,7 +22,7 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
             media_links(
                 media_file:media_files(
                     id,
-                    file_url,
+                    is_public,
                     file_type,
                     file_name,
                     bucket,
@@ -46,25 +46,26 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
             const file = link.media_file;
             if (!file) return null;
 
-            let finalUrl = file.file_url;
+            let finalUrl: string | null = null;
 
-            // If it's a private bucket or missing URL, try to sign it
-            // common private buckets: 'private-assets', 'secure-files', etc.
-            // checking 'private' in name or just if bucket exists
+            // Generate URL based on privacy
             if (file.bucket && file.file_path) {
-                // We prefer signing for consistency if it's in a bucket
-                // especially private-assets
-                try {
-                    // 1 hour expiry
-                    const { data: signedData } = await supabase.storage
-                        .from(file.bucket)
-                        .createSignedUrl(file.file_path, 3600);
+                if (file.is_public) {
+                    const { data } = supabase.storage.from(file.bucket).getPublicUrl(file.file_path);
+                    finalUrl = data.publicUrl;
+                } else {
+                    try {
+                        // 1 hour expiry
+                        const { data: signedData } = await supabase.storage
+                            .from(file.bucket)
+                            .createSignedUrl(file.file_path, 3600);
 
-                    if (signedData?.signedUrl) {
-                        finalUrl = signedData.signedUrl;
+                        if (signedData?.signedUrl) {
+                            finalUrl = signedData.signedUrl;
+                        }
+                    } catch (e) {
+                        console.error("Failed to sign url for", file.id, e);
                     }
-                } catch (e) {
-                    console.error("Failed to sign url for", file.id, e);
                 }
             }
 
@@ -74,7 +75,9 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
                 id: file.id,
                 url: finalUrl,
                 type: file.file_type,
-                name: file.file_name
+                name: file.file_name,
+                bucket: file.bucket,
+                path: file.file_path
             };
         }));
 
@@ -309,7 +312,6 @@ export async function createSiteLog(formData: FormData) {
                                 file_path: item.path || item.url, // Fallback
                                 file_name: item.name,
                                 file_type: dbFileType,
-                                file_url: item.url,
                                 created_by: user.id
                             })
                             .select()
@@ -323,7 +325,8 @@ export async function createSiteLog(formData: FormData) {
                     }
                 }
 
-                // 2. Sync Links (Delete old, Insert new) -> For simplicity we do this strategy
+                // 2. Sync Links (Delete old, Insert new)
+
                 // First delete existing links for this log
                 await supabase
                     .from('media_links')
@@ -334,7 +337,9 @@ export async function createSiteLog(formData: FormData) {
                 if (validMediaFileIds.length > 0) {
                     const linksToInsert = validMediaFileIds.map(fileId => ({
                         site_log_id: currentLogId,
-                        media_file_id: fileId
+                        media_file_id: fileId,
+                        organization_id: organizationId,
+                        project_id: projectId
                     }));
 
                     const { error: linkError } = await supabase

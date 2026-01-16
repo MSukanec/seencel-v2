@@ -46,6 +46,8 @@ import { toast } from "sonner";
 import { createSiteLog } from "@/actions/sitelog";
 import { MediaGalleryUpload, UploadedFile, type MediaGalleryUploadRef } from "@/components/shared/media-gallery-upload";
 
+import { WEATHER_CONFIG, SEVERITY_OPTIONS } from "../constants";
+
 const formSchema = z.object({
     comments: z.string().min(1, "El contenido de la bitácora es requerido"),
     log_date: z.date(),
@@ -63,23 +65,6 @@ interface SitelogFormProps {
     onSuccess?: () => void;
 }
 
-const severityOptions = [
-    { value: 'low', label: 'Baja (Informativo)', color: 'bg-green-500' },
-    { value: 'medium', label: 'Media (Atención)', color: 'bg-yellow-500' },
-    { value: 'high', label: 'Alta (Crítico)', color: 'bg-red-500' },
-];
-
-const weatherOptions = [
-    { value: 'sunny', icon: Sun, label: 'weather.sunny', color: 'text-orange-500' },
-    { value: 'partly_cloudy', icon: CloudSun, label: 'weather.partly_cloudy', color: 'text-yellow-500' },
-    { value: 'cloudy', icon: Cloud, label: 'weather.cloudy', color: 'text-gray-500' },
-    { value: 'windy', icon: Wind, label: 'weather.windy', color: 'text-blue-300' },
-    { value: 'fog', icon: CloudFog, label: 'weather.fog', color: 'text-gray-400' },
-    { value: 'rain', icon: CloudRain, label: 'weather.rain', color: 'text-blue-500' },
-    { value: 'storm', icon: CloudLightning, label: 'weather.storm', color: 'text-purple-500' },
-    { value: 'snow', icon: Snowflake, label: 'weather.snow', color: 'text-cyan-500' },
-    { value: 'hail', icon: CloudRain, label: 'weather.hail', color: 'text-blue-700' }, // CloudHail removed due to runtime error
-];
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -94,14 +79,14 @@ export function SitelogForm({
     const [isLoading, setIsLoading] = useState(false);
     // Initialize media files if editing (assuming initialData has media array compatible with UploadedFile)
     const [mediaFiles, setMediaFiles] = useState<UploadedFile[]>(
-        initialData?.media?.map(m => ({
+        initialData?.media?.map((m: any) => ({
             id: m.id,
             url: m.url,
             name: m.name || "Archivo",
             type: m.type,
             size: 0, // Mock size
-            path: m.url, // Mock path, acceptable for display
-            bucket: 'sitelogs' // Mock bucket
+            path: m.path || m.url,
+            bucket: m.bucket || 'sitelogs'
         })) || []
     );
 
@@ -120,11 +105,11 @@ export function SitelogForm({
                 if (!initialData?.weather) return undefined;
                 const w = initialData.weather.toLowerCase().trim();
                 // Try direct match first
-                const exactMatch = weatherOptions.find(opt => opt.value === w);
+                const exactMatch = WEATHER_CONFIG.find(opt => opt.value === w);
                 if (exactMatch) return exactMatch.value;
 
                 // Try to find if it contains the value (e.g. "Sunny day" -> "sunny")
-                const partialMatch = weatherOptions.find(opt => w.includes(opt.value));
+                const partialMatch = WEATHER_CONFIG.find(opt => w.includes(opt.value));
                 if (partialMatch) return partialMatch.value;
 
                 return undefined;
@@ -260,11 +245,11 @@ export function SitelogForm({
                                     <SelectValue placeholder={t('weather.placeholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {weatherOptions.map((option) => (
+                                    {WEATHER_CONFIG.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>
                                             <div className="flex items-center gap-2">
                                                 <option.icon className={cn("h-4 w-4", option.color)} />
-                                                <span>{t(option.label)}</span>
+                                                <span>{option.label}</span>
                                             </div>
                                         </SelectItem>
                                     ))}
@@ -281,7 +266,7 @@ export function SitelogForm({
                                     <SelectValue placeholder="Seleccionar impacto..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {severityOptions.map((option) => (
+                                    {SEVERITY_OPTIONS.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>
                                             <div className="flex items-center gap-2">
                                                 <div className={cn("h-2 w-2 rounded-full", option.color)} />

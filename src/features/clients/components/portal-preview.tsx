@@ -41,7 +41,8 @@ const mockData = {
         total_paid_amount: 18000,
         balance_due: 7000,
         currency_symbol: "$"
-    }
+    },
+    logs: []
 };
 
 export function PortalPreview({ settings, viewMode, branding }: PortalPreviewProps) {

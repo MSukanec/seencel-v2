@@ -371,7 +371,7 @@ BEGIN
   WHERE p.is_system = true;
 
   ----------------------------------------------------------------
-  -- EDITOR → Projects, Costs, Members, Contacts, Kanban, Clients
+  -- EDITOR → Projects, Costs, Members, Contacts, Kanban, Clients, Sitelog, Media
   ----------------------------------------------------------------
   DELETE FROM public.role_permissions
   WHERE role_id = v_editor_role_id;
@@ -390,7 +390,11 @@ BEGIN
     'kanban.view',
     'kanban.manage',
     'clients.view',
-    'clients.manage'
+    'clients.manage',
+    'sitelog.view',
+    'sitelog.manage',
+    'media.view',
+    'media.manage'
   );
 
   ----------------------------------------------------------------
@@ -409,7 +413,9 @@ BEGIN
     'roles.view',
     'contacts.view',
     'kanban.view',
-    'clients.view'
+    'clients.view',
+    'sitelog.view',
+    'media.view'
   );
 
 EXCEPTION
