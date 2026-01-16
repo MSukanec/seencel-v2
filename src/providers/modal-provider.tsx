@@ -101,10 +101,11 @@ export const ModalProvider = () => {
                             className={cn(
                                 "fixed inset-0 w-screen h-screen max-w-none rounded-none border-0 translate-x-0 translate-y-0 data-[state=open]:slide-in-from-bottom-full sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
                                 "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
-                                "sm:max-w-[90vw] sm:h-auto sm:max-h-[90vh] sm:min-h-0 sm:rounded-lg sm:border",
+                                "sm:max-w-[90vw] sm:h-auto sm:max-h-[85vh] sm:min-h-0 sm:rounded-lg sm:border",
                                 "!flex !flex-col p-0 !gap-0 overflow-hidden",
                                 sizeClasses[modal.size || 'md']
-                            )}              >
+                            )}
+                        >
                             {/* Fixed Header */}
                             {(modal.title || modal.description) && (
                                 <div className="flex-none p-3 border-b border-border bg-background z-10">
@@ -131,7 +132,7 @@ export const ModalProvider = () => {
                             )}
 
                             {/* Body - auto height, scrolls when needed */}
-                            <div className="flex-1 overflow-hidden p-4 flex flex-col relative w-full h-full">
+                            <div className="flex-1 overflow-hidden p-4 flex flex-col relative w-full min-h-0">
                                 {modal.view}
                             </div>
                         </DialogContent>

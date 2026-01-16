@@ -9,7 +9,8 @@ import {
     SheetContent,
     SheetHeader,
     SheetTrigger,
-    SheetClose
+    SheetClose,
+    SheetTitle
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Rocket, Users, CreditCard, LayoutDashboard, LogOut, User as UserIcon, Mail, GraduationCap } from "lucide-react";
@@ -40,7 +41,7 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className="md:hidden" suppressHydrationWarning>
                     <Menu className="h-6 w-6" />
                     <span className="sr-only">Menu</span>
                 </Button>
@@ -48,6 +49,7 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
             {/* Added [&>button]:hidden to hide the default Shadcn close button that looks duplicated */}
             <SheetContent side="top" className="w-full p-0 flex flex-col border-b border-border/10 bg-background/95 backdrop-blur-xl h-[100dvh] [&>button]:hidden">
                 <SheetHeader className="p-4 border-b text-left bg-transparent flex flex-row items-center justify-between pt-[calc(1rem+env(safe-area-inset-top))]">
+                    <SheetTitle className="sr-only">Menu</SheetTitle>
                     <div className="flex items-center space-x-2">
                         {/* Logo Matches Desktop Size (h-8 w-8) */}
                         <div className="relative h-8 w-8">

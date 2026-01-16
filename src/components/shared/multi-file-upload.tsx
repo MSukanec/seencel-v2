@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, forwardRef, useImperativeHandle } from "react";
 import { useDropzone } from "react-dropzone";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/client-image-compression";
@@ -21,6 +21,10 @@ export interface UploadedFile {
     bucket: string;
 }
 
+export interface MultiFileUploadRef {
+    startUpload: () => Promise<UploadedFile[]>;
+}
+
 interface MultiFileUploadProps {
     bucket?: string;
     folderPath: string; // e.g. "project-id/sitelogs"
@@ -30,6 +34,7 @@ interface MultiFileUploadProps {
     maxSizeMB?: number; // per file
     acceptedFileTypes?: Record<string, string[]>;
     className?: string;
+    autoUpload?: boolean;
 }
 
 interface FileState {
@@ -42,7 +47,7 @@ interface FileState {
     preview?: string;
 }
 
-export function MultiFileUpload({
+const MultiFileUpload = forwardRef<MultiFileUploadRef, MultiFileUploadProps>(({
     bucket = "private-assets",
     folderPath,
     onUploadComplete,
@@ -54,32 +59,16 @@ export function MultiFileUpload({
         'video/*': [],
         'application/pdf': []
     },
-    className
-}: MultiFileUploadProps) {
+    className,
+    autoUpload = true
+}, ref) => {
     const [activeUploads, setActiveUploads] = useState<FileState[]>([]);
     const [completedFiles, setCompletedFiles] = useState<UploadedFile[]>(initialFiles);
 
-    const onDrop = useCallback(async (acceptedFiles: File[]) => {
-        // initialize uploads
-        const newUploads: FileState[] = acceptedFiles.map(file => ({
-            file,
-            id: Math.random().toString(36).substring(7),
-            progress: 0,
-            status: 'pending',
-            preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-        }));
-
-        setActiveUploads(prev => [...prev, ...newUploads]);
-
-        // Process uploads
+    // We need a stable reference to incomplete uploads for the ref method to access functionality
+    const uploadSingleFile = async (uploadState: FileState): Promise<UploadedFile | null> => {
         const supabase = createClient();
 
-        for (const upload of newUploads) {
-            uploadFile(upload, supabase);
-        }
-    }, [folderPath, bucket]);
-
-    const uploadFile = async (uploadState: FileState, supabase: any) => {
         try {
             // Update status to uploading
             updateUploadState(uploadState.id, { status: 'uploading', progress: 0 });
@@ -101,12 +90,11 @@ export function MultiFileUpload({
             const filePath = `${folderPath}/${Date.now()}_${cleanName}`;
 
             // Mock progress - Supabase storage client doesn't support progress events easily 
-            // without using XMLHttpRequest wrapper or assumptions. 
-            // We'll simulate progress for better UX.
             const progressInterval = setInterval(() => {
-                updateUploadState(uploadState.id, (prev) => ({
-                    progress: Math.min((prev?.progress || 0) + 10, 90)
-                }));
+                updateUploadState(uploadState.id, (prev) => {
+                    if (prev?.status !== 'uploading') return {};
+                    return { progress: Math.min((prev?.progress || 0) + 10, 90) };
+                });
             }, 200);
 
             const { data, error } = await supabase.storage
@@ -123,14 +111,10 @@ export function MultiFileUpload({
             // Finalize
             updateUploadState(uploadState.id, { status: 'completed', progress: 100 });
 
-            // Construct result
-            // For private buckets, the "url" might imply we need to sign it later
-            // But we'll construct a direct URL if we can, or just store the path stuff.
-            // Using getPublicUrl is standard if the policy allows.
             const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
 
             const result: UploadedFile = {
-                id: uploadState.id, // temporary frontend ID, backend will assign DB ID
+                id: uploadState.id,
                 url: publicUrl,
                 path: filePath,
                 bucket: bucket,
@@ -139,16 +123,23 @@ export function MultiFileUpload({
                 size: uploadState.file.size
             };
 
+            // Update local completed state
             setCompletedFiles(prev => {
                 const newFiles = [...prev, result];
-                onUploadComplete(newFiles);
+                // Only notify if autoUpload is true, otherwise let the caller handle the final list?
+                // Actually, standard behavior is to notify whenever a file is done.
+                if (autoUpload) {
+                    onUploadComplete(newFiles);
+                }
                 return newFiles;
             });
 
-            // Remove from active uploads list after small delay to show completion
+            // Remove from active uploads list after small delay
             setTimeout(() => {
                 setActiveUploads(prev => prev.filter(u => u.id !== uploadState.id));
             }, 1000);
+
+            return result;
 
         } catch (error: any) {
             console.error("Upload error:", error);
@@ -157,8 +148,51 @@ export function MultiFileUpload({
                 error: error.message || "Error al subir"
             });
             toast.error(`Error subiendo ${uploadState.file.name}`);
+            return null;
         }
     };
+
+    useImperativeHandle(ref, () => ({
+        startUpload: async () => {
+            const pending = activeUploads.filter(u => u.status === 'pending' || u.status === 'error');
+
+            // If no pending files, just return what we have
+            if (pending.length === 0) return completedFiles;
+
+            const results = await Promise.all(pending.map(u => uploadSingleFile(u)));
+
+            // Filter successes
+            const successes = results.filter((f): f is UploadedFile => f !== null);
+
+            // StartUpload is generally called when we want the FINAL list for submission.
+            // So we combine existing completed + newly uploaded
+            const final = [...completedFiles, ...successes];
+
+            // Ensure parent knows about all files now
+            onUploadComplete(final);
+
+            return final;
+        }
+    }));
+
+    const onDrop = useCallback(async (acceptedFiles: File[]) => {
+        const newUploads: FileState[] = acceptedFiles.map(file => ({
+            file,
+            id: Math.random().toString(36).substring(7),
+            progress: 0,
+            status: 'pending',
+            preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+        }));
+
+        setActiveUploads(prev => [...prev, ...newUploads]);
+
+        if (autoUpload) {
+            for (const upload of newUploads) {
+                uploadSingleFile(upload);
+            }
+        }
+        // If not autoUpload, they sit in activeUploads with status 'pending'
+    }, [folderPath, bucket, autoUpload]); // Added dependencies
 
     const updateUploadState = (id: string, updates: Partial<FileState> | ((prev: FileState | undefined) => Partial<FileState>)) => {
         setActiveUploads(prev => prev.map(u => {
@@ -171,9 +205,13 @@ export function MultiFileUpload({
     };
 
     const handleRemove = (fileId: string) => {
+        // If it was pending (in activeUploads)
+        setActiveUploads(prev => prev.filter(u => u.id !== fileId));
+
+        // If it was completed
         setCompletedFiles(prev => {
             const next = prev.filter(f => f.id !== fileId);
-            onUploadComplete(next);
+            onUploadComplete(next); // Notify removal
             return next;
         });
         onRemove?.(fileId);
@@ -201,7 +239,7 @@ export function MultiFileUpload({
 
     return (
         <div className={cn("space-y-3", className)}>
-            {/* Dropzone - Styled to match Input standard */}
+            {/* Dropzone */}
             <div
                 {...getRootProps()}
                 className={cn(
@@ -232,15 +270,36 @@ export function MultiFileUpload({
                     {activeUploads.map((file) => (
                         <div key={file.id} className="flex items-center gap-3 rounded-md border border-input bg-background p-3">
                             <div className="flex items-center justify-center h-10 w-10 shrink-0 rounded-md bg-muted">
-                                {getFileIcon(file.file.type)}
+                                {file.preview ? (
+                                    <div className="relative w-full h-full rounded overflow-hidden">
+                                        <Image src={file.preview} alt="" fill className="object-cover" />
+                                    </div>
+                                ) : (
+                                    getFileIcon(file.file.type)
+                                )}
                             </div>
                             <div className="flex-1 space-y-1 min-w-0">
                                 <div className="flex justify-between text-xs">
                                     <span className="font-medium truncate">{file.file.name}</span>
-                                    <span className="text-muted-foreground">{file.status === 'uploading' ? `${file.progress}%` : 'Procesando...'}</span>
+                                    <span className="text-muted-foreground">
+                                        {file.status === 'uploading' ? `${file.progress}%` :
+                                            file.status === 'pending' ? 'Pendiente' :
+                                                file.status === 'error' ? 'Error' : 'Completado'}
+                                    </span>
                                 </div>
-                                <Progress value={file.progress} className="h-1.5" />
+                                {file.status === 'uploading' && <Progress value={file.progress} className="h-1.5" />}
                             </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleRemove(file.id);
+                                }}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
                     ))}
 
@@ -281,4 +340,7 @@ export function MultiFileUpload({
             )}
         </div>
     );
-}
+});
+
+MultiFileUpload.displayName = "MultiFileUpload";
+export { MultiFileUpload };

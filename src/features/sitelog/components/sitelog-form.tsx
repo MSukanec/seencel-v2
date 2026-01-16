@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -41,10 +41,10 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { SiteLogType } from "@/types/sitelog";
+import { SiteLog, SiteLogType } from "@/types/sitelog";
 import { toast } from "sonner";
 import { createSiteLog } from "@/actions/sitelog";
-import { MultiFileUpload, UploadedFile } from "@/components/shared/multi-file-upload";
+import { MediaGalleryUpload, UploadedFile, type MediaGalleryUploadRef } from "@/components/shared/media-gallery-upload";
 
 const formSchema = z.object({
     comments: z.string().min(1, "El contenido de la bitácora es requerido"),
@@ -59,6 +59,7 @@ interface SitelogFormProps {
     projectId: string;
     organizationId: string;
     descriptionType?: SiteLogType[];
+    initialData?: SiteLog;
     onSuccess?: () => void;
 }
 
@@ -86,26 +87,69 @@ export function SitelogForm({
     organizationId,
     projectId,
     descriptionType = [],
+    initialData,
     onSuccess
 }: SitelogFormProps) {
     const t = useTranslations('Sitelog');
     const [isLoading, setIsLoading] = useState(false);
-    const [mediaFiles, setMediaFiles] = useState<UploadedFile[]>([]);
+    // Initialize media files if editing (assuming initialData has media array compatible with UploadedFile)
+    const [mediaFiles, setMediaFiles] = useState<UploadedFile[]>(
+        initialData?.media?.map(m => ({
+            id: m.id,
+            url: m.url,
+            name: m.name || "Archivo",
+            type: m.type,
+            size: 0, // Mock size
+            path: m.url, // Mock path, acceptable for display
+            bucket: 'sitelogs' // Mock bucket
+        })) || []
+    );
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
-            comments: "",
-            log_date: new Date(),
-            severity: "low",
-            is_public: true,
-            entry_type_id: undefined,
-            weather: undefined,
+            comments: initialData?.comments || "",
+            log_date: initialData ? new Date(initialData.log_date) : new Date(),
+            severity: initialData?.severity || "low",
+            is_public: initialData ? initialData.is_public : true,
+            entry_type_id: initialData?.entry_type_id || (() => {
+                const general = descriptionType?.find(t => t.name.toLowerCase() === 'general');
+                return general?.id;
+            })(),
+            weather: (() => {
+                if (!initialData?.weather) return undefined;
+                const w = initialData.weather.toLowerCase().trim();
+                // Try direct match first
+                const exactMatch = weatherOptions.find(opt => opt.value === w);
+                if (exactMatch) return exactMatch.value;
+
+                // Try to find if it contains the value (e.g. "Sunny day" -> "sunny")
+                const partialMatch = weatherOptions.find(opt => w.includes(opt.value));
+                if (partialMatch) return partialMatch.value;
+
+                return undefined;
+            })(),
         },
     });
 
+    const uploadRef = useRef<MediaGalleryUploadRef>(null);
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
+
+        // Upload pending files first
+        let finalMediaFiles = mediaFiles;
+        if (uploadRef.current) {
+            try {
+                finalMediaFiles = await uploadRef.current.startUpload();
+            } catch (error) {
+                console.error("Upload error", error);
+                toast.error("Error al subir archivos pendientes");
+                setIsLoading(false);
+                return;
+            }
+        }
+
         const formData = new FormData();
 
         formData.append('project_id', projectId);
@@ -115,6 +159,10 @@ export function SitelogForm({
         formData.append('severity', values.severity);
         formData.append('is_public', String(values.is_public));
 
+        if (initialData?.id) {
+            formData.append('id', initialData.id);
+        }
+
         if (values.entry_type_id) {
             formData.append('entry_type_id', values.entry_type_id);
         }
@@ -122,9 +170,9 @@ export function SitelogForm({
             formData.append('weather', values.weather);
         }
 
-        // Serialize media files
-        if (mediaFiles.length > 0) {
-            formData.append('media', JSON.stringify(mediaFiles));
+        // Serialize media files using the most up-to-date list
+        if (finalMediaFiles.length > 0) {
+            formData.append('media', JSON.stringify(finalMediaFiles));
         }
 
         const result = await createSiteLog(formData);
@@ -145,8 +193,8 @@ export function SitelogForm({
     }
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
-            <div className="flex-1 overflow-y-auto">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-full min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 pr-2">
                 <div className="space-y-4">
                     {/* Row 1: Date & Type */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -185,7 +233,7 @@ export function SitelogForm({
                         <FormGroup label="Tipo de entrada">
                             <Select
                                 onValueChange={(val) => form.setValue("entry_type_id", val)}
-                                defaultValue={form.getValues("entry_type_id")}
+                                value={form.watch("entry_type_id")}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccionar tipo..." />
@@ -206,7 +254,7 @@ export function SitelogForm({
                         <FormGroup label="Clima">
                             <Select
                                 onValueChange={(val) => form.setValue("weather", val)}
-                                defaultValue={form.getValues("weather")}
+                                value={form.watch("weather")}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('weather.placeholder')} />
@@ -227,7 +275,7 @@ export function SitelogForm({
                         <FormGroup label="Impacto en obra">
                             <Select
                                 onValueChange={(val) => form.setValue("severity", val)}
-                                defaultValue={form.getValues("severity")}
+                                value={form.watch("severity")}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccionar impacto..." />
@@ -257,9 +305,12 @@ export function SitelogForm({
 
                     {/* Row 4: Attachments */}
                     <FormGroup label="Archivos adjuntos">
-                        <MultiFileUpload
-                            folderPath={`${projectId}/sitelogs`}
+                        <MediaGalleryUpload
+                            ref={uploadRef}
+                            autoUpload={false}
+                            folderPath={`organizations/${organizationId}/sitelogs`}
                             onUploadComplete={setMediaFiles}
+                            initialFiles={mediaFiles}
                             acceptedFileTypes={{
                                 'image/*': [],
                                 'video/*': [],

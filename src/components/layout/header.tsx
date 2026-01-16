@@ -471,8 +471,10 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                 </div>
             </header >
 
-            {/* Mobile Header (Only for variant='public' or responsive app fallback) */}
-            <PublicMobileHeader user={user} className="md:hidden" />
+            {/* Mobile Header (Only for variant='public') */}
+            {variant === 'public' && (
+                <PublicMobileHeader user={user} className="md:hidden" />
+            )}
         </>
     );
 }

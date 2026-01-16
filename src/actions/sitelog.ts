@@ -204,6 +204,7 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
 export async function createSiteLog(formData: FormData) {
     const supabase = await createClient();
 
+    const id = formData.get('id') as string | null;
     const projectId = formData.get('project_id') as string;
     const organizationId = formData.get('organization_id') as string;
     const comments = formData.get('comments') as string;
@@ -218,27 +219,54 @@ export async function createSiteLog(formData: FormData) {
 
     if (!user) return { error: "No autorizado" };
 
-    const { data: logData, error } = await supabase
-        .from('site_logs')
-        .insert({
-            project_id: projectId,
-            organization_id: organizationId,
-            comments: comments,
-            log_date: logDate, // Timestamptz or date string
-            entry_type_id: entryTypeId,
-            weather: weather,
-            severity: severity,
-            is_public: isPublic,
-            created_by: user.id,
-            updated_by: user.id
-        })
-        .select()
-        .single();
+    let currentLogId = id;
 
-    if (error) {
-        console.error("Create log error:", error);
-        return { error: error.message };
+    if (id) {
+        // UPDATE Existing Log
+        const { error } = await supabase
+            .from('site_logs')
+            .update({
+                comments: comments,
+                log_date: logDate,
+                entry_type_id: entryTypeId,
+                weather: weather,
+                severity: severity,
+                is_public: isPublic,
+                updated_by: user.id
+            })
+            .eq('id', id);
+
+        if (error) {
+            console.error("Update log error:", error);
+            return { error: error.message };
+        }
+    } else {
+        // CREATE New Log
+        const { data: logData, error } = await supabase
+            .from('site_logs')
+            .insert({
+                project_id: projectId,
+                organization_id: organizationId,
+                comments: comments,
+                log_date: logDate,
+                entry_type_id: entryTypeId,
+                weather: weather,
+                severity: severity,
+                is_public: isPublic,
+                created_by: user.id,
+                updated_by: user.id
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Create log error:", error);
+            return { error: error.message };
+        }
+        currentLogId = logData.id;
     }
+
+    if (!currentLogId) return { error: "Error de ID de registro" };
 
     // Process Media
     const mediaJson = formData.get('media') as string | null;
@@ -246,37 +274,74 @@ export async function createSiteLog(formData: FormData) {
         try {
             const mediaItems = JSON.parse(mediaJson);
             if (Array.isArray(mediaItems)) {
+
+                // 1. Identify valid media files to be linked
+                const validMediaFileIds: string[] = [];
+
                 for (const item of mediaItems) {
-                    // 1. Create Media File Record
-                    const { data: fileData, error: fileError } = await supabase
+                    let fileId = item.id;
+
+                    // Map MIME type to DB Enum
+                    let dbFileType = 'other';
+                    if (item.type && item.type.startsWith('image/')) dbFileType = 'image';
+                    else if (item.type && item.type.startsWith('video/')) dbFileType = 'video';
+                    else if (item.type === 'application/pdf') dbFileType = 'pdf';
+
+                    // Check if this file already exists in DB (by ID)
+                    // If it's a new upload, the ID is random UUID and won't exist in DB
+                    const { data: existingFile } = await supabase
                         .from('media_files')
-                        .insert({
-                            bucket: item.bucket,
-                            file_path: item.path,
-                            file_name: item.name,
-                            file_type: item.type,
-                            file_url: item.url,
-                            created_by: user.id
-                        })
-                        .select()
+                        .select('id')
+                        .eq('id', fileId)
                         .single();
 
-                    if (fileError) {
-                        console.error("Error creating media file record:", fileError);
-                        continue;
-                    }
+                    if (existingFile) {
+                        // File exists, use it
+                        validMediaFileIds.push(existingFile.id);
+                    } else {
+                        // File does not exist, create it
+                        console.log("Creating new media_file", item.name);
+                        const { data: fileData, error: fileError } = await supabase
+                            .from('media_files')
+                            .insert({
+                                organization_id: organizationId,
+                                bucket: item.bucket || 'sitelogs', // Default bucket if missing
+                                file_path: item.path || item.url, // Fallback
+                                file_name: item.name,
+                                file_type: dbFileType,
+                                file_url: item.url,
+                                created_by: user.id
+                            })
+                            .select()
+                            .single();
 
-                    // 2. Link to Site Log
+                        if (fileError) {
+                            console.error("Error creating media file record:", fileError);
+                            continue;
+                        }
+                        validMediaFileIds.push(fileData.id);
+                    }
+                }
+
+                // 2. Sync Links (Delete old, Insert new) -> For simplicity we do this strategy
+                // First delete existing links for this log
+                await supabase
+                    .from('media_links')
+                    .delete()
+                    .eq('site_log_id', currentLogId);
+
+                // Then insert new links
+                if (validMediaFileIds.length > 0) {
+                    const linksToInsert = validMediaFileIds.map(fileId => ({
+                        site_log_id: currentLogId,
+                        media_file_id: fileId
+                    }));
+
                     const { error: linkError } = await supabase
                         .from('media_links')
-                        .insert({
-                            site_log_id: logData.id, // Ensure column name is correct (log_id vs site_log_id)
-                            media_file_id: fileData.id
-                        });
+                        .insert(linksToInsert);
 
                     if (linkError) {
-                        // Try fallback column name just in case, typically it's site_log_id based on table name but check schema if possible
-                        // Based on 'media_links' usually linking 'site_log_id' and 'media_file_id'
                         console.error("Error linking media:", linkError);
                     }
                 }
@@ -284,6 +349,32 @@ export async function createSiteLog(formData: FormData) {
         } catch (e) {
             console.error("Error parsing media JSON:", e);
         }
+    }
+
+    revalidatePath(`/project/${projectId}/sitelog`);
+    return { success: true };
+}
+
+export async function deleteSiteLog(logId: string, projectId: string) {
+    const supabase = await createClient();
+
+    // 1. Get Auth User
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No autorizado" };
+
+    // 2. Soft Delete
+    const { error } = await supabase
+        .from('site_logs')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+            updated_by: user.id
+        })
+        .eq('id', logId);
+
+    if (error) {
+        console.error("Error deleting log:", error);
+        return { error: "Error al eliminar el registro" };
     }
 
     revalidatePath(`/project/${projectId}/sitelog`);

@@ -6,12 +6,25 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Calendar, CloudSun, MapPin, Quote, CloudRain, Sun, Cloud, AlertTriangle, CloudFog, FileText, Eye, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { User, Calendar, CloudSun, MapPin, Quote, CloudRain, Sun, Cloud, AlertTriangle, CloudFog, FileText, Eye, EyeOff, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Star, Trash } from "lucide-react";
+
 interface SitelogFeedProps {
     logs: SiteLog[];
+    onEdit?: (log: SiteLog) => void;
+    onDelete?: (log: SiteLog) => void;
+    onToggleFavorite?: (log: SiteLog) => Promise<void>;
 }
 
 import * as React from "react";
@@ -20,7 +33,7 @@ import { MediaLightbox, MediaItem } from "@/components/shared/media-lightbox";
 
 // ... SitelogFeed component start
 
-export function SitelogFeed({ logs }: SitelogFeedProps) {
+export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite }: SitelogFeedProps) {
     const [lightboxOpen, setLightboxOpen] = React.useState(false);
     const [currentMediaItems, setCurrentMediaItems] = React.useState<MediaItem[]>([]);
     const [initialMediaIndex, setInitialMediaIndex] = React.useState(0);
@@ -58,29 +71,42 @@ export function SitelogFeed({ logs }: SitelogFeedProps) {
 
     return (
         <>
-            <div className="max-w-4xl mx-auto space-y-10 pb-20">
+            <div className="w-full pb-20">
                 {sortedDates.map((date) => (
-                    <div key={date} className="relative">
-                        {/* Date Header Sticky */}
-                        <div className="sticky top-0 z-10 flex items-center justify-center mb-8 pointer-events-none">
-                            <div className="bg-background/80 backdrop-blur-md border border-border shadow-sm px-4 py-1.5 rounded-full flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium capitalize text-foreground">
-                                    {format(new Date(date), "EEEE, d 'de' MMMM, yyyy", { locale: es })}
-                                </span>
+                    <div key={date} className="relative grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+                        {/* Timeline/Date Column (1/4) - Left */}
+                        <div className="relative md:col-span-1 hidden md:block">
+                            <div className="sticky top-24 flex flex-col items-end text-right pr-4">
+                                {/* Date Badge */}
+                                <div className="border border-border/60 rounded-md px-3 py-1.5 inline-block bg-background/50 backdrop-blur-sm shadow-sm opacity-80 hover:opacity-100 transition-opacity">
+                                    <span className={cn(
+                                        "block text-sm font-semibold capitalize text-foreground",
+                                        "font-heading"
+                                    )}>
+                                        {format(new Date(date), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Timeline Spine */}
-                        <div className="absolute left-8 top-12 bottom-0 w-px bg-border/50 hidden md:block" />
-
-                        <div className="space-y-6">
+                        {/* Content Column (3/4) - Right */}
+                        <div className="md:col-span-3 space-y-8 md:pl-16 border-l-0 md:border-l-2 border-dashed border-border/60 relative">
                             {groupedLogs[date].map((log) => (
-                                <LogCard
-                                    key={log.id}
-                                    log={log}
-                                    onMediaClick={openLightbox}
-                                />
+                                <div key={log.id} className="relative group/timeline">
+                                    {/* Timeline Node - Desktop Only */}
+                                    <div className={cn(
+                                        "hidden md:block absolute top-8 -left-[70px] h-3 w-3 rounded-full ring-4 ring-background z-10 transition-transform group-hover/timeline:scale-125",
+                                        getSeverityColor(log.severity)
+                                    )} />
+
+                                    <LogCard
+                                        log={log}
+                                        onMediaClick={openLightbox}
+                                        onEdit={onEdit}
+                                        onDelete={onDelete}
+                                        onToggleFavorite={onToggleFavorite}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -97,7 +123,19 @@ export function SitelogFeed({ logs }: SitelogFeedProps) {
     );
 }
 
-function LogCard({ log, onMediaClick }: { log: SiteLog, onMediaClick: (items: any[], index: number) => void }) {
+function LogCard({
+    log,
+    onMediaClick,
+    onEdit,
+    onDelete,
+    onToggleFavorite
+}: {
+    log: SiteLog,
+    onMediaClick: (items: any[], index: number) => void,
+    onEdit?: (log: SiteLog) => void;
+    onDelete?: (log: SiteLog) => void;
+    onToggleFavorite?: (log: SiteLog) => Promise<void>;
+}) {
     // ... LogCard render logic
 
     const authorName = log.author?.user?.full_name || log.author?.user?.email || "Desconocido";
@@ -105,15 +143,12 @@ function LogCard({ log, onMediaClick }: { log: SiteLog, onMediaClick: (items: an
     const typeName = log.entry_type?.name;
 
     return (
-        <div className="relative pl-0 md:pl-20 group">
-            {/* Timeline Node */}
-            <div className={`absolute left-8 top-6 -translate-x-1/2 hidden md:flex h-3 w-3 rounded-full border-2 border-background z-10 group-hover:scale-125 transition-transform ${getSeverityColor(log.severity)}`} />
-
-            <Card className="overflow-hidden border-border/60 hover:border-primary/30 transition-colors shadow-sm hover:shadow-md">
+        <div className="relative group pl-0">
+            <Card className="overflow-hidden border-border/60 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
                 {/* Header */}
-                <div className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-start justify-between bg-muted/20 border-b border-border/40">
+                <div className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center justify-between bg-muted/20 border-b border-border/40">
                     <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                        <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
                             <AvatarImage src={authorAvatar || undefined} />
                             <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                         </Avatar>
@@ -125,7 +160,56 @@ function LogCard({ log, onMediaClick }: { log: SiteLog, onMediaClick: (items: an
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                        {/* Actions (Visible on Hover) */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">Open menu</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => onEdit?.(log)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onToggleFavorite?.(log)}>
+                                        <Star className={cn("mr-2 h-4 w-4", log.is_favorite ? "fill-yellow-400 text-yellow-400" : "")} />
+                                        {log.is_favorite ? "Quitar de favoritos" : "Marcar como favorita"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete?.(log)}>
+                                        <Trash className="mr-2 h-4 w-4" />
+                                        Eliminar
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+
+                        {/* Status Indicators */}
+                        {log.is_favorite && (
+                            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-yellow-500/10" title="Marcado como favorito">
+                                <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                            </div>
+                        )}
+
+                        {/* Visibility Badge */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background/50 border border-border px-2.5 py-1 rounded-full">
+                            {log.is_public ? (
+                                <>
+                                    <Eye className="h-3.5 w-3.5 text-emerald-500" />
+                                    <span className="hidden sm:inline">Visible cliente</span>
+                                </>
+                            ) : (
+                                <>
+                                    <EyeOff className="h-3.5 w-3.5 text-red-500" />
+                                    <span className="hidden sm:inline">Interno</span>
+                                </>
+                            )}
+                        </div>
+
                         {/* Weather Badge */}
                         {log.weather && log.weather !== 'none' && (
                             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background/50 border border-border px-2.5 py-1 rounded-full">
@@ -153,86 +237,75 @@ function LogCard({ log, onMediaClick }: { log: SiteLog, onMediaClick: (items: an
 
                     {/* Media Grid */}
                     {log.media && log.media.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                            {log.media.map((file, idx) => {
-                                const isImage = file.type === 'image' || file.type.startsWith('image/');
-                                const isVideo = file.type === 'video' || file.type.startsWith('video/');
+                        <div className="p-4 border-t border-border/40 bg-muted/5">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                {log.media.slice(0, 5).map((file, idx) => {
+                                    const isImage = file.type === 'image' || file.type.startsWith('image/');
+                                    const isVideo = file.type === 'video' || file.type.startsWith('video/');
+                                    const mediaItems = log.media || [];
 
-                                if (isImage) {
                                     return (
                                         <div
                                             key={file.id || idx}
-                                            className="group/img aspect-square relative rounded-xl overflow-hidden bg-muted border border-border/50 shadow-sm cursor-zoom-in"
-                                            onClick={() => onMediaClick(log.media!, idx)}
+                                            className="group/item aspect-square relative rounded-xl overflow-hidden bg-muted border border-border/50 shadow-sm cursor-zoom-in"
+                                            onClick={() => onMediaClick(mediaItems, idx)}
                                         >
-                                            <img
-                                                src={file.url}
-                                                alt={file.name || `Adjunto ${idx + 1}`}
-                                                className="object-cover w-full h-full group-hover/img:scale-105 transition-transform duration-500"
-                                                loading="lazy"
-                                            />
-                                            {/* Hover Overlay Icon */}
-                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                                                <div className="bg-black/40 p-2 rounded-full text-white backdrop-blur-sm">
-                                                    <Eye className="h-4 w-4" />
+                                            {isImage && (
+                                                <img
+                                                    src={file.url}
+                                                    alt={file.name || `Adjunto ${idx + 1}`}
+                                                    className="object-cover w-full h-full group-hover/item:scale-105 transition-transform duration-500"
+                                                    loading="lazy"
+                                                />
+                                            )}
+                                            {isVideo && (
+                                                <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                                                    <div className="w-full h-full relative">
+                                                        <video
+                                                            src={file.url}
+                                                            className="w-full h-full object-cover opacity-80"
+                                                            muted
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm">
+                                                                <Play className="h-5 w-5 text-white fill-current" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
+                                            {!isImage && !isVideo && (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-background p-2 text-center group-hover/item:bg-muted transition-colors">
+                                                    <div className="p-2 rounded-full bg-primary/10 text-primary mb-1">
+                                                        <FileText className="h-5 w-5" />
+                                                    </div>
+                                                    <span className="text-[10px] text-muted-foreground w-full truncate px-1">
+                                                        {file.name}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     );
-                                }
+                                })}
 
-                                if (isVideo) {
-                                    return (
-                                        <div
-                                            key={file.id || idx}
-                                            className="group/vid aspect-square relative rounded-xl overflow-hidden bg-black border border-border/50 shadow-sm cursor-pointer"
-                                            onClick={() => onMediaClick(log.media!, idx)}
-                                        >
-                                            <video
-                                                src={file.url}
-                                                className="object-cover w-full h-full opacity-80 group-hover/vid:scale-105 transition-transform duration-500"
-                                                muted
-                                                preload="metadata"
-                                                playsInline
-                                            />
-                                            {/* Play Icon Overlay */}
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <div className="bg-black/40 p-3 rounded-full text-white backdrop-blur-sm group-hover/vid:bg-primary group-hover/vid:text-primary-foreground transition-colors">
-                                                    <Play className="h-5 w-5 fill-current" />
-                                                </div>
-                                            </div>
-                                            <div className="absolute bottom-2 right-2 bg-black/60 px-1.5 py-0.5 rounded text-[10px] font-medium text-white">
-                                                VIDEO
-                                            </div>
-                                        </div>
-                                    );
-                                }
-
-                                // Fallback for files
-                                return (
+                                {/* Remaining Count Indicator */}
+                                {log.media.length > 5 && (
                                     <div
-                                        key={file.id || idx}
-                                        className="aspect-square relative rounded-xl overflow-hidden bg-background border border-border p-4 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors group/file cursor-pointer"
-                                        onClick={() => onMediaClick(log.media!, idx)}
+                                        className="aspect-square relative rounded-xl overflow-hidden bg-muted border border-border/50 shadow-sm cursor-pointer flex items-center justify-center hover:bg-muted/80 transition-colors"
+                                        onClick={() => onMediaClick(log.media!, 5)}
                                     >
-                                        <div className="p-3 rounded-full bg-primary/5 text-primary mb-2 group-hover/file:scale-110 transition-transform">
-                                            <FileText className="h-6 w-6" />
-                                        </div>
-                                        <span className="text-xs text-muted-foreground truncate w-full px-2 font-medium">
-                                            {file.name || "Archivo adjunto"}
-                                        </span>
-                                        <span className="text-[10px] uppercase text-muted-foreground/60 mt-1">
-                                            {file.type}
+                                        <span className="text-sm font-semibold text-muted-foreground">
+                                            +{log.media.length - 5}
                                         </span>
                                     </div>
-                                );
-                            })}
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {/* AI Summary Highlight */}
                     {log.ai_summary && (
-                        <div className="mt-4 p-4 rounded-xl bg-violet-50/80 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/50 text-sm">
+                        <div className="mt-4 p-4 rounded-xl bg-violet-50/80 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/50 text-sm mx-4 mb-4">
                             <div className="flex items-center gap-2 mb-2 text-violet-700 dark:text-violet-400 font-medium">
                                 <Quote className="h-4 w-4" />
                                 <span>Resumen IA</span>
@@ -245,22 +318,22 @@ function LogCard({ log, onMediaClick }: { log: SiteLog, onMediaClick: (items: an
                 </div>
             </Card>
         </div>
-    )
+    );
 }
 
 // Helpers
 function getSeverityColor(severity: string | null) {
     switch (severity) {
-        case 'high': return 'bg-red-500';
+        case 'high': return 'bg-destructive';
         case 'medium': return 'bg-yellow-500';
-        case 'low': return 'bg-green-500';
+        case 'low': return 'bg-primary'; // Use accent color
         default: return 'bg-primary';
     }
 }
 
 function getWeatherIcon(weather: string) {
     const w = weather.toLowerCase();
-    if (w.includes('sun') || w.includes('sunny') || w.includes('clear')) return <Sun className="h-3.5 w-3.5 text-orange-500" />;
+    if (w.includes('sun') || w.includes('sunny') || w.includes('clear')) return <Sun className="h-3.5 w-3.5 text-yellow-500" />;
     if (w.includes('cloud')) return <Cloud className="h-3.5 w-3.5 text-blue-400" />;
     if (w.includes('rain')) return <CloudRain className="h-3.5 w-3.5 text-blue-600" />;
     if (w.includes('fog') || w.includes('mist')) return <CloudFog className="h-3.5 w-3.5 text-gray-400" />;
@@ -270,14 +343,16 @@ function getWeatherIcon(weather: string) {
 function translateWeather(weather: string) {
     const map: Record<string, string> = {
         'sunny': 'Soleado',
+        'partly_cloudy': 'Parcialmente Nublado',
         'cloudy': 'Nublado',
-        'rainy': 'Lluvioso',
-        'stormy': 'Tormenta',
+        'rain': 'Lluvioso',
+        'storm': 'Tormenta',
+        'snow': 'Nieve',
+        'fog': 'Niebla',
         'windy': 'Ventoso',
-        'snowy': 'Nieve',
-        'foggy': 'Niebla',
+        'hail': 'Granizo',
         'clear': 'Despejado',
         'none': ''
     };
-    return map[weather.toLowerCase()] || weather;
+    return map[weather.toLowerCase().trim()] || weather;
 }
