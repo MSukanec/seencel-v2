@@ -1,7 +1,7 @@
 "use client";
 
 import { useCashFlowData } from "@/features/finance/hooks/use-cash-flow-data";
-import { BaseAreaChart } from "@/components/charts/base-area-chart";
+import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts";
 import { DollarSign, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";

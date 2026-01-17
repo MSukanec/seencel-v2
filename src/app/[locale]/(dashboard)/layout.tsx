@@ -16,10 +16,12 @@ export default async function DashboardLayout({
 
     // Fetch currencies for bi-currency context
     let currencies: Currency[] = [];
+    let financialData: Awaited<ReturnType<typeof getOrganizationFinancialData>> | null = null;
+
     if (activeOrgId) {
         try {
-            const financialData = await getOrganizationFinancialData(activeOrgId);
-            currencies = (financialData.currencies || []).map(c => ({
+            financialData = await getOrganizationFinancialData(activeOrgId);
+            currencies = (financialData?.currencies || []).map((c: any) => ({
                 id: c.id,
                 code: c.code,
                 name: c.name,
@@ -36,9 +38,19 @@ export default async function DashboardLayout({
     const secondaryCurrency = currencies.find(c => !c.is_default);
     const defaultExchangeRate = secondaryCurrency?.exchange_rate || 1;
 
+    // Get decimal places preference (default to 2)
+    const decimalPlaces = financialData?.preferences?.currency_decimal_places ?? 2;
+
     return (
-        <OrganizationProvider activeOrgId={activeOrgId || null}>
-            <CurrencyProvider currencies={currencies} defaultExchangeRate={defaultExchangeRate}>
+        <OrganizationProvider
+            activeOrgId={activeOrgId || null}
+            preferences={activeOrgId && financialData?.preferences ? financialData.preferences as any : null}
+        >
+            <CurrencyProvider
+                currencies={currencies}
+                defaultExchangeRate={defaultExchangeRate}
+                decimalPlaces={decimalPlaces}
+            >
                 <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
                     {children}
                 </LayoutSwitcher>

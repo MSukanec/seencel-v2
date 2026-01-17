@@ -55,6 +55,7 @@ const FEATURE_MODULES = [
             { key: "templates", label: "Plantillas personalizadas", featureKey: "custom_pdf_templates" },
             { key: "exports", label: "Exportar a Excel/CSV", featureKey: "export_excel" },
             { key: "reports", label: "Reportes y Analíticas", featureKey: "analytics_level" },
+            { key: "insight_config", label: "Configuración de Insights", featureKey: "custom_insight_thresholds" },
         ],
     },
     {
@@ -346,7 +347,6 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                             className={cn(
                                 "relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
                                 isPopular && `border-2 shadow-lg ring-2 ${planColors.border} ring-current/20`,
-                                isCurrentPlan && "ring-2 ring-primary"
                             )}
                         >
                             {/* Gradient accent bar */}
@@ -354,11 +354,6 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
 
                             {/* Badges container */}
                             <div className="absolute top-4 right-4 flex flex-col gap-1 items-end">
-                                {isCurrentPlan && (
-                                    <Badge variant="outline" className="border-primary text-primary bg-primary/10">
-                                        Tu plan actual
-                                    </Badge>
-                                )}
                                 {isPopular && !isCurrentPlan && (
                                     <Badge className={cn("text-white", planColors.bg)}>
                                         Popular
@@ -445,7 +440,7 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
             </div>
 
             {/* Detailed Comparison - Vercel Style */}
-            <div className="space-y-0">
+            <div className="space-y-0 w-full">
                 {/* Sticky Header - Different layouts for mobile/desktop */}
                 <div className="sticky top-16 z-20 bg-background/95 backdrop-blur-sm border-b">
                     {/* Mobile: Tab selector */}

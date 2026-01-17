@@ -122,7 +122,7 @@ export function SidebarContent({ onLinkClick, mode = "desktop", isExpanded: prop
     return (
         <div
             className={cn(
-                "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
+                "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out",
                 widthClass
             )}
             onMouseEnter={() => {
@@ -139,7 +139,7 @@ export function SidebarContent({ onLinkClick, mode = "desktop", isExpanded: prop
                     </div>
 
                     <span className={cn(
-                        "font-bold text-lg tracking-tight text-foreground/90 whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out",
+                        "font-bold text-lg tracking-tight text-foreground/90 whitespace-nowrap overflow-hidden transition-all duration-150 ease-in-out",
                         isExpanded ? "w-auto opacity-100 pl-3" : "w-0 opacity-0 pl-0"
                     )}>
                         SEENCEL

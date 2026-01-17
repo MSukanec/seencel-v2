@@ -1,5 +1,6 @@
 import { Insight, InsightContext } from "../types";
 import { allInsightRules } from "./rules";
+import { upsellLiquidityInsight, cashFlowRiskInsight } from "./real-estate-rules";
 import { ClientFinancialSummary, ClientPaymentView } from "@/features/clients/types";
 import { MonetaryItem } from "@/hooks/use-smart-currency";
 
@@ -139,7 +140,7 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
         .sort((a, b) => b.value - a.value);
 
     const genericContext: InsightContext = {
-        totalGasto: kpis.totalPaid, // Mapped to "Total Value" (Income)
+        totalValue: kpis.totalPaid, // Mapped to "Total Value" (Income)
 
         monthlyData: monthlyData,
         categoryData: clientConcentration,
@@ -147,22 +148,40 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
         paymentCount: payments.length,
         monthCount: monthlyData.length,
 
-        totalIngresos: kpis.totalPaid,
-        totalEgresos: 0
+        termLabels: {
+            singular: 'ingreso',
+            plural: 'ingresos',
+            verbIncrease: 'aumenta',
+            verbDecrease: 'disminuye'
+        },
+
+        // Default Thresholds Configuration
+        // Default Thresholds Configuration
+        thresholds: {
+            growthSignificant: 15,
+            trendStable: 4,
+            concentrationPareto: 80,
+            minDataPoints: 3,
+            upsellLiquidity: 90, // Default 90%
+            cashFlowRisk: 1 // Default
+        },
+
+        // Pass full summary for real estate rules
+        clientSummaries: summary.map(s => ({
+            client_id: s.client_id,
+            total_committed_amount: s.total_committed_amount,
+            total_paid_amount: s.total_paid_amount,
+            balance_due: s.balance_due,
+            currency_code: s.currency_code
+        }))
     };
 
-    // --- 3. RUN GENERIC RULES ---
-    const genericInsights = allInsightRules
+    // --- 3. RUN GENERIC & REAL ESTATE RULES ---
+    const activeRules = [...allInsightRules, upsellLiquidityInsight, cashFlowRiskInsight];
+
+    const genericInsights = activeRules
         .map(rule => rule(genericContext))
-        .filter((i): i is Insight => i !== null)
-        .map(insight => {
-            return {
-                ...insight,
-                title: insight.title.replace(/gasto/gi, 'ingreso'),
-                description: insight.description.replace(/gasto/gi, 'ingreso'),
-                context: insight.context?.replace(/gasto/gi, 'ingreso')
-            };
-        });
+        .filter((i): i is Insight => i !== null);
 
     return [...manualInsights, ...genericInsights].sort((a, b) => (a.priority || 99) - (b.priority || 99)).slice(0, 5);
 }

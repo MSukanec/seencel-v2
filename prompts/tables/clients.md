@@ -70,6 +70,11 @@ or
 update on client_commitments for EACH row
 execute FUNCTION handle_updated_by ();
 
+create trigger set_functional_amount_client_commitments BEFORE INSERT
+or
+update on client_commitments for EACH row
+execute FUNCTION set_client_commitment_functional_amount ();
+
 ## Tabla client_financial_summary_view:
 
 create view public.client_financial_summary_view as

@@ -69,7 +69,7 @@ export interface Plan {
     price: number;
     billing_period: 'monthly' | 'annual';
     currency: string;
-    features: string[]; // Assuming jsonb or text[] in DB, inferred from usage needs
+    features: any; // JSONB with feature flags
 }
 
 export interface OrganizationSubscription {
@@ -133,9 +133,12 @@ export interface OrganizationPreferences {
     id: string;
     organization_id: string;
     default_currency_id: string | null;
+    functional_currency_id: string | null;
     default_wallet_id: string | null;
     default_pdf_template_id: string | null;
     use_currency_exchange: boolean;
+    currency_decimal_places: number; // 0, 1, or 2 - controls decimal display globally
+    insight_config?: any; // JSONB
 }
 
 export interface OrganizationSettingsData {

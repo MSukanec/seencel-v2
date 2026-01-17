@@ -5,8 +5,7 @@ import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { InsightCard } from "@/features/insights/components/insight-card";
 import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BaseAreaChart } from "@/components/charts/base-area-chart";
-import { BaseDonutChart } from "@/components/charts/base-donut-chart";
+import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card"; // Kept for Activity List only
 import { useCurrencyOptional } from "@/providers/currency-context";
 import { formatCurrency as formatCurrencyUtil, getAmountsByCurrency } from "@/lib/currency-utils";

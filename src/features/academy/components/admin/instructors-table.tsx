@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic } from "react";
 import {
     Table,
     TableBody,
@@ -53,6 +53,12 @@ export function InstructorsTable({ instructors }: InstructorsTableProps) {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
 
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const [optimisticInstructors, setOptimisticInstructors] = useOptimistic(
+        instructors,
+        (current, removedId: string) => current.filter(i => i.id !== removedId)
+    );
+
     const handleEdit = (instructor: Instructor) => {
         setEditingInstructor(instructor);
         setIsFormOpen(true);
@@ -63,16 +69,25 @@ export function InstructorsTable({ instructors }: InstructorsTableProps) {
         setIsFormOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
+    // 🚀 OPTIMISTIC DELETE: Instructor disappears instantly
+    const handleDelete = (id: string) => {
         if (!confirm("¿Estás seguro de que quieres eliminar este instructor?")) return;
 
-        const res = await deleteInstructor(id);
-        if (res.success) {
-            toast.success("Instructor eliminado");
+        // Optimistic update - instructor disappears NOW
+        setOptimisticInstructors(id);
+
+        // Server action in background
+        deleteInstructor(id).then(res => {
+            if (res.success) {
+                toast.success("Instructor eliminado");
+            } else {
+                toast.error(res.message);
+                router.refresh(); // Recover on error
+            }
+        }).catch(() => {
+            toast.error("Error al eliminar instructor");
             router.refresh();
-        } else {
-            toast.error(res.message);
-        }
+        });
     };
 
     const getStorageUrl = (path: string | null) => {
@@ -103,14 +118,14 @@ export function InstructorsTable({ instructors }: InstructorsTableProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {instructors.length === 0 ? (
+                                {optimisticInstructors.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                             No hay instructores creados
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    instructors.map((instructor) => (
+                                    optimisticInstructors.map((instructor) => (
                                         <TableRow key={instructor.id}>
                                             <TableCell>
                                                 <Avatar>

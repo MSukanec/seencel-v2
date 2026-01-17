@@ -1,41 +1,37 @@
 "use client";
 
 import {
-    BarChart,
-    Bar,
+    AreaChart,
+    Area,
     XAxis,
     YAxis,
     CartesianGrid,
-    ResponsiveContainer,
-    Cell
+    Tooltip,
 } from 'recharts';
-import { CHART_DEFAULTS, formatCurrency, formatCompactNumber } from './chart-config';
+import { CHART_DEFAULTS, formatCurrency, formatCompactNumber } from '../chart-config';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
 
-interface BaseBarChartProps {
+interface BaseAreaChartProps {
     data: any[];
     xKey: string;
     yKey: string;
     title?: string;
     description?: string;
     height?: number;
-    className?: string; // Class for the wrapper Card
-    chartClassName?: string; // Class for the ChartContainer
-    color?: string; // Now used as a fallback if not in config
+    className?: string;
+    chartClassName?: string;
+    color?: string;
     showGrid?: boolean;
     yAxisFormatter?: (value: number) => string;
     xAxisFormatter?: (value: string) => string;
     tooltipFormatter?: (value: number) => string;
-    layout?: 'horizontal' | 'vertical';
-    barSize?: number;
-    radius?: [number, number, number, number];
-    // Shadcn Config
+    gradient?: boolean;
     config?: ChartConfig;
 }
 
-export function BaseBarChart({
+export function BaseAreaChart({
     data,
     xKey,
     yKey,
@@ -44,65 +40,70 @@ export function BaseBarChart({
     height = 300,
     className,
     chartClassName,
-    color = "var(--primary)", // Default to primary
+    color = "var(--primary)",
     showGrid = true,
     yAxisFormatter = formatCompactNumber,
     xAxisFormatter,
     tooltipFormatter = formatCurrency,
-    layout = 'horizontal',
-    barSize,
-    radius = [4, 4, 0, 0], // Top rounded
+    gradient = true,
     config = {
         [yKey]: {
-            label: title || "Valor",
+            label: "Valor",
             color: color
         }
     }
-}: BaseBarChartProps) {
+}: BaseAreaChartProps) {
+    const gradientId = `fill-${yKey}`; // Simplificado usando el ID de Shadcn
+
+    // If no specific color is provided in config[yKey].color, fallback to the `color` prop
+    // However, ChartContainer uses CSS vars based on the config key.
+    // We should map the color prop to the config if not present.
+
     const ChartContent = (
         <ChartContainer config={config} className={cn("w-full", chartClassName)} style={{ height }}>
-            <BarChart
-                layout={layout}
-                data={data}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                    {gradient && (
+                        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0} />
+                        </linearGradient>
+                    )}
+                </defs>
                 {showGrid && (
                     <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
-                        horizontal={layout === 'horizontal'}
                         stroke={CHART_DEFAULTS.gridColor}
                     />
                 )}
                 <XAxis
-                    type={layout === 'vertical' ? 'number' : 'category'}
-                    dataKey={layout === 'vertical' ? undefined : xKey}
+                    dataKey={xKey}
                     tickFormatter={xAxisFormatter}
                     fontSize={CHART_DEFAULTS.fontSize}
                     tickLine={false}
                     axisLine={false}
+                    minTickGap={30}
                 />
                 <YAxis
-                    type={layout === 'vertical' ? 'category' : 'number'}
-                    dataKey={layout === 'vertical' ? xKey : undefined}
                     tickFormatter={yAxisFormatter}
                     fontSize={CHART_DEFAULTS.fontSize}
                     tickLine={false}
                     axisLine={false}
-                    width={layout === 'vertical' ? 100 : undefined}
                 />
                 <ChartTooltip
-                    cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
-                    content={<ChartTooltipContent formatter={tooltipFormatter as any} hideLabel={false} />}
+                    cursor={{ stroke: `var(--color-${yKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
+                    content={<ChartTooltipContent formatter={tooltipFormatter as any} />}
                 />
-                <Bar
+                <Area
+                    type="monotone"
                     dataKey={yKey}
-                    fill={`var(--color-${yKey}, ${color})`}
-                    radius={radius}
-                    barSize={barSize}
+                    stroke={`var(--color-${yKey}, ${color})`}
+                    fillOpacity={1}
+                    fill={gradient ? `url(#${gradientId})` : "none"}
                     animationDuration={CHART_DEFAULTS.animationDuration}
                 />
-            </BarChart>
+            </AreaChart>
         </ChartContainer>
     );
 
@@ -123,6 +124,5 @@ export function BaseBarChart({
             </Card>
         );
     }
-
     return ChartContent;
 }

@@ -70,10 +70,17 @@ export function ClientsPageClient({
         return payments.filter(p => affectedPaymentIds.has(p.id));
     }, [payments, healthFilterActive, affectedPaymentIds]);
 
+    // 🚀 PERFORMANCE FIX: Use local state + shallow URL update
+    // router.replace() causes full re-fetch, this is instant
+    const [activeTab, setActiveTab] = useState(currentTab);
+
     const handleTabChange = (value: string) => {
+        setActiveTab(value); // Instant UI update
+
+        // Update URL without navigation (shallow)
         const params = new URLSearchParams(searchParams.toString());
         params.set("view", value);
-        router.replace(`${pathname}?${params.toString()}`);
+        window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
     };
 
     // Handler for "Mostrar" button - navigates to payments tab and activates filter
@@ -101,7 +108,7 @@ export function ClientsPageClient({
     );
 
     return (
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Compromisos y Pagos"
@@ -120,7 +127,7 @@ export function ClientsPageClient({
                     />
 
                     {/* FILTER INDICATOR - Shows when health filter is active */}
-                    {healthFilterActive && currentTab === "payments" && (
+                    {healthFilterActive && activeTab === "payments" && (
                         <Alert className="mb-4 bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400">
                             <FilterX className="h-4 w-4 !text-orange-500" />
                             <AlertDescription className="flex items-center justify-between w-full">
@@ -139,7 +146,7 @@ export function ClientsPageClient({
                         </Alert>
                     )}
 
-                    <TabsContent value="overview" className="m-0 h-full focus-visible:outline-none">
+                    <TabsContent value="overview" className="m-0 focus-visible:outline-none">
                         <ClientsOverview summary={financialSummary} payments={payments} />
                     </TabsContent>
                     <TabsContent value="list" className="m-0 h-full focus-visible:outline-none">

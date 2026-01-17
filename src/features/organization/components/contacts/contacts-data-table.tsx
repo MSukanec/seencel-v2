@@ -22,6 +22,7 @@ import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
 import { ImportConfig } from "@/lib/import-utils";
 import { Contact } from "@/types/contact";
 import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 interface ContactsDataTableProps {
     organizationId: string;
@@ -35,6 +36,15 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
     const { openModal, closeModal } = useModal();
     const router = useRouter();
     const [deletingContact, setDeletingContact] = useState<ContactWithRelations | null>(null);
+
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const {
+        optimisticItems: optimisticContacts,
+        removeItem: optimisticRemove
+    } = useOptimisticList({
+        items: contacts,
+        getItemId: (contact) => contact.id,
+    });
 
     const handleSuccess = () => {
         router.refresh();
@@ -148,13 +158,19 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
         setDeletingContact(contact);
     };
 
-    // Called by the modal when user confirms
+    // 🚀 OPTIMISTIC DELETE: Contact disappears instantly, server in background
     const handleConfirmDelete = async (replacementId: string | null) => {
         if (!deletingContact) return;
-        // Pass replacementId to server action for migration before delete
-        await deleteContact(deletingContact.id, replacementId || undefined);
-        setDeletingContact(null);
-        router.refresh();
+        const contactId = deletingContact.id;
+        setDeletingContact(null); // Close modal immediately
+
+        optimisticRemove(contactId, async () => {
+            try {
+                await deleteContact(contactId, replacementId || undefined);
+            } catch (error) {
+                router.refresh(); // Recover on error
+            }
+        });
     };
 
     const handleBulkDelete = (selectedContacts: ContactWithRelations[], onSuccess?: () => void) => {
@@ -281,7 +297,7 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
         <>
             <DataTable
                 columns={columns}
-                data={contacts}
+                data={optimisticContacts}
                 searchPlaceholder="Buscar contactos..."
                 viewMode={viewMode}
                 enableRowSelection={true}

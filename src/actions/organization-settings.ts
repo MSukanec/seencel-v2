@@ -191,6 +191,8 @@ export async function addOrganizationCurrency(
     const supabase = await createClient();
 
     // Constraint: Max 1 secondary currency (non-default)
+    // REMOVED LIMIT: User requested multiple secondary currencies.
+    /*
     if (!isDefault) {
         // Count existing non-default currencies
         const { count, error: countError } = await supabase
@@ -209,6 +211,7 @@ export async function addOrganizationCurrency(
             throw new Error("Maximum of 1 secondary currency allowed.");
         }
     }
+    */
 
     const { error } = await supabase
         .from('organization_currencies')

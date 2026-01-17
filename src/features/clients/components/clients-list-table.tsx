@@ -14,6 +14,7 @@ import { ClientForm } from "./client-form";
 import { deleteClientAction } from "../actions";
 import { toast } from "sonner";
 import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 
 interface ClientsListTableProps {
@@ -26,6 +27,15 @@ interface ClientsListTableProps {
 export function ClientsListTable({ data, roles, orgId, projectId }: ClientsListTableProps) {
     const { openModal, closeModal } = useModal();
     const [isPending, startTransition] = useTransition();
+
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const {
+        optimisticItems: optimisticData,
+        removeItem: optimisticRemove
+    } = useOptimisticList({
+        items: data,
+        getItemId: (client) => client.id,
+    });
 
     // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -48,19 +58,25 @@ export function ClientsListTable({ data, roles, orgId, projectId }: ClientsListT
         setDeleteModalOpen(true);
     };
 
+    // 🚀 OPTIMISTIC DELETE: Client disappears instantly, server in background
     const handleConfirmDelete = async (replacementId: string | null) => {
         if (!clientToDelete) return;
+        const clientId = clientToDelete.id;
 
-        try {
-            // For now, we just do soft delete - replacementId could be used in future
-            // to reassign commitments/payments to another client
-            await deleteClientAction(clientToDelete.id);
-            toast.success("Cliente eliminado correctamente");
-            setDeleteModalOpen(false);
-            setClientToDelete(null);
-        } catch (error) {
-            toast.error("Error al eliminar el cliente");
-        }
+        // Close modal immediately
+        setDeleteModalOpen(false);
+        setClientToDelete(null);
+
+        // Optimistic update - client disappears NOW
+        optimisticRemove(clientId, async () => {
+            try {
+                await deleteClientAction(clientId);
+                toast.success("Cliente eliminado correctamente");
+            } catch (error) {
+                toast.error("Error al eliminar el cliente");
+                // React will revert the optimistic update
+            }
+        });
     };
 
     const handleEdit = (client: ProjectClientView) => {
@@ -77,7 +93,7 @@ export function ClientsListTable({ data, roles, orgId, projectId }: ClientsListT
     };
 
     // Build replacement options (other clients in this project, excluding the one being deleted)
-    const replacementOptions = data
+    const replacementOptions = optimisticData
         .filter(c => c.id !== clientToDelete?.id)
         .map(c => ({ id: c.id, name: c.contact_full_name || "Sin Nombre" }));
 
@@ -140,7 +156,7 @@ export function ClientsListTable({ data, roles, orgId, projectId }: ClientsListT
         <>
             <DataTable
                 columns={columns}
-                data={data}
+                data={optimisticData}
                 searchKey="contact_full_name"
                 searchPlaceholder="Buscar clientes..."
                 enableRowActions={true}

@@ -14,6 +14,7 @@ import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmatio
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 interface PaymentsDataTableProps {
     data: ClientPaymentView[];
@@ -33,6 +34,16 @@ export function PaymentsDataTable({
     const { openModal } = useModal();
     const router = useRouter();
 
+    // 🚀 OPTIMISTIC UI: Instant visual updates for list operations
+    const {
+        optimisticItems: optimisticPayments,
+        removeItem: optimisticRemove,
+        isPending
+    } = useOptimisticList({
+        items: data,
+        getItemId: (payment) => payment.id,
+    });
+
     const handleNewPayment = () => {
         openModal(
             <PaymentForm
@@ -41,7 +52,6 @@ export function PaymentsDataTable({
                 clients={clients}
                 financialData={financialData}
                 onSuccess={() => {
-                    // Ideally revalidate path or refresh data
                     router.refresh();
                 }}
             />,
@@ -64,7 +74,7 @@ export function PaymentsDataTable({
                 organizationId={orgId}
                 clients={clients}
                 financialData={financialData}
-                initialData={payment as any} // Cast safely or map types
+                initialData={payment as any}
                 onSuccess={() => {
                     toast.success("Pago actualizado");
                     router.refresh();
@@ -85,19 +95,24 @@ export function PaymentsDataTable({
         setPaymentToDelete(payment);
     };
 
+    // 🚀 OPTIMISTIC DELETE: Payment disappears instantly, server action runs in background
     const confirmDelete = async () => {
         if (!paymentToDelete) return;
-        setIsDeleting(true);
-        try {
-            await deletePaymentAction(paymentToDelete.id);
-            toast.success("Pago eliminado");
-            router.refresh();
-        } catch (error) {
-            toast.error("Error al eliminar el pago");
-        } finally {
-            setIsDeleting(false);
-            setPaymentToDelete(null);
-        }
+        const paymentId = paymentToDelete.id;
+        setPaymentToDelete(null); // Close dialog immediately
+
+        // Optimistic update - payment disappears NOW
+        optimisticRemove(paymentId, async () => {
+            try {
+                await deletePaymentAction(paymentId);
+                toast.success("Pago eliminado");
+            } catch (error) {
+                toast.error("Error al eliminar el pago");
+                // On error, React will revert the optimistic update automatically
+                // Force refresh to ensure consistency
+                router.refresh();
+            }
+        });
     };
 
     // Define filters options
@@ -133,7 +148,7 @@ export function PaymentsDataTable({
         <div className="h-full flex flex-col">
             <DataTable
                 columns={columns}
-                data={data}
+                data={optimisticPayments}
                 searchKey="client_name"
                 searchPlaceholder="Buscar por cliente..."
                 enableRowSelection={true}

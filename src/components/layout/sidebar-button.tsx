@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,15 @@ export function SidebarButton({
     showTooltipWhenExpanded = false,
     ...props
 }: SidebarButtonProps) {
+    const router = useRouter();
+
+    // 🚀 PREFETCH: Pre-load route on hover for instant navigation
+    const handleMouseEnter = React.useCallback(() => {
+        if (href) {
+            router.prefetch(href as any);
+        }
+    }, [href, router]);
+
     // Logic for tooltip: show if provided AND (not expanded OR explicitly forced)
     const shouldShowTooltip = tooltip && (!isExpanded || showTooltipWhenExpanded);
 
@@ -57,6 +66,7 @@ export function SidebarButton({
                 className
             )}
             asChild={!!href}
+            onMouseEnter={handleMouseEnter}
             {...props}
         >
             {href ? (
@@ -66,7 +76,7 @@ export function SidebarButton({
                     </div>
                     {/* Label */}
                     <span className={cn(
-                        "font-medium text-sm truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+                        "font-medium text-sm truncate transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap",
                         isExpanded ? "w-auto opacity-100 ml-0 flex-1" : "w-0 opacity-0 ml-0"
                     )}>
                         {label}
@@ -78,7 +88,7 @@ export function SidebarButton({
                         <Icon className="h-5 w-5" />
                     </div>
                     <span className={cn(
-                        "font-medium text-sm truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+                        "font-medium text-sm truncate transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap",
                         isExpanded ? "w-auto opacity-100 ml-0 flex-1" : "w-0 opacity-0 ml-0"
                     )}>
                         {label}
@@ -103,3 +113,4 @@ export function SidebarButton({
 
     return buttonContent;
 }
+

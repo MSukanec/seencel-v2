@@ -14,6 +14,15 @@ export interface InsightAction {
     onClick?: () => void;
 }
 
+export interface InsightThresholds {
+    growthSignificant: number; // % change to be considered significant (default 15)
+    trendStable: number;      // % change to be considered stable (default 4)
+    concentrationPareto: number; // % accumulated for concentration (default 80)
+    minDataPoints: number;    // Min months for trend (default 3)
+    upsellLiquidity: number;  // % paid to trigger upsell (default 90)
+    cashFlowRisk: number;     // % overdue or days/count to trigger risk (default TBD, maybe 10% balance or specific flag)
+}
+
 // --- INSIGHT DEFINITION ---
 export interface Insight {
     id: string;
@@ -51,6 +60,13 @@ export interface InsightContext {
 
     paymentsByConcept?: { conceptName: string; paymentsCount: number }[]; // For consolidation
     projectFinancialData?: { projectName: string; income: number; expense: number }[]; // For project dependency
+    clientSummaries?: {
+        client_id: string;
+        total_committed_amount: number;
+        total_paid_amount: number;
+        balance_due: number;
+        currency_code: string | null;
+    }[]; // For aggregate real estate analysis
 
     // User/Meta Context
     isShortPeriod?: boolean; // If analyzing < 1 month
@@ -58,10 +74,22 @@ export interface InsightContext {
     monthCount?: number; // How many months in range
     paymentCount?: number; // Total operational volume
 
+    // Configuration
+    thresholds?: InsightThresholds;
+
     // Financials
+    totalValue?: number; // Universal field for rules (can map to income or expense)
     totalIngresos?: number;
     totalEgresos?: number;
     balance?: number;
+
+    // Reporting labels (for generic rules to use standard terms like "gasto" or "cobro")
+    termLabels?: {
+        singular: string;
+        plural: string;
+        verbIncrease: string;
+        verbDecrease: string;
+    };
 
     // Optional extras used in specific legacy rules
     topCategoryName?: string;

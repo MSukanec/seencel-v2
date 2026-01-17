@@ -73,7 +73,7 @@ export const columns: ColumnDef<ClientPaymentView>[] = [
 
             return (
                 <div className="flex flex-col">
-                    <span className="font-mono font-medium text-emerald-600 dark:text-emerald-500">
+                    <span className="font-mono font-medium text-amount-positive">
                         {currency} {amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     {rate && rate > 1 && (
@@ -98,7 +98,7 @@ export const columns: ColumnDef<ClientPaymentView>[] = [
             switch (status) {
                 case "confirmed":
                     variant = "outline";
-                    className = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+                    className = "bg-amount-positive/10 text-amount-positive border-amount-positive/20";
                     break;
                 case "pending":
                     variant = "outline";

@@ -7,27 +7,35 @@ import { Currency, MonetaryAmount, MonetaryBreakdown } from '@/types/currency';
 
 /**
  * Format a monetary amount with proper currency symbol and locale
+ * @param decimals - Number of decimal places (0, 1, or 2). Defaults to 2.
  */
 export function formatCurrency(
     amount: number,
     currency?: Currency | string,
-    locale: string = 'es-AR'
+    locale: string = 'es-AR',
+    decimals: number = 2
 ): string {
     const currencyCode = typeof currency === 'string'
         ? currency
         : currency?.code || 'ARS';
 
+    // Clamp decimals to valid range
+    const decimalPlaces = Math.max(0, Math.min(2, decimals));
+
     try {
         return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: currencyCode,
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces,
         }).format(amount);
     } catch {
         // Fallback for invalid currency codes
         const symbol = typeof currency === 'object' ? currency?.symbol : '$';
-        return `${symbol} ${amount.toLocaleString(locale)}`;
+        return `${symbol} ${amount.toLocaleString(locale, {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
+        })}`;
     }
 }
 

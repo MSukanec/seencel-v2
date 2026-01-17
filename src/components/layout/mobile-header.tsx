@@ -27,21 +27,20 @@ export function MobileHeader({
 
     return (
         <div className={cn("flex flex-col w-full bg-background border-b border-border/40 md:hidden sticky top-0 z-50", className)} {...props}>
-            {/* Row 1: Title + Burger */}
-            <div className="flex items-center justify-between px-4 h-14 border-b border-border/40 bg-background/95 backdrop-blur-sm">
-                <h1 className="text-lg font-semibold truncate pr-2">
+            {/* Row 1: Title + Burger - OPTIMIZED: h-12 instead of h-14, px-3 instead of px-4 */}
+            <div className="flex items-center justify-between px-3 h-12 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+                <h1 className="text-base font-semibold truncate pr-2">
                     {displayTitle}
                 </h1>
-                <div className="flex items-center gap-2">
-                    {/* Mobile Actions could go here, but usually just the menu */}
+                <div className="flex items-center gap-1">
                     <MobileNav />
                 </div>
             </div>
 
-            {/* Row 2: Chips (Tabs) */}
+            {/* Row 2: Tabs - OPTIMIZED: py-2 instead of py-3, px-3 instead of px-4 */}
             {tabs && (
-                <div className="w-full overflow-x-auto px-4 py-3 no-scrollbar bg-background">
-                    <div className="flex flex-nowrap min-w-max">
+                <div className="w-full overflow-x-auto px-3 py-2 no-scrollbar bg-background">
+                    <div className="flex flex-nowrap min-w-max gap-3">
                         {tabs}
                     </div>
                 </div>
@@ -49,3 +48,4 @@ export function MobileHeader({
         </div>
     );
 }
+

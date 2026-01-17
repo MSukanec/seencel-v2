@@ -47,6 +47,7 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
                     orgWallets={data.contactWallets}
                     availableCurrencies={data.availableCurrencies}
                     availableWallets={data.availableWallets}
+                    subscription={data.subscription}
                 />
             </TabsContent>
         </>

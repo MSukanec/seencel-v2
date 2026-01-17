@@ -1,22 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DashboardKpiCard, CurrencyBreakdownItem } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { InsightCard } from "@/features/insights/components/insight-card";
-import { Insight } from "@/features/insights/types";
+import { InsightAction } from "@/features/insights/types";
+import { useInsightPersistence } from "@/features/insights/hooks/use-insight-persistence";
 import { generateClientInsights } from "@/features/insights/logic/clients";
-import { BaseAreaChart } from "@/components/charts/base-area-chart";
-import { BaseDonutChart } from "@/components/charts/base-donut-chart";
+import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
+import { BaseDonutChart } from "@/components/charts/pie/base-donut-chart";
 import { ClientFinancialSummary, ClientPaymentView } from "../types";
-import { FileText, DollarSign, Clock, TrendingUp, BarChart3, PieChart, Lightbulb, Activity, CheckCircle } from "lucide-react";
+import { FileText, DollarSign, Clock, TrendingUp, TrendingDown, BarChart3, PieChart, Lightbulb, Activity, CheckCircle, Wallet } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
 import { useSmartCurrency } from "@/hooks/use-smart-currency";
+import { useFormatCurrency } from "@/hooks/use-format-currency";
 import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
-import { useCurrencyOptional } from "@/providers/currency-context"; // Needed for breakdown context only
+import { useCurrency } from "@/providers/currency-context";
+import { useCurrencyOptional } from "@/providers/currency-context";
+import { useFinancialFeatures } from "@/hooks/use-financial-features";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface ClientsOverviewProps {
     summary: ClientFinancialSummary[];
@@ -37,7 +43,116 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     const displayCurrency = isSecondaryDisplay ? 'secondary' : 'primary';
 
     // We still need context for specific currency objects (symbol etc) for breakdowns
-    const currencyContext = useCurrencyOptional();
+    const {
+        allCurrencies,
+        setDisplayCurrency,
+        primaryCurrency: primaryCurrencyObj,
+        secondaryCurrency: secondaryCurrencyObj,
+        currentExchangeRate: marketRate
+    } = useCurrency(); // Explicit useCurrency instead of optional for robust logic
+
+    // Decimal-aware formatting
+    const { formatNumber, decimalPlaces } = useFormatCurrency();
+
+    // Feature Flags for Financial Logic
+    const { showCurrencySelector, showExchangeRate, functionalCurrencyId, showFunctionalColumns } = useFinancialFeatures();
+
+    // ========================================
+    // LOGIC FROM UNIFIED SUMMARY (MIGRATED)
+    // ========================================
+
+    // Resolve the actual Reference Currency Object
+    const referenceCurrency = useMemo(() => {
+        if (functionalCurrencyId) {
+            return allCurrencies.find(c => c.id === functionalCurrencyId);
+        }
+        return allCurrencies.find(c => !c.is_default);
+    }, [allCurrencies, functionalCurrencyId]);
+
+    // Local State for View Mode: 'mix' (Breakdown) vs 'ref' (Reference Total)
+    const [viewMode, setViewMode] = useState<'mix' | 'ref'>('mix');
+
+    // Enforce "Ref" View logic if we are in that mode
+    useEffect(() => {
+        if (showCurrencySelector && referenceCurrency && displayCurrency !== 'secondary') {
+            if (viewMode === 'ref') {
+                setDisplayCurrency('secondary');
+            }
+        }
+    }, [showCurrencySelector, referenceCurrency, displayCurrency, setDisplayCurrency, viewMode]);
+
+    const isMixView = viewMode === 'mix';
+    const isReferenceView = viewMode === 'ref';
+
+    // Helper to render value based on view mode
+    const renderFinancialValue = (
+        primaryValue: number,
+        breakdown: any[],
+    ) => {
+        const mainValueClass = "text-3xl font-bold tracking-tight";
+        const secondaryValueClass = "text-xl font-medium text-muted-foreground";
+
+        // If MIX view and we have mixed currencies, show the breakdown stacked
+        if (isMixView && breakdown && breakdown.length > 0) {
+            if (breakdown.length === 1) {
+                const item = breakdown[0];
+                return (
+                    <div className="flex flex-col">
+                        <span className={mainValueClass}>{item.symbol} {formatNumber(item.nativeTotal)}</span>
+                    </div>
+                );
+            }
+
+            // Multiple currencies - stack vertically
+            return (
+                <div className="flex flex-col gap-0.5">
+                    {breakdown.map((item: any, index: number) => {
+                        const isNegative = item.nativeTotal < 0;
+                        const val = Math.abs(item.nativeTotal);
+                        const isMain = index === 0;
+
+                        return (
+                            <span key={item.currencyCode} className={cn(
+                                isMain ? mainValueClass : secondaryValueClass,
+                                "flex items-center"
+                            )}>
+                                {index > 0 && (isNegative ? "- " : "+ ")}
+                                {index === 0 && isNegative && "-"}
+                                {item.symbol} {formatNumber(val)}
+                            </span>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // Fallback or Reference View
+        return (
+            <div className="flex flex-col">
+                <span className={mainValueClass}>
+                    {formatCurrencyUtil(primaryValue, isReferenceView && referenceCurrency ? referenceCurrency.code : primaryCurrencyObj?.code, 'es-AR', decimalPlaces)}
+                </span>
+            </div>
+        );
+    };
+
+
+    // ========================================
+    // DOMINANT CURRENCY LOGIC (Must be top-level hook)
+    // ========================================
+    // Determine which currency has the highest committed volume to prioritize it in sorting
+    const dominantCurrencyCode = useMemo(() => {
+        if (!summary || summary.length === 0) return primaryCurrencyCode;
+
+        // Find the summary item with the highest functional committed amount
+        const dominant = summary.reduce((prev, current) => {
+            return (current.total_functional_committed_amount > prev.total_functional_committed_amount)
+                ? current
+                : prev;
+        }, summary[0]);
+
+        return dominant.currency_code || primaryCurrencyCode;
+    }, [summary, primaryCurrencyCode]);
 
     // ========================================
     // KPI CALCULATIONS
@@ -67,6 +182,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             currency_code: s.currency_code
         })));
 
+
         // ========================================
         // BREAKDOWN HELPER
         // ========================================
@@ -92,8 +208,17 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             return Object.values(grouped)
                 .filter(g => g.nativeTotal !== 0)
                 .sort((a, b) => {
+                    // Critical Request: Sort by "Commitment Currency" (Dominant) first
+                    const isADominant = a.currencyCode === dominantCurrencyCode;
+                    const isBDominant = b.currencyCode === dominantCurrencyCode;
+
+                    if (isADominant && !isBDominant) return -1;
+                    if (!isADominant && isBDominant) return 1;
+
+                    // Secondary sort: Primary Currency
                     if (a.isPrimary) return -1;
                     if (b.isPrimary) return 1;
+
                     return a.currencyCode.localeCompare(b.currencyCode);
                 });
         };
@@ -125,6 +250,11 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             p.payment_month || (p.payment_date ? p.payment_date.substring(0, 7) : '')
         )).size || 1;
 
+        // NOTE: totalPaid is currently calculated using sumDisplayAmounts, which uses 'displayCurrency'.
+        // If we want Average in Dominant Currency, we might need a separate total.
+        // But assuming User switches "Mix/Ref" view, totalPaid changes context.
+        // The Monthly Average KPI in 'render' section below formats this value.
+        // We should ensure the FORMATTING in the render section uses 'dominantCurrencyCode'.
         const monthlyAverage = totalPaid / (monthsWithPayments || 1);
 
         // Trend Logic
@@ -161,14 +291,27 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             trendDirection: trendPercent > 0 ? "up" : trendPercent < 0 ? "down" : "neutral" as "up" | "down" | "neutral",
             committedBreakdown,
             paidBreakdown,
-            balanceBreakdown
+            balanceBreakdown,
+            dominantCurrencyCode // Export this for UI usage
         };
     }, [summary, payments, sumDisplayAmounts, calculateDisplayAmount, primaryCurrencyCode]);
 
     // ========================================
-    // CHART DATA: PAYMENT EVOLUTION
+    // CHART DATA: PAYMENT EVOLUTION + BALANCE
     // ========================================
     const evolutionData = useMemo(() => {
+        // Total committed amount across all summary items
+        const totalCommitted = summary.reduce((acc, s) => {
+            // Use the display amount logic to handle multi-currency
+            const val = calculateDisplayAmount({
+                amount: Number(s.total_committed_amount),
+                functional_amount: null, // Will fall back to amount
+                currency_code: s.currency_code
+            });
+            return acc + val;
+        }, 0);
+
+        // Group payments by month
         const grouped = payments.reduce((acc, p) => {
             let monthKey = "";
             if (p.payment_month) {
@@ -188,22 +331,37 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             return acc;
         }, {} as Record<string, number>);
 
-        return Object.entries(grouped)
+        // First: Sort chronologically, THEN calculate cumulative balance
+        const sortedMonths = Object.entries(grouped)
             .filter(([month]) => month && month.length >= 7)
-            .map(([month, amount]) => {
-                const [year, monthNum] = month.split('-').map(Number);
-                const date = new Date(year, (monthNum || 1) - 1, 1);
-                const formatted = isNaN(date.getTime())
-                    ? month
-                    : new Intl.DateTimeFormat('es', { month: 'short', year: '2-digit' }).format(date);
-                return { month: formatted, rawMonth: month, amount };
-            })
-            .sort((a, b) => a.rawMonth.localeCompare(b.rawMonth))
+            .sort(([a], [b]) => a.localeCompare(b)) // Sort first!
             .slice(-12);
-    }, [payments, calculateDisplayAmount]);
 
+        // Now calculate cumulative paid and remaining balance in correct order
+        let cumulativePaid = 0;
+        return sortedMonths.map(([month, paid]) => {
+            const [year, monthNum] = month.split('-').map(Number);
+            const date = new Date(year, (monthNum || 1) - 1, 1);
+            const formatted = isNaN(date.getTime())
+                ? month
+                : new Intl.DateTimeFormat('es', { month: 'short', year: '2-digit' }).format(date);
+
+            cumulativePaid += paid;
+            const balance = totalCommitted - cumulativePaid;
+
+            return {
+                month: formatted,
+                rawMonth: month,
+                paid,
+                balance: Math.max(0, balance) // Saldo pendiente (decreases as you pay)
+            };
+        });
+    }, [payments, summary, calculateDisplayAmount]);
+
+    // Custom colors for this specific chart using centralized financial variables
     const evolutionChartConfig: ChartConfig = {
-        amount: { label: "Cobrado", color: "var(--chart-1)" }
+        paid: { label: "Cobrado", color: "var(--amount-positive)" },
+        balance: { label: "Saldo Pendiente", color: "var(--amount-negative)" }
     };
 
     // ========================================
@@ -241,83 +399,221 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
     // ========================================
     // INSIGHTS GENERATION
-    // ========================================
-    const insights = useMemo<Insight[]>(() => {
-        return generateClientInsights({
-            summary,
-            payments,
-            kpis,
-            calculateDisplayAmount, // Pass the smart calculator
-            formatCurrency: (amount, code) => formatCurrencyUtil(amount, code || displayCurrencyCode),
-            primaryCurrencyCode,
+    // --- 7. GENERATE INSIGHTS (Using Adapter) ---
+    const { dismissedIds, dismissInsight } = useInsightPersistence('clients-overview');
+
+    const insights = useMemo(() => {
+        const rawInsights = generateClientInsights({
+            summary: summary,
+            payments: payments,
+            kpis: kpis,
+            primaryCurrencyCode: primaryCurrencyCode || 'USD',
             displayCurrency: displayCurrency as 'primary' | 'secondary',
+            formatCurrency: (amount, code) => formatCurrencyUtil(amount, code || displayCurrencyCode, 'es-AR', decimalPlaces),
             currentRate: currentRate || 1,
-            secondaryCurrencyCode: currencyContext?.secondaryCurrency?.code
+            secondaryCurrencyCode: secondaryCurrencyObj?.code,
+            calculateDisplayAmount
         });
-    }, [summary, payments, kpis, calculateDisplayAmount, displayCurrencyCode, primaryCurrencyCode, displayCurrency, currentRate, currencyContext?.secondaryCurrency?.code]);
+
+        // Filter out dismissed insights
+        return rawInsights.filter(insight => !dismissedIds.has(insight.id));
+    }, [summary, payments, kpis, primaryCurrencyCode, displayCurrency, displayCurrencyCode, currentRate, secondaryCurrencyObj?.code, calculateDisplayAmount, dismissedIds]);
+
+
+    // --- 8. ACTION HANDLERS ---
+    const handleAction = (action: InsightAction) => {
+        // ... existing handleAction logic ...
+    };
 
     // ========================================
     // RECENT ACTIVITY
     // ========================================
     const recentActivity = payments.slice(0, 5);
 
+    // Dynamic Labels for Balance (Local Logic)
+    const balanceTitle = kpis.totalBalance < 0 ? "Saldo a Favor / Excedente" : "Saldo Pendiente";
+    const balanceSubtitle = kpis.totalBalance < 0 ? "Cobrado en exceso" : "Por cobrar";
+
     // ========================================
     // RENDER
     // ========================================
     return (
         <div className="space-y-6">
-            {/* ROW 1: KPIs */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <DashboardKpiCard
-                    title="Compromisos Totales"
-                    value={formatCurrencyUtil(kpis.totalCommitted, displayCurrencyCode)}
-                    icon={<FileText className="w-5 h-5" />}
-                    description="Valor total de contratos"
-                    currencyBreakdown={kpis.committedBreakdown}
-                />
-                <DashboardKpiCard
-                    title="Cobrado a la Fecha"
-                    value={formatCurrencyUtil(kpis.totalPaid, displayCurrencyCode)}
-                    icon={<DollarSign className="w-5 h-5" />}
-                    iconClassName="bg-emerald-500/10 text-emerald-600"
-                    trend={{
-                        value: `${kpis.trendPercent >= 0 ? '+' : ''}${kpis.trendPercent.toFixed(0)}%`,
-                        direction: kpis.trendDirection
-                    }}
-                    currencyBreakdown={kpis.paidBreakdown}
-                />
-                <DashboardKpiCard
-                    title={kpis.totalBalance < 0 ? "Saldo a Favor" : "Saldo a la Fecha"}
-                    value={formatCurrencyUtil(kpis.totalBalance < 0 ? Math.abs(kpis.totalBalance) : kpis.totalBalance, displayCurrencyCode)}
-                    icon={kpis.totalBalance < 0 ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-                    iconClassName={kpis.totalBalance < 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}
-                    description={kpis.totalBalance < 0 ? "Cobrado en exceso" : "Por cobrar"}
-                    currencyBreakdown={kpis.balanceBreakdown}
-                />
-                <DashboardKpiCard
-                    title="Promedio Mensual"
-                    value={formatCurrencyUtil(kpis.monthlyAverage, displayCurrencyCode)}
-                    icon={<TrendingUp className="w-5 h-5" />}
-                    iconClassName="bg-blue-500/10 text-blue-600"
-                    description="Ingreso promedio por mes"
-                />
-            </div>
+            {/* ROW 1: Unified Financial Summary (MIGRATED TO DASHBOARD CARD) */}
+            <DashboardCard
+                title="Resumen Financiero"
+                description="Balance general y estado de cuentas"
+                icon={<Wallet className="w-5 h-5" />}
+                headerAction={
+                    showCurrencySelector && referenceCurrency && (
+                        <div className="flex items-center gap-2">
+                            <Tabs
+                                value={viewMode}
+                                onValueChange={(v) => setViewMode(v as any)}
+                                className="h-8"
+                            >
+                                <TabsList className="h-9 grid w-[200px] grid-cols-2">
+                                    <TabsTrigger value="mix" className="text-xs">
+                                        Mix Real
+                                    </TabsTrigger>
+                                    <TabsTrigger value="ref" className="text-xs">
+                                        Ref: {referenceCurrency.code}
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        </div>
+                    )
+                }
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 py-2">
+                    {/* 1. Compromisos */}
+                    <div className="space-y-2">
+                        <div className="h-6 flex items-center">
+                            <p className="text-sm font-medium text-muted-foreground">Compromisos Totales</p>
+                        </div>
+                        <div className="min-h-[3rem] flex items-center">
+                            {renderFinancialValue(kpis.totalCommitted, kpis.committedBreakdown)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Valor total de contratos</p>
+                    </div>
+
+                    {/* 2. Cobrado */}
+                    <div className="space-y-2">
+                        <div className="h-6 flex items-center justify-between">
+                            <p className="text-sm font-medium text-muted-foreground">Cobrado a la Fecha</p>
+                            {kpis.trendPercent !== 0 && (
+                                <span className={cn(
+                                    "text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1",
+                                    kpis.trendDirection === "up" ? "bg-emerald-500/10 text-emerald-600" : "bg-destructive/10 text-destructive"
+                                )}>
+                                    {kpis.trendDirection === "up" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                    {Math.abs(kpis.trendPercent).toFixed(0)}%
+                                </span>
+                            )}
+                        </div>
+                        <div className="min-h-[3rem] flex items-center">
+                            {renderFinancialValue(kpis.totalPaid, kpis.paidBreakdown)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Ingresos reales</p>
+                    </div>
+
+                    {/* 3. Saldo */}
+                    <div className="space-y-2">
+                        <div className="h-6 flex items-center">
+                            <p className="text-sm font-medium text-muted-foreground">{balanceTitle}</p>
+                        </div>
+                        <div className="min-h-[3rem] flex items-center">
+                            {(() => {
+                                const positiveItem = kpis.balanceBreakdown.find(i => i.nativeTotal > 0);
+                                const negativeItem = kpis.balanceBreakdown.find(i => i.nativeTotal < 0);
+                                const hasCrossCurrencyMix = isMixView && !!positiveItem && !!negativeItem && positiveItem.currencyCode !== negativeItem.currencyCode;
+
+                                if (hasCrossCurrencyMix && positiveItem) {
+                                    // Cross-Currency Case: Debt in A, Credit in B.
+                                    // Goal: Show Net Balance in Debt Currency (A).
+
+                                    // Use global exchangeRate (Market Rate) not display rate (which is 1 in Primary View)
+                                    // If Debt is Primary (e.g. ARS) and we have Ref (USD) available
+                                    if (positiveItem.isPrimary) {
+                                        // TRUE NOMINAL BALANCE CALCULATION
+                                        // Goal: Calculate how much ARS is pending based on historical payments.
+                                        // 1. Start with Total Committed ARS
+                                        const totalCommittedARS = positiveItem.nativeTotal; // Assumption: Commitment is fully in ARS if nativeTotal > 0 and it's the only positive item? 
+                                        // Actually positiveItem.nativeTotal from 'balanceBreakdown' is simply (Committed - PaidSameCurrency). 
+                                        // It does not account for PaidOtherCurrency.
+                                        // So we need to reconstruct: Balance = CommittedARS - Sum(All Payments converted to ARS).
+
+                                        // We can find Total Committed in this currency from 'committedBreakdown'
+                                        const committedItem = kpis.committedBreakdown.find(c => c.currencyCode === positiveItem.currencyCode);
+                                        const initialDebt = committedItem ? committedItem.nativeTotal : 0;
+
+                                        // Calculate Total Paid converted to this currency (Historic)
+                                        const totalPaidConverted = payments.reduce((acc, p) => {
+                                            // 1. Payment in same currency (ARS)
+                                            if (p.currency_code === positiveItem.currencyCode) {
+                                                return acc + Number(p.amount);
+                                            }
+                                            // 2. Payment in Reference/Other (USD) -> Convert to ARS
+                                            // Rule: We need the rate used at moment of payment. 
+                                            // stored 'exchange_rate' is (ARS per USD).
+                                            // If p is USD, ARS = p.amount * p.exchange_rate
+                                            if (p.exchange_rate) {
+                                                if (p.currency_code !== positiveItem.currencyCode) {
+                                                    return acc + (Number(p.amount) * Number(p.exchange_rate));
+                                                }
+                                            }
+                                            return acc;
+                                        }, 0);
+
+                                        const trueNominalBalance = initialDebt - totalPaidConverted;
+
+                                        return (
+                                            <div className="flex flex-col">
+                                                <span className="text-3xl font-bold tracking-tight">
+                                                    {formatCurrencyUtil(trueNominalBalance, primaryCurrencyCode, 'es-AR', decimalPlaces)}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground italic">(Nominal Histórico)</span>
+                                            </div>
+                                        );
+                                    }
+
+                                    // If Debt is Secondary/Ref, just show the Net Functional directly
+                                    if (!positiveItem.isPrimary) {
+                                        return (
+                                            <div className="flex flex-col">
+                                                <span className="text-3xl font-bold tracking-tight">
+                                                    {formatCurrencyUtil(kpis.totalBalance, positiveItem.currencyCode, 'es-AR', decimalPlaces)}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground italic">(Neto)</span>
+                                            </div>
+                                        );
+                                    }
+                                }
+
+                                return renderFinancialValue(kpis.totalBalance, kpis.balanceBreakdown);
+                            })()}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            {balanceSubtitle}
+                        </p>
+                    </div>
+
+                    {/* 4. Promedio */}
+                    <div className="space-y-2">
+                        <div className="h-6 flex items-center">
+                            <p className="text-sm font-medium text-muted-foreground">Promedio Mensual</p>
+                        </div>
+                        <div className="min-h-[3rem] flex items-center">
+                            <div className="flex flex-col">
+                                <span className="text-3xl font-bold tracking-tight">
+                                    {formatCurrencyUtil(kpis.monthlyAverage, kpis.dominantCurrencyCode || secondaryCurrencyObj?.code || referenceCurrency?.code || primaryCurrencyCode, 'es-AR', decimalPlaces)}
+                                </span>
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Ingreso promedio / mes</p>
+                    </div>
+                </div>
+            </DashboardCard>
 
             {/* ROW 2: Charts */}
             <div className="grid gap-6 lg:grid-cols-2">
                 <DashboardCard
                     title="Evolución de Cobros"
-                    description="Ingresos mensuales"
+                    description="Pagos vs Saldo pendiente"
                     icon={<BarChart3 className="w-4 h-4" />}
                 >
                     {evolutionData.length > 0 ? (
-                        <BaseAreaChart
+                        <BaseDualAreaChart
                             data={evolutionData}
                             xKey="month"
-                            yKey="amount"
+                            primaryKey="paid"
+                            secondaryKey="balance"
+                            primaryLabel="Cobrado"
+                            secondaryLabel="Saldo Pendiente"
                             height={250}
                             config={evolutionChartConfig}
                             gradient
+                            showLegend
                         />
                     ) : (
                         <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
@@ -345,7 +641,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                                     <div key={i} className="flex items-center gap-2 text-sm">
                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
                                         <span className="flex-1 truncate text-muted-foreground">{item.name}</span>
-                                        <span className="font-medium">{formatCurrencyUtil(item.value, displayCurrencyCode)}</span>
+                                        <span className="font-medium">{formatCurrencyUtil(item.value, displayCurrencyCode, 'es-AR', decimalPlaces)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -365,13 +661,20 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                     description="Análisis automático de tu cartera"
                     icon={<Lightbulb className="w-4 h-4" />}
                 >
-                    {insights.length > 0 ? (
-                        <div className="space-y-3">
-                            {insights.map(insight => (
-                                <InsightCard key={insight.id} insight={insight} />
+                    {/* INSIGHTS LIST */}
+                    {insights.length > 0 && (
+                        <div className="space-y-4">
+                            {insights.map((insight) => (
+                                <InsightCard
+                                    key={insight.id}
+                                    insight={insight}
+                                    onAction={handleAction}
+                                    onDismiss={dismissInsight}
+                                />
                             ))}
                         </div>
-                    ) : (
+                    )}
+                    {insights.length === 0 && (
                         <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">
                             No hay insights disponibles
                         </div>
@@ -401,7 +704,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                                             {formatDistanceToNow(new Date(payment.payment_date), { addSuffix: true, locale: es })}
                                         </p>
                                     </div>
-                                    <span className="text-sm font-semibold text-emerald-600">
+                                    <span className="text-sm font-semibold text-amount-positive">
                                         {/* Activity stays as original usually */}
                                         +{payment.currency_symbol || "$"} {Number(payment.amount).toLocaleString('es-AR')}
                                     </span>

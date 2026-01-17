@@ -8,6 +8,7 @@ import { useLayoutStore } from "@/store/layout-store";
 import { UserProfile } from "@/types/user";
 
 import { UserProvider } from "@/context/user-context";
+import { QueryProvider } from "@/providers/query-provider";
 
 export function LayoutSwitcher({
     children,
@@ -36,29 +37,34 @@ export function LayoutSwitcher({
 
     if (layoutMode === 'sidebar') {
         return (
-            <UserProvider user={user}>
-                <SidebarLayout user={user}>
-                    {children}
-                </SidebarLayout>
-                <GlobalDrawer />
-            </UserProvider>
+            <QueryProvider>
+                <UserProvider user={user}>
+                    <SidebarLayout user={user}>
+                        {children}
+                    </SidebarLayout>
+                    <GlobalDrawer />
+                </UserProvider>
+            </QueryProvider>
         );
     }
 
     // Default Layout
     return (
-        <UserProvider user={user}>
-            <div className="flex min-h-screen flex-col bg-background">
-                <Header variant="app" user={user} activeOrgId={activeOrgId} />
-                <GlobalDrawer />
-                <div className="flex-1 flex flex-col">
-                    <main className="flex-1">
-                        <div className="w-full mx-auto max-w-[1800px] p-4 animate-in fade-in py-6">
-                            {children}
-                        </div>
-                    </main>
+        <QueryProvider>
+            <UserProvider user={user}>
+                <div className="flex min-h-screen flex-col bg-background">
+                    <Header variant="app" user={user} activeOrgId={activeOrgId} />
+                    <GlobalDrawer />
+                    <div className="flex-1 flex flex-col">
+                        <main className="flex-1">
+                            <div className="w-full mx-auto max-w-[1800px] p-3 md:p-4 animate-in fade-in py-4 md:py-6">
+                                {children}
+                            </div>
+                        </main>
+                    </div>
                 </div>
-            </div>
-        </UserProvider>
+            </UserProvider>
+        </QueryProvider>
     );
 }
+

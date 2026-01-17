@@ -54,7 +54,6 @@ export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite }: Sitelo
                     title="Bitácora vacía"
                     description="Aún no hay registros en la bitácora de este proyecto. Comienza creando el primero."
                     icon={Quote}
-                    variant="dashed"
                 />
             </div>
         );

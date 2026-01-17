@@ -15,6 +15,7 @@ interface CurrencyProviderProps {
     children: ReactNode;
     currencies: Currency[];
     defaultExchangeRate?: number;
+    decimalPlaces?: number; // Organization preference for decimal display
 }
 
 /**
@@ -28,7 +29,8 @@ interface CurrencyProviderProps {
 export function CurrencyProvider({
     children,
     currencies,
-    defaultExchangeRate = 1
+    defaultExchangeRate = 1,
+    decimalPlaces = 2
 }: CurrencyProviderProps) {
     // Find primary and secondary currencies
     const primaryCurrency = useMemo(() =>
@@ -82,8 +84,8 @@ export function CurrencyProvider({
     // Formatting function
     const formatAmount = useCallback((amount: number, currency?: Currency | string) => {
         const curr = currency || primaryCurrency;
-        return formatCurrencyUtil(amount, curr);
-    }, [primaryCurrency]);
+        return formatCurrencyUtil(amount, curr, 'es-AR', decimalPlaces);
+    }, [primaryCurrency, decimalPlaces]);
 
     // Conversion functions
     const convertToFunctional = useCallback((
@@ -136,6 +138,7 @@ export function CurrencyProvider({
         convertToFunctional,
         convertFromFunctional,
         calculateBreakdown,
+        decimalPlaces,
         isLoading: false,
     }), [
         primaryCurrency,
@@ -148,6 +151,7 @@ export function CurrencyProvider({
         convertToFunctional,
         convertFromFunctional,
         calculateBreakdown,
+        decimalPlaces,
     ]);
 
     return (

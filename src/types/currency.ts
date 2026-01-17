@@ -51,6 +51,9 @@ export interface CurrencyContextValue {
     // Breakdown calculation
     calculateBreakdown: (items: MonetaryAmount[]) => MonetaryBreakdown;
 
+    // Decimal places preference (0, 1, or 2)
+    decimalPlaces: number;
+
     // Loading state
     isLoading: boolean;
 }

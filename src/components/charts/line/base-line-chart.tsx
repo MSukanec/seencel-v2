@@ -9,7 +9,7 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
-import { CHART_COLORS, CHART_DEFAULTS, formatCurrency, formatCompactNumber } from './chart-config';
+import { CHART_COLORS, CHART_DEFAULTS, formatCurrency, formatCompactNumber } from '../chart-config';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 

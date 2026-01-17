@@ -27,6 +27,8 @@ interface DashboardKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     iconClassName?: string;
     /** Optional currency breakdown for bi-monetary KPIs */
     currencyBreakdown?: CurrencyBreakdownItem[];
+    /** Decimal places for formatting (0, 1, or 2) */
+    decimalPlaces?: number;
 }
 
 export function DashboardKpiCard({
@@ -38,10 +40,18 @@ export function DashboardKpiCard({
     iconClassName,
     description,
     currencyBreakdown,
+    decimalPlaces = 2,
     ...props
 }: DashboardKpiCardProps) {
     // Only show breakdown if there are 2+ currencies
     const showBreakdown = currencyBreakdown && currencyBreakdown.length > 1;
+
+    const formatValue = (amount: number) => {
+        return amount.toLocaleString('es-AR', {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
+        });
+    };
 
     return (
         <Card className={cn("overflow-hidden transition-all hover:shadow-md", className)} {...props}>
@@ -61,7 +71,7 @@ export function DashboardKpiCard({
                                         <span key={item.currencyCode}>
                                             {index > 0 && (isNegative ? " - " : " + ")}
                                             {index === 0 && isNegative && "-"}
-                                            {item.symbol} {displayValue.toLocaleString('es-AR')}
+                                            {item.symbol} {formatValue(displayValue)}
                                         </span>
                                     );
                                 })}

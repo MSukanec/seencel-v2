@@ -18,7 +18,7 @@ export function ClientPaymentsTable({ data }: { data: ClientPaymentView[] }) {
             header: "Monto",
             cell: ({ row }) => {
                 return (
-                    <span className="font-mono font-medium text-green-600">
+                    <span className="font-mono font-medium text-amount-positive">
                         {row.original.currency_symbol} {row.original.amount.toLocaleString()}
                     </span>
                 );

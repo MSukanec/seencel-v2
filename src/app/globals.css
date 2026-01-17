@@ -204,12 +204,24 @@
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.744 0.16 126.36);
-  /* Safe HEX Colors */
+  /* Safe HEX Colors for Charts */
   --chart-1: #96cc00;
   --chart-2: #38bdf8;
   --chart-3: #f472b6;
   --chart-4: #c084fc;
   --chart-5: #fb923c;
+  /* ============================================
+     FINANCIAL SEMANTIC COLORS
+     Use these for income/expense/balance displays
+     across tables, charts, KPIs, badges, etc.
+     ============================================ */
+  --amount-positive: #6fb124;
+  /* Soft lime green - Ingresos, Cobrado, Pagado */
+  --amount-negative: #ce4330;
+  /* Terracotta/brick - Egresos, Deuda, Saldo pendiente */
+  --amount-neutral: #71717a;
+  /* Zinc-500 gray - Balance neutral, cero, N/A */
+  /* Sidebar */
   --sidebar: oklch(0.97 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.744 0.16 126.36);
@@ -244,17 +256,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.744 0.16 126.36);
-  /* Safe HEX Colors for Recharts Compatibility */
-  --chart-1: #96cc00;
-  /* Primary Lime */
-  --chart-2: #38bdf8;
-  /* Cyan/Blue-400 */
-  --chart-3: #f472b6;
-  /* Pink-400 */
-  --chart-4: #c084fc;
-  /* Violet-400 */
-  --chart-5: #fb923c;
-  /* Orange-400 */
+  /* Chart colors and financial amounts are in :root only - HEX colors work in both themes */
+  /* Sidebar */
   --sidebar: oklch(0.25 0 0);
   /* HSL 0 0 14 */
   --sidebar-foreground: oklch(0.985 0 0);
@@ -266,20 +269,11 @@
   --sidebar-ring: oklch(0.552 0.016 285.938);
 }
 
-/* Plan Colors */
+/* Plan Colors (universal - don't change per theme) */
 :root {
   --plan-free: oklch(0.744 0.16 126.36);
-  /* Lime Green #96cc00 */
   --plan-pro: oklch(0.55 0.22 260);
-  /* Blue */
   --plan-teams: oklch(0.55 0.25 300);
-  /* Purple/Violet */
-}
-
-.dark {
-  --plan-free: oklch(0.78 0.18 126.36);
-  --plan-pro: oklch(0.65 0.20 260);
-  --plan-teams: oklch(0.65 0.22 300);
 }
 
 /*
@@ -302,6 +296,49 @@
   body[style*="overflow: hidden"] {
     padding-right: 0 !important;
   }
+}
+
+/* ============================================
+   FINANCIAL AMOUNT UTILITY CLASSES
+   Use these instead of text-emerald-* or text-green-*
+   Change the CSS variables above to update everywhere
+   ============================================ */
+.text-amount-positive {
+  color: var(--amount-positive);
+}
+
+.text-amount-negative {
+  color: var(--amount-negative);
+}
+
+.text-amount-neutral {
+  color: var(--amount-neutral);
+}
+
+/* Background variants */
+.bg-amount-positive {
+  background-color: var(--amount-positive);
+}
+
+.bg-amount-negative {
+  background-color: var(--amount-negative);
+}
+
+/* With opacity (for badges, highlights) */
+.bg-amount-positive\/10 {
+  background-color: color-mix(in srgb, var(--amount-positive) 10%, transparent);
+}
+
+.bg-amount-negative\/10 {
+  background-color: color-mix(in srgb, var(--amount-negative) 10%, transparent);
+}
+
+.border-amount-positive\/20 {
+  border-color: color-mix(in srgb, var(--amount-positive) 20%, transparent);
+}
+
+.border-amount-negative\/20 {
+  border-color: color-mix(in srgb, var(--amount-negative) 20%, transparent);
 }
 
 /* Custom Scrollbar - Minimalist & Theme Aware */

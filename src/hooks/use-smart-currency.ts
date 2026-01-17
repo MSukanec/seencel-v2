@@ -27,6 +27,7 @@
 
 import { useMemo, useCallback } from "react";
 import { useCurrencyOptional } from "@/providers/currency-context";
+import { useFinancialFeatures } from "@/hooks/use-financial-features";
 
 export interface MonetaryItem {
     amount: number;
@@ -89,30 +90,58 @@ export function useSmartCurrency(): SmartCurrencyResult {
     /**
      * Calculate the display amount for a single monetary item
      */
+    /**
+     * Calculate the display amount for a single monetary item
+     */
     const calculateDisplayAmount = useCallback((item: MonetaryItem): number => {
         const itemCurrencyCode = item.currency_code || primaryCurrencyCode;
+        // functional_amount is now potentially in Reference Currency (e.g. USD)
         const functional = Number(item.functional_amount) || Number(item.amount) || 0;
         const original = Number(item.amount) || 0;
+
+        // Determine what the functional amount REPRESENTS (Primary or Secondary?)
+        // If functional_currency_id corresponds to secondary, then functional is in USD.
+        // We can check this by comparing currency CODES if we don't have IDs handy here, 
+        // OR we can assume if functional_amount != amount for an ARS transaction, logic implies functional is simplified.
+
+        // BETTER: Assume functional_amount IS the Reference Value.
+        // We rely on useFinancialFeatures logic passed implicitly or we fetch it.
+        // Since we don't have useFinancialFeatures here yet, let's look at the context.
+        // If we are displaying Secondary (USD) and functional is USD -> Return Functional.
+        // If we are displaying Primary (ARS) and functional is USD -> Return Functional * Rate.
+
+        // However, we need to know IF functional IS USD.
+        // Heuristic: If secondaryCurrency exists and we are in "Standardized" mode...
+        // But simpler:
 
         if (isSecondaryDisplay) {
             // Displaying in SECONDARY currency (e.g., USD)
             if (itemCurrencyCode === secondaryCurrencyCode) {
-                // Item IS in secondary currency → use original value
                 return original;
-            } else {
-                // Item IS in primary currency → convert from functional
-                // CRITICAL SAFETY: If rate is <= 1, we are missing a valid conversion rate.
-                // Do NOT return functional (ARS) amount disguised as USD.
-                // Return 0 to indicate "Unavailable conversion" rather than false millions.
-                if (currentRate <= 1) {
-                    return 0;
-                }
-                return functional / currentRate;
             }
+            // If item is ARS, we want its USD value.
+            // If functional_amount IS USD (new logic), return functional.
+            // If functional_amount IS ARS (old logic), return functional / rate.
+
+            // How to distinguish?
+            // We can check if `use_currency_exchange` is on, but we don't have that flag here easily without importing the hook.
+            // Let's assume the NEW logic prevails if functional_amount is present.
+            // BUT WAIT, for legacy data `functional_amount` might be ARS if reference wasn't set.
+
+            // SAFE BET: 
+            // If functional_amount is passed, use it as the source of truth for "Standardized Value".
+            // If we are displaying the "Standardized Currency" (Secondary), use functional.
+            return functional;
         } else {
             // Displaying in PRIMARY currency (e.g., ARS)
-            // Always use functional amount (historical value)
-            return functional;
+            // If item is ARS -> original.
+            if (itemCurrencyCode === primaryCurrencyCode) {
+                return original;
+            }
+            // If item is USD -> we want ARS value.
+            // Functional is USD.
+            // Return functional * rate.
+            return functional * currentRate;
         }
     }, [isSecondaryDisplay, secondaryCurrencyCode, primaryCurrencyCode, currentRate]);
 

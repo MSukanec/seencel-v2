@@ -5,7 +5,7 @@ import {
     Pie,
     Cell
 } from 'recharts';
-import { CHART_DEFAULTS, formatCurrency } from './chart-config';
+import { CHART_DEFAULTS, formatCurrency } from '../chart-config';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';

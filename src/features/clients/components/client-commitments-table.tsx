@@ -17,6 +17,7 @@ import { deleteCommitmentAction } from "@/features/clients/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 
 // ------------------------------------------------------------------------
@@ -43,7 +44,16 @@ export function ClientCommitmentsTable({
     const { openModal, closeModal } = useModal();
     const router = useRouter();
     const [commitmentToDelete, setCommitmentToDelete] = useState<any>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const {
+        optimisticItems: optimisticData,
+        removeItem: optimisticRemove,
+        isPending
+    } = useOptimisticList({
+        items: data,
+        getItemId: (commitment) => commitment.id,
+    });
 
     const handleCreate = () => {
         openModal(
@@ -133,27 +143,30 @@ export function ClientCommitmentsTable({
             header: "Pagado a la fecha",
             cell: ({ row }) => {
                 const commitment = row.original;
-                const commitmentCurrencyCode = commitment.currency?.code || "ARS"; // Fallback to base
                 const connectedPayments = payments.filter(p => p.commitment_id === commitment.id);
+                // Is the commitment in the base/default currency (e.g., ARS)?
+                const isCommitmentInBase = commitment.currency?.is_default === true;
 
+                // ========================================
+                // NOMINAL HISTORIC CALCULATION
+                // Per FINANCIAL_ARCHITECTURE.md Section 5.B
+                // ========================================
                 const paidAmount = connectedPayments.reduce((sum, p) => {
-                    // 1. Same Currency -> Add Face Value
+                    // 1. Same Currency -> Add Face Value directly
                     if (p.currency_id === commitment.currency_id) {
                         return sum + Number(p.amount);
                     }
 
-                    // 2. Different Currency -> specialized logic
-                    // If Target (Commitment) is ARS (Base):
-                    // Payment (USD) -> functional_amount is ARS value.
-                    if (commitmentCurrencyCode !== 'USD') {
-                        return sum + (p.functional_amount || 0);
-                    }
+                    // 2. Different Currency -> Convert using PAYMENT's historic exchange_rate
+                    const paymentRate = Number(p.exchange_rate) || 1;
 
-                    // If Target (Commitment) is USD:
-                    // Payment (ARS) -> functional_amount is ARS. Need to divide by rate.
-                    // We use commitment.exchange_rate as the reference "Deal Rate" if generic conversion unavailable
-                    const rate = commitment.exchange_rate || 1;
-                    return sum + ((p.functional_amount || 0) / rate);
+                    if (isCommitmentInBase) {
+                        // Commitment is ARS, Payment is USD -> USD * rate = ARS
+                        return sum + (Number(p.amount) * paymentRate);
+                    } else {
+                        // Commitment is USD, Payment is ARS -> ARS / rate = USD
+                        return sum + (Number(p.amount) / paymentRate);
+                    }
                 }, 0);
 
                 const currencySymbol = commitment.currency?.symbol || "$";
@@ -170,18 +183,30 @@ export function ClientCommitmentsTable({
             header: "Saldo",
             cell: ({ row }) => {
                 const commitment = row.original;
-                const commitmentCurrencyCode = commitment.currency?.code || "ARS";
                 const connectedPayments = payments.filter(p => p.commitment_id === commitment.id);
+                // Is the commitment in the base/default currency (e.g., ARS)?
+                const isCommitmentInBase = commitment.currency?.is_default === true;
 
+                // ========================================
+                // NOMINAL HISTORIC CALCULATION
+                // Per FINANCIAL_ARCHITECTURE.md Section 5.B
+                // ========================================
                 const paidAmount = connectedPayments.reduce((sum, p) => {
+                    // 1. Same Currency -> Add Face Value directly
                     if (p.currency_id === commitment.currency_id) {
                         return sum + Number(p.amount);
                     }
-                    if (commitmentCurrencyCode !== 'USD') {
-                        return sum + (p.functional_amount || 0);
+
+                    // 2. Different Currency -> Convert using PAYMENT's historic exchange_rate
+                    const paymentRate = Number(p.exchange_rate) || 1;
+
+                    if (isCommitmentInBase) {
+                        // Commitment is ARS, Payment is USD -> USD * rate = ARS
+                        return sum + (Number(p.amount) * paymentRate);
+                    } else {
+                        // Commitment is USD, Payment is ARS -> ARS / rate = USD
+                        return sum + (Number(p.amount) / paymentRate);
                     }
-                    const rate = commitment.exchange_rate || 1;
-                    return sum + ((p.functional_amount || 0) / rate);
                 }, 0);
 
                 const total = Number(commitment.amount);
@@ -191,7 +216,7 @@ export function ClientCommitmentsTable({
                 return (
                     <span className={cn(
                         "font-mono font-bold",
-                        balance > 0 ? "text-orange-600" : "text-green-600"
+                        balance > 0 ? "text-amount-negative" : "text-amount-positive"
                     )}>
                         {currencySymbol} {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </span>
@@ -220,7 +245,7 @@ export function ClientCommitmentsTable({
         <>
             <DataTable
                 columns={columns}
-                data={data}
+                data={optimisticData}
                 searchKey="client.contact.full_name"
                 searchPlaceholder="Buscar por cliente..."
                 enableRowActions={true}
@@ -257,19 +282,21 @@ export function ClientCommitmentsTable({
             <DeleteConfirmationDialog
                 open={!!commitmentToDelete}
                 onOpenChange={(open) => !open && setCommitmentToDelete(null)}
-                onConfirm={async () => {
+                onConfirm={() => {
                     if (!commitmentToDelete) return;
-                    setIsDeleting(true);
-                    try {
-                        await deleteCommitmentAction(commitmentToDelete.id);
-                        toast.success("Compromiso eliminado");
-                        router.refresh();
-                    } catch (error) {
-                        toast.error("Error al eliminar compromiso");
-                    } finally {
-                        setIsDeleting(false);
-                        setCommitmentToDelete(null);
-                    }
+                    const commitmentId = commitmentToDelete.id;
+                    setCommitmentToDelete(null); // Close dialog immediately
+
+                    // 🚀 OPTIMISTIC DELETE: Disappears NOW, server in background
+                    optimisticRemove(commitmentId, async () => {
+                        try {
+                            await deleteCommitmentAction(commitmentId);
+                            toast.success("Compromiso eliminado");
+                        } catch (error) {
+                            toast.error("Error al eliminar compromiso");
+                            router.refresh(); // Recover on error
+                        }
+                    });
                 }}
                 title="¿Eliminar compromiso?"
                 description={
@@ -278,7 +305,7 @@ export function ClientCommitmentsTable({
                     </span>
                 }
                 confirmLabel="Eliminar"
-                isDeleting={isDeleting}
+                isDeleting={isPending}
             />
         </>
     );

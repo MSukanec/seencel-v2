@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Archive, Trash2, RotateCcw, Pencil } from "lucide-react";
 import { updateCard, deleteCard } from "@/features/kanban/actions";
-import { useTransition } from "react";
+import { useTransition, useOptimistic } from "react";
 import { toast } from "sonner";
 import { useModal } from "@/providers/modal-store";
 
@@ -38,19 +38,33 @@ interface KanbanCardItemProps {
 export function KanbanCardItem({ card, members = [], onClick, isDragging }: KanbanCardItemProps) {
     const { openModal, closeModal } = useModal();
     const [isPending, startTransition] = useTransition();
-    const priorityConfig = PRIORITY_CONFIG[card.priority];
-    const hasDueDate = !!card.due_date;
-    const isOverdue = hasDueDate && isPast(new Date(card.due_date!)) && !card.is_completed;
-    const isDueToday = hasDueDate && isToday(new Date(card.due_date!));
 
+    // 🚀 OPTIMISTIC UI: Instant archive/restore visual feedback
+    const [optimisticCard, setOptimisticCard] = useOptimistic(
+        card,
+        (currentCard, updates: Partial<KanbanCard>) => ({ ...currentCard, ...updates })
+    );
+
+    const priorityConfig = PRIORITY_CONFIG[optimisticCard.priority];
+    const hasDueDate = !!optimisticCard.due_date;
+    const isOverdue = hasDueDate && isPast(new Date(optimisticCard.due_date!)) && !optimisticCard.is_completed;
+    const isDueToday = hasDueDate && isToday(new Date(optimisticCard.due_date!));
+
+    // 🚀 OPTIMISTIC ARCHIVE: Visual feedback instantly, server in background
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();
+        const newArchived = !optimisticCard.is_archived;
+
         startTransition(async () => {
+            // Optimistic update - UI changes NOW
+            setOptimisticCard({ is_archived: newArchived });
+
             try {
-                await updateCard(card.id, { is_archived: !card.is_archived });
-                toast.success(card.is_archived ? "Tarjeta restaurada" : "Tarjeta archivada");
+                await updateCard(card.id, { is_archived: newArchived });
+                toast.success(newArchived ? "Tarjeta archivada" : "Tarjeta restaurada");
             } catch (error) {
                 toast.error("Error al actualizar la tarjeta");
+                // React reverts optimistic update on error
             }
         });
     };
@@ -96,7 +110,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging }: Kanb
                 "group relative bg-background border rounded-lg p-3 cursor-pointer",
                 "hover:border-primary/50 transition-all duration-200",
                 isDragging && "shadow-lg rotate-2 scale-105 opacity-90",
-                (card.is_completed || card.is_archived) && "opacity-60"
+                (optimisticCard.is_completed || optimisticCard.is_archived) && "opacity-60"
             )}
         >
             {/* Cover Color */}
@@ -124,7 +138,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging }: Kanb
                             Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleArchive}>
-                            {card.is_archived ? (
+                            {optimisticCard.is_archived ? (
                                 <>
                                     <RotateCcw className="h-4 w-4 mr-2" />
                                     Restaurar

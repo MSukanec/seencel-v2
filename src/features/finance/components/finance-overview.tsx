@@ -126,7 +126,7 @@ export function FinanceOverview({ movements }: FinanceOverviewProps) {
                                         </td>
                                         <td className={cn(
                                             "px-6 py-4 text-right font-medium",
-                                            isPositive ? "text-emerald-600" : "text-foreground"
+                                            isPositive ? "text-amount-positive" : "text-foreground"
                                         )}>
                                             <div className="flex flex-col items-end">
                                                 <span>

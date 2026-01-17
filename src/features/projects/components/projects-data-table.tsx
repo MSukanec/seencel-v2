@@ -17,6 +17,7 @@ import { CreateProjectButton } from "./create-project-button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ProjectCard } from "@/features/projects/components/project-card";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 import { Circle, Timer, CheckCircle2, Ban, FolderSearch } from "lucide-react";
 import { DataTableEmptyState } from "@/components/shared/data-table/data-table-empty-state";
@@ -38,7 +39,16 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
     const { actions } = useLayoutStore();
     const { openModal, closeModal } = useModal();
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const {
+        optimisticItems: optimisticProjects,
+        removeItem: optimisticRemove,
+        isPending
+    } = useOptimisticList({
+        items: projects,
+        getItemId: (project) => project.id,
+    });
 
     const statusOptions = [
         {
@@ -63,13 +73,13 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
         },
     ];
 
-    const typeOptions = Array.from(new Set(projects.map(p => p.project_type_name).filter(Boolean)))
+    const typeOptions = Array.from(new Set(optimisticProjects.map(p => p.project_type_name).filter(Boolean)))
         .map(type => ({
             label: type!,
             value: type!,
         }));
 
-    const modalityOptions = Array.from(new Set(projects.map(p => p.project_modality_name).filter(Boolean)))
+    const modalityOptions = Array.from(new Set(optimisticProjects.map(p => p.project_modality_name).filter(Boolean)))
         .map(modality => ({
             label: modality!,
             value: modality!,
@@ -104,24 +114,26 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
         );
     };
 
-    const handleConfirmDelete = async () => {
+    // 🚀 OPTIMISTIC DELETE: Project disappears instantly, server in background
+    const handleConfirmDelete = () => {
         if (!projectToDelete) return;
+        const projectId = projectToDelete.id;
+        setProjectToDelete(null); // Close dialog immediately
 
-        setIsDeleting(true);
-        try {
-            const result = await deleteProject(projectToDelete.id);
-            if (result.success) {
-                toast.success("Proyecto eliminado correctamente");
-                setProjectToDelete(null);
-                router.refresh(); // Refresh after successful deletion
-            } else {
-                toast.error(result.error || "Error al eliminar el proyecto");
+        optimisticRemove(projectId, async () => {
+            try {
+                const result = await deleteProject(projectId);
+                if (result.success) {
+                    toast.success("Proyecto eliminado correctamente");
+                } else {
+                    toast.error(result.error || "Error al eliminar el proyecto");
+                    router.refresh(); // Recover on error
+                }
+            } catch (error) {
+                toast.error("Error inesperado al eliminar");
+                router.refresh();
             }
-        } catch (error) {
-            toast.error("Error inesperado al eliminar");
-        } finally {
-            setIsDeleting(false);
-        }
+        });
     };
 
     const handleDelete = (project: Project) => {
@@ -239,7 +251,7 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
         <>
             <DataTable
                 columns={columns}
-                data={projects}
+                data={optimisticProjects}
                 searchPlaceholder="Buscar proyectos..."
                 onRowClick={handleNavigateToProject}
                 toolbar={<CreateProjectButton organizationId={organizationId} />}
@@ -322,7 +334,7 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                 validationText={projectToDelete?.name}
                 confirmLabel="Eliminar Proyecto"
                 deletingLabel="Eliminando..."
-                isDeleting={isDeleting}
+                isDeleting={isPending}
             />
         </>
     );

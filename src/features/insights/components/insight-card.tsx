@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
-import { Lightbulb, AlertTriangle, CheckCircle, Info, ChevronRight, TrendingUp, TrendingDown, PieChart, Repeat, Calendar, Zap, Activity, Layers, Target, Wallet, Scale, AlertCircle } from "lucide-react";
+import { Lightbulb, AlertTriangle, CheckCircle, Info, ChevronRight, TrendingUp, TrendingDown, PieChart, Repeat, Calendar, Zap, Activity, Layers, Target, Wallet, Scale, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Insight, InsightAction } from "../types";
 
 interface InsightCardProps {
     insight: Insight;
     onAction?: (action: InsightAction) => void;
+    onDismiss?: (insightId: string) => void;
 }
 
-export function InsightCard({ insight, onAction }: InsightCardProps) {
+export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) {
     const getIcon = () => {
         // First try to match by string name (legacy compat)
         if (insight.icon) {
@@ -43,8 +44,8 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
     const getColors = () => {
         switch (insight.severity) {
             case 'warning': return "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400";
-            case 'critical': return "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-400";
-            case 'positive': return "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400";
+            case 'critical': return "border-amount-negative/20 bg-amount-negative/10 text-amount-negative";
+            case 'positive': return "border-amount-positive/20 bg-amount-positive/10 text-amount-positive";
             default: return "border-blue-500/20 bg-blue-500/5 text-blue-700 dark:text-blue-400";
         }
     };
@@ -61,11 +62,23 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
     };
 
     return (
-        <div className={cn("p-4 rounded-xl border flex items-start gap-4 transition-all hover:bg-muted/30", getColors())}>
+        <div className={cn("relative p-4 rounded-xl border flex items-start gap-4 transition-all hover:bg-muted/30 group", getColors())}>
+            {onDismiss && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDismiss(insight.id);
+                    }}
+                    className="absolute top-2 right-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity text-foreground/50 hover:text-foreground"
+                    aria-label="Descartar"
+                >
+                    <X className="w-3.5 h-3.5" />
+                </button>
+            )}
             <div className="mt-0.5">
                 <Icon className="w-5 h-5" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 pr-4">
                 <div className="flex justify-between items-start gap-2">
                     <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
                 </div>

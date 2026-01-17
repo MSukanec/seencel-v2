@@ -4,9 +4,7 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { BarChart as BarChartIcon, Clock, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardData } from "@/features/admin/queries";
-import { BaseBarChart } from "@/components/charts/base-bar-chart";
-import { BaseAreaChart } from "@/components/charts/base-area-chart";
-import { BasePieChart } from "@/components/charts/base-pie-chart";
+import { LazyBarChart as BaseBarChart, LazyAreaChart as BaseAreaChart, LazyPieChart as BasePieChart } from "@/components/charts/lazy-charts";
 
 interface AdminChartsProps {
     charts: DashboardData['charts'];

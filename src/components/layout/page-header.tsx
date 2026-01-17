@@ -3,8 +3,8 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ProjectSelectorWrapper } from "@/components/layout/project-selector-wrapper";
-import { CurrencySelector } from "@/components/ui/currency-selector";
-import { useCurrencyOptional } from "@/providers/currency-context";
+
+
 
 
 export interface BreadcrumbItem {
@@ -41,17 +41,7 @@ interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     icon?: React.ReactElement
 }
 
-// Helper: Only show currency selector if organization has multiple currencies
-function CurrencySelectorWrapper() {
-    const currencyContext = useCurrencyOptional();
 
-    // Only show if we have at least 2 currencies (bi-currency mode)
-    if (!currencyContext || currencyContext.allCurrencies.length < 2) {
-        return null;
-    }
-
-    return <CurrencySelector />;
-}
 
 export function PageHeader({
     breadcrumbs,
@@ -108,8 +98,7 @@ export function PageHeader({
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Currency Selector - only show if bi-currency is enabled */}
-                        <CurrencySelectorWrapper />
+
 
                         <ProjectSelectorWrapper />
 

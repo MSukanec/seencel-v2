@@ -32,8 +32,8 @@ export function InsightCard({ insight }: InsightCardProps) {
     const getColors = () => {
         switch (insight.severity) {
             case 'warning': return "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400";
-            case 'critical': return "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-400";
-            case 'positive': return "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400";
+            case 'critical': return "border-amount-negative/20 bg-amount-negative/10 text-amount-negative";
+            case 'positive': return "border-amount-positive/20 bg-amount-positive/10 text-amount-positive";
             default: return "border-blue-500/20 bg-blue-500/5 text-blue-700 dark:text-blue-400";
         }
     };

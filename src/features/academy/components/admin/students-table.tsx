@@ -15,6 +15,7 @@ import { deleteEnrollment } from "@/actions/enrollment-actions";
 import type { AdminCourseEnrollment, AdminCourse } from "@/features/admin/academy-queries";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 interface StudentsDataTableProps {
     enrollments: AdminCourseEnrollment[];
@@ -80,6 +81,15 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
     const { openModal, closeModal } = useModal();
     const router = useRouter();
 
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const {
+        optimisticItems: optimisticEnrollments,
+        removeItem: optimisticRemove
+    } = useOptimisticList({
+        items: enrollments,
+        getItemId: (enrollment) => enrollment.id,
+    });
+
     const handleSuccess = () => {
         router.refresh();
         closeModal();
@@ -107,7 +117,8 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
         );
     };
 
-    const handleDelete = async (enrollment: AdminCourseEnrollment) => {
+    // 🚀 OPTIMISTIC DELETE: Enrollment disappears instantly
+    const handleDelete = (enrollment: AdminCourseEnrollment) => {
         openModal(
             <div className="flex flex-col gap-4">
                 <p>
@@ -124,15 +135,20 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
                     </Button>
                     <Button
                         variant="destructive"
-                        onClick={async () => {
-                            try {
-                                await deleteEnrollment(enrollment.id);
-                                router.refresh();
-                                closeModal();
-                                toast.success("Inscripción eliminada");
-                            } catch (error) {
-                                toast.error("Error al eliminar inscripción");
-                            }
+                        onClick={() => {
+                            const enrollmentId = enrollment.id;
+                            closeModal(); // Close modal immediately
+
+                            // 🚀 Optimistic update - enrollment disappears NOW
+                            optimisticRemove(enrollmentId, async () => {
+                                try {
+                                    await deleteEnrollment(enrollmentId);
+                                    toast.success("Inscripción eliminada");
+                                } catch (error) {
+                                    toast.error("Error al eliminar inscripción");
+                                    router.refresh(); // Recover on error
+                                }
+                            });
                         }}
                     >
                         Eliminar
@@ -302,7 +318,7 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
     return (
         <DataTable
             columns={columns}
-            data={enrollments}
+            data={optimisticEnrollments}
             searchPlaceholder="Buscar alumnos..."
             enableRowSelection={true}
             enableRowActions={true}

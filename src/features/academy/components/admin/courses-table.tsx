@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic } from "react";
 import {
     Table,
     TableBody,
@@ -26,12 +26,14 @@ import { useLocale } from "next-intl";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AdminCourse } from "@/features/admin/academy-queries";
+import { toast } from "sonner";
+import { deleteCourse } from "@/features/academy/course-actions";
+import { useRouter } from "next/navigation";
 
 // Modals
 import { useModal } from "@/providers/modal-store";
 import { CreateCourseForm } from "./create-course-form";
 import { GeneralForm, type EditableCourseData } from "@/features/academy/components/admin/course-details/general-form";
-import { DeleteCourseConfirm } from "./delete-course-confirm";
 
 function getStatusBadge(status: string) {
     switch (status) {
@@ -81,7 +83,14 @@ function formatCurrency(amount: number | null): string {
 
 export function CoursesTable({ courses, instructors }: { courses: AdminCourse[], instructors: { id: string; name: string; avatar_path: string | null }[] }) {
     const locale = useLocale();
-    const { openModal } = useModal();
+    const router = useRouter();
+    const { openModal, closeModal } = useModal();
+
+    // 🚀 OPTIMISTIC UI: Instant visual updates for delete
+    const [optimisticCourses, setOptimisticCourses] = useOptimistic(
+        courses,
+        (current, removedId: string) => current.filter(c => c.id !== removedId)
+    );
 
     const handleCreate = () => {
         openModal(
@@ -121,9 +130,46 @@ export function CoursesTable({ courses, instructors }: { courses: AdminCourse[],
         );
     };
 
+    // 🚀 OPTIMISTIC DELETE: Course disappears instantly
     const handleDelete = (course: AdminCourse) => {
         openModal(
-            <DeleteCourseConfirm courseId={course.id} courseTitle={course.title} />,
+            <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted-foreground">
+                    ¿Estás seguro que deseas eliminar el curso <strong>{course.title}</strong>?
+                    <br />
+                    Esta acción lo marcará como eliminado pero no borrará los datos permanentemente.
+                </p>
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={closeModal}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            const courseId = course.id;
+                            closeModal(); // Close modal immediately
+
+                            // 🚀 Optimistic update - course disappears NOW
+                            setOptimisticCourses(courseId);
+
+                            // Server action in background
+                            deleteCourse(courseId).then(result => {
+                                if (result.success) {
+                                    toast.success("Curso eliminado correctamente");
+                                } else {
+                                    toast.error(result.message);
+                                    router.refresh(); // Recover on error
+                                }
+                            }).catch(() => {
+                                toast.error("Error al eliminar el curso");
+                                router.refresh();
+                            });
+                        }}
+                    >
+                        Eliminar
+                    </Button>
+                </div>
+            </div>,
             {
                 title: "Eliminar Curso",
                 description: "Esta acción no se puede deshacer.",
@@ -155,14 +201,14 @@ export function CoursesTable({ courses, instructors }: { courses: AdminCourse[],
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {courses.length === 0 ? (
+                        {optimisticCourses.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                     No hay cursos creados
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            courses.map((course) => (
+                            optimisticCourses.map((course) => (
                                 <TableRow key={course.id}>
                                     <TableCell>
                                         <div>
