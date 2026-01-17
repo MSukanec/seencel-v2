@@ -201,3 +201,144 @@ const file = await compressImage(rawFile, 'avatar');
 - [ ] **MIME**: Mapped file types for DB?
 - [ ] **Tables**: Used `DataTable`?
 - [ ] **I18n**: No hardcoded strings?
+- [ ] **Performance**: Used optimistic UI for mutations? (NEW)
+- [ ] **Tabs**: Used local state, not router.replace()? (NEW)
+
+---
+
+## 10. Performance & High-Speed UX ⚡
+
+### MANDATORY: All new features MUST follow these patterns for instant user feedback.
+
+---
+
+### 10.1 Optimistic UI (Delete/Archive Operations)
+
+**Hook:** `@/hooks/use-optimistic-list`
+
+```tsx
+import { useOptimisticList } from "@/hooks/use-optimistic-list";
+
+// In component
+const { optimisticItems, removeOptimistically, isPending } = useOptimisticList(items);
+
+// On delete
+const handleDelete = async (id: string) => {
+    removeOptimistically(id); // Item disappears INSTANTLY
+    const result = await deleteAction(id);
+    if (!result.success) {
+        router.refresh(); // Rollback on error
+    }
+};
+
+// Render with optimistic data
+<DataTable data={optimisticItems} />
+```
+
+**Rule:** NEVER show loading spinner for delete. Item must vanish immediately.
+
+---
+
+### 10.2 React Query (Caching & Invalidation)
+
+**Provider:** `@/providers/query-provider` (wraps `LayoutSwitcher`)
+
+**Hooks:**
+- `@/hooks/use-query-patterns` - Standardized query keys
+- `@/hooks/use-smart-refresh` - Hybrid refresh pattern
+
+```tsx
+import { useSmartRefresh } from "@/hooks/use-smart-refresh";
+import { queryKeys } from "@/hooks/use-query-patterns";
+
+const { invalidate, refresh } = useSmartRefresh();
+
+// After mutation:
+invalidate(queryKeys.clients(projectId)); // Invalidate specific cache
+// OR
+refresh(); // Full page refresh (legacy, avoid)
+```
+
+**Query Keys** (standardized in `use-query-patterns.ts`):
+- `queryKeys.clients(projectId)`
+- `queryKeys.projects(orgId)`
+- `queryKeys.kanbanCards(boardId)`
+- etc.
+
+---
+
+### 10.3 Lazy Loading (Charts & Heavy Components)
+
+**Location:** `@/components/charts/lazy-charts.tsx`
+
+```tsx
+// ❌ WRONG - Loads entire Recharts bundle immediately
+import { BaseAreaChart } from "@/components/charts/area/base-area-chart";
+
+// ✅ CORRECT - Lazy loads ~200KB only when rendered
+import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts";
+```
+
+**Available Lazy Components:**
+- `LazyAreaChart`, `LazyDualAreaChart`
+- `LazyBarChart`, `LazyPieChart`, `LazyDonutChart`
+- `LazyLineChart`
+
+**Rule:** ALWAYS use lazy versions for charts in dashboards and overviews.
+
+---
+
+### 10.4 Tab Navigation (Instant Switching)
+
+**Problem:** `router.replace()` causes full page re-fetch = SLOW.
+
+**Solution:** Local state + shallow URL update.
+
+```tsx
+// ❌ WRONG - Causes full re-fetch
+const handleTabChange = (value: string) => {
+    router.replace(`${pathname}?view=${value}`);
+};
+
+// ✅ CORRECT - Instant tab switch
+const [activeTab, setActiveTab] = useState(defaultTab);
+
+const handleTabChange = (value: string) => {
+    setActiveTab(value); // Instant UI update
+    window.history.replaceState(null, '', `${pathname}?view=${value}`); // Shallow URL
+};
+
+<Tabs value={activeTab} onValueChange={handleTabChange}>
+```
+
+---
+
+### 10.5 Prefetching (Navigation)
+
+**Location:** `@/components/layout/sidebar-button.tsx`
+
+All sidebar links prefetch on hover via `router.prefetch()`.
+
+```tsx
+// Already implemented in SidebarButton
+const handleMouseEnter = useCallback(() => {
+    if (href) router.prefetch(href);
+}, [href, router]);
+```
+
+---
+
+### 10.6 Animation Durations
+
+**Standard:** `duration-150` (150ms) for sidebar/drawer animations.
+
+**Rule:** NEVER use `duration-300` for navigation animations. It feels sluggish.
+
+---
+
+### Performance Checklist (Add to every PR)
+- [ ] Delete operations use `useOptimisticList`?
+- [ ] Charts use `Lazy*` components?
+- [ ] Tab switching uses local state, not `router.replace()`?
+- [ ] Animations are `duration-150` or faster?
+

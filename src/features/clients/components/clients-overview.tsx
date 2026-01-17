@@ -305,7 +305,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             // Use the display amount logic to handle multi-currency
             const val = calculateDisplayAmount({
                 amount: Number(s.total_committed_amount),
-                functional_amount: null, // Will fall back to amount
+                functional_amount: Number(s.total_functional_committed_amount) || null, // Use actual functional amount
                 currency_code: s.currency_code
             });
             return acc + val;
