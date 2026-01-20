@@ -1,5 +1,7 @@
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { HelpCircle } from "lucide-react";
 import React from "react";
 
 interface FormGroupProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -24,6 +26,11 @@ interface FormGroupProps extends React.HTMLAttributes<HTMLDivElement> {
      */
     required?: boolean;
     /**
+     * Tooltip content shown on hover of help icon (?)
+     * Can be a string or ReactNode for rich content (links, etc.)
+     */
+    tooltip?: React.ReactNode;
+    /**
      * Form field content (input, select, etc.)
      */
     children: React.ReactNode;
@@ -35,6 +42,7 @@ export function FormGroup({
     error,
     helpText,
     required,
+    tooltip,
     children,
     className,
     ...props
@@ -51,10 +59,32 @@ export function FormGroup({
     return (
         <div className={cn("flex flex-col gap-2", className)} {...props}>
             {label && (
-                <Label htmlFor={htmlFor} className="text-foreground/80">
-                    {label}
-                    {required && <span className="text-primary ml-1">*</span>}
-                </Label>
+                <div className="flex items-center gap-1.5">
+                    <Label htmlFor={htmlFor} className="text-foreground/80">
+                        {label}
+                        {required && <span className="text-primary ml-1">*</span>}
+                    </Label>
+                    {tooltip && (
+                        <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span
+                                        className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors cursor-help"
+                                        tabIndex={-1}
+                                    >
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                    side="top"
+                                    className="max-w-xs text-sm [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
+                                >
+                                    {tooltip}
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
             )}
 
             {/* Clone children to add aria attributes */}
@@ -84,3 +114,4 @@ export function FormGroup({
         </div>
     );
 }
+

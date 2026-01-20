@@ -16,7 +16,7 @@ MIEMBROS {ACCIÓN} {TABLA}
 |--------|-------------|---------|
 | VEN | SELECT | `MIEMBROS VEN PROJECTS` |
 | CREAN | INSERT | `MIEMBROS CREAN CONTACTS` |
-| EDITAN | UPDATE | `MIEMBROS EDITAN CONTACTS` |
+| ACTUALIZAN | UPDATE | `MIEMBROS ACTUALIZAN CONTACTS` |
 
 > **IMPORTANTE**: No se crean políticas DELETE porque usamos soft delete (`is_deleted = true`).
 

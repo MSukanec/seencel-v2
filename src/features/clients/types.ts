@@ -242,3 +242,43 @@ export const clientPortalSettingsSchema = z.object({
 });
 
 export type ClientPortalSettings = z.infer<typeof clientPortalSettingsSchema>;
+
+// ==========================================
+// Financial Data (from getOrganizationFinancialData)
+// ==========================================
+
+export interface OrganizationCurrency {
+    id: string;
+    name: string;
+    code: string;
+    symbol: string;
+    is_default: boolean;
+    exchange_rate: number;
+}
+
+export interface OrganizationWallet {
+    id: string;
+    wallet_id: string;
+    name: string;
+    balance: number;
+    currency_symbol: string;
+    currency_code?: string;
+    is_default: boolean;
+}
+
+export interface OrganizationFinancialData {
+    defaultCurrencyId: string | null;
+    defaultWalletId: string | null;
+    defaultTaxLabel: string | null;
+    currencies: OrganizationCurrency[];
+    wallets: OrganizationWallet[];
+    preferences: {
+        default_currency_id?: string | null;
+        functional_currency_id?: string | null;
+        default_wallet_id?: string | null;
+        currency_decimal_places: number;
+        use_currency_exchange?: boolean | null;
+        insight_config?: any;
+        default_tax_label?: string | null;
+    } | null;
+}

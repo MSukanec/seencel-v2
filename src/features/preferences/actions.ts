@@ -3,10 +3,35 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
+// Query to get user's saved timezone
+export async function getUserTimezone(): Promise<string | null> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!publicUser) return null;
+
+    const { data: prefs } = await supabase
+        .from('user_preferences')
+        .select('timezone')
+        .eq('user_id', publicUser.id)
+        .single();
+
+    return prefs?.timezone || null;
+}
+
 export type UserPreferencesUpdate = {
     language?: 'en' | 'es';
     theme?: 'light' | 'dark' | 'system';
     layout?: 'default' | 'sidebar';
+    timezone?: string;
 };
 
 export async function updateUserPreferences(preferences: UserPreferencesUpdate) {
@@ -27,32 +52,33 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
     const userId = publicUser.id;
 
     // Build update object dynamically
-    const updateData: any = {};
+    const updateData: Record<string, any> = {};
     if (preferences.language) updateData.language = preferences.language;
-    if (preferences.theme) updateData.theme = preferences.theme; // Note: Theme might be client-only usually, but storing it is good
+    if (preferences.theme) updateData.theme = preferences.theme;
+    if (preferences.timezone) updateData.timezone = preferences.timezone;
     if (preferences.layout) {
-        // Map to DB values for compatibility
-        // default -> lab
-        // sidebar -> experimental
         updateData.layout = preferences.layout === 'default' ? 'lab' : 'experimental';
     }
 
-    // Upsert public.user_preferences
-    const { error } = await supabase
+    console.log("[updateUserPreferences] userId:", userId, "updateData:", updateData);
+
+    // Update existing user_preferences row
+    const { data, error } = await supabase
         .from('user_preferences')
-        .upsert({
-            user_id: userId,
-            ...updateData,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        .update(updateData)
+        .eq('user_id', userId)
+        .select()
+        .single();
 
     if (error) {
-        console.error("User Preferences Update Error:", error);
+        console.error("[updateUserPreferences] Error:", error);
         throw new Error("Failed to update preferences");
     }
 
+    console.log("[updateUserPreferences] Updated:", data);
+
     revalidatePath('/settings');
-    revalidatePath('/', 'layout'); // Reset layout cache 
+    revalidatePath('/', 'layout');
 
     return { success: true };
 }

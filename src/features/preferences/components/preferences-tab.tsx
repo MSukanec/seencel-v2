@@ -1,20 +1,27 @@
 
 "use client";
 
+import { useState } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Monitor, LayoutDashboard, PanelLeft } from "lucide-react";
+import { Monitor, LayoutDashboard, PanelLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/store/layout-store";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { useTransition } from "react";
 import { updateUserPreferences } from "@/features/preferences/actions";
+import { TIMEZONES, detectBrowserTimezone } from "@/lib/timezone-data";
+import { toast } from "sonner";
 
-export function PreferencesTab() {
+interface PreferencesTabProps {
+    initialTimezone?: string | null;
+}
+
+export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
     const { setTheme, theme } = useTheme();
     const { layoutMode, actions: { setLayoutMode } } = useLayoutStore();
     const t = useTranslations("Settings");
@@ -22,6 +29,9 @@ export function PreferencesTab() {
     const router = useRouter();
     const pathname = usePathname();
     const [isPending, startTransition] = useTransition();
+
+    // Timezone state - use saved value or fallback to browser detection
+    const [timezone, setTimezone] = useState<string>(initialTimezone || detectBrowserTimezone());
 
     // Handle Language Change
     const onLanguageChange = (newLocale: string) => {
@@ -43,6 +53,17 @@ export function PreferencesTab() {
     const onLayoutChange = (newLayout: 'default' | 'sidebar') => {
         setLayoutMode(newLayout);
         updateUserPreferences({ layout: newLayout });
+    };
+
+    // Handle Timezone Change
+    const onTimezoneChange = async (newTimezone: string) => {
+        setTimezone(newTimezone);
+        try {
+            await updateUserPreferences({ timezone: newTimezone });
+            toast.success("Zona horaria actualizada");
+        } catch {
+            toast.error("Error al actualizar zona horaria");
+        }
     };
 
     return (
@@ -67,6 +88,33 @@ export function PreferencesTab() {
                         <SelectContent align="end">
                             <SelectItem value="en">{t('Preferences.language.options.en')}</SelectItem>
                             <SelectItem value="es">{t('Preferences.language.options.es')}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <Separator />
+
+                {/* TIMEZONE */}
+                <div className="flex items-center justify-between gap-8">
+                    <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-base">Zona Horaria</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Configura tu zona horaria para mostrar fechas y horas correctamente.
+                        </p>
+                    </div>
+                    <Select value={timezone} onValueChange={onTimezoneChange}>
+                        <SelectTrigger className="w-[240px]">
+                            <SelectValue placeholder="Seleccionar zona horaria" />
+                        </SelectTrigger>
+                        <SelectContent align="end" className="max-h-[300px]">
+                            {TIMEZONES.map((tz) => (
+                                <SelectItem key={tz.value} value={tz.value}>
+                                    {tz.label}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>

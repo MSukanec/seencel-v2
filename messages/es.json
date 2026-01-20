@@ -1436,5 +1436,13 @@
                 "commitment": "Nos comprometemos a responder a todas las consultas dentro de 5 días hábiles."
             }
         }
+    },
+    "FormHelp": {
+        "quotes": {
+            "client": "Selecciona un contacto existente para asociar a este presupuesto.",
+            "clientLink": "Administrar contactos",
+            "project": "Asocia este presupuesto a un proyecto existente. Dejalo vacío para cotizaciones, licitaciones o pre-ventas.",
+            "projectEmpty": "Sin proyecto (cotización/licitación)"
+        }
     }
 }

@@ -1305,5 +1305,13 @@
                 "commitment": "We commit to responding within 5 business days."
             }
         }
+    },
+    "FormHelp": {
+        "quotes": {
+            "client": "Select an existing contact to associate with this quote.",
+            "clientLink": "Manage contacts",
+            "project": "Associate this quote with an existing project. Leave empty for quotations, bids, or pre-sales.",
+            "projectEmpty": "No project (quotation/bid)"
+        }
     }
 }

@@ -46,8 +46,8 @@ export function ContentLayout({
 
     if (variant === 'wide') {
         return (
-            <div className={cn("h-full w-full overflow-y-auto bg-transparent", className)}>
-                <div className="w-full px-6 pt-6 pb-20 md:px-8">
+            <div className={cn("h-full w-full overflow-y-auto bg-transparent flex flex-col", className)}>
+                <div className="w-full px-6 py-6 md:px-8 flex-1 flex flex-col min-h-0">
                     {children}
                 </div>
             </div>

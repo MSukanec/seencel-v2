@@ -139,6 +139,7 @@ export interface OrganizationPreferences {
     use_currency_exchange: boolean;
     currency_decimal_places: number; // 0, 1, or 2 - controls decimal display globally
     insight_config?: any; // JSONB
+    default_tax_label?: string; // IVA, VAT, Sales Tax, etc.
 }
 
 export interface OrganizationSettingsData {

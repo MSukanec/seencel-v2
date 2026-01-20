@@ -341,4 +341,112 @@ const handleMouseEnter = useCallback(() => {
 - [ ] Charts use `Lazy*` components?
 - [ ] Tab switching uses local state, not `router.replace()`?
 - [ ] Animations are `duration-150` or faster?
+- [ ] Empty states use `EmptyState` component? (NEW)
+
+---
+
+## 11. Empty State Pattern
+
+### MANDATORY: All lists/tables MUST show `EmptyState` when data is empty.
+
+**Location:** `@/components/ui/empty-state`
+
+### Usage Pattern
+
+```tsx
+import { EmptyState } from "@/components/ui/empty-state";
+import { FileText, Plus } from "lucide-react";
+
+// Early return BEFORE rendering the full list UI
+if (items.length === 0) {
+    return (
+        <EmptyState
+            icon={FileText}
+            title="Sin elementos"
+            description="Creá tu primer elemento para comenzar."
+            action={
+                <Button onClick={handleCreate} size="lg">
+                    <Plus className="mr-2 h-4 w-4" /> Nuevo Elemento
+                </Button>
+            }
+        />
+    );
+}
+
+// Normal list/table rendering AFTER the check
+return (
+    <div>
+        <Toolbar><Button onClick={handleCreate}>Nuevo</Button></Toolbar>
+        <DataTable data={items} />
+    </div>
+);
+```
+
+### Key Rules
+
+1. **Full Page Coverage**: EmptyState replaces the ENTIRE content area (no toolbar, no search, no stats visible).
+2. **Early Return**: Use `if (data.length === 0) return <EmptyState />` BEFORE the normal JSX.
+3. **Action Button**: If the view has a "Create" button, pass it to `action` prop so users can create from empty state.
+4. **Icon Match**: Use an icon relevant to the entity (e.g., `FileText` for documents, `Users` for contacts).
+
+### Examples in Codebase
+- `client-commitments-table.tsx` - Commitments list
+- `quotes-list.tsx` - Presupuestos list
+
+---
+
+## 12. Toolbar Pattern
+
+### MANDATORY: All list/table pages with search, filters, or actions MUST use the `Toolbar` component.
+
+**Location:** `@/components/ui/toolbar`
+
+### Usage Pattern
+
+```tsx
+import { Toolbar } from "@/components/ui/toolbar";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
+// Inside your component
+<Card className="p-4 border-dashed bg-card/50">
+    <Toolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Buscar..."
+        leftActions={<Badge>{count} items</Badge>}
+        filterContent={<FacetedFilter ... />}
+    >
+        {/* Right side: Action buttons */}
+        <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" /> Nuevo
+        </Button>
+    </Toolbar>
+</Card>
+```
+
+### Toolbar Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `searchQuery` | string | Current search value |
+| `onSearchChange` | function | Search change handler |
+| `searchPlaceholder` | string | Placeholder text |
+| `leftActions` | ReactNode | Badges, stats (before search) |
+| `filterContent` | ReactNode | FacetedFilter components |
+| `children` | ReactNode | Right side action buttons |
+
+### Key Rules
+
+1. **Always wrap in Card**: Use `<Card className="p-4 border-dashed bg-card/50">` for visual consistency.
+2. **NEVER create custom search inputs**: Use Toolbar's built-in search.
+3. **Stats as leftActions**: Pass badges/counters to `leftActions` prop.
+4. **Create button in children**: Primary action goes in `children` (right side).
+5. **Filters in filterContent**: Use `FacetedFilter` components if needed.
+
+### Examples in Codebase
+- `sitelog-shell.tsx` - Full Toolbar with filters and favorites
+- `quotes-list.tsx` - Simple Toolbar with stats and create button
+
 

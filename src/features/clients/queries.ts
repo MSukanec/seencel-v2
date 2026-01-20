@@ -85,6 +85,67 @@ export async function getClientsByOrganization(organizationId: string) {
 }
 
 /**
+ * Get all contacts for an organization (for representative selection)
+ */
+export async function getOrganizationContacts(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('contacts')
+        .select('id, full_name, email, phone, linked_user_id, image_url')
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .order('full_name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching contacts:", error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}
+
+/**
+ * Get all representatives for a project (grouped by client for UI)
+ */
+export async function getProjectRepresentatives(projectId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('client_representatives_view')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('is_deleted', false);
+
+    if (error) {
+        console.error("Error fetching project representatives:", error);
+        return { data: [], error };
+    }
+
+    // Group by client_id for easy lookup
+    const byClient = (data || []).reduce((acc, rep) => {
+        if (!acc[rep.client_id]) {
+            acc[rep.client_id] = [];
+        }
+        acc[rep.client_id].push({
+            id: rep.id,
+            client_id: rep.client_id,
+            contact_id: rep.contact_id,
+            role: rep.role,
+            can_approve: rep.can_approve,
+            can_chat: rep.can_chat,
+            accepted_at: rep.accepted_at,
+            rep_full_name: rep.rep_full_name,
+            rep_email: rep.rep_email,
+            linked_user_id: rep.linked_user_id,
+        });
+        return acc;
+    }, {} as Record<string, any[]>);
+
+    return { data: byClient, error: null };
+}
+
+/**
  * Get financial summary for all clients in an organization
  */
 export async function getFinancialSummaryByOrganization(organizationId: string) {
@@ -134,6 +195,7 @@ export async function getCommitmentsByOrganization(organizationId: string) {
 
 /**
  * Helper to enrich payments with media signed URLs
+ * OPTIMIZED: Pre-generates all signed URLs in a single batch for better performance
  */
 async function enrichPaymentsWithMedia(payments: any[]) {
     if (!payments || payments.length === 0) return [];
@@ -141,11 +203,13 @@ async function enrichPaymentsWithMedia(payments: any[]) {
     const supabase = await createClient();
     const paymentIds = payments.map(p => p.id);
 
+    // Single query for all media links
     const { data: mediaLinks } = await supabase
         .from('media_links')
         .select(`
             client_payment_id,
             media_file:media_files (
+                id,
                 bucket,
                 file_path,
                 file_name,
@@ -155,24 +219,36 @@ async function enrichPaymentsWithMedia(payments: any[]) {
         `)
         .in('client_payment_id', paymentIds);
 
-    return await Promise.all(payments.map(async (payment) => {
-        const links = mediaLinks?.filter((l: any) => l.client_payment_id === payment.id) || [];
+    if (!mediaLinks || mediaLinks.length === 0) {
+        // No media, return payments as-is with empty attachments
+        return payments.map(p => ({ ...p, attachments: [] }));
+    }
 
-        const attachedFiles = await Promise.all(links.map(async (link: any) => {
-            const fileData = link.media_file;
-            if (!fileData) return null;
+    // === BATCH SIGNED URL GENERATION ===
+    // Collect all unique files that need signing
+    const filesToSign: { paymentId: string; fileData: any }[] = [];
+    for (const link of mediaLinks as any[]) {
+        const file = link.media_file;
+        if (file?.bucket && file?.file_path) {
+            filesToSign.push({
+                paymentId: link.client_payment_id,
+                fileData: file
+            });
+        }
+    }
 
+    // Generate ALL signed URLs in parallel (single Promise.all)
+    const signedResults = await Promise.all(
+        filesToSign.map(async ({ paymentId, fileData }) => {
             let image_url = "";
-            if (fileData.bucket && fileData.file_path) {
-                try {
-                    const command = new GetObjectCommand({
-                        Bucket: fileData.bucket,
-                        Key: fileData.file_path,
-                    });
-                    image_url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-                } catch (e) {
-                    console.error("Error signing payment media url:", e);
-                }
+            try {
+                const command = new GetObjectCommand({
+                    Bucket: fileData.bucket,
+                    Key: fileData.file_path,
+                });
+                image_url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+            } catch (e) {
+                console.error("Error signing payment media url:", e);
             }
 
             let mime = 'application/octet-stream';
@@ -182,26 +258,43 @@ async function enrichPaymentsWithMedia(payments: any[]) {
             else if (fileData.file_type === 'doc') mime = 'application/msword';
 
             return {
-                id: fileData.id, // Use real ID if needed, or mapped later
-                url: image_url,
-                name: fileData.file_name,
-                mime: mime,
-                size: fileData.file_size
+                paymentId,
+                file: {
+                    id: fileData.id,
+                    url: image_url,
+                    name: fileData.file_name,
+                    mime,
+                    size: fileData.file_size
+                }
             };
-        }));
+        })
+    );
 
-        const validAttachments = attachedFiles.filter((f: any) => f !== null);
-        const primary = validAttachments[0];
+    // === GROUP FILES BY PAYMENT ===
+    const filesByPaymentId: Record<string, any[]> = {};
+    for (const result of signedResults) {
+        if (!filesByPaymentId[result.paymentId]) {
+            filesByPaymentId[result.paymentId] = [];
+        }
+        if (result.file.url) {
+            filesByPaymentId[result.paymentId].push(result.file);
+        }
+    }
+
+    // === MAP TO PAYMENTS (synchronous, no async) ===
+    return payments.map(payment => {
+        const attachments = filesByPaymentId[payment.id] || [];
+        const primary = attachments[0];
 
         return {
             ...payment,
-            image_url: primary?.url || (payment as any).image_url || null,
+            image_url: primary?.url || payment.image_url || null,
             media_mime: primary?.mime,
             media_name: primary?.name,
             media_size: primary?.size,
-            attachments: validAttachments
+            attachments
         };
-    }));
+    });
 }
 
 /**
@@ -551,3 +644,105 @@ export async function getClientPortalData(projectId: string, clientId: string) {
     };
 }
 
+/**
+ * Types for authenticated client portal
+ */
+export interface ClientPortalInfo {
+    client_id: string;
+    client_name: string;
+    role: string;
+    can_approve: boolean;
+    can_chat: boolean;
+    rep_id: string;
+}
+
+export interface ProjectPortal {
+    project_id: string;
+    project_name: string;
+    clients: ClientPortalInfo[];
+}
+
+/**
+ * Get all client portals where the current authenticated user is a representative.
+ * Returns clients grouped with their project info for the authenticated portal selector.
+ */
+export async function getMyClientPortals(): Promise<{ data: ProjectPortal[]; error: string | null }> {
+    const supabase = await createClient();
+
+    // Get current authenticated user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { data: [], error: "No authenticated user" };
+    }
+
+    // Get the user record to find linked contacts through client_representatives
+    const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData) {
+        return { data: [], error: "User not found" };
+    }
+
+    // Find all client representations through the view
+    // This joins: client_representatives -> contacts -> users
+    const { data: representations, error } = await supabase
+        .from('client_representatives_view')
+        .select('*')
+        .eq('linked_user_id', userData.id)
+        .eq('is_deleted', false);
+
+    if (error) {
+        console.error("Error fetching client portals:", error);
+        return { data: [], error: error.message };
+    }
+
+    // Group by project for better UI
+    const portalsByProject = representations?.reduce((acc, rep) => {
+        const projectId = rep.project_id;
+        if (!acc[projectId]) {
+            acc[projectId] = {
+                project_id: projectId,
+                project_name: rep.project_name,
+                clients: []
+            };
+        }
+        acc[projectId].clients.push({
+            client_id: rep.client_id,
+            client_name: rep.client_name,
+            role: rep.role,
+            can_approve: rep.can_approve,
+            can_chat: rep.can_chat,
+            rep_id: rep.id
+        });
+        return acc;
+    }, {} as Record<string, ProjectPortal>) || {};
+
+    return {
+        data: Object.values(portalsByProject),
+        error: null
+    };
+}
+
+
+/**
+ * Get representatives for a specific client (for management UI)
+ */
+export async function getClientRepresentatives(clientId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('client_representatives_view')
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('is_deleted', false);
+
+    if (error) {
+        console.error("Error fetching client representatives:", error);
+        return { data: [], error };
+    }
+
+    return { data, error: null };
+}

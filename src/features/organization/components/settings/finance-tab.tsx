@@ -359,6 +359,27 @@ export function FinanceTab({
                                         </SelectContent>
                                     </Select>
                                 </FormGroup>
+
+                                {/* Default Tax Label Selector */}
+                                <FormGroup label="Etiqueta de Impuesto" helpText="Nombre del impuesto usado por defecto en cotizaciones (IVA, VAT, etc).">
+                                    <Select
+                                        disabled={isPending}
+                                        value={preferences?.default_tax_label || 'IVA'}
+                                        onValueChange={(val) => handleUpdatePreference('default_tax_label', val)}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Selecciona etiqueta" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="IVA">IVA (Impuesto al Valor Agregado)</SelectItem>
+                                            <SelectItem value="VAT">VAT (Value Added Tax)</SelectItem>
+                                            <SelectItem value="Sales Tax">Sales Tax (USA)</SelectItem>
+                                            <SelectItem value="GST">GST (Goods and Services Tax)</SelectItem>
+                                            <SelectItem value="ICMS">ICMS (Brasil)</SelectItem>
+                                            <SelectItem value="Tax">Tax (Genérico)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
                             </CardContent>
                         </Card>
                     </div>

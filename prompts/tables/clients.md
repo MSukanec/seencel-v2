@@ -23,16 +23,20 @@ create table public.client_commitments (
   updated_by uuid null,
   functional_amount numeric(20, 2) null,
   description text null,
+  quote_id uuid null,
   constraint project_client_commitments_pkey primary key (id),
   constraint client_commitments_client_id_fkey foreign KEY (client_id) references project_clients (id) on delete CASCADE,
   constraint client_commitments_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
   constraint client_commitments_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint client_commitments_quote_id_fkey foreign KEY (quote_id) references quotes (id) on delete set null,
   constraint fk_commit_currency foreign KEY (currency_id) references currencies (id) on delete RESTRICT,
   constraint fk_commit_org foreign KEY (organization_id) references organizations (id) on delete CASCADE,
   constraint client_commitments_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
   constraint client_commitments_amount_positive check ((amount > (0)::numeric)),
   constraint client_commitments_exchange_rate_positive check ((exchange_rate > (0)::numeric))
 ) TABLESPACE pg_default;
+
+create index IF not exists idx_client_commitments_quote on public.client_commitments using btree (quote_id) TABLESPACE pg_default;
 
 create index IF not exists idx_client_commitments_org_project on public.client_commitments using btree (organization_id, project_id) TABLESPACE pg_default;
 
@@ -211,8 +215,10 @@ create table public.client_payments (
   is_deleted boolean null default false,
   deleted_at timestamp with time zone null,
   updated_by uuid null,
+  import_batch_id uuid null,
   constraint client_payments_pkey primary key (id),
   constraint client_payments_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint client_payments_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id),
   constraint fk_payment_schedule foreign KEY (schedule_id) references client_payment_schedule (id) on delete set null,
   constraint fk_payment_org foreign KEY (organization_id) references organizations (id) on delete CASCADE,
   constraint fk_payment_project foreign KEY (project_id) references projects (id) on delete CASCADE,
@@ -255,6 +261,10 @@ where
     or (is_deleted = false)
   );
 
+create index IF not exists idx_client_payments_import_batch on public.client_payments using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
+
 create trigger on_client_payment_audit
 after INSERT
 or DELETE
@@ -270,6 +280,11 @@ execute FUNCTION handle_updated_by ();
 create trigger set_client_payments_updated_at BEFORE
 update on client_payments for EACH row
 execute FUNCTION set_timestamp ();
+
+create trigger set_functional_amount_client_payments BEFORE INSERT
+or
+update on client_payments for EACH row
+execute FUNCTION set_client_payment_functional_amount ();
 
 ## Tabla client_portal_settings:
 

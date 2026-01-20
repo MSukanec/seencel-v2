@@ -14,6 +14,7 @@ import { SwitchOrganizationButton } from "@/features/organization/components/Swi
 import { getUserProfile } from "@/features/profile/queries";
 import { ProfileForm } from "@/features/profile/components/ProfileForm";
 import { PreferencesTab } from "@/features/preferences/components/preferences-tab";
+import { getUserTimezone } from "@/features/preferences/actions";
 import { getStorageUrl } from "@/lib/storage-utils";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import { AvatarManager } from "@/features/profile/components/AvatarManager";
@@ -68,6 +69,7 @@ export default async function SettingsPage({
     const countries = await getCountries();
     const { profile: billingProfile } = await getBillingProfile();
     const { notifications } = await getUserNotifications();
+    const userTimezone = await getUserTimezone();
 
     const currentOrgId = activeOrgId || organizations[0]?.id || "";
 
@@ -228,7 +230,7 @@ export default async function SettingsPage({
                         </TabsContent>
 
                         <TabsContent value="preferences" className="space-y-6 mt-0">
-                            <PreferencesTab />
+                            <PreferencesTab initialTimezone={userTimezone} />
                         </TabsContent>
                     </div>
                 </Tabs>

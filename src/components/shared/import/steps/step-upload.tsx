@@ -170,59 +170,92 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
             {stage === 'header-selection' && rawResult?.rawPreview && previewFile && (
                 // Header Selection State
                 <div className="flex flex-col h-full overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-yellow-50/50 dark:bg-yellow-900/10">
-                        <div className="space-y-1">
-                            <h3 className="font-medium flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                {t('headerSelection.title')}
-                            </h3>
-                            <p className="text-xs text-muted-foreground">
-                                {t('headerSelection.description')}
-                            </p>
+                    {/* Header card with selected row preview */}
+                    <div className="px-6 py-4 border-b shrink-0 bg-yellow-50/50 dark:bg-yellow-900/10 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <h3 className="font-medium flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                    {t('headerSelection.title')}
+                                </h3>
+                                <p className="text-xs text-muted-foreground">
+                                    {t('headerSelection.description')}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={handleReset}>Cancelar</Button>
+                                <Button size="sm" onClick={confirmHeaderSelection}>
+                                    {t('headerSelection.useRow', { index: selectedHeaderIndex + 1 })} <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={handleReset}>Cancelar</Button>
-                            <Button size="sm" onClick={confirmHeaderSelection}>
-                                {t('headerSelection.useRow', { index: selectedHeaderIndex + 1 })} <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
+
+                        {/* Selected row preview */}
+                        <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 overflow-x-auto">
+                            <div className="flex items-center gap-3 min-w-max">
+                                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded shrink-0">
+                                    Fila {selectedHeaderIndex + 1}
+                                </span>
+                                <div className="flex gap-2">
+                                    {rawResult.rawPreview[selectedHeaderIndex]?.map((cell: any, i: number) => (
+                                        <span
+                                            key={i}
+                                            className="text-sm font-semibold text-primary bg-background px-3 py-1 rounded shadow-sm ring-1 ring-primary/20 truncate max-w-[150px]"
+                                        >
+                                            {String(cell || `Col ${i + 1}`)}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-hidden relative bg-muted/5">
+                    {/* Full table below */}
+                    <div className="flex-1 overflow-hidden relative">
                         <ScrollArea className="h-full">
-                            <Table>
-                                <TableBody>
-                                    {rawResult.rawPreview.map((row, rowIndex) => (
-                                        <TableRow
-                                            key={rowIndex}
-                                            className={cn(
-                                                "cursor-pointer transition-colors",
-                                                selectedHeaderIndex === rowIndex
-                                                    ? "bg-primary/10 hover:bg-primary/15 border-primary"
-                                                    : "hover:bg-muted/50",
-                                                rowIndex < selectedHeaderIndex && "opacity-40 grayscale"
-                                            )}
-                                            onClick={() => setSelectedHeaderIndex(rowIndex)}
-                                        >
-                                            <TableCell className="w-[50px] text-center font-mono text-xs text-muted-foreground bg-muted/30">
-                                                {rowIndex + 1}
-                                            </TableCell>
-                                            <TableCell className="p-0">
-                                                <div className="flex gap-4 p-2">
-                                                    {row.map((cell: any, cellIndex: number) => (
-                                                        <div key={cellIndex} className={cn(
-                                                            "text-sm min-w-[100px] max-w-[200px] truncate px-2 py-1 rounded",
-                                                            selectedHeaderIndex === rowIndex && "font-semibold text-primary bg-background shadow-sm ring-1 ring-primary/20",
-                                                        )}>
-                                                            {String(cell || "")}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </TableCell>
+                            <div className="min-w-max">
+                                <Table>
+                                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                                        <TableRow>
+                                            <TableHead className="w-[50px] text-center">#</TableHead>
+                                            {rawResult.rawPreview[0]?.map((_: any, i: number) => (
+                                                <TableHead key={i} className="min-w-[100px] max-w-[180px]">
+                                                    Col {i + 1}
+                                                </TableHead>
+                                            ))}
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {rawResult.rawPreview.map((row, rowIndex) => (
+                                            <TableRow
+                                                key={rowIndex}
+                                                className={cn(
+                                                    "cursor-pointer transition-colors",
+                                                    selectedHeaderIndex === rowIndex
+                                                        ? "bg-primary/10 hover:bg-primary/15 ring-2 ring-primary ring-inset"
+                                                        : "hover:bg-muted/50"
+                                                )}
+                                                onClick={() => setSelectedHeaderIndex(rowIndex)}
+                                            >
+                                                <TableCell className="w-[50px] text-center font-mono text-xs text-muted-foreground bg-muted/30">
+                                                    {rowIndex + 1}
+                                                </TableCell>
+                                                {row.map((cell: any, cellIndex: number) => (
+                                                    <TableCell
+                                                        key={cellIndex}
+                                                        className={cn(
+                                                            "min-w-[100px] max-w-[180px] truncate",
+                                                            selectedHeaderIndex === rowIndex && "font-semibold text-primary"
+                                                        )}
+                                                    >
+                                                        {String(cell || "")}
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </ScrollArea>
                     </div>
                 </div>

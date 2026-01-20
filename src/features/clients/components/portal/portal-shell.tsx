@@ -75,6 +75,8 @@ interface PortalShellProps {
     branding?: Partial<PortalBranding>;
     className?: string;
     isMobile?: boolean;
+    /** Whether the user is authenticated (vs magic link access) */
+    isAuthenticated?: boolean;
 }
 
 type Section = 'dashboard' | 'payments' | 'schedule' | 'logs' | 'messages';

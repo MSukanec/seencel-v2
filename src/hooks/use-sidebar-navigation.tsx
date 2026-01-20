@@ -18,6 +18,7 @@ import {
     Calendar,
     Monitor,
     Info,
+    Wrench,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 
@@ -64,6 +65,8 @@ export function useSidebarNavigation() {
                     { title: 'Proyectos', href: '/organization/projects', icon: Briefcase },
                     { title: 'Contactos', href: '/organization/contacts', icon: Users },
                     { title: 'Finanzas', href: '/organization/finance', icon: Wallet },
+                    { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench },
+                    { title: 'Presupuestos', href: '/organization/quotes', icon: FileText },
                     { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard },
                     { title: 'Configuración', href: '/organization/settings', icon: Settings },
                 ];
@@ -83,6 +86,11 @@ export function useSidebarNavigation() {
                         title: 'Información',
                         href: activeProjectId ? `${projectBase}/details` : '/organization/projects',
                         icon: Info
+                    },
+                    {
+                        title: 'Presupuestos',
+                        href: activeProjectId ? `${projectBase}/quotes` : '/organization/projects',
+                        icon: FileText
                     },
                     {
                         title: tSidebar('items.sitelog'),

@@ -19,7 +19,7 @@ export function EmptyState({
     return (
         <div
             className={cn(
-                "relative flex flex-col items-center justify-center h-full p-8 text-center animate-in fade-in-50 zoom-in-95 duration-500 overflow-hidden",
+                "relative flex flex-col items-center justify-center flex-1 min-h-0 h-full p-8 text-center animate-in fade-in-50 zoom-in-95 duration-500 overflow-hidden",
                 "border-2 border-dashed border-primary/25 rounded-xl",
                 className
             )}

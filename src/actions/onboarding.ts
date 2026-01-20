@@ -12,6 +12,8 @@ const onboardingSchema = z.object({
     orgName: z.string().min(1, "Organization name is required"), // Strict min 1 char
     countryCode: z.string().length(2).optional(), // 2 letter country code
     baseCurrency: z.string().min(3).max(3).optional(), // Currency code (e.g., ARS, USD)
+    timezone: z.string().optional(), // IANA timezone (e.g., America/Argentina/Buenos_Aires)
+    taxLabel: z.string().optional(), // Tax label (IVA, VAT, Sales Tax, etc.)
 });
 
 export async function submitOnboarding(prevState: any, formData: FormData) {
@@ -23,6 +25,8 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         orgName: formData.get("orgName"),
         countryCode: formData.get("countryCode") || undefined,
         baseCurrency: formData.get("baseCurrency") || undefined,
+        timezone: formData.get("timezone") || undefined,
+        taxLabel: formData.get("taxLabel") || undefined,
     });
 
     if (!validatedFields.success) {
@@ -34,7 +38,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         return { error: "validation_error", message: `Validation failed: ${errorMessage}`, details: fieldErrors };
     }
 
-    const { firstName, lastName, birthdate, country, orgName, baseCurrency } = validatedFields.data;
+    const { firstName, lastName, birthdate, country, orgName, baseCurrency, timezone, taxLabel } = validatedFields.data;
     const supabase = await createClient();
 
     const {
@@ -150,7 +154,10 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
             // B. Update Organization Preferences (Source of Truth for Default)
             const { error: prefUpdateError } = await supabase
                 .from("organization_preferences")
-                .update({ default_currency_id: currencyData.id })
+                .update({
+                    default_currency_id: currencyData.id,
+                    ...(taxLabel && { default_tax_label: taxLabel }) // Save tax label if provided
+                })
                 .eq("organization_id", org.id);
 
             if (prefUpdateError) {
@@ -172,12 +179,12 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         }
     }
 
-    // 5. Update Preferences (Onboarding Completion only)
+    // 5. Update Preferences (Onboarding Completion + Timezone)
     const { error: prefError } = await supabase
         .from("user_preferences")
         .update({
             onboarding_completed: true,
-            // REMOVED theme and timezone updates
+            ...(timezone && { timezone }), // Save detected timezone
         })
         .eq("user_id", internalUser.id);
 

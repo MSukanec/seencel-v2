@@ -7,6 +7,19 @@ import { z } from "zod";
 import { projectClientSchema, clientRoleSchema, clientCommitmentSchema } from "./types";
 
 // ===============================================
+// Auth Helper
+// ===============================================
+
+/**
+ * Get the authenticated user ID from Supabase auth.
+ * Returns null if not authenticated.
+ */
+async function getAuthenticatedUserId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+}
+
+// ===============================================
 // Clients (Project Clients)
 // ===============================================
 
@@ -539,9 +552,14 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
         throw new Error("Error al registrar el pago.");
     }
 
-    // 3. Handle Media Attachment
-    if (mediaFilesJson && data?.id && user?.id) {
-        try {
+    // === TRANSACTIONAL SECTION START ===
+    // These operations should ideally be atomic. If critical ones fail, rollback the payment.
+    let rollbackNeeded = false;
+    let rollbackReason = '';
+
+    try {
+        // 3. Handle Media Attachment
+        if (mediaFilesJson && data?.id && user?.id) {
             const mediaList = JSON.parse(mediaFilesJson);
             if (Array.isArray(mediaList)) {
                 for (const mediaData of mediaList) {
@@ -568,7 +586,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
 
                     if (!fileError && fileData) {
                         // Link
-                        await supabase.from('media_links').insert({
+                        const { error: linkError } = await supabase.from('media_links').insert({
                             media_file_id: fileData.id,
                             client_payment_id: data.id,
                             organization_id: payload.organization_id,
@@ -577,29 +595,51 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
                             category: 'financial',
                             visibility: 'private'
                         });
+                        if (linkError) {
+                            console.error("Error linking media file:", linkError);
+                            // Non-critical: file exists but link failed - continue
+                        }
                     } else {
                         console.error("Error creating media file record:", fileError);
+                        // Non-critical: continue with other files
                     }
                 }
             }
-        } catch (e) {
-            console.error("Error processing media file:", e);
         }
+
+        // 4. If it's linked to a schedule, update the schedule status
+        if (input.schedule_id && input.status === 'confirmed') {
+            const { error: scheduleError } = await supabase
+                .from('client_payment_schedule')
+                .update({
+                    status: 'paid',
+                    paid_at: new Date().toISOString(),
+                })
+                .eq('id', payload.schedule_id);
+
+            if (scheduleError) {
+                console.error("Error updating schedule status:", scheduleError);
+                // This is more critical - schedule won't reflect payment
+                // But we don't rollback for this, just log
+            }
+        }
+    } catch (e) {
+        console.error("Critical error in post-payment operations:", e);
+        rollbackNeeded = true;
+        rollbackReason = e instanceof Error ? e.message : 'Unknown error';
     }
 
-    // If it's linked to a schedule, update the schedule status!
-    if (input.schedule_id && input.status === 'confirmed') {
-        const { error: scheduleError } = await supabase
-            .from('client_payment_schedule')
-            .update({
-                status: 'paid',
-                paid_at: new Date().toISOString(),
-                // could update amount paid if partial, but let's assume full for now
-            })
-            .eq('id', payload.schedule_id);
+    // === ROLLBACK IF NEEDED ===
+    if (rollbackNeeded && data?.id) {
+        console.error(`Rolling back payment ${data.id} due to: ${rollbackReason}`);
+        await supabase
+            .from('client_payments')
+            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+            .eq('id', data.id);
 
-        if (scheduleError) console.error("Error updating schedule status:", scheduleError);
+        throw new Error(`Error al procesar el pago: ${rollbackReason}. El pago fue revertido.`);
     }
+    // === TRANSACTIONAL SECTION END ===
 
     revalidatePath('/organization/clients');
     return data;
@@ -899,5 +939,125 @@ export async function updatePortalSettings(
 
     revalidatePath(`/project/${projectId}/portal`);
     return { success: true };
+}
+
+// ===============================================
+// Client Representatives
+// ===============================================
+
+const addRepresentativeSchema = z.object({
+    client_id: z.string().uuid(),
+    contact_id: z.string().uuid(),
+    organization_id: z.string().uuid(),
+    role: z.string().default('viewer'),
+    can_approve: z.boolean().default(false),
+    can_chat: z.boolean().default(true),
+});
+
+export async function addClientRepresentativeAction(input: z.infer<typeof addRepresentativeSchema>) {
+    const supabase = await createClient();
+    const userId = await getAuthenticatedUserId(supabase);
+
+    // Get member ID for invited_by
+    let invitedBy: string | null = null;
+    if (userId) {
+        const { data: user } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_id', userId)
+            .single();
+
+        if (user) {
+            const { data: member } = await supabase
+                .from('organization_members')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('organization_id', input.organization_id)
+                .single();
+            if (member) invitedBy = member.id;
+        }
+    }
+
+    // Check if contact already has a user account
+    const { data: contact } = await supabase
+        .from('contacts')
+        .select('linked_user_id')
+        .eq('id', input.contact_id)
+        .single();
+
+    const acceptedAt = contact?.linked_user_id ? new Date().toISOString() : null;
+
+    const { data, error } = await supabase
+        .from('client_representatives')
+        .insert({
+            client_id: input.client_id,
+            contact_id: input.contact_id,
+            organization_id: input.organization_id,
+            role: input.role,
+            can_approve: input.can_approve,
+            can_chat: input.can_chat,
+            invited_by: invitedBy,
+            accepted_at: acceptedAt, // Auto-accept if contact has account
+        })
+        .select()
+        .single();
+
+    if (error) {
+        if (error.code === '23505') { // Unique violation
+            throw new Error("Este contacto ya es representante de este cliente.");
+        }
+        console.error("Error adding representative:", error);
+        throw new Error("Error al agregar representante.");
+    }
+
+    revalidatePath('/organization/clients');
+    return data;
+}
+
+export async function removeClientRepresentativeAction(repId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('client_representatives')
+        .update({ is_deleted: true })
+        .eq('id', repId);
+
+    if (error) {
+        console.error("Error removing representative:", error);
+        throw new Error("Error al eliminar representante.");
+    }
+
+    revalidatePath('/organization/clients');
+}
+
+const updateRepresentativeSchema = z.object({
+    id: z.string().uuid(),
+    role: z.string().optional(),
+    can_approve: z.boolean().optional(),
+    can_chat: z.boolean().optional(),
+});
+
+export async function updateClientRepresentativeAction(input: z.infer<typeof updateRepresentativeSchema>) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('client_representatives')
+        .update({
+            role: input.role,
+            can_approve: input.can_approve,
+            can_chat: input.can_chat,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating representative:", error);
+        throw new Error("Error al actualizar representante.");
+    }
+
+    revalidatePath('/organization/clients');
+    return data;
 }
 

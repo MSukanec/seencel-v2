@@ -12,6 +12,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Helper to get tax label based on country code
+function getTaxLabelForCountry(countryCode: string): string {
+    const upper = countryCode?.toUpperCase();
+    // LATAM and Spain use IVA
+    if (['AR', 'MX', 'ES', 'CL', 'CO', 'PE', 'UY', 'PY', 'EC', 'VE', 'BO', 'PA'].includes(upper)) {
+        return 'IVA';
+    }
+    // USA
+    if (upper === 'US') return 'Sales Tax';
+    // UK/Commonwealth
+    if (['GB', 'UK', 'IE', 'AU', 'NZ'].includes(upper)) return 'VAT';
+    // Brazil
+    if (upper === 'BR') return 'ICMS';
+    // Canada
+    if (upper === 'CA') return 'GST';
+    // Default
+    return 'IVA';
+}
+
 // Available currencies for selection - SORTED ALPHABETICALLY BY NAME
 const AVAILABLE_CURRENCIES = [
     { code: 'USD', name: 'Dólar Estadounidense', symbol: 'US$', country: 'US' },
@@ -79,6 +98,9 @@ export default function OnboardingForm({ countryCode }: { countryCode?: string }
         formData.append("baseCurrency", selectedCurrency);
         if (countryCode) {
             formData.append("countryCode", countryCode);
+            // Auto-detect tax label based on country
+            const taxLabel = getTaxLabelForCountry(countryCode);
+            formData.append("taxLabel", taxLabel);
         }
 
         startTransition(async () => {

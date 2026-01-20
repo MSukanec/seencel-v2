@@ -1,8 +1,8 @@
 import { getOrganizationFinancialData } from "@/features/organization/queries"; // Unified fetch
-import { getClients, getClientFinancialSummary, getClientCommitments, getClientPayments, getClientPaymentSchedules, getClientRoles } from "@/features/clients/queries";
+import { getClients, getClientFinancialSummary, getClientCommitments, getClientPayments, getClientPaymentSchedules, getClientRoles, getOrganizationContacts, getProjectRepresentatives } from "@/features/clients/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getOrganizationProjects } from "@/features/projects/queries";
-import { ClientsPageClient } from "@/features/clients/components/clients-page-client";
+import { ClientsPageClient } from "@/features/clients/components/overview/clients-page-client";
 
 interface PageProps {
     params: Promise<{
@@ -18,7 +18,7 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
     const resolvedSearchParams = await searchParams;
     const defaultTab = resolvedSearchParams.view || "overview";
 
-    const { clients, financialSummary, commitments, payments, schedules, roles, orgId, financialData } = await getData(projectId);
+    const { clients, financialSummary, commitments, payments, schedules, roles, orgId, financialData, contacts, representativesByClient } = await getData(projectId);
 
     return (
         <ClientsPageClient
@@ -32,13 +32,15 @@ export default async function ClientsPage({ params, searchParams }: PageProps) {
             roles={roles}
             financialData={financialData}
             defaultTab={defaultTab}
+            contacts={contacts}
+            representativesByClient={representativesByClient}
         />
     );
 }
 
 async function getData(projectId: string) {
     const { activeOrgId } = await getUserOrganizations();
-    if (!activeOrgId) return { clients: [], financialSummary: [], commitments: [], payments: [], schedules: [], roles: [], orgId: "", financialData: { currencies: [], wallets: [] } };
+    if (!activeOrgId) return { clients: [], financialSummary: [], commitments: [], payments: [], schedules: [], roles: [], orgId: "", financialData: { currencies: [], wallets: [], defaultCurrencyId: null, defaultWalletId: null, defaultTaxLabel: null, preferences: null }, contacts: [], representativesByClient: {} };
 
     const [
         clientsRes,
@@ -58,6 +60,12 @@ async function getData(projectId: string) {
         getOrganizationFinancialData(activeOrgId)
     ]);
 
+    // Fetch representatives and contacts in parallel (separate for clarity)
+    const [contactsRes, repsRes] = await Promise.all([
+        getOrganizationContacts(activeOrgId),
+        getProjectRepresentatives(projectId)
+    ]);
+
     return {
         clients: clientsRes.data || [],
         financialSummary: summaryRes.data || [],
@@ -66,7 +74,9 @@ async function getData(projectId: string) {
         schedules: schedulesRes.data || [],
         roles: rolesRes.data || [],
         orgId: activeOrgId,
-        financialData
+        financialData,
+        contacts: contactsRes.data || [],
+        representativesByClient: repsRes.data || {}
     };
 }
 
