@@ -182,14 +182,15 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                 >
                     <ContentLayout variant="wide" className="[scrollbar-gutter:stable]">
                         <TabsContent value="entries" className="mt-0 h-full space-y-6">
-                            {/* Toolbar Area */}
-                            <Card className="p-4 border-dashed bg-card/50">
+                            {/* Toolbar Area - Hidden on mobile (mobile uses floating buttons) */}
+                            <Card className="hidden md:block p-4 border-dashed bg-card/50">
                                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                                     <div className="flex-1 w-full sm:w-auto">
                                         <Toolbar
                                             searchQuery={searchQuery}
                                             onSearchChange={setSearchQuery}
                                             searchPlaceholder="Buscar en bitácora..."
+                                            mobileActionClick={handleCreate}
                                             filterContent={
                                                 <>
                                                     <FacetedFilter
@@ -241,6 +242,44 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                                     </div>
                                 </div>
                             </Card>
+
+                            {/* Mobile Toolbar - Rendered via Portal by Toolbar component */}
+                            <div className="md:hidden">
+                                <Toolbar
+                                    searchQuery={searchQuery}
+                                    onSearchChange={setSearchQuery}
+                                    searchPlaceholder="Buscar en bitácora..."
+                                    mobileActionClick={handleCreate}
+                                    filterContent={
+                                        <>
+                                            <FacetedFilter
+                                                title="Severidad"
+                                                options={severityOptions}
+                                                selectedValues={severityFilter}
+                                                onSelect={(value) => {
+                                                    const next = new Set(severityFilter);
+                                                    if (next.has(value)) next.delete(value);
+                                                    else next.add(value);
+                                                    setSeverityFilter(next);
+                                                }}
+                                                onClear={() => setSeverityFilter(new Set())}
+                                            />
+                                            <FacetedFilter
+                                                title="Tipo"
+                                                options={typeOptions}
+                                                selectedValues={typeFilter}
+                                                onSelect={(value) => {
+                                                    const next = new Set(typeFilter);
+                                                    if (next.has(value)) next.delete(value);
+                                                    else next.add(value);
+                                                    setTypeFilter(next);
+                                                }}
+                                                onClear={() => setTypeFilter(new Set())}
+                                            />
+                                        </>
+                                    }
+                                />
+                            </div>
 
                             <SitelogFeed
                                 logs={filteredLogs}

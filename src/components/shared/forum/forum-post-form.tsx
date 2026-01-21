@@ -55,8 +55,7 @@ export function ForumPostForm({
                 parent_id: parentId || null,
                 author: {
                     id: "",
-                    first_name: null,
-                    last_name: null,
+                    full_name: null,
                     avatar_url: null,
                 },
             };
