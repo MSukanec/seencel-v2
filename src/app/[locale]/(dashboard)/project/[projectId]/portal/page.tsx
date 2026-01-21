@@ -1,7 +1,7 @@
 import { Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { ClientPortalConfig } from "@/features/clients/components/portal/client-portal-config";
 import { ClientPortalAccess } from "@/features/clients/components/portal/client-portal-access";
 import { getPortalSettings } from "@/features/clients/actions";

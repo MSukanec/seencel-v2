@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
     LayoutDashboard,
@@ -9,7 +10,8 @@ import {
     FileText,
     MessageSquare,
     Menu,
-    X
+    X,
+    ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,6 +19,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTranslations } from "next-intl";
 import { SitelogFeed } from "@/features/sitelog/components/sitelog-feed";
 import { SiteLog } from "@/types/sitelog";
+import { PortalQuoteItems } from "./portal-quote-items";
+import { PortalQuoteApproval } from "./portal-quote-approval";
+import { PortalQuotePdfButton } from "./portal-quote-pdf-button";
 
 // Types
 export interface PortalProject {
@@ -39,13 +44,28 @@ export interface PortalSettings {
     show_logs: boolean;
     show_amounts: boolean;
     show_progress: boolean;
+    show_quotes: boolean;
     allow_comments: boolean;
 }
 
 export interface PortalData {
     payments: any[];
     schedules: any[];
+    quotes?: {
+        id: string;
+        name: string;
+        description?: string | null;
+        status: string;
+        total_with_tax: number;
+        tax_pct?: number;
+        tax_label?: string | null;
+        discount_pct?: number;
+        created_at: string;
+        currency_symbol?: string;
+    }[];
     summary: {
+        project_id?: string;
+        client_id?: string;
         total_committed_amount?: number;
         total_paid_amount?: number;
         balance_due?: number;
@@ -79,10 +99,11 @@ interface PortalShellProps {
     isAuthenticated?: boolean;
 }
 
-type Section = 'dashboard' | 'payments' | 'schedule' | 'logs' | 'messages';
+type Section = 'dashboard' | 'payments' | 'schedule' | 'quotes' | 'logs' | 'messages';
 
 const SECTION_CONFIG = {
     dashboard: { icon: LayoutDashboard, setting: 'show_dashboard' },
+    quotes: { icon: FileText, setting: 'show_quotes' },
     payments: { icon: CreditCard, setting: 'show_payments' },
     schedule: { icon: Calendar, setting: 'show_installments' },
     logs: { icon: FileText, setting: 'show_logs' },
@@ -285,6 +306,8 @@ function PortalContent({ section, project, settings, data, primaryColor, isMobil
             return <PaymentsSection data={data} settings={settings} />;
         case 'schedule':
             return <ScheduleSection data={data} settings={settings} />;
+        case 'quotes':
+            return <QuotesSection data={data} settings={settings} />;
         case 'logs':
             return <LogsSection data={data} />;
         case 'messages':
@@ -316,7 +339,7 @@ function DashboardSection({ project, settings, data, primaryColor, isMobile, por
 
     const formatAmount = (amount: number) => {
         if (!settings.show_amounts) return "•••••";
-        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     return (
@@ -384,7 +407,7 @@ function PaymentsSection({ data, settings }: { data: PortalData; settings: Porta
 
     const formatAmount = (amount: number) => {
         if (!settings.show_amounts) return "•••••";
-        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     if (data.payments.length === 0) {
@@ -426,7 +449,7 @@ function ScheduleSection({ data, settings }: { data: PortalData; settings: Porta
 
     const formatAmount = (amount: number) => {
         if (!settings.show_amounts) return "•••••";
-        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     if (data.schedules.length === 0) {
@@ -479,6 +502,213 @@ function ScheduleSection({ data, settings }: { data: PortalData; settings: Porta
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+// Quotes Section with expandable details
+function QuotesSection({ data, settings }: { data: PortalData; settings: PortalSettings }) {
+    const router = useRouter();
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const currencySymbol = data.summary?.currency_symbol || "$";
+
+    const formatAmount = (amount: number) => {
+        if (!settings.show_amounts) return "•••••";
+        return `${currencySymbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const formatDate = (dateStr: string) => {
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch {
+            return dateStr;
+        }
+    };
+
+    if (!data.quotes || data.quotes.length === 0) {
+        return (
+            <div className="p-6 text-center py-16">
+                <FileText className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
+                <p className="text-zinc-500">No hay presupuestos disponibles</p>
+            </div>
+        );
+    }
+
+    const statusColors: Record<string, string> = {
+        draft: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+        sent: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        approved: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        rejected: "bg-red-500/10 text-red-400 border-red-500/20",
+    };
+    const statusLabels: Record<string, string> = {
+        draft: "Borrador",
+        sent: "Enviado",
+        approved: "Aprobado",
+        rejected: "Rechazado",
+    };
+
+    const toggleExpand = (id: string) => {
+        setExpandedId(expandedId === id ? null : id);
+    };
+
+    // Calculate KPIs
+    const totalAmount = data.quotes.reduce((sum, q) => sum + q.total_with_tax, 0);
+    const approvedAmount = data.quotes
+        .filter(q => q.status === "approved")
+        .reduce((sum, q) => sum + q.total_with_tax, 0);
+    const pendingAmount = data.quotes
+        .filter(q => q.status === "sent" || q.status === "draft")
+        .reduce((sum, q) => sum + q.total_with_tax, 0);
+    const rejectedAmount = data.quotes
+        .filter(q => q.status === "rejected")
+        .reduce((sum, q) => sum + q.total_with_tax, 0);
+
+    // Separate quotes: pending first, then resolved
+    const pendingQuotes = data.quotes.filter(q => q.status === "sent" || q.status === "draft");
+    const resolvedQuotes = data.quotes.filter(q => q.status === "approved" || q.status === "rejected");
+
+    const renderQuoteCard = (quote: typeof data.quotes[0]) => {
+        const isExpanded = expandedId === quote.id;
+        return (
+            <div key={quote.id} className="bg-zinc-800/50 rounded-xl border border-zinc-700/50 overflow-hidden">
+                {/* Quote Header - Clickable */}
+                <button
+                    onClick={() => toggleExpand(quote.id)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-zinc-700/30 transition-colors text-left"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="font-medium">{quote.name}</div>
+                            <div className="text-xs text-zinc-500">{formatDate(quote.created_at)}</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="font-mono font-medium">{formatAmount(quote.total_with_tax)}</div>
+                        <span className={cn(
+                            "px-3 py-1 rounded-full text-xs border",
+                            statusColors[quote.status] || statusColors.draft
+                        )}>
+                            {statusLabels[quote.status] || quote.status}
+                        </span>
+                        <ChevronDown className={cn(
+                            "h-5 w-5 text-zinc-400 transition-transform",
+                            isExpanded && "rotate-180"
+                        )} />
+                    </div>
+                </button>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                    <div className="border-t border-zinc-700/50 p-4 bg-zinc-900/50">
+                        {quote.description && (
+                            <p className="text-sm text-zinc-400 mb-4">{quote.description}</p>
+                        )}
+                        <PortalQuoteItems
+                            quoteId={quote.id}
+                            currencySymbol={currencySymbol}
+                            showAmounts={settings.show_amounts}
+                            taxPct={quote.tax_pct}
+                            taxLabel={quote.tax_label}
+                            discountPct={quote.discount_pct}
+                        />
+
+                        {/* Approval/Rejection Buttons */}
+                        {quote.status === "sent" && (
+                            <PortalQuoteApproval
+                                quote={quote}
+                                projectId={data.summary?.project_id || ""}
+                                clientId={data.summary?.client_id || ""}
+                                onSuccess={() => router.refresh()}
+                            />
+                        )}
+
+                        {/* PDF Download Button */}
+                        <div className="flex justify-end mt-4 pt-4 border-t border-zinc-700/50">
+                            <PortalQuotePdfButton
+                                quote={quote}
+                                organizationName={data.summary?.project_id ? undefined : undefined}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="p-6 space-y-6">
+            <h2 className="text-xl font-semibold">Presupuestos</h2>
+
+            {/* KPI Summary Card */}
+            {settings.show_amounts && (
+                <div className="bg-zinc-800/50 rounded-xl border border-zinc-700/50 p-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* Total */}
+                        <div className="space-y-1">
+                            <p className="text-sm text-zinc-400">Total Presupuestado</p>
+                            <p className="text-2xl font-bold tracking-tight">{formatAmount(totalAmount)}</p>
+                            <p className="text-xs text-zinc-500">{data.quotes.length} presupuesto{data.quotes.length !== 1 ? 's' : ''}</p>
+                        </div>
+
+                        {/* Approved */}
+                        <div className="space-y-1">
+                            <p className="text-sm text-emerald-400/80">Aprobado</p>
+                            <p className="text-2xl font-bold tracking-tight text-emerald-400">{formatAmount(approvedAmount)}</p>
+                            <p className="text-xs text-zinc-500">
+                                {data.quotes.filter(q => q.status === 'approved').length} aprobado{data.quotes.filter(q => q.status === 'approved').length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+
+                        {/* Pending */}
+                        <div className="space-y-1">
+                            <p className="text-sm text-blue-400/80">Pendiente de Aprobación</p>
+                            <p className="text-2xl font-bold tracking-tight text-blue-400">{formatAmount(pendingAmount)}</p>
+                            <p className="text-xs text-zinc-500">
+                                {pendingQuotes.length} pendiente{pendingQuotes.length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+
+                        {/* Rejected (only if any) */}
+                        {rejectedAmount > 0 && (
+                            <div className="space-y-1">
+                                <p className="text-sm text-red-400/80">Rechazado</p>
+                                <p className="text-2xl font-bold tracking-tight text-red-400">{formatAmount(rejectedAmount)}</p>
+                                <p className="text-xs text-zinc-500">
+                                    {data.quotes.filter(q => q.status === 'rejected').length} rechazado{data.quotes.filter(q => q.status === 'rejected').length !== 1 ? 's' : ''}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Pending Quotes Section */}
+            {pendingQuotes.length > 0 && (
+                <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">
+                        Requieren tu atención ({pendingQuotes.length})
+                    </h3>
+                    {pendingQuotes.map(renderQuoteCard)}
+                </div>
+            )}
+
+            {/* Resolved Quotes Section */}
+            {resolvedQuotes.length > 0 && (
+                <div className="space-y-3">
+                    {pendingQuotes.length > 0 && (
+                        <div className="border-t border-zinc-700/30 pt-4 mt-6">
+                            <h3 className="text-sm font-medium text-zinc-500 uppercase tracking-wider">
+                                Resueltos ({resolvedQuotes.length})
+                            </h3>
+                        </div>
+                    )}
+                    {resolvedQuotes.map(renderQuoteCard)}
+                </div>
+            )}
         </div>
     );
 }

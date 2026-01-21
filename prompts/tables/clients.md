@@ -286,6 +286,29 @@ or
 update on client_payments for EACH row
 execute FUNCTION set_client_payment_functional_amount ();
 
+# Tabla CLIENT_PORTAL_BRANDING:
+
+create table public.client_portal_branding (
+  id uuid not null default gen_random_uuid (),
+  project_id uuid not null,
+  organization_id uuid not null,
+  portal_name text null,
+  welcome_message text null,
+  primary_color text null default '#83cc16'::text,
+  background_color text null default '#09090b'::text,
+  show_footer boolean null default true,
+  footer_text text null,
+  show_powered_by boolean null default true,
+  hero_image_url text null,
+  show_hero boolean null default true,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint client_portal_branding_pkey primary key (id),
+  constraint client_portal_branding_project_id_key unique (project_id),
+  constraint client_portal_branding_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint client_portal_branding_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE
+) TABLESPACE pg_default;
+
 ## Tabla client_portal_settings:
 
 create table public.client_portal_settings (

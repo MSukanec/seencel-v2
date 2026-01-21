@@ -874,6 +874,7 @@ export interface PortalSettings {
     show_logs: boolean;
     show_amounts: boolean;
     show_progress: boolean;
+    show_quotes: boolean;
     allow_comments: boolean;
 }
 
@@ -934,6 +935,70 @@ export async function updatePortalSettings(
         if (error) {
             console.error("Error creating portal settings:", error);
             throw new Error("Error al crear configuración del portal.");
+        }
+    }
+
+    revalidatePath(`/project/${projectId}/portal`);
+    return { success: true };
+}
+
+// ===============================================
+// Portal Branding
+// ===============================================
+
+export interface PortalBranding {
+    portal_name?: string | null;
+    welcome_message?: string | null;
+    primary_color?: string;
+    background_color?: string;
+    hero_image_url?: string | null;
+    show_hero?: boolean;
+    show_footer?: boolean;
+    footer_text?: string | null;
+    show_powered_by?: boolean;
+}
+
+export async function updatePortalBranding(
+    projectId: string,
+    organizationId: string,
+    branding: PortalBranding
+) {
+    const supabase = await createClient();
+
+    // Check if branding exists
+    const { data: existing } = await supabase
+        .from('client_portal_branding')
+        .select('id')
+        .eq('project_id', projectId)
+        .single();
+
+    if (existing) {
+        // Update
+        const { error } = await supabase
+            .from('client_portal_branding')
+            .update({
+                ...branding,
+                updated_at: new Date().toISOString()
+            })
+            .eq('project_id', projectId);
+
+        if (error) {
+            console.error("Error updating portal branding:", error);
+            throw new Error("Error al guardar el branding del portal.");
+        }
+    } else {
+        // Insert
+        const { error } = await supabase
+            .from('client_portal_branding')
+            .insert({
+                project_id: projectId,
+                organization_id: organizationId,
+                ...branding
+            });
+
+        if (error) {
+            console.error("Error creating portal branding:", error);
+            throw new Error("Error al crear el branding del portal.");
         }
     }
 

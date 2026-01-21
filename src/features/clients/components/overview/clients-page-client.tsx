@@ -5,8 +5,8 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Handshake, FilterX } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 

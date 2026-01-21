@@ -21,7 +21,7 @@ import {
     CheckCircle,
     FolderPlus
 } from "lucide-react";
-import { formatCurrency } from "@/lib/currency-utils";
+
 import { useModal } from "@/providers/modal-store";
 import { QuoteItemForm } from "./quote-item-form";
 import { QuoteItemsTable } from "./quote-items-table";
@@ -66,6 +66,30 @@ export function QuoteEditor({
             {
                 title: "Agregar Ítem",
                 description: "Selecciona una tarea del catálogo y define cantidad y precio",
+                size: "lg"
+            }
+        );
+    };
+
+    const handleEditItem = (item: QuoteItemView) => {
+        openModal(
+            <QuoteItemForm
+                mode="edit"
+                quoteId={quote.id}
+                organizationId={quote.organization_id}
+                projectId={quote.project_id}
+                currencyId={quote.currency_id}
+                tasks={tasks}
+                initialData={item}
+                onCancel={closeModal}
+                onSuccess={() => {
+                    closeModal();
+                    router.refresh();
+                }}
+            />,
+            {
+                title: "Editar Ítem",
+                description: "Modifica los datos del ítem",
                 size: "lg"
             }
         );
@@ -116,7 +140,7 @@ export function QuoteEditor({
                             </div>
 
                             {quote.description && (
-                                <p className="text-muted-foreground">{quote.description}</p>
+                                <p className="text-sm text-muted-foreground">{quote.description}</p>
                             )}
 
                             <div className="flex items-center gap-6 text-sm text-muted-foreground">
@@ -185,7 +209,7 @@ export function QuoteEditor({
                     <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Subtotal</p>
                         <p className="text-xl font-semibold">
-                            {quote.currency_symbol} {formatCurrency(quote.subtotal || 0)}
+                            {quote.currency_symbol} {(quote.subtotal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </p>
                     </CardContent>
                 </Card>
@@ -193,7 +217,7 @@ export function QuoteEditor({
                     <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Con Markup</p>
                         <p className="text-xl font-semibold">
-                            {quote.currency_symbol} {formatCurrency(quote.subtotal_with_markup || 0)}
+                            {quote.currency_symbol} {(quote.subtotal_with_markup || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </p>
                     </CardContent>
                 </Card>
@@ -203,7 +227,7 @@ export function QuoteEditor({
                             Descuento ({quote.discount_pct}%)
                         </p>
                         <p className="text-xl font-semibold">
-                            {quote.currency_symbol} {formatCurrency(quote.total_after_discount || 0)}
+                            {quote.currency_symbol} {(quote.total_after_discount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </p>
                     </CardContent>
                 </Card>
@@ -213,7 +237,7 @@ export function QuoteEditor({
                             Total ({quote.tax_label || 'IVA'} {quote.tax_pct}%)
                         </p>
                         <p className="text-2xl font-bold text-primary">
-                            {quote.currency_symbol} {formatCurrency(quote.total_with_tax || 0)}
+                            {quote.currency_symbol} {(quote.total_with_tax || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                         </p>
                     </CardContent>
                 </Card>
@@ -237,7 +261,9 @@ export function QuoteEditor({
                         items={items}
                         quote={quote}
                         tasks={tasks}
+                        divisions={divisions}
                         onRefresh={() => router.refresh()}
+                        onEditItem={handleEditItem}
                     />
                 </CardContent>
             </Card>

@@ -5,7 +5,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { ProjectProfileTab } from "./project-profile-tab";
 import { ProjectLocationTab } from "./project-location-tab";
 import { useEffect } from "react";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { ContentLayout } from "@/components/layout";
 
 export function ProjectDetailsClient({ project }: { project: any }) {
     const { actions } = useLayoutStore();

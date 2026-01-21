@@ -3,8 +3,8 @@ import { OrganizationDetailsForm } from "@/features/organization/components/orga
 import { OrganizationLocationManager } from "@/features/organization/components/location-manager";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganizationTabsWrapper } from "@/features/organization/components/organization-tabs-wrapper";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { BrandDigitalExperience } from "@/features/organization/components/brand/brand-digital-experience";
 import { BrandPdfTemplates } from "@/features/organization/components/brand/brand-pdf-templates";
 import { Building } from "lucide-react";

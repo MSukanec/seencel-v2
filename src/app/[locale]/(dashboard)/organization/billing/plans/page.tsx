@@ -1,5 +1,5 @@
 import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { ContentLayout } from "@/components/layout";
 import { PlansComparison } from "@/features/billing/components/plans-comparison";
 import { PricingFaq } from "@/features/billing/components/pricing-faq";
 import { getPlanPurchaseFlags } from "@/actions/feature-flags";

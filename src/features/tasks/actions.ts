@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserOrganizations } from "@/features/organization/queries";
 
@@ -8,11 +8,19 @@ import { getUserOrganizations } from "@/features/organization/queries";
 // CREATE TASK
 // ============================================
 export async function createTask(formData: FormData) {
-    const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    // Check if creating a system task (admin mode)
+    const isSystemTask = formData.get("is_system") === "true";
 
-    if (!activeOrgId) {
-        return { error: "No hay organización activa" };
+    // Use service client for admin operations to bypass RLS
+    const supabase = isSystemTask ? createServiceClient() : await createClient();
+    const formOrgId = formData.get("organization_id") as string | null;
+
+    // For non-system tasks, we need an organization
+    if (!isSystemTask && !formOrgId) {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) {
+            return { error: "No hay organización activa" };
+        }
     }
 
     const name = formData.get("name") as string;
@@ -39,8 +47,8 @@ export async function createTask(formData: FormData) {
             description: description?.trim() || null,
             unit_id,
             task_division_id: task_division_id || null,
-            organization_id: activeOrgId,
-            is_system: false,
+            organization_id: isSystemTask ? null : (formOrgId || (await getUserOrganizations()).activeOrgId),
+            is_system: isSystemTask,
             is_published,
             is_deleted: false,
         })
@@ -53,6 +61,7 @@ export async function createTask(formData: FormData) {
     }
 
     revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
     return { data, error: null };
 }
 
@@ -60,13 +69,10 @@ export async function createTask(formData: FormData) {
 // UPDATE TASK
 // ============================================
 export async function updateTask(formData: FormData) {
-    const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+    const isAdminMode = formData.get("is_admin_mode") === "true";
 
-    if (!activeOrgId) {
-        return { error: "No hay organización activa" };
-    }
-
+    // Use service client for admin operations to bypass RLS
+    const supabase = isAdminMode ? createServiceClient() : await createClient();
     const id = formData.get("id") as string;
     const name = formData.get("name") as string;
     const code = formData.get("code") as string | null;
@@ -83,7 +89,7 @@ export async function updateTask(formData: FormData) {
         return { error: "El nombre es requerido" };
     }
 
-    const { data, error } = await supabase
+    let query = supabase
         .from("tasks")
         .update({
             name: name.trim(),
@@ -94,11 +100,22 @@ export async function updateTask(formData: FormData) {
             task_division_id: task_division_id || null,
             is_published,
         })
-        .eq("id", id)
-        .eq("organization_id", activeOrgId) // Security: only own tasks
-        .eq("is_system", false) // Security: can't edit system tasks
-        .select()
-        .single();
+        .eq("id", id);
+
+    // In admin mode, we can edit system tasks
+    // In normal mode, we can only edit our org's non-system tasks
+    if (isAdminMode) {
+        // Admin mode: only edit system tasks
+        query = query.eq("is_system", true);
+    } else {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) {
+            return { error: "No hay organización activa" };
+        }
+        query = query.eq("organization_id", activeOrgId).eq("is_system", false);
+    }
+
+    const { data, error } = await query.select().single();
 
     if (error) {
         console.error("Error updating task:", error);
@@ -106,29 +123,36 @@ export async function updateTask(formData: FormData) {
     }
 
     revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
     return { data, error: null };
 }
 
 // ============================================
 // DELETE TASK (soft delete)
 // ============================================
-export async function deleteTask(id: string) {
-    const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
+export async function deleteTask(id: string, isAdminMode: boolean = false) {
+    // Use service client for admin operations to bypass RLS
+    const supabase = isAdminMode ? createServiceClient() : await createClient();
 
-    if (!activeOrgId) {
-        return { error: "No hay organización activa" };
-    }
-
-    const { error } = await supabase
+    let query = supabase
         .from("tasks")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
         })
-        .eq("id", id)
-        .eq("organization_id", activeOrgId)
-        .eq("is_system", false);
+        .eq("id", id);
+
+    // In admin mode, we can delete system tasks
+    // In normal mode, we can only delete our org's non-system tasks
+    if (!isAdminMode) {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) {
+            return { error: "No hay organización activa" };
+        }
+        query = query.eq("organization_id", activeOrgId).eq("is_system", false);
+    }
+
+    const { error } = await query;
 
     if (error) {
         console.error("Error deleting task:", error);
@@ -136,5 +160,6 @@ export async function deleteTask(id: string) {
     }
 
     revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
     return { success: true, error: null };
 }

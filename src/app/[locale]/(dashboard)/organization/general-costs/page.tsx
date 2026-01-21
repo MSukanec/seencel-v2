@@ -6,8 +6,8 @@ import {
     getGeneralCostsDashboard,
     getActiveOrganizationId
 } from "@/actions/general-costs";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard } from "lucide-react";
 

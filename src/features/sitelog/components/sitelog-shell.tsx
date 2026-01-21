@@ -1,7 +1,7 @@
 "use client";
 
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { FileText, BarChart2, Settings } from "lucide-react";

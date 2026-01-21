@@ -1,17 +1,30 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Database, Shield, Monitor } from "lucide-react";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { Activity, Database, Shield, Monitor, ToggleLeft } from "lucide-react";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
+import { getFeatureFlags } from "@/actions/feature-flags";
+import { FeatureFlagsManager } from "@/features/admin/components/feature-flags-manager";
 
-export default function AdminSystemPage() {
+export default async function AdminSystemPage() {
+    const flags = await getFeatureFlags();
+
     return (
-        <Tabs defaultValue="status" className="w-full h-full flex flex-col">
+        <Tabs defaultValue="flags" className="w-full h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Plataforma"
                 icon={<Monitor />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
+                        <TabsTrigger
+                            value="flags"
+                            className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
+                        >
+                            <div className="flex items-center gap-2">
+                                <ToggleLeft className="h-4 w-4" />
+                                <span>Feature Flags</span>
+                            </div>
+                        </TabsTrigger>
                         <TabsTrigger
                             value="status"
                             className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
@@ -42,6 +55,12 @@ export default function AdminSystemPage() {
                     </TabsList>
                 }
             >
+                <TabsContent value="flags" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <FeatureFlagsManager initialFlags={flags} />
+                    </ContentLayout>
+                </TabsContent>
+
                 <TabsContent value="status" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
                         <div className="p-8 border border-dashed rounded-lg bg-background text-center">

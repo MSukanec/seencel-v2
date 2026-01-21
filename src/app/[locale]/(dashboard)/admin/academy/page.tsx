@@ -1,8 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Users, Video, GraduationCap } from "lucide-react";
 import { getCoursesDashboardData, getAdminCourseEnrollments, getAdminCourses } from "@/features/admin/academy-queries";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { CoursesDashboard } from "@/features/academy/components/admin/courses-dashboard";
 import { StudentsDataTable } from "@/features/academy/components/admin/students-table";
 import { CoursesTable } from "@/features/academy/components/admin/courses-table";

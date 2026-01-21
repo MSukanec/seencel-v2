@@ -1,8 +1,8 @@
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions } from "@/features/tasks/queries";
 import { TaskCatalog } from "@/features/tasks/components/catalog/task-catalog";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Wrench, ClipboardList, Package } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";

@@ -2,8 +2,8 @@
 
 import { QuoteView } from "@/features/quotes/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { FileText, Package } from "lucide-react";
 import { QuotesList } from "./lists/quotes-list";
 import { EmptyState } from "@/components/ui/empty-state";

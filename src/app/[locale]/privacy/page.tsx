@@ -1,5 +1,5 @@
 import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import { Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { getMessages } from 'next-intl/server';
 import { getUserProfile } from "@/features/profile/queries";

@@ -3,8 +3,8 @@ import { Users, Building } from "lucide-react";
 import { getAdminUsers, getAdminOrganizations } from "@/features/admin/queries";
 import { UsersTable } from "@/features/admin/components/users-table";
 import { OrganizationsTable } from "@/features/admin/components/organizations-table";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 
 export default async function AdminDirectoryPage() {
     const [users, organizations] = await Promise.all([

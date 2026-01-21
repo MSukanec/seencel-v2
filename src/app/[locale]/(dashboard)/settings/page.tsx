@@ -18,14 +18,14 @@ import { getUserTimezone } from "@/features/preferences/actions";
 import { getStorageUrl } from "@/lib/storage-utils";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import { AvatarManager } from "@/features/profile/components/AvatarManager";
-import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
+import { HeaderTitleUpdater } from "@/components/layout";
 import { getCountries } from "@/features/countries/queries";
 import { getBillingProfile } from "@/features/billing/queries";
 import { BillingForm } from "@/features/billing/components/BillingForm";
 import { getUserNotifications } from "@/features/notifications/queries";
 import { NotificationsSettings } from "@/features/notifications/components/NotificationsSettings";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 
 interface Organization {
     id: string;

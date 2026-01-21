@@ -1,5 +1,5 @@
 import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/profile/queries";
 
 export default async function FeaturesPage() {

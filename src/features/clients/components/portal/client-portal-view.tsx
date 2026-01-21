@@ -17,6 +17,15 @@ import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+interface QuoteForPortal {
+    id: string;
+    name: string;
+    status: string;
+    total_with_tax: number;
+    created_at: string;
+    currency_symbol?: string;
+}
+
 interface ClientPortalViewProps {
     project: {
         id: string;
@@ -37,10 +46,12 @@ interface ClientPortalViewProps {
         show_logs: boolean;
         show_amounts: boolean;
         show_progress: boolean;
+        show_quotes: boolean;
         allow_comments: boolean;
     };
     payments: any[];
     schedules: any[];
+    quotes?: QuoteForPortal[];
     summary: {
         total_committed_amount?: number;
         total_paid_amount?: number;
@@ -60,6 +71,7 @@ export function ClientPortalView({
     settings,
     payments,
     schedules,
+    quotes = [],
     summary
 }: ClientPortalViewProps) {
     const primaryColor = project.color || "#83cc16";
@@ -225,6 +237,53 @@ export function ClientPortalView({
                                                 {isPending && 'Pendiente'}
                                                 {isOverdue && 'Vencido'}
                                                 {!isPaid && !isPending && !isOverdue && 'Próximo'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
+
+                {/* Quotes Section */}
+                {settings.show_quotes && quotes.length > 0 && (
+                    <section className="space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-400">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-xs font-medium uppercase tracking-wider">Presupuestos</span>
+                        </div>
+
+                        <div className="space-y-2">
+                            {quotes.map((quote) => {
+                                const statusColors: Record<string, string> = {
+                                    draft: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+                                    sent: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                                    approved: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                                    rejected: "bg-red-500/10 text-red-400 border-red-500/20",
+                                };
+                                const statusLabels: Record<string, string> = {
+                                    draft: "Borrador",
+                                    sent: "Enviado",
+                                    approved: "Aprobado",
+                                    rejected: "Rechazado",
+                                };
+
+                                return (
+                                    <div key={quote.id} className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700/50 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <div className="font-medium">{quote.name}</div>
+                                                <div className="text-xs text-zinc-500">{formatDate(quote.created_at)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right flex items-center gap-3">
+                                            <div className="font-mono font-medium">
+                                                {formatAmount(quote.total_with_tax)}
+                                            </div>
+                                            <Badge variant="outline" className={statusColors[quote.status] || statusColors.draft}>
+                                                {statusLabels[quote.status] || quote.status}
                                             </Badge>
                                         </div>
                                     </div>

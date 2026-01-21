@@ -2,6 +2,62 @@
 
 NO MODIFICAR NUNCA; solo lo modifico yo! Si te pido modificarla solo MODIFICA LAS TABLAS PARA QUE SE ACTUALICEN A LO UTLIMO QUE HICIMOS; pero ni suplantes informacion ni nada raro. Preguntame cuaquier cosa.
 
+# Tabla TASK_DIVISIONS:
+
+create table public.task_divisions (
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  name text not null,
+  description text null,
+  organization_id uuid null,
+  is_system boolean null default false,
+  "order" integer null,
+  code text null,
+  parent_id uuid null,
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  created_by uuid null,
+  updated_by uuid null,
+  constraint task_rubros_pkey primary key (id),
+  constraint task_divisions_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint task_divisions_parent_id_fkey foreign KEY (parent_id) references task_divisions (id) on delete set null,
+  constraint task_divisions_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint task_rubros_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_task_divisions_not_deleted on public.task_divisions using btree (is_deleted) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_task_divisions_org_active on public.task_divisions using btree (organization_id, is_deleted) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_task_divisions_created_by on public.task_divisions using btree (created_by) TABLESPACE pg_default;
+
+create index IF not exists idx_task_divisions_updated_by on public.task_divisions using btree (updated_by) TABLESPACE pg_default;
+
+create trigger on_task_division_audit
+after INSERT
+or DELETE
+or
+update on task_divisions for EACH row
+execute FUNCTION log_task_division_activity ();
+
+create trigger set_updated_by_task_divisions BEFORE INSERT
+or
+update on task_divisions for EACH row
+execute FUNCTION handle_updated_by ();
+
+create trigger task_divisions_set_updated_at BEFORE
+update on task_divisions for EACH row
+execute FUNCTION set_timestamp ();
+
+create trigger trg_task_divisions_org_immutable BEFORE
+update on task_divisions for EACH row
+execute FUNCTION prevent_column_change ('organization_id');
+
 ## Tabla: TASKS:
 
 create table public.tasks (

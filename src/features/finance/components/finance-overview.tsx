@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { FinanceCashFlowWidget } from "@/features/finance/components/dashboard/finance-cash-flow-widget";
 import { Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";

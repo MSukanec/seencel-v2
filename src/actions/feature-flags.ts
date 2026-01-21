@@ -82,3 +82,55 @@ export async function getPlanPurchaseFlags(): Promise<{
         teams: teamsFlag?.value ?? false,
     };
 }
+
+/**
+ * Set a feature flag value (admin only)
+ */
+export async function setFeatureFlag(key: string, value: boolean) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("feature_flags")
+        .update({ value })
+        .eq("key", key);
+
+    if (error) {
+        console.error(`Error setting feature flag ${key}:`, error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Toggle a feature flag (admin only)
+ */
+export async function toggleFeatureFlag(key: string) {
+    const supabase = await createClient();
+
+    // Get current value
+    const { data: current, error: fetchError } = await supabase
+        .from("feature_flags")
+        .select("value")
+        .eq("key", key)
+        .single();
+
+    if (fetchError) {
+        console.error(`Error fetching feature flag ${key}:`, fetchError);
+        return { success: false, error: fetchError.message };
+    }
+
+    const newValue = !current.value;
+
+    const { error } = await supabase
+        .from("feature_flags")
+        .update({ value: newValue })
+        .eq("key", key);
+
+    if (error) {
+        console.error(`Error toggling feature flag ${key}:`, error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true, value: newValue };
+}

@@ -1,7 +1,7 @@
 import { getBoards, getBoardWithData } from "@/features/kanban/queries";
 import { getDashboardData } from "@/features/organization/queries";
 import { redirect } from "next/navigation";
-import { PageWrapper } from "@/components/layout/page-wrapper";
+import { PageWrapper } from "@/components/layout";
 import { KanbanDashboard } from "@/features/kanban/components/kanban-dashboard";
 
 interface KanbanPageProps {

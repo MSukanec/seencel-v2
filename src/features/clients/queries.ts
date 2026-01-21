@@ -478,82 +478,32 @@ export async function getPortalSettings(projectId: string) {
 export async function getClientPortalSiteLogs(projectId: string) {
     const supabase = await createClient();
 
+    // Simplified query - only basic site_log fields
     const { data: logs, error } = await supabase
         .from('site_logs')
         .select(`
-            *,
-            entry_type:site_log_types(id, name, color, icon),
-            author:project_members(
-                id,
-                user:users(full_name, email, avatar_url)
-            ),
-            media:media_links(
-                id,
-                media_file:media_files(
-                    id,
-                    bucket,
-                    file_path,
-                    file_name,
-                    file_type,
-                    file_size,
-                    is_public,
-                    width,
-                    height
-                )
-            )
+            id,
+            log_date,
+            comments,
+            is_public,
+            status,
+            created_at
         `)
         .eq('project_id', projectId)
         .eq('is_deleted', false)
         .eq('is_public', true)
-        .order('log_date', { ascending: false });
+        .order('log_date', { ascending: false })
+        .limit(20);
 
     if (error) {
         console.error("Error fetching portal logs:", error);
         return { data: [] as SiteLog[], error };
     }
 
-    // Process media and sign URLs
-    const formattedData = await Promise.all(logs.map(async (log) => {
-        const mediaItems = await Promise.all(log.media.map(async (link: any) => {
-            const file = link.media_file;
-            if (!file) return null;
-
-            let finalUrl = "";
-
-            // If it's a public bucket, constructing the URL might be different, 
-            // but here we assume all media access via Signed URL for consistency and security
-            // unless we prefer public URLs for public buckets.
-            // Following shared logic: sign if bucket private, or just sign everything for safety + expiry.
-            // But we must check if file_path exists.
-
-            if (file.bucket && file.file_path) {
-                try {
-                    const command = new GetObjectCommand({
-                        Bucket: file.bucket,
-                        Key: file.file_path,
-                    });
-                    finalUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-                } catch (e) {
-                    console.error("Error signing URL:", e);
-                }
-            }
-
-            return {
-                id: file.id,
-                url: finalUrl,
-                type: file.file_type,
-                name: file.file_name,
-                bucket: file.bucket,
-                path: file.file_path,
-                // Add extra fields for the UI
-                size: file.file_size
-            };
-        }));
-
-        return {
-            ...log,
-            media: mediaItems.filter((m: any) => m !== null)
-        };
+    // Return simplified data
+    const formattedData = logs.map((log) => ({
+        ...log,
+        media: [] // No media for now
     }));
 
     return { data: formattedData as SiteLog[], error: null };
@@ -574,7 +524,8 @@ export async function getClientPortalData(projectId: string, clientId: string) {
         paymentsResult,
         schedulesResult,
         summaryResult,
-        logsResult
+        logsResult,
+        quotesResult
     ] = await Promise.all([
         // Project info
         supabase
@@ -628,8 +579,31 @@ export async function getClientPortalData(projectId: string, clientId: string) {
             .eq('client_id', clientId),
 
         // Site Logs
-        getClientPortalSiteLogs(projectId)
+        getClientPortalSiteLogs(projectId),
+
+        // Project Quotes (for portal display) - using quotes_view for pre-calculated totals
+        supabase
+            .from('quotes_view')
+            .select('id, name, description, status, quote_date, total_with_tax, tax_pct, tax_label, discount_pct, currency_symbol')
+            .eq('project_id', projectId)
+            .eq('is_deleted', false)
+            .neq('status', 'draft') // Don't show drafts to clients
+            .order('created_at', { ascending: false })
     ]);
+
+    // Quotes already have all fields from the view
+    const quotes = (quotesResult.data || []).map((q: any) => ({
+        id: q.id,
+        name: q.name,
+        description: q.description,
+        status: q.status,
+        total_with_tax: q.total_with_tax || 0,
+        tax_pct: q.tax_pct || 0,
+        tax_label: q.tax_label || null,
+        discount_pct: q.discount_pct || 0,
+        created_at: q.quote_date,
+        currency_symbol: q.currency_symbol || '$'
+    }));
 
     return {
         project: projectResult.data,
@@ -638,8 +612,11 @@ export async function getClientPortalData(projectId: string, clientId: string) {
         branding: brandingResult.data,  // Will be null if no custom branding
         payments: paymentsResult.data || [],
         schedules: schedulesResult.data || [],
-        summary: summaryResult.data?.[0] || null,
+        summary: summaryResult.data?.[0]
+            ? { ...summaryResult.data[0], project_id: projectId, client_id: clientId }
+            : { project_id: projectId, client_id: clientId },
         logs: logsResult.data || [],
+        quotes,
         error: projectResult.error || clientResult.error
     };
 }

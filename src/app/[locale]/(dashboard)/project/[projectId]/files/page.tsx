@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { HeaderTitleUpdater } from "@/components/layout/header-title-updater";
+import { HeaderTitleUpdater } from "@/components/layout";
 import { getProjectById } from "@/features/projects/queries";
 import { getProjectFiles } from "@/features/projects/file-queries";
 import { ProjectFilesClient } from "@/features/projects/components/project-files-client";

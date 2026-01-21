@@ -1,16 +1,31 @@
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile, checkIsAdmin } from "@/features/profile/queries";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
-import { LayoutSwitcher } from "@/components/layout/layout-switcher";
+import { LayoutSwitcher } from "@/components/layout";
+import { getFeatureFlag } from "@/actions/feature-flags";
 
 import { OrganizationProvider } from "@/context/organization-context";
 import { CurrencyProvider } from "@/providers/currency-context";
 import { Currency } from "@/types/currency";
+import MaintenancePage from "./maintenance/page";
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    // Check maintenance mode first
+    const isMaintenanceMode = await getFeatureFlag("dashboard_maintenance_mode");
+
+    // If maintenance mode is on, check if user is admin (admins can still access)
+    if (isMaintenanceMode) {
+        const isAdmin = await checkIsAdmin();
+
+        // Non-admins see maintenance page
+        if (!isAdmin) {
+            return <MaintenancePage />;
+        }
+    }
+
     const { profile } = await getUserProfile();
     const { activeOrgId } = await getUserOrganizations();
 
@@ -58,4 +73,3 @@ export default async function DashboardLayout({
         </OrganizationProvider>
     );
 }
-

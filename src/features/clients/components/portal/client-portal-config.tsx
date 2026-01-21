@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PortalPreview } from "./portal-preview";
-import { updatePortalSettings, PortalSettings } from "../../actions";
-import { SplitEditorLayout, SplitEditorPreview, SplitEditorSidebar } from "@/components/layout/split-editor-layout";
+import { updatePortalSettings, updatePortalBranding, PortalSettings } from "../../actions";
+import { SplitEditorLayout, SplitEditorPreview, SplitEditorSidebar } from "@/components/layout";
 import { FeatureGuard } from "@/components/ui/feature-guard";
 import { useTranslations } from "next-intl";
 import {
@@ -59,6 +59,7 @@ const defaultSettings: Omit<PortalSettings, 'project_id' | 'organization_id'> = 
     show_logs: false,
     show_amounts: true,
     show_progress: true,
+    show_quotes: false,
     allow_comments: false,
 };
 
@@ -89,6 +90,7 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
         show_logs: initialSettings?.show_logs ?? defaultSettings.show_logs,
         show_amounts: initialSettings?.show_amounts ?? defaultSettings.show_amounts,
         show_progress: initialSettings?.show_progress ?? defaultSettings.show_progress,
+        show_quotes: initialSettings?.show_quotes ?? defaultSettings.show_quotes,
         allow_comments: initialSettings?.allow_comments ?? defaultSettings.allow_comments,
     });
 
@@ -110,8 +112,10 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
     const handleSave = () => {
         startTransition(async () => {
             try {
-                await updatePortalSettings(projectId, organizationId, settings);
-                // TODO: Also save branding when server action is ready
+                await Promise.all([
+                    updatePortalSettings(projectId, organizationId, settings),
+                    updatePortalBranding(projectId, organizationId, branding)
+                ]);
                 toast.success("Configuración guardada correctamente");
             } catch (error) {
                 toast.error("Error al guardar la configuración");
@@ -123,6 +127,7 @@ export function ClientPortalConfig({ projectId, organizationId, initialSettings,
         { key: 'show_dashboard' as const, label: 'Dashboard', description: 'Resumen del proyecto con métricas clave', icon: LayoutDashboard },
         { key: 'show_progress' as const, label: 'Mostrar Progreso', description: 'Barra de progreso del proyecto', icon: TrendingUp },
         { key: 'show_amounts' as const, label: 'Mostrar Montos', description: 'Valores en moneda (vs ocultos)', icon: DollarSign },
+        { key: 'show_quotes' as const, label: 'Presupuestos', description: 'Ver presupuestos del proyecto', icon: FileText },
         { key: 'show_payments' as const, label: 'Pagos Realizados', description: 'Historial de pagos del cliente', icon: CreditCard },
         { key: 'show_installments' as const, label: 'Cronograma de Cuotas', description: 'Próximos pagos y cuotas pendientes', icon: Calendar },
         { key: 'show_logs' as const, label: 'Bitácora', description: 'Actualizaciones y avances del proyecto', icon: FileText },

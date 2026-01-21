@@ -1,8 +1,8 @@
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getQuote, getQuoteItems } from "@/features/quotes/queries";
 import { QuoteEditor } from "@/features/quotes/components/editor/quote-editor";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { FileText } from "lucide-react";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";

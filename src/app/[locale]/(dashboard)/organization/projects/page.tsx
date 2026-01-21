@@ -8,8 +8,8 @@ import { ProjectTypesManager } from "@/features/projects/components/project-type
 import { ProjectModalitiesManager } from "@/features/projects/components/project-modalities-manager";
 import { redirect } from "@/i18n/routing";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Briefcase } from "lucide-react";
 
 // Reusable tab trigger style

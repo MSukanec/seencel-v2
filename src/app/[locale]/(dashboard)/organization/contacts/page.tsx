@@ -3,8 +3,8 @@ import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/
 import { ContactsClient } from "@/features/organization/components/contacts/contacts-client";
 import { redirect } from "next/navigation";
 import { Users } from "lucide-react";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Reusable tab trigger style

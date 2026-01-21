@@ -76,7 +76,6 @@ export function TaskCatalogCombobox({
                 const searchableText = [
                     task.name,
                     task.custom_name,
-                    task.code,
                     task.division_name,
                     task.unit_name,
                 ].filter(Boolean).join(" ").toLowerCase();
@@ -111,7 +110,6 @@ export function TaskCatalogCombobox({
     // Format display label
     const getDisplayLabel = (task: TaskView) => {
         const parts: string[] = [];
-        if (task.code) parts.push(`[${task.code}]`);
         parts.push(task.name || task.custom_name || "");
         if (task.unit_name) parts.push(`(${task.unit_name})`);
         return parts.join(" ");
@@ -167,7 +165,7 @@ export function TaskCatalogCombobox({
                     >
                         <div className="[&_input]:!ring-0 [&_input]:!shadow-none [&_input]:!outline-none [&_input]:!border-none">
                             <CommandInput
-                                placeholder="Buscar por nombre, código o rubro..."
+                                placeholder="Buscar por nombre o rubro..."
                                 className="!border-none !ring-0 !outline-none !shadow-none h-10"
                                 value={search}
                                 onValueChange={setSearch}
@@ -197,11 +195,6 @@ export function TaskCatalogCombobox({
                                             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium truncate">
-                                                        {task.code && (
-                                                            <span className="text-primary font-mono text-xs mr-2">
-                                                                [{task.code}]
-                                                            </span>
-                                                        )}
                                                         {task.name || task.custom_name}
                                                     </span>
                                                     <span className={cn(

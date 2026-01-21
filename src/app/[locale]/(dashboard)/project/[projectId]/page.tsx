@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { getProjectById } from "@/features/projects/queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
 import { LayoutDashboard } from "lucide-react";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 
 interface PageProps {
     params: Promise<{

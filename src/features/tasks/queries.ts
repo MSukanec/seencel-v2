@@ -4,16 +4,25 @@ import { TaskView, TasksByDivision, TaskDivision, Unit } from "./types";
 /**
  * Get all tasks for an organization (includes system tasks + org custom tasks)
  * Reads from tasks_view which has pre-joined unit and division names
+ * @param organizationId - The org ID, or "__SYSTEM__" for admin mode (only system tasks)
  */
 export async function getOrganizationTasks(organizationId: string) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('tasks_view')
         .select('*')
-        .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false)
         .order('code', { ascending: true, nullsFirst: false });
+
+    // Special flag for admin mode - only system tasks
+    if (organizationId === "__SYSTEM__") {
+        query = query.eq('is_system', true);
+    } else {
+        query = query.or(`organization_id.eq.${organizationId},is_system.eq.true`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching tasks:", error);
@@ -63,6 +72,7 @@ export async function getTasksGroupedByDivision(organizationId: string): Promise
                     id: divisionId,
                     name: task.division_name || "Sin división",
                     color: task.division_color,
+                    order: (task as any).division_order,
                 } : null,
                 tasks: []
             });
@@ -71,11 +81,16 @@ export async function getTasksGroupedByDivision(organizationId: string): Promise
         grouped.get(divisionId)!.tasks.push(task);
     }
 
-    // Sort: divisions with tasks first, then by name
+    // Sort by division order, then by name as fallback
     return Array.from(grouped.values())
         .sort((a, b) => {
             if (!a.division) return 1;
             if (!b.division) return -1;
+            // Sort by order first (nulls last)
+            const orderA = a.division.order ?? 999999;
+            const orderB = b.division.order ?? 999999;
+            if (orderA !== orderB) return orderA - orderB;
+            // Fallback to name
             return (a.division.name || "").localeCompare(b.division.name || "");
         });
 }
@@ -89,6 +104,7 @@ export async function getTaskDivisions(organizationId?: string) {
     let query = supabase
         .from('task_divisions')
         .select('*')
+        .order('order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true });
 
     // If org provided, get both system and org divisions

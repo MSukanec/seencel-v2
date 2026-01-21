@@ -38,9 +38,10 @@ interface TaskCatalogProps {
     orgId: string;
     units: Unit[];
     divisions: TaskDivision[];
+    isAdminMode?: boolean;
 }
 
-export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatalogProps) {
+export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode = false }: TaskCatalogProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
@@ -63,7 +64,18 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
                 task.description?.toLowerCase().includes(query)
             );
         })
-    })).filter(group => group.tasks.length > 0);
+    })).filter(group => group.tasks.length > 0)
+        // Sort by division order using the divisions prop
+        .sort((a, b) => {
+            if (!a.division) return 1;
+            if (!b.division) return -1;
+            const divA = divisions.find(d => d.id === a.division?.id);
+            const divB = divisions.find(d => d.id === b.division?.id);
+            const orderA = divA?.order ?? 999999;
+            const orderB = divB?.order ?? 999999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.division.name || "").localeCompare(b.division.name || "");
+        });
 
     const toggleDivision = (divisionId: string) => {
         setExpandedDivisions(prev => {
@@ -84,6 +96,7 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
                 organizationId={orgId}
                 units={units}
                 divisions={divisions}
+                isAdminMode={isAdminMode}
                 onCancel={closeModal}
                 onSuccess={() => {
                     closeModal();
@@ -91,8 +104,10 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
                 }}
             />,
             {
-                title: "Nueva Tarea",
-                description: "Agregar una tarea personalizada al catálogo de tu organización",
+                title: isAdminMode ? "Nueva Tarea de Sistema" : "Nueva Tarea",
+                description: isAdminMode
+                    ? "Crear una tarea del sistema disponible para todas las organizaciones"
+                    : "Agregar una tarea personalizada al catálogo de tu organización",
                 size: "lg"
             }
         );
@@ -106,6 +121,7 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
                 organizationId={orgId}
                 units={units}
                 divisions={divisions}
+                isAdminMode={isAdminMode}
                 onCancel={closeModal}
                 onSuccess={() => {
                     closeModal();
@@ -130,7 +146,7 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
 
         setIsDeleting(true);
         try {
-            const result = await deleteTask(taskToDelete.id);
+            const result = await deleteTask(taskToDelete.id, isAdminMode);
             if (result.error) {
                 toast.error(result.error);
             } else {
@@ -238,6 +254,7 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
                                                 <TaskRow
                                                     key={task.id}
                                                     task={task}
+                                                    isAdminMode={isAdminMode}
                                                     onEdit={handleEditTask}
                                                     onDelete={handleDeleteClick}
                                                 />
@@ -283,12 +300,14 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions }: TaskCatal
 // Individual Task Row with actions
 interface TaskRowProps {
     task: TaskView;
+    isAdminMode?: boolean;
     onEdit: (task: TaskView) => void;
     onDelete: (task: TaskView) => void;
 }
 
-function TaskRow({ task, onEdit, onDelete }: TaskRowProps) {
-    const isEditable = !task.is_system; // Only org tasks can be edited/deleted
+function TaskRow({ task, isAdminMode = false, onEdit, onDelete }: TaskRowProps) {
+    // In admin mode, all tasks are editable. In org mode, only non-system tasks.
+    const isEditable = isAdminMode || !task.is_system;
 
     return (
         <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors group">

@@ -1,7 +1,7 @@
 import { getUserProfile } from "@/features/profile/queries";
 import { ContactView } from "@/features/contact/components/contact-view";
 import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import { Footer } from "@/components/layout";
 
 export default async function ContactPage() {
     const { profile } = await getUserProfile();

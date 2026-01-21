@@ -4,15 +4,16 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Clock, BookOpen, User } from "lucide-react";
+import { Clock, BookOpen, User, Play } from "lucide-react";
 
 interface CourseCardProps {
     course: CourseWithDetails;
     className?: string;
     basePath?: string;
+    isEnrolled?: boolean;
 }
 
-export function CourseCard({ course, className, basePath = '/academy' }: CourseCardProps) {
+export function CourseCard({ course, className, basePath = '/academy', isEnrolled = false }: CourseCardProps) {
     const { details } = course;
 
     // Format price
@@ -23,10 +24,10 @@ export function CourseCard({ course, className, basePath = '/academy' }: CourseC
     return (
         <Card className={cn("overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow", className)}>
             <div className="aspect-video w-full bg-muted relative overflow-hidden group">
-                {details?.image_path ? (
+                {(course.image_path || details?.image_path) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                        src={details.image_path}
+                        src={course.image_path || details?.image_path || ''}
                         alt={course.title}
                         className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                     />
@@ -38,6 +39,11 @@ export function CourseCard({ course, className, basePath = '/academy' }: CourseC
                 {details?.badge_text && (
                     <Badge className="absolute top-2 right-2" variant="secondary">
                         {details.badge_text}
+                    </Badge>
+                )}
+                {isEnrolled && (
+                    <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">
+                        Inscrito
                     </Badge>
                 )}
             </div>
@@ -71,13 +77,23 @@ export function CourseCard({ course, className, basePath = '/academy' }: CourseC
                 <div className="font-semibold text-primary">
                     {formattedPrice}
                 </div>
-                <Button size="sm" variant="outline" asChild>
-                    <Link
-                        href={`${basePath}/${course.slug}` as any}
-                    >
-                        Ver detalles
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    {isEnrolled && (
+                        <Button size="sm" asChild>
+                            <Link href={`/academy/my-courses/${course.slug}` as any}>
+                                <Play className="w-4 h-4 mr-1" />
+                                Continuar
+                            </Link>
+                        </Button>
+                    )}
+                    <Button size="sm" variant="outline" asChild>
+                        <Link
+                            href={`${basePath}/${course.slug}` as any}
+                        >
+                            Ver detalles
+                        </Link>
+                    </Button>
+                </div>
             </CardFooter>
         </Card>
     );

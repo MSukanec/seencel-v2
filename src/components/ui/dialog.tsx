@@ -50,9 +50,11 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  fullscreenMobile = false,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  fullscreenMobile?: boolean
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -60,9 +62,27 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg duration-200 outline-none sm:max-w-lg",
-          // Flex layout with max height for scroll behavior
-          "flex flex-col max-h-[85vh]",
+          // Base styles
+          "bg-background fixed z-50 outline-none duration-200",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "flex flex-col",
+          // Mobile fullscreen mode
+          fullscreenMobile ? [
+            // Mobile: fullscreen
+            "inset-0 w-screen h-screen max-w-none max-h-none rounded-none border-0",
+            "data-[state=open]:slide-in-from-bottom-full data-[state=closed]:slide-out-to-bottom-full",
+            // Desktop: centered modal
+            "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
+            "sm:w-full sm:max-w-lg sm:h-auto sm:max-h-[85vh] sm:rounded-lg sm:border sm:shadow-lg",
+            "sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
+            "sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0",
+          ] : [
+            // Standard centered modal
+            "top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]",
+            "w-full max-w-[calc(100%-2rem)] max-h-[85vh] rounded-lg border shadow-lg",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            "sm:max-w-lg",
+          ],
           className
         )}
         {...props}

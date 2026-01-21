@@ -10,8 +10,8 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { getViewName } from "@/lib/view-name-map";
 import { LayoutDashboard } from "lucide-react";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 
 export default async function AdminPage() {
     const { kpis, charts, lists } = await getAdminDashboardData();

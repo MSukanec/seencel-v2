@@ -40,6 +40,7 @@ export interface TaskDivision {
     color?: string;
     description?: string;
     organization_id?: string | null;
+    order?: number | null;
 }
 
 export interface Unit {

@@ -79,3 +79,31 @@ export async function getUserProfile(): Promise<{ profile: UserProfile | null; e
 
     return { profile, error: null };
 }
+
+/**
+ * Check if the current user has admin role
+ */
+export async function checkIsAdmin(): Promise<boolean> {
+    const supabase = await createClient();
+
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !authUser) return false;
+
+    // Get user with role info
+    const { data: userWithRole, error } = await supabase
+        .from('users')
+        .select(`
+            role_id,
+            roles:role_id (
+                name
+            )
+        `)
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (error || !userWithRole) return false;
+
+    // Check if role name is 'admin'
+    const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
+    return roleName === 'admin';
+}

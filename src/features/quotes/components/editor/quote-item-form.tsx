@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createQuoteItem } from "../../actions";
+import { createQuoteItem, updateQuoteItem } from "../../actions";
 
 interface QuoteItemFormProps {
     mode: "create" | "edit";
@@ -49,24 +49,38 @@ export function QuoteItemForm({
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
-        const toastId = toast.loading("Agregando ítem...");
+        const toastId = toast.loading(mode === "edit" ? "Actualizando ítem..." : "Agregando ítem...");
 
         try {
             const formData = new FormData(e.currentTarget);
-            formData.append("quote_id", quoteId);
-            formData.append("organization_id", organizationId);
-            if (projectId) {
-                formData.append("project_id", projectId);
-            }
-            formData.append("currency_id", currencyId);
 
-            const result = await createQuoteItem(formData);
+            if (mode === "edit" && initialData?.id) {
+                // Update existing item
+                const result = await updateQuoteItem(initialData.id, formData);
 
-            if (result.error) {
-                toast.error(result.error, { id: toastId });
+                if (result.error) {
+                    toast.error(result.error, { id: toastId });
+                } else {
+                    toast.success("¡Ítem actualizado!", { id: toastId });
+                    onSuccess?.();
+                }
             } else {
-                toast.success("¡Ítem agregado!", { id: toastId });
-                onSuccess?.();
+                // Create new item
+                formData.append("quote_id", quoteId);
+                formData.append("organization_id", organizationId);
+                if (projectId) {
+                    formData.append("project_id", projectId);
+                }
+                formData.append("currency_id", currencyId);
+
+                const result = await createQuoteItem(formData);
+
+                if (result.error) {
+                    toast.error(result.error, { id: toastId });
+                } else {
+                    toast.success("¡Ítem agregado!", { id: toastId });
+                    onSuccess?.();
+                }
             }
         } catch (error: any) {
             console.error("Quote item form error:", error);
@@ -87,14 +101,14 @@ export function QuoteItemForm({
                             label="Tarea del Catálogo"
                             htmlFor="task_id"
                             required
-                            tooltip="Busca por nombre, código o rubro. Escribe para filtrar entre miles de tareas."
+                            tooltip="Busca por nombre o rubro. Escribe para filtrar entre miles de tareas."
                         >
                             <TaskCatalogCombobox
                                 name="task_id"
                                 value={selectedTaskId}
                                 onValueChange={(id) => setSelectedTaskId(id)}
                                 tasks={tasks}
-                                placeholder="Buscar tarea por nombre, código o rubro..."
+                                placeholder="Buscar tarea por nombre o rubro..."
                             />
                         </FormGroup>
                     </div>
@@ -112,52 +126,7 @@ export function QuoteItemForm({
                         </FormGroup>
                     </div>
 
-                    {/* Cantidad: 4 cols */}
-                    <div className="md:col-span-4">
-                        <FormGroup label="Cantidad" htmlFor="quantity" required>
-                            <Input
-                                id="quantity"
-                                name="quantity"
-                                type="number"
-                                step="0.001"
-                                min="0"
-                                defaultValue={initialData?.quantity || 1}
-                                required
-                            />
-                        </FormGroup>
-                    </div>
-
-                    {/* Precio unitario: 4 cols */}
-                    <div className="md:col-span-4">
-                        <FormGroup label="Precio Unitario" htmlFor="unit_price" required>
-                            <Input
-                                id="unit_price"
-                                name="unit_price"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                defaultValue={initialData?.unit_price || 0}
-                                required
-                            />
-                        </FormGroup>
-                    </div>
-
-                    {/* Markup: 4 cols */}
-                    <div className="md:col-span-4">
-                        <FormGroup label="Markup %" htmlFor="markup_pct">
-                            <Input
-                                id="markup_pct"
-                                name="markup_pct"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="100"
-                                defaultValue={initialData?.markup_pct || 0}
-                            />
-                        </FormGroup>
-                    </div>
-
-                    {/* Cost Scope: 6 cols */}
+                    {/* Row 1: Alcance de Costo (6 cols) + Cantidad (6 cols) */}
                     <div className="md:col-span-6">
                         <FormGroup label="Alcance de Costo" htmlFor="cost_scope">
                             <Select name="cost_scope" defaultValue={initialData?.cost_scope || "materials_and_labor"}>
@@ -173,8 +142,53 @@ export function QuoteItemForm({
                         </FormGroup>
                     </div>
 
-                    {/* Impuesto del ítem: 6 cols */}
                     <div className="md:col-span-6">
+                        <FormGroup label="Cantidad" htmlFor="quantity" required>
+                            <Input
+                                id="quantity"
+                                name="quantity"
+                                type="number"
+                                step="0.001"
+                                min="0"
+                                placeholder="Ej: 100"
+                                defaultValue={initialData?.quantity || ""}
+                                required
+                            />
+                        </FormGroup>
+                    </div>
+
+                    {/* Row 2: Precio Unitario (4 cols) + Markup (4 cols) + Impuesto (4 cols) */}
+                    <div className="md:col-span-4">
+                        <FormGroup label="Precio Unitario" htmlFor="unit_price" required>
+                            <Input
+                                id="unit_price"
+                                name="unit_price"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ej: 1500"
+                                defaultValue={initialData?.unit_price || ""}
+                                required
+                            />
+                        </FormGroup>
+                    </div>
+
+                    <div className="md:col-span-4">
+                        <FormGroup label="Markup %" htmlFor="markup_pct">
+                            <Input
+                                id="markup_pct"
+                                name="markup_pct"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                placeholder="Ej: 15"
+                                defaultValue={initialData?.markup_pct || ""}
+                            />
+                        </FormGroup>
+                    </div>
+
+                    <div className="md:col-span-4">
                         <FormGroup label="Impuesto del ítem %" htmlFor="tax_pct">
                             <Input
                                 id="tax_pct"
@@ -183,7 +197,8 @@ export function QuoteItemForm({
                                 step="0.01"
                                 min="0"
                                 max="100"
-                                defaultValue={initialData?.tax_pct || 0}
+                                placeholder="Ej: 21"
+                                defaultValue={initialData?.tax_pct || ""}
                             />
                         </FormGroup>
                     </div>

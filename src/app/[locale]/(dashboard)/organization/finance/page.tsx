@@ -1,6 +1,6 @@
 import { getFinancialMovements } from "@/features/organization/queries";
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { Wallet } from "lucide-react";
 import { FinanceOverview } from "@/features/finance/components/finance-overview";
 

@@ -14,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { SplitEditorLayout, SplitEditorPreview, SplitEditorSidebar } from "@/components/layout/split-editor-layout";
+import { SplitEditorLayout, SplitEditorPreview, SplitEditorSidebar } from "@/components/layout";
 
 // --- Types ---
 type BrandTheme = {

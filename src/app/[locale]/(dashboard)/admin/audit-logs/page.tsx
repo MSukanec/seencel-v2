@@ -1,5 +1,5 @@
-import { PageWrapper } from "@/components/layout/page-wrapper";
-import { ContentLayout } from "@/components/layout/content-layout";
+import { PageWrapper } from "@/components/layout";
+import { ContentLayout } from "@/components/layout";
 import { getAllActivityLogs } from "@/actions/admin-actions";
 import { AdminActivityLogsDataTable } from "@/features/admin/components/admin-activity-logs-data-table";
 import { FileText } from "lucide-react";

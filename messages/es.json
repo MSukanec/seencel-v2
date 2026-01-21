@@ -89,6 +89,7 @@
             "dashboard": "Dashboard",
             "payments": "Pagos",
             "schedule": "Cronograma",
+            "quotes": "Presupuestos",
             "logs": "Bitácora",
             "messages": "Mensajes"
         },
@@ -1444,5 +1445,99 @@
             "project": "Asocia este presupuesto a un proyecto existente. Dejalo vacío para cotizaciones, licitaciones o pre-ventas.",
             "projectEmpty": "Sin proyecto (cotización/licitación)"
         }
+    },
+    "Forum": {
+        "title": "Foro de Discusión",
+        "newThread": "Nueva Pregunta",
+        "newThreadDescription": "Inicia una nueva discusión en el foro del curso.",
+        "backToList": "Volver",
+        "emptyTitle": "No hay temas todavía",
+        "emptyDescription": "Sé el primero en iniciar una discusión. Haz preguntas, comparte ideas o ayuda a otros estudiantes.",
+        "startDiscussion": "Iniciar Discusión",
+        "pinnedThreads": "Fijados",
+        "allThreads": "Todas las discusiones",
+        "anonymous": "Usuario",
+        "pinned": "Fijado",
+        "locked": "Cerrado",
+        "replies": "Respuestas",
+        "noReplies": "Aún no hay respuestas. ¡Sé el primero en responder!",
+        "writeReply": "Escribe tu respuesta",
+        "replyPlaceholder": "Escribe tu respuesta aquí...",
+        "sendReply": "Enviar Respuesta",
+        "cancel": "Cancelar",
+        "acceptedAnswer": "Respuesta Aceptada",
+        "markAsAnswer": "Marcar como respuesta",
+        "deletePost": "Eliminar",
+        "deletePostTitle": "¿Eliminar respuesta?",
+        "deletePostDescription": "Esta acción no se puede deshacer. La respuesta será eliminada permanentemente.",
+        "postDeleted": "Respuesta eliminada",
+        "postCreated": "Respuesta publicada",
+        "postError": "Error al publicar la respuesta",
+        "answerMarked": "Respuesta marcada como aceptada",
+        "threadTitle": "Título",
+        "threadTitlePlaceholder": "¿Cuál es tu pregunta o tema de discusión?",
+        "threadContent": "Contenido",
+        "threadContentPlaceholder": "Describe tu pregunta o tema con detalle...",
+        "createThread": "Publicar Pregunta",
+        "titleRequired": "El título es obligatorio",
+        "contentRequired": "El contenido es obligatorio",
+        "threadCreated": "Pregunta publicada correctamente",
+        "threadError": "Error al publicar la pregunta",
+        "noCategoriesTitle": "No hay categorías",
+        "noCategoriesDescription": "Este curso aún no tiene categorías de discusión configuradas.",
+        "threads": "discusiones",
+        "readOnly": "Solo lectura",
+        "categories": "Categorías",
+        "selectThreadToView": "Selecciona un tema para ver la conversación",
+        "noThreads": "No hay temas en esta categoría",
+        "allThreads": "Todos los temas"
+    },
+    "CourseNotes": {
+        "title": "Mis Apuntes",
+        "count": "{count, plural, =1 {# apunte guardado} other {# apuntes guardados}}",
+        "emptyTitle": "Todavía no tienes apuntes",
+        "emptyDescription": "Mientras ves las lecciones, podrás tomar notas que se guardarán aquí para que puedas consultarlas cuando quieras.",
+        "startWatching": "Comenzar a Ver",
+        "goToLesson": "Ir a la Lección"
+    },
+    "CourseOverview": {
+        "continue": "Continuar",
+        "start": "Comenzar Curso",
+        "kpi": {
+            "remaining": "Lecciones Restantes",
+            "lessonsRemaining": "de {total} lecciones",
+            "progress": "Progreso Total",
+            "of": "de",
+            "lessons": "lecciones",
+            "studyTime": "Tiempo de Estudio",
+            "ofContent": "de {total} de contenido",
+            "thisMonth": "Este Mes",
+            "dedicated": "dedicados en total"
+        },
+        "cards": {
+            "forum": {
+                "title": "Últimos Posts del Foro",
+                "empty": "No hay discusiones aún",
+                "by": "por",
+                "viewAll": "Ver todos los posts"
+            },
+            "notes": {
+                "title": "Apuntes Creados",
+                "empty": "No hay apuntes aún",
+                "goToPlayer": "Ir a Reproductor",
+                "viewAll": "Ver todos los apuntes"
+            },
+            "markers": {
+                "title": "Marcadores Creados",
+                "empty": "No hay marcadores aún",
+                "noDescription": "Sin descripción",
+                "viewAll": "Ver todos los marcadores"
+            }
+        }
+    },
+    "CommunityMap": {
+        "unknownLocation": "Ubicación desconocida",
+        "viewMore": "Ver más (Próximamente)",
+        "projectsOnMap": "proyectos en el mapa"
     }
 }

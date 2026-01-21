@@ -1,6 +1,6 @@
 "use client";
 
-import { HeaderPortal } from "@/components/layout/header-portal";
+import { HeaderPortal } from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProjectGalleryTab } from "./project-gallery-tab";
 

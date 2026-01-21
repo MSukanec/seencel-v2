@@ -19,6 +19,8 @@ import {
     Monitor,
     Info,
     Wrench,
+    MapPin,
+    Sparkles,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 
@@ -46,7 +48,7 @@ const contexts: ContextItem[] = [
 export const contextRoutes: Record<NavigationContext, string> = {
     organization: '/organization',
     project: '/organization/projects',
-    learnings: '/academy',
+    learnings: '/academy/courses',
     community: '/organization',
     admin: '/admin'
 };
@@ -112,19 +114,19 @@ export function useSidebarNavigation() {
                 ];
             case 'learnings':
                 return [
-                    { title: 'Visión General', href: '/academy', icon: LayoutDashboard },
                     { title: 'Cursos', href: '/academy/courses', icon: Video },
                 ];
             case 'community':
                 return [
-                    { title: 'Foros', href: '/community/forums', icon: MessageSquare },
-                    { title: 'Eventos', href: '/community/events', icon: Calendar },
+                    { title: 'Fundadores', href: '/community/founders', icon: Sparkles },
+                    { title: 'Mapa Seencel', href: '/community/map', icon: MapPin },
                 ];
             case 'admin':
                 return [
                     { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
                     { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
                     { title: 'Directorio', href: '/admin/directory', icon: Users },
+                    { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Wrench },
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
                     { title: 'Actividad', href: '/admin/audit-logs', icon: FileText },
                     { title: 'Plataforma', href: '/admin/system', icon: Monitor },

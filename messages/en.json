@@ -1313,5 +1313,99 @@
             "project": "Associate this quote with an existing project. Leave empty for quotations, bids, or pre-sales.",
             "projectEmpty": "No project (quotation/bid)"
         }
+    },
+    "Forum": {
+        "title": "Discussion Forum",
+        "newThread": "New Question",
+        "newThreadDescription": "Start a new discussion in the course forum.",
+        "backToList": "Back",
+        "emptyTitle": "No discussions yet",
+        "emptyDescription": "Be the first to start a discussion. Ask questions, share ideas, or help other students.",
+        "startDiscussion": "Start Discussion",
+        "pinnedThreads": "Pinned",
+        "allThreads": "All discussions",
+        "anonymous": "User",
+        "pinned": "Pinned",
+        "locked": "Locked",
+        "replies": "Replies",
+        "noReplies": "No replies yet. Be the first to respond!",
+        "writeReply": "Write your reply",
+        "replyPlaceholder": "Write your reply here...",
+        "sendReply": "Send Reply",
+        "cancel": "Cancel",
+        "acceptedAnswer": "Accepted Answer",
+        "markAsAnswer": "Mark as answer",
+        "deletePost": "Delete",
+        "deletePostTitle": "Delete reply?",
+        "deletePostDescription": "This action cannot be undone. The reply will be permanently deleted.",
+        "postDeleted": "Reply deleted",
+        "postCreated": "Reply posted",
+        "postError": "Error posting reply",
+        "answerMarked": "Answer marked as accepted",
+        "threadTitle": "Title",
+        "threadTitlePlaceholder": "What's your question or discussion topic?",
+        "threadContent": "Content",
+        "threadContentPlaceholder": "Describe your question or topic in detail...",
+        "createThread": "Post Question",
+        "titleRequired": "Title is required",
+        "contentRequired": "Content is required",
+        "threadCreated": "Question posted successfully",
+        "threadError": "Error posting question",
+        "noCategoriesTitle": "No categories",
+        "noCategoriesDescription": "This course doesn't have discussion categories configured yet.",
+        "threads": "discussions",
+        "readOnly": "Read only",
+        "categories": "Categories",
+        "selectThreadToView": "Select a topic to view the conversation",
+        "noThreads": "No topics in this category",
+        "allThreads": "All topics"
+    },
+    "CourseNotes": {
+        "title": "My Notes",
+        "count": "{count, plural, =1 {# note saved} other {# notes saved}}",
+        "emptyTitle": "You don't have any notes yet",
+        "emptyDescription": "While watching lessons, you can take notes that will be saved here for future reference.",
+        "startWatching": "Start Watching",
+        "goToLesson": "Go to Lesson"
+    },
+    "CourseOverview": {
+        "continue": "Continue",
+        "start": "Start Course",
+        "kpi": {
+            "remaining": "Lessons Remaining",
+            "lessonsRemaining": "of {total} lessons",
+            "progress": "Total Progress",
+            "of": "of",
+            "lessons": "lessons",
+            "studyTime": "Study Time",
+            "ofContent": "of {total} content",
+            "thisMonth": "This Month",
+            "dedicated": "dedicated total"
+        },
+        "cards": {
+            "forum": {
+                "title": "Latest Forum Posts",
+                "empty": "No discussions yet",
+                "by": "by",
+                "viewAll": "View all posts"
+            },
+            "notes": {
+                "title": "Notes Created",
+                "empty": "No notes yet",
+                "goToPlayer": "Go to Player",
+                "viewAll": "View all notes"
+            },
+            "markers": {
+                "title": "Markers Created",
+                "empty": "No markers yet",
+                "noDescription": "No description",
+                "viewAll": "View all markers"
+            }
+        }
+    },
+    "CommunityMap": {
+        "unknownLocation": "Unknown location",
+        "viewMore": "View more (Coming soon)",
+        "projectsOnMap": "projects on map"
     }
 }

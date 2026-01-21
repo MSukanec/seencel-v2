@@ -3,7 +3,7 @@ import { getProjectById } from "@/features/projects/queries";
 import { getProjectFiles } from "@/features/projects/file-queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
 import { notFound } from "next/navigation";
-import { PageWrapper } from "@/components/layout/page-wrapper";
+import { PageWrapper } from "@/components/layout";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Info } from "lucide-react";

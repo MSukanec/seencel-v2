@@ -2,18 +2,7 @@ import { redirect } from "next/navigation";
 import { getMyClientPortals, getClientPortalData } from "@/features/clients/queries";
 import { PortalShell } from "@/features/clients/components/portal/portal-shell";
 import { ClientPortalSelector } from "@/features/clients/components/portal/client-portal-selector";
-
-// Default branding values
-const DEFAULT_BRANDING = {
-    portal_name: null,
-    welcome_message: 'Bienvenido a tu portal',
-    primary_color: '#83cc16',
-    background_color: '#09090b',
-    show_hero: true,
-    show_footer: true,
-    footer_text: null,
-    show_powered_by: true,
-};
+import { preparePortalProps } from "@/features/clients/components/portal/portal-constants";
 
 export default async function AuthenticatedPortalPage() {
     // Get all client portals for the current user
@@ -48,12 +37,12 @@ export default async function AuthenticatedPortalPage() {
         const singleClient = singleProject.clients[0];
 
         // Fetch portal data for this client
-        const portalData = await getClientPortalData(
+        const rawData = await getClientPortalData(
             singleProject.project_id,
             singleClient.client_id
         );
 
-        if (!portalData.project || !portalData.client || portalData.error) {
+        if (!rawData.project || !rawData.client || rawData.error) {
             return (
                 <div className="min-h-screen bg-background flex items-center justify-center p-8">
                     <div className="text-center">
@@ -64,33 +53,16 @@ export default async function AuthenticatedPortalPage() {
             );
         }
 
-        const settings = portalData.settings || {
-            show_dashboard: true,
-            show_installments: false,
-            show_payments: false,
-            show_logs: false,
-            show_amounts: true,
-            show_progress: true,
-            allow_comments: false,
-        };
-
-        const branding = portalData.branding
-            ? { ...DEFAULT_BRANDING, ...portalData.branding }
-            : DEFAULT_BRANDING;
+        const { settings, branding, data } = preparePortalProps(rawData);
 
         return (
             <PortalShell
                 mode="live"
-                project={portalData.project}
-                client={portalData.client}
+                project={rawData.project}
+                client={rawData.client}
                 settings={settings}
                 branding={branding}
-                data={{
-                    payments: portalData.payments,
-                    schedules: portalData.schedules,
-                    summary: portalData.summary,
-                    logs: portalData.logs || []
-                }}
+                data={data}
                 isAuthenticated={true}
             />
         );

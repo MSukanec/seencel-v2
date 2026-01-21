@@ -24,11 +24,12 @@ interface TaskFormProps {
     organizationId: string;
     units: Unit[];
     divisions: TaskDivision[];
+    isAdminMode?: boolean;
     onCancel?: () => void;
     onSuccess?: () => void;
 }
 
-export function TaskForm({ mode, initialData, organizationId, units, divisions, onCancel, onSuccess }: TaskFormProps) {
+export function TaskForm({ mode, initialData, organizationId, units, divisions, isAdminMode = false, onCancel, onSuccess }: TaskFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isPublished, setIsPublished] = useState(initialData?.is_published ?? false);
 
@@ -65,6 +66,17 @@ export function TaskForm({ mode, initialData, organizationId, units, divisions, 
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
+            {/* Hidden fields for admin mode */}
+            {isAdminMode && (
+                <>
+                    <input type="hidden" name="is_system" value="true" />
+                    <input type="hidden" name="is_admin_mode" value="true" />
+                    {/* Don't send organization_id for system tasks */}
+                </>
+            )}
+            {!isAdminMode && (
+                <input type="hidden" name="organization_id" value={organizationId} />
+            )}
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 

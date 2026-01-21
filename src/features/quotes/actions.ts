@@ -261,11 +261,8 @@ export async function createQuoteItem(formData: FormData) {
         return { error: "No hay organización activa", data: null };
     }
 
-    // Get current user for created_by
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        return { error: "Usuario no autenticado", data: null };
-    }
+    // NOTE: created_by is auto-populated by DB trigger handle_updated_by()
+    // See: AUDIT-LOGGING-GUIDELINES.md
 
     const quote_id = formData.get("quote_id") as string;
     const organization_id = formData.get("organization_id") as string;
@@ -297,7 +294,7 @@ export async function createQuoteItem(formData: FormData) {
             markup_pct,
             tax_pct,
             cost_scope,
-            created_by: user.id,
+            // created_by is auto-populated by DB trigger
         })
         .select()
         .single();
@@ -312,7 +309,51 @@ export async function createQuoteItem(formData: FormData) {
 }
 
 // ============================================
-// DELETE QUOTE ITEM
+// UPDATE QUOTE ITEM
+// ============================================
+export async function updateQuoteItem(id: string, formData: FormData) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) {
+        return { error: "No hay organización activa", data: null };
+    }
+
+    const task_id = formData.get("task_id") as string | null;
+    const description = formData.get("description") as string | null;
+    const quantity = parseFloat(formData.get("quantity") as string) || 1;
+    const unit_price = parseFloat(formData.get("unit_price") as string) || 0;
+    const markup_pct = parseFloat(formData.get("markup_pct") as string) || 0;
+    const tax_pct = parseFloat(formData.get("tax_pct") as string) || 0;
+    const cost_scope = formData.get("cost_scope") as string || "materials_and_labor";
+
+    const { data, error } = await supabase
+        .from("quote_items")
+        .update({
+            task_id: task_id || null,
+            description: description?.trim() || null,
+            quantity,
+            unit_price,
+            markup_pct,
+            tax_pct,
+            cost_scope,
+        })
+        .eq("id", id)
+        .eq("organization_id", activeOrgId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating quote item:", error);
+        return { error: error.message, data: null };
+    }
+
+    revalidatePath("/organization/quotes");
+    return { data, error: null };
+}
+
+// ============================================
+// DELETE QUOTE ITEM (Soft Delete)
 // ============================================
 export async function deleteQuoteItem(id: string) {
     const supabase = await createClient();
@@ -324,7 +365,10 @@ export async function deleteQuoteItem(id: string) {
 
     const { error } = await supabase
         .from("quote_items")
-        .delete()
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
         .eq("id", id)
         .eq("organization_id", activeOrgId);
 
