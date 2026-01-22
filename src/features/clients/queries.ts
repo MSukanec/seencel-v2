@@ -506,7 +506,7 @@ export async function getClientPortalSiteLogs(projectId: string) {
         media: [] // No media for now
     }));
 
-    return { data: formattedData as SiteLog[], error: null };
+    return { data: formattedData as unknown as SiteLog[], error: null };
 }
 
 /**

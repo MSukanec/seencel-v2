@@ -56,6 +56,7 @@ export function PortalPreview({ settings, viewMode, branding }: PortalPreviewPro
         show_logs: false,
         show_amounts: true,
         show_progress: true,
+        show_quotes: false,
         allow_comments: false,
         ...settings
     };
