@@ -94,3 +94,4 @@ export function PortalPreview({ settings, viewMode, branding }: PortalPreviewPro
         </div>
     );
 }
+

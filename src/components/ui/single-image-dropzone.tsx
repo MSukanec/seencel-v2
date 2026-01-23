@@ -192,3 +192,4 @@ function formatFileSize(bytes?: number) {
 }
 
 export { SingleImageDropzone };
+

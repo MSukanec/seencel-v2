@@ -98,3 +98,4 @@ export function OrganizationLocationForm({ organization }: { organization: any }
         </form>
     );
 }
+

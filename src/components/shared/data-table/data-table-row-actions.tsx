@@ -100,3 +100,4 @@ export function DataTableRowActions<TData>({
         </DropdownMenu>
     );
 }
+

@@ -316,3 +316,4 @@ export async function deleteOrganizationPdfTemplate(templateId: string): Promise
     revalidatePath('/organization/details');
     return { success: true };
 }
+

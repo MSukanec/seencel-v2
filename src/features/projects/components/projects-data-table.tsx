@@ -339,3 +339,4 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
         </>
     );
 }
+

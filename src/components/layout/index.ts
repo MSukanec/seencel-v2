@@ -1,17 +1,21 @@
-// Layout components - organized by category
-// This file re-exports all layout components for backward compatibility
+// Layout Components - Main Export
+// Organized into public (landing, auth) and dashboard (app) layouts
 
-// Core layouts
-export * from "./core";
+// Public layout components
+export * from "./public";
 
-// Header components  
-export * from "./header";
+// Dashboard layout components (both sidebar and mega-menu modes)
+export * from "./dashboard";
 
-// Sidebar components
-export * from "./sidebar";
+// Explicit exports for backward compatibility
+export { Header } from "./dashboard/mega-menu-version/header";
+export { HeaderPortal } from "./dashboard/mega-menu-version/header-portal";
+export { LayoutSwitcher } from "./dashboard/shared/layout-switcher";
+export { PageWrapper } from "./dashboard/shared/page-wrapper";
+export { ContentLayout } from "./dashboard/shared/content-layout";
+export { SidebarLayout } from "./dashboard/sidebar-version/sidebar-layout";
 
-// Navigation components
-export * from "./navigation";
+// Shared dashboard components
+export { GlobalDrawer } from "./dashboard/shared/drawer/global-drawer";
+export { HeaderTitleUpdater } from "./dashboard/shared/header-title-updater";
 
-// Shared components
-export * from "./shared";

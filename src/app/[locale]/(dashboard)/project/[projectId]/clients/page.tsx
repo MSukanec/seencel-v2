@@ -2,7 +2,7 @@ import { getOrganizationFinancialData } from "@/features/organization/queries"; 
 import { getClients, getClientFinancialSummary, getClientCommitments, getClientPayments, getClientPaymentSchedules, getClientRoles, getOrganizationContacts, getProjectRepresentatives } from "@/features/clients/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getOrganizationProjects } from "@/features/projects/queries";
-import { ClientsPageClient } from "@/features/clients/components/overview/clients-page-client";
+import { ClientsPageClient } from "@/features/clients/views";
 
 interface PageProps {
     params: Promise<{

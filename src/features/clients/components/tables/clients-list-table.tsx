@@ -236,3 +236,4 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
         </>
     );
 }
+

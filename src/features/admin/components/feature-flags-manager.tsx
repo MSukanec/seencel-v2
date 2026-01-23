@@ -140,3 +140,4 @@ export function FeatureFlagsManager({ initialFlags }: FeatureFlagsManagerProps) 
         </div>
     );
 }
+

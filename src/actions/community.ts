@@ -93,3 +93,4 @@ export async function getPublicProjects(): Promise<PublicProject[]> {
         })
         .filter((p: PublicProject) => !isNaN(p.lat) && !isNaN(p.lng));
 }
+

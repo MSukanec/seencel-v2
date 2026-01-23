@@ -140,3 +140,136 @@ export async function getUnits() {
 
     return { data: data as Unit[], error: null };
 }
+
+// ============================================================================
+// TASK DETAIL PAGE QUERIES
+// ============================================================================
+
+export interface TaskMaterial {
+    id: string;
+    task_id: string;
+    material_id: string;
+    material_name: string;
+    unit_name: string | null;
+    amount: number | null;
+    is_system: boolean;
+}
+
+/**
+ * Get a single task by ID with full details
+ */
+export async function getTaskById(taskId: string): Promise<TaskView | null> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('tasks_view')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+
+    if (error) {
+        console.error("Error fetching task:", error);
+        return null;
+    }
+
+    if (!data) return null;
+
+    return {
+        id: data.id,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        code: data.code,
+        name: data.name,
+        custom_name: data.custom_name,
+        description: data.description,
+        unit_id: data.unit_id,
+        task_division_id: data.task_division_id,
+        organization_id: data.organization_id,
+        is_system: data.is_system,
+        is_published: data.is_published ?? true,
+        is_deleted: data.is_deleted ?? false,
+        deleted_at: null,
+        unit_name: data.unit_name,
+        division_name: data.division_name,
+        division_color: undefined,
+    };
+}
+
+/**
+ * Get all materials linked to a task (the "recipe")
+ */
+export async function getTaskMaterials(taskId: string): Promise<TaskMaterial[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('task_materials')
+        .select(`
+            id,
+            task_id,
+            material_id,
+            amount,
+            is_system,
+            materials (
+                name,
+                units (name)
+            )
+        `)
+        .eq('task_id', taskId);
+
+    if (error) {
+        console.error("Error fetching task materials:", error);
+        return [];
+    }
+
+    return (data || []).map((tm: any) => ({
+        id: tm.id,
+        task_id: tm.task_id,
+        material_id: tm.material_id,
+        material_name: tm.materials?.name || 'Material desconocido',
+        unit_name: tm.materials?.units?.name || null,
+        amount: tm.amount,
+        is_system: tm.is_system || false,
+    }));
+}
+
+/**
+ * Get all available materials for adding to a task
+ * For system tasks: only system materials
+ * For org tasks: system + org materials
+ */
+export async function getAvailableMaterials(isSystemTask: boolean, organizationId?: string | null) {
+    const supabase = await createClient();
+
+    let query = supabase
+        .from('materials')
+        .select(`
+            id,
+            name,
+            units (name)
+        `)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (isSystemTask) {
+        // System tasks can only use system materials
+        query = query.eq('is_system', true);
+    } else if (organizationId) {
+        // Org tasks can use system + org materials
+        query = query.or(`is_system.eq.true,organization_id.eq.${organizationId}`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching available materials:", error);
+        return [];
+    }
+
+    return (data || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        unit_name: m.units?.name || null,
+    }));
+}
+
+

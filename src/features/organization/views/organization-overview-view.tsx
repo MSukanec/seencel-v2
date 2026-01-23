@@ -1,32 +1,34 @@
 "use client";
 
-import { FinanceCashFlowWidget } from "@/features/finance/components/dashboard/finance-cash-flow-widget";
-import { ProjectStatusCard } from "@/features/projects/components/dashboard/project-status-card";
 import { RecentProjectsCard } from "@/features/projects/components/dashboard/recent-projects-card";
 import { ActivityFeedCard } from "@/features/activity/components/dashboard/activity-feed-card";
 import {
     Folder,
     Briefcase,
     Plus,
-    Activity,
-    DollarSign,
-    Users2
+    Users2,
+    FileText
 } from "lucide-react";
-import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { HeaderTitleUpdater } from "@/components/layout";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import type {
+    Organization,
+    DashboardStats,
+    DashboardProject,
+    DashboardActivity
+} from "@/features/organization/types";
+import type { User } from "@supabase/supabase-js";
 
 interface OrganizationOverviewViewProps {
-    user: any;
-    organization: any;
-    stats: any;
-    projects: any[];
-    movements: any[];
-    activity: any[];
+    user: User;
+    organization: Organization;
+    stats: DashboardStats;
+    projects: DashboardProject[];
+    activity: DashboardActivity[];
 }
 
 export function OrganizationOverviewView({
@@ -34,7 +36,6 @@ export function OrganizationOverviewView({
     organization,
     stats,
     projects,
-    movements,
     activity
 }: OrganizationOverviewViewProps) {
     const t = useTranslations('OrganizationDashboard');
@@ -78,31 +79,27 @@ export function OrganizationOverviewView({
                         </div>
                     </div>
 
-                    {/* 2. KPI Grid (Spectacular Glass Cards) */}
+                    {/* 2. KPI Grid (Real Data - No Hardcoded Values) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <DashboardKpiCard
                             title={t('kpis.activeProjects')}
                             value={stats.activeProjects}
                             icon={<Folder className="w-5 h-5" />}
-                            trend={{ value: "+12%", direction: "up", label: t('kpis.vsLastMonth') }}
-                        />
-                        <DashboardKpiCard
-                            title={t('kpis.totalBudget')}
-                            value="$2.4M"
-                            icon={<DollarSign className="w-5 h-5" />}
-                            trend={{ value: "+5.2%", direction: "up", label: t('kpis.vsLastMonth') }}
                         />
                         <DashboardKpiCard
                             title={t('kpis.pendingTasks')}
                             value={stats.totalTasks}
                             icon={<Briefcase className="w-5 h-5" />}
-                            trend={{ value: "-2", direction: "up", label: t('kpis.vsLastMonth') }}
                         />
                         <DashboardKpiCard
-                            title={t('kpis.teamVelocity')}
-                            value="87%"
-                            icon={<Activity className="w-5 h-5" />}
-                            trend={{ value: "+3%", direction: "up", label: t('kpis.vsLastMonth') }}
+                            title={t('kpis.documentsLast30Days')}
+                            value={stats.documentsLast30Days}
+                            icon={<FileText className="w-5 h-5" />}
+                        />
+                        <DashboardKpiCard
+                            title={t('kpis.teamSize')}
+                            value={stats.teamSize}
+                            icon={<Users2 className="w-5 h-5" />}
                         />
                     </div>
 
@@ -112,10 +109,11 @@ export function OrganizationOverviewView({
                         <RecentProjectsCard projects={projects} />
 
                         {/* Right Column: Activity Feed */}
-                        <ActivityFeedCard activity={activity} className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm overflow-hidden flex flex-col items-stretch" />
+                        <ActivityFeedCard activity={activity} />
                     </div>
                 </div>
             </ContentLayout>
         </PageWrapper>
     );
 }
+

@@ -50,3 +50,4 @@ export const formatCompactNumber = (value: number) => {
         maximumFractionDigits: 1
     }).format(value);
 };
+

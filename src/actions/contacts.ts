@@ -368,3 +368,4 @@ export async function uploadContactAvatar(formData: FormData) {
 
     return { success: true, path: filePath };
 }
+

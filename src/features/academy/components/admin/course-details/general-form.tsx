@@ -385,3 +385,4 @@ export function GeneralForm({ course, instructors, isModal = false }: GeneralFor
         </Form>
     );
 }
+

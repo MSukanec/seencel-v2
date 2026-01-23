@@ -100,3 +100,4 @@ export function CurrencySelector({ className }: CurrencySelectorProps) {
         </DropdownMenu>
     );
 }
+

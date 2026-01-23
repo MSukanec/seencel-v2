@@ -69,19 +69,18 @@ function DialogContent({
           // Mobile fullscreen mode
           fullscreenMobile ? [
             // Mobile: fullscreen
-            "inset-0 w-screen h-screen max-w-none max-h-none rounded-none border-0",
+            "inset-0 w-screen h-screen max-w-none max-h-none rounded-none border-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
             "data-[state=open]:slide-in-from-bottom-full data-[state=closed]:slide-out-to-bottom-full",
             // Desktop: centered modal
             "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
-            "sm:w-full sm:max-w-lg sm:h-auto sm:max-h-[85vh] sm:rounded-lg sm:border sm:shadow-lg",
+            "sm:w-full sm:h-auto sm:max-h-[85vh] sm:rounded-lg sm:border sm:shadow-lg",
             "sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
             "sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0",
           ] : [
             // Standard centered modal
             "top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]",
-            "w-full max-w-[calc(100%-2rem)] max-h-[85vh] rounded-lg border shadow-lg",
+            "w-full max-w-[calc(100%-2rem)] max-h-[85vh] rounded-lg border shadow-lg p-6",
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "sm:max-w-lg",
           ],
           className
         )}
@@ -177,3 +176,4 @@ export {
   DialogTitle,
   DialogTrigger,
 }
+

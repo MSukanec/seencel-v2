@@ -55,3 +55,15 @@ export interface TasksByDivision {
     division: TaskDivision | null;
     tasks: TaskView[];
 }
+
+// Material linked to a task (the "recipe")
+export interface TaskMaterial {
+    id: string;
+    task_id: string;
+    material_id: string;
+    material_name: string;
+    unit_name: string | null;
+    amount: number | null;
+    is_system: boolean;
+}
+

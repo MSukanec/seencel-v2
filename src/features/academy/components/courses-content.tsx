@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CourseWithDetails } from "@/types/courses";
 import { CourseCard } from "./course-card";
 import { useTranslations } from "next-intl";
-import { Toolbar } from "@/components/ui/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Sparkles, ArrowRight, GraduationCap } from "lucide-react";
@@ -147,3 +147,4 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
         </div>
     );
 }
+

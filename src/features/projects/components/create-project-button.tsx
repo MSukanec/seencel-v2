@@ -43,3 +43,4 @@ export function CreateProjectButton({ organizationId }: CreateProjectButtonProps
         </motion.div>
     );
 }
+

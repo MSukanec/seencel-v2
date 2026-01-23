@@ -183,3 +183,4 @@ export function ConceptsTable({ data, categories, organizationId }: ConceptsTabl
     );
 }
 
+

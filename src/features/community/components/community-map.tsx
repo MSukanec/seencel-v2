@@ -231,3 +231,4 @@ function MapWithMarkers({ projects }: CommunityMapProps) {
         </div>
     );
 }
+

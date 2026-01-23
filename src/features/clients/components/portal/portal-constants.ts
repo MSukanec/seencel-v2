@@ -64,3 +64,4 @@ export function preparePortalProps(rawData: RawPortalData) {
 
     return { settings, branding, data };
 }
+

@@ -377,3 +377,4 @@ export function FoundersContent({ isDashboard = false }: FoundersContentProps) {
         </div>
     );
 }
+

@@ -126,3 +126,4 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId }: 
         </div>
     );
 }
+

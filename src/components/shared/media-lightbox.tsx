@@ -192,3 +192,4 @@ export function MediaLightbox({ items, initialIndex, isOpen, onClose }: MediaLig
         </Dialog>
     );
 }
+

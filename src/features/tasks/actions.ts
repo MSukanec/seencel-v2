@@ -163,3 +163,93 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
     revalidatePath("/admin/catalog");
     return { success: true, error: null };
 }
+
+// ============================================================================
+// TASK MATERIALS CRUD (Recipe Management)
+// ============================================================================
+
+/**
+ * Add a material to a task's recipe
+ */
+export async function addTaskMaterial(
+    taskId: string,
+    materialId: string,
+    amount: number,
+    isSystemTask: boolean = false
+) {
+    const supabase = isSystemTask ? createServiceClient() : await createClient();
+
+    const { data, error } = await supabase
+        .from("task_materials")
+        .insert({
+            task_id: taskId,
+            material_id: materialId,
+            amount,
+            is_system: isSystemTask,
+            // organization_id is auto-set by trigger for non-system
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error adding task material:", error);
+        if (error.code === "23505") {
+            return { error: "Este material ya está agregado a la tarea" };
+        }
+        return { error: error.message };
+    }
+
+    revalidatePath("/admin/catalog/task");
+    revalidatePath("/organization/catalog/task");
+    return { data, error: null };
+}
+
+/**
+ * Update a task material's amount
+ */
+export async function updateTaskMaterial(
+    id: string,
+    amount: number,
+    isSystemTask: boolean = false
+) {
+    const supabase = isSystemTask ? createServiceClient() : await createClient();
+
+    const { data, error } = await supabase
+        .from("task_materials")
+        .update({ amount })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating task material:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath("/admin/catalog/task");
+    revalidatePath("/organization/catalog/task");
+    return { data, error: null };
+}
+
+/**
+ * Remove a material from a task's recipe
+ */
+export async function removeTaskMaterial(id: string, isSystemTask: boolean = false) {
+    const supabase = isSystemTask ? createServiceClient() : await createClient();
+
+    const { error } = await supabase
+        .from("task_materials")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error("Error removing task material:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath("/admin/catalog/task");
+    revalidatePath("/organization/catalog/task");
+    return { success: true, error: null };
+}
+
+

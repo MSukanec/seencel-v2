@@ -95,3 +95,4 @@ export function OrganizationLogoUpload({ organizationId, initialLogoUrl, organiz
         </div>
     );
 }
+

@@ -36,3 +36,4 @@ export interface UserProfile extends User {
     phone_e164: string | null;
     user_data_id: string | null; // To track if user_data record exists
 }
+

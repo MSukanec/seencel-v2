@@ -12,12 +12,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SitelogFeed } from "./sitelog-feed";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FacetedFilter } from "@/components/ui/faceted-filter";
+import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { Star, Circle, Activity, AlertTriangle, HelpCircle } from "lucide-react";
 
 import { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
-import { Toolbar } from "@/components/ui/toolbar";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/providers/modal-store";
 import { SitelogForm } from "./sitelog-form";
 import { deleteSiteLog } from "@/actions/sitelog";
@@ -190,7 +190,7 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                                             searchQuery={searchQuery}
                                             onSearchChange={setSearchQuery}
                                             searchPlaceholder="Buscar en bitácora..."
-                                            mobileActionClick={handleCreate}
+                                            // mobileActionClick={handleCreate}
                                             filterContent={
                                                 <>
                                                     <FacetedFilter
@@ -249,7 +249,7 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                                     searchQuery={searchQuery}
                                     onSearchChange={setSearchQuery}
                                     searchPlaceholder="Buscar en bitácora..."
-                                    mobileActionClick={handleCreate}
+                                    // mobileActionClick={handleCreate}
                                     filterContent={
                                         <>
                                             <FacetedFilter
@@ -313,3 +313,4 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
         </>
     );
 }
+

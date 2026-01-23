@@ -27,3 +27,4 @@ export function ErrorDisplay({ title, message, retryLabel }: ErrorDisplayProps) 
         </div>
     );
 }
+

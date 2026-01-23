@@ -37,3 +37,4 @@ export interface ProjectModality {
     name: string;
     is_default: boolean;
 }
+

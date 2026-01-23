@@ -181,3 +181,4 @@ export function InstructorsTable({ instructors }: InstructorsTableProps) {
         </>
     );
 }
+

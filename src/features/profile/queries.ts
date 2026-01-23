@@ -107,3 +107,4 @@ export async function checkIsAdmin(): Promise<boolean> {
     const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
     return roleName === 'admin';
 }
+

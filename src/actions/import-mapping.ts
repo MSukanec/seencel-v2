@@ -79,3 +79,4 @@ export async function updateMappingPatterns(
 
     await Promise.all(updates);
 }
+

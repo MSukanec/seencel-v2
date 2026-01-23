@@ -179,3 +179,4 @@ export function useSmartCurrency(): SmartCurrencyResult {
         primaryCurrencyCode,
     };
 }
+

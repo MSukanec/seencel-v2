@@ -130,3 +130,4 @@ function FlagComponent({ alpha2, name }: { alpha2: string | null; name: string }
         </span>
     );
 }
+

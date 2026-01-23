@@ -525,3 +525,4 @@ export async function getOrganizationWallets(orgId: string) {
     const data = await getOrganizationFinancialData(orgId);
     return data.wallets;
 }
+

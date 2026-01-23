@@ -23,3 +23,4 @@ export function OrganizationTabsWrapper({ defaultValue, children }: Organization
         </Tabs>
     );
 }
+

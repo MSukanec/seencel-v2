@@ -17,3 +17,4 @@ export { BaseDonutChart } from './pie/base-donut-chart';
 
 // Config & Utils
 export * from './chart-config';
+

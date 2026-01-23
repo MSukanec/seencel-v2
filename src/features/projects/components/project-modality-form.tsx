@@ -111,3 +111,4 @@ export function ProjectModalityForm({ organizationId, initialData, onSuccess }: 
         </form>
     );
 }
+

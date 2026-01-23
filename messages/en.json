@@ -623,6 +623,8 @@
             "totalBudget": "Total Budget",
             "pendingTasks": "Pending Tasks",
             "teamVelocity": "Team Velocity",
+            "documentsLast30Days": "Documents (30 days)",
+            "teamSize": "Team Members",
             "vsLastMonth": "vs last month"
         },
         "sections": {
@@ -1407,5 +1409,14 @@
         "unknownLocation": "Unknown location",
         "viewMore": "View more (Coming soon)",
         "projectsOnMap": "projects on map"
+    },
+    "Errors": {
+        "unexpected": {
+            "title": "Something went wrong",
+            "description": "An unexpected error occurred. Our team has been notified.",
+            "retry": "Retry",
+            "goHome": "Go to Home",
+            "errorId": "Error ID"
+        }
     }
 }

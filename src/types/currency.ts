@@ -57,3 +57,4 @@ export interface CurrencyContextValue {
     // Loading state
     isLoading: boolean;
 }
+

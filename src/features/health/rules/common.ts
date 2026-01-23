@@ -142,3 +142,4 @@ export const ruleExchangeRate = (field: string, label: string = 'Cotización', t
         };
     }
 });
+

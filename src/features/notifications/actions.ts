@@ -77,3 +77,4 @@ export async function markAllNotificationsAsRead() {
     revalidatePath('/[locale]/settings', 'page');
     return { success: true };
 }
+

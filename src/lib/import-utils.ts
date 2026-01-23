@@ -168,3 +168,4 @@ export function findBestMatch(header: string, columns: ImportColumn[]): string |
 
     return undefined;
 }
+

@@ -251,3 +251,4 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
         </form>
     );
 }
+

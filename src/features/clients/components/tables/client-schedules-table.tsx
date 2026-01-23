@@ -44,3 +44,4 @@ export function ClientSchedulesTable({ data }: { data: any[] }) {
 
     return <DataTable columns={columns} data={data} searchKey="commitment.client.contact.full_name" />;
 }
+

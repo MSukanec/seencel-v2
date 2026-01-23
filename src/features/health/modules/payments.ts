@@ -120,3 +120,4 @@ export function analyzePaymentsHealth(payments: ClientPaymentView[]): PaymentsHe
         issues: reportedIssues
     };
 }
+

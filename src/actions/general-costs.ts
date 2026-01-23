@@ -375,3 +375,4 @@ export async function deleteGeneralCostPayment(id: string) {
     revalidatePath('/organization/general-costs');
     return true;
 }
+

@@ -63,3 +63,4 @@ export interface ContactTypeCount {
     contact_type_name: string;
     total_contacts: number;
 }
+

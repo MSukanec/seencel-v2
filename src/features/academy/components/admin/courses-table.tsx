@@ -284,3 +284,4 @@ export function CoursesTable({ courses, instructors }: { courses: AdminCourse[],
         </Card>
     );
 }
+

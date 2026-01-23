@@ -161,3 +161,4 @@ export function AvatarManager({ avatarUrl, fullName, initials }: AvatarManagerPr
         </div>
     )
 }
+

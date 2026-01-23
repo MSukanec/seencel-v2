@@ -143,3 +143,4 @@ export function ClientPortalAccess({ projectId, clients }: ClientPortalAccessPro
         </div>
     );
 }
+

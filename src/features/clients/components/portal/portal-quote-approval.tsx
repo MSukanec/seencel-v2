@@ -254,3 +254,4 @@ export function PortalQuoteApproval({ quote, projectId, clientId, onSuccess }: P
         </>
     );
 }
+

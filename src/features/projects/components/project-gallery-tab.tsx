@@ -213,3 +213,4 @@ export function ProjectGalleryTab({ files }: { files: any[] }) {
         </div>
     );
 }
+

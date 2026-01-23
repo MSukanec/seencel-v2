@@ -51,3 +51,4 @@ export function useCashFlowData(movements: any[], days = 14) {
 
     return { data, totalBalance };
 }
+

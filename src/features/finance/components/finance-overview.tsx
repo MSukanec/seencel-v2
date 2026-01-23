@@ -150,3 +150,4 @@ export function FinanceOverview({ movements }: FinanceOverviewProps) {
         </div>
     );
 }
+

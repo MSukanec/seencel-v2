@@ -105,3 +105,4 @@ export interface EnhancedDashboardData {
     insights: Insight[];
     recentActivity: GeneralCostPaymentView[];
 }
+

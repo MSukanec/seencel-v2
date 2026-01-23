@@ -1058,3 +1058,4 @@ export function CourseLanding({ course, isDashboard = false }: CourseLandingProp
         </div >
     );
 }
+

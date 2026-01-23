@@ -165,3 +165,4 @@ export function TOTPSetup({ onSuccess, onCancel }: TOTPSetupProps) {
         </div>
     );
 }
+

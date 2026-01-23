@@ -1,10 +1,11 @@
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions } from "@/features/tasks/queries";
+import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
 import { TaskCatalog } from "@/features/tasks/components/catalog/task-catalog";
+import { MaterialCatalogView } from "@/features/materials/views";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Wrench, ClipboardList, Package, Shield } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 // Reusable tab trigger style
@@ -17,11 +18,23 @@ const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transp
  * - New tasks are created with is_system=true and NO organization_id
  */
 export default async function AdminCatalogPage() {
-    // For admin view, we show ONLY system tasks (no org filtering)
-    const [groupedTasks, unitsResult, divisionsResult] = await Promise.all([
+    // Fetch all data in parallel
+    const [
+        groupedTasks,
+        taskUnitsResult,
+        divisionsResult,
+        systemMaterials,
+        materialCategories,
+        materialUnits,
+        categoryHierarchy
+    ] = await Promise.all([
         getTasksGroupedByDivision("__SYSTEM__"), // Special flag for system-only tasks
         getUnits(),
-        getTaskDivisions() // No org filter - get all divisions
+        getTaskDivisions(), // No org filter - get all divisions
+        getSystemMaterials(),
+        getMaterialCategories(),
+        getUnitsForMaterials(),
+        getMaterialCategoriesHierarchy()
     ]);
 
     return (
@@ -49,35 +62,24 @@ export default async function AdminCatalogPage() {
                     </TabsList>
                 }
             >
-                <ContentLayout variant="wide" className="pb-6">
+                <ContentLayout variant="narrow" className="pb-6">
                     <TabsContent value="tasks" className="mt-0">
                         <TaskCatalog
                             groupedTasks={groupedTasks}
                             orgId="" // No org - admin mode
-                            units={unitsResult.data}
+                            units={taskUnitsResult.data}
                             divisions={divisionsResult.data}
                             isAdminMode={true}
                         />
                     </TabsContent>
 
                     <TabsContent value="materials" className="mt-0">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Catálogo de Materiales</CardTitle>
-                                <CardDescription>
-                                    Gestiona los materiales del sistema
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-center py-12 text-muted-foreground">
-                                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p className="text-lg font-medium">Próximamente</p>
-                                    <p className="text-sm">
-                                        El catálogo de materiales estará disponible pronto
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <MaterialCatalogView
+                            materials={systemMaterials}
+                            units={materialUnits}
+                            categories={materialCategories}
+                            categoryHierarchy={categoryHierarchy}
+                        />
                     </TabsContent>
                 </ContentLayout>
             </PageWrapper>

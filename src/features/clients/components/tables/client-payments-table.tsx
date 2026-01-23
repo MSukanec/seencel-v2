@@ -48,3 +48,4 @@ export function ClientPaymentsTable({ data }: { data: ClientPaymentView[] }) {
         />
     );
 }
+

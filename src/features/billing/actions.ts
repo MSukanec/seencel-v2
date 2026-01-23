@@ -74,3 +74,4 @@ export async function updateBillingProfile(formData: FormData) {
     revalidatePath('/[locale]/settings', 'page');
     return { success: true };
 }
+

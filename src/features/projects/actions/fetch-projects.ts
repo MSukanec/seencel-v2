@@ -12,3 +12,4 @@ export async function fetchProjectsAction(organizationId: string) {
         return [];
     }
 }
+

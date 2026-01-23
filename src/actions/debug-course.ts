@@ -34,3 +34,4 @@ export async function debugCourseFetch(slug: string) {
 
     return { exact, listCandidates: listData };
 }
+

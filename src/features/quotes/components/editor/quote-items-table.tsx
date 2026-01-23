@@ -253,3 +253,4 @@ export function QuoteItemsTable({ items, quote, tasks, divisions, onRefresh, onE
         </>
     );
 }
+

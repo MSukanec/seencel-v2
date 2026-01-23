@@ -573,7 +573,7 @@ export function BrandPdfTemplates() {
                         <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Esta acción no se puede deshacer. Se eliminará permanentemente la plantilla
-                            <span className="font-bold text-foreground"> "{config.name}"</span>.
+                            <span className="font-bold text-foreground"> &quot;{config.name}&quot;</span>.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -873,3 +873,4 @@ function PdfPreview({ config, logoUrl, demoData }: { config: PdfGlobalTheme, log
         </div>
     );
 }
+

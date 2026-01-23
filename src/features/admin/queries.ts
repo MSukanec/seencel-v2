@@ -294,3 +294,137 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
     };
 }
 
+// ============================================================================
+// CATALOG: System Materials Queries
+// ============================================================================
+
+export interface SystemMaterial {
+    id: string;
+    name: string;
+    unit_id: string | null;
+    unit_name: string | null;
+    category_id: string | null;
+    category_name: string | null;
+    material_type: 'material' | 'consumable';
+    is_system: boolean;
+    is_deleted: boolean;
+    created_at: string | null;
+}
+
+export interface MaterialCategory {
+    id: string;
+    name: string | null;
+}
+
+export interface Unit {
+    id: string;
+    name: string;
+}
+
+/**
+ * Get all system materials for admin catalog
+ */
+export async function getSystemMaterials(): Promise<SystemMaterial[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('materials')
+        .select(`
+            id,
+            name,
+            unit_id,
+            category_id,
+            material_type,
+            is_system,
+            is_deleted,
+            created_at,
+            units (name),
+            material_categories (name)
+        `)
+        .eq('is_system', true)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching system materials:", error);
+        return [];
+    }
+
+    return (data || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        unit_id: m.unit_id,
+        unit_name: m.units?.name || null,
+        category_id: m.category_id,
+        category_name: m.material_categories?.name || null,
+        material_type: m.material_type || 'material',
+        is_system: m.is_system,
+        is_deleted: m.is_deleted,
+        created_at: m.created_at,
+    }));
+}
+
+/**
+ * Get all material categories
+ */
+export async function getMaterialCategories(): Promise<MaterialCategory[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_categories')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching material categories:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+/**
+ * Get all units (for material form)
+ */
+export async function getUnitsForMaterials(): Promise<Unit[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('units')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching units:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+/**
+ * Get all material categories with hierarchy info for tree display
+ */
+export interface MaterialCategoryNode {
+    id: string;
+    name: string | null;
+    parent_id: string | null;
+    created_at: string;
+}
+
+export async function getMaterialCategoriesHierarchy(): Promise<MaterialCategoryNode[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_categories')
+        .select('id, name, parent_id, created_at')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching material categories hierarchy:", error);
+        return [];
+    }
+
+    return data || [];
+}
+

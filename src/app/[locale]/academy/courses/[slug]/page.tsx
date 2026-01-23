@@ -1,6 +1,6 @@
 import { getCourseBySlug } from "@/features/academy/course-queries";
 import { CourseLanding } from "@/features/academy/views/course-landing-view";
-import { Header } from "@/components/layout/header";
+import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/profile/queries";
 import { setRequestLocale } from 'next-intl/server';

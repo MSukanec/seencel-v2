@@ -819,3 +819,4 @@ export async function getLatestUserMarkersWithDetails(courseId: string, limit: n
     return (markers || []) as unknown as MarkerWithDetails[];
 }
 
+

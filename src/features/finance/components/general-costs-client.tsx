@@ -33,3 +33,4 @@ export function GeneralCostsClient({ organizationId, categories, concepts, payme
         </>
     );
 }
+

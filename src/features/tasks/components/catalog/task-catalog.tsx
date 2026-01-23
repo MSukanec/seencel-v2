@@ -32,6 +32,7 @@ import { TaskForm } from "../forms/task-form";
 import { deleteTask } from "../../actions";
 import { toast } from "sonner";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import Link from "next/link";
 
 interface TaskCatalogProps {
     groupedTasks: TasksByDivision[];
@@ -319,11 +320,14 @@ function TaskRow({ task, isAdminMode = false, onEdit, onDelete }: TaskRowProps) 
                     </code>
                 </div>
 
-                {/* Name */}
+                {/* Name - Clickable to navigate to detail */}
                 <div className="flex-1">
-                    <p className="text-sm font-medium">
+                    <Link
+                        href={isAdminMode ? `/admin/catalog/task/${task.id}` : `/organization/catalog/task/${task.id}`}
+                        className="text-sm font-medium hover:text-primary hover:underline transition-colors"
+                    >
                         {task.name || task.custom_name || "Sin nombre"}
-                    </p>
+                    </Link>
                     {task.description && (
                         <p className="text-xs text-muted-foreground truncate max-w-md">
                             {task.description}
@@ -390,3 +394,4 @@ function TaskRow({ task, isAdminMode = false, onEdit, onDelete }: TaskRowProps) 
         </div>
     );
 }
+

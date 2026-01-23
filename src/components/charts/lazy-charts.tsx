@@ -71,3 +71,4 @@ export const LazyLineChart = dynamic(
         ssr: false
     }
 );
+

@@ -376,3 +376,4 @@ function ColorPicker({ label, color, onChange }: { label: string, color: string,
         </div>
     );
 }
+

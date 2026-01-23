@@ -187,3 +187,4 @@ export function SiteLogTypesManager({ organizationId, initialTypes }: SiteLogTyp
         </Card>
     );
 }
+

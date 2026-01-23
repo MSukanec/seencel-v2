@@ -69,3 +69,4 @@ export function detectBrowserTimezone(): string {
 export function isKnownTimezone(value: string): boolean {
     return TIMEZONES.some(t => t.value === value);
 }
+

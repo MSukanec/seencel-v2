@@ -71,3 +71,4 @@ export function CourseTabs({ courseId }: CourseTabsProps) {
         </div>
     );
 }
+

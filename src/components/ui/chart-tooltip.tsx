@@ -72,3 +72,4 @@ export function PieChartTooltip({ active, payload }: ChartTooltipProps) {
         </div>
     );
 }
+

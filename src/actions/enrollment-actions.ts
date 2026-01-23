@@ -133,3 +133,4 @@ export async function deleteEnrollment(id: string) {
     revalidatePath("/admin/courses");
     return { success: true };
 }
+

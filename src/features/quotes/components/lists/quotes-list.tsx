@@ -33,8 +33,8 @@ import { deleteQuote } from "../../actions";
 import { toast } from "sonner";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Toolbar } from "@/components/ui/toolbar";
-import { FacetedFilter } from "@/components/ui/faceted-filter";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { Circle, FileCheck, Send as SendIcon, XCircle as XCircleIcon, FileSpreadsheet, FileSignature, FilePlus2 } from "lucide-react";
 import { OrganizationFinancialData } from "@/features/clients/types";
 
@@ -382,3 +382,4 @@ export function QuotesList({
         </div>
     );
 }
+

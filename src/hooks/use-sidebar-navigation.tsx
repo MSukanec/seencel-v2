@@ -21,6 +21,9 @@ import {
     Wrench,
     MapPin,
     Sparkles,
+    Package,
+    CalendarDays,
+    FolderOpen,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 
@@ -63,12 +66,14 @@ export function useSidebarNavigation() {
             case 'organization':
                 return [
                     { title: tMega('Organization.items.overview'), href: '/organization', icon: LayoutDashboard },
-                    { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building },
-                    { title: 'Proyectos', href: '/organization/projects', icon: Briefcase },
-                    { title: 'Contactos', href: '/organization/contacts', icon: Users },
-                    { title: 'Finanzas', href: '/organization/finance', icon: Wallet },
-                    { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench },
+                    { title: 'Agenda', href: '/organization/planner', icon: CalendarDays },
+                    { title: 'Archivos', href: '/organization/files', icon: FolderOpen },
                     { title: 'Presupuestos', href: '/organization/quotes', icon: FileText },
+                    { title: 'Finanzas', href: '/organization/finance', icon: Wallet },
+                    { title: 'Proyectos', href: '/organization/projects', icon: Briefcase, sectionHeader: 'Mi Organización' },
+                    { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building },
+                    { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench },
+                    { title: 'Contactos', href: '/organization/contacts', icon: Users },
                     { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard },
                     { title: 'Configuración', href: '/organization/settings', icon: Settings },
                 ];
@@ -81,13 +86,28 @@ export function useSidebarNavigation() {
                     {
                         title: 'Visión General',
                         href: projectBase,
-                        icon: LayoutDashboard,
-                        sectionHeader: 'General'
+                        icon: LayoutDashboard
+                    },
+                    {
+                        title: 'Agenda',
+                        href: activeProjectId ? `${projectBase}/planner` : '/organization/projects',
+                        icon: CalendarDays
+                    },
+                    {
+                        title: 'Archivos',
+                        href: activeProjectId ? `${projectBase}/files` : '/organization/projects',
+                        icon: FolderOpen
+                    },
+                    {
+                        title: 'Contactos',
+                        href: activeProjectId ? `${projectBase}/contacts` : '/organization/projects',
+                        icon: Users
                     },
                     {
                         title: 'Información',
                         href: activeProjectId ? `${projectBase}/details` : '/organization/projects',
-                        icon: Info
+                        icon: Info,
+                        sectionHeader: 'Gestión'
                     },
                     {
                         title: 'Presupuestos',
@@ -95,10 +115,15 @@ export function useSidebarNavigation() {
                         icon: FileText
                     },
                     {
+                        title: 'Materiales',
+                        href: activeProjectId ? `${projectBase}/materials` : '/organization/projects',
+                        icon: Package,
+                        sectionHeader: tSidebar('construction')
+                    },
+                    {
                         title: tSidebar('items.sitelog'),
                         href: activeProjectId ? `${projectBase}/sitelog` : '/organization/projects',
-                        icon: FileText,
-                        sectionHeader: tSidebar('construction')
+                        icon: FileText
                     },
                     {
                         title: 'Compromisos y Pagos',
@@ -143,3 +168,4 @@ export function useSidebarNavigation() {
         getNavItems
     };
 }
+

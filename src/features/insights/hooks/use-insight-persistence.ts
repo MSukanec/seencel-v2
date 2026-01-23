@@ -92,3 +92,4 @@ export function useInsightPersistence(moduleId: string) {
         isLoading
     };
 }
+

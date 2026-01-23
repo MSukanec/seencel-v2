@@ -27,3 +27,4 @@ export function ProjectFilesClient({ files }: { files: any[] }) {
         </Tabs>
     );
 }
+

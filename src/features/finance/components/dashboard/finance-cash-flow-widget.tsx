@@ -57,3 +57,4 @@ export function FinanceCashFlowWidget({ movements, className }: { movements: any
         </Card>
     );
 }
+

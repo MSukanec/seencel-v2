@@ -97,3 +97,4 @@ export const cashFlowRiskInsight: InsightRule = (context: InsightContext): Insig
 
     return null;
 };
+

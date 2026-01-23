@@ -294,3 +294,4 @@ export const allInsightRules: InsightRule[] = [
     sustainedTrendInsight,
     yearEndProjectionInsight,
 ];
+

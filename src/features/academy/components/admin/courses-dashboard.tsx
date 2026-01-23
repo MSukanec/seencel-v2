@@ -246,3 +246,4 @@ export function CoursesDashboard({ data }: CoursesDashboardProps) {
         </div>
     );
 }
+

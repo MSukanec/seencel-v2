@@ -78,3 +78,4 @@ export function SiteLogTypeForm({ organizationId, initialData, onSuccess }: Site
         </form>
     );
 }
+

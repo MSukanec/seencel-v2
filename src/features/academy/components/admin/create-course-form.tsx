@@ -172,3 +172,4 @@ export function CreateCourseForm({ instructors }: CreateCourseFormProps) {
         </form>
     );
 }
+

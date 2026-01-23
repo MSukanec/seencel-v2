@@ -33,6 +33,8 @@ import { DataTableRowActions } from "./data-table-row-actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Paperclip } from "lucide-react";
 
+import { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
+
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
@@ -74,9 +76,9 @@ interface DataTableProps<TData, TValue> {
         onClick: (data: TData) => void;
         variant?: "default" | "destructive";
     }[];
+    toolbarInHeader?: boolean;
+    actions?: ToolbarAction[] | ((args: { table: Table<TData> }) => ToolbarAction[]);
 }
-
-
 
 export function DataTable<TData, TValue>({
     columns,
@@ -107,6 +109,8 @@ export function DataTable<TData, TValue>({
     onDuplicate,
     onDelete,
     customActions,
+    toolbarInHeader = false,
+    actions,
 }: DataTableProps<TData, TValue> & { meta?: any }) {
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -210,23 +214,51 @@ export function DataTable<TData, TValue>({
         },
     });
 
+    const resolvedActions = React.useMemo(() => {
+        if (typeof actions === 'function') {
+            return actions({ table });
+        }
+        return actions;
+    }, [actions, table]);
+
     return (
         <div className="space-y-4">
             {/* Toolbar */}
             {showToolbar && (
-                <Card className="p-4">
-                    <DataTableToolbar
-                        table={table}
-                        globalFilter={globalFilter}
-                        setGlobalFilter={setGlobalFilter}
-                        searchPlaceholder={searchPlaceholder}
-                        leftActions={leftActions}
-                        facetedFilters={facetedFilters}
-                        bulkActions={typeof bulkActions === "function" ? bulkActions({ table }) : bulkActions}
-                    >
-                        {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
-                    </DataTableToolbar>
-                </Card>
+                <div className={cn("transition-all", toolbarInHeader ? "contents" : "")}>
+                    {/* If toolbarInHeader, we don't render the Card wrapper, or we let the Toolbar handle portal */}
+                    {/* Actually, existing code wrapped it in Card. If portaling, we likely want to avoid the Card visual in the body */}
+                    {toolbarInHeader ? (
+                        <DataTableToolbar
+                            table={table}
+                            globalFilter={globalFilter}
+                            setGlobalFilter={setGlobalFilter}
+                            searchPlaceholder={searchPlaceholder}
+                            leftActions={leftActions}
+                            facetedFilters={facetedFilters}
+                            bulkActions={typeof bulkActions === "function" ? bulkActions({ table }) : bulkActions}
+                            portalToHeader={true}
+                            actions={resolvedActions}
+                        >
+                            {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
+                        </DataTableToolbar>
+                    ) : (
+                        <Card className="p-4">
+                            <DataTableToolbar
+                                table={table}
+                                globalFilter={globalFilter}
+                                setGlobalFilter={setGlobalFilter}
+                                searchPlaceholder={searchPlaceholder}
+                                leftActions={leftActions}
+                                facetedFilters={facetedFilters}
+                                bulkActions={typeof bulkActions === "function" ? bulkActions({ table }) : bulkActions}
+                                actions={resolvedActions}
+                            >
+                                {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
+                            </DataTableToolbar>
+                        </Card>
+                    )}
+                </div>
             )}
 
             {/* Table Container */}
@@ -353,3 +385,4 @@ export function DataTable<TData, TValue>({
         </div >
     );
 }
+

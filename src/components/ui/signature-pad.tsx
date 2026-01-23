@@ -433,3 +433,4 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
         );
     }
 );
+

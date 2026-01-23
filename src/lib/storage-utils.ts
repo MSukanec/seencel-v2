@@ -18,3 +18,4 @@ export function getStorageUrl(path: string | null, bucket: 'avatars' | 'organiza
 
     return `${baseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
 }
+

@@ -346,3 +346,4 @@ export function MarketingForm({ course, details }: MarketingFormProps) {
         </Form >
     );
 }
+

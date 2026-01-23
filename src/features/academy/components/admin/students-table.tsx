@@ -372,3 +372,4 @@ export function StudentsDataTable({ enrollments, courses }: StudentsDataTablePro
         />
     );
 }
+

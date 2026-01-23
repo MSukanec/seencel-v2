@@ -367,3 +367,4 @@ export async function deleteProject(projectId: string) {
         return { error: e.message || "Failed to delete project" };
     }
 }
+

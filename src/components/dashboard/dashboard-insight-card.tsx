@@ -65,3 +65,4 @@ export function InsightCard({ insight }: InsightCardProps) {
         </div>
     );
 }
+

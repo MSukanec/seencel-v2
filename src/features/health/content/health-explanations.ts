@@ -82,3 +82,4 @@ export const healthExplanations: Record<string, HealthExplanation> = {
 export function getHealthExplanation(ruleId: string): HealthExplanation {
     return healthExplanations[ruleId] || healthExplanations["unknown"];
 }
+

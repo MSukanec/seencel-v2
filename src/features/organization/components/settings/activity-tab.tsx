@@ -24,3 +24,4 @@ export function ActivityTab({ logs = [] }: ActivityTabProps) {
         </div>
     );
 }
+

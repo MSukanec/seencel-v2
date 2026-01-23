@@ -157,3 +157,4 @@ export interface OrganizationSettingsData {
     availableCurrencies?: Currency[]; // All global
     availableWallets?: Wallet[]; // All global
 }
+

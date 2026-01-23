@@ -27,3 +27,4 @@ export const SEVERITY_OPTIONS = [
     { value: 'medium', label: 'Media (Atención)', color: 'bg-yellow-500' },
     { value: 'high', label: 'Alta (Crítico)', color: 'bg-red-500' },
 ] as const;
+

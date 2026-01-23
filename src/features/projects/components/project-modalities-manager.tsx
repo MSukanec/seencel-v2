@@ -195,3 +195,4 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
         </Card>
     );
 }
+

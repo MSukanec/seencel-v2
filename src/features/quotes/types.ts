@@ -116,3 +116,4 @@ export const QUOTE_TYPE_COLORS: Record<QuoteType, string> = {
     contract: 'text-emerald-500 border-emerald-500/30',
     change_order: 'text-orange-500 border-orange-500/30'
 };
+

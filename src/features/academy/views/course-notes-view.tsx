@@ -212,3 +212,4 @@ export function CourseNotesView({
         </ContentLayout>
     );
 }
+

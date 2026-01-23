@@ -419,3 +419,4 @@ export function getCourseBySlug(slug: string): Course | undefined {
 export function getAllCourseSlugs(): string[] {
     return ["archicad"];
 }
+

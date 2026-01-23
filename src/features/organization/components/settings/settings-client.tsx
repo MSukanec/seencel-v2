@@ -25,6 +25,7 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">
                 <PermissionsTab
+                    organizationId={organizationId}
                     roles={data.roles}
                     permissions={data.permissions}
                     rolePermissions={data.rolePermissions}
@@ -53,3 +54,4 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
         </>
     );
 }
+

@@ -197,3 +197,4 @@ export function ProjectTypesManager({ organizationId, initialTypes }: ProjectTyp
         </Card>
     );
 }
+

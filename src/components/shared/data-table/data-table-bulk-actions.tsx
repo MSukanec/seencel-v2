@@ -37,3 +37,4 @@ export function DataTableBulkActions<TData>({
         </div>
     );
 }
+

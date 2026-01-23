@@ -82,3 +82,4 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
 
     return { success: true };
 }
+

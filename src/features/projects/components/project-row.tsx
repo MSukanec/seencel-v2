@@ -106,3 +106,4 @@ export function ProjectRow({ project, locale, isLastActive }: ProjectRowProps) {
         </TableRow>
     );
 }
+

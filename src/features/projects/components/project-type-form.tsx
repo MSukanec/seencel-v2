@@ -114,3 +114,4 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
         </form>
     );
 }
+

@@ -44,3 +44,4 @@ export function SwitchOrganizationButton({ organizationId, currentOrgId, label }
         </Button>
     );
 }
+

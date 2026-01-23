@@ -385,3 +385,4 @@ export async function deleteSiteLog(logId: string, projectId: string) {
     revalidatePath(`/project/${projectId}/sitelog`);
     return { success: true };
 }
+

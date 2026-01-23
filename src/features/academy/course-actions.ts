@@ -320,3 +320,4 @@ export async function deleteLesson(lessonId: string, courseId: string) {
     revalidatePath(`/admin/academy/${courseId}`);
     return { success: true, message: "Lección eliminada" };
 }
+

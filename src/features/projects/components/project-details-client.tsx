@@ -33,3 +33,4 @@ export function ProjectDetailsClient({ project }: { project: any }) {
         </>
     );
 }
+

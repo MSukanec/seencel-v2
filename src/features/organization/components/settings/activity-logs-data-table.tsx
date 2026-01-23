@@ -214,3 +214,4 @@ export function ActivityLogsDataTable({ data }: ActivityLogsDataTableProps) {
         />
     );
 }
+

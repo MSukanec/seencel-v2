@@ -12,9 +12,6 @@ import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Briefcase } from "lucide-react";
 
-// Reusable tab trigger style
-const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
-
 export default async function ProjectsPage({
     params
 }: {
@@ -43,10 +40,10 @@ export default async function ProjectsPage({
                 icon={<Briefcase />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
-                        <TabsTrigger value="projects" className={tabTriggerClass}>
+                        <TabsTrigger value="projects">
                             {t('tabs.projects')}
                         </TabsTrigger>
-                        <TabsTrigger value="settings" className={tabTriggerClass}>
+                        <TabsTrigger value="settings">
                             {t('settings.title')}
                         </TabsTrigger>
                     </TabsList>
@@ -79,6 +76,7 @@ export default async function ProjectsPage({
                     </ContentLayout>
                 </TabsContent>
             </PageWrapper>
+
         </Tabs>
     );
 }

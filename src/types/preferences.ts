@@ -17,3 +17,4 @@ export interface UserPreferences {
     layout: string;
     language: string;
 }
+

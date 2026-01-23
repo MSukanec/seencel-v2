@@ -40,3 +40,4 @@ export const MODAL_REGISTRY: Record<string, ModalRegistryItem> = {
     }
     // Add more mappings here
 };
+

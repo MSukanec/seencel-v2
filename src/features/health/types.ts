@@ -54,3 +54,4 @@ export interface HealthExplanation {
         description: string;
     };
 }
+

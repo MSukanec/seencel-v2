@@ -56,3 +56,4 @@ export function DeleteCourseConfirm({ courseId, courseTitle }: DeleteCourseConfi
         </div>
     );
 }
+

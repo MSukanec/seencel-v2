@@ -367,3 +367,4 @@ export async function getAllInstructors() {
 
     return data || [];
 }
+

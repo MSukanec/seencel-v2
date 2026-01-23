@@ -571,3 +571,4 @@ export async function markAsAnswer(postId: string): Promise<{ success: boolean; 
     revalidatePath('/academy');
     return { success: true };
 }
+

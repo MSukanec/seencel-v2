@@ -1,14 +1,40 @@
 import { getActiveOrganizationId } from "@/actions/general-costs";
+import { cn } from "@/lib/utils";
 import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/actions/contacts";
-import { ContactsClient } from "@/features/organization/components/contacts/contacts-client";
+import {
+    Tabs,
+    TabsList,
+    TabsTrigger,
+    TabsContent
+} from "@/components/ui/tabs";
+import { ContactsListView } from "@/features/contact/views/contacts-list-view";
+import { ContactsSettingsView } from "@/features/contact/views/contacts-settings-view";
 import { redirect } from "next/navigation";
 import { Users } from "lucide-react";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageWrapper, ContentLayout } from "@/components/layout";
+import { getTranslations } from "next-intl/server";
+import { Metadata } from "next";
+import { ErrorDisplay } from "@/components/ui/error-display";
 
-// Reusable tab trigger style
-const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
+// ============================================
+// METADATA (SEO)
+// ============================================
+export async function generateMetadata({
+    params
+}: {
+    params: { locale: string }
+}): Promise<Metadata> {
+    const t = await getTranslations({
+        locale: params.locale,
+        namespace: 'Contacts'
+    });
+
+    return {
+        title: `${t('title')} | SEENCEL`,
+        description: t('subtitle'),
+        robots: "noindex, nofollow",
+    };
+}
 
 export default async function ContactsPage() {
     const organizationId = await getActiveOrganizationId();
@@ -17,38 +43,64 @@ export default async function ContactsPage() {
         redirect('/');
     }
 
-    const [contacts, types, summary] = await Promise.all([
-        getOrganizationContacts(organizationId),
-        getContactTypes(organizationId),
-        getContactsSummary(organizationId)
-    ]);
+    const t = await getTranslations('Contacts');
 
-    return (
-        <Tabs defaultValue="list" className="h-full flex flex-col">
-            <PageWrapper
-                type="page"
-                title="Contactos"
-                icon={<Users />}
-                tabs={
-                    <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
-                        <TabsTrigger value="list" className={tabTriggerClass}>
-                            Lista de Contactos
-                        </TabsTrigger>
-                        <TabsTrigger value="settings" className={tabTriggerClass}>
-                            Configuración
-                        </TabsTrigger>
-                    </TabsList>
-                }
-            >
-                <ContentLayout variant="wide">
-                    <ContactsClient
-                        organizationId={organizationId}
-                        initialContacts={contacts}
-                        initialTypes={types}
-                        summary={summary}
-                    />
-                </ContentLayout>
-            </PageWrapper>
-        </Tabs>
-    );
+    try {
+        const [contacts, types, summary] = await Promise.all([
+            getOrganizationContacts(organizationId),
+            getContactTypes(organizationId),
+            getContactsSummary(organizationId)
+        ]);
+
+        return (
+            <Tabs defaultValue="list" className="h-full flex flex-col">
+                <PageWrapper
+                    type="page"
+                    title={t('title')}
+                    icon={<Users />}
+                    tabs={
+                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
+                            <TabsTrigger value="list">
+                                {t('tabs.list')}
+                            </TabsTrigger>
+                            <TabsTrigger value="settings">
+                                {t('tabs.settings')}
+                            </TabsTrigger>
+                        </TabsList>
+                    }
+                >
+                    <TabsContent value="list" className="m-0 h-full focus-visible:outline-none">
+                        <ContentLayout variant="wide">
+                            <ContactsListView
+                                organizationId={organizationId}
+                                initialContacts={contacts}
+                                contactTypes={types}
+                                summary={summary}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    <TabsContent value="settings" className="m-0 h-full focus-visible:outline-none">
+                        <ContentLayout variant="wide">
+                            <ContactsSettingsView
+                                organizationId={organizationId}
+                                initialTypes={types}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+                </PageWrapper>
+            </Tabs>
+        );
+    } catch (error) {
+        console.error("Error loading contacts:", error);
+        return (
+            <div className="h-full w-full flex items-center justify-center">
+                <ErrorDisplay
+                    title={t('errors.title')}
+                    message={error instanceof Error ? error.message : "Unknown error"}
+                    retryLabel={t('errors.retry')}
+                />
+            </div>
+        );
+    }
 }

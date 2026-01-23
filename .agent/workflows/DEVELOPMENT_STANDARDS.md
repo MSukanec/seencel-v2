@@ -1,452 +1,82 @@
-# Development Standards & Architecture Decisions
+---
+description: Estándares de desarrollo de SEENCEL - Índice principal y checklist
+---
 
-This document serves as the **Single Source of Truth** for all developers and AI agents working on the SEENCEL v2 project. Follow these guidelines strictly to maintain consistency and "Enterprise" quality.
+# Estándares de Desarrollo SEENCEL
+
+Este es el **índice principal** de estándares de desarrollo. Para detalles específicos, consultar los workflows especializados.
 
 ---
 
-## 1. Project Architecture (Feature-First)
+## Workflows Especializados
 
-### Directory Structure
-
-#### `src/components` (UI Agnostic)
-Reserved **EXCLUSIVELY** for generic components:
-| Folder | Purpose |
-|--------|---------|
-| `ui/` | Atomic primitives (Button, Input, Select). Shadcn components. |
-| `layout/` | Visual structure (Header, Sidebar, Footer, PageWrapper). |
-| `shared/` | Complex reusable components (DeleteModal, FormFooter, DataTable). |
-| `charts/` | Chart components (BaseBarChart, BasePieChart, etc.). |
-| `dashboard/` | Dashboard-specific components (DashboardCard, DashboardKpiCard). |
-
-⛔ **FORBIDDEN**: Creating business folders here (e.g., `src/components/users`).
-⛔ **FORBIDDEN**: Using `src/components/global`. Use `shared` instead.
-
-#### `src/features` (Domain & Business)
-All feature-specific logic lives here:
-- Structure: `src/features/[feature-name]/components`
-- Examples: `auth`, `finance`, `projects`, `kanban`, `organization`, `clients`
-- If a component imports business logic (actions, queries) → it belongs in a Feature.
-
-### Naming Conventions
-
-| Type | Convention | Example |
-|------|------------|---------|
-| Files/Dirs | ✅ kebab-case | `delete-confirmation-modal.tsx` |
-| Components | ✅ PascalCase | `export function UserProfile()` |
-| ❌ Wrong | PascalCase files | `DeleteConfirmationModal.tsx` |
+| Workflow | Descripción | Comando |
+|----------|-------------|---------|
+| [Arquitectura de Carpetas](file:///.agent/workflows/development/file-structure.md) | Feature-first, naming conventions | `/file-structure` |
+| [Layout de Páginas](file:///.agent/workflows/development/page-layout.md) | PageWrapper, ContentLayout, Tabs | `/page-layout` |
+| [Formularios y Modales](file:///.agent/workflows/development/forms-modals.md) | Forms, modals, inputs especiales | `/forms-modals` |
+| [Patrones de Performance](file:///.agent/workflows/development/performance-patterns.md) | Optimistic UI, lazy loading, tabs | `/performance-patterns` |
+| [Patrones de UI](file:///.agent/workflows/development/ui-patterns.md) | EmptyState, Toolbar, DataTable | `/ui-patterns` |
+| [Backend e i18n](file:///.agent/workflows/development/backend-i18n.md) | Supabase, RLS, internacionalización | `/backend-i18n` |
+| [Plan Features](file:///.agent/workflows/development/plan-features.md) | Límites de planes, FeatureGuard | `/plan-features` |
 
 ---
 
-## 2. Page Layout System
+## ⭐ Workflows Críticos (Leer Obligatorio)
 
-### PageWrapper
-**Location:** `@/components/layout/page-wrapper`
+| Workflow | Descripción | Comando |
+|----------|-------------|---------|
+| **[Arquitectura Financiera](file:///.agent/workflows/development/financial-architecture.md)** | **Monedas, functional_amount, triggers, dualidad nominal/funcional** | `/financial-architecture` |
+| `/RLS-GUIDELINES` | Políticas Row Level Security |
+| `/add-notification` | Agregar notificaciones al sistema |
 
-| Prop | Values | Description |
-|------|--------|-------------|
-| `type` | `"page"` / `"dashboard"` | `page` = header; `dashboard` = no header |
-| `title` | String | Page title |
-| `icon` | ReactElement | **MANDATORY**: Must match sidebar icon |
-| `tabs` | ReactNode | Tabs below title (pass `TabsList` here) |
-
-### ContentLayout
-**Location:** `@/components/layout/content-layout`
-
-| Variant | Use Case |
-|---------|----------|
-| `wide` | Tables, lists, dashboards |
-| `narrow` | Forms, profiles, settings |
-| `full` | Canvas, maps, editors |
-
-### Layout Rules
-1. **Title in PageWrapper**, not as `<h1>` in content.
-2. **Icons**: Always pass the `icon` prop to `PageWrapper`. Use the SAME icon as the sidebar.
-3. **Tabs Structure**: 
-   - Root `<Tabs>` wraps `PageWrapper`.
-   - Pass `<TabsList>` to `PageWrapper`'s `tabs` prop.
-   - Use standard transparent tab styles (reference `ContactsPage`).
-4. **TabsContent inside ContentLayout**.
+> [!IMPORTANT]
+> Para cualquier feature que involucre **pagos, montos o monedas**, leer `/financial-architecture` es **OBLIGATORIO**.
 
 ---
 
-## 3. Forms & Modal System
+## Checklist Rápido (Pre-Commit)
 
-### Modal Usage
-```tsx
-import { useModal } from "@/providers/modal-store";
-openModal(<MyComponent />, { 
-    title: "...",
-    description: "...", // MANDATORY - never leave empty
-    size: 'md'
-});
-```
+### Arquitectura
+- [ ] Componente en carpeta correcta (`features/` vs `components/`)
+- [ ] Archivo en kebab-case, componente en PascalCase
 
-### Form Architecture
-- **FormFooter**: `@/components/shared/form-footer` (handles `Cmd+Enter`).
-- **FormGroup**: ALWAYS wrap inputs for accessibility.
-- **FormFooter class**: `className="-mx-4 -mb-4 mt-6"`.
-- **Grid Layout**: `grid grid-cols-1 md:grid-cols-2 gap-4`.
-- **Agnostic**: Forms receive `onSuccess` and `initialData` as props.
+### Layout
+- [ ] Usado `PageWrapper` + `ContentLayout`
+- [ ] Ícono de página coincide con sidebar
 
-### Specialized Inputs
-- **Phone**: `PhoneInput` - NEVER native inputs.
-- **Date**: `DatePicker`.
+### Formularios
+- [ ] Modal tiene `description`
+- [ ] Form usa `FormGroup`, `FormFooter`
+- [ ] Inputs especiales: `PhoneInput`, `DatePicker`
+- [ ] MIME types mapeados para BD
 
-### Deletion Patterns
-| Pattern | Use Case | Component |
-|---------|----------|-----------|
-| **Soft Delete + Reassign** | Categories, Roles (in use) | `DeleteReplacementModal` |
-| **Simple Delete** | Projects, Tasks (leaf nodes) | `DeleteDialog` |
+### Performance
+- [ ] Delete usa `useOptimisticList`
+- [ ] Charts usan componentes `Lazy*`
+- [ ] Tabs usan estado local, no `router.replace()`
 
-### File Uploads & MIME Types
-**CRITICAL**: Database tables (like `media_files`) often use restricted ENUMs for `file_type`.
-**ALWAYS** map the raw MIME type to the allowed DB value before insertion in Server Actions:
+### UI
+- [ ] Lista vacía muestra `EmptyState`
+- [ ] Toolbar wrap en Card
+- [ ] No `window.confirm()` - usar `AlertDialog`
 
-| Raw MIME Type | DB Value |
-|---------------|----------|
-| `image/*` (png, jpeg, etc.) | `'image'` |
-| `video/*` (mp4, webm) | `'video'` |
-| `application/pdf` | `'pdf'` |
-| `application/msword`, etc. | `'doc'` |
-| Everything else | `'other'` |
+### Backend
+- [ ] RLS habilitado en nuevas tablas
+- [ ] No strings hardcodeados - usar `next-intl`
 
-**NEVER** insert `file.type` (e.g., `'image/png'`) directly into `file_type` columns. Use a helper function like `getMediaType(mime)`.
+### Financiero ⭐
+- [ ] Datos vía `getOrganizationFinancialData`
+- [ ] Tabla tiene `functional_amount` + trigger
+- [ ] UI usa `useFinancialFeatures` para flags
+- [ ] Transacciones incluyen `exchange_rate`
 
 ---
 
-## 4. Financial Data Handling
-
-For forms with transactions, payments, or financial movements:
-
-1. **Single Source**: NEVER query `wallets` or `currencies` directly. Use `getOrganizationFinancialData(orgId)`.
-2. **Default Logic**: Returns lists + default IDs (`defaultCurrencyId`, `defaultWalletId`).
-3. **Pre-selection**: Use defaults to pre-fill Currency/Wallet selectors.
-
-```tsx
-// In Page.tsx
-const financialData = await getOrganizationFinancialData(orgId);
-<PaymentForm financialData={financialData} />
-
-// In Form
-const [walletId] = useState(initialData?.wallet_id || financialData.defaultWalletId);
-```
-
----
-
-## 5. User Interface (UI/UX)
-
-### Dialogs
-**NEVER** use `window.confirm()`. Use `AlertDialog`.
-
-### Toasts
-- **System**: Sonner (`toast.success()`, `toast.error()`).
-- **Rule**: No inline success/error messages.
-
-### Image Uploads
-**CRITICAL**: Compress before upload.
-```tsx
-import { compressImage } from "@/lib/client-image-compression";
-const file = await compressImage(rawFile, 'avatar');
-```
-
----
-
-## 6. Data Tables
-
-**Location**: `@/components/shared/data-table/`
-
-### Usage
-```tsx
-<DataTable
-    columns={columns}  // NO manual "actions" column
-    data={data}
-    enableRowActions={true}
-    onEdit={handleEdit}
-    onDelete={handleDelete}
-/>
-```
-
-### When to Use
-- ✅ Entity lists, > 20 items, sortable/filterable
-- ❌ Tables < 5 rows, inside modals
-
----
-
-## 7. Internationalization (i18n)
-- **Library**: `next-intl`
-- **Rule**: **NO HARDCODED STRINGS**. Extract to `messages/es.json`.
-- **Locale**: Default is Spanish (`es`).
-
----
-
-## 8. Backend (Supabase)
-
-### RLS
-- Use `.update()` not `.upsert()` for existing profiles.
-
-### Storage
-- Use `getStorageUrl` for public URLs.
-- Prefer `logo_path` column.
-
----
-
-## 9. Implementation Checklist
-- [ ] **Architecture**: Component in correct folder (`features/` or `components/`)?
-- [ ] **Naming**: File is kebab-case?
-- [ ] **Layout**: Used `PageWrapper` + `ContentLayout`?
-- [ ] **Modal**: Has description?
-- [ ] **Form**: Used `FormGroup`, `FormFooter`?
-- [ ] **Financial**: Used `getOrganizationFinancialData`?
-- [ ] **Images**: Used `compressImage`?
-- [ ] **MIME**: Mapped file types for DB?
-- [ ] **Tables**: Used `DataTable`?
-- [ ] **I18n**: No hardcoded strings?
-- [ ] **Performance**: Used optimistic UI for mutations? (NEW)
-- [ ] **Tabs**: Used local state, not router.replace()? (NEW)
-
----
-
-## 10. Performance & High-Speed UX ⚡
-
-### MANDATORY: All new features MUST follow these patterns for instant user feedback.
-
----
-
-### 10.1 Optimistic UI (Delete/Archive Operations)
-
-**Hook:** `@/hooks/use-optimistic-list`
-
-```tsx
-import { useOptimisticList } from "@/hooks/use-optimistic-list";
-
-// In component
-const { optimisticItems, removeOptimistically, isPending } = useOptimisticList(items);
-
-// On delete
-const handleDelete = async (id: string) => {
-    removeOptimistically(id); // Item disappears INSTANTLY
-    const result = await deleteAction(id);
-    if (!result.success) {
-        router.refresh(); // Rollback on error
-    }
-};
-
-// Render with optimistic data
-<DataTable data={optimisticItems} />
-```
-
-**Rule:** NEVER show loading spinner for delete. Item must vanish immediately.
-
----
-
-### 10.2 React Query (Caching & Invalidation)
-
-**Provider:** `@/providers/query-provider` (wraps `LayoutSwitcher`)
-
-**Hooks:**
-- `@/hooks/use-query-patterns` - Standardized query keys
-- `@/hooks/use-smart-refresh` - Hybrid refresh pattern
-
-```tsx
-import { useSmartRefresh } from "@/hooks/use-smart-refresh";
-import { queryKeys } from "@/hooks/use-query-patterns";
-
-const { invalidate, refresh } = useSmartRefresh();
-
-// After mutation:
-invalidate(queryKeys.clients(projectId)); // Invalidate specific cache
-// OR
-refresh(); // Full page refresh (legacy, avoid)
-```
-
-**Query Keys** (standardized in `use-query-patterns.ts`):
-- `queryKeys.clients(projectId)`
-- `queryKeys.projects(orgId)`
-- `queryKeys.kanbanCards(boardId)`
-- etc.
-
----
-
-### 10.3 Lazy Loading (Charts & Heavy Components)
-
-**Location:** `@/components/charts/lazy-charts.tsx`
-
-```tsx
-// ❌ WRONG - Loads entire Recharts bundle immediately
-import { BaseAreaChart } from "@/components/charts/area/base-area-chart";
-
-// ✅ CORRECT - Lazy loads ~200KB only when rendered
-import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts";
-```
-
-**Available Lazy Components:**
-- `LazyAreaChart`, `LazyDualAreaChart`
-- `LazyBarChart`, `LazyPieChart`, `LazyDonutChart`
-- `LazyLineChart`
-
-**Rule:** ALWAYS use lazy versions for charts in dashboards and overviews.
-
----
-
-### 10.4 Tab Navigation (Instant Switching)
-
-**Problem:** `router.replace()` causes full page re-fetch = SLOW.
-
-**Solution:** Local state + shallow URL update.
-
-```tsx
-// ❌ WRONG - Causes full re-fetch
-const handleTabChange = (value: string) => {
-    router.replace(`${pathname}?view=${value}`);
-};
-
-// ✅ CORRECT - Instant tab switch
-const [activeTab, setActiveTab] = useState(defaultTab);
-
-const handleTabChange = (value: string) => {
-    setActiveTab(value); // Instant UI update
-    window.history.replaceState(null, '', `${pathname}?view=${value}`); // Shallow URL
-};
-
-<Tabs value={activeTab} onValueChange={handleTabChange}>
-```
-
----
-
-### 10.5 Prefetching (Navigation)
-
-**Location:** `@/components/layout/sidebar-button.tsx`
-
-All sidebar links prefetch on hover via `router.prefetch()`.
-
-```tsx
-// Already implemented in SidebarButton
-const handleMouseEnter = useCallback(() => {
-    if (href) router.prefetch(href);
-}, [href, router]);
-```
-
----
-
-### 10.6 Animation Durations
-
-**Standard:** `duration-150` (150ms) for sidebar/drawer animations.
-
-**Rule:** NEVER use `duration-300` for navigation animations. It feels sluggish.
-
----
-
-### Performance Checklist (Add to every PR)
-- [ ] Delete operations use `useOptimisticList`?
-- [ ] Charts use `Lazy*` components?
-- [ ] Tab switching uses local state, not `router.replace()`?
-- [ ] Animations are `duration-150` or faster?
-- [ ] Empty states use `EmptyState` component? (NEW)
-
----
-
-## 11. Empty State Pattern
-
-### MANDATORY: All lists/tables MUST show `EmptyState` when data is empty.
-
-**Location:** `@/components/ui/empty-state`
-
-### Usage Pattern
-
-```tsx
-import { EmptyState } from "@/components/ui/empty-state";
-import { FileText, Plus } from "lucide-react";
-
-// Early return BEFORE rendering the full list UI
-if (items.length === 0) {
-    return (
-        <EmptyState
-            icon={FileText}
-            title="Sin elementos"
-            description="Creá tu primer elemento para comenzar."
-            action={
-                <Button onClick={handleCreate} size="lg">
-                    <Plus className="mr-2 h-4 w-4" /> Nuevo Elemento
-                </Button>
-            }
-        />
-    );
-}
-
-// Normal list/table rendering AFTER the check
-return (
-    <div>
-        <Toolbar><Button onClick={handleCreate}>Nuevo</Button></Toolbar>
-        <DataTable data={items} />
-    </div>
-);
-```
-
-### Key Rules
-
-1. **Full Page Coverage**: EmptyState replaces the ENTIRE content area (no toolbar, no search, no stats visible).
-2. **Early Return**: Use `if (data.length === 0) return <EmptyState />` BEFORE the normal JSX.
-3. **Action Button**: If the view has a "Create" button, pass it to `action` prop so users can create from empty state.
-4. **Icon Match**: Use an icon relevant to the entity (e.g., `FileText` for documents, `Users` for contacts).
-
-### Examples in Codebase
-- `client-commitments-table.tsx` - Commitments list
-- `quotes-list.tsx` - Presupuestos list
-
----
-
-## 12. Toolbar Pattern
-
-### MANDATORY: All list/table pages with search, filters, or actions MUST use the `Toolbar` component.
-
-**Location:** `@/components/ui/toolbar`
-
-### Usage Pattern
-
-```tsx
-import { Toolbar } from "@/components/ui/toolbar";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-
-// Inside your component
-<Card className="p-4 border-dashed bg-card/50">
-    <Toolbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder="Buscar..."
-        leftActions={<Badge>{count} items</Badge>}
-        filterContent={<FacetedFilter ... />}
-    >
-        {/* Right side: Action buttons */}
-        <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" /> Nuevo
-        </Button>
-    </Toolbar>
-</Card>
-```
-
-### Toolbar Props
-
-| Prop | Type | Description |
-|------|------|-------------|
-| `searchQuery` | string | Current search value |
-| `onSearchChange` | function | Search change handler |
-| `searchPlaceholder` | string | Placeholder text |
-| `leftActions` | ReactNode | Badges, stats (before search) |
-| `filterContent` | ReactNode | FacetedFilter components |
-| `children` | ReactNode | Right side action buttons |
-
-### Key Rules
-
-1. **Always wrap in Card**: Use `<Card className="p-4 border-dashed bg-card/50">` for visual consistency.
-2. **NEVER create custom search inputs**: Use Toolbar's built-in search.
-3. **Stats as leftActions**: Pass badges/counters to `leftActions` prop.
-4. **Create button in children**: Primary action goes in `children` (right side).
-5. **Filters in filterContent**: Use `FacetedFilter` components if needed.
-
-### Examples in Codebase
-- `sitelog-shell.tsx` - Full Toolbar with filters and favorites
-- `quotes-list.tsx` - Simple Toolbar with stats and create button
-
-
+## Principios Core
+
+1. **Feature-First**: Lógica de negocio en `src/features/`, UI genérica en `src/components/`
+2. **Optimistic UI**: El usuario ve el resultado antes de confirmación del servidor
+3. **i18n First**: Todos los textos en `messages/es.json`
+4. **Performance**: Lazy loading, prefetch, animaciones rápidas (150ms)
+5. **Financial Integrity**: `functional_amount` calculado automáticamente, nunca manual

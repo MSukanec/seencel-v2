@@ -187,3 +187,4 @@ export function CommitmentCard({ data, onEdit, onDelete }: CommitmentCardProps) 
         </Card>
     );
 }
+

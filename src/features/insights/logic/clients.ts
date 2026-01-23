@@ -185,3 +185,4 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
 
     return [...manualInsights, ...genericInsights].sort((a, b) => (a.priority || 99) - (b.priority || 99)).slice(0, 5);
 }
+

@@ -114,3 +114,4 @@ export async function getPlanBySlug(slug: string): Promise<Plan | null> {
 
     return data;
 }
+

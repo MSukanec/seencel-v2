@@ -98,3 +98,4 @@ export function FoundersBanner({ isDashboard = false, className, coursePrice }: 
         </section>
     );
 }
+

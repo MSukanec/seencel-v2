@@ -130,3 +130,4 @@ export function NotificationsSettings({ initialNotifications }: NotificationsSet
         </Card>
     );
 }
+

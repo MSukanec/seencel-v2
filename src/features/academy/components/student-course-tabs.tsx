@@ -82,3 +82,4 @@ export function StudentCourseTabs({ courseSlug }: StudentCourseTabsProps) {
         </div>
     );
 }
+

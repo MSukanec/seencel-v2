@@ -59,3 +59,4 @@ export function generateGeneralCostsInsights(context: GeneralCostsInsightsContex
     // 3. Sorting (by priority)
     return insights.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 }
+

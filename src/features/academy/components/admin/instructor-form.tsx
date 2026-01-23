@@ -337,3 +337,4 @@ export function InstructorForm({ open, onOpenChange, instructor }: InstructorFor
         </Dialog>
     );
 }
+

@@ -147,3 +147,4 @@ export function formatProjectionInsight(
 
     return `Se proyecta un cierre anual un ${percent}% ${directionText} a lo esperado si se mantiene la tendencia actual.`;
 }
+

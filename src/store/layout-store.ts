@@ -58,3 +58,4 @@ export const useLayoutMode = () => useLayoutStore((state) => state.layoutMode);
 export const useActiveContext = () => useLayoutStore((state) => state.activeContext);
 export const useActiveProjectId = () => useLayoutStore((state) => state.activeProjectId);
 export const useHeaderTitle = () => useLayoutStore((state) => state.headerTitle);
+

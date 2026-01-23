@@ -116,3 +116,4 @@ export async function deleteInstructor(id: string): Promise<InstructorState> {
         return { success: false, message: error.message };
     }
 }
+

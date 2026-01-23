@@ -123,3 +123,4 @@ export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) 
         </div>
     );
 }
+

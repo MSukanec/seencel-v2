@@ -218,3 +218,4 @@ export function getAmountsByCurrency<T extends {
         return a.currencyCode.localeCompare(b.currencyCode);
     });
 }
+

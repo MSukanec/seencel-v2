@@ -80,3 +80,4 @@ export async function updateOrganization(orgId: string, formData: FormData) {
         return { error: e.message };
     }
 }
+

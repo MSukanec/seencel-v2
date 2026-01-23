@@ -98,3 +98,4 @@ export function CourseCard({ course, className, basePath = '/academy', isEnrolle
         </Card>
     );
 }
+

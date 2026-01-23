@@ -195,3 +195,4 @@ export function MoneyKpi({ totalFunctional, breakdown, className }: MoneyKpiProp
         </div>
     );
 }
+

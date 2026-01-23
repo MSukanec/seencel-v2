@@ -191,3 +191,4 @@ export function SettingsTab({ categories, organizationId }: SettingsTabProps) {
         </div>
     );
 }
+

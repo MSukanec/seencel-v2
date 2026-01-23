@@ -243,3 +243,4 @@ export function OrganizationDetailsForm({ organization }: { organization: any })
         </div>
     );
 }
+

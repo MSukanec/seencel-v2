@@ -37,3 +37,4 @@ export function DataTableImport<T>({ config, organizationId }: DataTableImportPr
         </Button>
     );
 }
+

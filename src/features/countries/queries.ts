@@ -23,3 +23,4 @@ export async function getCountries(): Promise<Country[]> {
 
     return data || [];
 }
+

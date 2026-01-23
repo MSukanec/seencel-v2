@@ -56,3 +56,4 @@ export function getStatusFromScore(score: number): HealthStatus {
     if (score >= 40) return 'poor';
     return 'critical';
 }
+

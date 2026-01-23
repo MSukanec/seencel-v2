@@ -61,3 +61,4 @@ export function HealthBadge({ score, status, showScore = true, size = "md", clas
         </TooltipProvider>
     );
 }
+

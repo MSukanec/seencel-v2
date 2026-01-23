@@ -104,3 +104,4 @@ export async function getQuoteItems(quoteId: string) {
         subtotal_with_markup: item.quantity * item.unit_price * (1 + (item.markup_pct || 0) / 100),
     }));
 }
+

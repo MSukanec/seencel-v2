@@ -709,6 +709,18 @@
             }
         }
     },
+    "Contacts": {
+        "title": "Contactos",
+        "subtitle": "Gestiona el directorio de personas y empresas de tu organización.",
+        "tabs": {
+            "list": "Lista de Contactos",
+            "settings": "Configuración"
+        },
+        "errors": {
+            "title": "No se pudieron cargar los contactos",
+            "retry": "Reintentar"
+        }
+    },
     "OrganizationDashboard": {
         "greeting": {
             "morning": "Buenos días",
@@ -731,6 +743,8 @@
             "totalBudget": "Presupuesto Total",
             "pendingTasks": "Tareas Pendientes",
             "teamVelocity": "Velocidad del Equipo",
+            "documentsLast30Days": "Documentos (30 días)",
+            "teamSize": "Miembros del Equipo",
             "vsLastMonth": "vs mes anterior"
         },
         "sections": {
@@ -1539,5 +1553,14 @@
         "unknownLocation": "Ubicación desconocida",
         "viewMore": "Ver más (Próximamente)",
         "projectsOnMap": "proyectos en el mapa"
+    },
+    "Errors": {
+        "unexpected": {
+            "title": "Algo salió mal",
+            "description": "Ocurrió un error inesperado. Nuestro equipo ha sido notificado.",
+            "retry": "Reintentar",
+            "goHome": "Ir al Inicio",
+            "errorId": "ID del error"
+        }
     }
 }

@@ -23,3 +23,4 @@ export async function GET(request: Request) {
     // or if no code provided (shouldn't happen on valid callback)
     return NextResponse.redirect(`${origin}/login?error=auth_callback_error`)
 }
+

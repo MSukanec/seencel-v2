@@ -362,3 +362,4 @@ function LessonItem({ lesson, courseId }: { lesson: Lesson; courseId: string }) 
         </div>
     );
 }
+

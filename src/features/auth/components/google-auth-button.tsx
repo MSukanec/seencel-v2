@@ -68,3 +68,4 @@ export function GoogleAuthButton({ text = "Continuar con Google" }: { text?: str
         </Button>
     )
 }
+

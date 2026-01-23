@@ -102,3 +102,4 @@ export function formatCompressionStats(originalSize: number, compressedSize: num
 
     return `${originalMB}MB → ${compressedMB}MB (-${reductionPercent}%)`;
 }
+

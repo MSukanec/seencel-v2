@@ -282,3 +282,4 @@ export interface OrganizationFinancialData {
         default_tax_label?: string | null;
     } | null;
 }
+

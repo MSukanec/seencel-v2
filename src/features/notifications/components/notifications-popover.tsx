@@ -220,3 +220,4 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
         </Popover>
     );
 }
+

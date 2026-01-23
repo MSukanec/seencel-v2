@@ -7,13 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useMemo, useState } from "react";
-import { Info, ShieldCheck, Database, Shield, Edit, Eye, User, Settings, FileText, Wallet, Briefcase } from "lucide-react";
-import { seedPermissions } from "@/actions/organization-settings";
+import { useMemo, useState, useTransition, useOptimistic } from "react";
+import { Info, ShieldCheck, Database, Shield, Edit, Eye, User, Settings, FileText, Wallet, Briefcase, Loader2 } from "lucide-react";
+import { seedPermissions, toggleRolePermission } from "@/actions/organization-settings";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface PermissionsTabProps {
+    organizationId: string;
     roles: Role[];
     permissions?: Permission[];
     rolePermissions?: RolePermission[];
@@ -75,9 +77,48 @@ const getRoleIcon = (roleName: string) => {
     return User;
 };
 
-export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }: PermissionsTabProps) {
+export function PermissionsTab({ organizationId, roles, permissions = [], rolePermissions = [] }: PermissionsTabProps) {
     const router = useRouter();
     const [isSeeding, setIsSeeding] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const [pendingChanges, setPendingChanges] = useState<Set<string>>(new Set());
+
+    // Optimistic state for role permissions
+    const [optimisticPermissions, setOptimisticPermissions] = useOptimistic(
+        rolePermissions,
+        (state, update: { roleId: string; permissionId: string; enabled: boolean }) => {
+            if (update.enabled) {
+                return [...state, { role_id: update.roleId, permission_id: update.permissionId } as RolePermission];
+            } else {
+                return state.filter(rp => !(rp.role_id === update.roleId && rp.permission_id === update.permissionId));
+            }
+        }
+    );
+
+    const handleTogglePermission = (roleId: string, permissionId: string, currentValue: boolean) => {
+        const key = `${roleId}-${permissionId}`;
+        setPendingChanges(prev => new Set(prev).add(key));
+
+        startTransition(async () => {
+            // Optimistic update
+            setOptimisticPermissions({ roleId, permissionId, enabled: !currentValue });
+
+            try {
+                await toggleRolePermission(organizationId, roleId, permissionId, !currentValue);
+                router.refresh();
+            } catch (error) {
+                toast.error('Error al actualizar permiso');
+                // Revert will happen automatically on refresh
+                router.refresh();
+            } finally {
+                setPendingChanges(prev => {
+                    const next = new Set(prev);
+                    next.delete(key);
+                    return next;
+                });
+            }
+        });
+    };
 
     // Filter roles based on user request: type === 'organization' && !is_system
     const filteredRoles = useMemo(() => {
@@ -202,21 +243,30 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
                                                                 </div>
                                                             </TableCell>
                                                             {filteredRoles.map(role => {
-                                                                const hasPermission = rolePermissions.some(rp => rp.role_id === role.id && rp.permission_id === permission.id);
+                                                                const hasPermission = optimisticPermissions.some(rp => rp.role_id === role.id && rp.permission_id === permission.id);
+                                                                const isAdmin = role.name === 'Administrador';
+                                                                const isLoading = pendingChanges.has(`${role.id}-${permission.id}`);
+
                                                                 return (
                                                                     <TableCell key={`${role.id}-${permission.id}`} className="text-center p-0 align-middle">
                                                                         <div className="flex items-center justify-center h-full w-full py-4 transition-colors">
-                                                                            <Checkbox
-                                                                                checked={hasPermission}
-                                                                                disabled
-                                                                                className={cn(
-                                                                                    "h-5 w-5 transition-all border-2 rounded-[4px]",
-                                                                                    "disabled:cursor-not-allowed disabled:opacity-100",
-                                                                                    hasPermission
-                                                                                        ? "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
-                                                                                        : "border-input bg-card opacity-100"
-                                                                                )}
-                                                                            />
+                                                                            {isLoading ? (
+                                                                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                                                            ) : (
+                                                                                <Checkbox
+                                                                                    checked={hasPermission}
+                                                                                    disabled={isAdmin}
+                                                                                    onCheckedChange={() => !isAdmin && handleTogglePermission(role.id, permission.id, hasPermission)}
+                                                                                    className={cn(
+                                                                                        "h-5 w-5 transition-all border-2 rounded-[4px]",
+                                                                                        isAdmin && "cursor-not-allowed opacity-60",
+                                                                                        !isAdmin && "cursor-pointer hover:border-primary",
+                                                                                        hasPermission
+                                                                                            ? "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
+                                                                                            : "border-input bg-card"
+                                                                                    )}
+                                                                                />
+                                                                            )}
                                                                         </div>
                                                                     </TableCell>
                                                                 );
@@ -236,3 +286,4 @@ export function PermissionsTab({ roles, permissions = [], rolePermissions = [] }
         </div>
     );
 }
+

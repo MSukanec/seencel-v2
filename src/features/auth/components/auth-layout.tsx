@@ -114,3 +114,4 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
         </div>
     )
 }
+

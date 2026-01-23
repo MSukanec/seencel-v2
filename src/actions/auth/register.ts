@@ -65,3 +65,4 @@ export async function registerUser(prevState: any, formData: FormData) {
 
     return { success: true };
 }
+

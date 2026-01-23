@@ -97,3 +97,4 @@ export function getViewName(slug: string | null | undefined): string {
         .replace(/\//g, ' › ')
         .replace(/\b\w/g, c => c.toUpperCase()) || 'Inicio';
 }
+

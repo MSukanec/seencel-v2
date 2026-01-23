@@ -98,3 +98,4 @@ export interface InsightContext {
 
 // Definition of a Rule Function
 export type InsightRule = (context: InsightContext) => Insight | null;
+

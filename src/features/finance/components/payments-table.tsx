@@ -205,3 +205,4 @@ export function PaymentsTable({ data, concepts, organizationId }: PaymentsTableP
     );
 }
 
+

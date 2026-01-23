@@ -96,3 +96,4 @@ export function ForumThreadCard({ thread, onClick }: ForumThreadCardProps) {
         </Card>
     );
 }
+

@@ -245,3 +245,4 @@ export function PortalQuoteItems({ quoteId, currencySymbol, showAmounts, taxPct 
         </TooltipProvider>
     );
 }
+

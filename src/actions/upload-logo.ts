@@ -75,3 +75,4 @@ export async function uploadOrganizationLogo(formData: FormData) {
         return { error: error.message };
     }
 }
+

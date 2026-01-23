@@ -359,3 +359,4 @@ function translateWeather(weather: string) {
     const config = WEATHER_CONFIG.find(c => c.value === w);
     return config ? config.label : weather;
 }
+
