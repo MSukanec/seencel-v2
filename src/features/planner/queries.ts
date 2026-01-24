@@ -214,7 +214,7 @@ export async function getCalendarEvents(
             projects (name)
         `)
         .eq('organization_id', organizationId)
-        .eq('is_deleted', false)
+        .is('deleted_at', null)
         .order('start_at', { ascending: true });
 
     // Filter by project if provided

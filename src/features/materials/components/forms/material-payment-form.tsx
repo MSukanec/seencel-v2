@@ -149,7 +149,7 @@ export function MaterialPaymentForm({
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4 px-4 py-2">
+            <div className="flex-1 overflow-y-auto space-y-4">
                 {/* Row 1: Date & Purchase */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormGroup label="Fecha de Pago" required>

@@ -2,11 +2,13 @@
 
 import { OrganizationSettingsData } from "@/types/organization";
 import { TabsContent } from "@/components/ui/tabs";
-import { MembersTab } from "./members-tab";
-import { PermissionsTab } from "./permissions-tab";
-import { ActivityTab } from "./activity-tab";
-import { BillingTab } from "./billing-tab";
-import { FinanceTab } from "./finance-tab";
+import {
+    MembersSettingsView,
+    PermissionsSettingsView,
+    ActivitySettingsView,
+    BillingSettingsView,
+    FinanceSettingsView
+} from "@/features/organization/views";
 
 interface SettingsClientProps {
     data: OrganizationSettingsData;
@@ -17,14 +19,14 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
     return (
         <>
             <TabsContent value="members" className="m-0 h-full focus-visible:outline-none">
-                <MembersTab
+                <MembersSettingsView
                     members={data.members}
                     invitations={data.invitations}
                     roles={data.roles}
                 />
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">
-                <PermissionsTab
+                <PermissionsSettingsView
                     organizationId={organizationId}
                     roles={data.roles}
                     permissions={data.permissions}
@@ -32,16 +34,16 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
                 />
             </TabsContent>
             <TabsContent value="activity" className="m-0 h-full focus-visible:outline-none">
-                <ActivityTab logs={data.activityLogs || []} />
+                <ActivitySettingsView logs={data.activityLogs || []} />
             </TabsContent>
             <TabsContent value="billing" className="m-0 h-full focus-visible:outline-none">
-                <BillingTab
+                <BillingSettingsView
                     subscription={data.subscription}
                     billingCycles={data.billingCycles}
                 />
             </TabsContent>
             <TabsContent value="finance" className="m-0 h-full focus-visible:outline-none">
-                <FinanceTab
+                <FinanceSettingsView
                     organizationId={organizationId}
                     preferences={data.preferences}
                     orgCurrencies={data.contactCurrencies}

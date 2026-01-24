@@ -24,6 +24,7 @@ import {
     Package,
     CalendarDays,
     FolderOpen,
+    ClipboardList,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 
@@ -99,9 +100,9 @@ export function useSidebarNavigation() {
                         icon: FolderOpen
                     },
                     {
-                        title: 'Contactos',
-                        href: activeProjectId ? `${projectBase}/contacts` : '/organization/projects',
-                        icon: Users
+                        title: 'Presupuestos',
+                        href: activeProjectId ? `${projectBase}/quotes` : '/organization/projects',
+                        icon: FileText
                     },
                     {
                         title: 'Información',
@@ -110,15 +111,15 @@ export function useSidebarNavigation() {
                         sectionHeader: 'Gestión'
                     },
                     {
-                        title: 'Presupuestos',
-                        href: activeProjectId ? `${projectBase}/quotes` : '/organization/projects',
-                        icon: FileText
+                        title: 'Tareas',
+                        href: activeProjectId ? `${projectBase}/construction-tasks` : '/organization/projects',
+                        icon: ClipboardList,
+                        sectionHeader: tSidebar('construction')
                     },
                     {
                         title: 'Materiales',
                         href: activeProjectId ? `${projectBase}/materials` : '/organization/projects',
-                        icon: Package,
-                        sectionHeader: tSidebar('construction')
+                        icon: Package
                     },
                     {
                         title: tSidebar('items.sitelog'),

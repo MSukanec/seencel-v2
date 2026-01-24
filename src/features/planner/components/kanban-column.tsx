@@ -69,7 +69,7 @@ export function KanbanColumn({
             ref={innerRef}
             {...draggableProps}
             className={cn(
-                "flex flex-col bg-card rounded-xl min-w-[280px] w-[280px] max-h-full",
+                "flex flex-col bg-card rounded-xl w-full h-full",
                 "border shadow-sm",
                 isDragOver && "border-primary/50 ring-2 ring-primary/20",
             )}

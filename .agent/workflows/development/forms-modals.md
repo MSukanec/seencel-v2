@@ -22,44 +22,90 @@ openModal(<MyFormComponent onSuccess={closeModal} />, {
 
 ---
 
-## Arquitectura de Formularios
+## Arquitectura de Formularios en Modales
 
 ### Componentes Base
 
 | Componente | Ubicación | Uso |
 |------------|-----------|-----|
-| `FormFooter` | `@/components/shared/form-footer` | Botones de acción (maneja `Cmd+Enter`) |
-| `FormGroup` | Shadcn Form | Wrapper para accesibilidad |
+| `FormFooter` | `@/components/shared/form-footer` | Botones de acción (sticky, maneja `Cmd+Enter`) |
+| `FormGroup` | `@/components/ui/form-group` | Wrapper para campos con label |
 
-### Reglas
+---
 
-1. **FormFooter class**: `className="-mx-4 -mb-4 mt-6"`
-2. **Grid Layout**: `grid grid-cols-1 md:grid-cols-2 gap-4`
-3. **Agnóstico**: Forms reciben `onSuccess` e `initialData` como props
+## ⚠️ PATRÓN OBLIGATORIO: Footer Sticky en Modales
+
+Para que el footer quede **fijo en la parte inferior** del modal mientras el contenido scrollea, el formulario **DEBE** seguir esta estructura exacta:
+
+```tsx
+<form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+    {/* Contenido scrolleable */}
+    <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormGroup>...</FormGroup>
+        </div>
+    </div>
+    
+    {/* Footer sticky - SIEMPRE fuera del div scrolleable */}
+    <FormFooter 
+        className="-mx-4 -mb-4 mt-6"
+        isLoading={isLoading}
+        submitLabel={isEditing ? "Guardar" : "Crear"}
+        onCancel={onCancel}
+    />
+</form>
+```
+
+### Clases CSS Obligatorias
+
+| Elemento | Clases | Propósito |
+|----------|--------|-----------|
+| `<form>` | `flex flex-col h-full min-h-0` | **min-h-0 es CRÍTICO** - permite que flexbox encoja |
+| Content wrapper | `flex-1 overflow-y-auto` | Solo este div scrollea |
+| `<FormFooter>` | `className="-mx-4 -mb-4 mt-6"` | Contrarresta el padding del modal |
+
+> ⚠️ **SIN `min-h-0`** el footer NO será sticky. Flexbox usa `min-height: auto` por defecto, lo cual impide el scroll.
+
+---
+
+## Ejemplo Completo
 
 ```tsx
 interface MyFormProps {
     initialData?: MyEntity | null;
     onSuccess?: () => void;
+    onCancel?: () => void;
 }
 
-export function MyForm({ initialData, onSuccess }: MyFormProps) {
+export function MyForm({ initialData, onSuccess, onCancel }: MyFormProps) {
+    const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!initialData;
     
-    const handleSubmit = async (data: FormData) => {
-        await saveAction(data);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        // ... submit logic
         onSuccess?.();
     };
     
     return (
-        <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormGroup>...</FormGroup>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormGroup label="Campo 1">
+                        <Input name="field1" defaultValue={initialData?.field1} />
+                    </FormGroup>
+                    <FormGroup label="Campo 2">
+                        <Input name="field2" defaultValue={initialData?.field2} />
+                    </FormGroup>
+                </div>
             </div>
+            
             <FormFooter 
                 className="-mx-4 -mb-4 mt-6"
-                isSubmitting={isPending}
-                submitLabel={isEditing ? "Guardar" : "Crear"}
+                isLoading={isLoading}
+                submitLabel={isEditing ? "Guardar Cambios" : "Crear"}
+                onCancel={onCancel}
             />
         </form>
     );
@@ -117,7 +163,10 @@ const fileType = getMediaType(file.type); // 'image' | 'video' | 'pdf' | 'doc' |
 ## Checklist
 
 - [ ] ¿Modal tiene `description`?
-- [ ] ¿Form usa `FormGroup` y `FormFooter`?
-- [ ] ¿Form recibe `onSuccess` e `initialData`?
+- [ ] ¿Form usa `className="flex flex-col h-full min-h-0"`?
+- [ ] ¿Content wrapper usa `flex-1 overflow-y-auto`?
+- [ ] ¿`FormFooter` está FUERA del div scrolleable?
+- [ ] ¿`FormFooter` usa `className="-mx-4 -mb-4 mt-6"`?
+- [ ] ¿Form recibe `onSuccess`, `onCancel` e `initialData`?
 - [ ] ¿Teléfonos usan `PhoneInput`?
 - [ ] ¿MIME types mapeados para BD?

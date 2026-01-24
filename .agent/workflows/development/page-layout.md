@@ -40,9 +40,65 @@ La Toolbar es el estándar para acciones, filtros y búsqueda en cualquier pági
 | `searchQuery` | string | Estado de búsqueda. |
 | `onSearchChange` | function | Setter para el estado de búsqueda. |
 | `searchPlaceholder` | string | Placeholder del input de búsqueda. |
-| `actions` | Action[] | Lista de botones de acción principales (ej. "Crear"). |
+| `actions` | Action[] | **OBLIGATORIO** para botones de acción principales (ej. "Crear", "Nuevo"). |
+| `leftActions` | ReactNode | Contenido a la izquierda del toolbar (ej: tabs, badges). |
 | `filterContent` | ReactNode | Componentes de filtrado custom (ej: `FacetedFilter`). |
 | `facetedFilters` | Filter[] | (Solo DataTables) Configuración automática de filtros ligados a una tabla. |
+
+### 🚨 REGLA CRÍTICA: Siempre usar `actions` para botones
+
+> [!CAUTION]
+> **NUNCA uses `children` para pasar botones al Toolbar.** Siempre usa la prop `actions`.
+
+El `Toolbar` tiene comportamiento responsive inteligente:
+- **Desktop**: Muestra botón rectangular con texto e icono
+- **Mobile**: Muestra FAB circular en esquina inferior derecha
+
+Si usas `children` en lugar de `actions`, **pierdes este comportamiento** y el botón se ve inconsistente entre páginas.
+
+#### ❌ INCORRECTO (No hacer esto)
+```tsx
+<Toolbar portalToHeader>
+    <Button onClick={handleCreate}>
+        <Plus className="h-4 w-4 mr-2" />
+        Nueva Tarea
+    </Button>
+</Toolbar>
+```
+
+#### ✅ CORRECTO (Siempre hacer esto)
+```tsx
+<Toolbar
+    portalToHeader
+    actions={[{
+        label: "Nueva Tarea",
+        icon: Plus,
+        onClick: handleCreate,
+    }]}
+/>
+```
+
+#### ✅ CORRECTO - Con múltiples acciones
+```tsx
+<Toolbar
+    portalToHeader
+    actions={[
+        { label: "Nueva Tarea", icon: Plus, onClick: handleCreate },
+        { label: "Importar", icon: Upload, onClick: handleImport },
+    ]}
+/>
+```
+
+### Estructura de ToolbarAction
+
+```typescript
+interface ToolbarAction {
+    label: string;                           // Texto del botón
+    icon: React.ComponentType<{ className?: string }>; // Icono de Lucide
+    onClick: () => void;                     // Handler del click
+    variant?: 'default' | 'destructive';     // Estilo (opcional)
+}
+```
 
 ---
 
@@ -189,14 +245,94 @@ export function ContactsSettingsView({ organizationId, initialTypes }: ContactsS
 ## ⚠️ Reglas de Oro (Grabadas a Fuego)
 
 1.  **Toolbar en Header**: NUNCA coloques barras de herramientas, buscadores o filtros dentro del cuerpo de la página (`ContentLayout`). Siempre usa la `Toolbar` inyectada en el header.
-    
-2.  **Jerarquía Sagrada**: `PAGE` > `VIEWS` > `COMPONENTS`. No mezclar. `page.tsx` debe ser legible en un vistazo.
 
-3.  **EmptyState Obligatorio**: Si no hay datos, usa `@/components/ui/empty-state`. Prohibido hacer `divs` vacíos a mano.
+2.  **Botones con `actions`**: NUNCA uses `children` para pasar botones al `Toolbar`. SIEMPRE usa la prop `actions={[...]}`. Esto garantiza comportamiento responsive consistente (rectangular en desktop, FAB circular en mobile).
 
-4.  **Iconos Consistentes**: El ícono pasado a `PageWrapper` debe ser **idéntico** al usado en el Sidebar.
+3.  **Jerarquía Sagrada**: `PAGE` > `VIEWS` > `COMPONENTS`. No mezclar. `page.tsx` debe ser legible en un vistazo.
 
-5.  **Focus Ring**: Los inputs de búsqueda en filtros facetados deben tener `border-none focus:ring-0` para evitar bordes verdes estéticamente incorrectos.
+4.  **EmptyState Obligatorio**: Si no hay datos, usa `@/components/ui/empty-state`. Prohibido hacer `divs` vacíos a mano.
+
+5.  **Iconos Consistentes**: El ícono pasado a `PageWrapper` debe ser **idéntico** al usado en el Sidebar.
+
+6.  **Focus Ring**: Los inputs de búsqueda en filtros facetados deben tener `border-none focus:ring-0` para evitar bordes verdes estéticamente incorrectos.
+
+---
+
+## EmptyState: Mejores Prácticas
+
+### 🚨 REGLA CRÍTICA: EmptyState vive en Views, NO en DataTables
+
+> [!CAUTION]
+> **NUNCA** coloques lógica de `EmptyState` dentro de componentes `DataTable`. 
+> La decisión de mostrar un `EmptyState` vs contenido es responsabilidad de la **View**.
+
+#### ❌ INCORRECTO (No hacer esto)
+```tsx
+// material-payments-data-table.tsx
+export function MaterialPaymentsDataTable({ payments }) {
+    if (payments.length === 0) {
+        return <EmptyState title="Sin pagos" ... />;  // ❌ MAL
+    }
+    return <DataTable ... />;
+}
+```
+
+#### ✅ CORRECTO (Siempre hacer esto)
+```tsx
+// materials-payments-view.tsx
+export function MaterialsPaymentsView({ payments }) {
+    if (payments.length === 0) {
+        return <EmptyState title="Sin pagos" ... />;  // ✅ BIEN
+    }
+    return (
+        <ContentLayout variant="wide" className="pb-6">
+            <MaterialPaymentsDataTable payments={payments} />
+        </ContentLayout>
+    );
+}
+```
+
+### TabsContent para EmptyState de altura completa
+
+Para que un `EmptyState` dentro de un `TabsContent` ocupe toda la altura disponible y muestre su borde dashed correctamente, el `TabsContent` **debe** tener estas clases:
+
+```tsx
+<TabsContent 
+    value="overview" 
+    className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none"
+>
+    <MaterialsOverviewView ... />
+</TabsContent>
+```
+
+| Clase | Propósito |
+|-------|-----------|
+| `m-0` | Elimina márgenes por defecto de Radix |
+| `flex-1` | Permite que crezca para ocupar espacio disponible |
+| `h-full` | Altura 100% del contenedor padre |
+| `flex flex-col` | Permite que hijos se expandan verticalmente |
+| `focus-visible:outline-none` | Elimina outline de accesibilidad innecesario |
+
+### ContentLayout con EmptyState
+
+Cuando una View muestra `EmptyState`, envuélvelo en `ContentLayout` para padding consistente:
+
+```tsx
+export function MaterialsOverviewView({ hasMaterials }) {
+    if (!hasMaterials) {
+        return (
+            <ContentLayout variant="wide" className="pb-6">
+                <EmptyState
+                    title="Sin materiales"
+                    description="Agrega materiales para comenzar"
+                    icon={Package}
+                />
+            </ContentLayout>
+        );
+    }
+    // ... contenido normal
+}
+```
 
 ---
 
@@ -206,5 +342,8 @@ export function ContactsSettingsView({ organizationId, initialTypes }: ContactsS
 - [ ] ¿`views` están en `features/[name]/views`?
 - [ ] ¿Usas `PageWrapper` con `icon` correcto?
 - [ ] ¿Usas `Toolbar` con `portalToHeader` para acciones y filtros?
+- [ ] ¿Los botones de acción usan `actions={[...]}` y NO `children`?
 - [ ] ¿El contenido está dentro de `ContentLayout`?
 - [ ] ¿Hay `EmptyState` si la lista está vacía?
+- [ ] ¿El `EmptyState` está en la **View**, no en DataTable u otros componentes anidados?
+- [ ] ¿Los `TabsContent` tienen `className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none"`?

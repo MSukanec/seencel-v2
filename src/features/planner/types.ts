@@ -264,7 +264,7 @@ export interface CalendarEvent {
     updated_by: string | null;
     created_at: string;
     updated_at: string;
-    is_deleted: boolean;
+    deleted_at: string | null;
     // Joined data
     project_name?: string | null;
     attendees?: CalendarEventAttendee[];
@@ -311,7 +311,8 @@ export interface UpdateCalendarEventInput {
     end_at?: string | null;
     is_all_day?: boolean;
     status?: CalendarEventStatus;
-    is_deleted?: boolean;
+    deleted_at?: string | null;
+    // is_deleted?: boolean;
 }
 
 // ============================================

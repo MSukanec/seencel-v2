@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, LayoutDashboard, Search, Filter, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useModal } from "@/providers/modal-store";
-import { KanbanBoardForm } from "@/features/planner/components/kanban-board-form";
+import { KanbanBoardForm } from "@/features/planner/forms/kanban-board-form";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
@@ -175,21 +175,20 @@ export function KanbanDashboard({
 
     return (
         <div className="flex flex-col h-full">
-            {/* UNIFIED TOOLBAR */}
+            {/* UNIFIED TOOLBAR - Portaled to Header */}
             <Toolbar
-                className="px-6 md:px-8 py-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 h-14"
+                portalToHeader
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Buscar tarjetas..."
                 leftActions={
-                    // ... existing leftActions ...
                     <div className="flex items-center gap-1">
                         {initialBoards.map((board) => (
                             <div key={board.id} className="group relative flex items-center">
                                 <button
                                     onClick={() => handleBoardSwitch(board.id)}
                                     className={cn(
-                                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap border pr-7", // Add padding-right for the menu trigger
+                                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap border pr-7",
                                         activeBoardId === board.id
                                             ? "bg-background border-border shadow-sm text-foreground ring-1 ring-primary/20"
                                             : "bg-transparent border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -243,18 +242,12 @@ export function KanbanDashboard({
                         />
                     </div>
                 }
-            >
-                <div className="flex items-center gap-2 shrink-0 pl-2 border-l">
-                    <Button
-                        size="sm"
-                        onClick={handleCreateBoard}
-                        className="gap-2"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">Nuevo Tablero</span>
-                    </Button>
-                </div>
-            </Toolbar>
+                actions={[{
+                    label: "Nuevo Tablero",
+                    icon: Plus,
+                    onClick: handleCreateBoard
+                }]}
+            />
 
             {/* BOARD CONTENT */}
             <div className="flex-1 overflow-hidden relative">

@@ -33,6 +33,7 @@ import { toast } from "sonner";
 
 import { CalendarEvent, EVENT_COLORS } from "@/features/planner/types";
 import { createCalendarEvent, updateCalendarEvent } from "@/features/planner/actions";
+import { Project } from "@/types/project";
 
 // ============================================================================
 // SCHEMA
@@ -40,6 +41,7 @@ import { createCalendarEvent, updateCalendarEvent } from "@/features/planner/act
 
 const eventFormSchema = z.object({
     title: z.string().min(1, "El título es requerido"),
+    project_id: z.string().optional().nullable(),
     description: z.string().optional(),
     location: z.string().optional(),
     color: z.string().default("#3b82f6"),
@@ -62,6 +64,7 @@ interface CalendarEventFormProps {
     initialData?: CalendarEvent | null;
     defaultDate?: Date;
     onSuccess?: () => void;
+    projects?: Project[];
 }
 
 export function CalendarEventForm({
@@ -70,6 +73,7 @@ export function CalendarEventForm({
     initialData,
     defaultDate,
     onSuccess,
+    projects
 }: CalendarEventFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!initialData;
@@ -82,6 +86,7 @@ export function CalendarEventForm({
 
             return {
                 title: initialData.title,
+                project_id: initialData.project_id,
                 description: initialData.description || "",
                 location: initialData.location || "",
                 color: initialData.color || "#3b82f6",
@@ -96,6 +101,7 @@ export function CalendarEventForm({
         const date = defaultDate || new Date();
         return {
             title: "",
+            project_id: projectId || null,
             description: "",
             location: "",
             color: "#3b82f6",
@@ -157,7 +163,7 @@ export function CalendarEventForm({
             } else {
                 await createCalendarEvent({
                     organization_id: organizationId,
-                    project_id: projectId,
+                    project_id: values.project_id || projectId,
                     title: values.title,
                     description: values.description || null,
                     location: values.location || null,
@@ -190,6 +196,34 @@ export function CalendarEventForm({
                         />
                     </FormGroup>
 
+                    {/* Project Selector (Optional) */}
+                    <FormGroup label="Proyecto (Opcional)">
+                        <Select
+                            value={form.watch("project_id") || "none"}
+                            onValueChange={(val) => form.setValue("project_id", val === "none" ? null : val)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar proyecto..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Sin proyecto (Global)</SelectItem>
+                                {projects?.map((project) => (
+                                    <SelectItem key={project.id} value={project.id}>
+                                        <div className="flex items-center gap-2">
+                                            {project.custom_color_hex && (
+                                                <div
+                                                    className="w-2 h-2 rounded-full"
+                                                    style={{ backgroundColor: project.custom_color_hex }}
+                                                />
+                                            )}
+                                            {project.name}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
+
                     {/* All Day Toggle */}
                     <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
@@ -205,7 +239,7 @@ export function CalendarEventForm({
                     </div>
 
                     {/* Start Date/Time */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={cn("grid gap-4", isAllDay ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
                         <FormGroup label="Fecha inicio">
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -250,7 +284,7 @@ export function CalendarEventForm({
                     </div>
 
                     {/* End Date/Time */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={cn("grid gap-4", isAllDay ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
                         <FormGroup label="Fecha fin (opcional)">
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -360,4 +394,3 @@ export function CalendarEventForm({
         </form>
     );
 }
-

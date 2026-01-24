@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { MaterialsPageView } from "@/features/materials/views";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
-import { getMaterialPayments } from "@/features/materials/queries";
+import { getMaterialPayments, getProjectMaterialRequirements } from "@/features/materials/queries";
 import { getMaterialPurchasesAction } from "@/features/materials/actions";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { notFound } from "next/navigation";
@@ -72,11 +72,12 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
         notFound();
     }
 
-    // Fetch data for payments tab
-    const [payments, purchases, financialData] = await Promise.all([
+    // Fetch data for all tabs
+    const [payments, purchases, financialData, requirements] = await Promise.all([
         getMaterialPayments(projectId),
         getMaterialPurchasesAction(projectId),
-        getOrganizationFinancialData(activeOrgId)
+        getOrganizationFinancialData(activeOrgId),
+        getProjectMaterialRequirements(projectId)
     ]);
 
     return (
@@ -87,6 +88,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
             payments={payments}
             purchases={purchases}
             financialData={financialData}
+            requirements={requirements}
         />
     );
 }

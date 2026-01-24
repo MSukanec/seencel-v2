@@ -423,3 +423,86 @@ Vista de boards con conteos de listas y cards.
 
 - **Migración SQL**: `prompts/tables/kanban-migration.sql`
 - **Roadmap**: `.agent/workflows/kanban-roadmap.md`
+
+# Tabla CALENDAR_EVENTS:
+
+create table public.calendar_events (
+  id uuid not null default gen_random_uuid (),
+  organization_id uuid not null,
+  project_id uuid null,
+  title text not null,
+  description text null,
+  location text null,
+  color text null,
+  start_at timestamp with time zone not null,
+  end_at timestamp with time zone null,
+  is_all_day boolean not null default false,
+  timezone text null default 'America/Argentina/Buenos_Aires'::text,
+  source_type text null,
+  source_id uuid null,
+  recurrence_rule text null,
+  recurrence_end_at timestamp with time zone null,
+  parent_event_id uuid null,
+  status text not null default 'scheduled'::text,
+  created_by uuid null,
+  updated_by uuid null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  deleted_at timestamp with time zone null,
+  constraint calendar_events_pkey primary key (id),
+  constraint calendar_events_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint calendar_events_parent_event_id_fkey foreign KEY (parent_event_id) references calendar_events (id) on delete CASCADE,
+  constraint calendar_events_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint calendar_events_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint calendar_events_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint valid_recurrence check (
+    (
+      (
+        (recurrence_rule is null)
+        and (parent_event_id is null)
+      )
+      or (recurrence_rule is not null)
+      or (parent_event_id is not null)
+    )
+  ),
+  constraint valid_source check (
+    (
+      (
+        (source_type is null)
+        and (source_id is null)
+      )
+      or (
+        (source_type is not null)
+        and (source_id is not null)
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_calendar_events_org_id on public.calendar_events using btree (organization_id) TABLESPACE pg_default;
+
+create index IF not exists idx_calendar_events_project_id on public.calendar_events using btree (project_id) TABLESPACE pg_default
+where
+  (project_id is not null);
+
+create index IF not exists idx_calendar_events_start_at on public.calendar_events using btree (start_at) TABLESPACE pg_default;
+
+create index IF not exists idx_calendar_events_source on public.calendar_events using btree (source_type, source_id) TABLESPACE pg_default
+where
+  (source_type is not null);
+
+create index IF not exists idx_calendar_events_status on public.calendar_events using btree (status) TABLESPACE pg_default
+where
+  (deleted_at is null);
+
+create trigger on_calendar_event_audit
+after INSERT
+or DELETE
+or
+update on calendar_events for EACH row
+execute FUNCTION log_calendar_event_activity ();
+
+create trigger set_updated_by_calendar_events BEFORE INSERT
+or
+update on calendar_events for EACH row
+execute FUNCTION handle_updated_by ();

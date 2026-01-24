@@ -200,6 +200,88 @@ export async function updateQuoteStatus(id: string, status: string) {
 }
 
 // ============================================
+// APPROVE QUOTE AND CREATE CONSTRUCTION TASKS
+// ============================================
+// Uses a database function to atomically:
+// 1. Validate quote is not already approved
+// 2. Create construction_tasks from quote_items
+// 3. Mark quote as approved
+// ============================================
+export async function approveQuote(quoteId: string) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) {
+        return {
+            success: false,
+            error: "No hay organización activa"
+        };
+    }
+
+    // Verify quote belongs to this org before calling function
+    const { data: quote, error: fetchError } = await supabase
+        .from("quotes")
+        .select("id, project_id, status")
+        .eq("id", quoteId)
+        .eq("organization_id", activeOrgId)
+        .eq("is_deleted", false)
+        .single();
+
+    if (fetchError || !quote) {
+        return {
+            success: false,
+            error: "Presupuesto no encontrado"
+        };
+    }
+
+    // Call the atomic database function
+    const { data, error } = await supabase.rpc(
+        'approve_quote_and_create_tasks',
+        {
+            p_quote_id: quoteId,
+            p_member_id: null
+        }
+    );
+
+    if (error) {
+        console.error("Error approving quote:", error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+
+    // Parse response from function
+    const result = data as {
+        success: boolean;
+        error?: string;
+        message?: string;
+        tasks_created?: number;
+        approved_at?: string;
+    };
+
+    if (!result.success) {
+        return {
+            success: false,
+            error: result.message || result.error || "Error desconocido"
+        };
+    }
+
+    // Revalidate paths
+    revalidatePath("/organization/quotes");
+    if (quote.project_id) {
+        revalidatePath(`/project/${quote.project_id}/quotes`);
+        revalidatePath(`/project/${quote.project_id}/construction-tasks`);
+    }
+
+    return {
+        success: true,
+        tasksCreated: result.tasks_created || 0,
+        approvedAt: result.approved_at
+    };
+}
+
+// ============================================
 // DUPLICATE QUOTE
 // ============================================
 export async function duplicateQuote(id: string) {

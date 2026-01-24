@@ -25,7 +25,7 @@ import {
 import { useModal } from "@/providers/modal-store";
 import { QuoteItemForm } from "./quote-item-form";
 import { QuoteItemsTable } from "./quote-items-table";
-import { convertQuoteToProject } from "../../actions";
+import { convertQuoteToProject, approveQuote } from "../../actions";
 import { toast } from "sonner";
 
 interface QuoteEditorProps {
@@ -108,6 +108,22 @@ export function QuoteEditor({
         }
     };
 
+    const handleApproveQuote = async () => {
+        const toastId = toast.loading("Aprobando presupuesto...");
+
+        const result = await approveQuote(quote.id);
+
+        if (!result.success) {
+            toast.error(result.error || "Error al aprobar", { id: toastId });
+        } else {
+            const tasksMsg = result.tasksCreated
+                ? ` Se crearon ${result.tasksCreated} tareas de construcción.`
+                : "";
+            toast.success(`¡Presupuesto aprobado!${tasksMsg}`, { id: toastId });
+            router.refresh();
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Back button */}
@@ -182,7 +198,11 @@ export function QuoteEditor({
                                 </Button>
                             )}
                             {quote.status === 'sent' && (
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={handleApproveQuote}
+                                >
                                     <CheckCircle className="h-4 w-4 mr-2" />
                                     Aprobar
                                 </Button>

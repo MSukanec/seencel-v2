@@ -85,3 +85,32 @@ export interface MaterialPurchase {
     supplier_name: string | null;
 }
 
+// ==========================================
+// Material Requirement (calculated from construction_tasks)
+// ==========================================
+
+export interface MaterialRequirement {
+    project_id: string;
+    organization_id: string;
+    material_id: string;
+    material_name: string;
+    unit_name: string | null;
+    category_id: string | null;
+    category_name: string | null;
+    total_required: number;
+    task_count: number;
+    construction_task_ids: string[];
+}
+
+// ==========================================
+// Material Requirement Detail (for drill-down)
+// ==========================================
+
+export interface MaterialRequirementDetail {
+    construction_task_id: string;
+    task_name: string;
+    task_quantity: number;
+    material_amount_per_unit: number;
+    total_for_task: number;
+}
+

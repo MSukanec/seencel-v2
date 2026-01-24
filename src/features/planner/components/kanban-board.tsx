@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { useModal } from "@/providers/modal-store";
-import { KanbanCardForm } from "./kanban-card-form";
-import { KanbanListForm } from "./kanban-list-form";
+import { KanbanCardForm } from "../forms/kanban-card-form";
+import { KanbanListForm } from "../forms/kanban-list-form";
 import { MoveListModal } from "./move-list-modal";
 import { toast } from "sonner";
 import { deleteList, reorderLists, moveCard, reorderCards } from "@/features/planner/actions";
@@ -280,39 +280,45 @@ export function KanbanBoard({
     return (
         <div className="flex flex-col h-full">
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="flex-1 overflow-x-auto overflow-y-hidden">
+                {/* Mobile: Full-bleed snap carousel. Desktop: Normal horizontal scroll */}
+                <div className="flex-1 overflow-x-auto overflow-y-hidden no-scrollbar md:scrollbar-default">
                     <Droppable droppableId="board" type="list" direction="horizontal">
                         {(provided) => (
                             <div
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
-                                className="flex h-full gap-4 p-4"
+                                className="flex h-full gap-3 md:gap-4 px-[10vw] md:px-8 py-4 snap-x snap-mandatory md:snap-none scroll-smooth"
                             >
                                 {/* Columns */}
                                 {orderedLists.map((list, index) => (
                                     <Draggable key={list.id} draggableId={list.id} index={index}>
                                         {(provided, snapshot) => (
-                                            <KanbanColumn
-                                                innerRef={provided.innerRef}
-                                                draggableProps={provided.draggableProps}
-                                                dragHandleProps={provided.dragHandleProps}
-                                                isDragOver={snapshot.isDragging}
-                                                list={list}
-                                                cards={filterCards(list.cards || [])}
-                                                members={members}
-                                                onAddCard={() => handleAddCard(list.id)}
-                                                onCardClick={handleCardClick}
-                                                onEditList={() => handleEditList(list)}
-                                                onDeleteList={() => handleDeleteList(list)}
-                                                onMoveList={() => handleMoveList(list)}
-                                            />
+                                            <div
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                className="shrink-0 w-[80vw] md:w-[320px] snap-center h-full"
+                                            >
+                                                <KanbanColumn
+                                                    draggableProps={{}}
+                                                    dragHandleProps={provided.dragHandleProps}
+                                                    isDragOver={snapshot.isDragging}
+                                                    list={list}
+                                                    cards={filterCards(list.cards || [])}
+                                                    members={members}
+                                                    onAddCard={() => handleAddCard(list.id)}
+                                                    onCardClick={handleCardClick}
+                                                    onEditList={() => handleEditList(list)}
+                                                    onDeleteList={() => handleDeleteList(list)}
+                                                    onMoveList={() => handleMoveList(list)}
+                                                />
+                                            </div>
                                         )}
                                     </Draggable>
                                 ))}
                                 {provided.placeholder}
 
                                 {/* Add Column Button (end of board) */}
-                                <div className="shrink-0 w-[280px]">
+                                <div className="shrink-0 w-[80vw] md:w-[280px] snap-center">
                                     <Button
                                         variant="outline"
                                         className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground hover:border-primary/50"

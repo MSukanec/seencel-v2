@@ -45,6 +45,7 @@ export function PageWrapper({
             {/* Mobile Header: ALWAYS visible regardless of type */}
             <MobileHeader
                 title={title}
+                icon={icon}
                 tabs={tabs}
                 actions={actions}
                 user={user}

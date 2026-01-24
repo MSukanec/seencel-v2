@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useLayoutStore, NavigationContext } from "@/store/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
+import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarFeedbackButton } from "./buttons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -45,6 +46,7 @@ export function SidebarContent({
 }: SidebarContentProps) {
     const pathname = usePathname();
     const router = useRouter();
+    const nativeRouter = useNextRouter();
     const { activeContext, sidebarMode, actions } = useLayoutStore();
     const { contexts, contextRoutes, getNavItems } = useSidebarNavigation();
 
@@ -66,16 +68,13 @@ export function SidebarContent({
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
 
     // Handle context button click - drill into that context
+    // NOTE: Changing context should NOT navigate to a different page
+    // It only updates the sidebar menu to show that context's navigation items
     const handleContextEnter = (ctx: NavigationContext) => {
         setSlideDirection("right");
         setDrillState(ctx);
         actions.setActiveContext(ctx);
-
-        // Navigate to context main route
-        const route = contextRoutes[ctx];
-        if (route) {
-            router.push(route as any);
-        }
+        // Intentionally not navigating - user stays on current page
     };
 
     // Handle back button - return to home
@@ -96,6 +95,25 @@ export function SidebarContent({
     // Get nav items for specific contexts
     const orgNavItems = getNavItems("organization");
     const projectNavItems = getNavItems("project");
+
+    // Sync sidebar project with URL projectId
+    // If user navigates directly to a project URL, update the sidebar to show that project
+    React.useEffect(() => {
+        const projectMatch = pathname.match(/\/project\/([^/]+)/);
+        if (projectMatch) {
+            const urlProjectId = projectMatch[1];
+            // If URL has a different project than currently selected, sync it
+            if (urlProjectId && currentProject?.id !== urlProjectId) {
+                const projectInList = projects.find(p => p.id === urlProjectId);
+                if (projectInList) {
+                    handleProjectChange(urlProjectId);
+                    // Also switch to project context
+                    setDrillState("project");
+                    actions.setActiveContext("project");
+                }
+            }
+        }
+    }, [pathname, currentProject?.id, projects, handleProjectChange, actions]);
 
     // Slide animation classes
     const slideClass = cn(
@@ -125,7 +143,7 @@ export function SidebarContent({
                         setSlideDirection("left");
                         setDrillState("organization");
                         actions.setActiveContext("organization");
-                        router.push("/organization" as any);
+                        // Intentionally not navigating - user stays on current page
                     }}
                     onProjectChange={(projectId) => {
                         // Change context to project
@@ -134,8 +152,23 @@ export function SidebarContent({
                         actions.setActiveContext("project");
                         // Update state and save preference
                         handleProjectChange(projectId);
-                        // Navigate to project overview (SPA navigation, no reload)
-                        router.push(`/project/${projectId}` as any);
+
+                        // Navigate to the new project
+                        // If already on a project page, stay on same sub-page
+                        // If on organization page, go to project overview
+                        // Extract locale from current URL (e.g., /es/project/... -> es)
+                        const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+                        const locale = localeMatch ? localeMatch[1] : 'es';
+
+                        const projectPathMatch = pathname.match(/\/project\/[^/]+\/?(.*)$/);
+                        if (projectPathMatch) {
+                            // On a project page, navigate to same sub-page in new project
+                            const subPage = projectPathMatch[1] || '';
+                            nativeRouter.push(`/${locale}/project/${projectId}${subPage ? `/${subPage}` : ''}`);
+                        } else {
+                            // On organization page, navigate to project overview
+                            nativeRouter.push(`/${locale}/project/${projectId}`);
+                        }
                     }}
                 />
             </div>
@@ -148,7 +181,7 @@ export function SidebarContent({
                 {/* HOME STATE: Context Buttons */}
                 {/* ============================================================ */}
                 {drillState === "home" && (
-                    <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="home">
+                    <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
                         <SidebarContextButton
                             icon={contexts.find(c => c.id === "organization")?.icon || Building}
                             label="Dashboard"

@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
-import { HeaderTitleUpdater } from "@/components/layout";
 import { getProjectById } from "@/features/projects/queries";
-import { getProjectFiles } from "@/features/projects/file-queries";
-import { ProjectFilesClient } from "@/features/projects/components/project-files-client";
+import { getFiles } from "@/features/files/queries";
+import { FilesPageView } from "@/features/files/views";
 
 interface PageProps {
     params: Promise<{
@@ -14,24 +13,21 @@ interface PageProps {
 export default async function ProjectFilesPage({ params }: PageProps) {
     const { projectId } = await params;
 
-    // Fetch project for title context and files for content
-    const [project, files] = await Promise.all([
-        getProjectById(projectId),
-        getProjectFiles(projectId)
-    ]);
+    // Fetch project for context and files filtered by project
+    const project = await getProjectById(projectId);
 
     if (!project) {
         notFound();
     }
 
+    // Get files filtered by this project
+    const files = await getFiles(project.organization_id, projectId);
+
     return (
-        <div className="flex flex-col h-full">
-            <HeaderTitleUpdater title={
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                    Proyecto <span className="text-muted-foreground/40">/</span> <span className="text-foreground font-medium">{project.name}</span> <span className="text-muted-foreground/40">/</span> <span className="text-foreground font-medium">Archivos</span>
-                </span>
-            } />
-            <ProjectFilesClient files={files || []} />
-        </div>
+        <FilesPageView
+            organizationId={project.organization_id}
+            projectId={projectId}
+            files={files}
+        />
     );
 }

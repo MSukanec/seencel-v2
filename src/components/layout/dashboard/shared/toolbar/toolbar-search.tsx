@@ -39,7 +39,7 @@ export function ToolbarSearch({
                 // EXPAND ON HOVER or FOCUS/ACTIVE
                 isExpanded
                     ? "w-full sm:w-64 lg:w-80 shadow-sm"
-                    : "w-[150px] hover:w-full sm:hover:w-64 lg:hover:w-80",
+                    : "w-40 sm:w-56 lg:w-64 hover:w-full sm:hover:w-64 lg:hover:w-80", // Increased base width from 150px to show placeholder
                 className
             )}
         >

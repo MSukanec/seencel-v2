@@ -1562,5 +1562,15 @@
             "goHome": "Ir al Inicio",
             "errorId": "ID del error"
         }
+    },
+    "Planner": {
+        "title": "Agenda",
+        "tabs": {
+            "calendar": "Calendario",
+            "kanban": "Tablero"
+        }
+    },
+    "Files": {
+        "title": "Archivos"
     }
 }

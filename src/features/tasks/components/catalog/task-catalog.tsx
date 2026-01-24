@@ -40,9 +40,10 @@ interface TaskCatalogProps {
     units: Unit[];
     divisions: TaskDivision[];
     isAdminMode?: boolean;
+    showHeader?: boolean;
 }
 
-export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode = false }: TaskCatalogProps) {
+export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode = false, showHeader = true }: TaskCatalogProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
@@ -170,47 +171,51 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode
     return (
         <>
             <Card>
-                {/* Header with toolbar */}
-                <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                            <CardTitle>Catálogo de Tareas</CardTitle>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="gap-1">
-                                    <FileCode className="h-3 w-3" />
-                                    {totalTasks} tareas
-                                </Badge>
-                                <Badge variant="system" className="gap-1">
-                                    <Monitor className="h-3 w-3" />
-                                    {systemTasks} sistema
-                                </Badge>
-                                <Badge variant="organization" className="gap-1">
-                                    <Building2 className="h-3 w-3" />
-                                    {orgTasks} propias
-                                </Badge>
+                {/* Header with toolbar - only shown when showHeader is true */}
+                {showHeader && (
+                    <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-3">
+                                <CardTitle>Catálogo de Tareas</CardTitle>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="gap-1">
+                                        <FileCode className="h-3 w-3" />
+                                        {totalTasks} tareas
+                                    </Badge>
+                                    <Badge variant="system" className="gap-1">
+                                        <Monitor className="h-3 w-3" />
+                                        {systemTasks} sistema
+                                    </Badge>
+                                    <Badge variant="organization" className="gap-1">
+                                        <Building2 className="h-3 w-3" />
+                                        {orgTasks} propias
+                                    </Badge>
+                                </div>
                             </div>
+                            <CardDescription>
+                                Gestiona las tareas disponibles para tus presupuestos
+                            </CardDescription>
                         </div>
-                        <CardDescription>
-                            Gestiona las tareas disponibles para tus presupuestos
-                        </CardDescription>
-                    </div>
-                    <Button size="sm" onClick={handleCreateTask}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nueva Tarea
-                    </Button>
-                </CardHeader>
+                        <Button size="sm" onClick={handleCreateTask}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nueva Tarea
+                        </Button>
+                    </CardHeader>
+                )}
 
                 <CardContent className="space-y-4">
-                    {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar tareas por nombre, código o descripción..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
+                    {/* Search - only shown when showHeader is true */}
+                    {showHeader && (
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar tareas por nombre, código o descripción..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
+                    )}
 
                     {/* Grouped Tasks */}
                     <div className="space-y-2">

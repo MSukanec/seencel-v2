@@ -117,7 +117,9 @@ export function SidebarBrandButton({
 
         return (
             <Avatar className={cn(sizeClass, "rounded-lg")}>
-                <AvatarImage src={org?.logo_path || ""} alt={org?.name || ""} />
+                {org?.logo_path && (
+                    <AvatarImage src={org.logo_path} alt={org?.name || ""} />
+                )}
                 <AvatarFallback className={cn(textSize, "rounded-lg bg-primary/10 text-primary font-semibold")}>
                     {getInitials(org?.name || "")}
                 </AvatarFallback>
@@ -136,7 +138,9 @@ export function SidebarBrandButton({
 
         return (
             <Avatar className={cn(sizeClass, "rounded-lg")}>
-                <AvatarImage src={project?.image_path || ""} alt={project?.name || ""} />
+                {project?.image_path && (
+                    <AvatarImage src={project.image_path} alt={project?.name || ""} />
+                )}
                 <AvatarFallback
                     className={cn(textSize, "rounded-lg font-bold")}
                     style={{
@@ -181,7 +185,7 @@ export function SidebarBrandButton({
 
             {/* Name */}
             <span className={cn(
-                "font-bold tracking-tight text-foreground/90 whitespace-nowrap overflow-hidden transition-all duration-150 ease-in-out truncate",
+                "font-bold tracking-tight text-foreground/90 whitespace-nowrap overflow-hidden transition-all duration-150 ease-in-out truncate text-left",
                 isHome ? "text-lg" : "text-sm font-semibold",
                 isExpanded ? "flex-1 opacity-100 pl-2" : "w-0 opacity-0 pl-0"
             )}>

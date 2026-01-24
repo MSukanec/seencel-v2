@@ -140,7 +140,9 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
             const { data: contact } = await supabase.from('contacts').select('organization_id').eq('id', contactId).single();
 
             if (contact) {
-                const links = typeIds.map(typeId => ({
+                // Deduplicate typeIds to prevent unique constraint violations in the same batch
+                const uniqueTypeIds = Array.from(new Set(typeIds));
+                const links = uniqueTypeIds.map(typeId => ({
                     contact_id: contactId,
                     contact_type_id: typeId,
                     organization_id: contact.organization_id

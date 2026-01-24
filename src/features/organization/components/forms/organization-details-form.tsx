@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateOrganization } from "@/actions/update-organization";
-import { OrganizationLogoUpload } from "@/features/organization/components/organization-logo-upload";
+import { OrganizationLogoUpload } from "./organization-logo-upload";
 import { Loader2 } from "lucide-react";
 import { getStorageUrl } from "@/lib/storage-utils";
 import { PhoneInput } from "@/components/ui/phone-input";

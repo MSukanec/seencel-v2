@@ -1,9 +1,8 @@
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions } from "@/features/tasks/queries";
 import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
-import { TaskCatalog } from "@/features/tasks/components/catalog/task-catalog";
-import { MaterialCatalogView } from "@/features/materials/views";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
+import { TasksCatalogView } from "@/features/tasks/views";
+import { MaterialsCatalogView } from "@/features/materials/views";
+import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Wrench, ClipboardList, Package, Shield } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +12,9 @@ const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transp
 
 /**
  * Admin Technical Catalog Page
- * IDENTICAL to organization catalog but with full admin permissions:
- * - Can edit/delete ALL tasks (including system tasks)
- * - New tasks are created with is_system=true and NO organization_id
+ * Uses the SAME views as organization catalog but with isAdminMode=true:
+ * - Tasks: can edit/delete ALL tasks including system tasks
+ * - Materials: can create/edit/delete system materials
  */
 export default async function AdminCatalogPage() {
     // Fetch all data in parallel
@@ -36,6 +35,33 @@ export default async function AdminCatalogPage() {
         getUnitsForMaterials(),
         getMaterialCategoriesHierarchy()
     ]);
+
+    // Transform system materials to match MaterialsCatalogView expected type
+    const materialsForView = systemMaterials.map(m => ({
+        ...m,
+        organization_id: null as string | null
+    }));
+
+    // Transform categories to include parent_id
+    const categoriesForView = materialCategories.map(c => ({
+        ...c,
+        name: c.name || '',
+        parent_id: null as string | null
+    }));
+
+    // Transform units with abbreviation
+    const unitsForView = materialUnits.map(u => ({
+        id: u.id,
+        name: u.name,
+        abbreviation: ''
+    }));
+
+    // Transform category hierarchy to ensure name is string
+    const categoryHierarchyForView = categoryHierarchy.map(c => ({
+        ...c,
+        name: c.name || ''
+    }));
+
 
     return (
         <Tabs defaultValue="tasks" className="h-full flex flex-col">
@@ -62,26 +88,30 @@ export default async function AdminCatalogPage() {
                     </TabsList>
                 }
             >
-                <ContentLayout variant="narrow" className="pb-6">
-                    <TabsContent value="tasks" className="mt-0">
-                        <TaskCatalog
+                <TabsContent value="tasks" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <TasksCatalogView
                             groupedTasks={groupedTasks}
                             orgId="" // No org - admin mode
                             units={taskUnitsResult.data}
                             divisions={divisionsResult.data}
                             isAdminMode={true}
                         />
-                    </TabsContent>
+                    </ContentLayout>
+                </TabsContent>
 
-                    <TabsContent value="materials" className="mt-0">
-                        <MaterialCatalogView
-                            materials={systemMaterials}
-                            units={materialUnits}
-                            categories={materialCategories}
-                            categoryHierarchy={categoryHierarchy}
+                <TabsContent value="materials" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <MaterialsCatalogView
+                            materials={materialsForView}
+                            units={unitsForView}
+                            categories={categoriesForView}
+                            categoryHierarchy={categoryHierarchyForView}
+                            orgId="" // No org - admin mode
+                            isAdminMode={true}
                         />
-                    </TabsContent>
-                </ContentLayout>
+                    </ContentLayout>
+                </TabsContent>
             </PageWrapper>
         </Tabs>
     );

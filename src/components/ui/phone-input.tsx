@@ -97,7 +97,6 @@ const PhoneInput = React.forwardRef<
              * @param value
              */
             onChange={(value) => onChange?.(value as RPNInput.Value)} // Cast for strict type safety
-            {...props}
         />
     );
 });

@@ -33,7 +33,7 @@ export function SidebarContextButton({
             isExpanded={isExpanded}
             onClick={onClick}
             className={className}
-            height="md"
+            height="lg"
             leftContent={<Icon className="h-5 w-5" />}
             title={label}
             subtitle={description}

@@ -1,10 +1,6 @@
-import { getUserOrganizations } from "@/features/organization/queries";
+import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { getProjectQuotes } from "@/features/quotes/queries";
-import { getOrganizationFinancialData } from "@/features/organization/queries";
-import { QuotesList } from "@/features/quotes/components/lists/quotes-list";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
-import { FileText } from "lucide-react";
+import { QuotesPageView } from "@/features/quotes/views";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,22 +46,13 @@ export default async function ProjectQuotesPage({ params }: PageProps) {
     const projects = projectsResult.data || [];
 
     return (
-        <PageWrapper
-            type="page"
-            title="Presupuestos"
-            icon={<FileText />}
-        >
-            <ContentLayout variant="wide" className="pb-6">
-                <QuotesList
-                    quotes={quotes}
-                    organizationId={activeOrgId}
-                    financialData={financialData}
-                    clients={clients}
-                    projects={projects}
-                    projectId={projectId}
-                    showProjectColumn={false}
-                />
-            </ContentLayout>
-        </PageWrapper>
+        <QuotesPageView
+            organizationId={activeOrgId}
+            projectId={projectId}
+            quotes={quotes}
+            financialData={financialData}
+            clients={clients}
+            projects={projects}
+        />
     );
 }

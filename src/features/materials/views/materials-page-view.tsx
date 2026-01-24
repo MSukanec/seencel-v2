@@ -11,7 +11,8 @@ import { MaterialsOverviewView } from "./materials-overview-view";
 import { MaterialsOrdersView } from "./materials-orders-view";
 import { MaterialsPaymentsView } from "./materials-payments-view";
 import { MaterialsSettingsView } from "./materials-settings-view";
-import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase } from "../types";
+import { MaterialsRequirementsView } from "./materials-requirements-view";
+import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase, MaterialRequirement } from "../types";
 
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
@@ -23,6 +24,8 @@ interface MaterialsPageViewProps {
     payments: MaterialPaymentView[];
     purchases: MaterialPurchase[];
     financialData: OrganizationFinancialData;
+    // Requirements data (for requirements tab)
+    requirements: MaterialRequirement[];
 }
 
 export function MaterialsPageView({
@@ -31,7 +34,8 @@ export function MaterialsPageView({
     defaultTab = "overview",
     payments,
     purchases,
-    financialData
+    financialData,
+    requirements
 }: MaterialsPageViewProps) {
     const searchParams = useSearchParams();
     const pathname = usePathname();
@@ -50,6 +54,7 @@ export function MaterialsPageView({
     const tabs = (
         <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
             <TabsTrigger value="overview" className={tabTriggerClass}>Visión General</TabsTrigger>
+            <TabsTrigger value="requirements" className={tabTriggerClass}>Necesidades</TabsTrigger>
             <TabsTrigger value="orders" className={tabTriggerClass}>Órdenes</TabsTrigger>
             <TabsTrigger value="payments" className={tabTriggerClass}>Pagos</TabsTrigger>
             <TabsTrigger value="settings" className={tabTriggerClass}>Ajustes</TabsTrigger>
@@ -64,13 +69,16 @@ export function MaterialsPageView({
                 tabs={tabs}
                 icon={<Package />}
             >
-                <TabsContent value="overview" className="m-0 focus-visible:outline-none">
+                <TabsContent value="overview" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsOverviewView projectId={projectId} orgId={orgId} />
                 </TabsContent>
-                <TabsContent value="orders" className="m-0 focus-visible:outline-none">
+                <TabsContent value="requirements" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
+                    <MaterialsRequirementsView projectId={projectId} orgId={orgId} requirements={requirements} />
+                </TabsContent>
+                <TabsContent value="orders" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsOrdersView projectId={projectId} orgId={orgId} />
                 </TabsContent>
-                <TabsContent value="payments" className="m-0 focus-visible:outline-none">
+                <TabsContent value="payments" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsPaymentsView
                         projectId={projectId}
                         orgId={orgId}
@@ -79,7 +87,7 @@ export function MaterialsPageView({
                         financialData={financialData}
                     />
                 </TabsContent>
-                <TabsContent value="settings" className="m-0 focus-visible:outline-none">
+                <TabsContent value="settings" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsSettingsView projectId={projectId} orgId={orgId} />
                 </TabsContent>
             </PageWrapper>

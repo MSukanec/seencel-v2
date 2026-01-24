@@ -146,7 +146,7 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             {/* Scrollable Content Body - No internal padding, uses System p-4 */}
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">

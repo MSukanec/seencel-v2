@@ -1,5 +1,5 @@
 import { getDashboardData } from "@/features/organization/queries";
-import { OrganizationDetailsForm } from "@/features/organization/components/organization-details-form";
+import { OrganizationDetailsForm } from "@/features/organization/components/forms/organization-details-form";
 import { OrganizationLocationManager } from "@/features/organization/components/location-manager";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganizationTabsWrapper } from "@/features/organization/components/organization-tabs-wrapper";

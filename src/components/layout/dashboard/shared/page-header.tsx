@@ -117,10 +117,10 @@ export function PageHeader({
                     </div>
                 </div>
 
-                {/* Row 2: Toolbar Portal Target - Components use createPortal to render here */}
+                {/* Row 2: Toolbar Portal Target - Auto-hides when empty */}
                 <div
                     id="toolbar-portal-root"
-                    className="px-8 py-2 border-t border-border/50"
+                    className="px-8 py-2 border-t border-border/50 empty:hidden empty:p-0 empty:border-0"
                 />
 
                 {children}

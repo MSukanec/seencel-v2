@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/context/organization-context";
 import { Organization, Project } from "@/components/layout/dashboard/sidebar-version/buttons";
 import { fetchProjectsAction } from "@/features/projects/actions/fetch-projects";
+import { saveLastActiveProject, fetchLastActiveProject } from "@/features/projects/actions";
 
 interface SidebarData {
     currentOrg: Organization | null;
@@ -33,6 +34,7 @@ function buildLogoUrl(logoPath: string | null | undefined): string | null {
 /**
  * Hook to get current organization and projects for the sidebar
  * Uses server action for projects (same as header selector)
+ * Loads and saves last_project_id from user preferences
  */
 export function useSidebarData(): SidebarData {
     const { activeOrgId } = useOrganization();
@@ -41,6 +43,7 @@ export function useSidebarData(): SidebarData {
     const [projects, setProjects] = React.useState<Project[]>([]);
     const [currentProject, setCurrentProject] = React.useState<Project | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [lastProjectIdLoaded, setLastProjectIdLoaded] = React.useState(false);
 
     // Memoize supabase client
     const supabase = React.useMemo(() => createClient(), []);
@@ -78,21 +81,27 @@ export function useSidebarData(): SidebarData {
         fetchOrg();
     }, [supabase, orgId]);
 
-    // Fetch projects using server action (same as header project selector)
+    // Fetch projects and load last active project from preferences
     React.useEffect(() => {
         if (!orgId) {
             setProjects([]);
+            setCurrentProject(null);
             setIsLoading(false);
             return;
         }
 
-        async function fetchProjects() {
+        async function fetchProjectsAndPreferences() {
             try {
                 setIsLoading(true);
-                const fetched = await fetchProjectsAction(orgId!);
+
+                // Fetch projects and last active project ID in parallel
+                const [fetched, lastProjectId] = await Promise.all([
+                    fetchProjectsAction(orgId!),
+                    fetchLastActiveProject(orgId!)
+                ]);
 
                 // Map to our Project type
-                const mappedProjects: Project[] = fetched.map((p: any) => ({
+                let mappedProjects: Project[] = fetched.map((p: any) => ({
                     id: p.id,
                     name: p.name,
                     image_path: p.image_path || p.image_url,
@@ -101,12 +110,30 @@ export function useSidebarData(): SidebarData {
                     use_custom_color: p.use_custom_color,
                 }));
 
+                // Find the last active project
+                let activeProject: Project | null = null;
+                if (lastProjectId) {
+                    activeProject = mappedProjects.find(p => p.id === lastProjectId) || null;
+                }
+
+                // If we have an active project, move it to the first position
+                if (activeProject) {
+                    mappedProjects = [
+                        activeProject,
+                        ...mappedProjects.filter(p => p.id !== activeProject!.id)
+                    ];
+                }
+
                 setProjects(mappedProjects);
 
-                // Set first project as current if none selected
-                if (mappedProjects.length > 0 && !currentProject) {
+                // Set current project: either the last active one or the first one
+                if (activeProject) {
+                    setCurrentProject(activeProject);
+                } else if (mappedProjects.length > 0) {
                     setCurrentProject(mappedProjects[0]);
                 }
+
+                setLastProjectIdLoaded(true);
             } catch (error) {
                 console.error('Error fetching projects:', error);
             } finally {
@@ -114,43 +141,27 @@ export function useSidebarData(): SidebarData {
             }
         }
 
-        fetchProjects();
-    }, [orgId, currentProject]);
+        fetchProjectsAndPreferences();
+    }, [orgId]);
 
-    // Handle project change - updates state and saves preference
-    // Navigation is handled by the caller
-    const handleProjectChange = React.useCallback(async (projectId: string) => {
+    // Handle project change - updates state, saves preference, and reorders list
+    const handleProjectChange = React.useCallback((projectId: string) => {
         const newProject = projects.find(p => p.id === projectId);
         if (newProject) {
             setCurrentProject(newProject);
 
-            // Update preference in DB (fire and forget)
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user && orgId) {
-                    const { data: userData } = await supabase
-                        .from('users')
-                        .select('id')
-                        .eq('auth_id', user.id)
-                        .single();
+            // Reorder projects: move selected to first position
+            setProjects(prev => [
+                newProject,
+                ...prev.filter(p => p.id !== projectId)
+            ]);
 
-                    if (userData) {
-                        await supabase
-                            .from('user_organization_preferences')
-                            .upsert({
-                                user_id: userData.id,
-                                organization_id: orgId,
-                                last_project_id: projectId,
-                            }, { onConflict: 'user_id,organization_id' });
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating project preference:', error);
-            }
+            // Save to database using server action (fire and forget)
+            saveLastActiveProject(projectId).catch(error => {
+                console.error('Error saving project preference:', error);
+            });
         }
-
-        return newProject; // Return the project for the caller to use
-    }, [projects, supabase, orgId]);
+    }, [projects]);
 
     return {
         currentOrg,

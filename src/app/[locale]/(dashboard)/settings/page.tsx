@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Shield, User, Building, Settings2, Check, Crown, Users, Sparkles, CreditCard } from "lucide-react";
 import { getTranslations } from 'next-intl/server';
 import { getUserOrganizations } from "@/features/organization/queries";
-import { SwitchOrganizationButton } from "@/features/organization/components/SwitchOrganizationButton";
+import { SwitchOrganizationButton } from "@/features/organization/components/switch-organization-button";
 import { getUserProfile } from "@/features/profile/queries";
 import { ProfileForm } from "@/features/profile/components/ProfileForm";
 import { PreferencesTab } from "@/features/preferences/components/preferences-tab";

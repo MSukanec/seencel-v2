@@ -506,14 +506,15 @@ export async function deleteCalendarEvent(eventId: string) {
     const { error } = await supabase
         .from('calendar_events')
         .update({
-            is_deleted: true,
+            // is_deleted: true, // Removed in favor of deleted_at
+            deleted_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         })
         .eq('id', eventId);
 
     if (error) {
         console.error('Error deleting calendar event:', error);
-        throw new Error('Error al eliminar el evento');
+        throw new Error(`Error al eliminar el evento: ${error.message} (${error.code})`);
     }
 
     revalidatePath('/organization/planner');

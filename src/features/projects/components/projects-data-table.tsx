@@ -275,6 +275,7 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                 ]}
                 pageSize={50}
                 viewMode={viewMode}
+                toolbarInHeader={true}
                 enableRowActions={true}
                 onView={handleNavigateToProject}
                 onEdit={handleEdit}

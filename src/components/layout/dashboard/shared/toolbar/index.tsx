@@ -1,7 +1,7 @@
 "use client";
 
 import { Table } from "@tanstack/react-table";
-import { Search, X, Plus, MoreHorizontal } from "lucide-react";
+import { Search, X, Plus, MoreHorizontal, LayoutTemplate } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { DataTableFacetedFilter } from "./toolbar-faceted-filter";
@@ -67,6 +67,8 @@ export interface ToolbarProps<TData> {
     // mobileActionClick -> Derived from first action onClick if not provided
     mobileShowSearch?: boolean;
     mobileShowFilters?: boolean;
+
+    mobileShowViewToggler?: boolean;
     portalToHeader?: boolean;
 }
 
@@ -86,9 +88,12 @@ export function Toolbar<TData>({
     className,
     mobileShowSearch = true,
     mobileShowFilters = true,
+
+    mobileShowViewToggler = false,
     portalToHeader = false,
 }: ToolbarProps<TData>) {
     const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
+    const [mobileViewOpen, setMobileViewOpen] = React.useState(false);
     const [mounted, setMounted] = React.useState(false);
 
     // Mount state for Portal (avoid SSR hydration issues)
@@ -172,16 +177,16 @@ export function Toolbar<TData>({
             <div className="flex items-center gap-2 shrink-0">
                 {/* 
                    Strategy:
-                   1. If 'actions' prop is provided, use ToolbarSplitButton.
-                   2. If 'children' provided, render it (legacy).
+                   1. Render children first (e.g., custom toolbar buttons like CreateProjectButton)
+                   2. Then render ToolbarSplitButton if 'actions' are provided
+                   Both can coexist.
                 */}
-                {actions && actions.length > 0 ? (
+                {children}
+                {actions && actions.length > 0 && (
                     <ToolbarSplitButton
                         mainAction={actions[0]}
                         secondaryActions={actions.slice(1)}
                     />
-                ) : (
-                    children
                 )}
             </div>
         </div>
@@ -269,95 +274,131 @@ export function Toolbar<TData>({
                     <div className="pb-[env(safe-area-inset-bottom)]">
                         <div className="flex justify-between items-end px-6 py-4">
                             {/* Left Button: Search or Filters */}
-                            {(mobileShowSearch || (mobileShowFilters && hasFilters)) && (
-                                <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
-                                    <SheetTrigger asChild>
-                                        <button
-                                            className={cn(
-                                                "pointer-events-auto",
-                                                "w-14 h-14 rounded-full",
-                                                "bg-background/80 backdrop-blur-xl",
-                                                "border border-border/50",
-                                                "flex items-center justify-center",
-                                                "shadow-lg shadow-black/10",
-                                                "active:scale-95 transition-transform",
-                                                isFiltered && "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                                            )}
-                                        >
-                                            <Search className="h-5 w-5 text-foreground" />
-                                        </button>
-                                    </SheetTrigger>
-                                    <SheetContent side="bottom" className="rounded-t-3xl">
-                                        <SheetHeader className="mb-4">
-                                            <SheetTitle>Buscar y filtrar</SheetTitle>
-                                        </SheetHeader>
-                                        <div className="space-y-4">
-                                            {/* Mobile Search Input */}
-                                            {mobileShowSearch && (
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                    <Input
-                                                        placeholder={searchPlaceholder}
-                                                        value={searchValue}
-                                                        onChange={(e) => onSearch(e.target.value)}
-                                                        className="pl-9 pr-8 h-12 text-base"
-                                                        autoFocus
-                                                    />
-                                                    {isFiltered && (
-                                                        <ToolbarButton
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                                                            onClick={() => onSearch("")}
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </ToolbarButton>
-                                                    )}
+                            {/* Left Side: View Toggler + Search/Filters */}
+                            <div className="flex items-end gap-3">
+                                {/* View Toggler (New) */}
+                                {mobileShowViewToggler && leftActions && (
+                                    <Sheet open={mobileViewOpen} onOpenChange={setMobileViewOpen}>
+                                        <SheetTrigger asChild>
+                                            <button
+                                                className={cn(
+                                                    "pointer-events-auto",
+                                                    "w-14 h-14 rounded-full",
+                                                    "bg-background/80 backdrop-blur-xl",
+                                                    "border border-border/50",
+                                                    "flex items-center justify-center",
+                                                    "shadow-lg shadow-black/10",
+                                                    "active:scale-95 transition-transform",
+                                                    mobileViewOpen && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                                                )}
+                                            >
+                                                <LayoutTemplate className="h-5 w-5 text-foreground" />
+                                            </button>
+                                        </SheetTrigger>
+                                        <SheetContent side="bottom" className="rounded-t-3xl outline-none">
+                                            <SheetHeader className="mb-4 text-left px-6 pt-6">
+                                                <SheetTitle>Cambiar Vista</SheetTitle>
+                                            </SheetHeader>
+                                            <div className="px-6 pb-8">
+                                                <div className="flex justify-center w-full">
+                                                    {leftActions}
                                                 </div>
-                                            )}
+                                            </div>
+                                        </SheetContent>
+                                    </Sheet>
+                                )}
 
-                                            {/* Mobile Filters */}
-                                            {mobileShowFilters && hasFilters && (
-                                                <div className="space-y-3">
-                                                    <p className="text-sm font-medium text-muted-foreground">Filtros</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {table && facetedFilters?.map((filter) => (
-                                                            table.getColumn(filter.columnId) && (
-                                                                <DataTableFacetedFilter
-                                                                    key={filter.columnId}
-                                                                    column={table.getColumn(filter.columnId)}
-                                                                    title={filter.title}
-                                                                    options={filter.options}
-                                                                />
-                                                            )
-                                                        ))}
-                                                        {filterContent}
+                                {/* Search or Filters */}
+                                {(mobileShowSearch || (mobileShowFilters && hasFilters)) && (
+                                    <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
+                                        <SheetTrigger asChild>
+                                            <button
+                                                className={cn(
+                                                    "pointer-events-auto",
+                                                    "w-14 h-14 rounded-full",
+                                                    "bg-background/80 backdrop-blur-xl",
+                                                    "border border-border/50",
+                                                    "flex items-center justify-center",
+                                                    "shadow-lg shadow-black/10",
+                                                    "active:scale-95 transition-transform",
+                                                    isFiltered && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                                                )}
+                                            >
+                                                <Search className="h-5 w-5 text-foreground" />
+                                            </button>
+                                        </SheetTrigger>
+                                        <SheetContent side="bottom" className="rounded-t-3xl outline-none">
+                                            <SheetHeader className="mb-4 px-6 pt-6 text-left">
+                                                <SheetTitle>Buscar y filtrar</SheetTitle>
+                                            </SheetHeader>
+                                            <div className="space-y-4 px-6 pb-8">
+                                                {/* Mobile Search Input */}
+                                                {mobileShowSearch && (
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                        <Input
+                                                            placeholder={searchPlaceholder}
+                                                            value={searchValue}
+                                                            onChange={(e) => onSearch(e.target.value)}
+                                                            className="pl-9 pr-8 h-12 text-base"
+                                                            autoFocus
+                                                        />
+                                                        {isFiltered && (
+                                                            <ToolbarButton
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                                                                onClick={() => onSearch("")}
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </ToolbarButton>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
 
-                                            {/* Clear filters button */}
-                                            {isFiltered && (
-                                                <ToolbarButton
-                                                    variant="outline"
-                                                    className="w-full h-12"
-                                                    onClick={() => {
-                                                        onSearch("");
-                                                        table?.resetColumnFilters();
-                                                        setMobileSearchOpen(false);
-                                                    }}
-                                                >
-                                                    Limpiar todo
-                                                    <X className="ml-2 h-4 w-4" />
-                                                </ToolbarButton>
-                                            )}
-                                        </div>
-                                    </SheetContent>
-                                </Sheet>
-                            )}
+                                                {/* Mobile Filters */}
+                                                {mobileShowFilters && hasFilters && (
+                                                    <div className="space-y-3">
+                                                        <p className="text-sm font-medium text-muted-foreground">Filtros</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {table && facetedFilters?.map((filter) => (
+                                                                table.getColumn(filter.columnId) && (
+                                                                    <DataTableFacetedFilter
+                                                                        key={filter.columnId}
+                                                                        column={table.getColumn(filter.columnId)}
+                                                                        title={filter.title}
+                                                                        options={filter.options}
+                                                                    />
+                                                                )
+                                                            ))}
+                                                            {filterContent}
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                            {/* Spacer if no left button */}
-                            {!mobileShowSearch && !(mobileShowFilters && hasFilters) && <div />}
+                                                {/* Clear filters button */}
+                                                {isFiltered && (
+                                                    <ToolbarButton
+                                                        variant="outline"
+                                                        className="w-full h-12"
+                                                        onClick={() => {
+                                                            onSearch("");
+                                                            table?.resetColumnFilters();
+                                                            setMobileSearchOpen(false);
+                                                        }}
+                                                    >
+                                                        Limpiar todo
+                                                        <X className="ml-2 h-4 w-4" />
+                                                    </ToolbarButton>
+                                                )}
+                                            </div>
+                                        </SheetContent>
+                                    </Sheet>
+                                )}
+                            </div>
+
+                            {/* Spacer if no left buttons */}
+                            {!mobileShowSearch && !(mobileShowFilters && hasFilters) && !mobileShowViewToggler && <div />}
 
                             {/* Right Button: Primary Action (Context Aware) */}
                             {renderMobileActionButton()}

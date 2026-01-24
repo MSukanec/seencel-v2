@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { MaterialPaymentView, OrganizationFinancialData } from "./types";
+import { MaterialPaymentView, OrganizationFinancialData, MaterialRequirement } from "./types";
 
 // ===============================================
 // Material Payments Queries
@@ -96,3 +96,188 @@ export async function getOrganizationFinancialData(organizationId: string): Prom
     };
 }
 
+// ===============================================
+// Material Catalog Queries (Organization View)
+// ===============================================
+
+export interface CatalogMaterial {
+    id: string;
+    name: string;
+    unit_id: string | null;
+    unit_name: string | null;
+    category_id: string | null;
+    category_name: string | null;
+    material_type: 'material' | 'consumable';
+    is_system: boolean;
+    organization_id: string | null;
+}
+
+export interface MaterialCategory {
+    id: string;
+    name: string;
+    parent_id: string | null;
+}
+
+export interface MaterialUnit {
+    id: string;
+    name: string;
+    abbreviation: string;
+}
+
+export interface MaterialCategoryNode {
+    id: string;
+    name: string;
+    parent_id: string | null;
+}
+
+/**
+ * Get all materials for an organization catalog
+ * Returns both system materials and organization-specific materials
+ */
+export async function getMaterialsForOrganization(organizationId: string): Promise<CatalogMaterial[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('materials')
+        .select(`
+            id,
+            name,
+            unit_id,
+            category_id,
+            material_type,
+            is_system,
+            organization_id,
+            units (name),
+            material_categories (name)
+        `)
+        .eq('is_deleted', false)
+        .or(`is_system.eq.true,organization_id.eq.${organizationId}`)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching organization materials:", error);
+        return [];
+    }
+
+    return (data || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        unit_id: m.unit_id,
+        unit_name: m.units?.name || null,
+        category_id: m.category_id,
+        category_name: m.material_categories?.name || null,
+        material_type: m.material_type || 'material',
+        is_system: m.is_system,
+        organization_id: m.organization_id,
+    }));
+}
+
+/**
+ * Get all material categories for dropdown/tree
+ */
+export async function getMaterialCategoriesForCatalog(): Promise<MaterialCategory[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_categories')
+        .select('id, name, parent_id')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching material categories:", error);
+        return [];
+    }
+
+    return (data || []).map((c: any) => ({
+        id: c.id,
+        name: c.name || '',
+        parent_id: c.parent_id
+    }));
+}
+
+/**
+ * Get all units for material form
+ */
+export async function getUnitsForMaterialCatalog(): Promise<MaterialUnit[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('units')
+        .select('id, name, abbreviation')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching units:", error);
+        return [];
+    }
+
+    return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        abbreviation: u.abbreviation || ''
+    }));
+}
+
+/**
+ * Get material categories hierarchy for tree display
+ */
+export async function getMaterialCategoryHierarchy(): Promise<MaterialCategoryNode[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_categories')
+        .select('id, name, parent_id')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching material category hierarchy:", error);
+        return [];
+    }
+
+    return (data || []).map((c: any) => ({
+        id: c.id,
+        name: c.name || '',
+        parent_id: c.parent_id
+    }));
+}
+
+// ===============================================
+// Material Requirements Queries
+// ===============================================
+
+/**
+ * Get material requirements for a project
+ * Calculated from: construction_tasks.quantity × task_materials.amount
+ */
+export async function getProjectMaterialRequirements(projectId: string): Promise<MaterialRequirement[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('project_material_requirements_view')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('material_name', { ascending: true });
+
+    if (error) {
+        // If view doesn't exist yet, return empty array gracefully
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("project_material_requirements_view does not exist yet, returning empty array");
+            return [];
+        }
+        console.error("Error fetching material requirements:", error);
+        return [];
+    }
+
+    return (data || []).map((r: any) => ({
+        project_id: r.project_id,
+        organization_id: r.organization_id,
+        material_id: r.material_id,
+        material_name: r.material_name || 'Material desconocido',
+        unit_name: r.unit_name,
+        category_id: r.category_id,
+        category_name: r.category_name,
+        total_required: parseFloat(r.total_required) || 0,
+        task_count: parseInt(r.task_count) || 0,
+        construction_task_ids: r.construction_task_ids || [],
+    }));
+}

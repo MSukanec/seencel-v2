@@ -11,16 +11,22 @@ import { CalendarEvent } from "@/features/planner/types";
 // Calendar view for the planner - shows events in a month/week/day format
 // ============================================================================
 
+import { Project } from "@/types/project";
+
+// ...
+
 interface PlannerCalendarViewProps {
     organizationId: string;
     projectId?: string | null;
     events: CalendarEvent[];
+    projects?: Project[];
 }
 
 export function PlannerCalendarView({
     organizationId,
     projectId,
     events,
+    projects
 }: PlannerCalendarViewProps) {
     const router = useRouter();
 
@@ -29,12 +35,13 @@ export function PlannerCalendarView({
     };
 
     return (
-        <div className="h-full relative">
+        <div className="h-full relative flex flex-col">
             <PlannerCalendar
                 organizationId={organizationId}
                 projectId={projectId}
                 events={events}
                 onRefresh={handleRefresh}
+                projects={projects}
             />
         </div>
     );

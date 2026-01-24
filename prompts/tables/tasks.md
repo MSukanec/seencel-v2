@@ -2,6 +2,143 @@
 
 NO MODIFICAR NUNCA; solo lo modifico yo! Si te pido modificarla solo MODIFICA LAS TABLAS PARA QUE SE ACTUALICEN A LO UTLIMO QUE HICIMOS; pero ni suplantes informacion ni nada raro. Preguntame cuaquier cosa.
 
+# Tabla CONSTRUCTION_TASKS:
+
+create table public.construction_tasks (
+  created_at timestamp with time zone not null default now(),
+  organization_id uuid null,
+  updated_at timestamp with time zone null default now(),
+  project_id uuid null,
+  task_id uuid null,
+  quantity real null,
+  created_by uuid null,
+  start_date date null,
+  end_date date null,
+  duration_in_days integer null,
+  id uuid not null default gen_random_uuid (),
+  progress_percent integer null,
+  description text null,
+  cost_scope public.cost_scope_enum not null default 'materials_and_labor'::cost_scope_enum,
+  updated_by uuid null,
+  quote_item_id uuid null,
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  status text not null default 'pending'::text,
+  notes text null,
+  original_quantity real null,
+  custom_name text null,
+  custom_unit text null,
+  constraint construction_tasks_pkey primary key (id),
+  constraint construction_tasks_id_key unique (id),
+  constraint construction_tasks_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint construction_tasks_quote_item_id_fkey foreign KEY (quote_item_id) references quote_items (id) on delete set null,
+  constraint construction_tasks_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint construction_tasks_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint construction_tasks_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint construction_tasks_task_id_fkey foreign KEY (task_id) references tasks (id) on delete CASCADE,
+  constraint construction_tasks_status_check check (
+    (
+      status = any (
+        array[
+          'pending'::text,
+          'in_progress'::text,
+          'completed'::text,
+          'paused'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_construction_tasks_project_id on public.construction_tasks using btree (project_id) TABLESPACE pg_default;
+
+create index IF not exists idx_construction_tasks_organization_id on public.construction_tasks using btree (organization_id) TABLESPACE pg_default;
+
+create index IF not exists idx_construction_tasks_quote_item_id on public.construction_tasks using btree (quote_item_id) TABLESPACE pg_default;
+
+create index IF not exists idx_construction_tasks_status on public.construction_tasks using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_construction_tasks_not_deleted on public.construction_tasks using btree (id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create trigger on_construction_task_audit
+after INSERT
+or DELETE
+or
+update on construction_tasks for EACH row
+execute FUNCTION log_construction_task_activity ();
+
+create trigger set_updated_by_construction_tasks BEFORE INSERT
+or
+update on construction_tasks for EACH row
+execute FUNCTION handle_updated_by ();
+
+# Vista COSNTRUCTION_TASKS_VIEW:
+
+create view public.construction_tasks_view as
+select
+  ct.id,
+  ct.organization_id,
+  ct.project_id,
+  ct.task_id,
+  ct.quote_item_id,
+  COALESCE(t.custom_name, t.name, ct.custom_name) as task_name,
+  COALESCE(u.name, ct.custom_unit) as unit,
+  td.name as division_name,
+  ct.cost_scope,
+  case ct.cost_scope
+    when 'materials_and_labor'::cost_scope_enum then 'M.O. + MAT.'::text
+    when 'labor_only'::cost_scope_enum then 'M.O.'::text
+    when 'materials_only'::cost_scope_enum then 'MAT'::text
+    else 'M.O. + MAT.'::text
+  end as cost_scope_label,
+  ct.quantity,
+  ct.original_quantity,
+  case
+    when ct.original_quantity is not null
+    and ct.original_quantity > 0::double precision then ct.quantity - ct.original_quantity
+    else null::real
+  end as quantity_variance,
+  ct.start_date,
+  ct.end_date,
+  ct.duration_in_days,
+  ct.progress_percent,
+  ct.status,
+  ct.description,
+  ct.notes,
+  ct.created_at,
+  ct.updated_at,
+  ct.created_by,
+  ct.updated_by,
+  ct.is_deleted,
+  qi.quote_id,
+  q.name as quote_name,
+  qi.markup_pct as quote_markup_pct,
+  ph.phase_name
+from
+  construction_tasks ct
+  left join tasks t on t.id = ct.task_id
+  left join units u on u.id = t.unit_id
+  left join task_divisions td on td.id = t.task_division_id
+  left join quote_items qi on qi.id = ct.quote_item_id
+  left join quotes q on q.id = qi.quote_id
+  left join lateral (
+    select
+      cp.name as phase_name
+    from
+      construction_phase_tasks cpt
+      join construction_phases cp on cp.id = cpt.project_phase_id
+    where
+      cpt.construction_task_id = ct.id
+    order by
+      cpt.created_at desc
+    limit
+      1
+  ) ph on true
+where
+  ct.is_deleted = false;
+
 # Tabla TASK_DIVISIONS:
 
 create table public.task_divisions (

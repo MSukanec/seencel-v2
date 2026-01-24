@@ -111,8 +111,8 @@ export const ModalProvider = () => {
                                         </div>
                                     )}
 
-                                    {/* Body */}
-                                    <div className="flex-1 flex flex-col relative min-h-0 overflow-y-auto p-4">
+                                    {/* Body - No overflow here, let forms handle their own scroll */}
+                                    <div className="flex-1 flex flex-col relative min-h-0 p-4">
                                         {modal.view}
                                     </div>
                                 </motion.div>
@@ -148,8 +148,8 @@ export const ModalProvider = () => {
                                 </div>
                             )}
 
-                            {/* Body */}
-                            <div className="flex-1 flex flex-col relative w-full min-h-0 overflow-y-auto p-4">
+                            {/* Body - No overflow here, let forms handle their own scroll */}
+                            <div className="flex-1 flex flex-col relative w-full min-h-0 p-4">
                                 {modal.view}
                             </div>
                         </GlobalDialogContent>

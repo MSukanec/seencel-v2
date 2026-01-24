@@ -348,3 +348,165 @@ export async function getMaterialPurchasesAction(projectId: string) {
     return data || [];
 }
 
+// ===============================================
+// Material CRUD (Unified for Admin + Organization)
+// ===============================================
+
+/**
+ * Create a material
+ * @param isAdminMode - If true, creates a system material (is_system=true, no org_id)
+ * @param organizationId - Required when isAdminMode is false
+ */
+export async function createMaterial(formData: FormData, isAdminMode: boolean = false) {
+    const supabase = await createClient();
+
+    const name = formData.get("name") as string;
+    const unit_id = formData.get("unit_id") as string || null;
+    const category_id = formData.get("category_id") as string || null;
+    const material_type = (formData.get("material_type") as string) || "material";
+    const organization_id = formData.get("organization_id") as string || null;
+
+    if (!name?.trim()) {
+        return { error: "El nombre es requerido" };
+    }
+
+    // Validate org_id is present for non-admin mode
+    if (!isAdminMode && !organization_id) {
+        return { error: "Se requiere una organización" };
+    }
+
+    const { data, error } = await supabase
+        .from("materials")
+        .insert({
+            name: name.trim(),
+            unit_id: unit_id || null,
+            category_id: category_id || null,
+            material_type,
+            is_system: isAdminMode,
+            organization_id: isAdminMode ? null : organization_id,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error creating material:", error);
+        if (error.code === "23505") {
+            return { error: "Ya existe un material con ese nombre" };
+        }
+        return { error: error.message };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { data };
+}
+
+/**
+ * Update a material
+ * @param isAdminMode - If true, can only update system materials
+ */
+export async function updateMaterial(formData: FormData, isAdminMode: boolean = false) {
+    const supabase = await createClient();
+
+    const id = formData.get("id") as string;
+    const name = formData.get("name") as string;
+    const unit_id = formData.get("unit_id") as string || null;
+    const category_id = formData.get("category_id") as string || null;
+    const material_type = (formData.get("material_type") as string) || "material";
+
+    if (!id) {
+        return { error: "ID es requerido" };
+    }
+
+    if (!name?.trim()) {
+        return { error: "El nombre es requerido" };
+    }
+
+    let query = supabase
+        .from("materials")
+        .update({
+            name: name.trim(),
+            unit_id: unit_id || null,
+            category_id: category_id || null,
+            material_type,
+        })
+        .eq("id", id);
+
+    // Safety: only update the correct type of material
+    if (isAdminMode) {
+        query = query.eq("is_system", true);
+    } else {
+        query = query.eq("is_system", false);
+    }
+
+    const { data, error } = await query.select().single();
+
+    if (error) {
+        console.error("Error updating material:", error);
+        if (error.code === "23505") {
+            return { error: "Ya existe un material con ese nombre" };
+        }
+        return { error: error.message };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { data };
+}
+
+/**
+ * Delete a material (soft delete)
+ * @param isAdminMode - If true, can only delete system materials
+ */
+export async function deleteMaterial(id: string, replacementId: string | null, isAdminMode: boolean = false) {
+    const supabase = await createClient();
+
+    // If replacement is provided, update all references first
+    if (replacementId) {
+        // products table
+        await supabase
+            .from("products")
+            .update({ material_id: replacementId })
+            .eq("material_id", id);
+
+        // organization_material_prices table
+        await supabase
+            .from("organization_material_prices")
+            .update({ material_id: replacementId })
+            .eq("material_id", id);
+
+        // task_materials table
+        await supabase
+            .from("task_materials")
+            .update({ material_id: replacementId })
+            .eq("material_id", id);
+    }
+
+    let query = supabase
+        .from("materials")
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+    // Safety: only delete the correct type of material
+    if (isAdminMode) {
+        query = query.eq("is_system", true);
+    } else {
+        query = query.eq("is_system", false);
+    }
+
+    const { error } = await query;
+
+    if (error) {
+        console.error("Error deleting material:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+

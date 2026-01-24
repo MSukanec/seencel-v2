@@ -189,47 +189,46 @@ export function QuotesList({
 
     return (
         <div className="space-y-4 flex flex-col flex-1 min-h-0">
-            {/* Toolbar Area */}
-            <Card className="p-4 border-dashed bg-card/50">
-                <Toolbar
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    searchPlaceholder="Buscar por nombre, cliente o proyecto..."
-                    filterContent={
-                        <>
-                            <FacetedFilter
-                                title="Estado"
-                                options={statusOptions}
-                                selectedValues={statusFilter}
-                                onSelect={(value) => {
-                                    const next = new Set(statusFilter);
-                                    if (next.has(value)) next.delete(value);
-                                    else next.add(value);
-                                    setStatusFilter(next);
-                                }}
-                                onClear={() => setStatusFilter(new Set())}
-                            />
-                            <FacetedFilter
-                                title="Tipo"
-                                options={typeOptions}
-                                selectedValues={typeFilter}
-                                onSelect={(value) => {
-                                    const next = new Set(typeFilter);
-                                    if (next.has(value)) next.delete(value);
-                                    else next.add(value);
-                                    setTypeFilter(next);
-                                }}
-                                onClear={() => setTypeFilter(new Set())}
-                            />
-                        </>
-                    }
-                >
-                    <Button size="sm" onClick={handleCreateQuote}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nuevo Presupuesto
-                    </Button>
-                </Toolbar>
-            </Card>
+            {/* Toolbar - Portaled to Header */}
+            <Toolbar
+                portalToHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Buscar por nombre, cliente o proyecto..."
+                filterContent={
+                    <>
+                        <FacetedFilter
+                            title="Estado"
+                            options={statusOptions}
+                            selectedValues={statusFilter}
+                            onSelect={(value) => {
+                                const next = new Set(statusFilter);
+                                if (next.has(value)) next.delete(value);
+                                else next.add(value);
+                                setStatusFilter(next);
+                            }}
+                            onClear={() => setStatusFilter(new Set())}
+                        />
+                        <FacetedFilter
+                            title="Tipo"
+                            options={typeOptions}
+                            selectedValues={typeFilter}
+                            onSelect={(value) => {
+                                const next = new Set(typeFilter);
+                                if (next.has(value)) next.delete(value);
+                                else next.add(value);
+                                setTypeFilter(next);
+                            }}
+                            onClear={() => setTypeFilter(new Set())}
+                        />
+                    </>
+                }
+            >
+                <Button size="sm" onClick={handleCreateQuote}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Presupuesto
+                </Button>
+            </Toolbar>
 
 
             {/* Quotes List */}

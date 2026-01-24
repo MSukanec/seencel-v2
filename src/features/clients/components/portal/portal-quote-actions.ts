@@ -120,6 +120,30 @@ export async function approveQuote({ quoteId, projectId, clientId, signatureData
         return { error: "RLS bloqueó la actualización" };
     }
 
+    // Create construction tasks from quote items (if quote has a project)
+    const { data: quoteWithProject } = await supabase
+        .from("quotes")
+        .select("project_id")
+        .eq("id", quoteId)
+        .single();
+
+    if (quoteWithProject?.project_id) {
+        const { data: taskResult, error: taskError } = await supabase.rpc(
+            'approve_quote_and_create_tasks',
+            {
+                p_quote_id: quoteId,
+                p_member_id: null
+            }
+        );
+
+        if (taskError) {
+            console.error("Error creating construction tasks:", taskError);
+            // Don't fail the approval - tasks can be created manually
+        } else if (taskResult && !taskResult.success) {
+            console.warn("Construction tasks not created:", taskResult.message);
+        }
+    }
+
     // Create activity log
     await supabase.from("activity_logs").insert({
         organization_id: quote.organization_id,

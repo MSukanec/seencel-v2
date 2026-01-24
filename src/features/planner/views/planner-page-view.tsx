@@ -10,6 +10,8 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { PlannerCalendarView } from "./planner-calendar-view";
 import { KanbanDashboard } from "@/features/planner/components/kanban-dashboard";
 import { CalendarEvent } from "@/features/planner/types";
+import { useTranslations } from "next-intl";
+import { Project } from "@/types/project";
 
 // ============================================================================
 // PLANNER PAGE VIEW
@@ -31,6 +33,7 @@ interface PlannerPageViewProps {
     baseUrl: string;
     /** Calendar events for the calendar view */
     calendarEvents: CalendarEvent[];
+    projects?: Project[];
 }
 
 export function PlannerPageView({
@@ -40,8 +43,10 @@ export function PlannerPageView({
     organizationId,
     projectId,
     baseUrl,
-    calendarEvents
+    calendarEvents,
+    projects
 }: PlannerPageViewProps) {
+    const t = useTranslations('Planner');
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
@@ -58,8 +63,8 @@ export function PlannerPageView({
 
     const tabs = (
         <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
-            <TabsTrigger value="calendar" className={tabTriggerClass}>Calendario</TabsTrigger>
-            <TabsTrigger value="kanban" className={tabTriggerClass}>Tablero</TabsTrigger>
+            <TabsTrigger value="calendar" className={tabTriggerClass}>{t('tabs.calendar')}</TabsTrigger>
+            <TabsTrigger value="kanban" className={tabTriggerClass}>{t('tabs.kanban')}</TabsTrigger>
         </TabsList>
     );
 
@@ -67,19 +72,22 @@ export function PlannerPageView({
         <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <PageWrapper
                 type="page"
-                title="Agenda"
+                title={t('title')}
                 tabs={tabs}
                 icon={<CalendarDays />}
             >
-                <ContentLayout variant="wide">
-                    <TabsContent value="calendar" className="m-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                <TabsContent value="calendar" className="m-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                    <ContentLayout variant="wide">
                         <PlannerCalendarView
                             organizationId={organizationId}
                             projectId={projectId}
                             events={calendarEvents}
+                            projects={projects}
                         />
-                    </TabsContent>
-                    <TabsContent value="kanban" className="m-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                    </ContentLayout>
+                </TabsContent>
+                <TabsContent value="kanban" className="m-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                    <ContentLayout variant="full">
                         <KanbanDashboard
                             boards={boards}
                             activeBoardId={activeBoardId}
@@ -88,12 +96,9 @@ export function PlannerPageView({
                             projectId={projectId}
                             baseUrl={baseUrl}
                         />
-                    </TabsContent>
-                </ContentLayout>
+                    </ContentLayout>
+                </TabsContent>
             </PageWrapper>
         </Tabs>
     );
 }
-
-
-

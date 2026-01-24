@@ -32,7 +32,7 @@ export function ToolbarTabs({ value, onValueChange, options, className }: Toolba
                         size="sm"
                         onClick={() => onValueChange(option.value)}
                         className={cn(
-                            "relative h-full px-3 text-sm font-medium transition-all hover:bg-transparent",
+                            "relative h-full px-3 text-sm font-medium transition-all hover:bg-transparent flex-1",
                             isSelected
                                 ? "text-primary-foreground shadow-sm"
                                 : "text-muted-foreground hover:text-foreground"

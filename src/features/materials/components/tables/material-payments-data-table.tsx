@@ -5,7 +5,7 @@ import { DataTable } from "@/components/shared/data-table/data-table";
 import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase } from "../../types";
 import { columns } from "./material-payments-columns";
 import { Button } from "@/components/ui/button";
-import { Plus, Banknote } from "lucide-react";
+import { Plus } from "lucide-react";
 import { DataTableExport } from "@/components/shared/data-table/data-table-export";
 import { useModal } from "@/providers/modal-store";
 import { MaterialPaymentForm } from "../forms/material-payment-form";
@@ -13,7 +13,6 @@ import { deleteMaterialPaymentAction } from "@/features/materials/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { EmptyState } from "@/components/ui/empty-state";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 interface MaterialPaymentsDataTableProps {
@@ -120,21 +119,6 @@ export function MaterialPaymentsDataTable({
         { label: "Anulado", value: "void" },
     ];
 
-    // Empty State when no payments
-    if (data.length === 0) {
-        return (
-            <EmptyState
-                icon={Banknote}
-                title="Sin pagos de materiales"
-                description="Registrá el primer pago de materiales para este proyecto."
-                action={
-                    <Button onClick={handleNewPayment}>
-                        <Plus className="mr-2 h-4 w-4" /> Nuevo Pago
-                    </Button>
-                }
-            />
-        );
-    }
 
     return (
         <div className="h-full flex flex-col">

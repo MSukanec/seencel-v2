@@ -7,14 +7,14 @@ import { useDropzone, type DropzoneOptions } from "react-dropzone";
 import { twMerge } from "tailwind-merge";
 
 const variants = {
-    base: "relative rounded-md flex justify-center items-center flex-col cursor-pointer min-h-[150px] min-w-[200px] border border-dashed border-gray-400 dark:border-gray-300 transition-colors duration-200 ease-in-out",
+    base: "relative flex flex-col items-center justify-center w-full rounded-md border border-input bg-background p-6 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer hover:bg-accent/50",
     image:
-        "border-0 p-0 min-h-0 min-w-0 relative shadow-md bg-slate-200 dark:bg-slate-900 rounded-md",
-    active: "border-2",
+        "border-0 p-0 relative shadow-md bg-slate-200 dark:bg-slate-900 rounded-md",
+    active: "border-primary bg-primary/5 ring-1 ring-primary",
     disabled:
-        "bg-gray-200 border-gray-300 cursor-default pointer-events-none bg-opacity-30 dark:bg-gray-700",
-    accept: "border border-blue-500 bg-blue-500 bg-opacity-10",
-    reject: "border border-red-500 bg-red-500 bg-opacity-10",
+        "bg-muted border-muted-foreground/20 cursor-default pointer-events-none opacity-50",
+    accept: "border-primary bg-primary/5 ring-1 ring-primary",
+    reject: "border-destructive bg-destructive/10 ring-1 ring-destructive",
 };
 
 type InputProps = {
@@ -141,10 +141,19 @@ const SingleImageDropzone = React.forwardRef<HTMLInputElement, InputProps>(
                             alt={typeof value === "string" ? value : value?.name}
                         />
                     ) : (
-                        // Upload Icon
-                        <div className="flex flex-col items-center justify-center text-xs text-gray-400">
-                            <UploadCloud className="mb-2 h-7 w-7" />
-                            <div className="text-gray-400">{dropzoneLabel || "Drag or click to upload"}</div>
+                        // Upload Prompt - styled like MultiFileUpload
+                        <div className="flex flex-col items-center gap-1.5 text-center">
+                            <div className="p-2 bg-primary/10 rounded-full">
+                                <UploadCloud className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="space-y-0.5">
+                                <p className="font-medium text-foreground">
+                                    <span className="text-primary hover:underline">Haz clic</span> o arrastra imagen
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {dropzoneLabel || "PNG, JPG, WEBP hasta 10MB"}
+                                </p>
+                            </div>
                         </div>
                     )}
 
