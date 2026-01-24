@@ -76,9 +76,8 @@ export function MediaLightbox({ items, initialIndex, isOpen, onClose }: MediaLig
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent
-                className="max-w-[95vw] w-full h-[95vh] p-0 overflow-hidden bg-transparent border-none shadow-none flex flex-col justify-center items-center focus:outline-none [&>button]:hidden"
-            // Prevent generic close button from interfering or looking ugly
-            // We implement our own UI
+                className="max-w-[95vw] w-full h-[95vh] p-0 overflow-hidden bg-transparent border-none shadow-none flex flex-col justify-center items-center focus:outline-none [&>[data-radix-dialog-close]]:hidden"
+            // Hide the default close button from Radix/shadcn, we use our own
             >
                 {/* Accessibility: Dialog must have a title */}
                 <VisuallyHidden.Root>
@@ -99,10 +98,10 @@ export function MediaLightbox({ items, initialIndex, isOpen, onClose }: MediaLig
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-4 right-4 z-50 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md"
+                    className="absolute top-4 right-2 sm:right-4 z-50 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md h-10 w-10 sm:h-11 sm:w-11 flex"
                     onClick={onClose}
                 >
-                    <X className="h-5 w-5" />
+                    <X className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Button>
 
                 {/* Navigation Arrows */}
@@ -110,10 +109,10 @@ export function MediaLightbox({ items, initialIndex, isOpen, onClose }: MediaLig
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-50 rounded-full bg-black/50 text-white hover:bg-black/70 h-12 w-12 hidden sm:flex"
+                        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 rounded-full bg-black/50 text-white hover:bg-black/70 h-10 w-10 sm:h-12 sm:w-12 flex"
                         onClick={prev}
                     >
-                        <ChevronLeft className="h-8 w-8" />
+                        <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8" />
                     </Button>
                 )}
 
@@ -121,10 +120,10 @@ export function MediaLightbox({ items, initialIndex, isOpen, onClose }: MediaLig
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-50 rounded-full bg-black/50 text-white hover:bg-black/70 h-12 w-12 hidden sm:flex"
+                        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 rounded-full bg-black/50 text-white hover:bg-black/70 h-10 w-10 sm:h-12 sm:w-12 flex"
                         onClick={next}
                     >
-                        <ChevronRight className="h-8 w-8" />
+                        <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8" />
                     </Button>
                 )}
 

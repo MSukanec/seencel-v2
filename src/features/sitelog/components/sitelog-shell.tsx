@@ -11,7 +11,6 @@ import { SiteLogTypesManager } from "./sitelog-types-manager";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SitelogFeed } from "./sitelog-feed";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { Star, Circle, Activity, AlertTriangle, HelpCircle } from "lucide-react";
 
@@ -182,104 +181,58 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                 >
                     <ContentLayout variant="wide" className="[scrollbar-gutter:stable]">
                         <TabsContent value="entries" className="mt-0 h-full space-y-6">
-                            {/* Toolbar Area - Hidden on mobile (mobile uses floating buttons) */}
-                            <Card className="hidden md:block p-4 border-dashed bg-card/50">
-                                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                                    <div className="flex-1 w-full sm:w-auto">
-                                        <Toolbar
-                                            searchQuery={searchQuery}
-                                            onSearchChange={setSearchQuery}
-                                            searchPlaceholder="Buscar en bitácora..."
-                                            // mobileActionClick={handleCreate}
-                                            filterContent={
-                                                <>
-                                                    <FacetedFilter
-                                                        title="Severidad"
-                                                        options={severityOptions}
-                                                        selectedValues={severityFilter}
-                                                        onSelect={(value) => {
-                                                            const next = new Set(severityFilter);
-                                                            if (next.has(value)) next.delete(value);
-                                                            else next.add(value);
-                                                            setSeverityFilter(next);
-                                                        }}
-                                                        onClear={() => setSeverityFilter(new Set())}
-                                                    />
+                            {/* Toolbar teleports to header */}
+                            <Toolbar
+                                portalToHeader
+                                searchQuery={searchQuery}
+                                onSearchChange={setSearchQuery}
+                                searchPlaceholder="Buscar en bitácora..."
+                                filterContent={
+                                    <>
+                                        <FacetedFilter
+                                            title="Severidad"
+                                            options={severityOptions}
+                                            selectedValues={severityFilter}
+                                            onSelect={(value) => {
+                                                const next = new Set(severityFilter);
+                                                if (next.has(value)) next.delete(value);
+                                                else next.add(value);
+                                                setSeverityFilter(next);
+                                            }}
+                                            onClear={() => setSeverityFilter(new Set())}
+                                        />
 
-                                                    <FacetedFilter
-                                                        title="Tipo"
-                                                        options={typeOptions}
-                                                        selectedValues={typeFilter}
-                                                        onSelect={(value) => {
-                                                            const next = new Set(typeFilter);
-                                                            if (next.has(value)) next.delete(value);
-                                                            else next.add(value);
-                                                            setTypeFilter(next);
-                                                        }}
-                                                        onClear={() => setTypeFilter(new Set())}
-                                                    />
+                                        <FacetedFilter
+                                            title="Tipo"
+                                            options={typeOptions}
+                                            selectedValues={typeFilter}
+                                            onSelect={(value) => {
+                                                const next = new Set(typeFilter);
+                                                if (next.has(value)) next.delete(value);
+                                                else next.add(value);
+                                                setTypeFilter(next);
+                                            }}
+                                            onClear={() => setTypeFilter(new Set())}
+                                        />
 
-                                                    <Button
-                                                        variant={showFavoritesOnly ? "secondary" : "outline"}
-                                                        size="sm"
-                                                        onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                                                        className={cn("h-9 px-3 border-dashed", showFavoritesOnly && "text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20")}
-                                                    >
-                                                        <Star className={cn("h-4 w-4 mr-1", showFavoritesOnly ? "fill-current" : "")} />
-                                                        <span className="hidden sm:inline">Favoritos</span>
-                                                    </Button>
-                                                </>
-                                            }
+                                        <Button
+                                            variant={showFavoritesOnly ? "secondary" : "outline"}
+                                            size="sm"
+                                            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                                            className={cn("h-9 px-3 border-dashed", showFavoritesOnly && "text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20")}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
-                                                <Button disabled={!canCreateLog} onClick={handleCreate} size="sm">
-                                                    <Plus className="mr-2 h-4 w-4" />
-                                                    Crear registro
-                                                </Button>
-                                            </div>
-                                        </Toolbar>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            {/* Mobile Toolbar - Rendered via Portal by Toolbar component */}
-                            <div className="md:hidden">
-                                <Toolbar
-                                    searchQuery={searchQuery}
-                                    onSearchChange={setSearchQuery}
-                                    searchPlaceholder="Buscar en bitácora..."
-                                    // mobileActionClick={handleCreate}
-                                    filterContent={
-                                        <>
-                                            <FacetedFilter
-                                                title="Severidad"
-                                                options={severityOptions}
-                                                selectedValues={severityFilter}
-                                                onSelect={(value) => {
-                                                    const next = new Set(severityFilter);
-                                                    if (next.has(value)) next.delete(value);
-                                                    else next.add(value);
-                                                    setSeverityFilter(next);
-                                                }}
-                                                onClear={() => setSeverityFilter(new Set())}
-                                            />
-                                            <FacetedFilter
-                                                title="Tipo"
-                                                options={typeOptions}
-                                                selectedValues={typeFilter}
-                                                onSelect={(value) => {
-                                                    const next = new Set(typeFilter);
-                                                    if (next.has(value)) next.delete(value);
-                                                    else next.add(value);
-                                                    setTypeFilter(next);
-                                                }}
-                                                onClear={() => setTypeFilter(new Set())}
-                                            />
-                                        </>
-                                    }
-                                />
-                            </div>
+                                            <Star className={cn("h-4 w-4 mr-1", showFavoritesOnly ? "fill-current" : "")} />
+                                            <span className="hidden sm:inline">Favoritos</span>
+                                        </Button>
+                                    </>
+                                }
+                                actions={[{
+                                    label: "Crear registro",
+                                    icon: Plus,
+                                    onClick: handleCreate,
+                                    disabled: !canCreateLog,
+                                }]}
+                            />
 
                             <SitelogFeed
                                 logs={filteredLogs}

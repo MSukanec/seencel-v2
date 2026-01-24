@@ -61,7 +61,7 @@ export function LayoutSwitcher({
                         <GlobalDrawer />
                         <div className="flex-1 flex flex-col">
                             <main className="flex-1">
-                                <div className="w-full mx-auto max-w-[1800px] p-3 md:p-4 animate-in fade-in py-4 md:py-6">
+                                <div className="w-full mx-auto max-w-[1800px] p-1 md:p-4 animate-in fade-in py-2 md:py-6">
                                     {children}
                                 </div>
                             </main>
