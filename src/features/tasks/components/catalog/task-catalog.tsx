@@ -1,38 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { TasksByDivision, TaskView, Unit, TaskDivision } from "../../types";
+import { useLocale } from "next-intl";
+import { MoreHorizontal, Pencil, Trash2, Eye, Monitor, Building2 } from "lucide-react";
+import { toast } from "sonner";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-    ChevronDown,
-    ChevronRight,
-    Search,
-    Plus,
-    Building2,
-    Monitor,
-    FileCode,
-    Ruler,
-    MoreHorizontal,
-    Pencil,
-    Trash2
-} from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { useModal } from "@/providers/modal-store";
+import { ContextSidebar } from "@/providers/context-sidebar-provider";
+import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+
+import { DivisionsSidebar } from "./divisions-sidebar";
 import { TaskForm } from "../forms/task-form";
 import { deleteTask } from "../../actions";
-import { toast } from "sonner";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
-import Link from "next/link";
+import { TasksByDivision, TaskView, Unit, TaskDivision } from "../../types";
 
 interface TaskCatalogProps {
     groupedTasks: TasksByDivision[];
@@ -40,79 +29,113 @@ interface TaskCatalogProps {
     units: Unit[];
     divisions: TaskDivision[];
     isAdminMode?: boolean;
-    showHeader?: boolean;
+    searchQuery?: string;
+    originFilter?: "all" | "system" | "organization";
 }
 
-export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode = false, showHeader = true }: TaskCatalogProps) {
+export function TaskCatalog({
+    groupedTasks,
+    orgId,
+    units,
+    divisions,
+    isAdminMode = false,
+    searchQuery: externalSearchQuery = "",
+    originFilter = "all",
+}: TaskCatalogProps) {
     const router = useRouter();
+    const locale = useLocale();
     const { openModal, closeModal } = useModal();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [expandedDivisions, setExpandedDivisions] = useState<Set<string>>(
-        new Set(groupedTasks.map(g => g.division?.id || "sin-division"))
-    );
+
+    // State
+    const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState<TaskView | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Filter tasks by search
-    const filteredGroups = groupedTasks.map(group => ({
-        ...group,
-        tasks: group.tasks.filter(task => {
-            const query = searchQuery.toLowerCase();
-            return (
-                task.name?.toLowerCase().includes(query) ||
-                task.custom_name?.toLowerCase().includes(query) ||
-                task.code?.toLowerCase().includes(query) ||
-                task.description?.toLowerCase().includes(query)
+    // Create order map from divisions for sorting
+    const divisionOrderMap = useMemo(() => {
+        const map: Record<string, number> = {};
+        divisions.forEach(d => {
+            map[d.id] = d.order ?? 999999;
+        });
+        return map;
+    }, [divisions]);
+
+    // Flatten all tasks
+    const allTasks = useMemo(() => {
+        return groupedTasks.flatMap(g => g.tasks);
+    }, [groupedTasks]);
+
+    // Calculate task counts per division (considering origin filter)
+    const taskCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+
+        // Filter by origin first
+        let tasksToCount = allTasks;
+        if (originFilter === "system") {
+            tasksToCount = tasksToCount.filter(t => t.is_system);
+        } else if (originFilter === "organization") {
+            tasksToCount = tasksToCount.filter(t => !t.is_system);
+        }
+
+        tasksToCount.forEach(t => {
+            const divId = t.task_division_id || "sin-division";
+            counts[divId] = (counts[divId] || 0) + 1;
+        });
+
+        return counts;
+    }, [allTasks, originFilter]);
+
+    // Filter tasks by selected division, search, and origin
+    const filteredTasks = useMemo(() => {
+        let tasks = allTasks;
+
+        // Filter by origin
+        if (originFilter === "system") {
+            tasks = tasks.filter(t => t.is_system);
+        } else if (originFilter === "organization") {
+            tasks = tasks.filter(t => !t.is_system);
+        }
+
+        // Filter by division
+        if (selectedDivisionId === "sin-division") {
+            tasks = tasks.filter(t => !t.task_division_id);
+        } else if (selectedDivisionId !== null) {
+            tasks = tasks.filter(t => t.task_division_id === selectedDivisionId);
+        }
+
+        // Filter by search (from external toolbar)
+        if (externalSearchQuery.trim()) {
+            const query = externalSearchQuery.toLowerCase();
+            tasks = tasks.filter(t =>
+                t.name?.toLowerCase().includes(query) ||
+                t.custom_name?.toLowerCase().includes(query) ||
+                t.code?.toLowerCase().includes(query) ||
+                t.description?.toLowerCase().includes(query)
             );
-        })
-    })).filter(group => group.tasks.length > 0)
-        // Sort by division order using the divisions prop
-        .sort((a, b) => {
-            if (!a.division) return 1;
-            if (!b.division) return -1;
-            const divA = divisions.find(d => d.id === a.division?.id);
-            const divB = divisions.find(d => d.id === b.division?.id);
-            const orderA = divA?.order ?? 999999;
-            const orderB = divB?.order ?? 999999;
+        }
+
+        // Sort by division order, then by code/name
+        return [...tasks].sort((a, b) => {
+            // First by division order
+            const orderA = a.task_division_id ? (divisionOrderMap[a.task_division_id] ?? 999999) : 999999;
+            const orderB = b.task_division_id ? (divisionOrderMap[b.task_division_id] ?? 999999) : 999999;
             if (orderA !== orderB) return orderA - orderB;
-            return (a.division.name || "").localeCompare(b.division.name || "");
-        });
 
-    const toggleDivision = (divisionId: string) => {
-        setExpandedDivisions(prev => {
-            const next = new Set(prev);
-            if (next.has(divisionId)) {
-                next.delete(divisionId);
-            } else {
-                next.add(divisionId);
-            }
-            return next;
-        });
-    };
+            // Then by code (if available)
+            if (a.code && b.code) return a.code.localeCompare(b.code);
+            if (a.code) return -1;
+            if (b.code) return 1;
 
-    const handleCreateTask = () => {
-        openModal(
-            <TaskForm
-                mode="create"
-                organizationId={orgId}
-                units={units}
-                divisions={divisions}
-                isAdminMode={isAdminMode}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
-            {
-                title: isAdminMode ? "Nueva Tarea de Sistema" : "Nueva Tarea",
-                description: isAdminMode
-                    ? "Crear una tarea del sistema disponible para todas las organizaciones"
-                    : "Agregar una tarea personalizada al catálogo de tu organización",
-                size: "lg"
-            }
-        );
+            // Finally by name
+            return (a.name || a.custom_name || "").localeCompare(b.name || b.custom_name || "");
+        });
+    }, [allTasks, selectedDivisionId, externalSearchQuery, originFilter, divisionOrderMap]);
+
+    // Handlers
+    const handleViewTask = (task: TaskView) => {
+        const basePath = isAdminMode ? `/${locale}/admin/catalog/task` : `/${locale}/organization/catalog/task`;
+        router.push(`${basePath}/${task.id}`);
     };
 
     const handleEditTask = (task: TaskView) => {
@@ -164,126 +187,51 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode
         }
     };
 
-    const totalTasks = groupedTasks.reduce((acc, g) => acc + g.tasks.length, 0);
-    const systemTasks = groupedTasks.reduce((acc, g) => acc + g.tasks.filter(t => t.is_system).length, 0);
-    const orgTasks = totalTasks - systemTasks;
+    // Sidebar content - injected into the layout's context sidebar
+    const sidebarContent = (
+        <DivisionsSidebar
+            divisions={divisions}
+            taskCounts={taskCounts}
+            selectedDivisionId={selectedDivisionId}
+            onSelectDivision={setSelectedDivisionId}
+            totalTasks={allTasks.length}
+        />
+    );
 
     return (
         <>
-            <Card>
-                {/* Header with toolbar - only shown when showHeader is true */}
-                {showHeader && (
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                                <CardTitle>Catálogo de Tareas</CardTitle>
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="gap-1">
-                                        <FileCode className="h-3 w-3" />
-                                        {totalTasks} tareas
-                                    </Badge>
-                                    <Badge variant="system" className="gap-1">
-                                        <Monitor className="h-3 w-3" />
-                                        {systemTasks} sistema
-                                    </Badge>
-                                    <Badge variant="organization" className="gap-1">
-                                        <Building2 className="h-3 w-3" />
-                                        {orgTasks} propias
-                                    </Badge>
-                                </div>
-                            </div>
-                            <CardDescription>
-                                Gestiona las tareas disponibles para tus presupuestos
-                            </CardDescription>
+            {/* Inject sidebar content into the layout's context sidebar slot */}
+            <ContextSidebar title="Rubros">
+                {sidebarContent}
+            </ContextSidebar>
+
+            {/* Main Content - same pattern as MaterialsCatalogView */}
+            <div className="space-y-2">
+                {filteredTasks.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <div className="rounded-full bg-muted p-4 mb-4">
+                            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
                         </div>
-                        <Button size="sm" onClick={handleCreateTask}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Nueva Tarea
-                        </Button>
-                    </CardHeader>
-                )}
-
-                <CardContent className="space-y-4">
-                    {/* Search - only shown when showHeader is true */}
-                    {showHeader && (
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar tareas por nombre, código o descripción..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    )}
-
-                    {/* Grouped Tasks */}
-                    <div className="space-y-2">
-                        {filteredGroups.map((group) => {
-                            const divisionId = group.division?.id || "sin-division";
-                            const isExpanded = expandedDivisions.has(divisionId);
-                            const publishedCount = group.tasks.filter(t => t.is_published).length;
-                            const draftCount = group.tasks.length - publishedCount;
-
-                            return (
-                                <div key={divisionId} className="border rounded-lg overflow-hidden">
-                                    {/* Division Header */}
-                                    <div
-                                        className="py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors bg-muted/30"
-                                        onClick={() => toggleDivision(divisionId)}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                {isExpanded ? (
-                                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                ) : (
-                                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                )}
-                                                <div
-                                                    className="w-3 h-3 rounded-full"
-                                                    style={{ backgroundColor: group.division?.color || "#6b7280" }}
-                                                />
-                                                <span className="text-sm font-medium">
-                                                    {group.division?.name || "Sin División"}
-                                                </span>
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {group.tasks.length}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Tasks List */}
-                                    {isExpanded && (
-                                        <div className="border-t divide-y">
-                                            {group.tasks.map((task) => (
-                                                <TaskRow
-                                                    key={task.id}
-                                                    task={task}
-                                                    isAdminMode={isAdminMode}
-                                                    onEdit={handleEditTask}
-                                                    onDelete={handleDeleteClick}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        <h3 className="font-medium text-lg">No hay tareas</h3>
+                        <p className="text-sm mt-1">
+                            {externalSearchQuery ? "No se encontraron resultados" : "Agregá tareas para comenzar"}
+                        </p>
                     </div>
-
-                    {/* Empty State */}
-                    {filteredGroups.length === 0 && (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <FileCode className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium">No se encontraron tareas</p>
-                            <p className="text-sm">
-                                {searchQuery ? "Probá con otro término de búsqueda" : "Agregá tareas para comenzar"}
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                ) : (
+                    filteredTasks.map((task) => (
+                        <TaskListItem
+                            key={task.id}
+                            task={task}
+                            isAdminMode={isAdminMode}
+                            onView={handleViewTask}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteClick}
+                        />
+                    ))
+                )}
+            </div>
 
             {/* Delete Confirmation Dialog */}
             <DeleteConfirmationDialog
@@ -303,82 +251,94 @@ export function TaskCatalog({ groupedTasks, orgId, units, divisions, isAdminMode
     );
 }
 
-// Individual Task Row with actions
-interface TaskRowProps {
+// Individual Task List Item
+interface TaskListItemProps {
     task: TaskView;
-    isAdminMode?: boolean;
+    isAdminMode: boolean;
+    onView: (task: TaskView) => void;
     onEdit: (task: TaskView) => void;
     onDelete: (task: TaskView) => void;
 }
 
-function TaskRow({ task, isAdminMode = false, onEdit, onDelete }: TaskRowProps) {
-    // In admin mode, all tasks are editable. In org mode, only non-system tasks.
-    const isEditable = isAdminMode || !task.is_system;
+function TaskListItem({ task, isAdminMode, onView, onEdit, onDelete }: TaskListItemProps) {
+    // System tasks are NEVER editable - they are immutable by design
+    // Only organization tasks (is_system = false) can be edited
+    const isEditable = !task.is_system;
+    const displayName = task.name || task.custom_name || "Sin nombre";
 
     return (
-        <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors group">
-            <div className="flex items-center gap-4">
-                {/* Code */}
-                <div className="w-40 shrink-0">
-                    <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
-                        {task.code || "—"}
-                    </code>
-                </div>
+        <div
+            className="flex items-center gap-3 p-3 rounded-lg border bg-sidebar hover:bg-muted/50 transition-colors group cursor-pointer"
+            onClick={() => onView(task)}
+        >
+            {/* Origin Color Line - slate for system, indigo for organization */}
+            <div
+                className={`w-1.5 self-stretch rounded-full shrink-0 ${task.is_system
+                    ? "bg-slate-500"
+                    : "bg-indigo-500"
+                    }`}
+            />
 
-                {/* Name - Clickable to navigate to detail */}
-                <div className="flex-1">
-                    <Link
-                        href={isAdminMode ? `/admin/catalog/task/${task.id}` : `/organization/catalog/task/${task.id}`}
-                        className="text-sm font-medium hover:text-primary hover:underline transition-colors"
-                    >
-                        {task.name || task.custom_name || "Sin nombre"}
-                    </Link>
-                    {task.description && (
-                        <p className="text-xs text-muted-foreground truncate max-w-md">
-                            {task.description}
-                        </p>
+            {/* Name & Badges (stacked) */}
+            <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="text-sm font-medium truncate">{displayName}</div>
+
+                {/* Rubro / Unidad / Código badges */}
+                <div className="flex flex-wrap gap-1.5">
+                    {task.division_name && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                            {task.division_name}
+                        </span>
+                    )}
+                    <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                        {task.unit_name || "Sin unidad"}
+                    </span>
+                    {task.code && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                            {task.code}
+                        </span>
                     )}
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
-                {/* Unit */}
-                <Badge variant="outline" className="gap-1 text-xs">
-                    <Ruler className="h-3 w-3" />
-                    {task.unit_name || "—"}
+            {/* Source Badge */}
+            {task.is_system ? (
+                <Badge variant="system" className="shrink-0 gap-1">
+                    <Monitor className="h-3 w-3" />
+                    Sistema
                 </Badge>
+            ) : (
+                <Badge variant="organization" className="shrink-0 gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Propia
+                </Badge>
+            )}
 
-                {/* Source Badge */}
-                {task.is_system ? (
-                    <Badge variant="system" icon={<Monitor className="h-3 w-3" />}>
-                        Sistema
-                    </Badge>
-                ) : (
-                    <Badge variant="organization" icon={<Building2 className="h-3 w-3" />}>
-                        Propia
-                    </Badge>
-                )}
+            {/* Status */}
+            {!task.is_published && (
+                <Badge variant="outline" className="shrink-0 text-xs text-amber-500 border-amber-500/30">
+                    Borrador
+                </Badge>
+            )}
 
-                {/* Status */}
-                {!task.is_published && (
-                    <Badge variant="outline" className="text-xs text-amber-500 border-amber-500/30">
-                        Borrador
-                    </Badge>
-                )}
-
-                {/* Actions Menu - Only for org tasks */}
-                {isEditable ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                            >
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+            {/* Actions */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => onView(task)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Ver detalle
+                    </DropdownMenuItem>
+                    {isEditable && (
+                        <>
                             <DropdownMenuItem onClick={() => onEdit(task)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Editar
@@ -390,12 +350,10 @@ function TaskRow({ task, isAdminMode = false, onEdit, onDelete }: TaskRowProps) 
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Eliminar
                             </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <div className="w-8" /> // Spacer for alignment
-                )}
-            </div>
+                        </>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }

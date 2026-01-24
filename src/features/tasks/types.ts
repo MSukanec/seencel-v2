@@ -41,6 +41,7 @@ export interface TaskDivision {
     description?: string;
     organization_id?: string | null;
     order?: number | null;
+    parent_id?: string | null;
 }
 
 export interface Unit {
@@ -56,7 +57,6 @@ export interface TasksByDivision {
     tasks: TaskView[];
 }
 
-// Material linked to a task (the "recipe")
 export interface TaskMaterial {
     id: string;
     task_id: string;
@@ -67,3 +67,70 @@ export interface TaskMaterial {
     is_system: boolean;
 }
 
+// Parameter type for reusable task parameters
+export type ParameterType = 'text' | 'number' | 'select' | 'material' | 'boolean';
+
+export interface TaskParameter {
+    id: string;
+    created_at: string;
+    updated_at: string | null;
+    slug: string;
+    label: string;
+    description: string | null;
+    type: ParameterType;
+    default_value: string | null;
+    validation_rules: Record<string, unknown> | null;
+    expression_template: string | null;
+    is_required: boolean;
+    order: number | null;
+    is_deleted: boolean;
+    deleted_at: string | null;
+}
+
+export interface TaskParameterOption {
+    id: string;
+    parameter_id: string;
+    name: string | null;
+    label: string;
+    value: string | null;
+    short_code: string | null; // For code generation (e.g., LH = ladrillo hueco)
+    material_id: string | null; // Material for auto-hydration of recipes
+    description: string | null;
+    unit_id: string | null;
+    order: number | null;
+    is_deleted: boolean;
+}
+
+// Task Kind (Action type: Ejecución, Instalación, etc.)
+export interface TaskKind {
+    id: string;
+    code: string;
+    name: string;
+    short_code: string | null;
+    description: string | null;
+    order: number | null;
+    is_active: boolean;
+}
+
+// Task Element (Object: Contrapiso, Muro, etc.)
+export interface TaskElement {
+    id: string;
+    name: string;
+    slug: string;
+    code: string | null; // Short code like MUR, CTR, VIG
+    description: string | null;
+    icon: string | null;
+    order: number | null;
+    is_deleted: boolean;
+}
+
+// Extended Task with parametric fields
+export interface ParametricTask extends Task {
+    task_kind_id: string | null;
+    task_element_id: string | null;
+    is_parametric: boolean;
+    parameter_values: Record<string, string | number | boolean>;
+    // Joined data
+    kind?: TaskKind;
+    element?: TaskElement;
+}

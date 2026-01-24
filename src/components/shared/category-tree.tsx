@@ -11,6 +11,7 @@ import {
     Trash2,
     FolderOpen,
     Folder,
+    ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +30,7 @@ export interface CategoryItem {
     id: string;
     name: string | null;
     parent_id: string | null;
+    order?: number | null; // For sorting by explicit order
 }
 
 interface CategoryTreeProps {
@@ -39,9 +41,13 @@ interface CategoryTreeProps {
     onEditClick: (category: CategoryItem) => void;
     /** Called when user clicks "Eliminar" - parent handles the modal */
     onDeleteClick: (category: CategoryItem) => void;
+    /** Called when user clicks the item or "Ver detalles" - for navigation */
+    onItemClick?: (category: CategoryItem) => void;
     emptyMessage?: string;
     /** Show drag handles (for future drag & drop support) */
     showDragHandle?: boolean;
+    /** Show hierarchical numbering (1, 1.1, 1.2) instead of folder icons */
+    showNumbering?: boolean;
 }
 
 // ============================================================================
@@ -50,6 +56,7 @@ interface CategoryTreeProps {
 
 interface TreeNode extends CategoryItem {
     children: TreeNode[];
+    number?: string; // For hierarchical numbering (1, 1.1, etc.)
 }
 
 function buildTree(items: CategoryItem[]): TreeNode[] {
@@ -71,14 +78,27 @@ function buildTree(items: CategoryItem[]): TreeNode[] {
         }
     }
 
-    // Sort children alphabetically
+    // Sort by order first, then alphabetically as fallback
     const sortNodes = (nodes: TreeNode[]): TreeNode[] => {
         return nodes
-            .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+            .sort((a, b) => {
+                const orderA = a.order ?? 999999;
+                const orderB = b.order ?? 999999;
+                if (orderA !== orderB) return orderA - orderB;
+                return (a.name || "").localeCompare(b.name || "");
+            })
             .map(node => ({ ...node, children: sortNodes(node.children) }));
     };
 
     return sortNodes(roots);
+}
+
+// Assign hierarchical numbers to tree nodes
+function assignNumbers(nodes: TreeNode[], prefix: string = ""): void {
+    nodes.forEach((node, index) => {
+        node.number = prefix ? `${prefix}.${index + 1}` : `${index + 1}`;
+        assignNumbers(node.children, node.number);
+    });
 }
 
 // ============================================================================
@@ -90,14 +110,22 @@ export function CategoryTree({
     onAddClick,
     onEditClick,
     onDeleteClick,
+    onItemClick,
     emptyMessage = "No hay categorías",
-    showDragHandle = false
+    showDragHandle = false,
+    showNumbering = false
 }: CategoryTreeProps) {
     // Accordion behavior: only one expanded per depth level
     // Key = depth level, Value = expanded node id at that level
     const [expandedByLevel, setExpandedByLevel] = useState<Map<number, string>>(new Map());
 
-    const tree = useMemo(() => buildTree(items), [items]);
+    const tree = useMemo(() => {
+        const builtTree = buildTree(items);
+        if (showNumbering) {
+            assignNumbers(builtTree);
+        }
+        return builtTree;
+    }, [items, showNumbering]);
 
     const toggleExpanded = (id: string, depth: number) => {
         setExpandedByLevel(prev => {
@@ -141,7 +169,13 @@ export function CategoryTree({
                         "group cursor-pointer hover:shadow-md transition-all mb-2",
                         isExpanded && "border-primary/50 shadow-md"
                     )}
-                    onClick={() => hasChildren && toggleExpanded(node.id, depth)}
+                    onClick={() => {
+                        if (hasChildren) {
+                            toggleExpanded(node.id, depth);
+                        } else if (onItemClick) {
+                            onItemClick(node);
+                        }
+                    }}
                 >
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
@@ -154,11 +188,20 @@ export function CategoryTree({
                                 )}
                             </div>
 
-                            {/* Folder Icon - Primary color when expanded */}
-                            {isExpanded && hasChildren ? (
-                                <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                            {/* Number or Folder Icon */}
+                            {showNumbering && node.number ? (
+                                <span className={cn(
+                                    "shrink-0 font-mono text-sm font-medium min-w-[2rem]",
+                                    isExpanded ? "text-primary" : "text-muted-foreground"
+                                )}>
+                                    {node.number}
+                                </span>
                             ) : (
-                                <Folder className="h-5 w-5 text-muted-foreground shrink-0" />
+                                isExpanded && hasChildren ? (
+                                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                                ) : (
+                                    <Folder className="h-5 w-5 text-muted-foreground shrink-0" />
+                                )
                             )}
 
                             {/* Name with count inline */}
@@ -196,6 +239,15 @@ export function CategoryTree({
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar
                                     </DropdownMenuItem>
+                                    {onItemClick && (
+                                        <DropdownMenuItem onClick={(e) => {
+                                            e.stopPropagation();
+                                            onItemClick(node);
+                                        }}>
+                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            Configurar
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem
                                         onClick={(e) => {
                                             e.stopPropagation();

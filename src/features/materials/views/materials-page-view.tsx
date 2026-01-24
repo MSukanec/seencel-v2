@@ -12,7 +12,13 @@ import { MaterialsOrdersView } from "./materials-orders-view";
 import { MaterialsPaymentsView } from "./materials-payments-view";
 import { MaterialsSettingsView } from "./materials-settings-view";
 import { MaterialsRequirementsView } from "./materials-requirements-view";
-import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase, MaterialRequirement } from "../types";
+import {
+    MaterialPaymentView,
+    OrganizationFinancialData,
+    MaterialPurchase,
+    MaterialRequirement,
+    PurchaseOrderView
+} from "../types";
 
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
@@ -26,6 +32,9 @@ interface MaterialsPageViewProps {
     financialData: OrganizationFinancialData;
     // Requirements data (for requirements tab)
     requirements: MaterialRequirement[];
+    // Orders data (for orders tab)
+    orders: PurchaseOrderView[];
+    providers: { id: string; name: string }[];
 }
 
 export function MaterialsPageView({
@@ -35,7 +44,9 @@ export function MaterialsPageView({
     payments,
     purchases,
     financialData,
-    requirements
+    requirements,
+    orders,
+    providers
 }: MaterialsPageViewProps) {
     const searchParams = useSearchParams();
     const pathname = usePathname();
@@ -76,7 +87,14 @@ export function MaterialsPageView({
                     <MaterialsRequirementsView projectId={projectId} orgId={orgId} requirements={requirements} />
                 </TabsContent>
                 <TabsContent value="orders" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
-                    <MaterialsOrdersView projectId={projectId} orgId={orgId} />
+                    <MaterialsOrdersView
+                        projectId={projectId}
+                        orgId={orgId}
+                        orders={orders}
+                        providers={providers}
+                        financialData={financialData}
+                        requirements={requirements}
+                    />
                 </TabsContent>
                 <TabsContent value="payments" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsPaymentsView
@@ -94,4 +112,5 @@ export function MaterialsPageView({
         </Tabs>
     );
 }
+
 

@@ -81,8 +81,6 @@ create trigger set_material_payments_updated_at BEFORE
 update on material_payments for EACH row
 execute FUNCTION set_timestamp ();
 
-
-
 # Tabla MATERIALS:
 
 create table public.materials (
@@ -152,3 +150,73 @@ create trigger set_updated_by_materials BEFORE INSERT
 or
 update on materials for EACH row
 execute FUNCTION handle_updated_by ();
+
+# Tabla CONSTRUCTION_TASK_MATERIAL_SNAPSHOTS:
+# Snapshot de materiales congelado al crear construction_task.
+# Cambios en task_materials NO afectan esta tabla.
+
+create table public.construction_task_material_snapshots (
+    id uuid not null default gen_random_uuid(),
+    construction_task_id uuid not null,
+    material_id uuid not null,
+    quantity_planned numeric(20, 4) not null,
+    amount_per_unit numeric(20, 4) not null,
+    unit_id uuid null,
+    source_task_id uuid null,
+    snapshot_at timestamp with time zone not null default now(),
+    organization_id uuid not null,
+    project_id uuid not null,
+    created_at timestamp with time zone not null default now(),
+    constraint construction_task_material_snapshots_pkey primary key (id),
+    constraint ctms_construction_task_fkey foreign key (construction_task_id) 
+        references construction_tasks(id) on delete cascade,
+    constraint ctms_material_fkey foreign key (material_id) 
+        references materials(id) on delete restrict,
+    constraint ctms_unit_fkey foreign key (unit_id) 
+        references units(id) on delete set null,
+    constraint ctms_organization_fkey foreign key (organization_id) 
+        references organizations(id) on delete cascade,
+    constraint ctms_project_fkey foreign key (project_id) 
+        references projects(id) on delete cascade,
+    constraint ctms_unique_material unique (construction_task_id, material_id)
+) tablespace pg_default;
+
+create index idx_ctms_construction_task on construction_task_material_snapshots(construction_task_id);
+create index idx_ctms_project on construction_task_material_snapshots(project_id);
+create index idx_ctms_material on construction_task_material_snapshots(material_id);
+create index idx_ctms_organization on construction_task_material_snapshots(organization_id);
+
+# Triggers asociados:
+# - trg_construction_task_material_snapshot: Auto-crea snapshot al INSERT en construction_tasks
+# - trg_prevent_task_id_change: Bloquea cambios en task_id para preservar integridad
+
+# Vista PROJECT_MATERIAL_REQUIREMENTS_VIEW:
+# Lee desde snapshots, NO desde recetas vivas (task_materials)
+
+create view public.project_material_requirements_view as
+select
+    ctms.project_id,
+    ctms.organization_id,
+    ctms.material_id,
+    m.name as material_name,
+    u.name as unit_name,
+    m.category_id,
+    mc.name as category_name,
+    sum(ctms.quantity_planned)::numeric(20, 4) as total_required,
+    count(distinct ctms.construction_task_id) as task_count,
+    array_agg(distinct ctms.construction_task_id) as construction_task_ids
+from construction_task_material_snapshots ctms
+inner join construction_tasks ct on ct.id = ctms.construction_task_id
+inner join materials m on m.id = ctms.material_id
+left join units u on u.id = m.unit_id
+left join material_categories mc on mc.id = m.category_id
+where ct.is_deleted = false
+  and ct.status in ('pending', 'in_progress', 'paused')
+group by
+    ctms.project_id,
+    ctms.organization_id,
+    ctms.material_id,
+    m.name,
+    u.name,
+    m.category_id,
+    mc.name;

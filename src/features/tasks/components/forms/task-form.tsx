@@ -4,7 +4,6 @@ import { useState } from "react";
 import { FormFooter } from "@/components/shared/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,11 +24,12 @@ interface TaskFormProps {
     units: Unit[];
     divisions: TaskDivision[];
     isAdminMode?: boolean;
+    defaultDivisionId?: string | null;
     onCancel?: () => void;
     onSuccess?: () => void;
 }
 
-export function TaskForm({ mode, initialData, organizationId, units, divisions, isAdminMode = false, onCancel, onSuccess }: TaskFormProps) {
+export function TaskForm({ mode, initialData, organizationId, units, divisions, isAdminMode = false, defaultDivisionId, onCancel, onSuccess }: TaskFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isPublished, setIsPublished] = useState(initialData?.is_published ?? false);
 
@@ -63,6 +63,9 @@ export function TaskForm({ mode, initialData, organizationId, units, divisions, 
             setIsLoading(false);
         }
     };
+
+    // Determine default division value
+    const defaultDivisionValue = initialData?.task_division_id || defaultDivisionId || undefined;
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
@@ -126,7 +129,7 @@ export function TaskForm({ mode, initialData, organizationId, units, divisions, 
                     {/* División: 6 cols */}
                     <div className="md:col-span-6">
                         <FormGroup label="División / Rubro" htmlFor="task_division_id">
-                            <Select name="task_division_id" defaultValue={initialData?.task_division_id || undefined}>
+                            <Select name="task_division_id" defaultValue={defaultDivisionValue}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Sin división" />
                                 </SelectTrigger>
@@ -138,19 +141,6 @@ export function TaskForm({ mode, initialData, organizationId, units, divisions, 
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </FormGroup>
-                    </div>
-
-                    {/* Descripción: 12 cols */}
-                    <div className="md:col-span-12">
-                        <FormGroup label="Descripción" htmlFor="description">
-                            <Textarea
-                                id="description"
-                                name="description"
-                                placeholder="Descripción detallada de la tarea..."
-                                defaultValue={initialData?.description || ""}
-                                rows={3}
-                            />
                         </FormGroup>
                     </div>
 

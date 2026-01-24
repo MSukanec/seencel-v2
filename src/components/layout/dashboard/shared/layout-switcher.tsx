@@ -9,6 +9,7 @@ import { UserProfile } from "@/types/user";
 
 import { UserProvider } from "@/context/user-context";
 import { QueryProvider } from "@/providers/query-provider";
+import { ContextSidebarProvider } from "@/providers/context-sidebar-provider";
 
 export function LayoutSwitcher({
     children,
@@ -39,9 +40,11 @@ export function LayoutSwitcher({
         return (
             <QueryProvider>
                 <UserProvider user={user}>
-                    <SidebarLayout user={user}>
-                        {children}
-                    </SidebarLayout>
+                    <ContextSidebarProvider>
+                        <SidebarLayout user={user}>
+                            {children}
+                        </SidebarLayout>
+                    </ContextSidebarProvider>
                     <GlobalDrawer />
                 </UserProvider>
             </QueryProvider>

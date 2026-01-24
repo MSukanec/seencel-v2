@@ -1,9 +1,9 @@
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskKinds, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
 import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
-import { TasksCatalogView } from "@/features/tasks/views";
+import { TasksCatalogView, DivisionsCatalogView, ParametersCatalogView } from "@/features/tasks/views";
 import { MaterialsCatalogView } from "@/features/materials/views";
 import { PageWrapper, ContentLayout } from "@/components/layout";
-import { Wrench, ClipboardList, Package, Shield } from "lucide-react";
+import { Wrench, ClipboardList, Package, Shield, FolderTree, Settings2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,6 +22,10 @@ export default async function AdminCatalogPage() {
         groupedTasks,
         taskUnitsResult,
         divisionsResult,
+        parametersResult,
+        kindsResult,
+        elementsResult,
+        elementParameterLinksResult,
         systemMaterials,
         materialCategories,
         materialUnits,
@@ -30,6 +34,10 @@ export default async function AdminCatalogPage() {
         getTasksGroupedByDivision("__SYSTEM__"), // Special flag for system-only tasks
         getUnits(),
         getTaskDivisions(), // No org filter - get all divisions
+        getTaskParameters(), // Get all parameters with options
+        getTaskKinds(), // Get all kinds for parametric tasks
+        getAllElements(), // Get all elements for sidebar
+        getElementParameterLinks(), // Get element-parameter links for filtering
         getSystemMaterials(),
         getMaterialCategories(),
         getUnitsForMaterials(),
@@ -77,9 +85,17 @@ export default async function AdminCatalogPage() {
                 }
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
+                        <TabsTrigger value="divisions" className={tabTriggerClass}>
+                            <FolderTree className="h-4 w-4 mr-2" />
+                            Rubros
+                        </TabsTrigger>
                         <TabsTrigger value="tasks" className={tabTriggerClass}>
                             <ClipboardList className="h-4 w-4 mr-2" />
                             Tareas
+                        </TabsTrigger>
+                        <TabsTrigger value="parameters" className={tabTriggerClass}>
+                            <Settings2 className="h-4 w-4 mr-2" />
+                            Parámetros
                         </TabsTrigger>
                         <TabsTrigger value="materials" className={tabTriggerClass}>
                             <Package className="h-4 w-4 mr-2" />
@@ -95,6 +111,7 @@ export default async function AdminCatalogPage() {
                             orgId="" // No org - admin mode
                             units={taskUnitsResult.data}
                             divisions={divisionsResult.data}
+                            kinds={kindsResult.data}
                             isAdminMode={true}
                         />
                     </ContentLayout>
@@ -108,6 +125,27 @@ export default async function AdminCatalogPage() {
                             categories={categoriesForView}
                             categoryHierarchy={categoryHierarchyForView}
                             orgId="" // No org - admin mode
+                            isAdminMode={true}
+                        />
+                    </ContentLayout>
+                </TabsContent>
+
+                <TabsContent value="divisions" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <DivisionsCatalogView
+                            divisions={divisionsResult.data}
+                            isAdminMode={true}
+                        />
+                    </ContentLayout>
+                </TabsContent>
+
+                <TabsContent value="parameters" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <ParametersCatalogView
+                            parameters={parametersResult.data}
+                            elements={elementsResult.data}
+                            elementParameterLinks={elementParameterLinksResult.data}
+                            materials={systemMaterials}
                             isAdminMode={true}
                         />
                     </ContentLayout>

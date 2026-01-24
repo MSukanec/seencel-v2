@@ -203,7 +203,7 @@ export async function getUnitsForMaterialCatalog(): Promise<MaterialUnit[]> {
 
     const { data, error } = await supabase
         .from('units')
-        .select('id, name, abbreviation')
+        .select('id, name')
         .order('name', { ascending: true });
 
     if (error) {
@@ -214,7 +214,7 @@ export async function getUnitsForMaterialCatalog(): Promise<MaterialUnit[]> {
     return (data || []).map((u: any) => ({
         id: u.id,
         name: u.name,
-        abbreviation: u.abbreviation || ''
+        abbreviation: u.name // Use name as abbreviation since column doesn't exist
     }));
 }
 
@@ -279,5 +279,168 @@ export async function getProjectMaterialRequirements(projectId: string): Promise
         total_required: parseFloat(r.total_required) || 0,
         task_count: parseInt(r.task_count) || 0,
         construction_task_ids: r.construction_task_ids || [],
+    }));
+}
+
+// ===============================================
+// Purchase Orders Queries
+// ===============================================
+
+import { PurchaseOrderView, PurchaseOrderItem } from "./types";
+
+/**
+ * Get all purchase orders for a project
+ */
+export async function getPurchaseOrders(projectId: string): Promise<PurchaseOrderView[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_purchase_orders_view')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("material_purchase_orders_view does not exist yet");
+            return [];
+        }
+        console.error("Error fetching purchase orders:", error);
+        return [];
+    }
+
+    return (data || []).map((po: any) => ({
+        id: po.id,
+        organization_id: po.organization_id,
+        project_id: po.project_id,
+        order_number: po.order_number,
+        order_date: po.order_date,
+        expected_delivery_date: po.expected_delivery_date,
+        status: po.status,
+        notes: po.notes,
+        currency_id: po.currency_id,
+        subtotal: parseFloat(po.subtotal) || 0,
+        tax_amount: parseFloat(po.tax_amount) || 0,
+        total: parseFloat(po.total) || 0,
+        provider_id: po.provider_id,
+        provider_name: po.provider_name,
+        requested_by: po.requested_by,
+        approved_by: po.approved_by,
+        is_deleted: po.is_deleted,
+        created_at: po.created_at,
+        updated_at: po.updated_at,
+        currency_symbol: po.currency_symbol,
+        currency_code: po.currency_code,
+        project_name: po.project_name,
+        item_count: parseInt(po.item_count) || 0,
+    }));
+}
+
+/**
+ * Get a single purchase order with its items
+ */
+export async function getPurchaseOrderById(orderId: string): Promise<{
+    order: PurchaseOrderView | null;
+    items: PurchaseOrderItem[];
+}> {
+    const supabase = await createClient();
+
+    // Get the order
+    const { data: orderData, error: orderError } = await supabase
+        .from('material_purchase_orders_view')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+    if (orderError || !orderData) {
+        console.error("Error fetching purchase order:", orderError);
+        return { order: null, items: [] };
+    }
+
+    // Get the items
+    const { data: itemsData, error: itemsError } = await supabase
+        .from('material_purchase_order_items')
+        .select(`
+            *,
+            materials (name),
+            units (name)
+        `)
+        .eq('purchase_order_id', orderId)
+        .order('created_at', { ascending: true });
+
+    if (itemsError) {
+        console.error("Error fetching purchase order items:", itemsError);
+    }
+
+    const order: PurchaseOrderView = {
+        id: orderData.id,
+        organization_id: orderData.organization_id,
+        project_id: orderData.project_id,
+        order_number: orderData.order_number,
+        order_date: orderData.order_date,
+        expected_delivery_date: orderData.expected_delivery_date,
+        status: orderData.status,
+        notes: orderData.notes,
+        currency_id: orderData.currency_id,
+        subtotal: parseFloat(orderData.subtotal) || 0,
+        tax_amount: parseFloat(orderData.tax_amount) || 0,
+        total: parseFloat(orderData.total) || 0,
+        provider_id: orderData.provider_id,
+        provider_name: orderData.provider_name,
+        requested_by: orderData.requested_by,
+        approved_by: orderData.approved_by,
+        is_deleted: orderData.is_deleted,
+        created_at: orderData.created_at,
+        updated_at: orderData.updated_at,
+        currency_symbol: orderData.currency_symbol,
+        currency_code: orderData.currency_code,
+        project_name: orderData.project_name,
+        item_count: parseInt(orderData.item_count) || 0,
+    };
+
+    const items: PurchaseOrderItem[] = (itemsData || []).map((item: any) => ({
+        id: item.id,
+        purchase_order_id: item.purchase_order_id,
+        material_id: item.material_id,
+        description: item.description,
+        quantity: parseFloat(item.quantity) || 0,
+        unit_id: item.unit_id,
+        unit_price: item.unit_price ? parseFloat(item.unit_price) : null,
+        notes: item.notes,
+        organization_id: item.organization_id,
+        project_id: item.project_id,
+        created_at: item.created_at,
+        created_by: item.created_by,
+        material_name: item.materials?.name || null,
+        unit_name: item.units?.name || null,
+    }));
+
+    return { order, items };
+}
+
+/**
+ * Get providers (contacts of type supplier) for dropdown
+ */
+export async function getProvidersForProject(organizationId: string): Promise<{
+    id: string;
+    name: string;
+}[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, company_name')
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .order('company_name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching providers:", error);
+        return [];
+    }
+
+    return (data || []).map((c: any) => ({
+        id: c.id,
+        name: c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Sin nombre',
     }));
 }

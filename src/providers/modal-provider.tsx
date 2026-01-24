@@ -29,10 +29,10 @@ const GlobalDialogContent = ({ className, children, ...props }: React.ComponentP
                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                 "flex flex-col",
                 // Mobile fullscreen styles (Global System Default)
-                "inset-0 w-screen h-screen max-w-none max-h-none rounded-none border-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+                "inset-0 w-screen h-screen max-w-none max-h-none rounded-none border-0 pb-[env(safe-area-inset-bottom)]",
                 "data-[state=open]:slide-in-from-bottom-full data-[state=closed]:slide-out-to-bottom-full",
                 // Desktop centered styles
-                "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]",
+                "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:pb-0",
                 "sm:w-full sm:h-auto sm:max-h-[85vh] sm:rounded-lg sm:border sm:shadow-lg",
                 "sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
                 "sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0",
@@ -128,7 +128,7 @@ export const ModalProvider = () => {
                         >
                             {/* Fixed Header */}
                             {(modal.title || modal.description) && (
-                                <div className="flex-none flex flex-col gap-2 p-3 border-b text-left space-y-1.5">
+                                <div className="flex-none flex flex-col gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3 border-b text-left space-y-1.5">
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-3">
                                             <CopyPlus className="h-5 w-5 text-primary" />

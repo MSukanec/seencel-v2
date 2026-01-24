@@ -34,7 +34,7 @@ export default async function QuoteDetailPage({ params }: PageProps) {
         getQuoteItems(quoteId),
         getOrganizationTasks(activeOrgId),
         getUnits(),
-        getTaskDivisions(activeOrgId),
+        getTaskDivisions(),
         supabase.from("currencies").select("id, name, symbol").order("name"),
     ]);
 

@@ -509,4 +509,246 @@ export async function deleteMaterial(id: string, replacementId: string | null, i
     return { success: true };
 }
 
+// ===============================================
+// Purchase Orders Actions
+// ===============================================
+
+import { PurchaseOrderStatus, PurchaseOrderItemFormData } from "./types";
+
+/**
+ * Create a new Purchase Order
+ */
+export async function createPurchaseOrder(input: {
+    project_id: string;
+    organization_id: string;
+    provider_id?: string | null;
+    order_date: string;
+    expected_delivery_date?: string | null;
+    currency_id?: string | null;
+    notes?: string | null;
+    items: PurchaseOrderItemFormData[];
+}) {
+    const supabase = await createClient();
+
+    // 1. Create the PO
+    const { data: order, error: orderError } = await supabase
+        .from('material_purchase_orders')
+        .insert({
+            project_id: input.project_id,
+            organization_id: input.organization_id,
+            provider_id: input.provider_id || null,
+            order_date: input.order_date,
+            expected_delivery_date: input.expected_delivery_date || null,
+            currency_id: input.currency_id || null,
+            notes: input.notes || null,
+            status: 'draft',
+        })
+        .select()
+        .single();
+
+    if (orderError || !order) {
+        console.error("Error creating purchase order:", orderError);
+        return { error: orderError?.message || "Error al crear la orden de compra" };
+    }
+
+    // 2. Create items if any
+    if (input.items && input.items.length > 0) {
+        const itemsToInsert = input.items.map(item => ({
+            purchase_order_id: order.id,
+            material_id: item.material_id || null,
+            description: item.description,
+            quantity: item.quantity,
+            unit_id: item.unit_id || null,
+            unit_price: item.unit_price || null,
+            notes: item.notes || null,
+            organization_id: input.organization_id,
+            project_id: input.project_id,
+        }));
+
+        const { error: itemsError } = await supabase
+            .from('material_purchase_order_items')
+            .insert(itemsToInsert);
+
+        if (itemsError) {
+            console.error("Error creating PO items:", itemsError);
+            // Don't fail the whole operation, just log
+        }
+    }
+
+    revalidatePath('/project');
+    return { data: order };
+}
+
+/**
+ * Update an existing Purchase Order
+ */
+export async function updatePurchaseOrder(input: {
+    id: string;
+    provider_id?: string | null;
+    order_date?: string;
+    expected_delivery_date?: string | null;
+    currency_id?: string | null;
+    notes?: string | null;
+    items?: PurchaseOrderItemFormData[];
+}) {
+    const supabase = await createClient();
+
+    // 1. Get current order for context
+    const { data: currentOrder, error: fetchError } = await supabase
+        .from('material_purchase_orders')
+        .select('id, organization_id, project_id, status')
+        .eq('id', input.id)
+        .single();
+
+    if (fetchError || !currentOrder) {
+        return { error: "Orden de compra no encontrada" };
+    }
+
+    // Check if order can be edited (only draft)
+    if (currentOrder.status !== 'draft') {
+        return { error: "Solo se pueden editar órdenes en estado Borrador" };
+    }
+
+    // 2. Update the order
+    const { error: updateError } = await supabase
+        .from('material_purchase_orders')
+        .update({
+            provider_id: input.provider_id,
+            order_date: input.order_date,
+            expected_delivery_date: input.expected_delivery_date,
+            currency_id: input.currency_id,
+            notes: input.notes,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.id);
+
+    if (updateError) {
+        console.error("Error updating purchase order:", updateError);
+        return { error: updateError.message };
+    }
+
+    // 3. Update items if provided (delete all and re-insert)
+    if (input.items !== undefined) {
+        // Delete existing items
+        await supabase
+            .from('material_purchase_order_items')
+            .delete()
+            .eq('purchase_order_id', input.id);
+
+        // Insert new items
+        if (input.items.length > 0) {
+            const itemsToInsert = input.items.map(item => ({
+                purchase_order_id: input.id,
+                material_id: item.material_id || null,
+                description: item.description,
+                quantity: item.quantity,
+                unit_id: item.unit_id || null,
+                unit_price: item.unit_price || null,
+                notes: item.notes || null,
+                organization_id: currentOrder.organization_id,
+                project_id: currentOrder.project_id,
+            }));
+
+            await supabase
+                .from('material_purchase_order_items')
+                .insert(itemsToInsert);
+        }
+    }
+
+    revalidatePath('/project');
+    return { success: true };
+}
+
+/**
+ * Update Purchase Order status
+ */
+export async function updatePurchaseOrderStatus(
+    orderId: string,
+    newStatus: PurchaseOrderStatus
+) {
+    const supabase = await createClient();
+
+    // Get current status
+    const { data: currentOrder, error: fetchError } = await supabase
+        .from('material_purchase_orders')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+
+    if (fetchError || !currentOrder) {
+        return { error: "Orden no encontrada" };
+    }
+
+    // Validate status transitions
+    const validTransitions: Record<PurchaseOrderStatus, PurchaseOrderStatus[]> = {
+        draft: ['sent', 'rejected'],
+        sent: ['quoted', 'approved', 'rejected'],
+        quoted: ['approved', 'rejected'],
+        approved: ['converted'],
+        rejected: ['draft'], // Can re-open
+        converted: [], // Terminal state
+    };
+
+    const currentStatus = currentOrder.status as PurchaseOrderStatus;
+    if (!validTransitions[currentStatus]?.includes(newStatus)) {
+        return {
+            error: `No se puede cambiar de "${currentStatus}" a "${newStatus}"`
+        };
+    }
+
+    const { error: updateError } = await supabase
+        .from('material_purchase_orders')
+        .update({
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+    if (updateError) {
+        console.error("Error updating PO status:", updateError);
+        return { error: updateError.message };
+    }
+
+    revalidatePath('/project');
+    return { success: true };
+}
+
+/**
+ * Delete a Purchase Order (soft delete)
+ */
+export async function deletePurchaseOrder(orderId: string) {
+    const supabase = await createClient();
+
+    // Check if order is in draft status
+    const { data: order, error: fetchError } = await supabase
+        .from('material_purchase_orders')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+
+    if (fetchError || !order) {
+        return { error: "Orden no encontrada" };
+    }
+
+    if (order.status !== 'draft') {
+        return { error: "Solo se pueden eliminar órdenes en estado Borrador" };
+    }
+
+    const { error } = await supabase
+        .from('material_purchase_orders')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+    if (error) {
+        console.error("Error deleting purchase order:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath('/project');
+    return { success: true };
+}
+
 

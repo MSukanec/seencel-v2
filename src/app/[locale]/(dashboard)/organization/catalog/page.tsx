@@ -1,10 +1,10 @@
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskKinds } from "@/features/tasks/queries";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy } from "@/features/materials/queries";
-import { TasksCatalogView } from "@/features/tasks/views";
+import { TasksCatalogView, DivisionsCatalogView } from "@/features/tasks/views";
 import { MaterialsCatalogView } from "@/features/materials/views";
 import { PageWrapper, ContentLayout } from "@/components/layout";
-import { Wrench, ClipboardList, Package } from "lucide-react";
+import { Wrench, ClipboardList, Package, FolderTree } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -27,6 +27,7 @@ export default async function TechnicalCatalogPage({ searchParams }: CatalogPage
         groupedTasks,
         taskUnitsResult,
         divisionsResult,
+        kindsResult,
         materials,
         materialCategories,
         materialUnits,
@@ -34,7 +35,8 @@ export default async function TechnicalCatalogPage({ searchParams }: CatalogPage
     ] = await Promise.all([
         getTasksGroupedByDivision(activeOrgId),
         getUnits(),
-        getTaskDivisions(activeOrgId),
+        getTaskDivisions(),
+        getTaskKinds(),
         getMaterialsForOrganization(activeOrgId),
         getMaterialCategoriesForCatalog(),
         getUnitsForMaterialCatalog(),
@@ -51,6 +53,10 @@ export default async function TechnicalCatalogPage({ searchParams }: CatalogPage
                 icon={<Wrench />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
+                        <TabsTrigger value="divisions" className={tabTriggerClass}>
+                            <FolderTree className="h-4 w-4 mr-2" />
+                            Rubros
+                        </TabsTrigger>
                         <TabsTrigger value="tasks" className={tabTriggerClass}>
                             <ClipboardList className="h-4 w-4 mr-2" />
                             Tareas
@@ -69,6 +75,7 @@ export default async function TechnicalCatalogPage({ searchParams }: CatalogPage
                             orgId={activeOrgId}
                             units={taskUnitsResult.data}
                             divisions={divisionsResult.data}
+                            kinds={kindsResult.data}
                         />
                     </ContentLayout>
                 </TabsContent>
@@ -80,6 +87,14 @@ export default async function TechnicalCatalogPage({ searchParams }: CatalogPage
                             categories={materialCategories}
                             categoryHierarchy={categoryHierarchy}
                             orgId={activeOrgId}
+                            isAdminMode={false}
+                        />
+                    </ContentLayout>
+                </TabsContent>
+                <TabsContent value="divisions" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <DivisionsCatalogView
+                            divisions={divisionsResult.data}
                             isAdminMode={false}
                         />
                     </ContentLayout>

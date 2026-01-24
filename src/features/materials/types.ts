@@ -114,3 +114,116 @@ export interface MaterialRequirementDetail {
     total_for_task: number;
 }
 
+// ==========================================
+// Purchase Order Status
+// ==========================================
+
+export type PurchaseOrderStatus =
+    | "draft"
+    | "sent"
+    | "quoted"
+    | "approved"
+    | "rejected"
+    | "converted";
+
+export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
+    draft: "Borrador",
+    sent: "Enviada",
+    quoted: "Cotizada",
+    approved: "Aprobada",
+    rejected: "Rechazada",
+    converted: "Convertida",
+};
+
+export const PURCHASE_ORDER_STATUS_COLORS: Record<PurchaseOrderStatus, string> = {
+    draft: "bg-gray-100 text-gray-800",
+    sent: "bg-blue-100 text-blue-800",
+    quoted: "bg-yellow-100 text-yellow-800",
+    approved: "bg-green-100 text-green-800",
+    rejected: "bg-red-100 text-red-800",
+    converted: "bg-purple-100 text-purple-800",
+};
+
+// ==========================================
+// Purchase Order
+// ==========================================
+
+export interface PurchaseOrder {
+    id: string;
+    organization_id: string;
+    project_id: string;
+    order_number: string | null;
+    order_date: string;
+    expected_delivery_date: string | null;
+    status: PurchaseOrderStatus;
+    notes: string | null;
+    currency_id: string | null;
+    subtotal: number;
+    tax_amount: number;
+    provider_id: string | null;
+    requested_by: string | null;
+    approved_by: string | null;
+    is_deleted: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+// ==========================================
+// Purchase Order View (with joined data)
+// ==========================================
+
+export interface PurchaseOrderView extends PurchaseOrder {
+    total: number;
+    currency_symbol: string | null;
+    currency_code: string | null;
+    provider_name: string | null;
+    project_name: string | null;
+    item_count: number;
+}
+
+// ==========================================
+// Purchase Order Item
+// ==========================================
+
+export interface PurchaseOrderItem {
+    id: string;
+    purchase_order_id: string;
+    material_id: string | null;
+    description: string;
+    quantity: number;
+    unit_id: string | null;
+    unit_price: number | null;
+    notes: string | null;
+    organization_id: string | null;
+    project_id: string | null;
+    created_at: string;
+    created_by: string | null;
+    // Joined fields
+    material_name?: string | null;
+    unit_name?: string | null;
+}
+
+// ==========================================
+// Purchase Order Form Data
+// ==========================================
+
+export interface PurchaseOrderFormData {
+    provider_id?: string | null;
+    order_date: string;
+    expected_delivery_date?: string | null;
+    currency_id?: string | null;
+    notes?: string | null;
+    items: PurchaseOrderItemFormData[];
+}
+
+export interface PurchaseOrderItemFormData {
+    id?: string;
+    material_id?: string | null;
+    description: string;
+    quantity: number;
+    unit_id?: string | null;
+    unit_price?: number | null;
+    notes?: string | null;
+}
+
+
