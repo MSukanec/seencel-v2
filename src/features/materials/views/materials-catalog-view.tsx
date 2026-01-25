@@ -29,7 +29,7 @@ import { CategoryForm } from "@/features/admin/components/forms/category-form";
 import { deleteMaterial } from "@/features/materials/actions";
 import { createMaterialCategory, updateMaterialCategory, deleteMaterialCategory } from "@/features/admin/material-actions";
 import { toast } from "sonner";
-import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
 
 // Extended material type with joined data from query

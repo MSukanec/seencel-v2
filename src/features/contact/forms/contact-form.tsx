@@ -11,7 +11,7 @@ import { ContactWithRelations, ContactType } from "@/types/contact";
 import { useModal } from "@/providers/modal-store";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { PhoneInput } from "@/components/ui/phone-input";
 
 import { ContactAvatarManager } from "@/features/contact/components/contact-avatar-manager";
@@ -85,7 +85,7 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
 
                 {/* Avatar Section */}

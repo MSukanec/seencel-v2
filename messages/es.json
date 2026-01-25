@@ -214,11 +214,14 @@
         "button": "Feedback",
         "title": "Enviar Comentarios",
         "description": "Ayúdanos a mejorar compartiendo tus ideas o reportando problemas.",
+        "modalDescription": "Envíanos tus comentarios o reporta un problema.",
         "placeholder": "Tu comentario...",
         "send": "Enviar",
         "sending": "Enviando",
         "successTitle": "¡Gracias por tus comentarios!",
-        "successMessage": "Apreciamos mucho tu aporte."
+        "successMessage": "Apreciamos mucho tu aporte.",
+        "emptyMessage": "El mensaje no puede estar vacío",
+        "errorMessage": "Error al enviar feedback"
     },
     "Public": {
         "nav": {
@@ -1572,5 +1575,15 @@
     },
     "Files": {
         "title": "Archivos"
+    },
+    "Subcontracts": {
+        "title": "Subcontratos",
+        "subtitle": "Gestión de contratos y pagos a subcontratistas.",
+        "detailTitle": "Detalle de Subcontrato",
+        "back": "Volver",
+        "errors": {
+            "unableToLoad": "Error al cargar los datos",
+            "retry": "Reintentar"
+        }
     }
 }

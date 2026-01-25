@@ -5,7 +5,7 @@ import { createThread, ForumThread } from "@/actions/forum";
 import { RichTextEditor } from "@/components/shared/rich-text-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useModal } from "@/providers/modal-store";

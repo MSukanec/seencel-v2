@@ -14,6 +14,7 @@ export async function getOrganizationContacts(organizationId: string): Promise<C
         .from('contacts_with_relations_view')
         .select('*')
         .eq('organization_id', organizationId)
+        .eq('is_deleted', false) // Filter out deleted contacts
         .order('full_name', { ascending: true });
 
     if (error) {

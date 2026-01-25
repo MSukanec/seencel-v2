@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useModal } from "@/providers/modal-store";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
 interface ProjectActionsProps {
     project: Project;

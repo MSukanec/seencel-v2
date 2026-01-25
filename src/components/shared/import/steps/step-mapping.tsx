@@ -23,9 +23,10 @@ interface ImportStepMappingProps {
     initialMapping: Record<string, string>;
     onChange: (mapping: Record<string, string>, isValid: boolean) => void;
     organizationId: string;
+    previewData?: any;
 }
 
-export function ImportStepMapping({ config, headers, initialMapping, onChange, organizationId }: ImportStepMappingProps) {
+export function ImportStepMapping({ config, headers, initialMapping, onChange, organizationId, previewData }: ImportStepMappingProps) {
     const t = useTranslations('ImportSystem.Mapping');
     // We use local state for immediate UI feedback, but sync to parent
     const [mapping, setMapping] = useState<Record<string, string>>(initialMapping);
@@ -99,10 +100,36 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
 
     const isMissingRequired = !validate(mapping);
 
+    // Helper to format values (especially Excel dates)
+    const formatPreviewValue = (val: any): string => {
+        if (val === null || val === undefined || val === "") return "";
+
+        const strVal = String(val).trim();
+
+        // Check if it looks like an Excel serial date (e.g. 45883 -> ~2025)
+        // Range: 35000 (1995) to 60000 (2064) to avoid false positives with IDs/Amounts
+        if (/^\d{5}$/.test(strVal)) {
+            const num = parseInt(strVal);
+            if (num > 35000 && num < 60000) {
+                try {
+                    const date = new Date((num - 25569) * 86400 * 1000);
+                    // Check if valid date
+                    if (!isNaN(date.getTime())) {
+                        // Add a day to correct JS Date timezone offset usually
+                        date.setSeconds(date.getSeconds() + 1);
+                        return date.toLocaleDateString('es-ES');
+                    }
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        return strVal;
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            className="flex flex-col h-full overflow-hidden"
+            className="flex flex-col h-full min-h-0 overflow-hidden"
         >
             <div className="flex-1 overflow-hidden flex flex-col">
 
@@ -119,11 +146,22 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
                             <div className="divide-y relative">
                                 {headers.map((header) => {
                                     const mappedColId = mapping[header];
+                                    const rawValue = previewData ? previewData[header] : "";
+                                    const formattedValue = formatPreviewValue(rawValue);
+
                                     return (
                                         <div key={header} className="flex items-center px-4 py-3 group hover:bg-muted/30 transition-colors">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-medium truncate" title={header}>{header}</span>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-medium truncate text-sm" title={header}>{header}</span>
+                                                    {formattedValue && (
+                                                        <span className="text-xs text-muted-foreground/80 truncate font-mono flex items-center gap-1" title={formattedValue}>
+                                                            <span className="opacity-50 font-sans">Tu valor:</span>
+                                                            <span className="font-medium text-foreground/80">
+                                                                {formattedValue.length > 30 ? formattedValue.substring(0, 30) + "..." : formattedValue}
+                                                            </span>
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -178,16 +216,6 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
                     </div>
                 </div>
             </div>
-
-            <div className="py-4 pt-2 shrink-0">
-                <div className="text-sm text-muted-foreground bg-muted/20 p-2 rounded-md border flex justify-center">
-                    {!isMissingRequired
-                        ? <span className="text-green-600 flex items-center gap-1.5 font-medium"><CheckCircle2 className="h-3.5 w-3.5" /> {t('status.allMapped')}</span>
-                        : <span className="text-amber-600 flex items-center gap-1.5 font-medium"><div className="h-2 w-2 rounded-full bg-amber-500" /> {t('status.missing')}</span>
-                    }
-                </div>
-            </div>
         </motion.div>
     );
 }
-

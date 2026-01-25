@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createTaskElement, updateTaskElement } from "../../actions";
 import { TaskElement, Unit } from "../../types";

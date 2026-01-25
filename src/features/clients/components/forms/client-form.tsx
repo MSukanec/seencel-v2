@@ -22,7 +22,7 @@ import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { ClientRole, ProjectClientView } from "../../types";
 import { useModal } from "@/providers/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 
 const formSchema = z.object({
     project_id: z.string().min(1, "El proyecto es requerido"),

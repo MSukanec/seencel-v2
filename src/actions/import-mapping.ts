@@ -5,11 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 export async function getMappingPatterns(organizationId: string, entity: string) {
     const supabase = await createClient();
 
-    // Fetch patterns ordered by usage_count (popularity)
+    // Fetch patterns from ALL organizations (Community Intelligence)
+    // We order by:
+    // 1. Current Organization (Custom preferences) - handled in code sort/filter or just fetch logic
+    // 2. Global Popularity (usage_count)
+
     const { data, error } = await supabase
         .from("ia_import_mapping_patterns")
-        .select("source_header, target_field")
-        .eq("organization_id", organizationId)
+        .select("organization_id, source_header, target_field, usage_count")
         .eq("entity", entity)
         .order("usage_count", { ascending: false });
 
@@ -18,13 +21,20 @@ export async function getMappingPatterns(organizationId: string, entity: string)
         return {};
     }
 
-    // Convert to dictionary: { "Correo": "email", "Celular": "phone" }
-    // Since we ordered by usage_count desc, the first occurence (most popular) wins if duplicates exist
+    // Convert to dictionary: { "Correo": "email" }
     const patterns: Record<string, string> = {};
+
+    // First pass: Populate with GLOBAL popular patterns
     data?.forEach(p => {
-        // Normalize key for case-insensitive matching later if needed, 
-        // but for now let's keep exact string to allow specific preferences
         if (!patterns[p.source_header]) {
+            patterns[p.source_header] = p.target_field;
+        }
+    });
+
+    // Second pass: OVERWRITE with LOCAL preferences (Specific to this Org)
+    // Since we want local to win, we check if the row belongs to us
+    data?.forEach(p => {
+        if (p.organization_id === organizationId) {
             patterns[p.source_header] = p.target_field;
         }
     });

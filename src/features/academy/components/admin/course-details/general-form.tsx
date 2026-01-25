@@ -32,7 +32,7 @@ import { ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Course } from "@/features/academy/types/course-marketing";
 import { useModal } from "@/providers/modal-store";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 
 const formSchema = z.object({
     title: z.string().min(2, "El título debe tener al menos 2 caracteres"),

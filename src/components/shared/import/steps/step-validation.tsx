@@ -132,6 +132,30 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
     const { validCount, invalidCount, processedRows } = validationResults;
     const hasErrors = invalidCount > 0;
 
+    const formatCell = (value: any) => {
+        if (value === null || value === undefined || value === "") {
+            return <span className="text-muted-foreground italic">-</span>;
+        }
+
+        const strVal = String(value).trim();
+
+        // Excel serial date check (35000-60000 range -> ~1995-2064)
+        if (/^\d{5}$/.test(strVal)) {
+            const num = parseInt(strVal);
+            if (num > 35000 && num < 60000) {
+                try {
+                    const date = new Date((num - 25569) * 86400 * 1000);
+                    if (!isNaN(date.getTime())) {
+                        date.setSeconds(date.getSeconds() + 1);
+                        return date.toLocaleDateString('es-ES');
+                    }
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        return value;
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
@@ -220,7 +244,7 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
                                         </TableCell>
                                         {config.columns.map(col => (
                                             <TableCell key={col.id.toString()} className="text-sm">
-                                                {(row as any)[col.id] || <span className="text-muted-foreground italic">-</span>}
+                                                {formatCell((row as any)[col.id])}
                                             </TableCell>
                                         ))}
                                     </TableRow>

@@ -16,7 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { useModal } from "@/providers/modal-store";
 import { createList, updateList } from "@/features/planner/actions";
 import { DEFAULT_LIST_COLORS, KanbanList } from "@/features/planner/types";

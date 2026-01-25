@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { toast } from "sonner";
 import { Check, X, CopyPlus } from "lucide-react";
 import { approveQuote, rejectQuote } from "./portal-quote-actions";

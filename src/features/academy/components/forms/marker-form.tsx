@@ -8,7 +8,7 @@ import { createLessonMarker, updateLessonMarker } from "@/actions/courses";
 import { LessonMarker } from "@/types/courses";
 import { useModal } from "@/providers/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 

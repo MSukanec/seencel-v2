@@ -9,7 +9,7 @@ import { useModal } from "@/providers/modal-store";
 import { useRouter } from "next/navigation";
 import { deleteProject } from "@/features/projects/actions";
 import { ProjectForm } from "./project-form";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
 
 interface ProjectsListProps {

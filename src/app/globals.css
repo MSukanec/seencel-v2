@@ -37,6 +37,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-success: var(--amount-positive);
+  --color-error: var(--amount-negative);
+
   --radius-xl: calc(var(--radius) + 4px);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -200,7 +203,7 @@
   --muted-foreground: oklch(0.552 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(48.965% 0.15693 22.57);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.744 0.16 126.36);
@@ -215,11 +218,11 @@
      Use these for income/expense/balance displays
      across tables, charts, KPIs, badges, etc.
      ============================================ */
-  --amount-positive: #6fb124;
+  --amount-positive: oklch(60.998% 0.14425 126.832);
   /* Soft lime green - Ingresos, Cobrado, Pagado */
-  --amount-negative: #ce4330;
+  --amount-negative: oklch(48.965% 0.15693 22.57);
   /* Terracotta/brick - Egresos, Deuda, Saldo pendiente */
-  --amount-neutral: #71717a;
+  --amount-neutral: oklch(60.209% 0.12049 235.006);
   /* Zinc-500 gray - Balance neutral, cero, N/A */
   /* Sidebar */
   --sidebar: oklch(0.97 0 0);
@@ -425,6 +428,7 @@ select:focus-visible,
     opacity: 0;
     transform: translateX(16px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -436,6 +440,7 @@ select:focus-visible,
     opacity: 0;
     transform: translateX(-16px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);

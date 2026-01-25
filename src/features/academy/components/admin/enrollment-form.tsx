@@ -7,7 +7,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { useModal } from "@/providers/modal-store";
 import { toast } from "sonner";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { createEnrollment, updateEnrollment, getEnrollableUsers, getEnrollableCourses, getExistingEnrollments } from "@/actions/enrollment-actions";
 import type { AdminCourseEnrollment } from "@/features/admin/academy-queries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

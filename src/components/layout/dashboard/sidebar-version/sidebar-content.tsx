@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useLayoutStore, NavigationContext } from "@/store/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
-import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarFeedbackButton } from "./buttons";
+import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton } from "./buttons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     PanelLeft,
@@ -55,7 +55,8 @@ export function SidebarContent({
         projects,
         currentOrg,
         currentProject,
-        handleProjectChange
+        handleProjectChange,
+        saveProjectPreference
     } = useSidebarData();
 
     const isMobile = mode === "mobile";
@@ -149,303 +150,298 @@ export function SidebarContent({
     const widthClass = isExpanded ? "w-[240px]" : "w-[50px]";
 
     return (
+
         <div
             className={cn(
-                "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out overflow-hidden",
+                "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out relative",
                 widthClass
             )}
         >
-            {/* Top Brand Section */}
-            <div className="w-full flex items-center mb-2 px-2">
-                <SidebarBrandButton
-                    mode={drillState === "home" ? "home" : drillState === "project" ? "project" : "organization"}
-                    isExpanded={isExpanded}
-                    currentOrg={currentOrg}
-                    currentProject={currentProject}
-                    projects={projects}
-                    onOrgClick={() => {
-                        setSlideDirection("left");
-                        setDrillState("organization");
-                        actions.setActiveContext("organization");
-
-                        // Navigate to organization dashboard to resolve context conflict
-                        // Extract locale from current URL (e.g., /es/project/... -> es)
-                        const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-                        const locale = localeMatch ? localeMatch[1] : 'es';
-                        nativeRouter.push(`/${locale}/organization`);
-                    }}
-                    onProjectChange={(projectId) => {
-                        // Change context to project
-                        setSlideDirection("right");
-                        setDrillState("project");
-                        actions.setActiveContext("project");
-                        // Update state and save preference
-                        handleProjectChange(projectId);
-
-                        // Navigate to the new project
-                        // If already on a project page, stay on same sub-page
-                        // If on organization page, go to project overview
-                        // Extract locale from current URL (e.g., /es/project/... -> es)
-                        const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-                        const locale = localeMatch ? localeMatch[1] : 'es';
-
-                        const projectPathMatch = pathname.match(/\/project\/[^/]+\/?(.*)$/);
-                        if (projectPathMatch) {
-                            // On a project page, navigate to same sub-page in new project
-                            const subPage = projectPathMatch[1] || '';
-                            nativeRouter.push(`/${locale}/project/${projectId}${subPage ? `/${subPage}` : ''}`);
-                        } else {
-                            // On organization page, navigate to project overview
-                            nativeRouter.push(`/${locale}/project/${projectId}`);
-                        }
-                    }}
-                />
-            </div>
-
-            {/* Separator */}
-            <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
-
-            <ScrollArea className="flex-1" type="scroll">
-                {/* ============================================================ */}
-                {/* HOME STATE: Context Buttons */}
-                {/* ============================================================ */}
-                {drillState === "home" && (
-                    <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
-                        <SidebarContextButton
-                            icon={contexts.find(c => c.id === "organization")?.icon || Building}
-                            label="Dashboard"
-                            description="Organización y proyectos"
-                            isExpanded={isExpanded}
-                            onClick={() => handleContextEnter("organization")}
-                        />
-                        <SidebarContextButton
-                            icon={contexts.find(c => c.id === "learnings")?.icon || Building}
-                            label="Academia"
-                            description="Cursos y capacitaciones"
-                            isExpanded={isExpanded}
-                            onClick={() => handleContextEnter("learnings")}
-                        />
-                        <SidebarContextButton
-                            icon={contexts.find(c => c.id === "community")?.icon || Building}
-                            label="Comunidad"
-                            description="Fundadores y red Seencel"
-                            isExpanded={isExpanded}
-                            onClick={() => handleContextEnter("community")}
-                        />
-                        <SidebarContextButton
-                            icon={contexts.find(c => c.id === "admin")?.icon || Building}
-                            label="Admin"
-                            description="Panel de administración"
-                            isExpanded={isExpanded}
-                            onClick={() => handleContextEnter("admin")}
-                        />
-                    </nav>
-                )}
-
-                {/* ============================================================ */}
-                {/* ORGANIZATION STATE: Direct navigation buttons */}
-                {/* ============================================================ */}
-                {drillState === "organization" && (
-                    <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
-                        {/* Back Button */}
-                        <SidebarNavButton
-                            icon={ArrowLeft}
-                            label="Volver"
-                            isExpanded={isExpanded}
-                            onClick={handleBack}
-                        />
-
-                        {/* Separator */}
-                        <div className="w-full h-px bg-border/30 my-1" />
-
-                        {/* Organization Nav Items */}
-                        {orgNavItems.map((item, idx) => (
-                            <React.Fragment key={idx}>
-                                {item.sectionHeader && isExpanded && (
-                                    <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                        {item.sectionHeader}
-                                    </div>
-                                )}
-                                <SidebarNavButton
-                                    icon={item.icon}
-                                    label={item.title}
-                                    href={item.href}
-                                    isActive={pathname === item.href}
-                                    isExpanded={isExpanded}
-                                    onClick={onLinkClick}
-                                />
-                            </React.Fragment>
-                        ))}
-                    </nav>
-                )}
-
-                {/* ============================================================ */}
-                {/* PROJECT STATE: Direct navigation buttons */}
-                {/* ============================================================ */}
-                {drillState === "project" && (
-                    <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="project">
-                        {/* Back Button */}
-                        <SidebarNavButton
-                            icon={ArrowLeft}
-                            label="Volver"
-                            isExpanded={isExpanded}
-                            onClick={handleBack}
-                        />
-
-                        {/* Separator */}
-                        <div className="w-full h-px bg-border/30 my-1" />
-
-                        {/* Project Nav Items */}
-                        {projectNavItems.map((item, idx) => (
-                            <React.Fragment key={idx}>
-                                {item.sectionHeader && isExpanded && (
-                                    <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                        {item.sectionHeader}
-                                    </div>
-                                )}
-                                <SidebarNavButton
-                                    icon={item.icon}
-                                    label={item.title}
-                                    href={item.href}
-                                    isActive={pathname === item.href}
-                                    isExpanded={isExpanded}
-                                    onClick={onLinkClick}
-                                />
-                            </React.Fragment>
-                        ))}
-                    </nav>
-                )}
-
-                {/* ============================================================ */}
-                {/* LEARNINGS STATE */}
-                {/* ============================================================ */}
-                {drillState === "learnings" && (
-                    <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
-                        {/* Back Button */}
-                        <SidebarNavButton
-                            icon={ArrowLeft}
-                            label="Volver"
-                            isExpanded={isExpanded}
-                            onClick={handleBack}
-                        />
-
-                        <div className="w-full h-px bg-border/30 my-1" />
-
-                        {/* Academia Header */}
-                        {isExpanded && (
-                            <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                Academia
-                            </div>
-                        )}
-
-                        {getNavItems("learnings").map((item, idx) => (
-                            <SidebarNavButton
-                                key={idx}
-                                icon={item.icon}
-                                label={item.title}
-                                href={item.href}
-                                isActive={pathname === item.href}
-                                isExpanded={isExpanded}
-                                onClick={onLinkClick}
-                            />
-                        ))}
-                    </nav>
-                )}
-
-                {/* ============================================================ */}
-                {/* COMMUNITY STATE */}
-                {/* ============================================================ */}
-                {drillState === "community" && (
-                    <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
-                        <SidebarNavButton
-                            icon={ArrowLeft}
-                            label="Volver"
-                            isExpanded={isExpanded}
-                            onClick={handleBack}
-                        />
-
-                        <div className="w-full h-px bg-border/30 my-1" />
-
-                        {isExpanded && (
-                            <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                Comunidad
-                            </div>
-                        )}
-
-                        {getNavItems("community").map((item, idx) => (
-                            <SidebarNavButton
-                                key={idx}
-                                icon={item.icon}
-                                label={item.title}
-                                href={item.href}
-                                isActive={pathname === item.href}
-                                isExpanded={isExpanded}
-                                onClick={onLinkClick}
-                            />
-                        ))}
-                    </nav>
-                )}
-
-                {/* ============================================================ */}
-                {/* ADMIN STATE */}
-                {/* ============================================================ */}
-                {drillState === "admin" && (
-                    <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
-                        <SidebarNavButton
-                            icon={ArrowLeft}
-                            label="Volver"
-                            isExpanded={isExpanded}
-                            onClick={handleBack}
-                        />
-
-                        <div className="w-full h-px bg-border/30 my-1" />
-
-                        {isExpanded && (
-                            <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                Administración
-                            </div>
-                        )}
-
-                        {getNavItems("admin").map((item, idx) => (
-                            <SidebarNavButton
-                                key={idx}
-                                icon={item.icon}
-                                label={item.title}
-                                href={item.href}
-                                isActive={pathname === item.href}
-                                isExpanded={isExpanded}
-                                onClick={onLinkClick}
-                            />
-                        ))}
-                    </nav>
-                )}
-            </ScrollArea>
-
-            {/* Mode Toggle (bottom, desktop only) */}
+            {/* TOGGLE FLAP BUTTON */}
             {!isMobile && (
-                <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
-                    <SidebarNavButton
-                        icon={getModeIcon()}
-                        label={getModeLabel()}
+                <button
+                    onClick={cycleSidebarMode}
+                    className="absolute left-full bottom-8 z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-md transition-colors hover:bg-accent hover:text-foreground text-muted-foreground"
+                    title={getModeLabel()}
+                >
+                    {sidebarMode === 'docked' ? (
+                        <PanelLeftClose className="h-3 w-3" />
+                    ) : (
+                        <PanelLeft className="h-3 w-3" />
+                    )}
+                </button>
+            )}
+
+            <div className="flex flex-col w-full h-full overflow-hidden">
+                {/* Top Brand Section */}
+                <div className="w-full flex items-center mb-2 px-2">
+                    <SidebarBrandButton
+                        mode={drillState === "home" ? "home" : drillState === "project" ? "project" : "organization"}
                         isExpanded={isExpanded}
-                        onClick={cycleSidebarMode}
-                    />
+                        currentOrg={currentOrg}
+                        currentProject={currentProject}
+                        projects={projects}
+                        onOrgClick={() => {
+                            setSlideDirection("left");
+                            setDrillState("organization");
+                            actions.setActiveContext("organization");
 
-                    {/* Feedback Button */}
-                    <SidebarFeedbackButton isExpanded={isExpanded} />
+                            // Navigate to organization dashboard to resolve context conflict
+                            // Extract locale from current URL (e.g., /es/project/... -> es)
+                            const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+                            const locale = localeMatch ? localeMatch[1] : 'es';
+                            nativeRouter.push(`/${locale}/organization`);
+                        }}
+                        onProjectChange={(projectId) => {
+                            // OPTIMIZED NAVIGATION:
+                            // We do NOT update state here manually to avoid blocking the main thread.
+                            // We immediately navigate and let the URL change drive the state via useEffect.
 
-                    {/* Notifications Button */}
-                    <SidebarNotificationsButton isExpanded={isExpanded} />
+                            // 1. Save preference (Fire and forget, non-blocking)
+                            saveProjectPreference(projectId);
 
-                    {/* User Avatar Button */}
-                    <SidebarAvatarButton
-                        avatarUrl={user?.avatar_url}
-                        name={user?.full_name || "Usuario"}
-                        email={user?.email}
-                        isExpanded={isExpanded}
+                            // 2. Navigate immediately
+                            // Extract locale from current URL
+                            const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+                            const locale = localeMatch ? localeMatch[1] : 'es';
+
+                            const projectPathMatch = pathname.match(/\/project\/[^/]+\/?(.*)$/);
+                            if (projectPathMatch) {
+                                // On a project page, navigate to same sub-page in new project
+                                const subPage = projectPathMatch[1] || '';
+                                nativeRouter.push(`/${locale}/project/${projectId}${subPage ? `/${subPage}` : ''}`);
+                            } else {
+                                // On organization page, navigate to project overview
+                                nativeRouter.push(`/${locale}/project/${projectId}`);
+                            }
+                        }}
                     />
                 </div>
-            )}
+
+                {/* Separator */}
+                <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
+
+                <ScrollArea className="flex-1" type="scroll">
+                    {/* ... (Previous Content Kept Same via Context, but I need to re-render it because replace_file requires context) 
+                        Wait, this content is huge. using replace_file_content for the whole return is risky on size.
+                        I should target START and END specific lines if possible.
+                        But I am wrapping EVERYTHING inside the root div.
+                        
+                        I'll try to just wrap the RETURN statement content.
+                    */}
+                    {/* Only showing the modified structure here for clarity, will use code below */}
+
+                    {/* ============================================================ */}
+                    {/* HOME STATE: Context Buttons */}
+                    {/* ============================================================ */}
+                    {drillState === "home" && (
+                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
+                            <SidebarContextButton
+                                icon={contexts.find(c => c.id === "organization")?.icon || Building}
+                                label="Dashboard"
+                                description="Organización y proyectos"
+                                isExpanded={isExpanded}
+                                onClick={() => handleContextEnter("organization")}
+                            />
+                            <SidebarContextButton
+                                icon={contexts.find(c => c.id === "learnings")?.icon || Building}
+                                label="Academia"
+                                description="Cursos y capacitaciones"
+                                isExpanded={isExpanded}
+                                onClick={() => handleContextEnter("learnings")}
+                            />
+                            <SidebarContextButton
+                                icon={contexts.find(c => c.id === "community")?.icon || Building}
+                                label="Comunidad"
+                                description="Fundadores y red Seencel"
+                                isExpanded={isExpanded}
+                                onClick={() => handleContextEnter("community")}
+                            />
+                            <SidebarContextButton
+                                icon={contexts.find(c => c.id === "admin")?.icon || Building}
+                                label="Admin"
+                                description="Panel de administración"
+                                isExpanded={isExpanded}
+                                onClick={() => handleContextEnter("admin")}
+                            />
+                        </nav>
+                    )}
+
+                    {/* ============================================================ */}
+                    {/* ORGANIZATION STATE: Direct navigation buttons */}
+                    {/* ============================================================ */}
+                    {drillState === "organization" && (
+                        <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
+                            {/* Back Button */}
+                            <SidebarNavButton
+                                icon={ArrowLeft}
+                                label="Volver"
+                                isExpanded={isExpanded}
+                                onClick={handleBack}
+                            />
+
+                            {/* Separator */}
+                            <div className="w-full h-px bg-border/30 my-1" />
+
+                            {/* Organization Nav Items */}
+                            {orgNavItems.map((item, idx) => (
+                                <React.Fragment key={idx}>
+                                    {item.sectionHeader && isExpanded && (
+                                        <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                            {item.sectionHeader}
+                                        </div>
+                                    )}
+                                    <SidebarNavButton
+                                        icon={item.icon}
+                                        label={item.title}
+                                        href={item.href}
+                                        isActive={pathname === item.href}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                </React.Fragment>
+                            ))}
+                        </nav>
+                    )}
+
+                    {/* PROJECT STATE */}
+                    {drillState === "project" && (
+                        <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="project">
+                            <SidebarNavButton
+                                icon={ArrowLeft}
+                                label="Volver"
+                                isExpanded={isExpanded}
+                                onClick={handleBack}
+                            />
+                            <div className="w-full h-px bg-border/30 my-1" />
+                            {projectNavItems.map((item, idx) => (
+                                <React.Fragment key={idx}>
+                                    {item.sectionHeader && isExpanded && (
+                                        <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                            {item.sectionHeader}
+                                        </div>
+                                    )}
+                                    <SidebarNavButton
+                                        icon={item.icon}
+                                        label={item.title}
+                                        href={item.href}
+                                        isActive={pathname === item.href}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                </React.Fragment>
+                            ))}
+                        </nav>
+                    )}
+
+                    {/* LEARNINGS STATE */}
+                    {drillState === "learnings" && (
+                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
+                            <SidebarNavButton
+                                icon={ArrowLeft}
+                                label="Volver"
+                                isExpanded={isExpanded}
+                                onClick={handleBack}
+                            />
+                            <div className="w-full h-px bg-border/30 my-1" />
+                            {isExpanded && (
+                                <div className="px-3 py-2 text-sm font-semibold text-primary">
+                                    Academia
+                                </div>
+                            )}
+                            {getNavItems("learnings").map((item, idx) => (
+                                <SidebarNavButton
+                                    key={idx}
+                                    icon={item.icon}
+                                    label={item.title}
+                                    href={item.href}
+                                    isActive={pathname === item.href}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                            ))}
+                        </nav>
+                    )}
+
+                    {/* COMMUNITY STATE */}
+                    {drillState === "community" && (
+                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
+                            <SidebarNavButton
+                                icon={ArrowLeft}
+                                label="Volver"
+                                isExpanded={isExpanded}
+                                onClick={handleBack}
+                            />
+                            <div className="w-full h-px bg-border/30 my-1" />
+                            {isExpanded && (
+                                <div className="px-3 py-2 text-sm font-semibold text-primary">
+                                    Comunidad
+                                </div>
+                            )}
+                            {getNavItems("community").map((item, idx) => (
+                                <SidebarNavButton
+                                    key={idx}
+                                    icon={item.icon}
+                                    label={item.title}
+                                    href={item.href}
+                                    isActive={pathname === item.href}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                            ))}
+                        </nav>
+                    )}
+
+                    {/* ADMIN STATE */}
+                    {drillState === "admin" && (
+                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
+                            <SidebarNavButton
+                                icon={ArrowLeft}
+                                label="Volver"
+                                isExpanded={isExpanded}
+                                onClick={handleBack}
+                            />
+                            <div className="w-full h-px bg-border/30 my-1" />
+                            {isExpanded && (
+                                <div className="px-3 py-2 text-sm font-semibold text-primary">
+                                    Administración
+                                </div>
+                            )}
+                            {getNavItems("admin").map((item, idx) => (
+                                <SidebarNavButton
+                                    key={idx}
+                                    icon={item.icon}
+                                    label={item.title}
+                                    href={item.href}
+                                    isActive={pathname === item.href}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                            ))}
+                        </nav>
+                    )}
+                </ScrollArea>
+
+                {/* Mode Toggle (bottom, desktop only) */}
+                {!isMobile && (
+                    <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
+                        {/* SidebarNavButton for toggle REMOVED */}
+
+                        {/* Feedback Button REMOVED - Moved to User Menu */}
+
+                        {/* Notifications Button */}
+                        <SidebarNotificationsButton isExpanded={isExpanded} />
+
+                        {/* User Avatar Button */}
+                        <SidebarAvatarButton
+                            avatarUrl={user?.avatar_url}
+                            name={user?.full_name || "Usuario"}
+                            email={user?.email}
+                            isExpanded={isExpanded}
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

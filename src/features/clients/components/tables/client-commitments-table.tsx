@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CommitmentForm } from "../forms/commitment-form";
 import { deleteCommitmentAction } from "@/features/clients/actions";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";

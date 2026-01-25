@@ -31,7 +31,7 @@ import { QuoteForm } from "../forms/quote-form";
 import { formatCurrency } from "@/lib/currency-utils";
 import { deleteQuote } from "../../actions";
 import { toast } from "sonner";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { DataTablePagination } from "./data-table-pagination";
-import { DataTableToolbar } from "./data-table-toolbar";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DataTableSkeleton } from "./data-table-skeleton";
 import { cn } from "@/lib/utils";
 import { DataTableRowActions } from "./data-table-row-actions";
@@ -222,29 +222,30 @@ export function DataTable<TData, TValue>({
     }, [actions, table]);
 
     return (
-        <div className="space-y-4">
+        <div className={cn("space-y-4", (data.length === 0 && emptyState) ? "h-full flex flex-col" : "")}>
             {/* Toolbar */}
             {showToolbar && (
                 <div className={cn("transition-all", toolbarInHeader ? "contents" : "")}>
                     {/* If toolbarInHeader, we don't render the Card wrapper, or we let the Toolbar handle portal */}
                     {/* Actually, existing code wrapped it in Card. If portaling, we likely want to avoid the Card visual in the body */}
                     {toolbarInHeader ? (
-                        <DataTableToolbar
+                        <Toolbar
                             table={table}
+                            portalToHeader={true}
                             globalFilter={globalFilter}
                             setGlobalFilter={setGlobalFilter}
                             searchPlaceholder={searchPlaceholder}
                             leftActions={leftActions}
                             facetedFilters={facetedFilters}
                             bulkActions={typeof bulkActions === "function" ? bulkActions({ table }) : bulkActions}
-                            portalToHeader={true}
                             actions={resolvedActions}
-                        >
-                            {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
-                        </DataTableToolbar>
+                            children={
+                                typeof toolbar === "function" ? toolbar({ table }) : toolbar
+                            }
+                        />
                     ) : (
                         <Card className="p-4">
-                            <DataTableToolbar
+                            <Toolbar
                                 table={table}
                                 globalFilter={globalFilter}
                                 setGlobalFilter={setGlobalFilter}
@@ -255,125 +256,105 @@ export function DataTable<TData, TValue>({
                                 actions={resolvedActions}
                             >
                                 {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
-                            </DataTableToolbar>
+                            </Toolbar>
                         </Card>
                     )}
                 </div>
             )}
 
             {/* Table Container */}
-            {viewMode === "grid" && renderGridItem ? (
-                <div className={gridClassName}>
-                    {table.getRowModel().rows.map((row) => (
-                        <div key={row.id}>
-                            {renderGridItem(row.original)}
-                        </div>
-                    ))}
-                    {table.getRowModel().rows.length === 0 && (
-                        <div className="col-span-full">
-                            {typeof emptyState === "function"
-                                ? (emptyState as (props: { table: Table<TData> }) => React.ReactNode)({ table })
-                                : (emptyState || (
-                                    <Card className="flex flex-col items-center justify-center py-12 text-muted-foreground p-8">
-                                        <svg
-                                            className="h-12 w-12 mb-4 opacity-50"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={1.5}
-                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                            />
-                                        </svg>
-                                        <p className="font-medium">No se encontraron resultados</p>
-                                        <p className="text-sm mt-1">Intenta ajustar los filtros o la búsqueda</p>
-                                    </Card>
-                                ))}
-                        </div>
-                    )}
+            {data.length === 0 && emptyState ? (
+                // Full Page Empty State (No Table Structure)
+                <div className="flex-1 flex flex-col h-full">
+                    {typeof emptyState === "function"
+                        ? (emptyState as (props: { table: Table<TData> }) => React.ReactNode)({ table })
+                        : emptyState}
                 </div>
             ) : (
-                <Card className="overflow-hidden">
-                    <div className="relative w-full overflow-auto">
-                        <UiTable>
-                            <TableHeader
-                                className={cn(
-                                    stickyHeader && "sticky top-0 z-10 bg-card/95 backdrop-blur-sm"
-                                )}
-                            >
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-2">
-                                        {headerGroup.headers.map((header) => (
-                                            <TableHead
-                                                key={header.id}
-                                                className="h-11 px-4 text-[11px] font-medium text-muted-foreground"
-                                                style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                                            >
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(header.column.columnDef.header, header.getContext())}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                ))}
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
-                                    <DataTableSkeleton columnCount={columns.length} rowCount={pageSize} />
-                                ) : table.getRowModel().rows?.length ? (
-                                    table.getRowModel().rows.map((row) => (
-                                        <TableRow
-                                            key={row.id}
-                                            data-state={row.getIsSelected() && "selected"}
-                                            className={cn(
-                                                "transition-colors",
-                                                onRowClick && "cursor-pointer",
-                                                row.getIsSelected() && "bg-primary/5 border-l-2 border-l-primary"
-                                            )}
-                                            onClick={() => onRowClick?.(row.original)}
-                                        >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id} className="px-4 py-3">
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </TableCell>
+                viewMode === "grid" && renderGridItem ? (
+                    <div className={gridClassName}>
+                        {table.getRowModel().rows.map((row) => (
+                            <div key={row.id}>
+                                {renderGridItem(row.original)}
+                            </div>
+                        ))}
+                        {table.getRowModel().rows.length === 0 && (
+                            <div className="col-span-full">
+                                {/* Use standard empty state for No Results (Filtered) vs No Data */}
+                                <Card className="flex flex-col items-center justify-center py-12 text-muted-foreground p-8">
+                                    {/* ... SVG ... */}
+                                    <p className="font-medium">No se encontraron resultados</p>
+                                    <p className="text-sm mt-1">Intenta ajustar los filtros o la búsqueda</p>
+                                </Card>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <Card className="overflow-hidden">
+                        <div className="relative w-full overflow-auto">
+                            <UiTable>
+                                { /* ... Header & Body ... */}
+                                <TableHeader
+                                    className={cn(
+                                        stickyHeader && "sticky top-0 z-10 bg-card/95 backdrop-blur-sm"
+                                    )}
+                                >
+                                    {table.getHeaderGroups().map((headerGroup) => (
+                                        <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-2">
+                                            {headerGroup.headers.map((header) => (
+                                                <TableHead
+                                                    key={header.id}
+                                                    className="h-11 px-4 text-[11px] font-medium text-muted-foreground"
+                                                    style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                                                >
+                                                    {header.isPlaceholder
+                                                        ? null
+                                                        : flexRender(header.column.columnDef.header, header.getContext())}
+                                                </TableHead>
                                             ))}
                                         </TableRow>
-                                    ))
-                                ) : (
-                                    // Empty state
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-32 text-center">
-                                            {typeof emptyState === "function"
-                                                ? (emptyState as (props: { table: Table<TData> }) => React.ReactNode)({ table })
-                                                : (emptyState || (
-                                                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                                                        <svg
-                                                            className="h-12 w-12 mb-4 opacity-50"
-                                                            fill="none"
-                                                            viewBox="0 0 24 24"
-                                                            stroke="currentColor"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={1.5}
-                                                                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                                                            />
-                                                        </svg>
-                                                        <p className="font-medium">No hay datos</p>
-                                                        <p className="text-sm mt-1">No se encontraron registros</p>
-                                                    </div>
+                                    ))}
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? (
+                                        <DataTableSkeleton columnCount={columns.length} rowCount={pageSize} />
+                                    ) : table.getRowModel().rows?.length ? (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow
+                                                key={row.id}
+                                                data-state={row.getIsSelected() && "selected"}
+                                                // ... details
+                                                className={cn(
+                                                    "transition-colors",
+                                                    onRowClick && "cursor-pointer",
+                                                    row.getIsSelected() && "bg-primary/5 border-l-2 border-l-primary"
+                                                )}
+                                                onClick={() => onRowClick?.(row.original)}
+                                            >
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell key={cell.id} className="px-4 py-3">
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                    </TableCell>
                                                 ))}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </UiTable>
-                    </div>
-                </Card>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        // Empty state for FILTERED results (No matches)
+                                        <TableRow>
+                                            <TableCell colSpan={columns.length} className="h-32 text-center">
+                                                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                                                    {/* Same SVG/Message for No Results */}
+                                                    <p className="font-medium">No hay resultados</p>
+                                                    <p className="text-sm mt-1">Intenta ajustar los filtros.</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </UiTable>
+                        </div>
+                    </Card>
+                )
             )}
 
             {/* Pagination - only show when rows exceed pageSize */}

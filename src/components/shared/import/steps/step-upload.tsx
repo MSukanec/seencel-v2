@@ -119,11 +119,11 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="flex flex-col h-full"
+            className="flex flex-col h-full min-h-0"
         >
             {stage === 'upload' && (
                 // Upload State
-                <div className="flex flex-col items-center justify-center p-8 h-full">
+                <div className="flex flex-col items-center justify-center p-8 h-full min-h-0">
                     <div
                         {...getRootProps()}
                         className={cn(
@@ -169,7 +169,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
 
             {stage === 'header-selection' && rawResult?.rawPreview && previewFile && (
                 // Header Selection State
-                <div className="flex flex-col h-full overflow-hidden">
+                <div className="flex flex-col h-full min-h-0 overflow-hidden">
                     {/* Header card with selected row preview */}
                     <div className="px-6 py-4 border-b shrink-0 bg-yellow-50/50 dark:bg-yellow-900/10 space-y-3">
                         <div className="flex items-center justify-between">

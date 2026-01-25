@@ -17,7 +17,7 @@ import { Slider } from "@/components/ui/slider";
 import { FeatureGuard, FeatureLockBadge } from "@/components/ui/feature-guard";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
 interface FinanceSettingsViewProps {
     preferences?: OrganizationPreferences | null;

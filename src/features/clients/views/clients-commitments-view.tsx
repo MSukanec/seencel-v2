@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { deleteCommitmentAction } from "@/features/clients/actions";
 import { CommitmentForm } from "../components/forms/commitment-form";

@@ -28,7 +28,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 import { useModal } from "@/providers/modal-store";
 import { createCard, updateCard } from "@/features/planner/actions";
 import { PRIORITY_CONFIG, KanbanPriority, KanbanCard, KanbanMember } from "@/features/planner/types";

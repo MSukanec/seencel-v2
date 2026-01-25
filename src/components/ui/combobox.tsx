@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 export interface ComboboxOption {
     value: string;
     label: string;
@@ -27,6 +29,10 @@ export interface ComboboxOption {
     selectedContent?: React.ReactNode;
     /** Optional: additional search terms */
     searchTerms?: string;
+    /** Optional: image URL for avatar */
+    image?: string | null;
+    /** Optional: fallback text for avatar */
+    fallback?: string;
 }
 
 interface ComboboxProps {
@@ -46,12 +52,7 @@ interface ComboboxProps {
     name?: string;
 }
 
-/**
- * Combobox - A Select component with search/filter functionality
- * 
- * Visually identical to the standard Select component, but allows typing to filter options.
- * Use this when you have many options (e.g., users, courses) and need search capability.
- */
+
 export function Combobox({
     value,
     onValueChange,
@@ -62,12 +63,34 @@ export function Combobox({
     disabled = false,
     className,
     size = "default",
-    modal = true, // Default to true as often used in modals which trap focus
+    modal = true,
     name,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false);
 
     const selectedOption = options.find((opt) => opt.value === value);
+
+    const renderContent = (option: ComboboxOption) => {
+        if (option.content) return option.content;
+
+        if (option.image || option.fallback) {
+            return (
+                <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5 border border-border/50">
+                        {option.image && (
+                            <AvatarImage src={option.image} alt={option.label} className="object-cover" />
+                        )}
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                            {option.fallback || option.label.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <span>{option.label}</span>
+                </div>
+            );
+        }
+
+        return option.label;
+    };
 
     return (
         <>
@@ -81,7 +104,6 @@ export function Combobox({
                         aria-expanded={open}
                         disabled={disabled}
                         className={cn(
-                            // Same styles as SelectTrigger but WITHOUT focus ring (focus is on the search input inside)
                             "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50",
                             size === "default" && "h-9",
                             size === "sm" && "h-8",
@@ -90,7 +112,7 @@ export function Combobox({
                     >
                         <span className="flex items-center gap-2 truncate">
                             {selectedOption ? (
-                                selectedOption.selectedContent || selectedOption.content || selectedOption.label
+                                selectedOption.selectedContent || renderContent(selectedOption)
                             ) : (
                                 <span className="text-muted-foreground">{placeholder}</span>
                             )}
@@ -107,7 +129,7 @@ export function Combobox({
                     <Command className="[&_[data-slot=command-input-wrapper]]:border-none">
                         <CommandInput
                             placeholder={searchPlaceholder}
-                            className="border-none focus:ring-0 focus:outline-none shadow-none h-9"
+                            className="border-none focus:ring-0 !focus:ring-0 focus:outline-none !focus:outline-none focus:ring-offset-0 !focus:ring-offset-0 focus-visible:ring-0 !focus-visible:ring-0 focus-visible:ring-offset-0 !focus-visible:ring-offset-0 shadow-none !shadow-none h-9"
                         />
                         <CommandList>
                             <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -115,13 +137,13 @@ export function Combobox({
                                 {options.map((option) => (
                                     <CommandItem
                                         key={option.value}
-                                        value={option.label}
+                                        value={option.label} // Command uses this for filtering
                                         onSelect={() => {
                                             onValueChange(option.value);
                                             setOpen(false);
                                         }}
                                     >
-                                        {option.content || option.label}
+                                        {renderContent(option)}
                                         <Check
                                             className={cn(
                                                 "ml-auto size-4",

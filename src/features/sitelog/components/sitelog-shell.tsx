@@ -20,7 +20,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/providers/modal-store";
 import { SitelogForm } from "./sitelog-form";
 import { deleteSiteLog } from "@/actions/sitelog";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
 interface SitelogShellProps {
     projectId: string;

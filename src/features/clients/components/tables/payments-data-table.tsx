@@ -11,7 +11,7 @@ import { DataTableImport } from "@/components/shared/data-table/data-table-impor
 import { useModal } from "@/providers/modal-store";
 import { PaymentForm } from "../forms/payment-form";
 import { deletePaymentAction } from "@/features/clients/actions";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";

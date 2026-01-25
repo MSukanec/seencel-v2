@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Project } from "@/types/project";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";

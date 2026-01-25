@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
-import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { DivisionForm } from "../components/forms/division-form";
 import { deleteTaskDivision } from "../actions";
 import { TaskDivision } from "@/features/tasks/types";

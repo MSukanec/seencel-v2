@@ -14,7 +14,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeleteDialog } from "@/components/shared/delete-dialog";
+import { DeleteDialog } from "@/components/shared/forms/general/delete-dialog";
 import { toast } from "sonner";
 
 interface LessonMarkersListProps {

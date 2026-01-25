@@ -126,6 +126,11 @@ export function SidebarBrandButton({
     const getInitials = (name: string) =>
         name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "??";
 
+    // Normalize project data: Ensure we use the object from the list to guarantee we have all metadata (colors, etc)
+    const effectiveProject = isProject && currentProject
+        ? (projects.find(p => p.id === currentProject.id) || currentProject)
+        : currentProject;
+
     // Render avatar for organization
     const renderOrgAvatar = (org: Organization | null | undefined, size: "sm" | "md" = "md") => {
         const sizeClass = size === "sm" ? "h-5 w-5" : "h-7 w-7";
@@ -153,11 +158,12 @@ export function SidebarBrandButton({
         const bgOpacity = color === '#6b7280' ? '30' : '25'; // More visible for default gray
 
         return (
-            <Avatar className={cn(sizeClass, "rounded-lg")}>
+            <Avatar key={project?.id} className={cn(sizeClass, "rounded-lg")}>
                 {showProjectAvatar && project?.image_path && (
                     <AvatarImage src={project.image_path} alt={project?.name || ""} />
                 )}
                 <AvatarFallback
+                    delayMs={0}
                     className={cn(textSize, "rounded-lg font-bold")}
                     style={{
                         backgroundColor: `${color}${bgOpacity}`,
@@ -194,7 +200,7 @@ export function SidebarBrandButton({
                         className="object-contain"
                     />
                 ) : isProject ? (
-                    renderProjectAvatar(currentProject)
+                    renderProjectAvatar(effectiveProject)
                 ) : (
                     renderOrgAvatar(currentOrg)
                 )}

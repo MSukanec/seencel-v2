@@ -12,6 +12,7 @@ export interface FKConflict {
     fieldLabel: string;                 // Human label (e.g., 'Tipo de Contacto')
     table: string;                      // FK table name
     missingValues: string[];            // Values not found in DB
+    matchedValues: { original: string; targetId: string; targetLabel: string }[]; // Values found in DB
     existingOptions: ForeignKeyOption[]; // Available options from DB
     allowCreate: boolean;               // Can user create new inline?
 }
@@ -23,8 +24,8 @@ export interface FKResolution {
     targetId?: string;                  // ID to map to (for 'map' action)
 }
 
-// Resolution map: field -> originalValue -> targetId
-export type ResolutionMap = Record<string, Record<string, string | null>>;
+// Resolution map: field -> originalValue -> FKResolution
+export type ResolutionMap = Record<string, Record<string, FKResolution>>;
 
 /**
  * Detects FK conflicts in the imported data.
@@ -33,7 +34,8 @@ export type ResolutionMap = Record<string, Record<string, string | null>>;
 export async function detectConflicts(
     data: Record<string, any>[],
     config: ImportConfig,
-    organizationId: string
+    organizationId: string,
+    learnedPatterns?: Record<string, Record<string, string>> // { fieldId: { sourceVal: targetId } }
 ): Promise<FKConflict[]> {
     const conflicts: FKConflict[] = [];
 
@@ -51,7 +53,7 @@ export async function detectConflicts(
         for (const row of data) {
             const value = row[fieldId];
             if (value && typeof value === 'string' && value.trim()) {
-                valuesInData.add(value.trim().toLowerCase());
+                valuesInData.add(value.trim());
             }
         }
 
@@ -59,28 +61,82 @@ export async function detectConflicts(
 
         // Fetch existing options from DB
         const existingOptions = await fkConfig.fetchOptions(organizationId);
-        const existingLabels = new Set(
-            existingOptions.map(opt => opt.label.toLowerCase())
-        );
 
-        // Find missing values
+        // Optimize lookups
+        const labelToOption = new Map<string, ForeignKeyOption>();
+        const idToOption = new Map<string, ForeignKeyOption>();
+
+        existingOptions.forEach(opt => {
+            labelToOption.set(opt.label.toLowerCase(), opt);
+            idToOption.set(opt.id, opt);
+        });
+
         const missingValues: string[] = [];
+        const matchedValues: { original: string; targetId: string; targetLabel: string }[] = [];
+
+        // Check patterns for this field
+        const fieldPatterns = learnedPatterns?.[fieldId] || {};
+
         for (const value of valuesInData) {
-            if (!existingLabels.has(value)) {
-                // Get original case from data
-                const original = Array.from(
-                    new Set(data.map(row => row[fieldId]))
-                ).find(v => v && v.toLowerCase() === value);
-                if (original) missingValues.push(original);
+            const lowerValue = value.toLowerCase();
+
+            // 1. Check Learned Patterns (Exact string match)
+            if (fieldPatterns[value]) {
+                const targetId = fieldPatterns[value];
+                const option = idToOption.get(targetId);
+
+                if (option) {
+                    matchedValues.push({
+                        original: value,
+                        targetId: option.id,
+                        targetLabel: `[Aprendido] ${option.label}`
+                    });
+                    continue; // Done with this value
+                }
+            }
+
+            // 2. String Match
+            const match = labelToOption.get(lowerValue);
+
+            if (match) {
+                matchedValues.push({
+                    original: value,
+                    targetId: match.id,
+                    targetLabel: match.label
+                });
+            } else {
+                // Try Fuzzy Match
+                const normalizedValue = lowerValue.trim();
+                const fuzzyMatch = existingOptions.find(opt => {
+                    const normalizedOpt = opt.label.trim().toLowerCase();
+                    const distance = levenshteinDistance(normalizedValue, normalizedOpt);
+                    // Threshold: Allow 1 error per 4 characters, max 3 errors
+                    const allowedErrors = Math.min(3, Math.floor(normalizedValue.length / 4) + 1);
+                    return distance <= allowedErrors;
+                });
+
+                if (fuzzyMatch) {
+                    matchedValues.push({
+                        original: value,
+                        targetId: fuzzyMatch.id,
+                        targetLabel: fuzzyMatch.label
+                    });
+                } else {
+                    missingValues.push(value);
+                }
             }
         }
 
-        if (missingValues.length > 0) {
+        // Always push if we have values, because we need to map matched values to IDs too!
+
+        // Always push if we have values, because we need to map matched values to IDs too!
+        if (missingValues.length > 0 || matchedValues.length > 0) {
             conflicts.push({
                 field: fieldId,
                 fieldLabel: column.label,
                 table: fkConfig.table,
                 missingValues,
+                matchedValues,
                 existingOptions,
                 allowCreate: fkConfig.allowCreate ?? false
             });
@@ -89,6 +145,8 @@ export async function detectConflicts(
 
     return conflicts;
 }
+
+
 
 /**
  * Applies resolutions to the data before import.
@@ -114,9 +172,11 @@ export function applyResolutions(
             const normalizedValue = String(value).trim().toLowerCase();
 
             // Check if we have a resolution for this value
-            for (const [originalValue, targetId] of Object.entries(fieldResolutions)) {
+            for (const [originalValue, resolution] of Object.entries(fieldResolutions)) {
                 if (originalValue.toLowerCase() === normalizedValue) {
-                    newRow[fieldId] = targetId; // Replace with resolved ID
+                    if (resolution.targetId) {
+                        newRow[fieldId] = resolution.targetId; // Replace with resolved ID
+                    }
                     break;
                 }
             }
@@ -146,8 +206,8 @@ export function filterIgnoredRows(
 
             const normalizedValue = String(value).trim().toLowerCase();
 
-            for (const [originalValue, targetId] of Object.entries(fieldResolutions)) {
-                if (originalValue.toLowerCase() === normalizedValue && targetId === null) {
+            for (const [originalValue, resolution] of Object.entries(fieldResolutions)) {
+                if (originalValue.toLowerCase() === normalizedValue && resolution.action === 'ignore') {
                     return false; // This row should be ignored
                 }
             }
@@ -155,5 +215,44 @@ export function filterIgnoredRows(
 
         return true;
     });
+}
+
+/**
+ * Calculates Levenshtein distance between two strings
+ */
+function levenshteinDistance(a: string, b: string): number {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const matrix: number[][] = [];
+
+    // increment along the first column of each row
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+
+    // increment each column in the first row
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+
+    // Fill in the rest of the matrix
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, // substitution
+                    Math.min(
+                        matrix[i][j - 1] + 1, // insertion
+                        matrix[i - 1][j] + 1  // deletion
+                    )
+                );
+            }
+        }
+    }
+
+    return matrix[b.length][a.length];
 }
 

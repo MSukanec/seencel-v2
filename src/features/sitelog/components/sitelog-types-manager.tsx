@@ -19,7 +19,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { useModal } from "@/providers/modal-store";
 import { deleteSiteLogType } from "@/actions/sitelog";
 import { SiteLogType } from "@/types/sitelog";

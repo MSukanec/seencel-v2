@@ -20,7 +20,7 @@ interface PlannerEventActionsProps {
     className?: string;
 }
 
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useState } from "react";
 
 export function PlannerEventActions({ event, onEdit, className }: PlannerEventActionsProps) {

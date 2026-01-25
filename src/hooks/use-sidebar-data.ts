@@ -13,6 +13,7 @@ interface SidebarData {
     currentProject: Project | null;
     isLoading: boolean;
     handleProjectChange: (projectId: string) => void;
+    saveProjectPreference: (projectId: string) => void;
 }
 
 // Helper to build the full logo URL from logo_path
@@ -190,12 +191,19 @@ export function useSidebarData(): SidebarData {
         }
     }, [projects]);
 
+    const saveProjectPreference = React.useCallback((projectId: string) => {
+        saveLastActiveProject(projectId).catch(error => {
+            console.error('Error saving project preference:', error);
+        });
+    }, []);
+
     return {
         currentOrg,
         projects,
         currentProject,
         isLoading,
         handleProjectChange,
+        saveProjectPreference
     };
 }
 

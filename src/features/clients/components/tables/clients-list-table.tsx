@@ -14,7 +14,7 @@ import { useModal } from "@/providers/modal-store";
 import { ClientForm } from "../forms/client-form";
 import { deleteClientAction } from "../../actions";
 import { toast } from "sonner";
-import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { ClientRepresentativesManager } from "../representatives/client-representatives-manager";
 

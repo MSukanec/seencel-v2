@@ -51,15 +51,15 @@ export function SidebarExpandableButtonBase({
         <button
             onClick={onClick}
             className={cn(
-                "group relative flex items-center w-full rounded-lg transition-all duration-200",
-                "hover:bg-secondary/80 text-muted-foreground hover:text-foreground",
+                "group relative flex items-center w-full rounded-lg transition-colors duration-0",
+                "hover:bg-secondary/80 text-foreground",
                 "p-0",
                 heightClasses[height],
                 className
             )}
         >
             {/* Left Zone - Fixed width */}
-            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0 text-muted-foreground group-hover:text-foreground transition-colors duration-0">
                 {leftContent}
             </div>
 
@@ -72,7 +72,7 @@ export function SidebarExpandableButtonBase({
                     {title}
                 </span>
                 {subtitle && (
-                    <span className="text-xs text-muted-foreground truncate w-full text-left">
+                    <span className="text-xs text-muted-foreground truncate w-full text-left group-hover:text-muted-foreground/80">
                         {subtitle}
                     </span>
                 )}
@@ -81,7 +81,7 @@ export function SidebarExpandableButtonBase({
             {/* Right Zone - Optional action */}
             {rightContent && (
                 <div className={cn(
-                    "flex items-center justify-center shrink-0 text-muted-foreground transition-all duration-150",
+                    "flex items-center justify-center shrink-0 text-muted-foreground group-hover:text-foreground transition-all duration-150",
                     isExpanded ? "w-8 opacity-100" : "w-0 opacity-0"
                 )}>
                     {rightContent}

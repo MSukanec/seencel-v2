@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FKConflict, ResolutionMap } from "@/lib/import-conflict-utils";
 import { ImportConfig, ForeignKeyOption } from "@/lib/import-utils";
 
@@ -36,15 +36,76 @@ export function ImportStepConflicts({
     organizationId,
     onResolutionsChange
 }: ImportStepConflictsProps) {
-    // State: field -> value -> resolution
-    const [resolutions, setResolutions] = useState<Record<string, Record<string, ValueResolution>>>({});
+    // Initialize resolutions with matched values
+    const [resolutions, setResolutions] = useState<Record<string, Record<string, ValueResolution>>>(() => {
+        const initialBreaks: Record<string, Record<string, ValueResolution>> = {};
+
+        conflicts.forEach(c => {
+            if (c.matchedValues && c.matchedValues.length > 0) {
+                initialBreaks[c.field] = {};
+                c.matchedValues.forEach(m => {
+                    initialBreaks[c.field][m.original] = {
+                        action: 'map',
+                        targetId: m.targetId
+                    };
+                });
+            }
+        });
+
+        return initialBreaks;
+    });
+
     const [creatingValues, setCreatingValues] = useState<Set<string>>(new Set());
 
-    // Count total missing values and resolved values
+    // Count pure conflicts (missing values)
     const totalMissing = conflicts.reduce((acc, c) => acc + c.missingValues.length, 0);
-    const resolvedCount = Object.values(resolutions).reduce((acc, fieldRes) => {
-        return acc + Object.values(fieldRes).filter(r => r.action !== null).length;
+
+    // Count resolved MISSING values (we don't count matches as "resolved work" for the user, but we track them)
+    // Actually, simply check if all MISSING values have a resolution in the state
+    const missingResolvedCount = conflicts.reduce((acc, c) => {
+        const fieldResolutions = resolutions[c.field] || {};
+        const resolvedForField = c.missingValues.filter(val => {
+            const res = fieldResolutions[val];
+            return res && res.action !== null;
+        }).length;
+        return acc + resolvedForField;
     }, 0);
+
+    const isAllResolved = missingResolvedCount >= totalMissing;
+
+    // Trigger update on mount (to push initial matched resolutions) and on changes
+    // We use a comprehensive effect to ensure parent always has full map
+    useEffect(() => {
+        const resolutionMap: ResolutionMap = {};
+
+        // 1. Add manual resolutions (and pre-filled matches from state)
+        for (const [fieldKey, fieldValues] of Object.entries(resolutions)) {
+            resolutionMap[fieldKey] = {};
+            for (const [valueKey, res] of Object.entries(fieldValues)) {
+                if (res.action === 'map' && res.targetId) {
+                    resolutionMap[fieldKey][valueKey] = {
+                        action: 'map',
+                        targetId: res.targetId!,
+                        originalValue: valueKey
+                    };
+                } else if (res.action === 'ignore') {
+                    resolutionMap[fieldKey][valueKey] = {
+                        action: 'ignore',
+                        originalValue: valueKey
+                    };
+                } else if (res.action === 'create') {
+                    resolutionMap[fieldKey][valueKey] = {
+                        action: 'create',
+                        targetId: res.targetId, // Can be undefined now (deferred)
+                        originalValue: valueKey
+                    };
+                }
+            }
+        }
+
+        onResolutionsChange(resolutionMap, isAllResolved);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resolutions, isAllResolved]);
 
     const handleResolutionChange = (
         field: string,
@@ -52,54 +113,21 @@ export function ImportStepConflicts({
         action: ResolutionAction,
         targetId?: string
     ) => {
-        const newResolutions = {
-            ...resolutions,
+        setResolutions(prev => ({
+            ...prev,
             [field]: {
-                ...resolutions[field],
+                ...prev[field],
                 [value]: { action, targetId }
             }
-        };
-        setResolutions(newResolutions);
-
-        // Build ResolutionMap for parent
-        const resolutionMap: ResolutionMap = {};
-        for (const [fieldKey, fieldValues] of Object.entries(newResolutions)) {
-            resolutionMap[fieldKey] = {};
-            for (const [valueKey, res] of Object.entries(fieldValues)) {
-                if (res.action === 'map' && res.targetId) {
-                    resolutionMap[fieldKey][valueKey] = res.targetId;
-                } else if (res.action === 'ignore') {
-                    resolutionMap[fieldKey][valueKey] = null;
-                } else if (res.action === 'create' && res.targetId) {
-                    resolutionMap[fieldKey][valueKey] = res.targetId;
-                }
-            }
-        }
-
-        // Check if all resolved
-        const allResolved = resolvedCount + 1 >= totalMissing;
-        onResolutionsChange(resolutionMap, allResolved);
+        }));
     };
 
-    const handleCreate = async (conflict: FKConflict, value: string) => {
+    const handleCreate = (conflict: FKConflict, value: string) => {
         const column = config.columns.find(c => String(c.id) === conflict.field);
-        if (!column?.foreignKey?.createAction) return;
+        if (!column?.foreignKey?.allowCreate) return;
 
-        const key = `${conflict.field}:${value}`;
-        setCreatingValues(prev => new Set(prev).add(key));
-
-        try {
-            const result = await column.foreignKey.createAction(organizationId, value);
-            handleResolutionChange(conflict.field, value, 'create', result.id);
-        } catch (error) {
-            console.error('Failed to create:', error);
-        } finally {
-            setCreatingValues(prev => {
-                const next = new Set(prev);
-                next.delete(key);
-                return next;
-            });
-        }
+        // Defer creation: Just mark as 'create'. The actual creation happens on Import.
+        handleResolutionChange(conflict.field, value, 'create', undefined);
     };
 
     if (conflicts.length === 0) {
@@ -129,21 +157,38 @@ export function ImportStepConflicts({
         >
             {/* Summary Bar */}
             <div className="p-6 pb-2">
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-600">
-                        <AlertTriangle className="h-6 w-6" />
+                <div className={cn(
+                    "border rounded-lg p-4 flex items-center gap-3",
+                    totalMissing > 0 ? "bg-amber-500/10 border-amber-500/20" : "bg-green-500/10 border-green-500/20"
+                )}>
+                    <div className={cn(
+                        "h-10 w-10 rounded-full flex items-center justify-center",
+                        totalMissing > 0 ? "bg-amber-500/20 text-amber-600" : "bg-green-500/20 text-green-600"
+                    )}>
+                        {totalMissing > 0 ? <AlertTriangle className="h-6 w-6" /> : <Check className="h-6 w-6" />}
                     </div>
                     <div className="flex-1">
-                        <div className="text-lg font-semibold text-amber-700">
-                            {totalMissing} valor{totalMissing > 1 ? 'es' : ''} no encontrado{totalMissing > 1 ? 's' : ''}
+                        <div className={cn(
+                            "text-lg font-semibold",
+                            totalMissing > 0 ? "text-amber-700" : "text-green-700"
+                        )}>
+                            {totalMissing > 0
+                                ? `${totalMissing} valor${totalMissing > 1 ? 'es' : ''} no encontrado${totalMissing > 1 ? 's' : ''}`
+                                : "Todos los valores coinciden"
+                            }
                         </div>
-                        <div className="text-xs text-amber-600/80">
-                            Resuelve los conflictos antes de continuar
+                        <div className={cn(
+                            "text-xs",
+                            totalMissing > 0 ? "text-amber-600/80" : "text-green-600/80"
+                        )}>
+                            {totalMissing > 0 ? "Resuelve los conflictos antes de continuar" : "Revisa las coincidencias automáticas"}
                         </div>
                     </div>
-                    <Badge variant={resolvedCount === totalMissing ? "default" : "secondary"}>
-                        {resolvedCount} / {totalMissing} resueltos
-                    </Badge>
+                    {totalMissing > 0 && (
+                        <Badge variant={isAllResolved ? "default" : "secondary"}>
+                            {missingResolvedCount} / {totalMissing} resueltos
+                        </Badge>
+                    )}
                 </div>
             </div>
 
@@ -155,42 +200,90 @@ export function ImportStepConflicts({
                             <div key={conflict.field} className="border rounded-lg overflow-hidden">
                                 <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between">
                                     <div className="font-medium text-sm">{conflict.fieldLabel}</div>
-                                    <Badge variant="outline" className="text-xs">
-                                        {conflict.missingValues.length} faltante{conflict.missingValues.length > 1 ? 's' : ''}
-                                    </Badge>
+                                    <div className="flex gap-2">
+                                        {(() => {
+                                            const missingCount = conflict.missingValues.length;
+                                            const resolvedCount = conflict.missingValues.filter(val => resolutions[conflict.field]?.[val]?.action).length;
+                                            const remaining = missingCount - resolvedCount;
+
+                                            if (remaining > 0) {
+                                                return (
+                                                    <Badge className="text-xs bg-error text-white hover:bg-error/90 border-transparent">
+                                                        {remaining} faltante{remaining > 1 ? 's' : ''}
+                                                    </Badge>
+                                                );
+                                            } else if (missingCount > 0) {
+                                                return (
+                                                    <Badge className="text-xs bg-success text-white hover:bg-success/90 border-transparent">
+                                                        <Check className="h-3 w-3 mr-1" />
+                                                        Resuelto
+                                                    </Badge>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+
+                                        {conflict.matchedValues && conflict.matchedValues.length > 0 && (
+                                            <Badge className="text-xs bg-success text-white hover:bg-success/90 border-transparent">
+                                                {conflict.matchedValues.length} coincidencia{conflict.matchedValues.length > 1 ? 's' : ''}
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="divide-y">
+                                <div className="divide-y text-sm">
+                                    {/* Missing Values (Conflicts) */}
                                     {conflict.missingValues.map((value) => {
                                         const resolution = resolutions[conflict.field]?.[value];
                                         const isCreating = creatingValues.has(`${conflict.field}:${value}`);
+                                        const isResolved = !!resolution?.action;
 
                                         return (
                                             <div
-                                                key={value}
+                                                key={`missing-${value}`}
                                                 className={cn(
-                                                    "px-4 py-3 flex items-center gap-4",
-                                                    resolution?.action && "bg-green-50/50 dark:bg-green-950/10"
+                                                    "px-4 py-3 flex items-center gap-4 transition-colors",
+                                                    isResolved ? "bg-success/5" : "hover:bg-muted/30"
                                                 )}
                                             >
-                                                {/* Value */}
-                                                <div className="min-w-[120px]">
-                                                    <Badge variant="destructive" className="font-mono">
+                                                <div className="min-w-[140px]">
+                                                    <span className={cn(
+                                                        "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold shadow-sm transition-colors",
+                                                        isResolved
+                                                            ? "bg-success text-white"
+                                                            : "bg-error text-white"
+                                                    )}>
                                                         {value}
-                                                    </Badge>
+                                                    </span>
                                                 </div>
 
                                                 <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
 
-                                                {/* Actions */}
                                                 <div className="flex items-center gap-2 flex-1">
-                                                    {/* Create Button */}
+                                                    <Select
+                                                        value={resolution?.action === 'map' ? resolution.targetId : ''}
+                                                        onValueChange={(targetId) => {
+                                                            handleResolutionChange(conflict.field, value, 'map', targetId);
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="flex-1 h-8 text-xs">
+                                                            <SelectValue placeholder="Seleccionar..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {conflict.existingOptions.map((opt) => (
+                                                                <SelectItem key={opt.id} value={opt.id} className="text-xs">
+                                                                    {opt.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+
                                                     {conflict.allowCreate && (
                                                         <Button
                                                             size="sm"
                                                             variant={resolution?.action === 'create' ? "default" : "outline"}
                                                             onClick={() => handleCreate(conflict, value)}
                                                             disabled={isCreating || resolution?.action === 'create'}
-                                                            className="shrink-0"
+                                                            className="shrink-0 h-8 text-xs"
                                                         >
                                                             {isCreating ? (
                                                                 <>Creando...</>
@@ -202,41 +295,97 @@ export function ImportStepConflicts({
                                                         </Button>
                                                     )}
 
-                                                    {/* Map to Existing */}
+                                                    <Button
+                                                        size="sm"
+                                                        variant={resolution?.action === 'ignore' ? "destructive" : "ghost"}
+                                                        onClick={() => handleResolutionChange(conflict.field, value, 'ignore')}
+                                                        className="shrink-0 h-8 w-8 p-0"
+                                                        title="Ignorar fila"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Matched Values (Auto-resolved) */}
+                                    {conflict.matchedValues?.map((match) => {
+                                        const resolution = resolutions[conflict.field]?.[match.original];
+                                        const isCreating = creatingValues.has(`${conflict.field}:${match.original}`);
+                                        // A match is implicitly resolved unless overridden
+                                        const currentTargetId = resolution?.action === 'map' ? resolution.targetId : match.targetId;
+                                        const isResolved = resolution ? (!!resolution.action) : true; // Default true for match
+                                        const isIgnored = resolution?.action === 'ignore';
+
+                                        return (
+                                            <div
+                                                key={`match-${match.original}`}
+                                                className={cn(
+                                                    "px-4 py-3 flex items-center gap-4 transition-colors",
+                                                    isResolved && !isIgnored ? "bg-success/5" : "hover:bg-muted/30"
+                                                )}
+                                            >
+                                                <div className="min-w-[140px]">
+                                                    <span className={cn(
+                                                        "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold shadow-sm transition-colors",
+                                                        (isResolved && !isIgnored)
+                                                            ? "bg-success text-white"
+                                                            : "bg-error text-white"
+                                                    )}>
+                                                        {match.original}
+                                                    </span>
+                                                </div>
+
+                                                <ArrowRight className="h-4 w-4 text-success/50 shrink-0" />
+
+                                                <div className="flex items-center gap-2 flex-1">
                                                     <Select
-                                                        value={resolution?.action === 'map' ? resolution.targetId : ''}
+                                                        value={isIgnored ? '' : (currentTargetId || '')}
                                                         onValueChange={(targetId) => {
-                                                            handleResolutionChange(conflict.field, value, 'map', targetId);
+                                                            handleResolutionChange(conflict.field, match.original, 'map', targetId);
                                                         }}
                                                     >
-                                                        <SelectTrigger className="w-[180px]">
-                                                            <SelectValue placeholder="Usar existente..." />
+                                                        <SelectTrigger className="flex-1 h-8 text-xs bg-background border border-input shadow-sm">
+                                                            <SelectValue placeholder="Seleccionar..." />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {conflict.existingOptions.map((opt) => (
-                                                                <SelectItem key={opt.id} value={opt.id}>
+                                                                <SelectItem key={opt.id} value={opt.id} className="text-xs">
                                                                     {opt.label}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
 
-                                                    {/* Ignore Button */}
+                                                    {conflict.allowCreate && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant={resolution?.action === 'create' ? "default" : "outline"}
+                                                            onClick={() => handleCreate(conflict, match.original)}
+                                                            disabled={isCreating || resolution?.action === 'create'}
+                                                            className="shrink-0 h-8 text-xs"
+                                                        >
+                                                            {isCreating ? (
+                                                                <>Creando...</>
+                                                            ) : resolution?.action === 'create' ? (
+                                                                <><Check className="h-3 w-3 mr-1" /> Creado</>
+                                                            ) : (
+                                                                <><Plus className="h-3 w-3 mr-1" /> Crear &quot;{match.original}&quot;</>
+                                                            )}
+                                                        </Button>
+                                                    )}
+
                                                     <Button
                                                         size="sm"
-                                                        variant={resolution?.action === 'ignore' ? "destructive" : "ghost"}
-                                                        onClick={() => handleResolutionChange(conflict.field, value, 'ignore')}
-                                                        className="shrink-0"
+                                                        variant={isIgnored ? "destructive" : "ghost"}
+                                                        onClick={() => handleResolutionChange(conflict.field, match.original, isIgnored ? 'map' : 'ignore', isIgnored ? match.targetId : undefined)}
+                                                        className={cn("shrink-0 h-8 w-8 p-0", isIgnored ? "opacity-100" : "opacity-30 hover:opacity-100")}
+                                                        title={isIgnored ? "Restaurar" : "Ignorar fila"}
                                                     >
-                                                        <X className="h-3 w-3 mr-1" />
-                                                        Ignorar
+                                                        {isIgnored ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                                                     </Button>
                                                 </div>
-
-                                                {/* Status */}
-                                                {resolution?.action && (
-                                                    <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                                )}
                                             </div>
                                         );
                                     })}
@@ -249,4 +398,5 @@ export function ImportStepConflicts({
         </motion.div>
     );
 }
+
 

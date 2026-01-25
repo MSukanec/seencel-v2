@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContactWithRelations } from "@/types/contact";
 import { Building2, Mail, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, PhoneCall, Trash2 } from "lucide-react";
 
@@ -24,136 +25,152 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
     const avatarUrl = contact.resolved_avatar_url || contact.image_url;
 
     return (
-        <Card className="group relative overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-primary/30">
-            <CardContent className="p-0">
-                {/* Header with gradient background */}
-                <div className="h-16 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
+        <Card className="group relative flex flex-col items-center text-center p-6 h-[400px] bg-card hover:bg-accent/40 transition-colors border-border/50 shadow-sm">
 
-                {/* Avatar positioned over the header */}
-                <div className="flex flex-col items-center -mt-10 px-4 pb-4">
-                    <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
-                        <AvatarImage src={avatarUrl || undefined} className="object-cover" />
-                        <AvatarFallback className="text-xl font-semibold bg-muted">
-                            {contact.first_name?.[0]}{contact.last_name?.[0]}
-                        </AvatarFallback>
-                    </Avatar>
+            {/* Top Actions - Always Visible */}
+            <div className="absolute top-4 right-4">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="text-muted-foreground hover:text-foreground transition-colors outline-none">
+                            <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(contact)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => onDelete(contact)}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
 
-                    {/* Name & Company */}
-                    <div className="mt-3 text-center">
-                        <h3 className="font-semibold text-lg leading-tight">
-                            {contact.full_name || "Sin nombre"}
-                        </h3>
-                        {contact.company_name && (
-                            <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground mt-0.5">
-                                <Building2 className="h-3 w-3" />
-                                <span>{contact.company_name}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Tags */}
-                    {contact.contact_types && contact.contact_types.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-1 mt-3">
-                            {contact.contact_types.slice(0, 3).map((type) => (
-                                <Badge key={type.id} variant="secondary" className="text-xs">
-                                    {type.name}
-                                </Badge>
-                            ))}
-                            {contact.contact_types.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                    +{contact.contact_types.length - 3}
-                                </Badge>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Contact Info */}
-                    <div className="w-full mt-4 space-y-2 text-sm">
-                        {/* Email - Clickable mailto */}
-                        {contact.email && (
-                            <a
-                                href={`mailto:${contact.email}`}
-                                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                            >
-                                <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                                <span className="truncate hover:underline">{contact.email}</span>
-                            </a>
-                        )}
-
-                        {/* Phone - Popover with Call/WhatsApp options */}
-                        {contact.phone && (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer w-full text-left">
-                                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                                        <span className="hover:underline">{contact.phone}</span>
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-48 p-2" align="start">
-                                    <div className="flex flex-col gap-1">
-                                        <a
-                                            href={`tel:${contact.phone}`}
-                                            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors"
-                                        >
-                                            <PhoneCall className="h-4 w-4 text-blue-500" />
-                                            <span>Llamar</span>
-                                        </a>
-                                        <a
-                                            href={`https://wa.me/${formatPhoneForWhatsApp(contact.phone)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors"
-                                        >
-                                            <MessageCircle className="h-4 w-4 text-green-500" />
-                                            <span>WhatsApp</span>
-                                        </a>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-
-                        {contact.location && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                                <span className="truncate">{contact.location}</span>
-                            </div>
-                        )}
-                    </div>
+            {/* Organization Member Indicator (Top Left) - Mini Logo */}
+            {contact.is_organization_member && (
+                <div className="absolute top-4 left-4 z-10">
+                    <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Avatar className="h-8 w-8 border border-border/50 shadow-sm bg-background">
+                                    <AvatarFallback className="bg-primary/5 text-primary">
+                                        <Building2 className="h-4 w-4" />
+                                    </AvatarFallback>
+                                </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                                <p className="text-xs">Miembro de la Organización</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
+            )}
 
-                {/* Actions Menu (appears on hover) */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(contact)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => onDelete(contact)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+            {/* Avatar - Centered & Circular */}
+            <div className="mt-8 mb-6">
+                <Avatar className="h-24 w-24 border-2 border-border/10 shadow-sm rounded-full">
+                    <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+                    <AvatarFallback className="text-2xl font-medium bg-muted text-muted-foreground/70">
+                        {contact.first_name?.[0]}{contact.last_name?.[0]}
+                    </AvatarFallback>
+                </Avatar>
+            </div>
 
-                {/* Member Badge */}
-                {contact.is_organization_member && (
-                    <div className="absolute top-2 left-2">
-                        <Badge variant="default" className="text-xs bg-emerald-500/90 hover:bg-emerald-500">
-                            Miembro
-                        </Badge>
+            {/* Name & Title - Fixed Height Area */}
+            <div className="w-full min-h-[60px] flex flex-col items-center justify-start mb-4">
+                <h3 className="font-semibold text-lg leading-tight line-clamp-1 w-full px-2" title={contact.full_name || undefined}>
+                    {contact.full_name || "Sin nombre"}
+                </h3>
+                {contact.company_name ? (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                        <Building2 className="h-3 w-3" />
+                        <span className="line-clamp-1">{contact.company_name}</span>
                     </div>
+                ) : (
+                    <div className="h-5 mt-1" /> /* Spacer for alignment */
                 )}
-            </CardContent>
+            </div>
+
+            {/* Tags Slot - Moved here below name */}
+            <div className="h-6 w-full flex items-center justify-center overflow-hidden mb-2">
+                {contact.contact_types && contact.contact_types.length > 0 ? (
+                    <div className="flex gap-1 justify-center">
+                        <Badge variant="secondary" className="text-xs h-5 px-2 font-normal bg-secondary/50 text-secondary-foreground/80">
+                            {contact.contact_types[0].name}
+                        </Badge>
+                        {contact.contact_types.length > 1 && (
+                            <span className="text-xs text-muted-foreground self-center">+{contact.contact_types.length - 1}</span>
+                        )}
+                    </div>
+                ) : (
+                    <span className="text-xs opacity-20 select-none">-</span>
+                )}
+            </div>
+
+            {/* Fixed Height Contact Info Area */}
+            {/* We reserve space for Email, Phone, and Types so cards align perfectly even if empty */}
+            <div className="w-full mt-auto flex flex-col items-center gap-2 text-sm text-muted-foreground pb-2">
+
+                {/* Email Slot */}
+                <div className="h-6 w-full flex items-center justify-center">
+                    {contact.email ? (
+                        <a
+                            href={`mailto:${contact.email}`}
+                            className="flex items-center gap-2 hover:text-primary transition-colors max-w-full"
+                            title={contact.email || undefined}
+                        >
+                            <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="truncate text-xs">{contact.email}</span>
+                        </a>
+                    ) : (
+                        <span className="text-xs opacity-20 select-none">-</span>
+                    )}
+                </div>
+
+                {/* Phone Slot */}
+                <div className="h-6 w-full flex items-center justify-center">
+                    {contact.phone ? (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="flex items-center gap-2 hover:text-primary transition-colors max-w-full">
+                                    <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span className="truncate text-xs">{formatPhoneForWhatsApp(contact.phone)}</span>
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2" align="center">
+                                <div className="flex flex-col gap-1">
+                                    <a
+                                        href={`tel:${contact.phone}`}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                                    >
+                                        <PhoneCall className="h-4 w-4 text-blue-500" />
+                                        <span>Llamar</span>
+                                    </a>
+                                    <a
+                                        href={`https://wa.me/${formatPhoneForWhatsApp(contact.phone)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                                    >
+                                        <MessageCircle className="h-4 w-4 text-green-500" />
+                                        <span>WhatsApp</span>
+                                    </a>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    ) : (
+                        <span className="text-xs opacity-20 select-none">-</span>
+                    )}
+                </div>
+
+
+
+            </div>
         </Card>
     );
 }

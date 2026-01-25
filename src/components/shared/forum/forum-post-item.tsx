@@ -23,7 +23,7 @@ import { es, enUS } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { DeleteDialog } from "@/components/shared/delete-dialog";
+import { DeleteDialog } from "@/components/shared/forms/general/delete-dialog";
 import { cn } from "@/lib/utils";
 
 interface ForumPostItemProps {

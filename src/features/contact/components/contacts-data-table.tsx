@@ -21,7 +21,7 @@ import { DataTableImport } from "@/components/shared/data-table/data-table-impor
 import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
 import { ImportConfig } from "@/lib/import-utils";
 import { Contact } from "@/types/contact";
-import { DeleteReplacementModal } from "@/components/shared/delete-replacement-modal";
+import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
 import { exportTableToCsv, exportTableToExcel } from "@/lib/data-table-export-utils";

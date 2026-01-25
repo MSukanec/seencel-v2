@@ -1,6 +1,6 @@
 "use client";
 
-import { FormFooter } from "@/components/shared/form-footer";
+import { FormFooter } from "@/components/shared/forms/form-footer";
 
 import { createProject, updateProject } from "@/features/projects/actions";
 

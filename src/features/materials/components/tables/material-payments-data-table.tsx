@@ -10,7 +10,7 @@ import { DataTableExport } from "@/components/shared/data-table/data-table-expor
 import { useModal } from "@/providers/modal-store";
 import { MaterialPaymentForm } from "../forms/material-payment-form";
 import { deleteMaterialPaymentAction } from "@/features/materials/actions";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";

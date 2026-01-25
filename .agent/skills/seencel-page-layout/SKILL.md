@@ -13,6 +13,7 @@ description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en 
 4.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
 5.  **Toolbar**: Usar `<Toolbar portalToHeader />` dentro de las Views de Listado/Gestión. **NO usar en Dashboards/Overview**.
 6.  **EmptyState**: Responsabilidad de la **View**, prohibido en DataTables.
+7.  **Translations**: **NUNCA** dejar claves de traducción faltantes. Asegurar que `es.json` incluya `title`, `detailTitle` (si aplica), `subtitle` y `back`.
 
 ---
 
@@ -141,6 +142,18 @@ En las vistas de **"Visión General"** (Dashboards):
 
 ---
 
+## 🔒 4. Internationalization (i18n)
+
+Asegúrate de que TODOS los textos visibles estén en `messages/es.json`.
+1.  **Feature Namespace**: Crea una clave raíz para tu feature (ej. `Subcontracts`).
+2.  **Required Keys**:
+    *   `title`: Título principal.
+    *   `subtitle`: Descripción corta.
+    *   `detailTitle`: Título para páginas de detalle (ej. "Detalle de Subcontrato").
+    *   `back`: Etiqueta para el botón de volver.
+
+---
+
 ## ❌ Anti-Patrones (Lo que NO debes hacer)
 
 1.  **Tabs en Body**: Poner `<TabsList>` dentro de `ContentLayout` o debajo del header manualmente.
@@ -148,3 +161,4 @@ En las vistas de **"Visión General"** (Dashboards):
 3.  **Botones como Children**: `<Toolbar><Button>...</Button></Toolbar>`. Rompe el diseño mobile.
 4.  **Toolbar en Overview Vacío**: Poner una `<Toolbar actions={[]} />` vacía en un Dashboard. Simplemente no la pongas.
 5.  **EmptyState Oculto**: Poner el `EmptyState` dentro de un componente `DataTable`.
+6.  **Hardcoded Strings**: No usar textos quemados en el código. Usar `useTranslations` o `getTranslations`.

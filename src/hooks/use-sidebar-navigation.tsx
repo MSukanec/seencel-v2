@@ -25,6 +25,7 @@ import {
     CalendarDays,
     FolderOpen,
     ClipboardList,
+    Banknote,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 
@@ -134,13 +135,13 @@ export function useSidebarNavigation() {
                     {
                         title: 'Compromisos y Pagos',
                         href: activeProjectId ? `${projectBase}/clients` : '/organization/projects',
-                        icon: Users,
+                        icon: Banknote,
                         sectionHeader: 'Clientes'
                     },
                     {
                         title: 'Portal de Clientes',
                         href: activeProjectId ? `${projectBase}/portal` : '/organization/projects',
-                        icon: Users
+                        icon: Monitor
                     },
                 ];
             case 'learnings':

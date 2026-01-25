@@ -33,7 +33,7 @@ export function SidebarNavButton({
     const content = (
         <div
             className={cn(
-                "group relative flex items-center w-full rounded-lg transition-all duration-200",
+                "group relative flex items-center w-full rounded-lg transition-colors duration-0",
                 "hover:bg-secondary/80 text-muted-foreground hover:text-foreground",
                 "p-0 min-h-[32px]",
                 isActive && "bg-secondary text-foreground",
@@ -41,13 +41,17 @@ export function SidebarNavButton({
             )}
         >
             {/* Icon - 16x16 */}
-            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+            <div className={cn(
+                "w-8 h-8 flex items-center justify-center shrink-0",
+                // Icon inherits color (muted -> foreground on hover), or forces foreground if active
+                isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+            )}>
                 <Icon className="h-4 w-4" />
             </div>
 
             {/* Label - Single line, left-aligned */}
             <span className={cn(
-                "text-[13px] font-medium truncate transition-all duration-150 ease-in-out text-left",
+                "text-[13px] font-medium truncate transition-opacity duration-200 ease-in-out text-left",
                 isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0"
             )}>
                 {label}

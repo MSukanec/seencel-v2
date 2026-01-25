@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useModal } from "@/providers/modal-store";
 import { ContextSidebar } from "@/providers/context-sidebar-provider";
-import { DeleteConfirmationDialog } from "@/components/shared/delete-confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
 import { DivisionsSidebar } from "./divisions-sidebar";
 import { TaskForm } from "../forms/task-form";

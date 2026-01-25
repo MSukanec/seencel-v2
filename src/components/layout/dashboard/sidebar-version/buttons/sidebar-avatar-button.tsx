@@ -24,6 +24,8 @@ import {
     Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useModal } from "@/providers/modal-store";
+import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 
 // ============================================================================
 // AVATAR BUTTON WITH USER MENU POPOVER
@@ -52,6 +54,25 @@ export function SidebarAvatarButton({
     const supabase = createClient();
     const tUser = useTranslations('UserMenu');
     const { setTheme } = useTheme();
+
+    // Modal controls for Feedback
+    const { openModal, closeModal } = useModal();
+    const tFeedback = useTranslations('Feedback');
+
+    const handleFeedbackClick = () => {
+        setOpen(false); // Close popover
+        openModal(
+            <FeedbackForm
+                onSuccess={closeModal}
+                onCancel={closeModal}
+            />,
+            {
+                title: tFeedback('title') || "Feedback",
+                description: tFeedback('modalDescription') || "Envíanos tus comentarios o reporta un problema.",
+                size: 'md'
+            }
+        );
+    };
 
     // Generate initials from name
     const initials = name
@@ -130,15 +151,7 @@ export function SidebarAvatarButton({
 
                 {/* Menu Items */}
                 <div className="flex flex-col gap-0.5">
-                    <Link
-                        href="/"
-                        onClick={handleClose}
-                        className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors"
-                    >
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        {tUser('home')}
-                    </Link>
-
+                    {/* 1. Configuración */}
                     <Link
                         href="/settings"
                         onClick={handleClose}
@@ -148,6 +161,30 @@ export function SidebarAvatarButton({
                         {tUser('settings')}
                     </Link>
 
+                    <Separator className="my-1" />
+
+                    {/* 2. Feedback */}
+                    <button
+                        onClick={handleFeedbackClick}
+                        className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors w-full text-left"
+                    >
+                        <Sparkles className="h-4 w-4 text-muted-foreground" />
+                        Feedback
+                    </button>
+
+                    <Separator className="my-1" />
+
+                    {/* 3. Ir al Inicio */}
+                    <Link
+                        href="/"
+                        onClick={handleClose}
+                        className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors"
+                    >
+                        <Home className="h-4 w-4 text-muted-foreground" />
+                        {tUser('home')}
+                    </Link>
+
+                    {/* 4. Contacto */}
                     <Link
                         href="/contact"
                         onClick={handleClose}
