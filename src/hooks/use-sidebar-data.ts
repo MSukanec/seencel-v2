@@ -51,7 +51,7 @@ export function useSidebarData(): SidebarData {
     // Memoize orgId to avoid dependency issues
     const orgId = activeOrgId ?? null;
 
-    // Fetch current organization on mount
+    // Fetch current organization on mount and subscribe to changes
     React.useEffect(() => {
         if (!orgId) {
             setCurrentOrg(null);
@@ -79,6 +79,33 @@ export function useSidebarData(): SidebarData {
         }
 
         fetchOrg();
+
+        // Realtime Subscription
+        const channel = supabase
+            .channel(`org-sidebar-${orgId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'organizations',
+                    filter: `id=eq.${orgId}`,
+                },
+                (payload) => {
+                    // Update local state when organization changes
+                    const newData = payload.new as any;
+                    setCurrentOrg((prev) => ({
+                        ...prev!,
+                        name: newData.name, // In case name changes too
+                        logo_path: buildLogoUrl(newData.logo_path),
+                    }));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [supabase, orgId]);
 
     // Fetch projects and load last active project from preferences

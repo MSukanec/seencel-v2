@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateOrganization } from "@/actions/update-organization";
 import { Loader2, MapPin, Search } from "lucide-react";
+import { toast } from "sonner";
 
 import { useTheme } from "next-themes";
 
@@ -83,7 +84,6 @@ export function OrganizationLocationManager({ organization }: { organization: an
 
 function MapInterface({ organization, orgData }: { organization: any, orgData: any }) {
     const [isPending, startTransition] = useTransition();
-    const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
     const { resolvedTheme } = useTheme();
 
     // Determine styles based on theme
@@ -174,7 +174,6 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage(null);
 
         const formData = new FormData();
         // Append all field values from state + implicit ones
@@ -185,9 +184,9 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
         startTransition(async () => {
             const result = await updateOrganization(organization.id, formData);
             if (result.error) {
-                setMessage({ text: result.error, type: 'error' });
+                toast.error(`Error: ${result.error}`);
             } else {
-                setMessage({ text: "Location updated successfully!", type: 'success' });
+                toast.success("Ubicación actualizada correctamente");
             }
         });
     };
@@ -249,12 +248,6 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-
-                        {message && (
-                            <div className={`p-3 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'}`}>
-                                {message.text}
-                            </div>
-                        )}
 
                         <div className="relative">
                             <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground font-semibold">BUSCAR DIRECCIÓN</Label>

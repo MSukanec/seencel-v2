@@ -4,11 +4,13 @@ import { useEffect, useState, useMemo } from "react";
 import { useLayoutStore, NavigationContext } from "@/store/layout-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Users, FileText, Calendar, Clock, AlertCircle, MapPin, Loader2 } from "lucide-react";
+import { Activity, Users, FileText, Calendar, Clock, AlertCircle, MapPin, Loader2, Pencil } from "lucide-react";
 
 import { GoogleMap, useLoadScript, MarkerF } from "@react-google-maps/api";
 import { useTheme } from "next-themes";
 import Image from "next/image";
+import Link from "next/link";
+import { useLocale } from "next-intl";
 
 interface ProjectDashboardClientProps {
     project: any;
@@ -158,6 +160,8 @@ function ProjectHero({ project, imageUrl }: { project: any, imageUrl?: string | 
     // Theme for map style
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
+    const locale = useLocale();
+
     // Simplified Dark Mode style
     const mapStyle = isDark ? [
         { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -191,9 +195,18 @@ function ProjectHero({ project, imageUrl }: { project: any, imageUrl?: string | 
             {/* Content overlay */}
             <div className="absolute bottom-0 left-0 p-8 w-full md:w-2/3">
                 <div className="space-y-2 animate-in slide-in-from-bottom-4 duration-500">
-                    <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight drop-shadow-md">
-                        {project.name}
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight drop-shadow-md">
+                            {project.name}
+                        </h1>
+                        <Link
+                            href={`/${locale}/project/${project.id}/details`}
+                            className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md border border-white/20 shadow-lg"
+                            title="Editar Información"
+                        >
+                            <Pencil className="h-5 w-5" />
+                        </Link>
+                    </div>
                     {project.project_data?.address_full && (
                         <div className="flex items-center gap-2 text-white/90">
                             <MapPin className="h-4 w-4 text-primary" />

@@ -5,16 +5,11 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MapPin, Calendar, Building2, Hammer, ImageOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Calendar, Building2, Hammer, ImageOff, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "next-intl";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useLayoutStore } from "@/store/layout-store";
 
 interface ProjectCardProps {
     project: Project;
@@ -41,6 +36,7 @@ const STATUS_LABELS: Record<string, string> = {
  */
 export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCardProps) {
     const locale = useLocale();
+    const { actions } = useLayoutStore();
 
     // Get accent color for the card
     const accentColor = project.use_custom_color && project.custom_color_hex
@@ -62,8 +58,18 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         e.stopPropagation();
     };
 
+    const handleCardClick = () => {
+        // Update store immediately when card is clicked
+        actions.setActiveContext("project");
+        actions.setActiveProjectId(project.id);
+    };
+
     return (
-        <Link href={`/${locale}/project/${project.id}`} className="block group">
+        <Link
+            href={`/${locale}/project/${project.id}`}
+            className="block group"
+            onClick={handleCardClick}
+        >
             <Card className={cn(
                 "relative overflow-hidden rounded-xl border-0 shadow-lg",
                 "transition-all duration-300 ease-out",
@@ -179,5 +185,3 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         </Link>
     );
 }
-
-

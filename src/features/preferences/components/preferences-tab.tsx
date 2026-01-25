@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Monitor, LayoutDashboard, PanelLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ interface PreferencesTabProps {
 
 export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
     const { setTheme, theme } = useTheme();
-    const { layoutMode, actions: { setLayoutMode } } = useLayoutStore();
+    const { layoutMode, actions } = useLayoutStore();
     const t = useTranslations("Settings");
     const locale = useLocale();
     const router = useRouter();
@@ -51,7 +52,7 @@ export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
 
     // Handle Layout Change
     const onLayoutChange = (newLayout: 'default' | 'sidebar') => {
-        setLayoutMode(newLayout);
+        actions.setLayoutMode(newLayout);
         updateUserPreferences({ layout: newLayout });
     };
 
@@ -178,6 +179,39 @@ export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
                             current={layoutMode}
                             onClick={() => onLayoutChange('sidebar')}
                             icon={<PanelLeft className="h-6 w-6" />}
+                        />
+                    </div>
+                </div>
+            </CardContent>
+
+            <Separator className="my-6" />
+
+            <CardContent className="space-y-6 pt-0">
+                {/* SIDEBAR SETTINGS */}
+                <div className="space-y-4">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-base">Barra Lateral</Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Personaliza el comportamiento y apariencia de la barra lateral.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label className="text-base">Avatares de Proyecto</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Mostrar imagen de portada en el selector de proyectos.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={useLayoutStore(s => s.sidebarProjectAvatars)}
+                            onCheckedChange={(checked) => {
+                                actions.setSidebarProjectAvatars(checked);
+                                updateUserPreferences({ sidebar_project_avatars: checked });
+                            }}
                         />
                     </div>
                 </div>

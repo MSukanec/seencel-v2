@@ -1,5 +1,6 @@
 ---
-description: Patrones de formularios, modales y entradas especializadas
+name: Seencel Forms & Modals Standard
+description: Estándar OBLIGATORIO para crear Formularios y Modales en Seencel V2. Define arquitectura sticky footer, inputs especializados y patrones de borrado.
 ---
 
 # Sistema de Formularios y Modales
@@ -30,6 +31,24 @@ openModal(<MyFormComponent onSuccess={closeModal} />, {
 |------------|-----------|-----|
 | `FormFooter` | `@/components/shared/form-footer` | Botones de acción (sticky, maneja `Cmd+Enter`) |
 | `FormGroup` | `@/components/ui/form-group` | Wrapper para campos con label |
+
+---
+
+## Naming Convention & Location (OBLIGATORIO)
+
+### Ubicación
+Los formularios **SIEMPRE** deben ir dentro de la carpeta `components/forms` de su respectivo feature.
+
+`src/features/[feature]/components/forms/`
+
+### Naming
+El nombre del archivo debe seguir el patrón: `[feature]-[entity]-form.tsx`.
+
+*   ✅ `subcontracts-subcontract-form.tsx`
+*   ✅ `materials-request-form.tsx`
+*   ❌ `form.tsx`
+*   ❌ `create-form.tsx`
+
 
 ---
 

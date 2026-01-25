@@ -1,33 +1,79 @@
-"use client";
-
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateProject } from "@/features/projects/actions";
-import { Separator } from "@/components/ui/separator";
+import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
+import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/client-image-compression";
+import { toast } from "sonner";
 
 export function ProjectProfileTab({ project }: { project: any }) {
     const [isPending, startTransition] = useTransition();
+    const [file, setFile] = useState<File | undefined>();
 
     // project_data comes joined from the query
     const data = project.project_data || {};
 
-    const handleSubmit = (formData: FormData) => {
-        startTransition(async () => {
-            const result = await updateProject(formData);
-            if (result?.error) {
-                alert(`Error: ${result.error}`);
-            } else {
-                alert("Información del proyecto actualizada correctamente.");
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const toastId = toast.loading("Guardando cambios...", { duration: Infinity });
+
+        try {
+            const formData = new FormData(e.currentTarget);
+
+            // --- IMAGE OPTIMIZATION & UPLOAD ---
+            if (file) {
+                try {
+                    toast.loading("Procesando imagen...", { id: toastId });
+
+                    // Compress
+                    const compressedFile = await compressImage(file, 'project-cover');
+
+                    // Upload
+                    const supabase = createClient();
+                    const fileExt = compressedFile.name.split('.').pop();
+                    const fileName = `cover/projects/${project.organization_id}/${Date.now()}.${fileExt}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('social-assets')
+                        .upload(fileName, compressedFile);
+
+                    if (uploadError) throw new Error("Error al subir imagen: " + uploadError.message);
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('social-assets')
+                        .getPublicUrl(fileName);
+
+                    formData.append('image_url', publicUrl);
+
+                } catch (imgError: any) {
+                    console.error("Image upload error:", imgError);
+                    toast.error("Error al subir imagen: " + imgError.message, { id: toastId });
+                    return; // Stop on image error
+                }
             }
-        });
+            // -----------------------------------
+
+            startTransition(async () => {
+                const result = await updateProject(formData);
+                if (result?.error) {
+                    toast.error(`Error: ${result.error}`, { id: toastId });
+                } else {
+                    toast.success("Información del proyecto actualizada correctamente.", { id: toastId });
+                    setFile(undefined); // Clear local file state after success
+                }
+            });
+        } catch (err: any) {
+            toast.error("Ocurrió un error inesperado.", { id: toastId });
+            console.error(err);
+        }
     };
 
     return (
-        <form action={handleSubmit}>
+        <form onSubmit={handleSubmit}>
             <div className="grid gap-6">
                 {/* General Info Card */}
                 <Card>
@@ -49,6 +95,21 @@ export function ProjectProfileTab({ project }: { project: any }) {
                             {/* Hidden ID for Server Action */}
                             <input type="hidden" name="id" value={project.id} />
                         </div>
+
+                        {/* Image Upload */}
+                        <div className="grid w-full gap-1.5">
+                            <Label>Imagen Principal (Portada)</Label>
+                            <SingleImageDropzone
+                                height={200}
+                                value={file ?? project.image_url}
+                                onChange={(file) => {
+                                    setFile(file);
+                                }}
+                                className="w-full"
+                                dropzoneLabel="Arrastra una imagen o haz clic para subir"
+                            />
+                        </div>
+
                         <div className="grid w-full gap-1.5">
                             <Label htmlFor="description">Descripción</Label>
                             <Textarea

@@ -9,6 +9,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Link, useRouter } from "@/i18n/routing";
+import { useLayoutStore } from "@/store/layout-store";
 import { ChevronsUpDown, Briefcase, Check, Plus, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -79,12 +80,25 @@ interface SidebarBrandButtonProps {
 // Helper to get project color
 function getProjectColor(project: Project | null | undefined): string {
     if (!project) return '#6b7280'; // gray fallback
+
+    // 1. Custom Hex Color
     if (project.use_custom_color && project.custom_color_hex) {
         return project.custom_color_hex;
     }
-    if (project.color && PROJECT_COLORS[project.color]) {
-        return PROJECT_COLORS[project.color];
+
+    // 2. Preset Color (Handle casing and missing keys)
+    if (project.color) {
+        const colorKey = project.color.toLowerCase();
+        if (PROJECT_COLORS[colorKey]) {
+            return PROJECT_COLORS[colorKey];
+        }
+        // If the color itself is a hex code (e.g. stored in color column by mistake)
+        if (project.color.startsWith('#')) {
+            return project.color;
+        }
     }
+
+    // 3. Fallback
     return '#6b7280'; // gray fallback
 }
 
@@ -100,6 +114,8 @@ export function SidebarBrandButton({
 }: SidebarBrandButtonProps) {
     const [open, setOpen] = React.useState(false);
     const router = useRouter();
+    // Read preference from store at TOP LEVEL
+    const showProjectAvatar = useLayoutStore(state => state.sidebarProjectAvatars);
 
     // Determine what to show
     const isHome = mode === "home";
@@ -138,7 +154,7 @@ export function SidebarBrandButton({
 
         return (
             <Avatar className={cn(sizeClass, "rounded-lg")}>
-                {project?.image_path && (
+                {showProjectAvatar && project?.image_path && (
                     <AvatarImage src={project.image_path} alt={project?.name || ""} />
                 )}
                 <AvatarFallback
@@ -155,6 +171,7 @@ export function SidebarBrandButton({
             </Avatar>
         );
     };
+
 
     const buttonContent = (
         <button

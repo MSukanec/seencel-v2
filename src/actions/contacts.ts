@@ -371,3 +371,38 @@ export async function uploadContactAvatar(formData: FormData) {
     return { success: true, path: filePath };
 }
 
+export async function getContactsByTypes(organizationId: string, types: string[]): Promise<Contact[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('contacts')
+        .select(`
+            *,
+            contact_type_links!inner (
+                contact_types!inner (
+                    name
+                )
+            )
+        `)
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .in('contact_type_links.contact_types.name', types)
+        .order('full_name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching contacts by types:", error);
+        return [];
+    }
+
+    // Dedup contact objects using a Map
+    const uniqueContactsMap = new Map();
+    data.forEach((item: any) => {
+        if (!uniqueContactsMap.has(item.id)) {
+            const { contact_type_links, ...contact } = item;
+            uniqueContactsMap.set(item.id, contact as Contact);
+        }
+    });
+
+    return Array.from(uniqueContactsMap.values());
+}
+

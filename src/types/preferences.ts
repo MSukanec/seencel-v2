@@ -16,5 +16,6 @@ export interface UserPreferences {
     last_home_seen_at: string;
     layout: string;
     language: string;
+    sidebar_project_avatars: boolean;
 }
 

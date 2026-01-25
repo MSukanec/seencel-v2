@@ -45,6 +45,26 @@ export async function getOrganizationProjects(organizationId: string) {
     return data as Project[];
 }
 
+export async function getSidebarProjects(organizationId: string) {
+    const supabase = await createClient();
+
+    // Query projects table directly to ensure we get color fields
+    // which might be missing from the view
+    const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, organization_id, color, custom_color_hex, use_custom_color, image_url, image_path:image_url')
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .order('last_active_at', { ascending: false, nullsFirst: false });
+
+    if (error) {
+        console.error('Error fetching sidebar projects:', error);
+        return [];
+    }
+
+    return data;
+}
+
 export async function getProjectById(projectId: string) {
     const supabase = await createClient();
 

@@ -122,6 +122,11 @@ export function useSidebarNavigation() {
                         icon: Package
                     },
                     {
+                        title: 'Subcontratos',
+                        href: activeProjectId ? `${projectBase}/subcontracts` : '/organization/projects',
+                        icon: Users // Using Users as temporary icon, typically HardHat or similar fits better if available
+                    },
+                    {
                         title: tSidebar('items.sitelog'),
                         href: activeProjectId ? `${projectBase}/sitelog` : '/organization/projects',
                         icon: FileText

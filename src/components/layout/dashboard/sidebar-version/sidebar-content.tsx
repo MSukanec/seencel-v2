@@ -62,7 +62,24 @@ export function SidebarContent({
     const isExpanded = propIsExpanded ?? isMobile;
 
     // Drill-down state: "home" or a specific context
-    const [drillState, setDrillState] = React.useState<DrillDownState>("home");
+    // Initialize from activeContext if valid, otherwise home
+    // But we might want 'home' if user manually went back.
+    // Actually, persistence is key. If I reload, activeContext persists.
+    const [drillState, setDrillState] = React.useState<DrillDownState>(() => {
+        // If we have an active context that isn't null, use it.
+        // But maybe stick to logic driven by effects to avoid hydration mismatch?
+        // Let's safe bet: Initialize based on props or store if client-side, but hydration....
+        // Better: Use effect to sync.
+        return "home";
+    });
+
+    // EFFECT: Sync drillState with activeContext
+    React.useEffect(() => {
+        if (activeContext && activeContext !== drillState) {
+            setDrillState(activeContext);
+        }
+    }, [activeContext]); // Remove drillState from dep array to avoid loops if setDrillState triggers update
+
 
     // Animation direction
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
@@ -102,14 +119,21 @@ export function SidebarContent({
         const projectMatch = pathname.match(/\/project\/([^/]+)/);
         if (projectMatch) {
             const urlProjectId = projectMatch[1];
-            // If URL has a different project than currently selected, sync it
+
+            // 1. If we are in a project URL, we MUST be in project context
+            if (activeContext !== 'project') {
+                actions.setActiveContext('project');
+                setDrillState('project');
+            } else if (drillState !== 'project') {
+                // If activeContext is correct but UI is wrong (e.g. back button pressed then forward?)
+                setDrillState('project');
+            }
+
+            // 2. Sync Project ID data
             if (urlProjectId && currentProject?.id !== urlProjectId) {
                 const projectInList = projects.find(p => p.id === urlProjectId);
                 if (projectInList) {
                     handleProjectChange(urlProjectId);
-                    // Also switch to project context
-                    setDrillState("project");
-                    actions.setActiveContext("project");
                 }
             }
         }
@@ -143,7 +167,12 @@ export function SidebarContent({
                         setSlideDirection("left");
                         setDrillState("organization");
                         actions.setActiveContext("organization");
-                        // Intentionally not navigating - user stays on current page
+
+                        // Navigate to organization dashboard to resolve context conflict
+                        // Extract locale from current URL (e.g., /es/project/... -> es)
+                        const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+                        const locale = localeMatch ? localeMatch[1] : 'es';
+                        nativeRouter.push(`/${locale}/organization`);
                     }}
                     onProjectChange={(projectId) => {
                         // Change context to project

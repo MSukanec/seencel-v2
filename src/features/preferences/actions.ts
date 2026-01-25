@@ -32,6 +32,7 @@ export type UserPreferencesUpdate = {
     theme?: 'light' | 'dark' | 'system';
     layout?: 'default' | 'sidebar';
     timezone?: string;
+    sidebar_project_avatars?: boolean;
 };
 
 export async function updateUserPreferences(preferences: UserPreferencesUpdate) {
@@ -56,6 +57,7 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
     if (preferences.language) updateData.language = preferences.language;
     if (preferences.theme) updateData.theme = preferences.theme;
     if (preferences.timezone) updateData.timezone = preferences.timezone;
+    if (preferences.sidebar_project_avatars !== undefined) updateData.sidebar_project_avatars = preferences.sidebar_project_avatars;
     if (preferences.layout) {
         updateData.layout = preferences.layout === 'default' ? 'lab' : 'experimental';
     }

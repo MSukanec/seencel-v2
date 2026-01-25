@@ -11,6 +11,7 @@ interface LayoutState {
     activeContext: NavigationContext;
     activeProjectId: string | null;
     sidebarMode: SidebarMode;
+    sidebarProjectAvatars: boolean;
     headerTitle: React.ReactNode | null;
 
     actions: {
@@ -18,6 +19,7 @@ interface LayoutState {
         setActiveContext: (context: NavigationContext) => void;
         setActiveProjectId: (projectId: string | null) => void;
         setSidebarMode: (mode: SidebarMode) => void;
+        setSidebarProjectAvatars: (enabled: boolean) => void;
         setHeaderTitle: (title: React.ReactNode | null) => void;
     };
 
@@ -30,12 +32,14 @@ export const useLayoutStore = create<LayoutState>()(
             activeContext: 'organization',
             activeProjectId: null,
             sidebarMode: 'expanded_hover',
+            sidebarProjectAvatars: true, // Default true (use images)
             headerTitle: null,
             actions: {
                 setLayoutMode: (mode) => set({ layoutMode: mode }),
                 setActiveContext: (context) => set({ activeContext: context }),
                 setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
                 setSidebarMode: (mode) => set({ sidebarMode: mode }),
+                setSidebarProjectAvatars: (enabled) => set({ sidebarProjectAvatars: enabled }),
                 setHeaderTitle: (title) => set({ headerTitle: title }),
             },
         }),
@@ -45,7 +49,8 @@ export const useLayoutStore = create<LayoutState>()(
                 layoutMode: state.layoutMode,
                 activeContext: state.activeContext,
                 activeProjectId: state.activeProjectId,
-                sidebarMode: state.sidebarMode
+                sidebarMode: state.sidebarMode,
+                sidebarProjectAvatars: state.sidebarProjectAvatars
                 // headerTitle is not persisted as it depends on current page
             }),
 
@@ -58,4 +63,6 @@ export const useLayoutMode = () => useLayoutStore((state) => state.layoutMode);
 export const useActiveContext = () => useLayoutStore((state) => state.activeContext);
 export const useActiveProjectId = () => useLayoutStore((state) => state.activeProjectId);
 export const useHeaderTitle = () => useLayoutStore((state) => state.headerTitle);
+export const useSidebarProjectAvatars = () => useLayoutStore((state) => state.sidebarProjectAvatars);
+
 

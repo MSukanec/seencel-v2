@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateOrganization } from "@/actions/update-organization";
 
+import { toast } from "sonner";
+
 export function OrganizationLocationForm({ organization }: { organization: any }) {
     const [isPending, startTransition] = useTransition();
 
@@ -19,9 +21,9 @@ export function OrganizationLocationForm({ organization }: { organization: any }
             // but here we just pass fields.
             const result = await updateOrganization(organization.id, formData);
             if (result.error) {
-                alert(`Error: ${result.error}`);
+                toast.error(`Error: ${result.error}`);
             } else {
-                alert("Location updated successfully!");
+                toast.success("Ubicación actualizada correctamente");
             }
         });
     };
