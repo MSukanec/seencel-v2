@@ -123,7 +123,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
             const pendingCreations: Array<{
                 field: string;
                 value: string;
-                createAction: (val: string) => Promise<any>;
+                createAction: (orgId: string, value: string) => Promise<{ id: string }>;
             }> = [];
 
             const configResolutions = { ...resolutions }; // Clone to avoid mutation during iteration
@@ -149,7 +149,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                     const results = await Promise.all(
                         pendingCreations.map(async (item) => {
                             try {
-                                const result = await item.createAction(item.value);
+                                const result = await item.createAction(organizationId, item.value);
                                 return { ...item, resultId: result.id };
                             } catch (e) {
                                 console.error(`Failed to create ${item.value}`, e);
@@ -187,8 +187,15 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
             if (result.success > 0) {
                 // Background update patterns - Fire and forget
                 updateMappingPatterns(organizationId, config.entityId, mapping).catch(console.error);
-                // Also update value patterns
-                updateValuePatterns(organizationId, config.entityId, resolutions).catch(console.error);
+                // Transform ResolutionMap to the format expected by updateValuePatterns
+                const valuePatterns: Record<string, Record<string, string | null>> = {};
+                for (const [field, fieldResolutions] of Object.entries(resolutions)) {
+                    valuePatterns[field] = {};
+                    for (const [value, resolution] of Object.entries(fieldResolutions)) {
+                        valuePatterns[field][value] = resolution.targetId ?? null;
+                    }
+                }
+                updateValuePatterns(organizationId, config.entityId, valuePatterns).catch(console.error);
             }
 
             setImportResult(result);

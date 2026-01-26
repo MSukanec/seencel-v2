@@ -8,7 +8,7 @@ import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Link } from "@/i18n/routing";
+import Link from "next/link";
 
 import { getSubcontractById, getSubcontractPayments } from "@/features/subcontracts/queries";
 import { getOrganizationFinancialData } from "@/features/organization/queries"; // For currency if needed

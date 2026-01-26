@@ -1,0 +1,40 @@
+﻿Ôû▓ Next.js 16.1.1 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  ┬À serverActions
+
+node.exe : ÔÜá The "middleware" file convention is 
+deprecated. Please use "proxy" instead. Learn more: 
+https://nextjs.org/docs/messages/middleware-to-proxy
+En C:\Program Files\nodejs\npx.ps1: 29 Carácter: 3
++   & $NODE_EXE $NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÜá The "middl 
+   e...leware-to-proxy:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 15.0s
+  Running TypeScript ...
+Failed to compile.
+
+./src/components/shared/import/import-modal.tsx:140:29
+Type error: Type '(orgId: string, value: string) => 
+Promise<{ id: string; }>' is not assignable to type '(val: 
+string) => Promise<any>'.
+  Target signature provides too few arguments. Expected 2 
+or more, but got 1.
+
+[0m [90m 138 |[39m                             
+field[33m,[39m
+ [90m 139 |[39m                             
+value[33m,[39m
+[31m[1m>[22m[39m[90m 140 |[39m                        
+     createAction[33m:[39m 
+column[33m.[39mforeignKey[33m.[39mcreateAction
+ [90m     |[39m                             
+[31m[1m^[22m[39m
+ [90m 141 |[39m                         })[33m;[39m
+ [90m 142 |[39m                     }
+ [90m 143 |[39m                 }[0m
+Next.js build worker exited with code: 1 and signal: null

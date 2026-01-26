@@ -1,16 +1,19 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 
 export default function ProjectDashboardLoading() {
     return (
-        <PageWrapper
-            type="page"
-            title={<Skeleton className="h-8 w-48" />}
-            description={<Skeleton className="h-4 w-96" />}
-            icon={<Skeleton className="h-10 w-10 rounded-lg" />}
-        >
-            <ContentLayout variant="standard">
+        <div className="flex flex-col h-full overflow-hidden">
+            {/* Skeleton Header */}
+            <div className="px-6 py-4 border-b flex items-center gap-4">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-2">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-96" />
+                </div>
+            </div>
+
+            <ContentLayout variant="wide">
                 <div className="space-y-6">
                     {/* Stats Grid */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -34,6 +37,6 @@ export default function ProjectDashboardLoading() {
                     </div>
                 </div>
             </ContentLayout>
-        </PageWrapper>
+        </div>
     );
 }
