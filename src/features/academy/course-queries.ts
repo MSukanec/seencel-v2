@@ -368,3 +368,27 @@ export async function getAllInstructors() {
     return data || [];
 }
 
+/**
+ * Get recent public courses for dashboard news
+ * Returns latest 2 courses with visibility = 'public'
+ */
+export async function getRecentPublicCourses(limit: number = 2) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("courses")
+        .select("id, slug, title, status, created_at")
+        .eq("visibility", "public")
+        .eq("is_active", true)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+    if (error) {
+        console.error("Error fetching recent courses:", error);
+        return [];
+    }
+
+    return data || [];
+}
+

@@ -2,11 +2,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Database, Shield, Monitor, ToggleLeft } from "lucide-react";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
-import { getFeatureFlags } from "@/actions/feature-flags";
+import { getFeatureFlags, getFlagCategories } from "@/actions/feature-flags";
 import { FeatureFlagsManager } from "@/features/admin/components/feature-flags-manager";
 
 export default async function AdminSystemPage() {
     const flags = await getFeatureFlags();
+    const categories = await getFlagCategories();
 
     return (
         <Tabs defaultValue="flags" className="w-full h-full flex flex-col">
@@ -57,7 +58,7 @@ export default async function AdminSystemPage() {
             >
                 <TabsContent value="flags" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <FeatureFlagsManager initialFlags={flags} />
+                        <FeatureFlagsManager initialFlags={flags} categories={categories} />
                     </ContentLayout>
                 </TabsContent>
 

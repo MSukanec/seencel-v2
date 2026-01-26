@@ -19,6 +19,9 @@ interface SidebarNavButtonProps {
     isActive?: boolean;
     onClick?: () => void;
     className?: string;
+    badge?: React.ReactNode;
+    disabled?: boolean;
+    isLocked?: boolean;
 }
 
 export function SidebarNavButton({
@@ -28,8 +31,13 @@ export function SidebarNavButton({
     isExpanded = false,
     isActive = false,
     onClick,
-    className
+    className,
+    badge,
+    disabled,
+    isLocked
 }: SidebarNavButtonProps) {
+    const lockedClass = isLocked ? "opacity-40 grayscale text-muted-foreground" : "";
+
     const content = (
         <div
             className={cn(
@@ -37,6 +45,7 @@ export function SidebarNavButton({
                 "hover:bg-secondary/80 text-muted-foreground hover:text-foreground",
                 "p-0 min-h-[32px]",
                 isActive && "bg-secondary text-foreground",
+                disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground",
                 className
             )}
         >
@@ -44,7 +53,8 @@ export function SidebarNavButton({
             <div className={cn(
                 "w-8 h-8 flex items-center justify-center shrink-0",
                 // Icon inherits color (muted -> foreground on hover), or forces foreground if active
-                isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                lockedClass
             )}>
                 <Icon className="h-4 w-4" />
             </div>
@@ -52,12 +62,25 @@ export function SidebarNavButton({
             {/* Label - Single line, left-aligned */}
             <span className={cn(
                 "text-[13px] font-medium truncate transition-opacity duration-200 ease-in-out text-left",
-                isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0"
+                isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0",
+                lockedClass
             )}>
                 {label}
             </span>
+
+            {/* Badge - Absolute at top-right - NOT affected by locked styles */}
+            {isExpanded && badge && (
+                <div className="absolute right-1 top-0.5 z-10">
+                    {badge}
+                </div>
+            )}
         </div>
     );
+
+    // If disabled, return non-clickable div
+    if (disabled) {
+        return <div className="w-full">{content}</div>;
+    }
 
     // If href is provided, wrap in Link
     if (href) {

@@ -26,8 +26,10 @@ export function SidebarContextButton({
     description,
     isExpanded = false,
     onClick,
-    className
-}: SidebarContextButtonProps) {
+    className,
+    badge,
+    isLocked
+}: SidebarContextButtonProps & { badge?: React.ReactNode; isLocked?: boolean }) {
     return (
         <SidebarExpandableButtonBase
             isExpanded={isExpanded}
@@ -37,7 +39,9 @@ export function SidebarContextButton({
             leftContent={<Icon className="h-5 w-5" />}
             title={label}
             subtitle={description}
+            badge={badge}
             rightContent={<ChevronRight className="h-4 w-4" />}
+            isLocked={isLocked}
         />
     );
 }

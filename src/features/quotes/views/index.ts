@@ -1,2 +1,3 @@
 // Views
-export { QuotesPageView } from "./quotes-page-view";
+export { QuotesListView } from "./quotes-list-view";
+export { QuoteOverviewView } from "./quote-overview-view";

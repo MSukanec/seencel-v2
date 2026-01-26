@@ -27,6 +27,10 @@ export interface SidebarExpandableButtonBaseProps {
     subtitle?: string | null;
     /** Right zone content (chevron, badge, etc) - optional */
     rightContent?: React.ReactNode;
+    /** Badge/Status indicator - optional */
+    badge?: React.ReactNode;
+    /** Whether the item is visually locked */
+    isLocked?: boolean;
     /** Height of the button */
     height?: "sm" | "md" | "lg";
 }
@@ -45,8 +49,12 @@ export function SidebarExpandableButtonBase({
     title,
     subtitle,
     rightContent,
-    height = "md"
+    badge,
+    height = "md",
+    isLocked
 }: SidebarExpandableButtonBaseProps) {
+    const lockedClass = isLocked ? "opacity-40 grayscale text-muted-foreground" : "";
+
     return (
         <button
             onClick={onClick}
@@ -59,14 +67,18 @@ export function SidebarExpandableButtonBase({
             )}
         >
             {/* Left Zone - Fixed width */}
-            <div className="w-8 h-8 flex items-center justify-center shrink-0 text-muted-foreground group-hover:text-foreground transition-colors duration-0">
+            <div className={cn(
+                "w-8 h-8 flex items-center justify-center shrink-0 text-muted-foreground group-hover:text-foreground transition-colors duration-0",
+                lockedClass
+            )}>
                 {leftContent}
             </div>
 
             {/* Center Zone - Expandable text content */}
             <div className={cn(
                 "flex flex-col items-start justify-center min-w-0 overflow-hidden transition-all duration-150 ease-in-out ml-2",
-                isExpanded ? "flex-1 opacity-100" : "w-0 opacity-0 ml-0"
+                isExpanded ? "flex-1 opacity-100" : "w-0 opacity-0 ml-0",
+                lockedClass
             )}>
                 <span className="font-semibold text-sm text-foreground truncate w-full text-left">
                     {title}
@@ -78,11 +90,19 @@ export function SidebarExpandableButtonBase({
                 )}
             </div>
 
+            {/* Badge - Absolute Positioned - NOT AFFECTED BY LOCKED CLASS */}
+            {isExpanded && badge && (
+                <div className="absolute right-8 top-1 z-10">
+                    {badge}
+                </div>
+            )}
+
             {/* Right Zone - Optional action */}
             {rightContent && (
                 <div className={cn(
                     "flex items-center justify-center shrink-0 text-muted-foreground group-hover:text-foreground transition-all duration-150",
-                    isExpanded ? "w-8 opacity-100" : "w-0 opacity-0"
+                    isExpanded ? "w-8 opacity-100" : "w-0 opacity-0",
+                    lockedClass
                 )}>
                     {rightContent}
                 </div>

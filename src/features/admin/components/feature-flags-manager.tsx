@@ -1,143 +1,154 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { FeatureFlag, toggleFeatureFlag } from "@/actions/feature-flags";
-import { Switch } from "@/components/ui/switch";
+import { useState, useTransition, useMemo } from "react";
+import { FeatureFlag, FlagCategory, updateFeatureFlagStatus } from "@/actions/feature-flags";
+import { Lock, EyeOff, Activity } from "lucide-react";
+import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ToggleLeft, AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface FeatureFlagsManagerProps {
     initialFlags: FeatureFlag[];
+    categories?: FlagCategory[];
 }
 
-// Map flag keys to friendly names and icons
-const flagMetadata: Record<string, { name: string; warning?: boolean }> = {
-    dashboard_maintenance_mode: {
-        name: "Modo Mantenimiento",
-        warning: true
-    },
-    pro_purchases_enabled: {
-        name: "Compras Plan Pro"
-    },
-    teams_purchases_enabled: {
-        name: "Compras Plan Teams"
-    }
+// Translation Dictionary
+const FLAG_TRANSLATIONS: Record<string, string> = {
+    'context_workspace_enabled': 'Acceso Espacio de Trabajo',
+    'context_academy_enabled': 'Acceso Academia',
+    'context_community_enabled': 'Acceso Comunidad',
+    'context_community_map_enabled': 'Comunidad: Mapa Seencel',
+    'context_community_founders_enabled': 'Comunidad: Directorio Fundadores',
+    'dashboard_maintenance_mode': 'Modo Mantenimiento Global',
+    'pro_purchases_enabled': 'Habilitar Compra Plan Pro',
+    'teams_purchases_enabled': 'Habilitar Compra Plan Teams',
+    'course_purchases_enabled': 'Habilitar Compra Cursos',
+    'mp_test_mode': 'MercadoPago: Modo Test',
+    'paypal_test_mode': 'PayPal: Modo Test',
 };
 
-export function FeatureFlagsManager({ initialFlags }: FeatureFlagsManagerProps) {
+type FlagStatus = 'active' | 'maintenance' | 'founders' | 'hidden';
+
+export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFlagsManagerProps) {
+    const router = useRouter();
     const [flags, setFlags] = useState<FeatureFlag[]>(initialFlags);
-    const [pendingFlag, setPendingFlag] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
 
-    const handleToggle = (flagKey: string) => {
-        setPendingFlag(flagKey);
+    const handleStatusChange = (flagKey: string, newStatus: FlagStatus) => {
         startTransition(async () => {
-            const result = await toggleFeatureFlag(flagKey);
-            if (result.success) {
-                setFlags(prev => prev.map(f =>
-                    f.key === flagKey ? { ...f, value: result.value! } : f
-                ));
+            const original = flags.find(f => f.key === flagKey);
+            setFlags(prev => prev.map(f => f.key === flagKey ? {
+                ...f,
+                status: newStatus,
+                value: newStatus === 'active'
+            } : f));
+
+            const result = await updateFeatureFlagStatus(flagKey, newStatus);
+            if (!result.success) {
+                toast.error("Error al actualizar estado");
+                if (original) setFlags(prev => prev.map(f => f.key === flagKey ? original : f));
+            } else {
+                router.refresh();
             }
-            setPendingFlag(null);
         });
     };
 
-    // Group flags by category
-    const groupedFlags = flags.reduce((acc, flag) => {
-        const category = flag.category || "general";
-        if (!acc[category]) {
-            acc[category] = [];
-        }
-        acc[category].push(flag);
-        return acc;
-    }, {} as Record<string, FeatureFlag[]>);
+    const treeItems = useMemo(() => {
+        // Build Categories
+        const catItems: CategoryItem[] = categories.map(c => ({
+            id: c.id,
+            name: c.name,
+            parent_id: c.parent_id,
+            order: c.position,
+            isFolder: true
+        }));
 
-    const categoryNames: Record<string, string> = {
-        system: "Sistema",
-        billing: "Facturación",
-        general: "General"
-    };
+        // Build Flags
+        const flgItems: CategoryItem[] = flags.map(f => ({
+            id: f.id,
+            name: FLAG_TRANSLATIONS[f.key] || f.key,
+            parent_id: f.category_id || null, // Will match category ID if exists
+            order: f.position || 99,
+            // Extra props
+            originalKey: f.key,
+            description: f.description,
+            status: f.status || (f.value ? 'active' : 'hidden'),
+            isFolder: false
+        }));
+
+        return [...catItems, ...flgItems];
+    }, [flags, categories]);
 
     return (
-        <div className="space-y-6">
-            {Object.entries(groupedFlags).map(([category, categoryFlags]) => (
-                <Card key={category}>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <ToggleLeft className="h-5 w-5" />
-                            {categoryNames[category] || category}
-                        </CardTitle>
-                        <CardDescription>
-                            Feature flags de {categoryNames[category]?.toLowerCase() || category}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="divide-y">
-                            {categoryFlags.map(flag => {
-                                const meta = flagMetadata[flag.key];
-                                const isLoading = pendingFlag === flag.key && isPending;
+        <div className="space-y-4">
+            <CategoryTree
+                items={treeItems}
+                emptyMessage="No hay items configurables."
+                showNumbering={false}
+                renderEndContent={(item) => {
+                    if (item.isFolder) return null;
 
-                                return (
-                                    <div
-                                        key={flag.id}
-                                        className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
-                                    >
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium">
-                                                    {meta?.name || flag.key}
-                                                </span>
-                                                {meta?.warning && flag.value && (
-                                                    <Badge variant="destructive" className="text-xs">
-                                                        <AlertTriangle className="h-3 w-3 mr-1" />
-                                                        Activo
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            {flag.description && (
-                                                <p className="text-sm text-muted-foreground">
-                                                    {flag.description}
-                                                </p>
-                                            )}
-                                            <code className="text-xs text-muted-foreground/60 font-mono">
-                                                {flag.key}
-                                            </code>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {isLoading && (
-                                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                            )}
-                                            <Switch
-                                                checked={flag.value}
-                                                onCheckedChange={() => handleToggle(flag.key)}
-                                                disabled={isLoading}
-                                                className={cn(
-                                                    meta?.warning && flag.value && "data-[state=checked]:bg-destructive"
-                                                )}
-                                            />
-                                        </div>
+                    return (
+                        <div className="flex items-center gap-4 mr-2">
+                            <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground hidden xl:inline-flex">
+                                {item.originalKey}
+                            </Badge>
+
+                            <Select
+                                value={item.status as FlagStatus}
+                                onValueChange={(val) => handleStatusChange(item.originalKey, val as FlagStatus)}
+                                disabled={isPending}
+                            >
+                                <SelectTrigger className="w-[140px] h-8 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <SelectValue />
                                     </div>
-                                );
-                            })}
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">
+                                        <div className="flex items-center gap-2">
+                                            <Activity className="h-3 w-3 text-green-500" />
+                                            <span>Habilitado</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="maintenance">
+                                        <div className="flex items-center gap-2">
+                                            <Lock className="h-3 w-3 text-orange-500" />
+                                            <span>Mantenimiento</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="founders">
+                                        <div className="flex items-center gap-2">
+                                            <Lock className="h-3 w-3 text-yellow-500" />
+                                            <span>Fundadores</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="hidden">
+                                        <div className="flex items-center gap-2">
+                                            <EyeOff className="h-3 w-3 text-gray-500" />
+                                            <span>Oculto</span>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                    </CardContent>
-                </Card>
-            ))}
+                    );
+                }}
+            />
 
-            {flags.length === 0 && (
-                <div className="p-8 border border-dashed rounded-lg bg-background text-center">
-                    <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                        <ToggleLeft className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="font-medium text-lg">Sin Feature Flags</h3>
-                    <p className="text-muted-foreground text-sm mt-1">
-                        No hay feature flags configurados en el sistema.
-                    </p>
-                </div>
-            )}
+            <div className="text-xs text-muted-foreground px-4 space-y-1 mt-8 border-t pt-4">
+                <p><b>Habilitado:</b> Visible y accesible para todos.</p>
+                <p><b>Mantenimiento:</b> Visible (Admin) / Bloqueado (Usuario).</p>
+                <p><b>Oculto:</b> Invisible (User) / Translúcido (Admin).</p>
+            </div>
         </div>
     );
 }
-

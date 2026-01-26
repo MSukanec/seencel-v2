@@ -1,7 +1,9 @@
 import { getUserProfile, checkIsAdmin } from "@/features/profile/queries";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { LayoutSwitcher } from "@/components/layout";
-import { getFeatureFlag } from "@/actions/feature-flags";
+import { getFeatureFlags, getFeatureFlag } from "@/actions/feature-flags";
+import { FeatureFlagsProvider } from "@/providers/feature-flags-provider";
+
 
 import { OrganizationProvider } from "@/context/organization-context";
 import { CurrencyProvider } from "@/providers/currency-context";
@@ -13,17 +15,15 @@ export default async function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    // Check maintenance mode first
-    const isMaintenanceMode = await getFeatureFlag("dashboard_maintenance_mode");
+    // Get all feature flags once
+    const flags = await getFeatureFlags();
+    const isAdmin = await checkIsAdmin();
+    const isMaintenanceMode = flags.find(f => f.key === "dashboard_maintenance_mode")?.value ?? false;
 
     // If maintenance mode is on, check if user is admin (admins can still access)
-    if (isMaintenanceMode) {
-        const isAdmin = await checkIsAdmin();
-
-        // Non-admins see maintenance page
-        if (!isAdmin) {
-            return <MaintenancePage />;
-        }
+    // Non-admins see maintenance page
+    if (isMaintenanceMode && !isAdmin) {
+        return <MaintenancePage />;
     }
 
     const { profile } = await getUserProfile();
@@ -60,15 +60,18 @@ export default async function DashboardLayout({
         <OrganizationProvider
             activeOrgId={activeOrgId || null}
             preferences={activeOrgId && financialData?.preferences ? financialData.preferences as any : null}
+            isFounder={activeOrgId ? financialData?.isFounder : false}
         >
             <CurrencyProvider
                 currencies={currencies}
                 defaultExchangeRate={defaultExchangeRate}
                 decimalPlaces={decimalPlaces}
             >
-                <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
-                    {children}
-                </LayoutSwitcher>
+                <FeatureFlagsProvider flags={flags} isAdmin={isAdmin}>
+                    <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
+                        {children}
+                    </LayoutSwitcher>
+                </FeatureFlagsProvider>
             </CurrencyProvider>
         </OrganizationProvider>
     );

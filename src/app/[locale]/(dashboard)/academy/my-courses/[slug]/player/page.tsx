@@ -27,8 +27,41 @@ export default async function CoursePlayerPage({ params }: PageProps) {
     ]);
 
     // Determine initial lesson and position for resume
-    const initialLessonId = lastViewed?.lesson_id;
-    const initialPositionSec = lastViewed?.last_position_sec;
+    // Determine initial lesson logic:
+    // 1. If we have a last viewed lesson AND it is NOT completed, resume there.
+    // 2. If last viewed is completed (or doesn't exist), find the FIRST UNCOMPLETED lesson.
+    // 3. Fallback to first lesson ever.
+
+    const completedSet = new Set(progress.filter(p => p.is_completed).map(p => p.lesson_id));
+
+    // Sort modules and lessons to ensure correct order
+    const sortedModules = [...modules].sort((a, b) => a.sort_index - b.sort_index);
+    const allLessons = sortedModules.flatMap(m =>
+        [...m.lessons].sort((a, b) => a.sort_index - b.sort_index)
+    );
+
+    let targetLessonId = lastViewed?.lesson_id;
+    let targetPosition = lastViewed?.last_position_sec;
+
+    // Check if last viewed is completed
+    if (targetLessonId && completedSet.has(targetLessonId)) {
+        // If completed, finding the next uncompleted lesson is better
+        targetLessonId = undefined;
+        targetPosition = 0;
+    }
+
+    // If no target yet (or it was completed), find first uncompleted
+    if (!targetLessonId) {
+        const firstUncompleted = allLessons.find(l => !completedSet.has(l.id));
+        if (firstUncompleted) {
+            targetLessonId = firstUncompleted.id;
+            targetPosition = 0;
+        } else if (allLessons.length > 0) {
+            // All completed? Start from beginning or stay at last? 
+            // Usually start from beginning is safer replay behavior, or just first lesson.
+            targetLessonId = allLessons[0].id;
+        }
+    }
 
     return (
         <CoursePlayerView
@@ -37,8 +70,8 @@ export default async function CoursePlayerPage({ params }: PageProps) {
             markers={markers as LessonMarker[]}
             progress={progress as LessonProgress[]}
             summaries={summaries as LessonNote[]}
-            initialLessonId={initialLessonId}
-            initialPositionSec={initialPositionSec}
+            initialLessonId={targetLessonId}
+            initialPositionSec={targetPosition}
         />
     );
 }

@@ -244,14 +244,16 @@ export function QuotesList({
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
                                     {/* Name & Description */}
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-medium truncate">{quote.name}</p>
-                                            <Badge variant="outline" className={`text-xs ${QUOTE_TYPE_COLORS[quote.quote_type]}`}>
-                                                {QUOTE_TYPE_LABELS[quote.quote_type]}
-                                            </Badge>
-                                            <Badge variant="outline" className={`text-xs ${QUOTE_STATUS_COLORS[quote.status]}`}>
-                                                {QUOTE_STATUS_LABELS[quote.status]}
-                                            </Badge>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <p className="font-medium truncate text-base">{quote.name}</p>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <Badge variant="outline" className={`text-xs ${QUOTE_TYPE_COLORS[quote.quote_type]}`}>
+                                                    {QUOTE_TYPE_LABELS[quote.quote_type]}
+                                                </Badge>
+                                                <Badge variant="outline" className={`text-xs ${QUOTE_STATUS_COLORS[quote.status]}`}>
+                                                    {QUOTE_STATUS_LABELS[quote.status]}
+                                                </Badge>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                             {quote.client_name && (
@@ -281,7 +283,7 @@ export function QuotesList({
                                     {/* Total */}
                                     <div className="text-right min-w-[120px]">
                                         <p className="text-lg font-semibold">
-                                            {quote.currency_symbol} {formatCurrency(quote.total_with_tax || 0)}
+                                            {formatCurrency(quote.total_with_tax || 0)}
                                         </p>
                                         <p className="text-xs text-muted-foreground">Total</p>
                                     </div>

@@ -26,7 +26,7 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
             <div className="container mx-auto p-6 max-w-7xl">
                 <CoursesContent
                     courses={courses}
-                    detailRoute="/academy/courses"
+                    detailRoute="/academy"
                     isDashboard={true}
                     enrolledCourseIds={Array.from(enrolledCourseIds)}
                 />

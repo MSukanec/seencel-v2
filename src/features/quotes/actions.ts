@@ -70,6 +70,93 @@ export async function createQuote(formData: FormData) {
 }
 
 // ============================================
+// CREATE CHANGE ORDER
+// Creates a change order linked to a parent contract
+// ============================================
+export async function createChangeOrder(
+    contractId: string,
+    data: {
+        name?: string;
+        description?: string;
+    }
+) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) {
+        return { error: "No hay organización activa", data: null };
+    }
+
+    // 1. Get the parent contract
+    const { data: contract, error: contractError } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("id", contractId)
+        .eq("organization_id", activeOrgId)
+        .eq("is_deleted", false)
+        .single();
+
+    if (contractError || !contract) {
+        return { error: "Contrato no encontrado", data: null };
+    }
+
+    // 2. Validate it's a contract (not a quote or another change_order)
+    if (contract.quote_type !== 'contract') {
+        return { error: "Solo se pueden crear adicionales de contratos", data: null };
+    }
+
+    // 3. Get next change order number
+    const { data: lastCO } = await supabase
+        .from("quotes")
+        .select("change_order_number")
+        .eq("parent_quote_id", contractId)
+        .eq("quote_type", "change_order")
+        .eq("is_deleted", false)
+        .order("change_order_number", { ascending: false })
+        .limit(1);
+
+    const nextNumber = (lastCO?.[0]?.change_order_number || 0) + 1;
+
+    // 4. Generate default name if not provided
+    const coName = data.name || `CO #${nextNumber}: Adicional`;
+
+    // 5. Create the change order, inheriting from parent contract
+    const { data: changeOrder, error } = await supabase
+        .from("quotes")
+        .insert({
+            name: coName,
+            description: data.description || null,
+            organization_id: activeOrgId,
+            project_id: contract.project_id,       // Inherit from parent
+            client_id: contract.client_id,         // Inherit from parent
+            currency_id: contract.currency_id,     // Inherit from parent
+            exchange_rate: contract.exchange_rate, // Inherit from parent
+            quote_type: 'change_order',
+            parent_quote_id: contractId,           // Link to parent!
+            change_order_number: nextNumber,
+            status: 'draft',
+            tax_pct: contract.tax_pct,             // Inherit tax settings
+            tax_label: contract.tax_label,
+            discount_pct: 0,                       // COs typically don't have global discount
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error creating change order:", error);
+        return { error: error.message, data: null };
+    }
+
+    revalidatePath("/organization/quotes");
+    revalidatePath(`/organization/quotes/${contractId}`);
+    if (contract.project_id) {
+        revalidatePath(`/project/${contract.project_id}/quotes`);
+    }
+
+    return { data: changeOrder, error: null };
+}
+
+// ============================================
 // UPDATE QUOTE
 // ============================================
 export async function updateQuote(formData: FormData) {
@@ -206,6 +293,7 @@ export async function updateQuoteStatus(id: string, status: string) {
 // 1. Validate quote is not already approved
 // 2. Create construction_tasks from quote_items
 // 3. Mark quote as approved
+// 4. For contracts: freeze original_contract_value
 // ============================================
 export async function approveQuote(quoteId: string) {
     const supabase = await createClient();
@@ -219,9 +307,10 @@ export async function approveQuote(quoteId: string) {
     }
 
     // Verify quote belongs to this org before calling function
+    // Also get quote_type to check if we need to freeze original_contract_value
     const { data: quote, error: fetchError } = await supabase
-        .from("quotes")
-        .select("id, project_id, status")
+        .from("quotes_view") // Use view to get total_with_tax
+        .select("id, project_id, status, quote_type, total_with_tax, original_contract_value")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
         .eq("is_deleted", false)
@@ -267,8 +356,25 @@ export async function approveQuote(quoteId: string) {
         };
     }
 
+    // CHANGE ORDERS ARCHITECTURE:
+    // If this is a CONTRACT and original_contract_value is not set, freeze it now
+    if (quote.quote_type === 'contract' && !quote.original_contract_value) {
+        const { error: freezeError } = await supabase
+            .from("quotes")
+            .update({
+                original_contract_value: quote.total_with_tax || 0
+            })
+            .eq("id", quoteId);
+
+        if (freezeError) {
+            console.error("Error freezing original_contract_value:", freezeError);
+            // Non-blocking: we log but don't fail the approval
+        }
+    }
+
     // Revalidate paths
     revalidatePath("/organization/quotes");
+    revalidatePath(`/organization/quotes/${quoteId}`);
     if (quote.project_id) {
         revalidatePath(`/project/${quote.project_id}/quotes`);
         revalidatePath(`/project/${quote.project_id}/construction-tasks`);
@@ -277,7 +383,8 @@ export async function approveQuote(quoteId: string) {
     return {
         success: true,
         tasksCreated: result.tasks_created || 0,
-        approvedAt: result.approved_at
+        approvedAt: result.approved_at,
+        originalContractValue: quote.quote_type === 'contract' ? (quote.original_contract_value || quote.total_with_tax) : null
     };
 }
 
@@ -461,6 +568,65 @@ export async function deleteQuoteItem(id: string) {
 
     revalidatePath("/organization/quotes");
     return { success: true, error: null };
+}
+
+// ============================================
+// CONVERT QUOTE TO CONTRACT
+// Promotes an approved quote (within a project) to a Contract
+// ============================================
+export async function convertQuoteToContract(quoteId: string) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) {
+        return { error: "No hay organización activa" };
+    }
+
+    // 1. Get quote details (using view for totals)
+    const { data: quote, error: fetchError } = await supabase
+        .from("quotes_view")
+        .select("id, status, quote_type, project_id, total_with_tax")
+        .eq("id", quoteId)
+        .eq("organization_id", activeOrgId)
+        .single();
+
+    if (fetchError || !quote) {
+        return { error: "Presupuesto no encontrado" };
+    }
+
+    // 2. Validations
+    if (quote.quote_type !== 'quote') {
+        return { error: "Solo se pueden convertir cotizaciones" };
+    }
+
+    if (quote.status !== 'approved') {
+        return { error: "La cotización debe estar aprobada para convertirse en contrato" };
+    }
+
+    if (!quote.project_id) {
+        return { error: "La cotización debe estar vinculada a un proyecto" };
+    }
+
+    // 3. Update to contract and freeze value
+    const { error: updateError } = await supabase
+        .from("quotes")
+        .update({
+            quote_type: 'contract',
+            original_contract_value: quote.total_with_tax || 0,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", quoteId);
+
+    if (updateError) {
+        console.error("Error converting to contract:", updateError);
+        return { error: updateError.message };
+    }
+
+    revalidatePath("/organization/quotes");
+    revalidatePath(`/organization/quotes/${quoteId}`);
+    revalidatePath(`/project/${quote.project_id}/quotes`);
+
+    return { success: true };
 }
 
 // ============================================

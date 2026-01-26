@@ -9,7 +9,7 @@ interface PageWrapperProps {
     /** Type of page: dashboard (no header) or page (with header) */
     type: 'dashboard' | 'page'
     /** Page title - only used when type='page' */
-    title?: string
+    title?: string | React.ReactNode
     /** Tab navigation - only used when type='page' */
     tabs?: React.ReactNode
     /** Action buttons - only used when type='page' */

@@ -13,8 +13,16 @@ import {
     ArrowLeft,
     Building,
 } from "lucide-react";
-import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
+import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
+import { Badge } from "@/components/ui/badge";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Lock, Crown, ChevronRight } from "lucide-react";
+import { Link } from "@/i18n/routing";
 
 // ============================================================================
 // V2 EXPERIMENTAL - DRILL-DOWN SIDEBAR
@@ -36,7 +44,8 @@ interface SidebarContentProps {
 }
 
 // For Dashboard context, we show Organization and Project as sub-accordions
-type DrillDownState = "home" | NavigationContext;
+// For Dashboard context, we show Organization and Project as sub-accordions
+type DrillDownState = NavigationContext;
 
 export function SidebarContent({
     onLinkClick,
@@ -63,14 +72,7 @@ export function SidebarContent({
     const isExpanded = propIsExpanded ?? isMobile;
 
     // Drill-down state: "home" or a specific context
-    // Initialize from activeContext if valid, otherwise home
-    // But we might want 'home' if user manually went back.
-    // Actually, persistence is key. If I reload, activeContext persists.
     const [drillState, setDrillState] = React.useState<DrillDownState>(() => {
-        // If we have an active context that isn't null, use it.
-        // But maybe stick to logic driven by effects to avoid hydration mismatch?
-        // Let's safe bet: Initialize based on props or store if client-side, but hydration....
-        // Better: Use effect to sync.
         return "home";
     });
 
@@ -79,26 +81,28 @@ export function SidebarContent({
         if (activeContext && activeContext !== drillState) {
             setDrillState(activeContext);
         }
-    }, [activeContext]); // Remove drillState from dep array to avoid loops if setDrillState triggers update
+    }, [activeContext]);
 
 
     // Animation direction
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
 
-    // Handle context button click - drill into that context
-    // NOTE: Changing context should NOT navigate to a different page
-    // It only updates the sidebar menu to show that context's navigation items
+    // Handle context button click - drill into that context AND navigate instantly
     const handleContextEnter = (ctx: NavigationContext) => {
         setSlideDirection("right");
         setDrillState(ctx);
         actions.setActiveContext(ctx);
-        // Intentionally not navigating - user stays on current page
+        // Navigate to the context's main page instantly
+        router.push(contextRoutes[ctx] as any);
     };
 
-    // Handle back button - return to home
+    // Handle back button - return to home (HUB)
     const handleBack = () => {
         setSlideDirection("left");
         setDrillState("home");
+        actions.setActiveContext("home");
+        // Navigate to HUB page immediately
+        router.push("/hub");
     };
 
     // Toggle sidebar mode
@@ -114,23 +118,61 @@ export function SidebarContent({
     const orgNavItems = getNavItems("organization");
     const projectNavItems = getNavItems("project");
 
-    // Sync sidebar project with URL projectId
-    // If user navigates directly to a project URL, update the sidebar to show that project
+    // 1. Sync Context based on URL (Navigation) - only when URL changes
+    const prevPathnameRef = React.useRef(pathname);
+    React.useEffect(() => {
+        // Only sync if pathname actually changed (not on every render)
+        if (prevPathnameRef.current === pathname) return;
+        prevPathnameRef.current = pathname;
+
+        // Project Context
+        if (pathname.includes('/project/')) {
+            actions.setActiveContext('project');
+            return;
+        }
+
+        // Learnings Context
+        if (pathname.includes('/academy')) {
+            actions.setActiveContext('learnings');
+            return;
+        }
+
+        // Community Context
+        if (pathname.includes('/community')) {
+            actions.setActiveContext('community');
+            return;
+        }
+
+        // Organization Context
+        if (pathname.includes('/organization')) {
+            actions.setActiveContext('organization');
+            return;
+        }
+
+        // Admin Context
+        if (pathname.includes('/admin')) {
+            actions.setActiveContext('admin');
+            return;
+        }
+
+        // Hub Context
+        if (pathname.includes('/hub')) {
+            actions.setActiveContext('home');
+            return;
+        }
+
+    }, [pathname, actions]);
+
+    // 2. Sync Project Data (Specific to Project Context)
     React.useEffect(() => {
         const projectMatch = pathname.match(/\/project\/([^/]+)/);
         if (projectMatch) {
             const urlProjectId = projectMatch[1];
 
-            // 1. If we are in a project URL, we MUST be in project context
-            if (activeContext !== 'project') {
-                actions.setActiveContext('project');
-                setDrillState('project');
-            } else if (drillState !== 'project') {
-                // If activeContext is correct but UI is wrong (e.g. back button pressed then forward?)
-                setDrillState('project');
-            }
+            // Sync Drill State to Project
+            setDrillState(prev => prev !== 'project' ? 'project' : prev);
 
-            // 2. Sync Project ID data
+            // Sync Project Selection
             if (urlProjectId && currentProject?.id !== urlProjectId) {
                 const projectInList = projects.find(p => p.id === urlProjectId);
                 if (projectInList) {
@@ -138,7 +180,7 @@ export function SidebarContent({
                 }
             }
         }
-    }, [pathname, currentProject?.id, projects, handleProjectChange, actions]);
+    }, [pathname, currentProject?.id, projects, handleProjectChange]);
 
     // Slide animation classes
     const slideClass = cn(
@@ -148,6 +190,107 @@ export function SidebarContent({
 
     // Width class
     const widthClass = isExpanded ? "w-[240px]" : "w-[50px]";
+
+    // Unified Render Helper for Nav Items (Sub-items)
+    const renderNavItem = (item: any, idx: number) => {
+        if (item.hidden) return null;
+
+        const status = item.status;
+        const isDisabled = item.disabled;
+
+        // Badge
+        let badge = null;
+        if (status === 'maintenance') {
+            badge = (
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
+                    <Lock className="h-3 w-3 text-orange-500" />
+                </Badge>
+            );
+        } else if (status === 'founders') {
+            badge = (
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 shadow-none">
+                    <Lock className="h-3 w-3 text-yellow-500" />
+                </Badge>
+            );
+        }
+
+        const button = (
+            <React.Fragment key={idx}>
+                {item.sectionHeader && isExpanded && (
+                    <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {item.sectionHeader}
+                    </div>
+                )}
+                <SidebarNavButton
+                    icon={item.icon}
+                    label={item.title}
+                    href={item.href}
+                    isActive={pathname === item.href}
+                    isExpanded={isExpanded}
+                    onClick={onLinkClick}
+                    badge={badge}
+                    disabled={isDisabled}
+                    isLocked={!!status}
+                />
+            </React.Fragment>
+        );
+
+        if (status === 'maintenance') {
+            return (
+                <HoverCard key={idx} openDelay={100} closeDelay={100}>
+                    <HoverCardTrigger asChild>
+                        <div className="w-full">{button}</div>
+                    </HoverCardTrigger>
+                    <HoverCardContent side="right" className="w-80" align="start">
+                        <div className="flex gap-4">
+                            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                <Lock className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="text-sm font-semibold">En Mantenimiento</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    Estamos realizando mejoras en este módulo. Estará disponible nuevamente en breve.
+                                </p>
+                            </div>
+                        </div>
+                    </HoverCardContent>
+                </HoverCard>
+            );
+        }
+
+        if (status === 'founders') {
+            return (
+                <HoverCard key={idx} openDelay={100} closeDelay={100}>
+                    <HoverCardTrigger asChild>
+                        <div className="w-full">{button}</div>
+                    </HoverCardTrigger>
+                    <HoverCardContent side="right" className="w-80" align="start">
+                        <div className="flex gap-4">
+                            <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                                <Crown className="h-5 w-5 text-yellow-600" />
+                            </div>
+                            <div className="space-y-2">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-yellow-700">Acceso Fundadores</h4>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Este módulo está en acceso anticipado exclusivo para organizaciones fundadoras.
+                                    </p>
+                                </div>
+                                <Link
+                                    href={"/community/founders" as any}
+                                    className="text-xs font-medium text-yellow-600 hover:text-yellow-700 flex items-center gap-1"
+                                >
+                                    Conocer más <ChevronRight className="h-3 w-3" />
+                                </Link>
+                            </div>
+                        </div>
+                    </HoverCardContent>
+                </HoverCard>
+            );
+        }
+
+        return button;
+    };
 
     return (
 
@@ -176,7 +319,7 @@ export function SidebarContent({
                 {/* Top Brand Section */}
                 <div className="w-full flex items-center mb-2 px-2">
                     <SidebarBrandButton
-                        mode={drillState === "home" ? "home" : drillState === "project" ? "project" : "organization"}
+                        mode={drillState === "home" || drillState === "learnings" || drillState === "community" || drillState === "admin" ? "home" : drillState === "project" ? "project" : "organization"}
                         isExpanded={isExpanded}
                         currentOrg={currentOrg}
                         currentProject={currentProject}
@@ -236,34 +379,117 @@ export function SidebarContent({
                     {/* ============================================================ */}
                     {drillState === "home" && (
                         <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
-                            <SidebarContextButton
-                                icon={contexts.find(c => c.id === "organization")?.icon || Building}
-                                label="Dashboard"
-                                description="Organización y proyectos"
-                                isExpanded={isExpanded}
-                                onClick={() => handleContextEnter("organization")}
-                            />
-                            <SidebarContextButton
-                                icon={contexts.find(c => c.id === "learnings")?.icon || Building}
-                                label="Academia"
-                                description="Cursos y capacitaciones"
-                                isExpanded={isExpanded}
-                                onClick={() => handleContextEnter("learnings")}
-                            />
-                            <SidebarContextButton
-                                icon={contexts.find(c => c.id === "community")?.icon || Building}
-                                label="Comunidad"
-                                description="Fundadores y red Seencel"
-                                isExpanded={isExpanded}
-                                onClick={() => handleContextEnter("community")}
-                            />
-                            <SidebarContextButton
-                                icon={contexts.find(c => c.id === "admin")?.icon || Building}
-                                label="Admin"
-                                description="Panel de administración"
-                                isExpanded={isExpanded}
-                                onClick={() => handleContextEnter("admin")}
-                            />
+                            {contexts.map(ctx => {
+                                const descriptions: Record<string, string> = {
+                                    organization: "Organización y proyectos",
+                                    learnings: "Cursos y capacitaciones",
+                                    community: "Fundadores y red Seencel",
+                                    admin: "Panel de administración"
+                                };
+
+                                const labels: Record<string, string> = {
+                                    organization: "Espacio de Trabajo"
+                                };
+
+                                const isDisabled = ctx.disabled;
+                                const status = ctx.status;
+
+                                // Badge Logic
+                                let badge = null;
+                                if (status === 'maintenance') {
+                                    badge = (
+                                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
+                                            <Lock className="h-3 w-3 text-orange-500" />
+                                        </Badge>
+                                    );
+                                } else if (status === 'founders') {
+                                    badge = (
+                                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 shadow-none">
+                                            <Lock className="h-3 w-3 text-yellow-500" />
+                                        </Badge>
+                                    );
+                                }
+
+                                const button = (
+                                    <SidebarContextButton
+                                        key={ctx.id}
+                                        icon={ctx.icon}
+                                        label={labels[ctx.id] || ctx.label}
+                                        description={descriptions[ctx.id]}
+                                        isExpanded={isExpanded}
+                                        onClick={() => {
+                                            if (isDisabled) return;
+                                            handleContextEnter(ctx.id);
+                                        }}
+                                        badge={isExpanded ? badge : null}
+                                        isLocked={!!status}
+                                        className={cn(
+                                            // Disabled items (Users)
+                                            isDisabled && "cursor-not-allowed hover:bg-transparent",
+                                            // Admin specific: Keep interactivity if not disabled
+                                            !isDisabled && status && "cursor-pointer hover:opacity-60",
+                                            // Hidden items (Admins only) - Override locked style
+                                            ctx.hidden && "opacity-40 border border-dashed border-primary/20 bg-muted/20"
+                                        )}
+                                    />
+                                );
+
+                                if (status === 'maintenance') {
+                                    return (
+                                        <HoverCard key={ctx.id} openDelay={100} closeDelay={100}>
+                                            <HoverCardTrigger asChild>
+                                                <div className="w-full">{button}</div>
+                                            </HoverCardTrigger>
+                                            <HoverCardContent side="right" className="w-80" align="start">
+                                                <div className="flex gap-4">
+                                                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                                        <Lock className="h-5 w-5 text-orange-600" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-sm font-semibold">En Mantenimiento</h4>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Estamos realizando mejoras en este módulo. Estará disponible nuevamente en breve.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </HoverCardContent>
+                                        </HoverCard>
+                                    );
+                                }
+
+                                if (status === 'founders') {
+                                    return (
+                                        <HoverCard key={ctx.id} openDelay={100} closeDelay={100}>
+                                            <HoverCardTrigger asChild>
+                                                <div className="w-full">{button}</div>
+                                            </HoverCardTrigger>
+                                            <HoverCardContent side="right" className="w-80" align="start">
+                                                <div className="flex gap-4">
+                                                    <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                                                        <Crown className="h-5 w-5 text-yellow-600" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-yellow-700">Acceso Fundadores</h4>
+                                                            <p className="text-xs text-muted-foreground mt-1">
+                                                                Este módulo está en acceso anticipado exclusivo para organizaciones fundadoras.
+                                                            </p>
+                                                        </div>
+                                                        <Link
+                                                            href={"/community/founders" as any}
+                                                            className="text-xs font-medium text-yellow-600 hover:text-yellow-700 flex items-center gap-1"
+                                                        >
+                                                            Conocer más <ChevronRight className="h-3 w-3" />
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </HoverCardContent>
+                                        </HoverCard>
+                                    );
+                                }
+
+                                return button;
+                            })}
                         </nav>
                     )}
 
@@ -275,7 +501,7 @@ export function SidebarContent({
                             {/* Back Button */}
                             <SidebarNavButton
                                 icon={ArrowLeft}
-                                label="Volver"
+                                label="Volver al Hub"
                                 isExpanded={isExpanded}
                                 onClick={handleBack}
                             />
@@ -284,23 +510,7 @@ export function SidebarContent({
                             <div className="w-full h-px bg-border/30 my-1" />
 
                             {/* Organization Nav Items */}
-                            {orgNavItems.map((item, idx) => (
-                                <React.Fragment key={idx}>
-                                    {item.sectionHeader && isExpanded && (
-                                        <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                            {item.sectionHeader}
-                                        </div>
-                                    )}
-                                    <SidebarNavButton
-                                        icon={item.icon}
-                                        label={item.title}
-                                        href={item.href}
-                                        isActive={pathname === item.href}
-                                        isExpanded={isExpanded}
-                                        onClick={onLinkClick}
-                                    />
-                                </React.Fragment>
-                            ))}
+                            {orgNavItems.map(renderNavItem)}
                         </nav>
                     )}
 
@@ -309,7 +519,7 @@ export function SidebarContent({
                         <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="project">
                             <SidebarNavButton
                                 icon={ArrowLeft}
-                                label="Volver"
+                                label="Volver al Hub"
                                 isExpanded={isExpanded}
                                 onClick={handleBack}
                             />
@@ -339,16 +549,11 @@ export function SidebarContent({
                         <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
                             <SidebarNavButton
                                 icon={ArrowLeft}
-                                label="Volver"
+                                label="Volver al Hub"
                                 isExpanded={isExpanded}
                                 onClick={handleBack}
                             />
                             <div className="w-full h-px bg-border/30 my-1" />
-                            {isExpanded && (
-                                <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                    Academia
-                                </div>
-                            )}
                             {getNavItems("learnings").map((item, idx) => (
                                 <SidebarNavButton
                                     key={idx}
@@ -368,7 +573,7 @@ export function SidebarContent({
                         <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
                             <SidebarNavButton
                                 icon={ArrowLeft}
-                                label="Volver"
+                                label="Volver al Hub"
                                 isExpanded={isExpanded}
                                 onClick={handleBack}
                             />
@@ -378,17 +583,7 @@ export function SidebarContent({
                                     Comunidad
                                 </div>
                             )}
-                            {getNavItems("community").map((item, idx) => (
-                                <SidebarNavButton
-                                    key={idx}
-                                    icon={item.icon}
-                                    label={item.title}
-                                    href={item.href}
-                                    isActive={pathname === item.href}
-                                    isExpanded={isExpanded}
-                                    onClick={onLinkClick}
-                                />
-                            ))}
+                            {getNavItems("community").map(renderNavItem)}
                         </nav>
                     )}
 
@@ -397,16 +592,12 @@ export function SidebarContent({
                         <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
                             <SidebarNavButton
                                 icon={ArrowLeft}
-                                label="Volver"
+                                label="Volver al Hub"
                                 isExpanded={isExpanded}
                                 onClick={handleBack}
                             />
                             <div className="w-full h-px bg-border/30 my-1" />
-                            {isExpanded && (
-                                <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                    Administración
-                                </div>
-                            )}
+
                             {getNavItems("admin").map((item, idx) => (
                                 <SidebarNavButton
                                     key={idx}

@@ -280,7 +280,7 @@ export function ParametersCatalogView({
                         const TypeIcon = typeConfig.icon;
                         const isExpanded = expandedParams.has(param.id);
                         const hasOptions = param.type === "select" || param.type === "material";
-                        const options = (param as any).options as TaskParameterOption[] || [];
+                        const options = param.options || [];
 
                         return (
                             <Card key={param.id} className="overflow-hidden">

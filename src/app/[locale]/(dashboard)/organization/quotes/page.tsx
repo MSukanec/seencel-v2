@@ -1,6 +1,6 @@
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { getOrganizationQuotes } from "@/features/quotes/queries";
-import { QuotesPageView } from "@/features/quotes/views";
+import { QuotesListView } from "@/features/quotes/views";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -35,7 +35,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
     const projects = projectsResult.data || [];
 
     return (
-        <QuotesPageView
+        <QuotesListView
             organizationId={activeOrgId}
             projectId={null}
             quotes={quotes}

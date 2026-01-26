@@ -341,7 +341,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                                 asChild
                                                 className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
                                             >
-                                                <Link href="/organization">{tUser('dashboard')}</Link>
+                                                <Link href="/hub">{tUser('dashboard')}</Link>
                                             </Button>
                                         </>
                                     )}
@@ -380,7 +380,7 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                             {/* Public: Show Dashboard/Workspace link */}
                                             {variant === 'public' && (
                                                 <DropdownMenuItem asChild>
-                                                    <Link href="/organization">{tUser('dashboard')}</Link>
+                                                    <Link href="/hub">{tUser('dashboard')}</Link>
                                                 </DropdownMenuItem>
                                             )}
 

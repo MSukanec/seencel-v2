@@ -22,6 +22,10 @@ export interface Quote {
     created_at: string;
     updated_at: string;
     created_by: string | null;
+    // Change Orders Architecture
+    parent_quote_id: string | null;        // For change_orders: reference to parent contract
+    original_contract_value: number | null; // Frozen value when contract is approved
+    change_order_number: number | null;     // Sequential number (CO #1, CO #2, etc.)
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';
@@ -38,6 +42,29 @@ export interface QuoteView extends Quote {
     subtotal_with_markup: number;
     total_after_discount: number;
     total_with_tax: number;
+    // For contracts with change orders (from contract_summary_view)
+    parent_contract_name?: string;          // For COs: name of parent contract
+}
+
+// Contract with aggregated change order data
+export interface ContractSummary {
+    id: string;
+    name: string;
+    project_id: string | null;
+    organization_id: string;
+    client_id: string | null;
+    status: QuoteStatus;
+    currency_id: string;
+    original_contract_value: number;
+    change_order_count: number;
+    approved_change_order_count: number;
+    pending_change_order_count: number;
+    approved_changes_value: number;
+    pending_changes_value: number;
+    revised_contract_value: number;        // original + approved
+    potential_contract_value: number;      // original + approved + pending
+    created_at: string;
+    updated_at: string;
 }
 
 export interface QuoteItem {

@@ -110,7 +110,7 @@ export default function OnboardingForm({ countryCode }: { countryCode?: string }
                 // Use the specific message if available, otherwise fallback to generic
                 setError(result.message || t("form.error"));
             } else if (result?.success) {
-                router.push("/organization");
+                router.push("/hub");
                 router.refresh();
             }
         });

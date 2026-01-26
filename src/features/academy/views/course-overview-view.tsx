@@ -14,7 +14,7 @@ import {
     TrendingUp,
     Calendar
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import { ContentLayout } from "@/components/layout";
 import { cn } from "@/lib/utils";
@@ -106,7 +106,7 @@ export function CourseOverviewView({
                     <div className="relative p-6 md:p-8">
                         <h1 className="text-2xl md:text-3xl font-bold mb-2 text-white">{course.title}</h1>
 
-                        <Link href={`/academy/my-courses/${courseSlug}/player`}>
+                        <Link href={`/academy/my-courses/${courseSlug}/player` as any}>
                             <Button className="mt-4">
                                 <Play className="w-4 h-4 mr-2" />
                                 {progressPct > 0 ? t("continue") : t("start")}
@@ -174,7 +174,11 @@ export function CourseOverviewView({
                             ) : (
                                 <div className="space-y-3 flex-1">
                                     {latestThreads.slice(0, 3).map((thread) => (
-                                        <div key={thread.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                                        <Link
+                                            key={thread.id}
+                                            href={`/academy/my-courses/${courseSlug}/forum?thread=${thread.id}` as any}
+                                            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                        >
                                             <MessageSquare className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-medium line-clamp-1">{thread.title}</p>
@@ -185,12 +189,12 @@ export function CourseOverviewView({
                                             <span className="text-xs text-muted-foreground shrink-0">
                                                 {formatRelativeDate(thread.created_at)}
                                             </span>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
                             <Link
-                                href={`/academy/my-courses/${courseSlug}/forum`}
+                                href={`/academy/my-courses/${courseSlug}/forum` as any}
                                 className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
                             >
                                 {t("cards.forum.viewAll")}
@@ -212,7 +216,7 @@ export function CourseOverviewView({
                                 <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
                                     <FileText className="w-10 h-10 text-muted-foreground/30 mb-3" />
                                     <p className="text-sm text-muted-foreground mb-4">{t("cards.notes.empty")}</p>
-                                    <Link href={`/academy/my-courses/${courseSlug}/player`}>
+                                    <Link href={`/academy/my-courses/${courseSlug}/player` as any}>
                                         <Button size="sm" variant="outline">
                                             <Play className="w-3 h-3 mr-1" />
                                             {t("cards.notes.goToPlayer")}
@@ -222,7 +226,11 @@ export function CourseOverviewView({
                             ) : (
                                 <div className="space-y-3 flex-1">
                                     {latestSummaries.slice(0, 3).map((summary) => (
-                                        <div key={summary.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                                        <Link
+                                            key={summary.id}
+                                            href={`/academy/my-courses/${courseSlug}/notes?lesson=${summary.lesson_id}` as any}
+                                            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                        >
                                             <FileText className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-medium line-clamp-1">{summary.lesson.title}</p>
@@ -233,12 +241,12 @@ export function CourseOverviewView({
                                             <span className="text-xs text-muted-foreground shrink-0">
                                                 {formatRelativeDate(summary.updated_at)}
                                             </span>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
                             <Link
-                                href={`/academy/my-courses/${courseSlug}/notes`}
+                                href={`/academy/my-courses/${courseSlug}/notes` as any}
                                 className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
                             >
                                 {t("cards.notes.viewAll")}
@@ -264,7 +272,11 @@ export function CourseOverviewView({
                             ) : (
                                 <div className="space-y-3 flex-1">
                                     {latestMarkers.slice(0, 3).map((marker) => (
-                                        <div key={marker.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                                        <Link
+                                            key={marker.id}
+                                            href={`/academy/my-courses/${courseSlug}/player?lesson=${marker.lesson.id}&t=${marker.time_sec}` as any}
+                                            className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                                        >
                                             <Bookmark className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-medium line-clamp-1">
@@ -277,12 +289,12 @@ export function CourseOverviewView({
                                             <span className="text-xs text-muted-foreground shrink-0">
                                                 {formatRelativeDate(marker.created_at)}
                                             </span>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
                             <Link
-                                href={`/academy/my-courses/${courseSlug}/player`}
+                                href={`/academy/my-courses/${courseSlug}/player` as any}
                                 className="mt-4 text-sm text-primary hover:underline flex items-center gap-1"
                             >
                                 {t("cards.markers.viewAll")}

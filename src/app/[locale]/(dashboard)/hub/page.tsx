@@ -1,0 +1,59 @@
+import { PageWrapper } from "@/components/layout";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { setRequestLocale } from 'next-intl/server';
+import { getUserProfile } from "@/features/profile/queries";
+import { getUserOrganizations, getRecentOrganizationsCount } from "@/features/organization/queries";
+import { getActiveHeroSections } from "@/features/hero-sections/queries";
+import { getUserTimezone } from "@/features/preferences/actions";
+import { getRecentPublicCourses } from "@/features/academy/course-queries";
+import { DashboardHomeView } from "@/features/dashboard-home/components/dashboard-home-view";
+
+export default async function HubPage({ params }: { params: Promise<{ locale: string }> }) {
+    const { locale } = await params;
+    setRequestLocale(locale);
+
+    // Require authentication
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        redirect('/auth/login');
+    }
+
+    // Fetch only necessary data
+    const [
+        { profile },
+        { organizations, activeOrgId },
+        heroSlides,
+        userTimezone,
+        recentCourses,
+        recentOrgsCount
+    ] = await Promise.all([
+        getUserProfile(),
+        getUserOrganizations(),
+        getActiveHeroSections('hub_hero'),
+        getUserTimezone(),
+        getRecentPublicCourses(2),
+        getRecentOrganizationsCount(30)
+    ]);
+
+    // Derived data
+    const activeOrg = organizations.find(o => o.id === activeOrgId);
+    const activeOrgName = activeOrg?.name;
+
+    return (
+        <PageWrapper type="dashboard">
+            <DashboardHomeView
+                user={profile}
+                activeOrgId={activeOrgId}
+                activeOrgName={activeOrgName}
+                heroSlides={heroSlides}
+                userTimezone={userTimezone || undefined}
+                recentCourses={recentCourses}
+                communityOrgsCount={recentOrgsCount + 100}
+            />
+        </PageWrapper>
+    );
+}
+

@@ -14,6 +14,8 @@ export async function getOrganizationQuotes(organizationId: string): Promise<Quo
         .select("*")
         .eq("organization_id", organizationId)
         .eq("is_deleted", false)
+        // Hide Change Orders from main list (they appear inside contracts)
+        .neq("quote_type", "change_order")
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -35,6 +37,8 @@ export async function getProjectQuotes(projectId: string): Promise<QuoteView[]> 
         .select("*")
         .eq("project_id", projectId)
         .eq("is_deleted", false)
+        // Hide Change Orders from main list
+        .neq("quote_type", "change_order")
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -105,3 +109,89 @@ export async function getQuoteItems(quoteId: string) {
     }));
 }
 
+// ============================================
+// CHANGE ORDERS QUERIES
+// ============================================
+
+/**
+ * Get all change orders for a parent contract
+ */
+export async function getChangeOrdersByContract(contractId: string): Promise<QuoteView[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("quotes_view")
+        .select("*")
+        .eq("parent_quote_id", contractId)
+        .eq("quote_type", "change_order")
+        .eq("is_deleted", false)
+        .order("change_order_number", { ascending: true });
+
+    if (error) {
+        console.error("Error fetching change orders:", error);
+        return [];
+    }
+
+    return data as QuoteView[];
+}
+
+/**
+ * Get contract summary with aggregated change order data
+ */
+export async function getContractSummary(contractId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("contract_summary_view")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+    if (error) {
+        console.error("Error fetching contract summary:", error);
+        return null;
+    }
+
+    return data;
+}
+
+/**
+ * Get contract with its change orders (for detail view)
+ */
+export async function getContractWithChangeOrders(contractId: string) {
+    const [contract, changeOrders, summary] = await Promise.all([
+        getQuote(contractId),
+        getChangeOrdersByContract(contractId),
+        getContractSummary(contractId)
+    ]);
+
+    return {
+        contract,
+        changeOrders,
+        summary
+    };
+}
+
+/**
+ * Get next change order number for a contract
+ */
+export async function getNextChangeOrderNumber(contractId: string): Promise<number> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("quotes")
+        .select("change_order_number")
+        .eq("parent_quote_id", contractId)
+        .eq("quote_type", "change_order")
+        .eq("is_deleted", false)
+        .order("change_order_number", { ascending: false })
+        .limit(1);
+
+    if (error) {
+        console.error("Error fetching next CO number:", error);
+        return 1;
+    }
+
+    const maxNumber = data?.[0]?.change_order_number || 0;
+    return maxNumber + 1;
+}

@@ -14,8 +14,6 @@ import {
     CreditCard,
     Hammer,
     Video,
-    MessageSquare,
-    Calendar,
     Monitor,
     Info,
     Wrench,
@@ -28,33 +26,44 @@ import {
     Banknote,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
+import { useFeatureFlags } from "@/providers/feature-flags-provider";
+import { useOrganization } from "@/context/organization-context";
+import { useMemo } from "react";
 
 export interface NavItem {
     title: string;
     href: string;
     icon: React.ElementType;
     sectionHeader?: string;
+    // Status properties
+    disabled?: boolean;
+    hidden?: boolean;
+    status?: 'maintenance' | 'founders';
 }
 
 export interface ContextItem {
     id: NavigationContext;
     label: string;
     icon: React.ElementType;
+    disabled?: boolean;
+    hidden?: boolean;
+    status?: 'maintenance' | 'founders';
 }
 
-const contexts: ContextItem[] = [
-    { id: 'organization', label: 'Organización', icon: Building },
-    { id: 'project', label: 'Proyecto', icon: Briefcase },
+const ALL_CONTEXTS: ContextItem[] = [
+    { id: 'organization', label: 'Organización', icon: Briefcase },
+    // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
     { id: 'admin', label: 'Admin', icon: Hammer },
 ];
 
 export const contextRoutes: Record<NavigationContext, string> = {
+    home: '/hub',
     organization: '/organization',
     project: '/organization/projects',
     learnings: '/academy/courses',
-    community: '/organization',
+    community: '/community',
     admin: '/admin'
 };
 
@@ -62,6 +71,92 @@ export function useSidebarNavigation() {
     const activeProjectId = useActiveProjectId();
     const tMega = useTranslations('MegaMenu');
     const tSidebar = useTranslations('Sidebar');
+    const { statuses, isAdmin } = useFeatureFlags();
+    const { isFounder } = useOrganization();
+
+    const contexts = useMemo(() => {
+        return ALL_CONTEXTS.map(ctx => {
+            // Mapping: Context ID -> Feature Flag Key
+            let flagKey = null;
+            if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
+            if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
+            if (ctx.id === 'community') flagKey = 'context_community_enabled';
+
+            // Admin is always present
+            if (ctx.id === 'admin') {
+                return isAdmin ? ctx : null;
+            }
+
+            if (!flagKey) return ctx;
+
+            // Get Status (default to active)
+            const status = statuses[flagKey] || 'active';
+
+            // Logic:
+            // 1. Hidden
+            if (status === 'hidden') {
+                if (isAdmin) {
+                    return { ...ctx, hidden: true };
+                }
+                return null;
+            }
+
+            // 2. Maintenance
+            if (status === 'maintenance') {
+                // Visually maintenance for everyone (admin sees it too)
+                const maintenanceItem: ContextItem = { ...ctx, status: 'maintenance' };
+
+                if (isAdmin) {
+                    // Admin: Clickable (not disabled)
+                    return maintenanceItem;
+                } else {
+                    // User: Blocked
+                    return { ...maintenanceItem, disabled: true };
+                }
+            }
+
+            // 3. Founders
+            if (status === 'founders') {
+                const foundersItem: ContextItem = { ...ctx, status: 'founders' };
+
+                // Allow if Admin OR Founder
+                if (isAdmin || isFounder) {
+                    return foundersItem; // Returns item with status badge, but NOT disabled
+                } else {
+                    return { ...foundersItem, disabled: true };
+                }
+            }
+
+            // 4. Active
+            return ctx;
+        }).filter((ctx): ctx is ContextItem => ctx !== null);
+    }, [statuses, isAdmin, isFounder]);
+
+    // Helper to compute item status
+    const getItemStatus = (flagKey: string, baseItem: NavItem): NavItem | null => {
+        const flag = statuses[flagKey] || 'active';
+
+        if (flag === 'hidden') {
+            return isAdmin ? { ...baseItem, hidden: true } : null;
+        }
+
+        if (flag === 'maintenance') {
+            const updated = { ...baseItem, status: 'maintenance' as 'maintenance' };
+            return isAdmin ? updated : { ...updated, disabled: true };
+        }
+
+        if (flag === 'founders') {
+            const updated = { ...baseItem, status: 'founders' as 'founders' };
+            // Allow Admin OR Founder
+            if (isAdmin || isFounder) {
+                return updated;
+            } else {
+                return { ...updated, disabled: true };
+            }
+        }
+
+        return baseItem;
+    };
 
     const getNavItems = (ctx: NavigationContext): NavItem[] => {
         switch (ctx) {
@@ -125,7 +220,7 @@ export function useSidebarNavigation() {
                     {
                         title: 'Subcontratos',
                         href: activeProjectId ? `${projectBase}/subcontracts` : '/organization/projects',
-                        icon: Users // Using Users as temporary icon, typically HardHat or similar fits better if available
+                        icon: Users
                     },
                     {
                         title: tSidebar('items.sitelog'),
@@ -146,23 +241,24 @@ export function useSidebarNavigation() {
                 ];
             case 'learnings':
                 return [
-                    { title: 'Cursos', href: '/academy/courses', icon: Video },
+                    { title: 'Mis Cursos', href: '/academy/my-courses', icon: Video },
                 ];
             case 'community':
-                return [
-                    { title: 'Fundadores', href: '/community/founders', icon: Sparkles },
-                    { title: 'Mapa Seencel', href: '/community/map', icon: MapPin },
-                ];
+                const foundersItem = getItemStatus('context_community_founders_enabled', { title: 'Fundadores', href: '/community/founders', icon: Sparkles });
+                const mapItem = getItemStatus('context_community_map_enabled', { title: 'Mapa Seencel', href: '/community/map', icon: MapPin });
+
+                return [foundersItem, mapItem].filter((i): i is NavItem => i !== null);
             case 'admin':
                 return [
                     { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
-                    { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
                     { title: 'Directorio', href: '/admin/directory', icon: Users },
-                    { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Wrench },
-                    { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
-                    { title: 'Actividad', href: '/admin/audit-logs', icon: FileText },
+                    { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
                     { title: 'Plataforma', href: '/admin/system', icon: Monitor },
-                    { title: 'Configuración', href: '/admin/settings', icon: Settings },
+                    { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
+                    { title: 'Changelog', href: '/admin/changelog', icon: FileText },
+                    { title: 'Soporte', href: '/admin/support', icon: Wrench },
+                    { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
+                    { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },
                 ];
             default:
                 return [];
@@ -175,4 +271,3 @@ export function useSidebarNavigation() {
         getNavItems
     };
 }
-

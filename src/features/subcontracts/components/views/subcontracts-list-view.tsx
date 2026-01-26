@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "../tables/subcontracts-columns";
+import { useFormatCurrency } from "@/hooks/use-format-currency";
 
 interface SubcontractsListViewProps {
     projectId: string;
@@ -28,6 +29,8 @@ interface SubcontractsListViewProps {
 
 export function SubcontractsListView({ projectId, organizationId, providers, currencies, initialSubcontracts = [], defaultCurrencyId }: SubcontractsListViewProps) {
     const { openModal, closeModal } = useModal();
+    const { formatNumber, decimalPlaces } = useFormatCurrency();
+    console.log('[SubcontractsListView] decimalPlaces from context:', decimalPlaces);
     const subcontracts = initialSubcontracts;
 
     // KPI CALCULATIONS
@@ -35,7 +38,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
         const totals: Record<string, { amount: number; symbol: string }> = {};
 
         subcontracts.forEach(sub => {
-            if (sub.status === 'cancelled' || sub.status === 'draft') return; // Skip non-active for financial totals? Or include? User said "Borrador" in screenshot has totals. Let's include all except cancelled maybe? Or all? Screenshot shows "Borrador" with amounts. Let's include everything for now to match list.
+            if (sub.status === 'cancelled') return; // Only skip cancelled subcontracts
 
             const currency = sub.currency_code || 'ARS';
             const symbol = sub.currency_symbol || '$';
@@ -60,12 +63,12 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
     const totalPaid = calculateTotals('paid_amount');
     const totalRemaining = calculateTotals('remaining_amount');
 
-    // Helper to get main display string
+    // Helper to get main display string - uses organization's decimal preference
     const getMainValue = (breakdown: any[]) => {
-        if (breakdown.length === 0) return "$ 0.00";
+        if (breakdown.length === 0) return "$ 0";
         // Prefer USD or first
         const primary = breakdown.find(b => b.currencyCode === 'USD') || breakdown[0];
-        return `${primary.symbol} ${primary.nativeTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        return `${primary.symbol} ${formatNumber(primary.nativeTotal)}`;
     };
 
     const activeCount = subcontracts.filter(s => s.status === 'active').length;

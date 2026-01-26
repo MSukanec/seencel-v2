@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import { OrganizationSettingsData, OrganizationMemberDetail, OrganizationInvitation, Role, Permission, RolePermission, OrganizationActivityLog, OrganizationSubscription, OrganizationBillingCycle, OrganizationPreferences, OrganizationCurrency, OrganizationWallet, Currency, Wallet } from "@/types/organization";
 
 export async function seedPermissions(organizationId: string) {
@@ -179,6 +180,9 @@ export async function updateOrganizationPreferences(
         console.error('Error updating preferences:', error);
         throw new Error('Failed to update preferences');
     }
+
+    // Revalidate all dashboard routes to pick up new preferences (e.g., decimal_places)
+    revalidatePath('/', 'layout');
 
     return { success: true };
 }

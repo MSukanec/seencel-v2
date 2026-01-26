@@ -62,7 +62,8 @@ export async function parseFile(file: File, options?: ParseOptions): Promise<Par
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary' });
+                // cellDates: true converts Excel serial dates to JS Date objects
+                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
                 const firstSheetName = workbook.SheetNames[0]; // TODO: Support sheet selection
                 const worksheet = workbook.Sheets[firstSheetName];
 

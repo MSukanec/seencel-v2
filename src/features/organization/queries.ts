@@ -439,6 +439,15 @@ export async function getOrganizationFinancialData(orgId: string) {
         .eq('organization_id', orgId)
         .maybeSingle();
 
+    // 1b. Fetch Organization Settings (is_founder)
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('settings')
+        .eq('id', orgId)
+        .single();
+
+    const isFounder = (orgData?.settings as any)?.is_founder === true;
+
     // 2. Fetch Enabled Currencies (Use View)
     const { data: orgCurrencies } = await supabase
         .from('organization_currencies_view')
@@ -515,8 +524,8 @@ export async function getOrganizationFinancialData(orgId: string) {
         wallets: formattedWallets,
         preferences: preferences ? {
             ...preferences,
-            currency_decimal_places: preferences.currency_decimal_places ?? 2
-        } : null
+        } : null,
+        isFounder
     };
 }
 
@@ -524,5 +533,27 @@ export async function getOrganizationFinancialData(orgId: string) {
 export async function getOrganizationWallets(orgId: string) {
     const data = await getOrganizationFinancialData(orgId);
     return data.wallets;
+}
+
+/**
+ * Get count of organizations created in last N days
+ * Used for community card stats (+ offset for marketing)
+ */
+export async function getRecentOrganizationsCount(days: number = 30): Promise<number> {
+    const supabase = await createClient();
+
+    const sinceDate = subDays(new Date(), days).toISOString();
+
+    const { count, error } = await supabase
+        .from('organizations')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', sinceDate);
+
+    if (error) {
+        console.error("Error fetching recent orgs count:", error);
+        return 0;
+    }
+
+    return count || 0;
 }
 

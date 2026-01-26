@@ -10,6 +10,10 @@ export const routing = defineRouting({
 
     pathnames: {
         '/': '/',
+        '/hub': {
+            en: '/hub',
+            es: '/hub'
+        },
         '/organization': {
             en: '/organization',
             es: '/organizacion'
@@ -54,6 +58,27 @@ export const routing = defineRouting({
             es: "/academia/cursos/[slug]",
             en: "/academy/courses/[slug]"
         },
+        // Academy Dashboard (Student)
+        "/academy/my-courses": {
+            es: "/academia/mis-cursos",
+            en: "/academy/my-courses"
+        },
+        "/academy/my-courses/[slug]": {
+            es: "/academia/mis-cursos/[slug]",
+            en: "/academy/my-courses/[slug]"
+        },
+        "/academy/my-courses/[slug]/player": {
+            es: "/academia/mis-cursos/[slug]/reproductor",
+            en: "/academy/my-courses/[slug]/player"
+        },
+        "/academy/my-courses/[slug]/notes": {
+            es: "/academia/mis-cursos/[slug]/notas",
+            en: "/academy/my-courses/[slug]/notes"
+        },
+        "/academy/my-courses/[slug]/forum": {
+            es: "/academia/mis-cursos/[slug]/foro",
+            en: "/academy/my-courses/[slug]/forum"
+        },
         '/organization/billing/plans': {
             en: '/organization/billing/plans',
             es: '/organizacion/facturacion/planes'
@@ -96,7 +121,17 @@ export const routing = defineRouting({
         '/login': '/login',
         '/signup': '/signup',
         '/forgot-password': '/forgot-password',
-        '/admin': '/admin'
+        '/community': {
+            en: '/community',
+            es: '/comunidad'
+        },
+        '/onboarding': {
+            en: '/onboarding',
+            es: '/bienvenida'
+        },
+        '/admin': '/admin',
+        // Admin hub content
+        '/admin/hub-content': '/admin/hub-content'
     }
 });
 

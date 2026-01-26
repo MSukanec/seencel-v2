@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageWrapper } from "@/components/layout";
 import { Video, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 interface CourseLayoutProps {
     children: React.ReactNode;
@@ -46,15 +46,8 @@ export default async function StudentCourseLayout({ children, params }: CourseLa
             tabs={<StudentCourseTabs courseSlug={slug} />}
             backButton={
                 <Button variant="ghost" size="icon" asChild className="shrink-0">
-                    <Link href={`/${locale}/academy/my-courses`}>
+                    <Link href="/academy/my-courses">
                         <ArrowLeft className="h-5 w-5" />
-                    </Link>
-                </Button>
-            }
-            actions={
-                <Button variant="outline" size="sm" asChild>
-                    <Link href={`/${locale}/academy/courses/${course.slug}`}>
-                        Ver landing
                     </Link>
                 </Button>
             }

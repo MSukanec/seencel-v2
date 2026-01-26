@@ -85,6 +85,7 @@ export interface TaskParameter {
     order: number | null;
     is_deleted: boolean;
     deleted_at: string | null;
+    options?: TaskParameterOption[];
 }
 
 export interface TaskParameterOption {

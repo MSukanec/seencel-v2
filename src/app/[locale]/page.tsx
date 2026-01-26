@@ -39,7 +39,7 @@ export default async function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               {profile ? (
                 <Link
-                  href="/organization"
+                  href="/hub"
                   className={cn(buttonVariants({ size: "lg" }), "h-12 px-8 text-lg rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20")}
                 >
                   {t('Hero.dashboard')} <ArrowRight className="ml-2 h-4 w-4" />

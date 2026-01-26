@@ -30,7 +30,7 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
     const router = useRouter();
 
     const publicLinks = [
-        ...(user ? [{ href: "/organization", label: tUser('dashboard'), icon: LayoutDashboard }] : []),
+        ...(user ? [{ href: "/hub", label: tUser('dashboard'), icon: LayoutDashboard }] : []),
         { href: "/features", label: tPublic('features'), icon: Rocket },
         { href: "/academy/courses", label: tPublic('academy'), icon: GraduationCap },
         { href: "/founders", label: tPublic('founders'), icon: Users },
@@ -82,10 +82,10 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
                                 onClick={() => setOpen(false)}
                                 className={cn(
                                     "flex items-center gap-4 px-4 py-4 rounded-xl text-lg font-medium transition-all hover:bg-muted/50 text-foreground/80",
-                                    link.href === '/organization' && "text-primary bg-primary/5 font-semibold"
+                                    link.href === '/hub' && "text-primary bg-primary/5 font-semibold"
                                 )}
                             >
-                                <link.icon className={cn("h-5 w-5 text-muted-foreground", link.href === '/organization' && "text-primary")} />
+                                <link.icon className={cn("h-5 w-5 text-muted-foreground", link.href === '/hub' && "text-primary")} />
                                 {link.label}
                             </Link>
                         ))}

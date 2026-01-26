@@ -111,28 +111,72 @@ export default async function FeaturePage({ params }: Props) {
 *   ❌ `list-view.tsx`
 *   ❌ `overview.tsx`
 
-### Toolbar y Actions
-Las acciones de creación ("Nuevo X") van en la Toolbar del View correspondiente.
+### Toolbar y Actions (🚨 CRÍTICO)
+
+**TODAS las acciones de creación ("Crear X", "Nuevo X") DEBEN ir en el `<Toolbar portalToHeader />`.**
+
+NUNCA pongas botones de acción directamente en el body de la View. El Toolbar se teleporta al header de la página.
 
 ```tsx
 // src/features/[feature]/views/[feature]-list-view.tsx
 "use client";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function ListView({ data }) {
+    const handleCreate = () => { /* ... */ };
+
+    // ✅ CORRECTO: EmptyState SIN action + Toolbar en paralelo
+    // La acción de crear ya está en el Toolbar, NO duplicar en EmptyState
+    if (data.length === 0) {
+        return (
+            <>
+                <Toolbar
+                    portalToHeader
+                    actions={[
+                        { label: "Crear", icon: Plus, onClick: handleCreate }
+                    ]}
+                />
+                <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                        icon={ListIcon}
+                        title="Sin elementos"
+                        description="Creá tu primer elemento."
+                        // ⚠️ NO usar action por defecto - ya está en Toolbar
+                        // Solo agregar action si el usuario lo pide explícitamente
+                    />
+                </div>
+            </>
+        );
+    }
+
+    // ✅ CORRECTO: Toolbar siempre presente cuando hay data
     return (
-        <div className="space-y-4">
+        <>
             <Toolbar
                 portalToHeader
-                // ✅ Acciones de creación AQUI
                 actions={[
                     { label: "Crear", icon: Plus, onClick: handleCreate }
                 ]}
             />
             <DataTable data={data} />
-        </div>
+        </>
     );
 }
+```
+
+### ❌ Anti-patrón: Botones en Body
+```tsx
+// ❌ INCORRECTO: Nunca hagas esto
+return (
+    <div className="space-y-4">
+        <div className="flex justify-between">
+            <h3>Título</h3>
+            <Button onClick={handleCreate}>Crear</Button>  {/* ❌ NO */}
+        </div>
+        <DataTable />
+    </div>
+);
 ```
 
 ### 🚨 Excepción: Dashboards / Overview
@@ -154,6 +198,62 @@ Asegúrate de que TODOS los textos visibles estén en `messages/es.json`.
 
 ---
 
+## 🌐 9. i18n URLs (CRÍTICO)
+
+> [!CAUTION]
+> **SIEMPRE** usar el `Link` de `@/i18n/routing`, **NUNCA** de `next/link`. Esto aplica a absolutamente todas las páginas y componentes.
+
+### 9.1 Reglas de Imports
+
+```tsx
+// ✅ CORRECTO - Siempre usar este import
+import { Link } from "@/i18n/routing";
+
+// ❌ INCORRECTO - Nunca usar next/link directamente
+import Link from "next/link";
+```
+
+### 9.2 Reglas de hrefs
+
+```tsx
+// ✅ CORRECTO - Solo la ruta interna SIN prefijo de locale
+<Link href="/academy/my-courses">Mis Cursos</Link>
+<Link href="/organization/projects">Proyectos</Link>
+
+// ❌ INCORRECTO - No incluir manualmente el locale
+<Link href={`/${locale}/academy/my-courses`}>Mis Cursos</Link>
+<Link href="/es/organizacion/proyectos">Proyectos</Link>
+```
+
+### 9.3 Registro en routing.ts
+
+**TODA nueva ruta** debe registrarse en `src/i18n/routing.ts` con su traducción:
+
+```ts
+// src/i18n/routing.ts
+pathnames: {
+    // Ruta base (key) siempre en inglés
+    "/academy/my-courses": {
+        es: "/academia/mis-cursos",
+        en: "/academy/my-courses"
+    },
+    "/academy/my-courses/[slug]": {
+        es: "/academia/mis-cursos/[slug]",
+        en: "/academy/my-courses/[slug]"
+    },
+    // ... todas las sub-rutas también
+}
+```
+
+### 9.4 Checklist para Nuevas Páginas
+
+- [ ] Agregar ruta a `routing.ts` con traducciones ES/EN
+- [ ] Usar `import { Link } from "@/i18n/routing"`
+- [ ] hrefs sin prefijo de locale (ej: `/organization`, no `/es/organizacion`)
+- [ ] Verificar que funcione cambiando de idioma en la URL
+
+---
+
 ## ❌ Anti-Patrones (Lo que NO debes hacer)
 
 1.  **Tabs en Body**: Poner `<TabsList>` dentro de `ContentLayout` o debajo del header manualmente.
@@ -162,3 +262,6 @@ Asegúrate de que TODOS los textos visibles estén en `messages/es.json`.
 4.  **Toolbar en Overview Vacío**: Poner una `<Toolbar actions={[]} />` vacía en un Dashboard. Simplemente no la pongas.
 5.  **EmptyState Oculto**: Poner el `EmptyState` dentro de un componente `DataTable`.
 6.  **Hardcoded Strings**: No usar textos quemados en el código. Usar `useTranslations` o `getTranslations`.
+7.  **Link de next/link**: Usar `import Link from "next/link"` en lugar de `import { Link } from "@/i18n/routing"`. 🚨
+8.  **hrefs con locale**: Escribir hrefs como `/${locale}/ruta` en lugar de solo `/ruta`.
+

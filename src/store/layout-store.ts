@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 import { SidebarMode } from '@/types/preferences';
 
 export type LayoutMode = 'default' | 'sidebar';
-export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin';
+export type NavigationContext = 'organization' | 'project' | 'learnings' | 'community' | 'admin' | 'home';
 
 interface LayoutState {
     layoutMode: LayoutMode;
@@ -29,7 +29,7 @@ export const useLayoutStore = create<LayoutState>()(
     persist(
         (set) => ({
             layoutMode: 'default', // Default to existing layout initially
-            activeContext: 'organization',
+            activeContext: 'home',
             activeProjectId: null,
             sidebarMode: 'expanded_hover',
             sidebarProjectAvatars: true, // Default true (use images)

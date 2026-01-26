@@ -53,8 +53,8 @@ export function StudentCourseTabs({ courseSlug }: StudentCourseTabsProps) {
     ];
 
     return (
-        <div>
-            <nav className="flex h-12 items-center gap-1 md:gap-4 px-4 overflow-x-auto border-b" aria-label="Tabs">
+        <div className="h-full">
+            <nav className="flex h-14 items-center gap-1 md:gap-4 overflow-x-auto" aria-label="Tabs">
                 {tabs.map((tab) => {
                     // For exact match (overview tab), check if pathname ends with the base URL
                     // For other tabs, check if pathname includes the activeMatch
@@ -67,7 +67,7 @@ export function StudentCourseTabs({ courseSlug }: StudentCourseTabsProps) {
                             key={tab.href}
                             href={tab.href}
                             className={cn(
-                                "inline-flex items-center justify-center whitespace-nowrap py-3 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border-b-2 gap-2 px-2 md:px-3",
+                                "inline-flex items-center justify-center whitespace-nowrap h-full text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border-b-2 gap-2 px-2 md:px-3",
                                 isActive
                                     ? "border-primary text-primary"
                                     : "border-transparent text-muted-foreground hover:text-foreground"

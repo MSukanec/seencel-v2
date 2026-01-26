@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import { MobileNav } from "./mobile-nav";
 import { BreadcrumbItem } from "../shared/page-header";
 
-interface MobileHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-    title?: string;
+interface MobileHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
+    title?: string | React.ReactNode;
     icon?: React.ReactNode;
     breadcrumbs?: BreadcrumbItem[];
     tabs?: React.ReactNode;
