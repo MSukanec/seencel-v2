@@ -488,11 +488,11 @@
     },
     "Landing": {
         "Hero": {
-            "badge": "v2.0 Disponible Ahora",
+            "badge": "Beta v2.0 Disponible Ahora",
             "title": "El Sistema Operativo para la Construcción.",
             "description": "SEENCEL consolida todo el ciclo de vida de tu construcción en una plataforma poderosa. Gestiona proyectos, finanzas y equipos con precisión arquitectónica.",
             "getStarted": "Empieza Gratis",
-            "dashboard": "Ir al Dashboard",
+            "dashboard": "Ingresar",
             "howItWorks": "Ver cómo funciona",
             "preview": "Vista Previa"
         },
@@ -1472,7 +1472,6 @@
         "emptyDescription": "Sé el primero en iniciar una discusión. Haz preguntas, comparte ideas o ayuda a otros estudiantes.",
         "startDiscussion": "Iniciar Discusión",
         "pinnedThreads": "Fijados",
-        "allThreads": "Todas las discusiones",
         "anonymous": "Usuario",
         "pinned": "Fijado",
         "locked": "Cerrado",

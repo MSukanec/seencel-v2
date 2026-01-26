@@ -54,8 +54,13 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
     return (
         <>
             {/* Desktop Header */}
-            <header className="sticky top-0 z-50 w-full border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm hidden md:block">
-                <div className="flex h-16 w-full items-center px-8 relative max-w-[1920px] mx-auto">
+            <header className={cn(
+                "z-50 w-full hidden md:block transition-all duration-300",
+                variant === 'app'
+                    ? "sticky top-0 border-b border-border/10 bg-background/80 backdrop-blur-md shadow-sm"
+                    : "fixed top-0 left-0 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+            )}>
+                <div className="flex h-20 w-full items-center px-8 relative max-w-[1920px] mx-auto">
                     {/* 1. Logo */}
                     <div className="flex items-center justify-start mr-8">
                         <Link href="/" className="flex items-center space-x-2">
