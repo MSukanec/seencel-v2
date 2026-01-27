@@ -85,12 +85,12 @@ const getPaths = (score: number) => {
     return BLOB_PATHS.critical;
 };
 
-// Tamaños
+// Tamaños - texto más grande para mayor visibilidad
 const SIZES = {
-    sm: { container: 'w-12 h-12', text: 'text-xs' },
-    md: { container: 'w-20 h-20', text: 'text-lg' },
-    lg: { container: 'w-28 h-28', text: 'text-2xl' },
-    xl: { container: 'w-40 h-40', text: 'text-4xl' },
+    sm: { container: 'w-12 h-12', text: 'text-sm font-extrabold' },
+    md: { container: 'w-20 h-20', text: 'text-xl font-extrabold' },
+    lg: { container: 'w-28 h-28', text: 'text-3xl font-extrabold' },
+    xl: { container: 'w-40 h-40', text: 'text-5xl font-extrabold' },
 };
 
 export function HealthBlob({
@@ -159,15 +159,22 @@ export function HealthBlob({
                 </path>
             </svg>
 
-            {/* Score text */}
+            {/* Score text - enhanced visibility */}
             {showScore && (
                 <span
                     className={cn(
-                        'relative z-10 font-bold',
+                        'relative z-10 flex items-center justify-center',
+                        'rounded-full backdrop-blur-sm bg-background/30',
+                        size === 'sm' && 'w-8 h-8',
+                        size === 'md' && 'w-12 h-12',
+                        size === 'lg' && 'w-16 h-16',
+                        size === 'xl' && 'w-24 h-24',
                         sizeConfig.text,
                         colors.textColor
                     )}
-                    style={{ textShadow: `0 0 10px ${colors.glow}` }}
+                    style={{
+                        textShadow: `0 0 15px ${colors.glow}, 0 0 30px ${colors.glow}`,
+                    }}
                 >
                     {Math.round(score)}
                 </span>
