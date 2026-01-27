@@ -6,7 +6,7 @@ import {
     LayoutDashboard,
     Building,
     Briefcase,
-    Wallet,
+    DollarSign,
     GraduationCap,
     Users,
     Settings,
@@ -24,6 +24,8 @@ import {
     FolderOpen,
     ClipboardList,
     Banknote,
+    Wallet,
+    HeartPulse,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -166,7 +168,7 @@ export function useSidebarNavigation() {
                     { title: 'Agenda', href: '/organization/planner', icon: CalendarDays },
                     { title: 'Archivos', href: '/organization/files', icon: FolderOpen },
                     { title: 'Presupuestos', href: '/organization/quotes', icon: FileText },
-                    { title: 'Finanzas', href: '/organization/finance', icon: Wallet },
+                    { title: 'Finanzas', href: '/organization/finance', icon: DollarSign },
                     { title: 'Proyectos', href: '/organization/projects', icon: Briefcase, sectionHeader: 'Mi Organización' },
                     { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building },
                     { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench },
@@ -186,6 +188,11 @@ export function useSidebarNavigation() {
                         icon: LayoutDashboard
                     },
                     {
+                        title: 'Salud',
+                        href: activeProjectId ? `${projectBase}/health` : '/organization/projects',
+                        icon: HeartPulse
+                    },
+                    {
                         title: 'Agenda',
                         href: activeProjectId ? `${projectBase}/planner` : '/organization/projects',
                         icon: CalendarDays
@@ -199,6 +206,11 @@ export function useSidebarNavigation() {
                         title: 'Presupuestos',
                         href: activeProjectId ? `${projectBase}/quotes` : '/organization/projects',
                         icon: FileText
+                    },
+                    {
+                        title: 'Finanzas',
+                        href: activeProjectId ? `${projectBase}/finance` : '/organization/projects',
+                        icon: DollarSign
                     },
                     {
                         title: 'Información',

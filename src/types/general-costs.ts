@@ -55,15 +55,26 @@ export interface GeneralCostPaymentView {
     payment_month: string;
     amount: number;
     currency_id: string;
+    currency_code?: string;
+    currency_symbol?: string;
     exchange_rate: number | null;
     status: string;
     wallet_id: string;
+    wallet_name?: string;
+    notes?: string;
+    reference?: string;
     general_cost_id: string | null;
     general_cost_name: string | null;
     is_recurring: boolean | null;
     recurrence_interval: string | null;
     category_id: string | null;
     category_name: string | null;
+    // Creator info
+    created_by?: string;
+    creator_full_name?: string;
+    creator_avatar_url?: string;
+    // Attachments
+    has_attachments?: boolean;
 }
 
 export interface GeneralCostMonthlySummary {

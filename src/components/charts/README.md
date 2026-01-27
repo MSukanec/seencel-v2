@@ -24,6 +24,8 @@ charts/
 ├── pie/                # Pie and donut charts
 │   ├── base-pie-chart.tsx
 │   └── base-donut-chart.tsx
+├── waffle/             # Waffle/Pixel charts
+│   └── base-waffle-chart.tsx    # Grid-based visualization
 ├── chart-config.ts     # Shared configuration & formatters
 ├── index.ts            # Re-exports for clean imports
 └── README.md           # This file

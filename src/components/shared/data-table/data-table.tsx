@@ -31,7 +31,8 @@ import { cn } from "@/lib/utils";
 import { DataTableRowActions } from "./data-table-row-actions";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { Paperclip } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Paperclip, X } from "lucide-react";
 
 import { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
 
@@ -78,6 +79,7 @@ interface DataTableProps<TData, TValue> {
     }[];
     toolbarInHeader?: boolean;
     actions?: ToolbarAction[] | ((args: { table: Table<TData> }) => ToolbarAction[]);
+    onClearFilters?: () => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -111,6 +113,7 @@ export function DataTable<TData, TValue>({
     customActions,
     toolbarInHeader = false,
     actions,
+    onClearFilters,
 }: DataTableProps<TData, TValue> & { meta?: any }) {
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -329,7 +332,14 @@ export function DataTable<TData, TValue>({
                                                     onRowClick && "cursor-pointer",
                                                     row.getIsSelected() && "bg-primary/5 border-l-2 border-l-primary"
                                                 )}
-                                                onClick={() => onRowClick?.(row.original)}
+                                                onClick={(e) => {
+                                                    // Don't trigger row click if clicking on interactive elements
+                                                    const target = e.target as HTMLElement;
+                                                    const isInteractive = target.closest('button, input, [role="checkbox"], [role="menuitem"], [data-radix-collection-item]');
+                                                    if (!isInteractive) {
+                                                        onRowClick?.(row.original);
+                                                    }
+                                                }}
                                             >
                                                 {row.getVisibleCells().map((cell) => (
                                                     <TableCell key={cell.id} className="px-4 py-3">
@@ -342,10 +352,23 @@ export function DataTable<TData, TValue>({
                                         // Empty state for FILTERED results (No matches)
                                         <TableRow>
                                             <TableCell colSpan={columns.length} className="h-32 text-center">
-                                                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                                                <div className="w-full flex flex-col items-center justify-center py-8 text-muted-foreground">
                                                     {/* Same SVG/Message for No Results */}
                                                     <p className="font-medium">No hay resultados</p>
                                                     <p className="text-sm mt-1">Intenta ajustar los filtros.</p>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="mt-4"
+                                                        onClick={() => {
+                                                            table.resetColumnFilters();
+                                                            setGlobalFilter("");
+                                                            onClearFilters?.();
+                                                        }}
+                                                    >
+                                                        <X className="mr-2 h-4 w-4" />
+                                                        Limpiar filtros
+                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

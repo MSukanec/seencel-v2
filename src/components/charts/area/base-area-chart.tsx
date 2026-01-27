@@ -27,6 +27,7 @@ interface BaseAreaChartProps {
     yAxisFormatter?: (value: number) => string;
     xAxisFormatter?: (value: string) => string;
     tooltipFormatter?: (value: number) => string;
+    tooltipLabelFormatter?: (value: string) => string;
     gradient?: boolean;
     config?: ChartConfig;
 }
@@ -40,11 +41,12 @@ export function BaseAreaChart({
     height = 300,
     className,
     chartClassName,
-    color = "var(--primary)",
+    color = "var(--chart-1)",
     showGrid = true,
     yAxisFormatter = formatCompactNumber,
     xAxisFormatter,
     tooltipFormatter = formatCurrency,
+    tooltipLabelFormatter,
     gradient = true,
     config = {
         [yKey]: {
@@ -60,13 +62,18 @@ export function BaseAreaChart({
     // We should map the color prop to the config if not present.
 
     const ChartContent = (
-        <ChartContainer config={config} className={cn("w-full", chartClassName)} style={{ height }}>
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <ChartContainer
+            config={config}
+            className={cn("w-full min-w-0 max-w-full overflow-hidden", !height && "h-full", chartClassName)}
+            style={height ? { height } : undefined}
+        >
+            <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 4 }}>
                 <defs>
                     {gradient && (
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0} />
+                            <stop offset="0%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0.5} />
+                            <stop offset="50%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0.15} />
+                            <stop offset="100%" stopColor={`var(--color-${yKey}, ${color})`} stopOpacity={0} />
                         </linearGradient>
                     )}
                 </defs>
@@ -93,12 +100,18 @@ export function BaseAreaChart({
                 />
                 <ChartTooltip
                     cursor={{ stroke: `var(--color-${yKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
-                    content={<ChartTooltipContent formatter={tooltipFormatter as any} />}
+                    content={
+                        <ChartTooltipContent
+                            formatter={tooltipFormatter as any}
+                            labelFormatter={tooltipLabelFormatter}
+                        />
+                    }
                 />
                 <Area
                     type="monotone"
                     dataKey={yKey}
                     stroke={`var(--color-${yKey}, ${color})`}
+                    strokeWidth={2.5}
                     fillOpacity={1}
                     fill={gradient ? `url(#${gradientId})` : "none"}
                     animationDuration={CHART_DEFAULTS.animationDuration}

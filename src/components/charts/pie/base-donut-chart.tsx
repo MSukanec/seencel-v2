@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from 'react';
 import {
     PieChart,
     Pie,
@@ -7,7 +8,6 @@ import {
 } from 'recharts';
 import { CHART_DEFAULTS, formatCurrency } from '../chart-config';
 import { cn } from '@/lib/utils';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
 
 interface BaseDonutChartProps {
@@ -21,6 +21,11 @@ interface BaseDonutChartProps {
     chartClassName?: string;
     tooltipFormatter?: (value: number) => string;
     centerLabel?: string;
+    // Legend
+    showLegend?: boolean;
+    showPercentage?: boolean;
+    legendFormatter?: (value: number) => string;
+    maxLegendItems?: number;
     // Shadcn
     config?: ChartConfig;
 }
@@ -31,73 +36,131 @@ export function BaseDonutChart({
     valueKey,
     title,
     description,
-    height = 300,
+    height = 160,
     className,
     chartClassName,
     tooltipFormatter = formatCurrency,
     centerLabel,
+    showLegend = true,
+    showPercentage = true,
+    legendFormatter,
+    maxLegendItems = 8,
     config = {}
 }: BaseDonutChartProps) {
-    const ChartContent = (
-        <ChartContainer config={config} className={cn("mx-auto aspect-square max-h-[300px]", chartClassName)} style={{ height }}>
-            <PieChart>
-                <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent hideLabel />}
-                />
-                <Pie
-                    data={data}
-                    dataKey={valueKey}
-                    nameKey={nameKey}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    strokeWidth={5}
+    const formatValue = legendFormatter || tooltipFormatter;
+
+    // Sort data by value descending and calculate totals
+    const { sortedData, total, legendData, othersValue } = useMemo(() => {
+        const sorted = [...data].sort((a, b) => (b[valueKey] || 0) - (a[valueKey] || 0));
+        const totalVal = sorted.reduce((sum, item) => sum + (item[valueKey] || 0), 0);
+
+        // If more items than max, group the rest as "Otros"
+        let legend = sorted;
+        let others = 0;
+
+        if (sorted.length > maxLegendItems) {
+            legend = sorted.slice(0, maxLegendItems - 1);
+            others = sorted.slice(maxLegendItems - 1).reduce((sum, item) => sum + (item[valueKey] || 0), 0);
+        }
+
+        return { sortedData: sorted, total: totalVal, legendData: legend, othersValue: others };
+    }, [data, valueKey, maxLegendItems]);
+
+    const getPercentage = (value: number) => total > 0 ? Math.round((value / total) * 100) : 0;
+
+    return (
+        <div className={cn("flex items-center gap-4 w-full h-full min-h-0", className)}>
+            {/* Pie Chart - Left side */}
+            <div className="flex-shrink-0">
+                <ChartContainer
+                    config={config}
+                    className={cn("min-w-0 overflow-hidden", chartClassName)}
+                    style={{ width: height, height }}
                 >
-                    {data.map((entry, index) => (
-                        <Cell
-                            key={`cell-${index}`}
-                            fill={entry.fill || entry.color || `var(--color-${entry[nameKey]}, var(--chart-${(index % 5) + 1}))`}
+                    <PieChart>
+                        <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent formatter={tooltipFormatter as any} hideLabel />}
                         />
-                    ))}
-                </Pie>
-                {centerLabel && (
-                    <text
-                        x="50%"
-                        y="50%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                    >
-                        <tspan
-                            x="50%"
-                            dy="-10"
-                            className="fill-muted-foreground text-xs font-bold"
+                        <Pie
+                            data={sortedData}
+                            dataKey={valueKey}
+                            nameKey={nameKey}
+                            innerRadius="60%"
+                            outerRadius="85%"
+                            paddingAngle={2}
+                            strokeWidth={0}
                         >
-                            {centerLabel}
-                        </tspan>
-                    </text>
-                )}
-            </PieChart>
-        </ChartContainer>
-    );
+                            {sortedData.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.fill || entry.color || `var(--color-${entry[nameKey]}, var(--chart-${(index % 8) + 1}))`}
+                                />
+                            ))}
+                        </Pie>
+                        {centerLabel && (
+                            <text
+                                x="50%"
+                                y="50%"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                            >
+                                <tspan
+                                    x="50%"
+                                    dy="-10"
+                                    className="fill-muted-foreground text-xs font-bold"
+                                >
+                                    {centerLabel}
+                                </tspan>
+                            </text>
+                        )}
+                    </PieChart>
+                </ChartContainer>
+            </div>
 
-    if (title || description) {
-        return (
-            <Card className={cn("flex flex-col border-none shadow-none bg-transparent", className)}>
-                <CardHeader className="px-0 pt-0 pb-4">
-                    {title && (
-                        <CardTitle className="text-base font-semibold text-muted-foreground flex items-center gap-2">
-                            {title}
-                        </CardTitle>
+            {/* Legend - Right side */}
+            {showLegend && (
+                <div className="flex-1 min-w-0 space-y-1 overflow-hidden">
+                    {legendData.map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                            <div
+                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: item.fill || item.color || `var(--chart-${(i % 8) + 1})` }}
+                            />
+                            <span className="flex-1 truncate text-muted-foreground text-xs">
+                                {item[nameKey]}
+                            </span>
+                            {showPercentage && (
+                                <span className="text-muted-foreground text-xs tabular-nums w-7 text-right">
+                                    {getPercentage(item[valueKey])}%
+                                </span>
+                            )}
+                            <span className="font-medium text-xs tabular-nums min-w-[70px] text-right">
+                                {formatValue(item[valueKey])}
+                            </span>
+                        </div>
+                    ))}
+                    {/* "Otros" if items were grouped */}
+                    {othersValue > 0 && (
+                        <div className="flex items-center gap-2 text-sm">
+                            <div
+                                className="w-2 h-2 rounded-full flex-shrink-0 bg-muted-foreground/50"
+                            />
+                            <span className="flex-1 truncate text-muted-foreground text-xs">
+                                Otros
+                            </span>
+                            {showPercentage && (
+                                <span className="text-muted-foreground text-xs tabular-nums w-7 text-right">
+                                    {getPercentage(othersValue)}%
+                                </span>
+                            )}
+                            <span className="font-medium text-xs tabular-nums min-w-[70px] text-right">
+                                {formatValue(othersValue)}
+                            </span>
+                        </div>
                     )}
-                    {description && <CardDescription>{description}</CardDescription>}
-                </CardHeader>
-                <CardContent className="px-0 pb-0 flex-1 min-h-0">
-                    {ChartContent}
-                </CardContent>
-            </Card>
-        );
-    }
-    return ChartContent;
+                </div>
+            )}
+        </div>
+    );
 }
-

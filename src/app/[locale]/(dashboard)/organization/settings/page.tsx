@@ -45,9 +45,6 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                         <TabsTrigger value="billing" className={tabTriggerClass}>
                             Facturación
                         </TabsTrigger>
-                        <TabsTrigger value="finance" className={tabTriggerClass}>
-                            Finanzas
-                        </TabsTrigger>
                     </TabsList>
                 }
             >

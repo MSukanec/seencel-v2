@@ -118,50 +118,45 @@ export function SidebarContent({
     const orgNavItems = getNavItems("organization");
     const projectNavItems = getNavItems("project");
 
-    // 1. Sync Context based on URL (Navigation) - only when URL changes
-    const prevPathnameRef = React.useRef(pathname);
+    // 1. Sync Context based on URL (Navigation)
     React.useEffect(() => {
-        // Only sync if pathname actually changed (not on every render)
-        if (prevPathnameRef.current === pathname) return;
-        prevPathnameRef.current = pathname;
-
         // Project Context
         if (pathname.includes('/project/')) {
-            actions.setActiveContext('project');
+            if (activeContext !== 'project') actions.setActiveContext('project');
             return;
         }
 
         // Learnings Context
         if (pathname.includes('/academy')) {
-            actions.setActiveContext('learnings');
+            if (activeContext !== 'learnings') actions.setActiveContext('learnings');
             return;
         }
 
         // Community Context
         if (pathname.includes('/community')) {
-            actions.setActiveContext('community');
+            if (activeContext !== 'community') actions.setActiveContext('community');
             return;
         }
 
-        // Organization Context
+        // Organization Context (must be after project check to avoid overlaps if URL schema is weird, but usually distinct)
         if (pathname.includes('/organization')) {
-            actions.setActiveContext('organization');
+            if (activeContext !== 'organization') actions.setActiveContext('organization');
             return;
         }
 
         // Admin Context
         if (pathname.includes('/admin')) {
-            actions.setActiveContext('admin');
+            if (activeContext !== 'admin') actions.setActiveContext('admin');
             return;
         }
 
         // Hub Context
         if (pathname.includes('/hub')) {
-            actions.setActiveContext('home');
+            if (activeContext !== 'home') actions.setActiveContext('home');
             return;
         }
 
-    }, [pathname, actions]);
+    }, [pathname, actions, activeContext]);
 
     // 2. Sync Project Data (Specific to Project Context)
     React.useEffect(() => {

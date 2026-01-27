@@ -10,6 +10,7 @@ import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
 // Reusable tab trigger style
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -25,12 +26,19 @@ export default async function GeneralCostsPage() {
         );
     }
 
-    const [categories, concepts, payments, dashboardData] = await Promise.all([
+    const supabase = await createClient();
+
+    const [categories, concepts, payments, dashboardData, walletsRes, currenciesRes] = await Promise.all([
         getGeneralCostCategories(organizationId),
         getGeneralCosts(organizationId),
         getGeneralCostPayments(organizationId),
-        getGeneralCostsDashboard(organizationId)
+        getGeneralCostsDashboard(organizationId),
+        supabase.from('organization_wallets_view').select('id, wallet_name').eq('organization_id', organizationId),
+        supabase.from('currencies').select('id, code, symbol').eq('is_active', true)
     ]);
+
+    const wallets = walletsRes.data || [];
+    const currencies = currenciesRes.data || [];
 
     return (
         <Tabs defaultValue="dashboard" className="h-full flex flex-col">
@@ -62,9 +70,12 @@ export default async function GeneralCostsPage() {
                         concepts={concepts}
                         payments={payments}
                         dashboardData={dashboardData}
+                        wallets={wallets}
+                        currencies={currencies}
                     />
                 </ContentLayout>
             </PageWrapper>
         </Tabs>
     );
 }
+

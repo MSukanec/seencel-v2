@@ -89,59 +89,46 @@ export function useSmartCurrency(): SmartCurrencyResult {
 
     /**
      * Calculate the display amount for a single monetary item
-     */
-    /**
-     * Calculate the display amount for a single monetary item
+     * 
+     * BIDIRECTIONAL CONVERSION LOGIC:
+     * - When displaying in PRIMARY (ARS): 
+     *   - ARS items → use original amount
+     *   - USD items → amount × exchange_rate = ARS value
+     * 
+     * - When displaying in SECONDARY (USD):
+     *   - USD items → use original amount  
+     *   - ARS items → amount ÷ exchange_rate = USD value
+     * 
+     * Requires each item to have exchange_rate if it's in a different currency.
      */
     const calculateDisplayAmount = useCallback((item: MonetaryItem): number => {
         const itemCurrencyCode = item.currency_code || primaryCurrencyCode;
-        // functional_amount is now potentially in Reference Currency (e.g. USD)
-        const functional = Number(item.functional_amount) || Number(item.amount) || 0;
-        const original = Number(item.amount) || 0;
+        const originalAmount = Number(item.amount) || 0;
+        const itemExchangeRate = Number(item.exchange_rate) || currentRate || 1;
 
-        // Determine what the functional amount REPRESENTS (Primary or Secondary?)
-        // If functional_currency_id corresponds to secondary, then functional is in USD.
-        // We can check this by comparing currency CODES if we don't have IDs handy here, 
-        // OR we can assume if functional_amount != amount for an ARS transaction, logic implies functional is simplified.
-
-        // BETTER: Assume functional_amount IS the Reference Value.
-        // We rely on useFinancialFeatures logic passed implicitly or we fetch it.
-        // Since we don't have useFinancialFeatures here yet, let's look at the context.
-        // If we are displaying Secondary (USD) and functional is USD -> Return Functional.
-        // If we are displaying Primary (ARS) and functional is USD -> Return Functional * Rate.
-
-        // However, we need to know IF functional IS USD.
-        // Heuristic: If secondaryCurrency exists and we are in "Standardized" mode...
-        // But simpler:
+        // Prevent division by zero
+        const safeRate = itemExchangeRate > 0 ? itemExchangeRate : 1;
 
         if (isSecondaryDisplay) {
-            // Displaying in SECONDARY currency (e.g., USD)
+            // === DISPLAYING IN SECONDARY CURRENCY (e.g., USD) ===
             if (itemCurrencyCode === secondaryCurrencyCode) {
-                return original;
+                // Item is already in secondary currency → use original
+                return originalAmount;
+            } else {
+                // Item is in primary currency (ARS) → convert to secondary (USD)
+                // ARS ÷ rate = USD
+                return originalAmount / safeRate;
             }
-            // If item is ARS, we want its USD value.
-            // If functional_amount IS USD (new logic), return functional.
-            // If functional_amount IS ARS (old logic), return functional / rate.
-
-            // How to distinguish?
-            // We can check if `use_currency_exchange` is on, but we don't have that flag here easily without importing the hook.
-            // Let's assume the NEW logic prevails if functional_amount is present.
-            // BUT WAIT, for legacy data `functional_amount` might be ARS if reference wasn't set.
-
-            // SAFE BET: 
-            // If functional_amount is passed, use it as the source of truth for "Standardized Value".
-            // If we are displaying the "Standardized Currency" (Secondary), use functional.
-            return functional;
         } else {
-            // Displaying in PRIMARY currency (e.g., ARS)
-            // If item is ARS -> original.
+            // === DISPLAYING IN PRIMARY CURRENCY (e.g., ARS) ===
             if (itemCurrencyCode === primaryCurrencyCode) {
-                return original;
+                // Item is already in primary currency → use original
+                return originalAmount;
+            } else {
+                // Item is in secondary currency (USD) → convert to primary (ARS)
+                // USD × rate = ARS
+                return originalAmount * safeRate;
             }
-            // If item is USD -> we want ARS value.
-            // Functional is USD.
-            // Return functional * rate.
-            return functional * currentRate;
         }
     }, [isSecondaryDisplay, secondaryCurrencyCode, primaryCurrencyCode, currentRate]);
 

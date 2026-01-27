@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Lightbulb, AlertTriangle, CheckCircle, Info, ChevronRight, TrendingUp, TrendingDown, PieChart, Repeat, Calendar, Zap, Activity, Layers, Target, Wallet, Scale, AlertCircle, X } from "lucide-react";
+import { Lightbulb, AlertTriangle, CheckCircle, Info, ChevronRight, TrendingUp, TrendingDown, PieChart, Repeat, Calendar, Zap, Activity, Layers, Target, Wallet, Scale, AlertCircle, X, BarChart3, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Insight, InsightAction } from "../types";
 
@@ -7,9 +7,11 @@ interface InsightCardProps {
     insight: Insight;
     onAction?: (action: InsightAction) => void;
     onDismiss?: (insightId: string) => void;
+    /** Compact mode: shows only icon, title, and description in a smaller format */
+    compact?: boolean;
 }
 
-export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) {
+export function InsightCard({ insight, onAction, onDismiss, compact = false }: InsightCardProps) {
     const getIcon = () => {
         // First try to match by string name (legacy compat)
         if (insight.icon) {
@@ -27,7 +29,9 @@ export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) 
                 'Wallet': Wallet,
                 'Scale': Scale,
                 'AlertCircle': AlertCircle,
-                'AlertTriangle': AlertTriangle
+                'AlertTriangle': AlertTriangle,
+                'BarChart3': BarChart3,
+                'Clock': Clock
             };
             if (icons[insight.icon]) return icons[insight.icon];
         }
@@ -43,10 +47,10 @@ export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) 
 
     const getColors = () => {
         switch (insight.severity) {
-            case 'warning': return "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-400";
-            case 'critical': return "border-amount-negative/20 bg-amount-negative/10 text-amount-negative";
-            case 'positive': return "border-amount-positive/20 bg-amount-positive/10 text-amount-positive";
-            default: return "border-blue-500/20 bg-blue-500/5 text-blue-700 dark:text-blue-400";
+            case 'warning': return "border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
+            case 'critical': return "border-amount-negative/20 text-amount-negative hover:bg-amount-negative/10";
+            case 'positive': return "border-amount-positive/20 text-amount-positive hover:bg-amount-positive/10";
+            default: return "border-blue-500/20 text-blue-700 dark:text-blue-400 hover:bg-blue-500/10";
         }
     };
 
@@ -61,8 +65,55 @@ export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) 
         }
     };
 
+    // COMPACT MODE: Two-line optimized version with full info
+    if (compact) {
+        return (
+            <div className={cn(
+                "relative px-3 py-2.5 rounded-lg border transition-all group",
+                getColors()
+            )}>
+                <div className="flex items-start gap-3">
+                    <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        {/* Line 1: Title + Description */}
+                        <div className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="font-medium text-sm">{insight.title}</span>
+                            <span className="text-xs text-foreground/70">
+                                {insight.description}
+                            </span>
+                        </div>
+                        {/* Line 2: Context + ActionHint */}
+                        {(insight.context || insight.actionHint) && (
+                            <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3">
+                                {insight.context && <span className="opacity-80">{insight.context}</span>}
+                                {insight.actionHint && (
+                                    <span className="font-medium opacity-90 flex items-center gap-1">
+                                        <Lightbulb className="w-3 h-3" /> {insight.actionHint}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    {onDismiss && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDismiss(insight.id);
+                            }}
+                            className="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity text-foreground/50 hover:text-foreground"
+                            aria-label="Descartar"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // FULL MODE: Original rich version
     return (
-        <div className={cn("relative p-4 rounded-xl border flex items-start gap-4 transition-all hover:bg-muted/30 group", getColors())}>
+        <div className={cn("relative p-4 rounded-xl border flex items-start gap-4 transition-all group", getColors())}>
             {onDismiss && (
                 <button
                     onClick={(e) => {
@@ -123,4 +174,3 @@ export function InsightCard({ insight, onAction, onDismiss }: InsightCardProps) 
         </div>
     );
 }
-

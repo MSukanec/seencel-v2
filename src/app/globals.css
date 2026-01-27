@@ -173,6 +173,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -203,24 +206,40 @@
   --muted-foreground: oklch(0.552 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(48.965% 0.15693 22.57);
+  --destructive: oklch(54.392% 0.19137 24.073);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.744 0.16 126.36);
-  /* Safe HEX Colors for Charts */
-  --chart-1: #96cc00;
-  --chart-2: #38bdf8;
-  --chart-3: #f472b6;
-  --chart-4: #c084fc;
-  --chart-5: #fb923c;
+  /* ============================================
+     CHART COLOR PALETTE
+     Vibrant, harmonious colors for data visualization.
+     Inspired by modern dashboard designs (purple→pink→orange→yellow→cyan).
+     Order matters: used sequentially in multi-series charts.
+     ============================================ */
+  --chart-1: #8B5CF6;
+  /* Violet - Primary accent */
+  --chart-2: #EC4899;
+  /* Pink - Secondary */
+  --chart-3: #F97316;
+  /* Orange - Warm accent */
+  --chart-4: #EAB308;
+  /* Yellow/Gold - Highlight */
+  --chart-5: #06B6D4;
+  /* Cyan - Cool contrast */
+  --chart-6: #10B981;
+  /* Emerald - Success/Growth */
+  --chart-7: #6366F1;
+  /* Indigo - Deep accent */
+  --chart-8: #F43F5E;
+  /* Rose - Alert/Hot */
   /* ============================================
      FINANCIAL SEMANTIC COLORS
      Use these for income/expense/balance displays
      across tables, charts, KPIs, badges, etc.
      ============================================ */
-  --amount-positive: oklch(60.998% 0.14425 126.832);
+  --amount-positive: oklch(69.766% 0.16285 126.686);
   /* Soft lime green - Ingresos, Cobrado, Pagado */
-  --amount-negative: oklch(48.965% 0.15693 22.57);
+  --amount-negative: oklch(54.392% 0.19137 24.073);
   /* Terracotta/brick - Egresos, Deuda, Saldo pendiente */
   --amount-neutral: oklch(60.209% 0.12049 235.006);
   /* Zinc-500 gray - Balance neutral, cero, N/A */
@@ -342,6 +361,36 @@
 
 .border-amount-negative\/20 {
   border-color: color-mix(in srgb, var(--amount-negative) 20%, transparent);
+}
+
+/* ============================================
+   GLOW EFFECTS
+   For badges, trend indicators, and highlights
+   ============================================ */
+.glow-positive {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--amount-positive) 40%, transparent),
+    0 0 4px color-mix(in srgb, var(--amount-positive) 20%, transparent);
+}
+
+.glow-negative {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--amount-negative) 40%, transparent),
+    0 0 4px color-mix(in srgb, var(--amount-negative) 20%, transparent);
+}
+
+.glow-primary {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 40%, transparent),
+    0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* Subtle glow variants (for dark mode) */
+.dark .glow-positive {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--amount-positive) 50%, transparent),
+    0 0 6px color-mix(in srgb, var(--amount-positive) 30%, transparent);
+}
+
+.dark .glow-negative {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--amount-negative) 50%, transparent),
+    0 0 6px color-mix(in srgb, var(--amount-negative) 30%, transparent);
 }
 
 /* Custom Scrollbar - Minimalist & Theme Aware */

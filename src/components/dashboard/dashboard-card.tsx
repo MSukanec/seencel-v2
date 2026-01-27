@@ -20,6 +20,8 @@ interface DashboardCardProps {
     // Preset actions
     onExpand?: () => void;
     onRefresh?: () => void;
+    /** If true, card won't stretch to fill grid height */
+    compact?: boolean;
 }
 
 export function DashboardCard({
@@ -34,10 +36,11 @@ export function DashboardCard({
     headerAction,
     footer,
     onExpand,
-    onRefresh
+    onRefresh,
+    compact = false
 }: DashboardCardProps) {
     return (
-        <Card className={cn("flex flex-col h-full bg-card/50 backdrop-blur-sm transition-all hover:bg-card/80 hover:shadow-md", className)}>
+        <Card className={cn("flex flex-col min-w-0 overflow-hidden bg-card/50 backdrop-blur-sm transition-all hover:bg-card/80 hover:shadow-md", !compact && "h-full", className)}>
             <CardHeader className="pb-3 space-y-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -79,7 +82,7 @@ export function DashboardCard({
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className={cn("flex-1 min-h-[100px]", contentClassName)}>
+            <CardContent className={cn("overflow-hidden", !compact && "flex-1", contentClassName)}>
                 {children}
             </CardContent>
             {footer && (

@@ -141,9 +141,23 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
     const totalAmountAllMonths = sortedSummary.reduce((acc, curr) => acc + curr.total_amount, 0);
     const avgMonthly = sortedSummary.length > 0 ? totalAmountAllMonths / sortedSummary.length : 0;
 
-    // Concentration (Top Category)
-    const sortedCategories = [...byCategory].sort((a, b) => b.total_amount - a.total_amount);
-    const topCategory = sortedCategories[0];
+    // Concentration (Top Category) - need to aggregate by category first
+    const aggregatedByCategory = Object.values(
+        byCategory.reduce((acc, c) => {
+            const key = c.category_id || 'other';
+            if (!acc[key]) {
+                acc[key] = {
+                    category_id: c.category_id,
+                    category_name: c.category_name || "Otros",
+                    total_amount: 0
+                };
+            }
+            acc[key].total_amount += c.total_amount;
+            return acc;
+        }, {} as Record<string, { category_id: string | null; category_name: string; total_amount: number }>)
+    ).sort((a, b) => b.total_amount - a.total_amount);
+
+    const topCategory = aggregatedByCategory[0];
     const concentrationPercent = topCategory && totalAmountAllMonths > 0
         ? Math.round((topCategory.total_amount / totalAmountAllMonths) * 100)
         : 0;
@@ -187,11 +201,23 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
                 month: m.payment_month,
                 amount: m.total_amount
             })),
-            categoryDistribution: byCategory.map((c, index) => ({
-                name: c.category_name || "Otros",
-                value: c.total_amount,
+            // Aggregate by category (since view returns per category per month)
+            categoryDistribution: Object.values(
+                byCategory.reduce((acc, c) => {
+                    const key = c.category_id || 'other';
+                    if (!acc[key]) {
+                        acc[key] = {
+                            name: c.category_name || "Otros",
+                            value: 0
+                        };
+                    }
+                    acc[key].value += c.total_amount;
+                    return acc;
+                }, {} as Record<string, { name: string; value: number }>)
+            ).map((item, index) => ({
+                ...item,
                 color: CHART_COLORS.categorical[index % CHART_COLORS.categorical.length]
-            }))
+            })).sort((a, b) => b.value - a.value)
         },
         insights: insights,
         recentActivity: recentPayments

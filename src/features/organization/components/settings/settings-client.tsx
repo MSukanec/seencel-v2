@@ -6,8 +6,7 @@ import {
     MembersSettingsView,
     PermissionsSettingsView,
     ActivitySettingsView,
-    BillingSettingsView,
-    FinanceSettingsView
+    BillingSettingsView
 } from "@/features/organization/views";
 
 interface SettingsClientProps {
@@ -40,17 +39,6 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
                 <BillingSettingsView
                     subscription={data.subscription}
                     billingCycles={data.billingCycles}
-                />
-            </TabsContent>
-            <TabsContent value="finance" className="m-0 h-full focus-visible:outline-none">
-                <FinanceSettingsView
-                    organizationId={organizationId}
-                    preferences={data.preferences}
-                    orgCurrencies={data.contactCurrencies}
-                    orgWallets={data.contactWallets}
-                    availableCurrencies={data.availableCurrencies}
-                    availableWallets={data.availableWallets}
-                    subscription={data.subscription}
                 />
             </TabsContent>
         </>

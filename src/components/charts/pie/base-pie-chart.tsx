@@ -41,7 +41,7 @@ export function BasePieChart({
     config = {}
 }: BasePieChartProps) {
     const ChartContent = (
-        <ChartContainer config={config} className={cn("mx-auto aspect-square max-h-[300px]", chartClassName)} style={{ height }}>
+        <ChartContainer config={config} className={cn("mx-auto", chartClassName)} style={{ height }}>
             <PieChart>
                 <ChartTooltip
                     cursor={false}

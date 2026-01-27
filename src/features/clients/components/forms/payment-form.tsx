@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useModal } from "@/providers/modal-store";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
@@ -24,7 +23,7 @@ interface PaymentFormProps {
     projectId: string;
     organizationId: string;
     clients: any[];
-    financialData: OrganizationFinancialData; // Typed financial data
+    financialData: OrganizationFinancialData;
     initialData?: any;
     onSuccess?: () => void;
 }
@@ -38,7 +37,6 @@ export function PaymentForm({
     onSuccess
 }: PaymentFormProps) {
     const { closeModal } = useModal();
-    const t = useTranslations('Clients.payments'); // Assuming translations exist or fallback
     const [isLoading, setIsLoading] = useState(false);
     const uploadRef = useRef<MultiFileUploadRef>(null);
 
@@ -60,11 +58,11 @@ export function PaymentForm({
     const [commitments, setCommitments] = useState<any[]>([]);
     const [loadingCommitments, setLoadingCommitments] = useState(false);
 
-    // File Upload State (MultiFileUpload)
+    // File Upload State
     const [files, setFiles] = useState<UploadedFile[]>(
         (initialData?.attachments && initialData.attachments.length > 0)
             ? initialData.attachments.map((att: any) => ({
-                id: att.id || `existing-${Math.random()}`, // Use real ID or random fallback
+                id: att.id || `existing-${Math.random()}`,
                 url: att.url,
                 name: att.name || 'Adjunto',
                 type: att.mime || 'application/octet-stream',
@@ -83,23 +81,17 @@ export function PaymentForm({
             }] : []
     );
 
-    // Helper to get current image url (takes the last uploaded file)
-    const currentImageUrl = files.length > 0 ? files[files.length - 1].url : "";
-
     useEffect(() => {
         if (clientId) {
             setLoadingCommitments(true);
             getCommitmentsByClientAction(clientId)
                 .then(data => {
                     setCommitments(data);
-
-                    // Auto-select the latest commitment by created_at
                     if (data && data.length > 0) {
-                        // Sort by created_at descending and pick the first (latest)
                         const sorted = [...data].sort((a, b) => {
                             const dateA = new Date(a.created_at || 0).getTime();
                             const dateB = new Date(b.created_at || 0).getTime();
-                            return dateB - dateA; // Descending (latest first)
+                            return dateB - dateA;
                         });
                         setCommitmentId(sorted[0].id);
                     } else {
@@ -114,7 +106,6 @@ export function PaymentForm({
         }
     }, [clientId]);
 
-    // Auto-select currency if wallet changes and has a currency
     useEffect(() => {
         if (walletId) {
             const wallet = wallets.find((w: any) => w.id === walletId);
@@ -132,7 +123,6 @@ export function PaymentForm({
         setIsLoading(true);
 
         try {
-            // 1. Upload pending files first
             let finalFiles = files;
             if (uploadRef.current) {
                 const uploaded = await uploadRef.current.startUpload();
@@ -153,26 +143,20 @@ export function PaymentForm({
             if (reference) formData.append('reference', reference);
             if (commitmentId) formData.append('commitment_id', commitmentId);
 
-            // Pass currency_code directly to avoid backend RLS/Lookup issues
             const selectedCurrency = currencies.find((c: any) => c.id === currencyId);
             if (selectedCurrency?.code) {
                 formData.append('currency_code', selectedCurrency.code);
             }
 
-            // Append media_file JSON using finalFiles
-            // Append media_files JSON using finalFiles
             if (finalFiles && finalFiles.length > 0) {
                 formData.append('media_files', JSON.stringify(finalFiles));
             }
 
-            // Check if we are editing or creating
             if (initialData?.id) {
-                // Editing
                 formData.append('id', initialData.id);
                 await updatePaymentAction(formData as any);
                 toast.success("Pago actualizado correctamente");
             } else {
-                // Creating
                 await createPaymentAction(formData as any);
                 toast.success("Pago registrado correctamente");
             }
@@ -187,36 +171,41 @@ export function PaymentForm({
         }
     };
 
+    const isEditing = !!initialData?.id;
+
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4 p-6">
-                {/* Row 1: Date & Client */}
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Fecha de Pago */}
                     <FormGroup label="Fecha de Pago" required>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
-                                    variant={"outline"}
+                                    variant="outline"
                                     className={cn(
                                         "w-full justify-start text-left font-normal",
                                         !date && "text-muted-foreground"
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
+                                    {date ? format(date, "PPP", { locale: es }) : "Seleccionar fecha"}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
+                            <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                     mode="single"
                                     selected={date}
                                     onSelect={setDate}
+                                    locale={es}
                                     initialFocus
                                 />
                             </PopoverContent>
                         </Popover>
                     </FormGroup>
 
+                    {/* Cliente */}
                     <FormGroup label="Cliente" required>
                         <Select value={clientId} onValueChange={setClientId}>
                             <SelectTrigger>
@@ -233,10 +222,8 @@ export function PaymentForm({
                             </SelectContent>
                         </Select>
                     </FormGroup>
-                </div>
 
-                {/* Row 2: Wallet & Amount */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Billetera */}
                     <FormGroup label="Billetera" required>
                         <Select value={walletId} onValueChange={setWalletId}>
                             <SelectTrigger>
@@ -252,19 +239,19 @@ export function PaymentForm({
                         </Select>
                     </FormGroup>
 
+                    {/* Monto */}
                     <FormGroup label="Monto" required>
                         <Input
                             type="number"
                             step="0.01"
+                            min="0"
                             placeholder="0.00"
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                         />
                     </FormGroup>
-                </div>
 
-                {/* Row 3: Currency & Exchange Rate */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Moneda */}
                     <FormGroup label="Moneda" required>
                         <Select value={currencyId} onValueChange={setCurrencyId}>
                             <SelectTrigger>
@@ -280,29 +267,30 @@ export function PaymentForm({
                         </Select>
                     </FormGroup>
 
-                    <FormGroup label="Tipo de Cambio (opcional)">
+                    {/* Tipo de Cambio */}
+                    <FormGroup label="Tipo de Cambio" helpText="Cotización si aplica">
                         <Input
                             type="number"
                             step="0.0001"
+                            min="0"
                             placeholder="1.0000"
                             value={exchangeRate}
                             onChange={(e) => setExchangeRate(e.target.value)}
                         />
                     </FormGroup>
-                </div>
 
-                {/* Row 4: Commitment & Status */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Compromiso" helpText={!clientId ? "Selecciona un cliente primero" : ""}>
+                    {/* Compromiso */}
+                    <FormGroup label="Compromiso" helpText={!clientId ? "Selecciona un cliente primero" : undefined}>
                         <Select
                             disabled={!clientId || loadingCommitments}
-                            value={commitmentId === null ? undefined : commitmentId}
-                            onValueChange={setCommitmentId}
+                            value={commitmentId || "none"}
+                            onValueChange={(v) => setCommitmentId(v === "none" ? "" : v)}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder={loadingCommitments ? "Cargando..." : "Seleccionar compromiso"} />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="none">Sin compromiso</SelectItem>
                                 {commitments.map((c: any) => (
                                     <SelectItem key={c.id} value={c.id}>
                                         {c.concept || c.unit_description || c.unit_name || "Compromiso"} - {c.currency?.symbol}{c.amount}
@@ -312,6 +300,7 @@ export function PaymentForm({
                         </Select>
                     </FormGroup>
 
+                    {/* Estado */}
                     <FormGroup label="Estado" required>
                         <Select value={status} onValueChange={setStatus}>
                             <SelectTrigger>
@@ -325,48 +314,48 @@ export function PaymentForm({
                             </SelectContent>
                         </Select>
                     </FormGroup>
+
+                    {/* Notas */}
+                    <FormGroup label="Notas" className="md:col-span-2">
+                        <Textarea
+                            placeholder="Agregar notas adicionales sobre el pago..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            rows={3}
+                        />
+                    </FormGroup>
+
+                    {/* Referencia */}
+                    <FormGroup label="Referencia" helpText="Nro. de transacción o recibo">
+                        <Input
+                            placeholder="Ej: TRX-12345"
+                            value={reference}
+                            onChange={(e) => setReference(e.target.value)}
+                        />
+                    </FormGroup>
+
+                    {/* Comprobante */}
+                    <FormGroup label="Comprobante" helpText="Adjuntar imagen o PDF">
+                        <MultiFileUpload
+                            ref={uploadRef}
+                            folderPath={`organizations/${organizationId}/finance/client-payments`}
+                            onUploadComplete={setFiles}
+                            initialFiles={files}
+                            autoUpload={false}
+                            maxSizeMB={5}
+                            className="w-full"
+                        />
+                    </FormGroup>
                 </div>
-
-                {/* Notes */}
-                <FormGroup label="Notas (opcional)">
-                    <Textarea
-                        placeholder="Agregar notas adicionales sobre el pago..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="min-h-[80px]"
-                    />
-                </FormGroup>
-
-                {/* Reference */}
-                <FormGroup label="Referencia (opcional)">
-                    <Input
-                        placeholder="Ej: TRX-12345"
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                    />
-                </FormGroup>
-
-                {/* File Upload (Receipt) */}
-                <FormGroup label="Comprobante (opcional)">
-                    <MultiFileUpload
-                        ref={uploadRef}
-                        folderPath={`organizations/${organizationId}/finance/client-payments`}
-                        onUploadComplete={setFiles}
-                        initialFiles={files}
-                        autoUpload={false}
-                        maxSizeMB={5}
-                        className="w-full"
-                    />
-                </FormGroup>
-
             </div>
 
+            {/* Sticky Footer */}
             <FormFooter
+                className="-mx-4 -mb-4 mt-6"
                 onCancel={closeModal}
                 isLoading={isLoading}
-                submitLabel="Registrar Pago"
+                submitLabel={isEditing ? "Guardar Cambios" : "Registrar Pago"}
             />
         </form>
     );
 }
-

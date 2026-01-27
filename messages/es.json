@@ -1584,5 +1584,9 @@
             "unableToLoad": "Error al cargar los datos",
             "retry": "Reintentar"
         }
+    },
+    "ProjectHealth": {
+        "title": "Salud del Proyecto",
+        "subtitle": "Indicadores de estado, avance y estabilidad del proyecto."
     }
 }

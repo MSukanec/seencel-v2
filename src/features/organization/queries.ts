@@ -419,12 +419,34 @@ export async function getFinancialMovements() {
         .eq('organization_id', orgId)
         .order('payment_date', { ascending: false });
 
+    // Transform has_attachments boolean to array for DataTable compatibility
+    const movementsWithAttachments = (data || []).map(m => ({
+        ...m,
+        attachments: m.has_attachments ? [{ id: 'placeholder' }] : []
+    }));
+
+    // Fetch Wallets for mapping - organization_wallets.id is what payments reference
+    const { data: wallets } = await supabase
+        .from('organization_wallets_view')
+        .select('id, wallet_name')
+        .eq('organization_id', orgId);
+
+    // Fetch Projects for mapping
+    const { data: projects } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('organization_id', orgId);
+
     if (error) {
         console.error("Error fetching financial movements:", error);
         return { error: "Failed to fetch financial data." };
     }
 
-    return { movements: data || [] };
+    return {
+        movements: movementsWithAttachments,
+        wallets: wallets || [],
+        projects: projects || []
+    };
 }
 
 // Unified query for financial contexts (Forms, etc.)

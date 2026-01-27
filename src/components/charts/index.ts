@@ -15,6 +15,9 @@ export { BaseLineChart } from './line/base-line-chart';
 export { BasePieChart } from './pie/base-pie-chart';
 export { BaseDonutChart } from './pie/base-donut-chart';
 
+// Waffle Charts
+export { BaseWaffleChart } from './waffle/base-waffle-chart';
+
 // Config & Utils
 export * from './chart-config';
 
