@@ -93,7 +93,7 @@ export function DataTable<TData, TValue>({
     emptyState,
     pageSize = 10,
     showPagination = true,
-    showToolbar = true,
+    showToolbar = false,  // DEPRECATED: Toolbar se maneja en la View con portalToHeader
     stickyHeader = true,
     leftActions,
     facetedFilters,

@@ -30,31 +30,13 @@ export const columns: ColumnDef<ClientPaymentView>[] = [
         cell: ({ row }) => (
             <DataTableAvatarCell
                 title={row.original.client_name || "N/A"}
-                subtitle={row.original.client_role_name}
-                src={row.original.client_avatar_url}
-                fallback={row.original.client_first_name?.[0]}
+                subtitle={row.original.creator_full_name ? `por ${row.original.creator_full_name}` : undefined}
+                src={row.original.creator_avatar_url}
+                fallback={row.original.creator_full_name?.[0] || row.original.client_first_name?.[0]}
             />
         ),
         enableSorting: true,
         enableHiding: false,
-    },
-    {
-        accessorKey: "commitment_concept",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Compromiso" />,
-        cell: ({ row }) => (
-            <div className="max-w-[180px] truncate" title={row.original.commitment_concept || ""}>
-                <span className="text-sm">{row.original.commitment_concept || "-"}</span>
-            </div>
-        ),
-    },
-    {
-        accessorKey: "schedule_notes",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Cuota" />,
-        cell: ({ row }) => (
-            <span className="text-sm font-medium text-muted-foreground">
-                {row.original.schedule_notes || "-"}
-            </span>
-        ),
     },
     {
         accessorKey: "wallet_name",

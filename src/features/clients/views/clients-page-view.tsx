@@ -18,10 +18,10 @@ import type { DisplayMode } from "@/lib/money/money";
 
 import { ProjectClientView, ClientFinancialSummary, ClientPaymentView, ClientRole, OrganizationFinancialData } from "@/features/clients/types";
 import { ClientsOverview } from "./clients-overview-view";
-import { ClientsListTable } from "../components/tables/clients-list-table";
+import { ClientsListView } from "./clients-list-view";
 import { CommitmentsView } from "./clients-commitments-view";
-import { PaymentsDataTable } from "../components/tables/payments-data-table";
-import { ClientSchedulesTable } from "../components/tables/client-schedules-table";
+import { ClientsPaymentsView } from "./clients-payments-view";
+import { ClientsSchedulesView } from "./clients-schedules-view";
 import { ClientSettings } from "./clients-settings-view";
 import { HealthMonitorBanner } from "@/features/health/components/health-monitor-banner";
 import { analyzePaymentsHealth } from "@/features/health/modules/payments";
@@ -235,7 +235,7 @@ export function ClientsPageClient({
                         <ClientsOverview summary={financialSummary} payments={filteredPayments} />
                     </TabsContent>
                     <TabsContent value="list" className="m-0 h-full focus-visible:outline-none">
-                        <ClientsListTable
+                        <ClientsListView
                             data={clients}
                             roles={roles}
                             orgId={orgId}
@@ -255,7 +255,7 @@ export function ClientsPageClient({
                         />
                     </TabsContent>
                     <TabsContent value="payments" className="m-0 h-full focus-visible:outline-none">
-                        <PaymentsDataTable
+                        <ClientsPaymentsView
                             data={displayedPayments}
                             clients={clients}
                             financialData={financialData}
@@ -264,7 +264,7 @@ export function ClientsPageClient({
                         />
                     </TabsContent>
                     <TabsContent value="schedules" className="m-0 h-full focus-visible:outline-none">
-                        <ClientSchedulesTable data={schedules} />
+                        <ClientsSchedulesView data={schedules} />
                     </TabsContent>
                     <TabsContent value="settings" className="m-0 h-full focus-visible:outline-none">
                         <ClientSettings roles={roles} orgId={orgId} />

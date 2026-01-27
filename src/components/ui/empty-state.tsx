@@ -1,5 +1,6 @@
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface EmptyStateProps {
     title: string;
@@ -7,6 +8,8 @@ interface EmptyStateProps {
     icon: LucideIcon;
     action?: React.ReactNode;
     className?: string;
+    /** Show a "Coming Soon" badge above the title */
+    comingSoon?: boolean;
 }
 
 export function EmptyState({
@@ -15,6 +18,7 @@ export function EmptyState({
     icon: Icon,
     action,
     className,
+    comingSoon = false,
 }: EmptyStateProps) {
     return (
         <div
@@ -52,6 +56,16 @@ export function EmptyState({
                     <div className="absolute -top-2 -right-2 w-6 h-6 border-2 border-primary/20 rounded-md animate-[spin_8s_linear_infinite]" />
                 </div>
             </div>
+
+            {/* Coming Soon Badge */}
+            {comingSoon && (
+                <Badge
+                    variant="outline"
+                    className="relative z-10 mb-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 uppercase tracking-wider text-xs font-semibold px-3 py-1"
+                >
+                    Próximamente
+                </Badge>
+            )}
 
             <h3 className="relative z-10 text-xl font-bold tracking-tight text-foreground/90">
                 {title}

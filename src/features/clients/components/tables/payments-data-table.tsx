@@ -32,7 +32,7 @@ export function PaymentsDataTable({
     clients,
     financialData,
     projectId,
-    orgId
+    orgId,
 }: PaymentsDataTableProps) {
     const { openModal } = useModal();
     const router = useRouter();
@@ -223,61 +223,15 @@ export function PaymentsDataTable({
         });
     };
 
-    // Define filters options
-    const statusOptions = [
-        { label: "Confirmado", value: "confirmed" },
-        { label: "Pendiente", value: "pending" },
-        { label: "Rechazado", value: "rejected" },
-        { label: "Anulado", value: "void" },
-    ];
-
-    // Empty State when no payments
-    if (data.length === 0) {
-        return (
-            <EmptyState
-                icon={Banknote}
-                title="Sin pagos registrados"
-                description="Registrá el primer pago de tus clientes o importalos desde un archivo Excel."
-                action={
-                    <div className="flex gap-2">
-                        <DataTableImport config={paymentsImportConfig} organizationId={orgId} />
-                        <Button onClick={handleNewPayment}>
-                            <Plus className="mr-2 h-4 w-4" /> Nuevo Pago
-                        </Button>
-                    </div>
-                }
-            />
-        );
-    }
-
     return (
         <div className="h-full flex flex-col">
             <DataTable
                 columns={columns}
                 data={optimisticPayments}
-                searchKey="client_name"
-                searchPlaceholder="Buscar por cliente..."
                 enableRowSelection={true}
                 enableRowActions={true}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                facetedFilters={[
-                    {
-                        columnId: "status",
-                        title: "Estado",
-                        options: statusOptions
-                    }
-                ]}
-                toolbar={({ table }) => (
-                    <div className="flex gap-2">
-                        <DataTableExport table={table} />
-                        <DataTableImport config={paymentsImportConfig} organizationId={orgId} />
-                        <Button size="sm" className="h-9" onClick={handleNewPayment}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Nuevo Pago
-                        </Button>
-                    </div>
-                )}
                 initialSorting={[{ id: "payment_date", desc: true }]}
             />
 

@@ -5,19 +5,23 @@ import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { ColumnDef } from "@tanstack/react-table";
-import { ProjectClientView, ClientRole } from "../../types";
+import { ProjectClientView, ClientRole } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, UserPlus } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useModal } from "@/providers/modal-store";
-import { ClientForm } from "../forms/client-form";
-import { deleteClientAction } from "../../actions";
+import { ClientForm } from "../components/forms/client-form";
+import { deleteClientAction } from "../actions";
 import { toast } from "sonner";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { ClientRepresentativesManager } from "../representatives/client-representatives-manager";
+import { ClientRepresentativesManager } from "../components/representatives/client-representatives-manager";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
+// ========================================
+// TYPES
+// ========================================
 
 interface Contact {
     id: string;
@@ -41,7 +45,7 @@ interface Representative {
     linked_user_id?: string;
 }
 
-interface ClientsListTableProps {
+interface ClientsListViewProps {
     data: ProjectClientView[];
     roles: ClientRole[];
     orgId: string;
@@ -50,7 +54,18 @@ interface ClientsListTableProps {
     representativesByClient?: Record<string, Representative[]>;
 }
 
-export function ClientsListTable({ data, roles, orgId, projectId, contacts = [], representativesByClient = {} }: ClientsListTableProps) {
+// ========================================
+// COMPONENT
+// ========================================
+
+export function ClientsListView({
+    data,
+    roles,
+    orgId,
+    projectId,
+    contacts = [],
+    representativesByClient = {}
+}: ClientsListViewProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const [isPending, startTransition] = useTransition();
@@ -67,6 +82,10 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
     // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [clientToDelete, setClientToDelete] = useState<ProjectClientView | null>(null);
+
+    // ========================================
+    // HANDLERS
+    // ========================================
 
     const handleCreate = () => {
         openModal(
@@ -101,7 +120,6 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
                 toast.success("Cliente eliminado correctamente");
             } catch (error) {
                 toast.error("Error al eliminar el cliente");
-                // React will revert the optimistic update
             }
         });
     };
@@ -119,10 +137,32 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
         );
     };
 
-    // Build replacement options (other clients in this project, excluding the one being deleted)
+    const handleRepresentatives = (client: ProjectClientView) => {
+        const reps = representativesByClient[client.id] || [];
+        openModal(
+            <ClientRepresentativesManager
+                clientId={client.id}
+                clientName={client.contact_full_name || client.contact_company_name || "Cliente"}
+                orgId={orgId}
+                representatives={reps}
+                availableContacts={contacts}
+            />,
+            {
+                title: "Representantes del Cliente",
+                description: `Gestionar quién puede acceder al portal de ${client.contact_full_name || "este cliente"}`,
+                size: "lg"
+            }
+        );
+    };
+
+    // Replacement options for delete modal
     const replacementOptions = optimisticData
         .filter(c => c.id !== clientToDelete?.id)
         .map(c => ({ id: c.id, name: c.contact_full_name || "Sin Nombre" }));
+
+    // ========================================
+    // COLUMNS
+    // ========================================
 
     const columns: ColumnDef<ProjectClientView>[] = [
         {
@@ -163,35 +203,57 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
         },
     ];
 
-    // Empty State when no clients
+    // ========================================
+    // RENDER - EMPTY STATE
+    // ========================================
+
     if (data.length === 0) {
         return (
-            <EmptyState
-                icon={Users}
-                title="Sin clientes"
-                description="Agregá el primer cliente a este proyecto para comenzar a gestionar compromisos y pagos."
-                action={
-                    <Button onClick={handleCreate} size="lg">
-                        <Plus className="mr-2 h-4 w-4" /> Agregar Cliente
-                    </Button>
-                }
-            />
+            <>
+                <Toolbar
+                    portalToHeader
+                    actions={[
+                        {
+                            label: "Agregar Cliente",
+                            icon: Plus,
+                            onClick: handleCreate,
+                            variant: "default"
+                        }
+                    ]}
+                />
+                <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                        icon={Users}
+                        title="Sin clientes"
+                        description="Agregá el primer cliente a este proyecto para comenzar a gestionar compromisos y pagos."
+                    />
+                </div>
+            </>
         );
     }
 
+    // ========================================
+    // RENDER - CONTENT
+    // ========================================
+
     return (
         <>
+            <Toolbar
+                portalToHeader
+                actions={[
+                    {
+                        label: "Agregar Cliente",
+                        icon: Plus,
+                        onClick: handleCreate,
+                        variant: "default"
+                    }
+                ]}
+            />
+
             <DataTable
                 columns={columns}
                 data={optimisticData}
-                searchKey="contact_full_name"
-                searchPlaceholder="Buscar clientes..."
                 enableRowActions={true}
-                toolbar={() => (
-                    <Button onClick={handleCreate} size="sm">
-                        <Plus className="mr-2 h-4 w-4" /> Agregar Cliente
-                    </Button>
-                )}
                 onDelete={handleDelete}
                 customActions={[
                     {
@@ -200,23 +262,7 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
                     },
                     {
                         label: "Representantes",
-                        onClick: (client: ProjectClientView) => {
-                            const reps = representativesByClient[client.id] || [];
-                            openModal(
-                                <ClientRepresentativesManager
-                                    clientId={client.id}
-                                    clientName={client.contact_full_name || client.contact_company_name || "Cliente"}
-                                    orgId={orgId}
-                                    representatives={reps}
-                                    availableContacts={contacts}
-                                />,
-                                {
-                                    title: "Representantes del Cliente",
-                                    description: `Gestionar quién puede acceder al portal de ${client.contact_full_name || "este cliente"}`,
-                                    size: "lg"
-                                }
-                            );
-                        },
+                        onClick: handleRepresentatives,
                     }
                 ]}
             />
@@ -236,4 +282,3 @@ export function ClientsListTable({ data, roles, orgId, projectId, contacts = [],
         </>
     );
 }
-

@@ -17,6 +17,53 @@ description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en 
 
 ---
 
+## 📁 0. Arquitectura de Carpetas (Feature-First)
+
+### `src/components` (UI Agnóstico)
+
+Reservado **EXCLUSIVAMENTE** para componentes genéricos:
+
+| Carpeta | Propósito |
+|---------|-----------|
+| `ui/` | Primitivos atómicos (Button, Input, Select). Componentes Shadcn. |
+| `layout/` | Estructura visual (Header, Sidebar, Footer, PageWrapper). |
+| `shared/` | Componentes reusables complejos (DeleteModal, FormFooter, DataTable). |
+| `charts/` | Componentes de gráficos (BaseBarChart, BasePieChart, etc.). |
+| `dashboard/` | Componentes de dashboard (DashboardCard, DashboardKpiCard). |
+
+> ⛔ **PROHIBIDO**: Crear carpetas de negocio aquí (ej. `src/components/users`).
+> ⛔ **PROHIBIDO**: Usar `src/components/global`. Usar `shared` en su lugar.
+
+### `src/features` (Dominio y Negocio)
+
+Toda la lógica específica de features vive aquí:
+
+```
+src/features/
+├── auth/
+│   └── components/
+├── finance/
+│   ├── components/
+│   ├── actions.ts
+│   └── queries.ts
+├── projects/
+├── kanban/
+├── organization/
+└── clients/
+```
+
+**Regla**: Si un componente importa lógica de negocio (actions, queries) → pertenece a Features.
+
+### Convenciones de Nombrado
+
+| Tipo | Convención | Ejemplo |
+|------|------------|---------|
+| Archivos/Dirs | ✅ kebab-case | `delete-confirmation-modal.tsx` |
+| Componentes | ✅ PascalCase | `export function UserProfile()` |
+| ❌ Incorrecto | PascalCase en archivos | `DeleteConfirmationModal.tsx` |
+
+---
+
 ## 🏗️ 1. Estructura de Archivos
 
 ```mermaid

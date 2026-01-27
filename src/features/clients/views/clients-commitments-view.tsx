@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, LayoutGrid, List, Building2 } from "lucide-react";
+import { Plus, LayoutGrid, List, Building2, FileText } from "lucide-react";
 import { useModal } from "@/providers/modal-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,8 +14,10 @@ import { DeleteConfirmationDialog } from "@/components/shared/forms/general/dele
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { deleteCommitmentAction } from "@/features/clients/actions";
 import { CommitmentForm } from "../components/forms/commitment-form";
-import { CommitmentCard, CommitmentCardData } from "../components/commitments/commitment-card";
+import { CommitmentCard } from "../components/commitments/commitment-card";
 import { ProjectClientView, OrganizationFinancialData } from "../types";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // ========================================
 // TYPES
@@ -277,86 +279,108 @@ export function CommitmentsView({
     ];
 
     // ========================================
-    // VIEW TOGGLE
+    // RENDER - EMPTY STATE
     // ========================================
 
-    const viewToggle = (
-        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setViewMode("grid")}
-            >
-                <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setViewMode("table")}
-            >
-                <List className="h-4 w-4" />
-            </Button>
-        </div>
-    );
+    if (commitments.length === 0) {
+        return (
+            <>
+                <Toolbar
+                    portalToHeader
+                    actions={[
+                        {
+                            label: "Nuevo Compromiso",
+                            icon: Plus,
+                            onClick: handleCreate,
+                            variant: "default"
+                        }
+                    ]}
+                />
+                <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                        icon={FileText}
+                        title="Sin compromisos"
+                        description="Creá el primer compromiso de pago para comenzar."
+                    />
+                </div>
+            </>
+        );
+    }
 
     // ========================================
-    // RENDER
+    // RENDER - CONTENT
     // ========================================
 
     return (
         <>
-            <DataTable
-                columns={columns}
-                data={enrichedData}
-                searchPlaceholder="Buscar compromisos..."
-                viewMode={viewMode}
-                enableRowSelection={false}
-                enableRowActions={true}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                leftActions={viewToggle}
-                pageSize={50}
-                renderGridItem={(item) => (
-                    <CommitmentCard
-                        data={{
-                            id: item.id,
-                            client_id: item.client_id,
-                            clientName: item.clientName,
-                            clientAvatar: item.clientAvatar,
-                            clientRole: item.clientRole,
-                            unitName: item.unit_name,
-                            concept: item.concept,
-                            totalAmount: Number(item.amount),
-                            paidAmount: item.paidAmount,
-                            balance: item.balance,
-                            currencySymbol: item.currencySymbol,
-                            currencyCode: item.currencyCode,
-                        }}
-                        onEdit={(id) => handleEdit(item)}
-                        onDelete={(id) => handleDelete(item)}
-                    />
-                )}
-                toolbar={() => (
-                    <Button onClick={handleCreate}>
-                        <Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso
-                    </Button>
-                )}
-                initialSorting={[{ id: "unit_name", desc: false }]}
-                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                emptyState={
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <div className="rounded-full bg-muted p-4 mb-4">
-                            <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <h3 className="font-medium text-lg">Sin compromisos</h3>
-                        <p className="text-muted-foreground text-sm mt-1">Creá el primer compromiso para comenzar</p>
+            <Toolbar
+                portalToHeader
+                leftActions={
+                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+                        <Button
+                            variant={viewMode === "grid" ? "default" : "ghost"}
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setViewMode("grid")}
+                        >
+                            <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant={viewMode === "table" ? "default" : "ghost"}
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setViewMode("table")}
+                        >
+                            <List className="h-4 w-4" />
+                        </Button>
                     </div>
                 }
+                actions={[
+                    {
+                        label: "Nuevo Compromiso",
+                        icon: Plus,
+                        onClick: handleCreate,
+                        variant: "default"
+                    }
+                ]}
             />
+
+            {viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {enrichedData.map((item) => (
+                        <CommitmentCard
+                            key={item.id}
+                            data={{
+                                id: item.id,
+                                client_id: item.client_id,
+                                clientName: item.clientName,
+                                clientAvatar: item.clientAvatar,
+                                clientRole: item.clientRole,
+                                unitName: item.unit_name,
+                                concept: item.concept,
+                                totalAmount: Number(item.amount),
+                                paidAmount: item.paidAmount,
+                                balance: item.balance,
+                                currencySymbol: item.currencySymbol,
+                                currencyCode: item.currencyCode,
+                            }}
+                            onEdit={() => handleEdit(item)}
+                            onDelete={() => handleDelete(item)}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={enrichedData}
+                    enableRowSelection={false}
+                    enableRowActions={true}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    pageSize={50}
+                    initialSorting={[{ id: "unit_name", desc: false }]}
+                />
+            )}
 
             <DeleteConfirmationDialog
                 open={!!commitmentToDelete}
@@ -378,4 +402,3 @@ export function CommitmentsView({
         </>
     );
 }
-

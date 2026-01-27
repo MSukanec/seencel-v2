@@ -8,6 +8,7 @@ import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -207,20 +208,22 @@ export function PaymentForm({
 
                     {/* Cliente */}
                     <FormGroup label="Cliente" required>
-                        <Select value={clientId} onValueChange={setClientId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar cliente" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {clients
-                                    .sort((a, b) => (a.contact_full_name || "").localeCompare(b.contact_full_name || ""))
-                                    .map((client) => (
-                                        <SelectItem key={client.id} value={client.id}>
-                                            {client.contact_full_name || "Cliente sin nombre"}
-                                        </SelectItem>
-                                    ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            value={clientId}
+                            onValueChange={setClientId}
+                            options={clients
+                                .sort((a, b) => (a.contact_full_name || "").localeCompare(b.contact_full_name || ""))
+                                .map((client) => ({
+                                    value: client.id,
+                                    label: client.contact_full_name || "Cliente sin nombre",
+                                    image: client.contact_avatar_url || null,
+                                    fallback: (client.contact_full_name || "C").substring(0, 2).toUpperCase()
+                                }))
+                            }
+                            placeholder="Seleccionar cliente"
+                            searchPlaceholder="Buscar cliente..."
+                            emptyMessage="No se encontró el cliente."
+                        />
                     </FormGroup>
 
                     {/* Billetera */}
@@ -325,27 +328,30 @@ export function PaymentForm({
                         />
                     </FormGroup>
 
-                    {/* Referencia */}
-                    <FormGroup label="Referencia" helpText="Nro. de transacción o recibo">
-                        <Input
-                            placeholder="Ej: TRX-12345"
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                        />
-                    </FormGroup>
+                    {/* Referencia + Comprobante - Stacked */}
+                    <div className="md:col-span-2 grid grid-cols-1 gap-4">
+                        {/* Referencia */}
+                        <FormGroup label="Referencia" helpText="Nro. de transacción o recibo">
+                            <Input
+                                placeholder="Ej: TRX-12345"
+                                value={reference}
+                                onChange={(e) => setReference(e.target.value)}
+                            />
+                        </FormGroup>
 
-                    {/* Comprobante */}
-                    <FormGroup label="Comprobante" helpText="Adjuntar imagen o PDF">
-                        <MultiFileUpload
-                            ref={uploadRef}
-                            folderPath={`organizations/${organizationId}/finance/client-payments`}
-                            onUploadComplete={setFiles}
-                            initialFiles={files}
-                            autoUpload={false}
-                            maxSizeMB={5}
-                            className="w-full"
-                        />
-                    </FormGroup>
+                        {/* Comprobante */}
+                        <FormGroup label="Comprobante" helpText="Adjuntar imagen o PDF">
+                            <MultiFileUpload
+                                ref={uploadRef}
+                                folderPath={`organizations/${organizationId}/finance/client-payments`}
+                                onUploadComplete={setFiles}
+                                initialFiles={files}
+                                autoUpload={false}
+                                maxSizeMB={5}
+                                className="w-full"
+                            />
+                        </FormGroup>
+                    </div>
                 </div>
             </div>
 
