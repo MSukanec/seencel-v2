@@ -137,6 +137,11 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
             return <span className="text-muted-foreground italic">-</span>;
         }
 
+        // Handle Date objects directly (common from Excel imports)
+        if (value instanceof Date) {
+            return isNaN(value.getTime()) ? "-" : value.toLocaleDateString('es-ES');
+        }
+
         const strVal = String(value).trim();
 
         // Excel serial date check (35000-60000 range -> ~1995-2064)
@@ -153,7 +158,12 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
             }
         }
 
-        return value;
+        // Ensure we always return a string or React element, never a raw object
+        if (typeof value === 'object') {
+            return JSON.stringify(value);
+        }
+
+        return String(value);
     };
 
     return (

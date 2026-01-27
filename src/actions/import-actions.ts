@@ -461,11 +461,7 @@ export async function importSubcontractPaymentsBatch(
             const amount = Number(payment.amount) || 0;
             const exchange_rate = Number(payment.exchange_rate) || 1;
 
-            // Functional Amount Logic (Latam Rule)
-            // Need code for this logic. If we have currency_id, we need to find code.
-            const resolvedCurrency = currencies?.find(c => c.id === currency_id);
-            const isUSD = resolvedCurrency?.code === 'USD';
-            const functional_amount = isUSD ? amount * exchange_rate : amount;
+            // Note: functional_amount is now calculated by DB trigger
 
             return {
                 project_id: projectId,
@@ -479,7 +475,6 @@ export async function importSubcontractPaymentsBatch(
                 notes: payment.notes || null,
                 reference: payment.reference || null,
                 status: 'confirmed',
-                functional_amount,
                 import_batch_id: batchId,
                 created_by: user.id,
                 is_deleted: false,

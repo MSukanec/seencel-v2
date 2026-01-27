@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Pencil, Trash2, Eye, Calendar, Wallet } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Calendar, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -155,10 +155,6 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={() => onView(subcontract)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver detalle
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(subcontract)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Editar

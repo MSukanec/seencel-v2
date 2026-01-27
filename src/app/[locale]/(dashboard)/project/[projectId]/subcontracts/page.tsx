@@ -6,12 +6,11 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SubcontractsOverviewView } from "@/features/subcontracts/components/views/subcontracts-overview-view";
-import { SubcontractsListView } from "@/features/subcontracts/components/views/subcontracts-list-view";
-import { SubcontractsPaymentsView } from "@/features/subcontracts/components/views/subcontracts-payments-view";
+import { SubcontractsOverviewView, SubcontractsListView, SubcontractsPaymentsView } from "@/features/subcontracts/views";
 import { getOrganizationFinancialData } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
 import { getSubcontractsByProject, getSubcontractPayments } from "@/features/subcontracts/queries";
+import { getIndexTypes } from "@/features/advanced/queries";
 
 interface SubcontractsPageProps {
     params: Promise<{
@@ -53,11 +52,12 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
         const organizationId = project.organization_id;
 
         // 2. Fetch Data in Parallel
-        const [financialData, providers, subcontracts, payments] = await Promise.all([
+        const [financialData, providers, subcontracts, payments, indexTypes] = await Promise.all([
             getOrganizationFinancialData(organizationId),
             getOrganizationContacts(organizationId),
             getSubcontractsByProject(projectId),
-            getSubcontractPayments(projectId)
+            getSubcontractPayments(projectId),
+            getIndexTypes(organizationId)
         ]);
 
         return (
@@ -103,6 +103,11 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
                                 }))}
                                 currencies={financialData.currencies}
                                 defaultCurrencyId={financialData.defaultCurrencyId}
+                                indexTypes={indexTypes.map(idx => ({
+                                    id: idx.id,
+                                    name: idx.name,
+                                    periodicity: idx.periodicity
+                                }))}
                             />
                         </ContentLayout>
                     </TabsContent>

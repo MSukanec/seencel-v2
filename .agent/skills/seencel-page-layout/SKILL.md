@@ -152,11 +152,38 @@ export default async function FeaturePage({ params }: Props) {
 ## 🛠️ 3. Implementación de Views (`views/*.tsx`)
 
 ### Naming Convention
-**OBLIGATORIO**: Los archivos de vistas deben seguir el patrón `[feature]-[name]-view.tsx`.
-*   ✅ `subcontracts-list-view.tsx`
-*   ✅ `subcontracts-overview-view.tsx`
-*   ❌ `list-view.tsx`
-*   ❌ `overview.tsx`
+**OBLIGATORIO**: Los archivos deben seguir patrones claros:
+
+#### Páginas dentro de Features (`-page.tsx`)
+Se usan cuando una feature tiene una "página de detalle" que se importa desde `app/` pero la lógica vive en `features/`:
+
+```
+src/features/subcontracts/
+├── views/
+│   ├── subcontracts-list-view.tsx      # Vista principal (listado)
+│   ├── subcontracts-overview-view.tsx  # Vista overview (dashboard)
+│   └── details/                        # 📁 Páginas de detalle
+│       ├── subcontract-detail-page.tsx # ⭐ PAGE del detalle (Server Component)
+│       ├── subcontract-overview-view.tsx
+│       ├── subcontract-payments-view.tsx
+│       └── subcontract-tasks-view.tsx
+```
+
+| Tipo | Sufijo | Responsabilidad | Ejemplo |
+|------|--------|-----------------|---------|
+| Page | `-page.tsx` | Server Component, fetch de datos, estructura Tabs | `subcontract-detail-page.tsx` |
+| View | `-view.tsx` | Client Component, UI interactiva, Toolbar | `subcontracts-list-view.tsx` |
+
+#### Reglas de Nombrado
+*   ✅ `subcontracts-list-view.tsx` (Vista de listado)
+*   ✅ `subcontract-detail-page.tsx` (Página de detalle - singular!)
+*   ✅ `subcontract-payments-view.tsx` (Vista dentro del detalle)
+*   ❌ `list-view.tsx` (falta prefijo de feature)
+*   ❌ `overview.tsx` (falta sufijo -view)
+*   ❌ `subcontracts-detail-view.tsx` (las pages NO terminan en -view)
+
+> [!IMPORTANT]
+> **Páginas de detalle**: Cuando una entidad tiene su propia página de detalle (`/subcontracts/[id]`), crear una carpeta `views/details/` con el `-page.tsx` y sus `-view.tsx` internos.
 
 ### Toolbar y Actions (🚨 CRÍTICO)
 
@@ -226,10 +253,52 @@ return (
 );
 ```
 
-### 🚨 Excepción: Dashboards / Overview
-En las vistas de **"Visión General"** (Dashboards):
-*   **NO** usar Toolbar para acciones de creación (no se crean cosas en el dashboard).
-*   Se puede usar Toolbar **SOLO** si hay filtros globales importantes (ej. Rango de Fechas), pero por defecto **suele ir limpia**.
+### 🚨 Regla para Overview / Dashboard Views
+
+**TODAS las vistas (incluyendo Overview) DEBEN usar `<Toolbar portalToHeader ... />` cuando tienen:**
+- Currency selector (tabs para cambiar modo de moneda)
+- Date range filter
+- Botones de exportar o acciones secundarias
+
+```tsx
+// ✅ CORRECTO - Overview con Toolbar para currency selector y export
+export function SomeOverviewView() {
+    const { primaryCurrency, secondaryCurrency, setDisplayCurrency } = useCurrency();
+    const { showCurrencySelector } = useFinancialFeatures();
+    const [currencyMode, setCurrencyMode] = useState<CurrencyViewMode>('mix');
+
+    const currencyModeSelector = showCurrencySelector && secondaryCurrency ? (
+        <Tabs
+            value={currencyMode}
+            onValueChange={(v) => handleCurrencyModeChange(v as CurrencyViewMode)}
+            className="h-9"
+        >
+            <TabsList className="h-9 grid grid-cols-3 w-auto">
+                <TabsTrigger value="mix" className="text-xs px-3">Mix</TabsTrigger>
+                <TabsTrigger value="primary" className="text-xs px-3">{primaryCurrency?.code}</TabsTrigger>
+                <TabsTrigger value="secondary" className="text-xs px-3">{secondaryCurrency.code}</TabsTrigger>
+            </TabsList>
+        </Tabs>
+    ) : null;
+
+    return (
+        <>
+            <Toolbar
+                portalToHeader
+                leftActions={currencyModeSelector}  // Currency selector a la izquierda
+                actions={[
+                    { label: "Exportar", icon: Download, onClick: handleExport, variant: "secondary" }
+                ]}
+            />
+            <div className="space-y-6">
+                {/* Dashboard content */}
+            </div>
+        </>
+    );
+}
+```
+
+**La única excepción** es si la vista NO tiene ningún filtro ni acción - en ese caso no se necesita Toolbar.
 
 ---
 
@@ -397,6 +466,114 @@ invalidate(queryKeys.clients(projectId)); // Invalidar cache específico
 **Estándar:** `duration-150` (150ms) para animaciones de sidebar/drawer.
 
 > **REGLA**: NUNCA usar `duration-300` para animaciones de navegación. Se siente lento.
+
+---
+
+## 📊 11. Dashboard Components & Charts (OBLIGATORIO)
+
+### 11.1 Componentes de Dashboard
+
+Cuando construyas vistas con KPIs o gráficos, **SIEMPRE** usar los componentes estándar del dashboard:
+
+| Componente | Uso | Import |
+|-----------|-----|--------|
+| `DashboardKpiCard` | Mostrar un KPI numérico (monto, porcentaje, count) | `@/components/dashboard/dashboard-kpi-card` |
+| `DashboardCard` | Wrapper para gráficos, tablas o contenido complejo | `@/components/dashboard/dashboard-card` |
+
+```tsx
+// ❌ INCORRECTO - Usar Card manual para KPIs
+<Card>
+    <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+            Saldo Pendiente
+        </CardTitle>
+    </CardHeader>
+    <CardContent>
+        <p className="text-2xl font-mono font-bold">{formatMoney(value)}</p>
+    </CardContent>
+</Card>
+
+// ✅ CORRECTO - Usar DashboardKpiCard
+<DashboardKpiCard
+    title="Saldo Pendiente"
+    value={formatMoney(value)}
+    icon={<DollarSign className="h-5 w-5" />}
+    description="Monto restante por pagar"
+    compact={true}
+    size="large"
+/>
+```
+
+### 11.2 DashboardKpiCard Props
+
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `title` | string | Título del KPI |
+| `value` | string \| number | Valor principal |
+| `icon` | ReactNode | Icono decorativo |
+| `trend` | object | `{ value, label, direction: 'up'|'down'|'neutral' }` |
+| `description` | string | Texto secundario debajo del valor |
+| `currencyBreakdown` | array | Para KPIs bi-monetarios |
+| `compact` | boolean | Si usar notación compacta (31.4M en vez de 31.431.097) |
+| `size` | 'default' \| 'large' \| 'hero' | Tamaño del valor |
+
+### 11.3 DashboardCard para Gráficos
+
+```tsx
+// ❌ INCORRECTO - Card manual para gráficos
+<Card>
+    <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Evolución
+        </CardTitle>
+        <CardDescription>Descripción</CardDescription>
+    </CardHeader>
+    <CardContent>
+        <BaseDualAreaChart ... />
+    </CardContent>
+</Card>
+
+// ✅ CORRECTO - DashboardCard
+<DashboardCard
+    title="Evolución"
+    description="Descripción"
+    icon={<TrendingUp className="h-4 w-4" />}
+>
+    <BaseDualAreaChart ... />
+</DashboardCard>
+```
+
+### 11.4 Colores de Charts (🚨 CRÍTICO)
+
+> [!CAUTION]
+> **NUNCA usar variables CSS `hsl(var(--chart-X))` en props de colores de Recharts.**
+> Las variables CSS no se parsean correctamente. Usar valores HEX directos.
+
+```tsx
+// ❌ INCORRECTO - Variables CSS no funcionan
+<BaseDualAreaChart
+    primaryColor="hsl(var(--chart-2))"
+    secondaryColor="hsl(var(--chart-5))"
+/>
+
+// ✅ CORRECTO - Valores HEX directos
+<BaseDualAreaChart
+    primaryColor="#22c55e"  // Verde
+    secondaryColor="#8B5CF6" // Violeta
+/>
+```
+
+**Paleta de colores estándar (HEX):**
+
+| Nombre | HEX | Uso típico |
+|--------|-----|------------|
+| Verde | `#22c55e` | Pagado, positivo, ingreso |
+| Violeta | `#8B5CF6` | Saldo, pendiente, secundario |
+| Azul | `#3b82f6` | Primary, destacado |
+| Ámbar | `#f59e0b` | Warning, variación positiva |
+| Rosa | `#ec4899` | Terciario, accent |
+| Cian | `#06b6d4` | Info, neutral |
 
 ---
 

@@ -1,15 +1,15 @@
 "use client";
-// Force rebuild
 
-
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, TrendingUp, Info } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { createSubcontractAction, updateSubcontractAction } from "../../actions";
+import { getIndexValueByPeriod } from "@/features/advanced/queries";
+import { MONTH_NAMES } from "@/features/advanced/types";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-
+import { Label } from "@/components/ui/label";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,6 +34,7 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
+    FormDescription,
 } from "@/components/ui/form";
 import { toast } from "sonner";
 
@@ -46,9 +47,20 @@ const formSchema = z.object({
     date: z.date().optional(),
     start_date: z.date().optional(),
     description: z.string().optional(),
+    // Index adjustment fields
+    adjustment_index_type_id: z.string().optional().nullable(),
+    base_period_year: z.number().optional().nullable(),
+    base_period_month: z.number().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+interface IndexTypeOption {
+    id: string;
+    name: string;
+    periodicity: string;
+    components?: { key: string; name: string; is_main: boolean }[];
+}
 
 interface SubcontractsSubcontractFormProps {
     onSuccess: () => void;
@@ -60,6 +72,7 @@ interface SubcontractsSubcontractFormProps {
     providers?: { id: string; name: string; image?: string | null; fallback?: string }[];
     currencies?: { id: string; code: string; symbol: string; name: string }[];
     defaultCurrencyId?: string | null;
+    indexTypes?: IndexTypeOption[];
 }
 
 export function SubcontractsSubcontractForm({
@@ -70,9 +83,12 @@ export function SubcontractsSubcontractForm({
     projectId,
     providers = [],
     currencies = [],
-    defaultCurrencyId
+    defaultCurrencyId,
+    indexTypes = []
 }: SubcontractsSubcontractFormProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [baseIndexValue, setBaseIndexValue] = useState<number | null>(initialData?.base_index_value || null);
+    const [isFetchingIndex, setIsFetchingIndex] = useState(false);
     const isEditing = !!initialData;
 
     const form = useForm<FormValues>({
@@ -84,24 +100,73 @@ export function SubcontractsSubcontractForm({
             currency_id: initialData?.currency_id || defaultCurrencyId || undefined,
             date: initialData?.date ? new Date(initialData.date) : undefined,
             description: initialData?.notes || "",
+            // Index fields
+            adjustment_index_type_id: initialData?.adjustment_index_type_id || undefined,
+            base_period_year: initialData?.base_period_year || new Date().getFullYear(),
+            base_period_month: initialData?.base_period_month || new Date().getMonth() + 1,
         },
     });
+
+    // Watch index fields to fetch base value
+    const selectedIndexId = useWatch({ control: form.control, name: 'adjustment_index_type_id' });
+    const basePeriodYear = useWatch({ control: form.control, name: 'base_period_year' });
+    const basePeriodMonth = useWatch({ control: form.control, name: 'base_period_month' });
+
+    // Fetch base index value when index/period changes
+    useEffect(() => {
+        async function fetchBaseValue() {
+            if (!selectedIndexId || !basePeriodYear || !basePeriodMonth) {
+                setBaseIndexValue(null);
+                return;
+            }
+            setIsFetchingIndex(true);
+            try {
+                const value = await getIndexValueByPeriod(selectedIndexId, basePeriodYear, basePeriodMonth);
+                if (value?.values) {
+                    // Get the main component value (usually 'general')
+                    const mainKey = Object.keys(value.values)[0];
+                    setBaseIndexValue(value.values[mainKey] || null);
+                } else {
+                    setBaseIndexValue(null);
+                }
+            } catch (error) {
+                console.error('Error fetching index value:', error);
+                setBaseIndexValue(null);
+            } finally {
+                setIsFetchingIndex(false);
+            }
+        }
+        fetchBaseValue();
+    }, [selectedIndexId, basePeriodYear, basePeriodMonth]);
 
     const onSubmit = async (values: FormValues) => {
         setIsLoading(true);
         try {
+            const indexData = values.adjustment_index_type_id ? {
+                adjustment_index_type_id: values.adjustment_index_type_id,
+                base_period_year: values.base_period_year,
+                base_period_month: values.base_period_month,
+                base_index_value: baseIndexValue,
+            } : {
+                adjustment_index_type_id: null,
+                base_period_year: null,
+                base_period_month: null,
+                base_index_value: null,
+            };
+
             if (isEditing && initialData) {
                 await updateSubcontractAction({
                     id: initialData.id,
                     project_id: projectId,
                     organization_id: organizationId,
-                    contact_id: values.provider_id || null, // Ensure null if undefined
+                    contact_id: values.provider_id || null,
                     title: values.title,
                     amount_total: values.amount_total,
                     currency_id: values.currency_id,
                     date: values.date,
                     notes: values.description,
-                    status: initialData.status
+                    status: initialData.status,
+                    ...indexData,
                 });
                 toast.success("Subcontrato actualizado");
             } else {
@@ -114,7 +179,8 @@ export function SubcontractsSubcontractForm({
                     currency_id: values.currency_id,
                     date: values.date,
                     notes: values.description,
-                    status: 'draft'
+                    status: 'draft',
+                    ...indexData,
                 });
                 toast.success("Subcontrato creado");
             }
@@ -309,6 +375,132 @@ export function SubcontractsSubcontractForm({
                                 </FormItem>
                             )}
                         />
+
+                        {/* ROW 5: Index Adjustment Section */}
+                        {indexTypes.length > 0 && (
+                            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                                <div className="flex items-center gap-2 text-sm font-medium">
+                                    <TrendingUp className="h-4 w-4 text-primary" />
+                                    Ajuste por Índice (Opcional)
+                                </div>
+
+                                {/* Index Selector */}
+                                <FormField
+                                    control={form.control}
+                                    name="adjustment_index_type_id"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Índice de Ajuste</FormLabel>
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                value={field.value || undefined}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Sin ajuste por índice" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {indexTypes.map((index) => (
+                                                        <SelectItem key={index.id} value={index.id}>
+                                                            {index.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormDescription>
+                                                El contrato se ajustará según la variación del índice seleccionado
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Base Period (only show if index selected) */}
+                                {selectedIndexId && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Month */}
+                                        <FormField
+                                            control={form.control}
+                                            name="base_period_month"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Mes Base</FormLabel>
+                                                    <Select
+                                                        onValueChange={(v) => field.onChange(parseInt(v))}
+                                                        value={field.value?.toString()}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Mes" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {MONTH_NAMES.map((month, idx) => (
+                                                                <SelectItem key={idx + 1} value={(idx + 1).toString()}>
+                                                                    {month}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        {/* Year */}
+                                        <FormField
+                                            control={form.control}
+                                            name="base_period_year"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Año Base</FormLabel>
+                                                    <Select
+                                                        onValueChange={(v) => field.onChange(parseInt(v))}
+                                                        value={field.value?.toString()}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Año" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                                                                <SelectItem key={year} value={year.toString()}>
+                                                                    {year}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Base Index Value Display */}
+                                {selectedIndexId && (
+                                    <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
+                                        <Info className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-sm text-muted-foreground">
+                                            Valor del índice en {MONTH_NAMES[(basePeriodMonth || 1) - 1]} {basePeriodYear}:
+                                        </span>
+                                        {isFetchingIndex ? (
+                                            <span className="text-sm text-muted-foreground animate-pulse">Buscando...</span>
+                                        ) : baseIndexValue ? (
+                                            <span className="text-sm font-mono font-medium text-primary">
+                                                {baseIndexValue.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm text-amber-600">
+                                                No hay datos para este período
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

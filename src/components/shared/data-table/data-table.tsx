@@ -32,7 +32,7 @@ import { DataTableRowActions } from "./data-table-row-actions";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Paperclip, X } from "lucide-react";
+import { Paperclip, X, Trash2 } from "lucide-react";
 
 import { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
 
@@ -71,6 +71,7 @@ interface DataTableProps<TData, TValue> {
     onEdit?: (row: TData) => void;
     onDuplicate?: (row: TData) => void;
     onDelete?: (row: TData) => void;
+    onBulkDelete?: (rows: TData[], resetSelection: () => void) => void;
     customActions?: {
         label: string;
         icon?: React.ReactNode;
@@ -110,6 +111,7 @@ export function DataTable<TData, TValue>({
     onEdit,
     onDuplicate,
     onDelete,
+    onBulkDelete,
     customActions,
     toolbarInHeader = false,
     actions,
@@ -240,7 +242,7 @@ export function DataTable<TData, TValue>({
                             searchPlaceholder={searchPlaceholder}
                             leftActions={leftActions}
                             facetedFilters={facetedFilters}
-                            bulkActions={typeof bulkActions === "function" ? bulkActions({ table }) : bulkActions}
+                            /* bulkActions now handled in Selection Header inside table, not here */
                             actions={resolvedActions}
                             children={
                                 typeof toolbar === "function" ? toolbar({ table }) : toolbar
@@ -255,7 +257,7 @@ export function DataTable<TData, TValue>({
                                 searchPlaceholder={searchPlaceholder}
                                 leftActions={leftActions}
                                 facetedFilters={facetedFilters}
-                                bulkActions={typeof bulkActions === "function" ? bulkActions({ table }) : bulkActions}
+                                /* bulkActions now handled in Selection Header inside table, not here */
                                 actions={resolvedActions}
                             >
                                 {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
@@ -299,55 +301,161 @@ export function DataTable<TData, TValue>({
                                 { /* ... Header & Body ... */}
                                 <TableHeader
                                     className={cn(
-                                        stickyHeader && "sticky top-0 z-10 bg-card/95 backdrop-blur-sm"
+                                        stickyHeader && "sticky top-0 z-10 bg-card/95 backdrop-blur-sm",
+                                        "overflow-hidden"
                                     )}
                                 >
-                                    {table.getHeaderGroups().map((headerGroup) => (
-                                        <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-2">
-                                            {headerGroup.headers.map((header) => (
-                                                <TableHead
-                                                    key={header.id}
-                                                    className="h-11 px-4 text-[11px] font-medium text-muted-foreground"
-                                                    style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                                                >
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(header.column.columnDef.header, header.getContext())}
-                                                </TableHead>
-                                            ))}
-                                        </TableRow>
-                                    ))}
+                                    {table.getHeaderGroups().map((headerGroup) => {
+                                        const isSelecting = enableRowSelection && table.getSelectedRowModel().rows.length > 0;
+
+                                        return (
+                                            <TableRow
+                                                key={headerGroup.id}
+                                                className={cn(
+                                                    "hover:bg-transparent border-b-2 transition-colors duration-200",
+                                                    isSelecting && "bg-primary/5"
+                                                )}
+                                            >
+                                                {headerGroup.headers.map((header, index) => {
+                                                    const isFirst = index === 0;
+                                                    const isLast = index === headerGroup.headers.length - 1;
+
+                                                    return (
+                                                        <TableHead
+                                                            key={header.id}
+                                                            className={cn(
+                                                                "h-11 text-[11px] font-medium text-muted-foreground relative",
+                                                                // Only hide overflow when NOT selecting and last column
+                                                                !(isSelecting && isLast) && "overflow-hidden",
+                                                                isFirst ? "px-4" : isLast ? "px-6" : "px-4"
+                                                            )}
+                                                            style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                                                        >
+                                                            {/* Normal header content - slides out */}
+                                                            <div
+                                                                className={cn(
+                                                                    "transition-all duration-300 ease-out",
+                                                                    isSelecting
+                                                                        ? "opacity-0 translate-x-8"
+                                                                        : "opacity-100 translate-x-0"
+                                                                )}
+                                                            >
+                                                                {header.isPlaceholder
+                                                                    ? null
+                                                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                                                            </div>
+
+                                                            {/* Selection content - slides in */}
+                                                            {enableRowSelection && (
+                                                                <div
+                                                                    className={cn(
+                                                                        "absolute flex items-center transition-all duration-300 ease-out",
+                                                                        // Last column: anchor to right and let content extend left
+                                                                        isLast
+                                                                            ? "right-0 top-0 bottom-0 px-6"
+                                                                            : "inset-0",
+                                                                        isFirst ? "px-4" : !isLast && "px-4",
+                                                                        isSelecting
+                                                                            ? "opacity-100 translate-x-0"
+                                                                            : "opacity-0 -translate-x-8"
+                                                                    )}
+                                                                >
+                                                                    {isFirst ? (
+                                                                        /* Checkbox in first column */
+                                                                        <Checkbox
+                                                                            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+                                                                            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                                                                            aria-label="Seleccionar todo"
+                                                                        />
+                                                                    ) : index === 1 ? (
+                                                                        /* Selection info in second column */
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                                                                                {table.getSelectedRowModel().rows.length} seleccionado(s)
+                                                                            </span>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                onClick={() => table.resetRowSelection()}
+                                                                                className="text-muted-foreground hover:text-foreground h-7 px-2"
+                                                                            >
+                                                                                <X className="h-3.5 w-3.5 mr-1" />
+                                                                                Deseleccionar
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : isLast ? (
+                                                                        /* Bulk actions in last column - positioned to extend left */
+                                                                        <div className="flex items-center gap-2 whitespace-nowrap">
+                                                                            {/* Default Delete Button (if onBulkDelete or onDelete exists) */}
+                                                                            {(onBulkDelete || onDelete) && (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2 whitespace-nowrap"
+                                                                                    onClick={() => {
+                                                                                        const selectedRows = table.getSelectedRowModel().rows.map(r => r.original);
+                                                                                        if (onBulkDelete) {
+                                                                                            // Use bulk delete handler (passes array + reset callback)
+                                                                                            onBulkDelete(selectedRows, () => table.resetRowSelection());
+                                                                                        } else if (onDelete && selectedRows.length === 1) {
+                                                                                            // Fallback: single delete if only 1 row selected
+                                                                                            onDelete(selectedRows[0]);
+                                                                                        }
+                                                                                    }}
+                                                                                >
+                                                                                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                                                    Eliminar
+                                                                                </Button>
+                                                                            )}
+                                                                            {/* Custom bulk actions */}
+                                                                            {typeof bulkActions === "function"
+                                                                                ? bulkActions({ table })
+                                                                                : bulkActions}
+                                                                        </div>
+                                                                    ) : null}
+                                                                </div>
+                                                            )}
+                                                        </TableHead>
+                                                    );
+                                                })}
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading ? (
                                         <DataTableSkeleton columnCount={columns.length} rowCount={pageSize} />
                                     ) : table.getRowModel().rows?.length ? (
-                                        table.getRowModel().rows.map((row) => (
-                                            <TableRow
-                                                key={row.id}
-                                                data-state={row.getIsSelected() && "selected"}
-                                                // ... details
-                                                className={cn(
-                                                    "transition-colors",
-                                                    onRowClick && "cursor-pointer",
-                                                    row.getIsSelected() && "bg-primary/5 border-l-2 border-l-primary"
-                                                )}
-                                                onClick={(e) => {
-                                                    // Don't trigger row click if clicking on interactive elements
-                                                    const target = e.target as HTMLElement;
-                                                    const isInteractive = target.closest('button, input, [role="checkbox"], [role="menuitem"], [data-radix-collection-item]');
-                                                    if (!isInteractive) {
-                                                        onRowClick?.(row.original);
-                                                    }
-                                                }}
-                                            >
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <TableCell key={cell.id} className="px-4 py-3">
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                    </TableCell>
-                                                ))}
-                                            </TableRow>
-                                        ))
+                                        table.getRowModel().rows.map((row, rowIndex) => {
+                                            const isLastRow = rowIndex === table.getRowModel().rows.length - 1;
+                                            const isSelected = row.getIsSelected();
+
+                                            return (
+                                                <TableRow
+                                                    key={row.id}
+                                                    data-state={isSelected && "selected"}
+                                                    className={cn(
+                                                        "transition-colors",
+                                                        onRowClick && "cursor-pointer",
+                                                        isSelected && "bg-primary/5 border-l-2 border-l-primary"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        // Don't trigger row click if clicking on interactive elements
+                                                        const target = e.target as HTMLElement;
+                                                        const isInteractive = target.closest('button, input, [role="checkbox"], [role="menuitem"], [data-radix-collection-item]');
+                                                        if (!isInteractive) {
+                                                            onRowClick?.(row.original);
+                                                        }
+                                                    }}
+                                                >
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <TableCell key={cell.id} className="px-4 py-3">
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            );
+                                        })
                                     ) : (
                                         // Empty state for FILTERED results (No matches)
                                         <TableRow>

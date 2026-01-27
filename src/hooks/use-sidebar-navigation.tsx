@@ -12,6 +12,7 @@ import {
     Settings,
     FileText,
     CreditCard,
+    FileChartColumn,
     Hammer,
     Video,
     Monitor,
@@ -27,6 +28,7 @@ import {
     Wallet,
     HeartPulse,
     Handshake,
+    Landmark,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -174,7 +176,10 @@ export function useSidebarNavigation() {
                     { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building },
                     { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench },
                     { title: 'Contactos', href: '/organization/contacts', icon: Users },
+                    { title: 'Capital', href: '/organization/capital', icon: Landmark },
                     { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard },
+                    { title: 'Informes', href: '/organization/reports', icon: FileChartColumn },
+                    { title: 'Avanzado', href: '/organization/advanced', icon: Sparkles },
                     { title: 'Configuración', href: '/organization/settings', icon: Settings },
                 ];
             case 'project':
@@ -187,11 +192,6 @@ export function useSidebarNavigation() {
                         title: 'Visión General',
                         href: projectBase,
                         icon: LayoutDashboard
-                    },
-                    {
-                        title: 'Salud',
-                        href: activeProjectId ? `${projectBase}/health` : '/organization/projects',
-                        icon: HeartPulse
                     },
                     {
                         title: 'Agenda',
@@ -220,10 +220,15 @@ export function useSidebarNavigation() {
                         sectionHeader: 'Gestión'
                     },
                     {
+                        title: 'Salud',
+                        href: activeProjectId ? `${projectBase}/health` : '/organization/projects',
+                        icon: HeartPulse,
+                        sectionHeader: tSidebar('construction')
+                    },
+                    {
                         title: 'Tareas',
                         href: activeProjectId ? `${projectBase}/construction-tasks` : '/organization/projects',
-                        icon: ClipboardList,
-                        sectionHeader: tSidebar('construction')
+                        icon: ClipboardList
                     },
                     {
                         title: 'Materiales',

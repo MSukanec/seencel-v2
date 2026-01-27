@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { DataTable } from "@/components/shared/data-table/data-table";
-import { columns } from "../tables/subcontracts-payments-columns";
+import { columns } from "../components/tables/subcontracts-payments-columns";
 import { Button } from "@/components/ui/button";
-import { Plus, Banknote, Upload, FileSpreadsheet } from "lucide-react";
+import { Plus, Banknote, Upload, FileSpreadsheet, Trash2 } from "lucide-react";
 import { useModal } from "@/providers/modal-store";
-import { SubcontractPaymentForm } from "../forms/subcontract-payment-form";
-import { deleteSubcontractPaymentAction } from "@/features/subcontracts/actions";
+import { SubcontractPaymentForm } from "../components/forms/subcontract-payment-form";
+import { deleteSubcontractPaymentAction, bulkDeleteSubcontractPaymentsAction } from "@/features/subcontracts/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,6 @@ import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { createImportBatch, revertImportBatch, importSubcontractPaymentsBatch } from "@/actions/import-actions";
 import { ImportConfig } from "@/lib/import-utils";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
-// import { getSubcontractOptions, getCurrencyOptions, getWalletOptions } from "@/actions/import-options"; // Removed - using local data
 
 interface SubcontractsPaymentsViewProps {
     data: any[];
@@ -114,12 +113,8 @@ export function SubcontractsPaymentsView({
             { id: "reference", label: "Referencia", required: false, example: "Transferencia #123" },
         ],
         onImport: async (data) => {
-            // 1. Create Batch
             const batch = await createImportBatch(orgId, "subcontract_payments", data.length);
-
-            // 2. Insert Payments
             const result = await importSubcontractPaymentsBatch(orgId, projectId, data, batch.id);
-
             return { success: result.success, errors: result.errors, batchId: batch.id };
         },
         onRevert: async (batchId) => {
@@ -207,6 +202,33 @@ export function SubcontractsPaymentsView({
         { label: "Anulado", value: "void" },
     ];
 
+    // Bulk Delete State
+    const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+    const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+    const handleOpenBulkDelete = (ids: string[]) => {
+        setBulkDeleteIds(ids);
+        setShowBulkDeleteDialog(true);
+    };
+
+    const confirmBulkDelete = async () => {
+        if (bulkDeleteIds.length === 0) return;
+
+        setIsBulkDeleting(true);
+        try {
+            await bulkDeleteSubcontractPaymentsAction(bulkDeleteIds, projectId);
+            toast.success(`${bulkDeleteIds.length} pagos eliminados`);
+            router.refresh();
+        } catch (error) {
+            toast.error("Error al eliminar los pagos");
+        } finally {
+            setIsBulkDeleting(false);
+            setShowBulkDeleteDialog(false);
+            setBulkDeleteIds([]);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col">
             <DataTable
@@ -226,6 +248,7 @@ export function SubcontractsPaymentsView({
                     }
                 ]}
                 toolbarInHeader={true}
+                showToolbar={true}
                 actions={[
                     {
                         label: "Nuevo Pago",
@@ -243,6 +266,25 @@ export function SubcontractsPaymentsView({
                         onClick: () => toast.info("Próximamente: Exportación de pagos")
                     }
                 ]}
+                bulkActions={({ table }) => {
+                    const selectedRows = table.getSelectedRowModel().rows;
+                    const selectedCount = selectedRows.length;
+                    if (selectedCount === 0) return null;
+
+                    return (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                                const ids = selectedRows.map((row: any) => row.original.id);
+                                handleOpenBulkDelete(ids);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Eliminar ({selectedCount})
+                        </Button>
+                    );
+                }}
                 emptyState={
                     <EmptyState
                         icon={Banknote}
@@ -253,6 +295,7 @@ export function SubcontractsPaymentsView({
                 initialSorting={[{ id: "payment_date", desc: true }]}
             />
 
+            {/* Single Delete Dialog */}
             <DeleteConfirmationDialog
                 open={!!paymentToDelete}
                 onOpenChange={(open) => !open && setPaymentToDelete(null)}
@@ -265,6 +308,26 @@ export function SubcontractsPaymentsView({
                 }
                 confirmLabel="Eliminar"
                 isDeleting={isPending}
+            />
+
+            {/* Bulk Delete Dialog */}
+            <DeleteConfirmationDialog
+                open={showBulkDeleteDialog}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setShowBulkDeleteDialog(false);
+                        setBulkDeleteIds([]);
+                    }
+                }}
+                onConfirm={confirmBulkDelete}
+                title={`¿Eliminar ${bulkDeleteIds.length} pagos?`}
+                description={
+                    <span>
+                        Estás a punto de eliminar <strong>{bulkDeleteIds.length} pagos</strong> seleccionados. Esta acción no se puede deshacer.
+                    </span>
+                }
+                confirmLabel={`Eliminar ${bulkDeleteIds.length} pagos`}
+                isDeleting={isBulkDeleting}
             />
         </div>
     );

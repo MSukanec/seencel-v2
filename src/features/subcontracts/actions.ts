@@ -264,6 +264,26 @@ export async function deleteSubcontractPaymentAction(paymentId: string) {
 
     revalidatePath('/organization/subcontracts');
 }
+
+/**
+ * Bulk delete subcontract payments (soft delete)
+ */
+export async function bulkDeleteSubcontractPaymentsAction(paymentIds: string[], projectId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('subcontract_payments')
+        .update({ is_deleted: true })
+        .in('id', paymentIds);
+
+    if (error) {
+        console.error("Error bulk deleting subcontract payments:", error);
+        throw new Error("Error al eliminar los pagos seleccionados.");
+    }
+
+    revalidatePath(`/project/${projectId}/subcontracts`);
+    return { deleted: paymentIds.length };
+}
 // ===============================================
 // Subcontracts
 // ===============================================
@@ -278,6 +298,11 @@ const createSubcontractSchema = z.object({
     date: z.date().optional().nullable(), // contract date
     notes: z.string().optional().nullable(),
     status: z.string().default('draft'), // active, completed, cancelled, draft
+    // Index adjustment fields
+    adjustment_index_type_id: z.string().uuid().optional().nullable(),
+    base_period_year: z.number().optional().nullable(),
+    base_period_month: z.number().optional().nullable(),
+    base_index_value: z.number().optional().nullable(),
 });
 
 export async function createQuickSubcontractAction(organizationId: string, projectId: string, title: string) {
@@ -356,6 +381,11 @@ export async function updateSubcontractAction(input: z.infer<typeof updateSubcon
             date: input.date,
             notes: input.notes,
             status: input.status,
+            // Index adjustment fields
+            adjustment_index_type_id: input.adjustment_index_type_id,
+            base_period_year: input.base_period_year,
+            base_period_month: input.base_period_month,
+            base_index_value: input.base_index_value,
             updated_at: new Date().toISOString()
         })
         .eq('id', input.id)

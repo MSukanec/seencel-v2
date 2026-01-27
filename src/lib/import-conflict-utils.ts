@@ -105,24 +105,44 @@ export async function detectConflicts(
                     targetLabel: match.label
                 });
             } else {
-                // Try Fuzzy Match
+                // Try Substring Match first (e.g., "Pesos" matches "Peso Argentino (ARS)")
                 const normalizedValue = lowerValue.trim();
-                const fuzzyMatch = existingOptions.find(opt => {
-                    const normalizedOpt = opt.label.trim().toLowerCase();
-                    const distance = levenshteinDistance(normalizedValue, normalizedOpt);
-                    // Threshold: Allow 1 error per 4 characters, max 3 errors
-                    const allowedErrors = Math.min(3, Math.floor(normalizedValue.length / 4) + 1);
-                    return distance <= allowedErrors;
+                const substringMatch = existingOptions.find(opt => {
+                    const normalizedOpt = opt.label.toLowerCase().trim();
+                    // Check if one contains the other (handles plurals too)
+                    // Also check without last char to handle "Pesos" vs "Peso"
+                    const valueRoot = normalizedValue.length > 3 ? normalizedValue.slice(0, -1) : normalizedValue;
+                    const optRoot = normalizedOpt.length > 3 ? normalizedOpt.split(' ')[0].slice(0, -1) : normalizedOpt;
+                    return normalizedOpt.includes(normalizedValue) ||
+                        normalizedValue.includes(normalizedOpt.split(' ')[0]) ||
+                        valueRoot === optRoot;
                 });
 
-                if (fuzzyMatch) {
+                if (substringMatch) {
                     matchedValues.push({
                         original: value,
-                        targetId: fuzzyMatch.id,
-                        targetLabel: fuzzyMatch.label
+                        targetId: substringMatch.id,
+                        targetLabel: substringMatch.label
                     });
                 } else {
-                    missingValues.push(value);
+                    // Try Fuzzy Match (Levenshtein)
+                    const fuzzyMatch = existingOptions.find(opt => {
+                        const normalizedOpt = opt.label.trim().toLowerCase();
+                        const distance = levenshteinDistance(normalizedValue, normalizedOpt);
+                        // Threshold: Allow 1 error per 4 characters, max 3 errors
+                        const allowedErrors = Math.min(3, Math.floor(normalizedValue.length / 4) + 1);
+                        return distance <= allowedErrors;
+                    });
+
+                    if (fuzzyMatch) {
+                        matchedValues.push({
+                            original: value,
+                            targetId: fuzzyMatch.id,
+                            targetLabel: fuzzyMatch.label
+                        });
+                    } else {
+                        missingValues.push(value);
+                    }
                 }
             }
         }
