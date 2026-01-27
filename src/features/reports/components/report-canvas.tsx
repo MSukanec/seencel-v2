@@ -2,13 +2,12 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { cn } from "@/lib/utils";
-import { GripVertical, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { FileChartColumn } from "lucide-react";
+import { GripVertical, X, FileChartColumn } from "lucide-react";
 import { BlockRenderer } from "./block-renderer";
-import type { ReportBlock } from "../views/reports-builder-view";
+import { ReportPrintCanvas } from "./report-print-canvas";
+import type { ReportBlock, CompanyInfo } from "../views/reports-builder-view";
+import type { PdfGlobalTheme } from "@/features/organization/actions/pdf-settings";
+
 
 interface ReportCanvasProps {
     blocks: ReportBlock[];
@@ -18,6 +17,12 @@ interface ReportCanvasProps {
     isPreviewMode: boolean;
     organizationId: string;
     projects: { id: string; name: string; status: string }[];
+    // Theme props
+    pdfTheme?: PdfGlobalTheme;
+    logoUrl?: string | null;
+    companyInfo?: CompanyInfo;
+    // Global project filter
+    selectedProjectId?: string | null;
 }
 
 export function ReportCanvas({
@@ -28,41 +33,71 @@ export function ReportCanvas({
     isPreviewMode,
     organizationId,
     projects,
+    pdfTheme,
+    logoUrl,
+    companyInfo,
+    selectedProjectId,
 }: ReportCanvasProps) {
-    if (blocks.length === 0) {
-        return (
-            <div className="h-full flex items-center justify-center">
-                <EmptyState
-                    icon={FileChartColumn}
-                    title="Informe vacío"
-                    description="Agregá bloques desde el panel izquierdo para construir tu informe personalizado"
-                />
-            </div>
-        );
-    }
-
+    // ALWAYS show print canvas for realistic preview (WYSIWYG)
+    // Even when empty, show header/footer for context
     return (
-        <div className={cn(
-            "min-h-full p-6 space-y-4",
-            isPreviewMode ? "bg-white" : "bg-muted/30"
-        )}>
-            {/* Paper-like container for preview */}
-            <div className={cn(
-                "mx-auto space-y-4 transition-all",
-                isPreviewMode && "max-w-[800px] bg-white shadow-lg rounded-lg p-8 border"
-            )}>
-                {blocks.map((block) => (
-                    <SortableBlock
-                        key={block.id}
-                        block={block}
-                        isSelected={selectedBlockId === block.id}
-                        onSelect={() => onSelectBlock(block.id)}
-                        onRemove={() => onRemoveBlock(block.id)}
-                        isPreviewMode={isPreviewMode}
-                        organizationId={organizationId}
-                        projects={projects}
-                    />
-                ))}
+        <div className="min-h-full p-6" style={{ backgroundColor: "#3f3f46" }}>
+            <div className="mx-auto shadow-2xl overflow-hidden" style={{ maxWidth: 900 }}>
+                <ReportPrintCanvas
+                    theme={pdfTheme}
+                    logoUrl={logoUrl}
+                    companyInfo={companyInfo}
+                >
+                    {blocks.length === 0 ? (
+                        // Empty state inside the canvas
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "80px 40px",
+                                textAlign: "center",
+                            }}
+                        >
+                            <FileChartColumn style={{ width: 48, height: 48, color: "#d1d5db", marginBottom: 16 }} />
+                            <p style={{ fontSize: 16, fontWeight: 500, color: "#6b7280", margin: 0 }}>
+                                Informe vacío
+                            </p>
+                            <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 8, maxWidth: 280 }}>
+                                Agregá bloques desde el panel derecho para construir tu informe
+                            </p>
+                        </div>
+                    ) : isPreviewMode ? (
+                        // Preview mode: just render blocks
+                        blocks.map((block) => (
+                            <BlockRenderer
+                                key={block.id}
+                                block={block}
+                                organizationId={organizationId}
+                                projects={projects}
+                                pdfTheme={pdfTheme}
+                                selectedProjectId={selectedProjectId}
+                            />
+                        ))
+                    ) : (
+                        // Edit mode: sortable blocks with drag handles
+                        blocks.map((block) => (
+                            <SortableBlock
+                                key={block.id}
+                                block={block}
+                                isSelected={selectedBlockId === block.id}
+                                onSelect={() => onSelectBlock(block.id)}
+                                onRemove={() => onRemoveBlock(block.id)}
+                                isPreviewMode={isPreviewMode}
+                                organizationId={organizationId}
+                                projects={projects}
+                                pdfTheme={pdfTheme}
+                                selectedProjectId={selectedProjectId}
+                            />
+                        ))
+                    )}
+                </ReportPrintCanvas>
             </div>
         </div>
     );
@@ -76,6 +111,8 @@ interface SortableBlockProps {
     isPreviewMode: boolean;
     organizationId: string;
     projects: { id: string; name: string; status: string }[];
+    pdfTheme?: PdfGlobalTheme;
+    selectedProjectId?: string | null;
 }
 
 function SortableBlock({
@@ -86,6 +123,8 @@ function SortableBlock({
     isPreviewMode,
     organizationId,
     projects,
+    pdfTheme,
+    selectedProjectId,
 }: SortableBlockProps) {
     const {
         attributes,
@@ -96,62 +135,88 @@ function SortableBlock({
         isDragging,
     } = useSortable({ id: block.id });
 
-    const style = {
+    const primaryColor = pdfTheme?.primaryColor || "#3b82f6";
+
+    // Use inline styles for print-compatible appearance
+    const containerStyle: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
         transition,
+        position: "relative",
+        borderRadius: 8,
+        // Dotted border for edit mode - solid when selected
+        border: isSelected
+            ? `2px solid ${primaryColor}`
+            : `2px dashed ${primaryColor}40`, // 40 = ~25% opacity in hex
+        backgroundColor: "#ffffff",
+        opacity: isDragging ? 0.5 : 1,
+        boxShadow: isDragging ? "0 10px 25px rgba(0,0,0,0.15)" : undefined,
     };
-
-    if (isPreviewMode) {
-        return (
-            <div className="w-full">
-                <BlockRenderer
-                    block={block}
-                    organizationId={organizationId}
-                    projects={projects}
-                />
-            </div>
-        );
-    }
 
     return (
         <div
             ref={setNodeRef}
-            style={style}
-            className={cn(
-                "group relative rounded-lg border bg-card transition-all",
-                isSelected ? "ring-2 ring-primary border-primary" : "border-border hover:border-primary/50",
-                isDragging && "opacity-50 shadow-xl z-50"
-            )}
+            style={containerStyle}
             onClick={onSelect}
+            className="group"
         >
-            {/* Drag Handle */}
+            {/* Drag Handle - primary color, hidden on print */}
             <div
                 {...attributes}
                 {...listeners}
-                className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{
+                    position: "absolute",
+                    left: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 20,
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "grab",
+                    backgroundColor: primaryColor,
+                    borderRadius: 4,
+                    zIndex: 10,
+                }}
+                className="print:hidden"
             >
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <GripVertical style={{ width: 14, height: 14, color: "#ffffff" }} />
             </div>
 
-            {/* Remove Button */}
-            <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+            {/* Remove Button - primary color, hidden on print */}
+            <button
+                style={{
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    border: "none",
+                    backgroundColor: primaryColor,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 10,
+                }}
+                className="print:hidden hover:opacity-80 transition-opacity"
                 onClick={(e) => {
                     e.stopPropagation();
                     onRemove();
                 }}
             >
-                <X className="h-3 w-3" />
-            </Button>
+                <X style={{ width: 10, height: 10, color: "#ffffff" }} />
+            </button>
 
-            {/* Block Content */}
-            <div className="p-4 pl-10">
+            {/* Block Content - full width, no extra padding */}
+            <div>
                 <BlockRenderer
                     block={block}
                     organizationId={organizationId}
                     projects={projects}
+                    pdfTheme={pdfTheme}
+                    selectedProjectId={selectedProjectId}
                 />
             </div>
         </div>

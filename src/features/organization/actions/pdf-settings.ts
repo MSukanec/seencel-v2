@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { optimizeImage } from "@/lib/image-optimizer";
 
 // Type matching the Frontend Component state AND DB Schema
 export type PdfGlobalTheme = {
@@ -40,6 +41,13 @@ export type PdfGlobalTheme = {
     showFooter: boolean;
     footerText: string;
     showPageNumbers: boolean;
+
+    // Header visibility options
+    showCompanyName: boolean;
+    showCompanyAddress: boolean;
+
+    // PDF-specific logo (per template)
+    pdfLogoPath?: string;
 };
 
 async function getActiveOrganizationId() {
@@ -68,6 +76,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
     isGlobal?: boolean,
     canCreateCustomTemplates?: boolean,
     logoUrl?: string | null,
+    pdfLogoUrl?: string | null,
     availableTemplates?: { id: string, name: string }[],
     demoData?: { companyName?: string, address?: string, city?: string, state?: string, country?: string, phone?: string, email?: string },
     error?: string
@@ -195,7 +204,15 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
         showFooter: (template.show_footer_info ?? true),
         footerText: template.footer_text ?? "",
         showPageNumbers: template.footer_show_page_numbers ?? true,
+        showCompanyName: template.show_company_name ?? true,
+        showCompanyAddress: template.show_company_address ?? true,
+        pdfLogoPath: template.pdf_logo_path || undefined,
     };
+
+    // Build PDF logo URL if available
+    const pdfLogoUrl = template.pdf_logo_path
+        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${template.pdf_logo_path}`
+        : null;
 
     return {
         data: theme,
@@ -203,6 +220,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
         isGlobal: !template.organization_id,
         canCreateCustomTemplates,
         logoUrl,
+        pdfLogoUrl, // NEW: PDF-specific logo
         availableTemplates: templatesRes.data || [],
         demoData // Return the fetched demo data
     };
@@ -273,6 +291,8 @@ export async function updateOrganizationPdfTheme(theme: PdfGlobalTheme): Promise
         footer_text: theme.footerText,
         footer_show_page_numbers: theme.showPageNumbers,
         show_footer_info: theme.showFooter,
+        show_company_name: theme.showCompanyName,
+        show_company_address: theme.showCompanyAddress,
         updated_at: new Date().toISOString()
     };
 
@@ -317,3 +337,78 @@ export async function deleteOrganizationPdfTemplate(templateId: string): Promise
     return { success: true };
 }
 
+/**
+ * Upload a PDF-specific logo for a template
+ * Optimized for print: preserves transparency, allows PNG format
+ */
+export async function uploadPdfLogo(formData: FormData): Promise<{
+    success: boolean;
+    pdfLogoUrl?: string;
+    error?: string;
+}> {
+    const supabase = await createClient();
+    const orgId = await getActiveOrganizationId();
+
+    if (!orgId) return { success: false, error: "Organization not found" };
+
+    const file = formData.get("file") as File;
+    const templateId = formData.get("templateId") as string;
+
+    if (!file || !templateId) {
+        return { success: false, error: "Missing file or template ID" };
+    }
+
+    // Verify template ownership
+    const { data: template } = await supabase
+        .from('pdf_templates')
+        .select('organization_id')
+        .eq('id', templateId)
+        .single();
+
+    if (!template || template.organization_id !== orgId) {
+        return { success: false, error: "Cannot modify this template" };
+    }
+
+    try {
+        // Optimize Image - PNG format to preserve transparency
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const { buffer: optimizedBuffer, mimeType, extension } = await optimizeImage(buffer, {
+            maxWidth: 800, // Larger for print quality
+            quality: 90,
+            format: 'png' // Preserve transparency
+        });
+
+        // Upload to 'public-assets' bucket under pdf-logos folder
+        const fileName = `pdf-logo-${templateId}-${Date.now()}.${extension}`;
+        const filePath = `pdf-logos/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('public-assets')
+            .upload(filePath, optimizedBuffer, {
+                contentType: mimeType,
+                upsert: true,
+            });
+
+        if (uploadError) throw uploadError;
+
+        // Update template record with pdf_logo_path
+        const { error: updateError } = await supabase
+            .from('pdf_templates')
+            .update({ pdf_logo_path: filePath })
+            .eq('id', templateId);
+
+        if (updateError) throw updateError;
+
+        // Return success with URL
+        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
+
+        revalidatePath('/organization/identity');
+        return { success: true, pdfLogoUrl: publicUrl };
+
+    } catch (error: any) {
+        console.error("Upload PDF Logo Error:", error);
+        return { success: false, error: error.message };
+    }
+}

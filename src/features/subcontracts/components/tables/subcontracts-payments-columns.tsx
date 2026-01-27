@@ -25,14 +25,14 @@ export const columns: ColumnDef<any>[] = [
         },
     },
     {
-        accessorKey: "provider_name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Proveedor" />,
+        accessorKey: "subcontract_title",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Subcontrato" />,
         cell: ({ row }) => (
             <DataTableAvatarCell
-                title={row.original.provider_name || "N/A"}
-                subtitle={row.original.subcontract?.contact?.company_name || ""}
-                src={row.original.provider_avatar}
-                fallback={row.original.provider_name?.[0]}
+                title={row.original.subcontract_title || "Sin título"}
+                subtitle={row.original.provider_name || row.original.provider_company_name || ""}
+                src={row.original.provider_avatar_url}
+                fallback={(row.original.subcontract_title || "S")[0]}
             />
         ),
         enableSorting: true,

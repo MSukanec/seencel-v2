@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getActiveOrganizationId } from "@/actions/general-costs";
 import { getOrganizationProjects } from "@/features/projects/queries";
+import { getOrganizationPdfTheme } from "@/features/organization/actions/pdf-settings";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,9 +25,16 @@ export default async function ReportsPage() {
     }
 
     try {
-        // Fetch projects for the report builder
-        const rawProjects = await getOrganizationProjects(organizationId);
+        // Fetch projects and PDF theme in parallel
+        const [rawProjects, pdfThemeResult] = await Promise.all([
+            getOrganizationProjects(organizationId),
+            getOrganizationPdfTheme(),
+        ]);
+
         const projects = rawProjects.map(p => ({ id: p.id, name: p.name, status: p.status || 'active' }));
+        const pdfTheme = pdfThemeResult.data;
+        const logoUrl = pdfThemeResult.logoUrl;
+        const companyInfo = pdfThemeResult.demoData;
 
         return (
             <Tabs defaultValue="builder" className="h-full flex flex-col">
@@ -46,6 +54,9 @@ export default async function ReportsPage() {
                             <ReportsBuilderView
                                 organizationId={organizationId}
                                 projects={projects}
+                                pdfTheme={pdfTheme}
+                                logoUrl={logoUrl}
+                                companyInfo={companyInfo}
                             />
                         </TabsContent>
 

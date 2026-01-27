@@ -136,167 +136,168 @@ export function SubcontractPaymentForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full w-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4 p-6">
-                {/* Row 1: Date & Subcontract */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Fecha de Pago" required>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !date && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={setDate}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </FormGroup>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-1 gap-4">
+                    {/* Row 1: Date & Status */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Fecha de Pago" required>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !date && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {date ? format(date, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={date}
+                                        onSelect={setDate}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </FormGroup>
 
-                    <FormGroup label="Subcontrato (Proveedor)" required>
+                        <FormGroup label="Estado" required>
+                            <Select value={status} onValueChange={setStatus}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="confirmed">Confirmado</SelectItem>
+                                    <SelectItem value="pending">Pendiente</SelectItem>
+                                    <SelectItem value="rejected">Rechazado</SelectItem>
+                                    <SelectItem value="void">Anulado</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+                    </div>
+
+                    {/* Row 2: Subcontract (full width) */}
+                    <FormGroup label="Subcontrato" required>
                         <Select value={subcontractId} onValueChange={setSubcontractId}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar subcontrato" />
                             </SelectTrigger>
                             <SelectContent>
-                                {subcontracts
-                                    .map((sub: any) => {
-                                        // Get contact name safely
-                                        const name = sub.contact?.full_name || sub.contact?.company_name || "Desconocido";
-                                        return (
-                                            <SelectItem key={sub.id} value={sub.id}>
-                                                {name}
-                                            </SelectItem>
-                                        )
-                                    })}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-                </div>
-
-                {/* Row 2: Wallet & Amount */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Billetera" required>
-                        <Select value={walletId} onValueChange={setWalletId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar billetera" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {wallets.map((wallet: any) => (
-                                    <SelectItem key={wallet.id} value={wallet.id}>
-                                        {wallet.name}
-                                    </SelectItem>
-                                ))}
+                                {subcontracts.map((sub: any) => {
+                                    // Use title field (from subcontracts-subcontract-form.tsx)
+                                    const subTitle = sub.title || `Subcontrato #${sub.id.slice(0, 8)}`;
+                                    const contactName = sub.contact?.full_name || sub.contact?.company_name;
+                                    const displayLabel = contactName ? `${subTitle} - ${contactName}` : subTitle;
+                                    return (
+                                        <SelectItem key={sub.id} value={sub.id}>
+                                            {displayLabel}
+                                        </SelectItem>
+                                    );
+                                })}
                             </SelectContent>
                         </Select>
                     </FormGroup>
 
-                    <FormGroup label="Monto" required>
+                    {/* Row 3: Wallet & Amount */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Billetera" required>
+                            <Select value={walletId} onValueChange={setWalletId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar billetera" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {wallets.map((wallet: any) => (
+                                        <SelectItem key={wallet.id} value={wallet.id}>
+                                            {wallet.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+
+                        <FormGroup label="Monto" required>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                            />
+                        </FormGroup>
+                    </div>
+
+                    {/* Row 4: Currency & Exchange Rate */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Moneda" required>
+                            <Select value={currencyId} onValueChange={setCurrencyId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar moneda" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {currencies.map((curr: any) => (
+                                        <SelectItem key={curr.id} value={curr.id}>
+                                            {curr.name} ({curr.symbol})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+
+                        <FormGroup label="Tipo de Cambio (opcional)">
+                            <Input
+                                type="number"
+                                step="0.0001"
+                                placeholder="1.0000"
+                                value={exchangeRate}
+                                onChange={(e) => setExchangeRate(e.target.value)}
+                            />
+                        </FormGroup>
+                    </div>
+
+                    {/* Notes */}
+                    <FormGroup label="Notas (opcional)">
+                        <Textarea
+                            placeholder="Agregar notas adicionales..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            className="min-h-[80px]"
+                        />
+                    </FormGroup>
+
+                    {/* Reference */}
+                    <FormGroup label="Referencia (opcional)">
                         <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="Ej: TRX-12345"
+                            value={reference}
+                            onChange={(e) => setReference(e.target.value)}
+                        />
+                    </FormGroup>
+
+                    {/* File Upload (Receipt) */}
+                    <FormGroup label="Comprobante (opcional)">
+                        <MultiFileUpload
+                            ref={uploadRef}
+                            folderPath={`organizations/${organizationId}/finance/subcontract-payments`}
+                            onUploadComplete={setFiles}
+                            initialFiles={files}
+                            autoUpload={false}
+                            maxSizeMB={5}
+                            className="w-full"
                         />
                     </FormGroup>
                 </div>
-
-                {/* Row 3: Currency & Exchange Rate */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Moneda" required>
-                        <Select value={currencyId} onValueChange={setCurrencyId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar moneda" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {currencies.map((curr: any) => (
-                                    <SelectItem key={curr.id} value={curr.id}>
-                                        {curr.name} ({curr.symbol})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    <FormGroup label="Tipo de Cambio (opcional)">
-                        <Input
-                            type="number"
-                            step="0.0001"
-                            placeholder="1.0000"
-                            value={exchangeRate}
-                            onChange={(e) => setExchangeRate(e.target.value)}
-                        />
-                    </FormGroup>
-                </div>
-
-                {/* Row 4: Status */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormGroup label="Estado" required>
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="pending">Pendiente</SelectItem>
-                                <SelectItem value="rejected">Rechazado</SelectItem>
-                                <SelectItem value="void">Anulado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-                </div>
-
-                {/* Notes */}
-                <FormGroup label="Notas (opcional)">
-                    <Textarea
-                        placeholder="Agregar notas adicionales..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="min-h-[80px]"
-                    />
-                </FormGroup>
-
-                {/* Reference */}
-                <FormGroup label="Referencia (opcional)">
-                    <Input
-                        placeholder="Ej: TRX-12345"
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                    />
-                </FormGroup>
-
-                {/* File Upload (Receipt) */}
-                <FormGroup label="Comprobante (opcional)">
-                    <MultiFileUpload
-                        ref={uploadRef}
-                        folderPath={`organizations/${organizationId}/finance/subcontract-payments`}
-                        onUploadComplete={setFiles}
-                        initialFiles={files}
-                        autoUpload={false}
-                        maxSizeMB={5}
-                        className="w-full"
-                    />
-                </FormGroup>
-
             </div>
 
             <FormFooter
+                className="-mx-4 -mb-4 mt-6"
                 onCancel={closeModal}
                 isLoading={isLoading}
-                submitLabel="Registrar Pago"
+                submitLabel={initialData ? "Guardar Cambios" : "Registrar Pago"}
             />
         </form>
     );

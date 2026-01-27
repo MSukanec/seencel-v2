@@ -39,14 +39,6 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -63,11 +55,14 @@ import {
     updateOrganizationPdfTheme,
     createOrganizationPdfTemplate,
     deleteOrganizationPdfTemplate,
+    uploadPdfLogo,
     type PdfGlobalTheme
 } from "@/features/organization/actions/pdf-settings";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { FeatureGuard } from "@/components/ui/feature-guard";
+import { useModal } from "@/providers/modal-store";
+import { PdfTemplateForm } from "../forms/pdf-template-form";
 
 // --- Constants ---
 const PDF_FONTS = ["Inter", "Roboto", "Open Sans", "Merriweather", "Playfair Display", "Arial"];
@@ -99,12 +94,15 @@ export function BrandPdfTemplates() {
         showFooter: true,
         showPageNumbers: true,
         footerText: "Documento Confidencial",
+        showCompanyName: true,
+        showCompanyAddress: true,
     });
 
     const [isPro, setIsPro] = useState(false);
     const [canCreateCustomTemplates, setCanCreateCustomTemplates] = useState(false);
     const [isGlobal, setIsGlobal] = useState(true);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [pdfLogoUrl, setPdfLogoUrl] = useState<string | null>(null); // PDF-specific logo
     const [availableTemplates, setAvailableTemplates] = useState<{ id: string, name: string }[]>([]);
 
     // New: Demo Data for previewing real info
@@ -112,9 +110,8 @@ export function BrandPdfTemplates() {
 
 
     // UI State
-    const [isNewTemplateOpen, setIsNewTemplateOpen] = useState(false);
-    const [newTemplateName, setNewTemplateName] = useState("");
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const { openModal, closeModal } = useModal();
 
     const [isLoading, startTransition] = useTransition();
 
@@ -128,6 +125,7 @@ export function BrandPdfTemplates() {
             if (res.canCreateCustomTemplates !== undefined) setCanCreateCustomTemplates(res.canCreateCustomTemplates);
             if (res.isGlobal !== undefined) setIsGlobal(res.isGlobal);
             if (res.logoUrl) setLogoUrl(res.logoUrl);
+            if (res.pdfLogoUrl !== undefined) setPdfLogoUrl(res.pdfLogoUrl || null);
             if (res.availableTemplates) setAvailableTemplates(res.availableTemplates);
             if (res.demoData) setDemoData(res.demoData); // Store demo data
 
@@ -156,20 +154,29 @@ export function BrandPdfTemplates() {
         });
     };
 
-    const handleCreateTemplate = () => {
-        if (!newTemplateName.trim()) return;
+    const handleCreateTemplate = async (templateName: string) => {
+        const res = await createOrganizationPdfTemplate(templateName);
+        if (res.success && res.newTemplateId) {
+            toast.success("Plantilla creada", { description: `Se ha creado "${templateName}"` });
+            loadTheme(res.newTemplateId);
+        } else {
+            toast.error("Error al crear", { description: res.error });
+        }
+    };
 
-        startTransition(async () => {
-            const res = await createOrganizationPdfTemplate(newTemplateName);
-            if (res.success && res.newTemplateId) {
-                toast.success("Plantilla creada", { description: `Se ha creado "${newTemplateName}"` });
-                setIsNewTemplateOpen(false);
-                setNewTemplateName("");
-                loadTheme(res.newTemplateId);
-            } else {
-                toast.error("Error al crear", { description: res.error });
+    const handleOpenCreateModal = () => {
+        openModal(
+            <PdfTemplateForm
+                onSubmit={handleCreateTemplate}
+                onSuccess={closeModal}
+                onCancel={closeModal}
+            />,
+            {
+                title: "Nueva Plantilla",
+                description: "Crea una nueva plantilla para personalizar el diseño de tus documentos.",
+                size: "sm"
             }
-        });
+        );
     };
 
     const handleDeleteTemplate = () => {
@@ -218,7 +225,7 @@ export function BrandPdfTemplates() {
                                     <Button
                                         size="sm"
                                         className="h-7 text-xs px-2"
-                                        onClick={() => setIsNewTemplateOpen(true)}
+                                        onClick={handleOpenCreateModal}
                                     >
                                         <Plus className="h-3 w-3 mr-1" />
                                         Nueva Plantilla
@@ -379,8 +386,94 @@ export function BrandPdfTemplates() {
                                         </div>
                                     </div>
 
-                                    {/* Company Name Props */}
-                                    {/* Note: Schema has companyNameSize/Color but preview currently doesn't show text header. Will add logic. */}
+                                    {/* Visibility options */}
+                                    <div className="h-px bg-border/40 my-2" />
+                                    <div className="space-y-3">
+                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">
+                                            Opciones de Visibilidad
+                                        </Label>
+                                        <div className="space-y-3 p-3 rounded-lg border bg-card/40">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-xs">Mostrar nombre de empresa</Label>
+                                                <Switch
+                                                    disabled={!canEdit}
+                                                    checked={config.showCompanyName}
+                                                    onCheckedChange={(checked) => canEdit && setConfig({ ...config, showCompanyName: checked })}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-xs">Mostrar dirección</Label>
+                                                <Switch
+                                                    disabled={!canEdit}
+                                                    checked={config.showCompanyAddress}
+                                                    onCheckedChange={(checked) => canEdit && setConfig({ ...config, showCompanyAddress: checked })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* PDF Logo Upload Section */}
+                                    <div className="h-px bg-border/40 my-2" />
+                                    <div className="space-y-3">
+                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
+                                            <ImageIcon className="h-3 w-3" /> Logo para PDF
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Sube un logo optimizado para documentos (sin fondo, formato horizontal).
+                                        </p>
+                                        <div className="flex flex-col gap-3">
+                                            {pdfLogoUrl ? (
+                                                <div className="relative p-3 rounded-lg border bg-white/5 flex items-center gap-3">
+                                                    <img
+                                                        src={pdfLogoUrl}
+                                                        alt="Logo PDF"
+                                                        className="max-h-12 max-w-[120px] object-contain"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground flex-1">Logo PDF activo</span>
+                                                </div>
+                                            ) : (
+                                                <div className="p-3 rounded-lg border border-dashed bg-muted/20 text-center">
+                                                    <p className="text-xs text-muted-foreground">Sin logo PDF específico (usa logo web)</p>
+                                                </div>
+                                            )}
+                                            <input
+                                                type="file"
+                                                id="pdf-logo-input"
+                                                accept="image/png,image/webp,image/jpeg"
+                                                className="hidden"
+                                                disabled={!canEdit}
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file || !config.id) return;
+                                                    const formData = new FormData();
+                                                    formData.append("file", file);
+                                                    formData.append("templateId", config.id);
+                                                    startTransition(async () => {
+                                                        const res = await uploadPdfLogo(formData);
+                                                        if (res.success && res.pdfLogoUrl) {
+                                                            setPdfLogoUrl(res.pdfLogoUrl);
+                                                            toast.success("Logo PDF actualizado");
+                                                        } else {
+                                                            toast.error("Error al subir", { description: res.error });
+                                                        }
+                                                    });
+                                                    // Reset input to allow re-uploading same file
+                                                    e.target.value = '';
+                                                }}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full"
+                                                disabled={!canEdit || isLoading}
+                                                onClick={() => document.getElementById('pdf-logo-input')?.click()}
+                                            >
+                                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                                                {pdfLogoUrl ? "Cambiar Logo PDF" : "Subir Logo PDF"}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </AccordionContent>
                             </AccordionItem>
 
@@ -535,38 +628,10 @@ export function BrandPdfTemplates() {
             }
         >
             <ZoomPanCanvas>
-                <PdfPreview config={config} logoUrl={logoUrl} demoData={demoData} />
+                <PdfPreview config={config} logoUrl={pdfLogoUrl || logoUrl} demoData={demoData} />
             </ZoomPanCanvas>
 
-            {/* DIALOGS ... (Unchanged) */}
-            <Dialog open={isNewTemplateOpen} onOpenChange={setIsNewTemplateOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Nueva Plantilla</DialogTitle>
-                        <DialogDescription>
-                            Crea una nueva plantilla para personalizar el diseño de tus documentos.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-2">
-                        <div className="space-y-2">
-                            <Label>Nombre de la Plantilla</Label>
-                            <Input
-                                value={newTemplateName}
-                                onChange={(e) => setNewTemplateName(e.target.value)}
-                                placeholder="Ej: Facturas Corporativas"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsNewTemplateOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleCreateTemplate} disabled={isLoading || !newTemplateName.trim()}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Crear Plantilla
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
+            {/* Delete Confirmation Dialog */}
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -587,7 +652,7 @@ export function BrandPdfTemplates() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </SplitEditorLayout>
+        </SplitEditorLayout >
     );
 }
 
@@ -798,17 +863,21 @@ function PdfPreview({ config, logoUrl, demoData }: { config: PdfGlobalTheme, log
                         />
                     )}
                     <div className="space-y-1">
-                        <div
-                            className="font-bold leading-none"
-                            style={{ fontSize: `${config.companyNameSize}pt`, color: config.companyNameColor }}
-                        >
-                            {demoData ? "Mi Empresa" : "Nombre Empresa"}
-                        </div>
+                        {config.showCompanyName !== false && (
+                            <div
+                                className="font-bold leading-none"
+                                style={{ fontSize: `${config.companyNameSize}pt`, color: config.companyNameColor }}
+                            >
+                                {demoData ? "Mi Empresa" : "Nombre Empresa"}
+                            </div>
+                        )}
                         {/* Organization Data in Header */}
-                        <div className="text-[9px] text-muted-foreground opacity-80 leading-tight space-y-0.5" style={{ fontFamily: 'inherit' }}>
-                            <p>{displayAddr}</p>
-                            {displayContact && <p>{displayContact}</p>}
-                        </div>
+                        {config.showCompanyAddress !== false && (
+                            <div className="text-[9px] text-muted-foreground opacity-80 leading-tight space-y-0.5" style={{ fontFamily: 'inherit' }}>
+                                <p>{displayAddr}</p>
+                                {displayContact && <p>{displayContact}</p>}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="text-right">

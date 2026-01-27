@@ -11,6 +11,9 @@ import { MoreHorizontal, Pencil, Trash2, Calendar, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useMoney } from "@/hooks/use-money";
+import { createMoney } from "@/lib/money/money";
+import { calculateDisplayAmount as calcDisplayAmount } from "@/lib/money/money-service";
 
 interface SubcontractCardProps {
     subcontract: any;
@@ -20,6 +23,9 @@ interface SubcontractCardProps {
 }
 
 export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: SubcontractCardProps) {
+    const money = useMoney();
+    const currentRate = money.config.currentExchangeRate;
+
     const contact = subcontract.contact;
     const providerName = subcontract.provider_name || contact?.full_name || contact?.company_name || "Proveedor desconocido";
     // Prefer title, fallback to provider name, fallback to generic
@@ -30,12 +36,28 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
     const avatarFallback = (providerName[0] || "").toUpperCase();
     const imageUrl = subcontract.provider_image || contact?.image_url;
 
-    // Formatting
-    const amount = subcontract.amount_total;
-    const symbol = subcontract.currency_symbol || "$";
-    const formattedAmount = amount
-        ? `${symbol} ${Number(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
-        : "-";
+    // Calculate display amounts using Money system
+    const currencyCode = subcontract.currency_code || "ARS";
+    const exchangeRate = subcontract.exchange_rate || currentRate;
+
+    // Create Money objects for proper conversion
+    const totalMoney = createMoney(
+        { amount: subcontract.amount_total || 0, currency_code: currencyCode, exchange_rate: exchangeRate },
+        money.config
+    );
+    const paidMoney = createMoney(
+        { amount: subcontract.paid_amount || 0, currency_code: currencyCode, exchange_rate: exchangeRate },
+        money.config
+    );
+    const remainingMoney = createMoney(
+        { amount: subcontract.remaining_amount || 0, currency_code: currencyCode, exchange_rate: exchangeRate },
+        money.config
+    );
+
+    // Calculate display amounts
+    const totalDisplayAmount = calcDisplayAmount(totalMoney, money.displayMode, money.config);
+    const paidDisplayAmount = calcDisplayAmount(paidMoney, money.displayMode, money.config);
+    const remainingDisplayAmount = calcDisplayAmount(remainingMoney, money.displayMode, money.config);
 
     const startDate = subcontract.start_date
         ? format(new Date(subcontract.start_date), "dd MMM yyyy", { locale: es })
@@ -111,28 +133,25 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
                     {/* Total */}
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] uppercase text-muted-foreground font-semibold">Total</span>
-                        <div className="flex items-center gap-1 font-mono font-medium text-foreground">
-                            <span className="text-xs text-muted-foreground">{symbol}</span>
-                            <span>{Number(amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                        </div>
+                        <span className="font-mono font-medium text-foreground">
+                            {money.format(totalDisplayAmount)}
+                        </span>
                     </div>
 
                     {/* Paid */}
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] uppercase text-muted-foreground font-semibold">Pagado</span>
-                        <div className="flex items-center gap-1 font-mono font-medium text-amount-positive">
-                            <span className="text-xs text-amount-positive/70">{symbol}</span>
-                            <span>{Number(subcontract.paid_amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                        </div>
+                        <span className="font-mono font-medium text-amount-positive">
+                            {money.format(paidDisplayAmount)}
+                        </span>
                     </div>
 
                     {/* Remaining */}
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] uppercase text-muted-foreground font-semibold">Restante</span>
-                        <div className="flex items-center gap-1 font-mono font-medium text-amount-negative">
-                            <span className="text-xs text-amount-negative/70">{symbol}</span>
-                            <span>{Number(subcontract.remaining_amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                        </div>
+                        <span className="font-mono font-medium text-amount-negative">
+                            {money.format(remainingDisplayAmount)}
+                        </span>
                     </div>
                 </div>
 

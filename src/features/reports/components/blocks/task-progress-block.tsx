@@ -9,6 +9,7 @@ import type { BlockConfig } from "../../views/reports-builder-view";
 interface TaskProgressBlockProps {
     config: BlockConfig;
     organizationId: string;
+    projectId?: string | null;
 }
 
 // Mock task data

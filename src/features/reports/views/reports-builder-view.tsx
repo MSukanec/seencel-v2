@@ -9,8 +9,17 @@ import { ReportCanvas } from "../components/report-canvas";
 import { BlockConfigPanel } from "../components/block-config-panel";
 import { BlockRenderer } from "../components/block-renderer";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { Download, Eye, Trash2 } from "lucide-react";
+import { Download, Eye, Trash2, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import type { PdfGlobalTheme } from "@/features/organization/actions/pdf-settings";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 // Types
 export interface ReportBlock {
@@ -55,17 +64,31 @@ export interface BlockConfig {
     imageUrl?: string;
 }
 
-interface ReportsBuilderViewProps {
-    organizationId: string;
-    projects: { id: string; name: string; status: string }[];
+export interface CompanyInfo {
+    companyName?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    phone?: string;
+    email?: string;
 }
 
-export function ReportsBuilderView({ organizationId, projects }: ReportsBuilderViewProps) {
+export interface ReportsBuilderViewProps {
+    organizationId: string;
+    projects: { id: string; name: string; status: string }[];
+    pdfTheme?: PdfGlobalTheme;
+    logoUrl?: string | null;
+    companyInfo?: CompanyInfo;
+}
+
+export function ReportsBuilderView({ organizationId, projects, pdfTheme, logoUrl, companyInfo }: ReportsBuilderViewProps) {
     // State
     const [blocks, setBlocks] = useState<ReportBlock[]>([]);
     const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null); // Global project filter
 
     // Selected block
     const selectedBlock = blocks.find(b => b.id === selectedBlockId) || null;
@@ -264,6 +287,29 @@ export function ReportsBuilderView({ organizationId, projects }: ReportsBuilderV
             {/* Context Sidebar: Block Catalog (injected into layout's right sidebar) */}
             {!isPreviewMode && (
                 <ContextSidebar title="Bloques">
+                    {/* Global Project Selector */}
+                    <div className="mb-4 pb-4 border-b border-border/50">
+                        <Label className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5" />
+                            Filtro de Proyecto
+                        </Label>
+                        <Select
+                            value={selectedProjectId || "all"}
+                            onValueChange={(v) => setSelectedProjectId(v === "all" ? null : v)}
+                        >
+                            <SelectTrigger className="w-full h-9">
+                                <SelectValue placeholder="Todos los proyectos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los proyectos</SelectItem>
+                                {projects.map((p) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                        {p.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <BlockCatalog onAddBlock={handleAddBlock} />
                 </ContextSidebar>
             )}
@@ -288,6 +334,10 @@ export function ReportsBuilderView({ organizationId, projects }: ReportsBuilderV
                                 isPreviewMode={isPreviewMode}
                                 organizationId={organizationId}
                                 projects={projects}
+                                pdfTheme={pdfTheme}
+                                logoUrl={logoUrl}
+                                companyInfo={companyInfo}
+                                selectedProjectId={selectedProjectId}
                             />
                         </SortableContext>
                     </div>

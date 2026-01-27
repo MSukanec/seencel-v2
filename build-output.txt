@@ -1,40 +1,129 @@
-﻿Ôû▓ Next.js 16.1.1 (Turbopack)
+﻿
+> seencel-v2@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.1.1 (Turbopack)
 - Environments: .env.local
 - Experiments (use with caution):
   ┬À serverActions
 
-node.exe : ÔÜá The "middleware" file convention is 
-deprecated. Please use "proxy" instead. Learn more: 
-https://nextjs.org/docs/messages/middleware-to-proxy
-En C:\Program Files\nodejs\npx.ps1: 29 Carácter: 3
-+   & $NODE_EXE $NPX_CLI_JS $args
+node.exe : ÔÜá The "middleware" file 
+convention is deprecated. Please use "proxy" 
+instead. Learn more: https://nextjs.org/docs/
+messages/middleware-to-proxy
+En C:\Program Files\nodejs\npm.ps1: 29 
+Carácter: 3
++   & $NODE_EXE $NPM_CLI_JS $args
 +   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (ÔÜá The "middl 
-   e...leware-to-proxy:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
+    + CategoryInfo          : NotSpecified:  
+   (ÔÜá The "middle...leware-to-proxy:Strin  
+  g) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandE 
+   rror
  
   Creating an optimized production build ...
-Ô£ô Compiled successfully in 15.0s
+Ô£ô Compiled successfully in 12.1s
   Running TypeScript ...
-Failed to compile.
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/4) ...
+  Generating static pages using 15 workers (1/4) 
+  Generating static pages using 15 workers (2/4) 
+  Generating static pages using 15 workers (3/4) 
+Ô£ô Generating static pages using 15 workers (4/4) in 198.9ms
+  Finalizing page optimization ...
 
-./src/components/shared/import/import-modal.tsx:140:29
-Type error: Type '(orgId: string, value: string) => 
-Promise<{ id: string; }>' is not assignable to type '(val: 
-string) => Promise<any>'.
-  Target signature provides too few arguments. Expected 2 
-or more, but got 1.
+Route (app)
+Ôöî Ôùï /_not-found
+Ôö£ ãÆ /[locale]
+Ôö£ ãÆ /[locale]/academy/courses
+Ôö£ ãÆ /[locale]/academy/courses/[slug]
+Ôö£ ãÆ /[locale]/academy/my-courses
+Ôö£ ãÆ /[locale]/academy/my-courses/[slug]
+Ôö£ ãÆ /[locale]/academy/my-courses/[slug]/content
+Ôö£ ãÆ /[locale]/academy/my-courses/[slug]/forum
+Ôö£ ãÆ /[locale]/academy/my-courses/[slug]/notes
+Ôö£ ãÆ /[locale]/academy/my-courses/[slug]/player
+Ôö£ ãÆ /[locale]/admin
+Ôö£ ãÆ /[locale]/admin/academy
+Ôö£ ãÆ /[locale]/admin/academy/[courseId]
+Ôö£ ãÆ /[locale]/admin/academy/[courseId]/content
+Ôö£ ãÆ /[locale]/admin/academy/[courseId]/forum
+Ôö£ ãÆ /[locale]/admin/academy/[courseId]/general
+Ôö£ ãÆ /[locale]/admin/academy/[courseId]/marketing
+Ôö£ ãÆ /[locale]/admin/academy/[courseId]/testimonials
+Ôö£ ãÆ /[locale]/admin/audit-logs
+Ôö£ ãÆ /[locale]/admin/billing
+Ôö£ ãÆ /[locale]/admin/catalog
+Ôö£ ãÆ /[locale]/admin/catalog/division/[divisionId]
+Ôö£ ãÆ /[locale]/admin/catalog/element/[elementId]
+Ôö£ ãÆ /[locale]/admin/catalog/task/[taskId]
+Ôö£ ãÆ /[locale]/admin/changelog
+Ôö£ ãÆ /[locale]/admin/directory
+Ôö£ ãÆ /[locale]/admin/feedback
+Ôö£ ãÆ /[locale]/admin/finance
+Ôö£ ãÆ /[locale]/admin/hub-content
+Ôö£ ãÆ /[locale]/admin/organizations
+Ôö£ ãÆ /[locale]/admin/settings
+Ôö£ ãÆ /[locale]/admin/support
+Ôö£ ãÆ /[locale]/admin/system
+Ôö£ ãÆ /[locale]/admin/users
+Ôö£ ãÆ /[locale]/community/founders
+Ôö£ ãÆ /[locale]/community/map
+Ôö£ ãÆ /[locale]/contact
+Ôö£ ãÆ /[locale]/features
+Ôö£ ãÆ /[locale]/forgot-password
+Ôö£ ãÆ /[locale]/founders
+Ôö£ ãÆ /[locale]/hub
+Ôö£ ãÆ /[locale]/login
+Ôö£ ãÆ /[locale]/maintenance
+Ôö£ ãÆ /[locale]/offline
+Ôö£ ãÆ /[locale]/onboarding
+Ôö£ ãÆ /[locale]/organization
+Ôö£ ãÆ /[locale]/organization/advanced
+Ôö£ ãÆ /[locale]/organization/billing/checkout
+Ôö£ ãÆ /[locale]/organization/billing/founders
+Ôö£ ãÆ /[locale]/organization/billing/plans
+Ôö£ ãÆ /[locale]/organization/capital
+Ôö£ ãÆ /[locale]/organization/catalog
+Ôö£ ãÆ /[locale]/organization/catalog/task/[taskId]
+Ôö£ ãÆ /[locale]/organization/contacts
+Ôö£ ãÆ /[locale]/organization/files
+Ôö£ ãÆ /[locale]/organization/finance
+Ôö£ ãÆ /[locale]/organization/general-costs
+Ôö£ ãÆ /[locale]/organization/identity
+Ôö£ ãÆ /[locale]/organization/planner
+Ôö£ ãÆ /[locale]/organization/projects
+Ôö£ ãÆ /[locale]/organization/quotes
+Ôö£ ãÆ /[locale]/organization/quotes/[quoteId]
+Ôö£ ãÆ /[locale]/organization/reports
+Ôö£ ãÆ /[locale]/organization/settings
+Ôö£ ãÆ /[locale]/portal
+Ôö£ ãÆ /[locale]/portal/[projectId]/[clientId]
+Ôö£ ãÆ /[locale]/pricing
+Ôö£ ãÆ /[locale]/privacy
+Ôö£ ãÆ /[locale]/project/[projectId]
+Ôö£ ãÆ /[locale]/project/[projectId]/clients
+Ôö£ ãÆ /[locale]/project/[projectId]/construction-tasks
+Ôö£ ãÆ /[locale]/project/[projectId]/details
+Ôö£ ãÆ /[locale]/project/[projectId]/files
+Ôö£ ãÆ /[locale]/project/[projectId]/finance
+Ôö£ ãÆ /[locale]/project/[projectId]/health
+Ôö£ ãÆ /[locale]/project/[projectId]/materials
+Ôö£ ãÆ /[locale]/project/[projectId]/planner
+Ôö£ ãÆ /[locale]/project/[projectId]/portal
+Ôö£ ãÆ /[locale]/project/[projectId]/quotes
+Ôö£ ãÆ /[locale]/project/[projectId]/sitelog
+Ôö£ ãÆ /[locale]/project/[projectId]/subcontracts
+Ôö£ ãÆ /[locale]/project/[projectId]/subcontracts/[subcontractId]
+Ôö£ ãÆ /[locale]/projects
+Ôö£ ãÆ /[locale]/settings
+Ôö£ ãÆ /[locale]/signup
+Ôö£ ãÆ /[locale]/update-password
+Ôöö ãÆ /auth/callback
 
-[0m [90m 138 |[39m                             
-field[33m,[39m
- [90m 139 |[39m                             
-value[33m,[39m
-[31m[1m>[22m[39m[90m 140 |[39m                        
-     createAction[33m:[39m 
-column[33m.[39mforeignKey[33m.[39mcreateAction
- [90m     |[39m                             
-[31m[1m^[22m[39m
- [90m 141 |[39m                         })[33m;[39m
- [90m 142 |[39m                     }
- [90m 143 |[39m                 }[0m
-Next.js build worker exited with code: 1 and signal: null
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

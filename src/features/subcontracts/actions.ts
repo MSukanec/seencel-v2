@@ -95,7 +95,6 @@ export async function createSubcontractPaymentAction(input: z.infer<typeof creat
             notes: payload.notes,
             reference: payload.reference,
             status: payload.status,
-            functional_amount,
             created_by: user?.id
         })
         .select()
@@ -232,7 +231,6 @@ export async function updateSubcontractPaymentAction(input: z.infer<typeof updat
             notes: payload.notes,
             reference: payload.reference,
             status: payload.status,
-            functional_amount,
             updated_at: new Date().toISOString()
         })
         .eq('id', paymentId)

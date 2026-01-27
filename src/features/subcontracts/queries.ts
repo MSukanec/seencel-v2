@@ -57,30 +57,11 @@ export async function getSubcontractById(subcontractId: string) {
 export async function getSubcontractPayments(projectId: string) {
     const supabase = await createClient();
 
+    // Use the view which already includes all denormalized data
     const { data, error } = await supabase
-        .from('subcontract_payments')
-        .select(`
-            *,
-            subcontract:subcontracts(
-                id,
-                contact:contacts(
-                    full_name,
-                    company_name,
-                    image_url
-                )
-            ),
-            currency:currencies(
-                code,
-                symbol
-            ),
-            organization_wallet:organization_wallets(
-                wallet:wallets(
-                    name
-                )
-            )
-        `)
+        .from('subcontract_payments_view')
+        .select('*')
         .eq('project_id', projectId)
-        .eq('is_deleted', false) // Soft delete filter
         .order('payment_date', { ascending: false });
 
     if (error) {
@@ -88,13 +69,5 @@ export async function getSubcontractPayments(projectId: string) {
         return [];
     }
 
-    // Flatten data for the view
-    return data.map((item: any) => ({
-        ...item,
-        provider_name: item.subcontract?.contact?.full_name || item.subcontract?.contact?.company_name || 'Desconocido',
-        provider_avatar: item.subcontract?.contact?.image_url,
-        currency_code: item.currency?.code,
-        currency_symbol: item.currency?.symbol,
-        wallet_name: item.organization_wallet?.wallet?.name
-    }));
+    return data;
 }

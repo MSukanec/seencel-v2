@@ -19,6 +19,7 @@ interface TableBlockProps {
     config: BlockConfig;
     organizationId: string;
     projects: { id: string; name: string; status: string }[];
+    projectId?: string | null;
 }
 
 export function TableBlock({ config, organizationId, projects }: TableBlockProps) {

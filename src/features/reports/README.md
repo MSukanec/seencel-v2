@@ -41,11 +41,14 @@ El sistema utiliza un **patrón de Registry** que define:
 | Block Config Types | `views/reports-builder-view.tsx` | Tipos `BlockConfig` con `dataSourceId`, `dataTableId`, `dataFilters` |
 | Config Panel UI | `components/block-config-panel.tsx` | Selectores en cascada (Fuente → Tabla → Proyecto → Entidad) |
 | Table Block | `components/blocks/table-block.tsx` | Renderiza datos reales con estados de loading/error/empty |
+| **PDF Export** | `views/reports-builder-view.tsx` | Exportación a PDF usando `html2canvas` + `jsPDF` |
 
 #### Data Source: Subcontratistas → Pagos
 - **Columnas**: Fecha, Proveedor (condicional), Billetera, Monto
 - **Filtros**: Proyecto (requerido), Subcontrato (opcional, permite "Todos")
 - **Lógica**: Proveedor solo se muestra cuando hay múltiples subcontratos seleccionados
+
+> **Nota técnica**: PDF Export usa CSS variable overrides para evitar incompatibilidad de `html2canvas` con colores `lab()`/`oklch()` de Tailwind.
 
 ---
 
@@ -61,7 +64,6 @@ El sistema utiliza un **patrón de Registry** que define:
 |-----------|---------|-------------|
 | Alta | Más Data Sources | Agregar Finance, Tasks, Clients, Quotes |
 | Media | Guardar Reportes | Persistir configuraciones de bloques en DB |
-| Media | Exportar PDF | Integrar con sistema de PDF existente |
 | Baja | Columnas Personalizables | Permitir al usuario elegir qué columnas mostrar |
 | Baja | Ordenamiento | Permitir ordenar datos por columna |
 | Baja | Paginación | Agregar paginación para datasets grandes |

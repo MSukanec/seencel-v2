@@ -7,6 +7,7 @@ interface ChartBlockProps {
     type: BlockType;
     config: BlockConfig;
     organizationId: string;
+    projectId?: string | null;
 }
 
 // Mock data for demonstration

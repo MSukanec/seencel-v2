@@ -8,6 +8,7 @@ import type { BlockConfig } from "../../views/reports-builder-view";
 interface FinancialSummaryBlockProps {
     config: BlockConfig;
     organizationId: string;
+    projectId?: string | null;
 }
 
 // Mock financial data
