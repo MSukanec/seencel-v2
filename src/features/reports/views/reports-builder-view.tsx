@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ContextSidebar } from "@/providers/context-sidebar-provider";
@@ -121,12 +121,117 @@ export function ReportsBuilderView({ organizationId, projects }: ReportsBuilderV
     };
 
     // Export handler
+    const canvasRef = useRef<HTMLDivElement>(null);
+
     const handleExport = async () => {
+        if (!canvasRef.current || blocks.length === 0) {
+            toast.error("No hay bloques para exportar");
+            return;
+        }
+
         toast.info("Generando PDF...");
-        // TODO: Implement PDF export
-        setTimeout(() => {
+
+        try {
+            // Dynamic imports for code splitting
+            const html2canvas = (await import("html2canvas")).default;
+            const { jsPDF } = await import("jspdf");
+
+            // Clone the element to avoid modifying the original
+            const clone = canvasRef.current.cloneNode(true) as HTMLElement;
+
+            // Position clone off-screen but visible for rendering
+            clone.style.position = "absolute";
+            clone.style.left = "-9999px";
+            clone.style.top = "0";
+            clone.style.width = `${canvasRef.current.offsetWidth}px`;
+            clone.style.backgroundColor = "#ffffff";
+
+            // Create a container with forced safe colors via inline styles
+            // This bypasses the lab() color function issue in html2canvas
+            const container = document.createElement("div");
+            container.style.position = "absolute";
+            container.style.left = "-9999px";
+            container.style.top = "0";
+            container.style.backgroundColor = "#ffffff";
+            container.style.color = "#1a1a1a";
+
+            // Add a style element to override CSS variables with safe colors
+            const styleOverride = document.createElement("style");
+            styleOverride.textContent = `
+                * {
+                    --background: 0 0% 100% !important;
+                    --foreground: 0 0% 10% !important;
+                    --card: 0 0% 100% !important;
+                    --card-foreground: 0 0% 10% !important;
+                    --primary: 221 83% 53% !important;
+                    --primary-foreground: 0 0% 100% !important;
+                    --secondary: 0 0% 96% !important;
+                    --secondary-foreground: 0 0% 10% !important;
+                    --muted: 0 0% 96% !important;
+                    --muted-foreground: 0 0% 45% !important;
+                    --accent: 0 0% 96% !important;
+                    --accent-foreground: 0 0% 10% !important;
+                    --destructive: 0 84% 60% !important;
+                    --destructive-foreground: 0 0% 100% !important;
+                    --border: 0 0% 90% !important;
+                    --input: 0 0% 90% !important;
+                    --ring: 221 83% 53% !important;
+                }
+            `;
+            container.appendChild(styleOverride);
+            container.appendChild(clone);
+            document.body.appendChild(container);
+
+            // Wait a frame for styles to apply
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            // Render the clone to canvas
+            const canvas = await html2canvas(clone, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff",
+            });
+
+            // Clean up
+            document.body.removeChild(container);
+
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = pdfWidth - 20; // 10mm margins
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = 10; // Top margin
+
+            // First page
+            pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 20); // Account for margins
+
+            // Add more pages if needed
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight + 10;
+                pdf.addPage();
+                pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+                heightLeft -= (pdfHeight - 20);
+            }
+
+            // Download
+            const fileName = `Reporte_${new Date().toISOString().slice(0, 10)}.pdf`;
+            pdf.save(fileName);
+
             toast.success("PDF descargado correctamente");
-        }, 1500);
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            toast.error("Error al generar el PDF");
+        }
     };
 
     return (
@@ -170,7 +275,7 @@ export function ReportsBuilderView({ organizationId, projects }: ReportsBuilderV
             >
                 <div className="h-full flex gap-4">
                     {/* Main Canvas */}
-                    <div className="flex-1 overflow-auto">
+                    <div ref={canvasRef} className="flex-1 overflow-auto bg-white">
                         <SortableContext
                             items={blocks.map(b => b.id)}
                             strategy={verticalListSortingStrategy}
