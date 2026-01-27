@@ -5,15 +5,16 @@ import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts"
 import { DollarSign, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCurrencyOptional } from "@/providers/currency-context";
-import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
+import { useMoney } from "@/hooks/use-money";
 
 export function FinanceCashFlowWidget({ movements, className }: { movements: any[], className?: string }) {
     const { data, totalBalance } = useCashFlowData(movements);
-    const currencyContext = useCurrencyOptional();
+
+    // === Centralized money operations ===
+    const money = useMoney();
 
     const formatCurrency = (amount: number) => {
-        return formatCurrencyUtil(amount, currencyContext?.primaryCurrency || 'ARS');
+        return money.format(amount);
     };
 
     return (

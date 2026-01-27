@@ -15,6 +15,9 @@ export function formatCurrency(
     locale: string = 'es-AR',
     decimals: number = 2
 ): string {
+    // Protection against NaN or Infinity
+    const safeAmount = (isNaN(amount) || !isFinite(amount)) ? 0 : amount;
+
     const currencyCode = typeof currency === 'string'
         ? currency
         : currency?.code || 'ARS';
@@ -28,11 +31,11 @@ export function formatCurrency(
             currency: currencyCode,
             minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces,
-        }).format(amount);
+        }).format(safeAmount);
     } catch {
         // Fallback for invalid currency codes
         const symbol = typeof currency === 'object' ? currency?.symbol : '$';
-        return `${symbol} ${amount.toLocaleString(locale, {
+        return `${symbol} ${safeAmount.toLocaleString(locale, {
             minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces
         })}`;

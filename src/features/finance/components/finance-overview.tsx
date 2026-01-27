@@ -9,32 +9,20 @@ import { Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useCurrencyOptional } from "@/providers/currency-context";
-import { formatCurrency as formatCurrencyUtil, getAmountsByCurrency, sumMonetaryAmounts } from "@/lib/currency-utils";
+import { useMoney } from "@/hooks/use-money";
+import { getAmountsByCurrency, sumMonetaryAmounts } from "@/lib/currency-utils";
 
 interface FinanceOverviewProps {
     movements: any[];
 }
 
 export function FinanceOverview({ movements }: FinanceOverviewProps) {
-    const currencyContext = useCurrencyOptional();
-    const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
+    // === Centralized money operations ===
+    const money = useMoney();
 
+    // Use centralized formatting
     const formatCurrency = (amount: number, currencyCode?: string) => {
-        // If a specific currency code is provided, use it
-        if (currencyCode) {
-            return formatCurrencyUtil(amount, currencyCode);
-        }
-
-        // Otherwise, respect the global display preference
-        const displayCurrency = currencyContext?.displayCurrency || 'primary';
-        if (displayCurrency === 'secondary' && currencyContext?.secondaryCurrency) {
-            const converted = currencyContext.convertFromFunctional(amount, currencyContext.secondaryCurrency);
-            return formatCurrencyUtil(converted, currencyContext.secondaryCurrency);
-        }
-
-        // Default: Primary (Functional)
-        return formatCurrencyUtil(amount, currencyContext?.primaryCurrency || 'ARS');
+        return money.format(amount, currencyCode);
     };
 
     const kpis = useMemo(() => {
@@ -43,18 +31,18 @@ export function FinanceOverview({ movements }: FinanceOverviewProps) {
         const expenseMovements = movements.filter(m => Number(m.amount_sign ?? 1) < 0);
 
         // Sum amounts using functional currency (preferred) or native with conversion fallback
-        const incomeTotals = sumMonetaryAmounts(incomeMovements, primaryCurrencyCode);
-        const expenseTotals = sumMonetaryAmounts(expenseMovements, primaryCurrencyCode);
+        const incomeTotals = sumMonetaryAmounts(incomeMovements, money.primaryCurrencyCode);
+        const expenseTotals = sumMonetaryAmounts(expenseMovements, money.primaryCurrencyCode);
 
         return {
             totalIncome: incomeTotals.total,
             totalExpense: expenseTotals.total,
             balance: incomeTotals.total - expenseTotals.total,
-            incomeBreakdown: getAmountsByCurrency(incomeMovements, primaryCurrencyCode),
-            expenseBreakdown: getAmountsByCurrency(expenseMovements, primaryCurrencyCode),
-            balanceBreakdown: getAmountsByCurrency(movements, primaryCurrencyCode),
+            incomeBreakdown: getAmountsByCurrency(incomeMovements, money.primaryCurrencyCode),
+            expenseBreakdown: getAmountsByCurrency(expenseMovements, money.primaryCurrencyCode),
+            balanceBreakdown: getAmountsByCurrency(movements, money.primaryCurrencyCode),
         };
-    }, [movements, primaryCurrencyCode]);
+    }, [movements, money.primaryCurrencyCode]);
 
     return (
         <div className="space-y-8">
@@ -133,9 +121,9 @@ export function FinanceOverview({ movements }: FinanceOverviewProps) {
                                                     {isPositive ? "+" : "-"}
                                                     {formatCurrency(Number(m.amount), m.currency_code)}
                                                 </span>
-                                                {m.currency_code !== primaryCurrencyCode && m.functional_amount && (
+                                                {m.currency_code !== money.primaryCurrencyCode && Number(m.exchange_rate) && Number(m.exchange_rate) !== 1 && (
                                                     <span className="text-[10px] text-muted-foreground">
-                                                        ({formatCurrency(Number(m.functional_amount))})
+                                                        ({formatCurrency(Number(m.amount) * Number(m.exchange_rate))})
                                                     </span>
                                                 )}
                                             </div>

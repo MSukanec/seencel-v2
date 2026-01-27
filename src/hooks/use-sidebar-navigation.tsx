@@ -26,6 +26,7 @@ import {
     Banknote,
     Wallet,
     HeartPulse,
+    Handshake,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -232,7 +233,7 @@ export function useSidebarNavigation() {
                     {
                         title: 'Subcontratos',
                         href: activeProjectId ? `${projectBase}/subcontracts` : '/organization/projects',
-                        icon: Users
+                        icon: Handshake
                     },
                     {
                         title: tSidebar('items.sitelog'),

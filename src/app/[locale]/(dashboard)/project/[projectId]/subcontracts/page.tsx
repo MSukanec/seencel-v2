@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Handshake } from "lucide-react";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
@@ -65,7 +65,7 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
                 <PageWrapper
                     type="page"
                     title={t('title', { default: 'Subcontratos' })}
-                    icon={<Users />}
+                    icon={<Handshake />}
                     className="h-full"
                     tabs={
                         <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">

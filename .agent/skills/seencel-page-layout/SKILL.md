@@ -265,3 +265,110 @@ pathnames: {
 7.  **Link de next/link**: Usar `import Link from "next/link"` en lugar de `import { Link } from "@/i18n/routing"`. 🚨
 8.  **hrefs con locale**: Escribir hrefs como `/${locale}/ruta` en lugar de solo `/ruta`.
 
+---
+
+## ⚡ 10. Performance Patterns (OBLIGATORIO)
+
+### 10.1 Optimistic UI (Delete/Archive)
+
+**Hook:** `@/hooks/use-optimistic-list`
+
+```tsx
+import { useOptimisticList } from "@/hooks/use-optimistic-list";
+
+const { optimisticItems, removeOptimistically } = useOptimisticList(items);
+
+const handleDelete = async (id: string) => {
+    removeOptimistically(id); // Item desaparece INSTANTÁNEAMENTE
+    const result = await deleteAction(id);
+    if (!result.success) router.refresh(); // Rollback en error
+};
+
+<DataTable data={optimisticItems} />
+```
+
+> ⚠️ **REGLA**: NUNCA mostrar loading spinner para delete. El item debe desaparecer inmediatamente.
+
+### 10.2 Lazy Loading (Charts)
+
+**Ubicación:** `@/components/charts/lazy-charts.tsx`
+
+```tsx
+// ❌ INCORRECTO - Carga bundle completo de Recharts
+import { BaseAreaChart } from "@/components/charts/area/base-area-chart";
+
+// ✅ CORRECTO - Lazy load de ~200KB solo cuando se renderiza
+import { LazyAreaChart as BaseAreaChart } from "@/components/charts/lazy-charts";
+```
+
+**Componentes Lazy Disponibles:**
+- `LazyAreaChart`, `LazyDualAreaChart`
+- `LazyBarChart`, `LazyPieChart`, `LazyDonutChart`
+- `LazyLineChart`
+
+> **REGLA**: SIEMPRE usar versiones lazy para charts en dashboards.
+
+### 10.3 Navegación de Tabs (Cambio Instantáneo)
+
+**Problema:** `router.replace()` causa re-fetch completo = LENTO.
+
+```tsx
+// ❌ INCORRECTO - Causa re-fetch completo
+const handleTabChange = (value: string) => {
+    router.replace(`${pathname}?view=${value}`);
+};
+
+// ✅ CORRECTO - Cambio de tab instantáneo
+const [activeTab, setActiveTab] = useState(defaultTab);
+
+const handleTabChange = (value: string) => {
+    setActiveTab(value); // Update UI instantáneo
+    window.history.replaceState(null, '', `${pathname}?view=${value}`); // Shallow URL
+};
+
+<Tabs value={activeTab} onValueChange={handleTabChange}>
+```
+
+### 10.4 React Query (Caching)
+
+**Hooks:**
+- `@/hooks/use-query-patterns` - Query keys estandarizadas
+- `@/hooks/use-smart-refresh` - Patrón híbrido de refresh
+
+```tsx
+import { useSmartRefresh } from "@/hooks/use-smart-refresh";
+import { queryKeys } from "@/hooks/use-query-patterns";
+
+const { invalidate, refresh } = useSmartRefresh();
+
+// Después de mutación:
+invalidate(queryKeys.clients(projectId)); // Invalidar cache específico
+```
+
+### 10.5 Duraciones de Animación
+
+**Estándar:** `duration-150` (150ms) para animaciones de sidebar/drawer.
+
+> **REGLA**: NUNCA usar `duration-300` para animaciones de navegación. Se siente lento.
+
+---
+
+## ✅ Checklist Final
+
+### Estructura
+- [ ] `page.tsx` exporta `generateMetadata`
+- [ ] Tabs en prop `tabs` de PageWrapper
+- [ ] Views en archivos `*-view.tsx`
+- [ ] Toolbar con `portalToHeader` en vistas de listado
+
+### i18n
+- [ ] Textos en `messages/es.json`
+- [ ] Link importado de `@/i18n/routing`
+- [ ] hrefs sin prefijo de locale
+- [ ] Rutas registradas en `routing.ts`
+
+### Performance
+- [ ] Delete usa `useOptimisticList`
+- [ ] Charts usan componentes `Lazy*`
+- [ ] Tab switching usa estado local
+- [ ] Animaciones `duration-150` o más rápidas

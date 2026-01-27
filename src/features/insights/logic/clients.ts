@@ -2,7 +2,7 @@ import { Insight, InsightContext } from "../types";
 import { allInsightRules } from "./rules";
 import { upsellLiquidityInsight, cashFlowRiskInsight } from "./real-estate-rules";
 import { ClientFinancialSummary, ClientPaymentView } from "@/features/clients/types";
-import { MonetaryItem } from "@/hooks/use-smart-currency";
+import { MoneyInput } from "@/lib/money";
 
 // Helper Interface for KPI structure needed
 export interface KPISummary {
@@ -24,7 +24,7 @@ interface ClientInsightsContext {
     currentRate: number;
     secondaryCurrencyCode?: string;
     // NEW: Smart calculation helper
-    calculateDisplayAmount: (item: MonetaryItem) => number;
+    calculateDisplayAmount: (item: MoneyInput) => number;
 }
 
 export function generateClientInsights(context: ClientInsightsContext): Insight[] {
@@ -34,7 +34,8 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
         kpis,
         formatCurrency,
         calculateDisplayAmount,
-        primaryCurrencyCode
+        primaryCurrencyCode,
+        currentRate
     } = context;
 
     const manualInsights: Insight[] = [];
@@ -49,8 +50,8 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
 
         const val = calculateDisplayAmount({
             amount: s.balance_due,
-            functional_amount: s.functional_balance_due,
-            currency_code: s.currency_code
+            currency_code: s.currency_code,
+            exchange_rate: currentRate
         });
 
         acc[s.client_id] += val;
@@ -111,8 +112,8 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
         const month = p.payment_month || p.payment_date.substring(0, 7);
         const val = calculateDisplayAmount({
             amount: Number(p.amount),
-            functional_amount: Number(p.functional_amount),
-            currency_code: p.currency_code
+            currency_code: p.currency_code,
+            exchange_rate: Number(p.exchange_rate) || currentRate
         });
 
         monthlyGroups[month] = (monthlyGroups[month] || 0) + val;
@@ -128,8 +129,8 @@ export function generateClientInsights(context: ClientInsightsContext): Insight[
         const name = p.client_name || "Desconocido";
         const val = calculateDisplayAmount({
             amount: Number(p.amount),
-            functional_amount: Number(p.functional_amount),
-            currency_code: p.currency_code
+            currency_code: p.currency_code,
+            exchange_rate: Number(p.exchange_rate) || currentRate
         });
         clientConcentrationMap[name] = (clientConcentrationMap[name] || 0) + val;
     });

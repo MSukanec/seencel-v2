@@ -27,7 +27,7 @@ export interface MonetaryAmount {
     functionalAmount?: number; // Pre-calculated amount in functional currency
 }
 
-export type DisplayCurrency = 'primary' | 'secondary' | 'both';
+export type DisplayCurrency = 'primary' | 'secondary' | 'both' | 'mix';
 
 export interface CurrencyContextValue {
     // Organization's configured currencies

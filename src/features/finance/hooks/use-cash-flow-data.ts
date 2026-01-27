@@ -26,8 +26,8 @@ export function useCashFlowData(movements: any[], days = 14) {
             const date = m.payment_date?.split('T')[0];
             if (result.has(date)) {
                 const entry = result.get(date)!;
-                // Prefer functional_amount if available, else fallback to amount
-                const rawAmount = Number(m.functional_amount ?? m.amount);
+                // Standard 3.4.4: Calculate functional amount dynamically
+                const rawAmount = Number(m.amount) * (Number(m.exchange_rate) || 1);
                 const sign = Number(m.amount_sign ?? 1);
                 const signedAmount = rawAmount * sign;
 
@@ -43,7 +43,8 @@ export function useCashFlowData(movements: any[], days = 14) {
 
     const totalBalance = useMemo(() => {
         return movements.reduce((acc, m) => {
-            const rawAmount = Number(m.functional_amount ?? m.amount);
+            // Standard 3.4.4: Calculate functional amount dynamically
+            const rawAmount = Number(m.amount) * (Number(m.exchange_rate) || 1);
             const sign = Number(m.amount_sign ?? 1);
             return acc + (rawAmount * sign);
         }, 0);

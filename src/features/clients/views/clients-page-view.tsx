@@ -2,13 +2,19 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Handshake, FilterX } from "lucide-react";
+import { Banknote, FilterX } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { useCurrency } from "@/providers/currency-context";
+import { useFinancialFeatures } from "@/hooks/use-financial-features";
+import { useMoney } from "@/hooks/use-money";
+import type { DisplayMode } from "@/lib/money/money";
 
 import { ProjectClientView, ClientFinancialSummary, ClientPaymentView, ClientRole, OrganizationFinancialData } from "@/features/clients/types";
 import { ClientsOverview } from "./clients-overview-view";
@@ -56,6 +62,67 @@ export function ClientsPageClient({
     const pathname = usePathname();
 
     const currentTab = searchParams.get("view") || defaultTab;
+
+    // --- CURRENCY TOOLBAR STATE (Usando SOLO useMoney) ---
+    const { primaryCurrency, secondaryCurrency } = useCurrency();
+    const { showCurrencySelector } = useFinancialFeatures();
+    const money = useMoney();
+
+    // Map between UI tabs and DisplayMode
+    type CurrencyViewMode = 'mix' | 'primary' | 'secondary';
+
+    const modeToView = (mode: DisplayMode): CurrencyViewMode => {
+        if (mode === 'mix') return 'mix';
+        if (mode === 'secondary') return 'secondary';
+        return 'primary'; // functional -> primary
+    };
+
+    const viewToMode = (view: CurrencyViewMode): DisplayMode => {
+        if (view === 'mix') return 'mix';
+        if (view === 'secondary') return 'secondary';
+        return 'functional'; // primary -> functional
+    };
+
+    const currencyMode = modeToView(money.displayMode);
+
+    const handleCurrencyModeChange = (mode: CurrencyViewMode) => {
+        money.setDisplayMode(viewToMode(mode));
+    };
+
+    // Date range filter
+    const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
+
+    // Filter payments by date range for overview
+    const filteredPayments = useMemo(() => {
+        if (!dateRange?.from && !dateRange?.to) return payments;
+        return payments.filter(p => {
+            const paymentDate = new Date(p.payment_date);
+            if (dateRange?.from && paymentDate < dateRange.from) return false;
+            if (dateRange?.to && paymentDate > dateRange.to) return false;
+            return true;
+        });
+    }, [payments, dateRange]);
+
+    // Currency mode selector element (for Toolbar)
+    const currencyModeSelector = showCurrencySelector && secondaryCurrency ? (
+        <Tabs
+            value={currencyMode}
+            onValueChange={(v) => handleCurrencyModeChange(v as CurrencyViewMode)}
+            className="h-9"
+        >
+            <TabsList className="h-9 grid grid-cols-3 w-auto">
+                <TabsTrigger value="mix" className="text-xs px-3">
+                    Mix
+                </TabsTrigger>
+                <TabsTrigger value="primary" className="text-xs px-3">
+                    {primaryCurrency?.code || 'ARS'}
+                </TabsTrigger>
+                <TabsTrigger value="secondary" className="text-xs px-3">
+                    {secondaryCurrency.code}
+                </TabsTrigger>
+            </TabsList>
+        </Tabs>
+    ) : null;
 
     // --- HEALTH FILTER STATE ---
     const [healthFilterActive, setHealthFilterActive] = useState(false);
@@ -117,7 +184,7 @@ export function ClientsPageClient({
                 type="page"
                 title="Compromisos y Pagos"
                 tabs={tabs}
-                icon={<Handshake />}
+                icon={<Banknote />}
             >
                 <ContentLayout variant="wide" className="pb-6">
                     {/* DATA HEALTH BANNER */}
@@ -151,7 +218,21 @@ export function ClientsPageClient({
                     )}
 
                     <TabsContent value="overview" className="m-0 focus-visible:outline-none">
-                        <ClientsOverview summary={financialSummary} payments={payments} />
+                        {/* Portal toolbar to header for Overview tab */}
+                        <Toolbar
+                            portalToHeader={true}
+                            leftActions={
+                                <>
+                                    {currencyModeSelector}
+                                    <DateRangeFilter
+                                        title="Período"
+                                        value={dateRange}
+                                        onChange={(value) => setDateRange(value)}
+                                    />
+                                </>
+                            }
+                        />
+                        <ClientsOverview summary={financialSummary} payments={filteredPayments} />
                     </TabsContent>
                     <TabsContent value="list" className="m-0 h-full focus-visible:outline-none">
                         <ClientsListTable

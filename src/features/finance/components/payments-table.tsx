@@ -21,8 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
 import { useModal } from "@/providers/modal-store";
 
-import { useCurrencyOptional } from "@/providers/currency-context";
-import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
+import { useMoney } from "@/hooks/use-money";
 
 import {
     AlertDialog,
@@ -44,10 +43,10 @@ interface PaymentsTableProps {
 }
 
 export function PaymentsTable({ data, concepts, wallets, currencies, organizationId }: PaymentsTableProps) {
-    const currencyContext = useCurrencyOptional();
     const { openModal, closeModal } = useModal();
-    const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
-    const decimalPlaces = currencyContext?.decimalPlaces ?? 2;
+
+    // === Centralized money operations ===
+    const money = useMoney();
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState<GeneralCostPaymentView | null>(null);
@@ -75,11 +74,9 @@ export function PaymentsTable({ data, concepts, wallets, currencies, organizatio
         });
     }, [data, dateRange]);
 
+    // Use centralized formatting
     const formatCurrency = (amount: number, currencyCode?: string) => {
-        if (currencyCode) {
-            return formatCurrencyUtil(amount, currencyCode, 'es-AR', decimalPlaces);
-        }
-        return formatCurrencyUtil(amount, primaryCurrencyCode, 'es-AR', decimalPlaces);
+        return money.format(amount, currencyCode);
     };
 
     const handleOpenForm = (payment?: GeneralCostPaymentView) => {

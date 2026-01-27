@@ -10,9 +10,7 @@ import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Wallet, ArrowU
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
-import { useSmartCurrency } from "@/hooks/use-smart-currency";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
-import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
 import { useCurrency } from "@/providers/currency-context";
 import { useFinancialFeatures } from "@/hooks/use-financial-features";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { generateFinanceInsights } from "@/features/insights/logic/finance";
 import { InsightCard } from "@/features/insights/components/insight-card";
 import { Lightbulb } from "lucide-react";
+import { useMoney } from "@/hooks/use-money";
+import type { DisplayMode } from "@/lib/money";
 import type { CurrencyViewMode } from "./finance-page-client";
 
 interface FinancesOverviewViewProps {
@@ -31,16 +31,12 @@ interface FinancesOverviewViewProps {
 }
 
 export function FinancesOverviewView({ movements, wallets = [], currencyMode: externalCurrencyMode }: FinancesOverviewViewProps) {
-    const {
-        calculateDisplayAmount,
-        sumDisplayAmounts,
-        displayCurrencyCode,
-        isSecondaryDisplay,
-        currentRate,
-        primaryCurrencyCode
-    } = useSmartCurrency();
+    // === NEW: Centralized money operations ===
+    const money = useMoney();
 
-    const displayCurrency = isSecondaryDisplay ? 'secondary' : 'primary';
+    // Derived values from money hook
+    const displayCurrency = money.displayMode === 'secondary' ? 'secondary' : 'primary';
+    const isSecondaryDisplay = money.displayMode === 'secondary';
 
     const {
         allCurrencies,
@@ -128,7 +124,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
             );
         }
 
-        const formattedValue = formatCurrencyUtil(primaryValue, displayCurrencyCode, 'es-AR', decimalPlaces);
+        const formattedValue = money.format(primaryValue);
         return (
             <div className="flex flex-col">
                 <FinancialValueDisplay value={formattedValue} size="large" compact />
@@ -137,122 +133,46 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
     };
 
     // ========================================
-    // KPI CALCULATIONS (using calculateDisplayAmount for proper currency conversion)
+    // KPI CALCULATIONS (using centralized MoneyService)
+    // Standard: All financial calculations go through lib/money
     // ========================================
     const kpis = useMemo(() => {
-        let totalIngresos = 0;
-        let totalEgresos = 0;
-
-        movements.forEach(m => {
-            const amount = calculateDisplayAmount({
-                amount: Number(m.amount) || 0,
-                currency_code: m.currency_code,
-                exchange_rate: Number(m.exchange_rate) || undefined
-            });
-            const sign = Number(m.amount_sign ?? 1);
-            if (sign > 0) {
-                totalIngresos += amount;
-            } else {
-                totalEgresos += amount;
-            }
-        });
-
-        const balance = totalIngresos - totalEgresos;
-
-        // Breakdown by currency
-        const calculateBreakdown = (
-            items: { amount: number, functional: number, currencyCode?: string, symbol?: string, sign: number }[],
-            filterSign?: number
-        ): CurrencyBreakdownItem[] => {
-            const filtered = filterSign !== undefined
-                ? items.filter(i => i.sign === filterSign)
-                : items;
-
-            const grouped = filtered.reduce((acc, item) => {
-                const code = item.currencyCode || primaryCurrencyCode;
-                if (!acc[code]) {
-                    acc[code] = {
-                        currencyCode: code,
-                        symbol: item.symbol || '$',
-                        nativeTotal: 0,
-                        functionalTotal: 0,
-                        isPrimary: code === primaryCurrencyCode
-                    };
-                }
-                acc[code].nativeTotal += Number(item.amount) || 0;
-                acc[code].functionalTotal += Number(item.functional) || 0;
-                return acc;
-            }, {} as Record<string, CurrencyBreakdownItem>);
-
-            return Object.values(grouped)
-                .filter(g => g.nativeTotal !== 0)
-                .sort((a, b) => {
-                    if (a.isPrimary) return -1;
-                    if (b.isPrimary) return 1;
-                    return a.currencyCode.localeCompare(b.currencyCode);
-                });
-        };
-
-        const allItems = movements.map(m => ({
-            amount: Number(m.amount),
-            functional: Number(m.functional_amount) || Number(m.amount),
-            currencyCode: m.currency_code,
-            symbol: m.currency_symbol,
-            sign: Number(m.amount_sign ?? 1)
+        // Transform movements to the format expected by the centralized KPI calculator
+        const kpiMovements = movements.map(m => ({
+            amount: m.amount,
+            currency_code: m.currency_code,
+            exchange_rate: m.exchange_rate,
+            amount_sign: m.amount_sign,
+            payment_date: m.payment_date,
+            wallet_id: m.wallet_id,
         }));
 
-        const ingresosBreakdown = calculateBreakdown(allItems, 1);
-        const egresosBreakdown = calculateBreakdown(allItems, -1);
+        // Use centralized KPI calculator
+        const result = money.calculateKPIs(kpiMovements);
 
-        // Monthly average
-        const monthsWithMovements = new Set(movements.map(m =>
-            m.payment_date ? m.payment_date.substring(0, 7) : ''
-        )).size || 1;
-
-        const monthlyAverage = totalIngresos / monthsWithMovements;
-
-        // Trend calculation
-        const movementsByMonth = movements.reduce((acc, m) => {
-            const month = m.payment_date ? m.payment_date.substring(0, 7) : '';
-            if (!month) return acc;
-
-            const sign = Number(m.amount_sign ?? 1);
-            const amount = calculateDisplayAmount({
-                amount: Number(m.amount) || 0,
-                currency_code: m.currency_code,
-                exchange_rate: Number(m.exchange_rate) || undefined
-            });
-
-            if (!acc[month]) acc[month] = { ingresos: 0, egresos: 0 };
-            if (sign > 0) {
-                acc[month].ingresos += amount;
-            } else {
-                acc[month].egresos += amount;
-            }
-            return acc;
-        }, {} as Record<string, { ingresos: number, egresos: number }>);
-
-        const now = new Date();
-        const thisMonth = now.toISOString().slice(0, 7);
-        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonth = lastMonthDate.toISOString().slice(0, 7);
-
-        const thisMonthIngresos = movementsByMonth[thisMonth]?.ingresos || 0;
-        const lastMonthIngresos = movementsByMonth[lastMonth]?.ingresos || 0;
-        const trendPercent = lastMonthIngresos > 0 ? ((thisMonthIngresos - lastMonthIngresos) / lastMonthIngresos * 100) : 0;
+        // Map breakdown to CurrencyBreakdownItem format expected by DashboardKpiCard
+        const mapBreakdown = (breakdown: typeof result.ingresosBreakdown): CurrencyBreakdownItem[] => {
+            return breakdown.map(b => ({
+                currencyCode: b.currencyCode,
+                symbol: b.symbol,
+                nativeTotal: b.nativeTotal,
+                functionalTotal: b.nativeTotal * (b.isPrimary ? 1 : money.config.currentExchangeRate),
+                isPrimary: b.isPrimary,
+            }));
+        };
 
         return {
-            totalIngresos,
-            totalEgresos,
-            balance,
-            monthlyAverage,
-            trendPercent,
-            trendDirection: trendPercent > 0 ? "up" : trendPercent < 0 ? "down" : "neutral" as "up" | "down" | "neutral",
-            ingresosBreakdown,
-            egresosBreakdown,
-            totalMovements: movements.length
+            totalIngresos: result.totalIngresos,
+            totalEgresos: result.totalEgresos,
+            balance: result.balance,
+            monthlyAverage: result.monthlyAverage,
+            trendPercent: result.trendPercent,
+            trendDirection: result.trendDirection,
+            ingresosBreakdown: mapBreakdown(result.ingresosBreakdown),
+            egresosBreakdown: mapBreakdown(result.egresosBreakdown),
+            totalMovements: result.totalMovements,
         };
-    }, [movements, primaryCurrencyCode, calculateDisplayAmount]);
+    }, [movements, money]);
 
     // ========================================
     // CHART DATA: EVOLUTION (Ingresos vs Egresos)
@@ -263,7 +183,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
             if (!monthKey) return acc;
 
             const sign = Number(m.amount_sign ?? 1);
-            const amount = calculateDisplayAmount({
+            const amount = money.calculateDisplayAmount({
                 amount: Number(m.amount) || 0,
                 currency_code: m.currency_code,
                 exchange_rate: Number(m.exchange_rate) || undefined
@@ -298,7 +218,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                 egresos: data.egresos
             };
         });
-    }, [movements, calculateDisplayAmount]);
+    }, [movements, money]);
 
     const evolutionChartConfig: ChartConfig = {
         ingresos: { label: "Ingresos", color: "var(--amount-positive)" },
@@ -317,7 +237,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
         // Calculate balance per wallet (ingresos - egresos)
         const walletBalances = movements.reduce((acc, m) => {
             const walletName = getWalletName(m.wallet_id);
-            const baseAmount = calculateDisplayAmount({
+            const baseAmount = money.calculateDisplayAmount({
                 amount: Number(m.amount) || 0,
                 currency_code: m.currency_code,
                 exchange_rate: Number(m.exchange_rate) || undefined
@@ -342,7 +262,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                 value: value as number,
                 fill: colors[i % colors.length]
             }));
-    }, [movements, wallets, calculateDisplayAmount]);
+    }, [movements, wallets, money]);
 
     const distributionChartConfig: ChartConfig = distributionData.reduce((acc, item) => {
         acc[item.name] = { label: item.name, color: item.fill };
@@ -370,13 +290,13 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
     // INSIGHTS
     // ========================================
     const insights = useMemo(() => {
-        const formatForInsights = (amount: number) => formatCurrencyUtil(amount, displayCurrencyCode, 'es-AR', decimalPlaces);
+        const formatForInsights = (amount: number) => money.format(amount);
 
         return generateFinanceInsights({
             movements: movements.map(m => ({
                 id: m.id,
                 payment_date: m.payment_date,
-                amount: calculateDisplayAmount({
+                amount: money.calculateDisplayAmount({
                     amount: Number(m.amount) || 0,
                     currency_code: m.currency_code,
                     exchange_rate: Number(m.exchange_rate) || undefined
@@ -388,7 +308,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
             wallets,
             formatCurrency: formatForInsights
         });
-    }, [movements, wallets, displayCurrencyCode, decimalPlaces, calculateDisplayAmount]);
+    }, [movements, wallets, money]);
 
     // ========================================
     // RENDER
@@ -402,7 +322,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                     title="Ingresos Totales"
                     value={isMixView && kpis.ingresosBreakdown.length === 1
                         ? `${kpis.ingresosBreakdown[0].symbol} ${formatNumber(kpis.ingresosBreakdown[0].nativeTotal)}`
-                        : formatCurrencyUtil(kpis.totalIngresos, displayCurrencyCode, 'es-AR', decimalPlaces)
+                        : money.format(kpis.totalIngresos)
                     }
                     icon={<TrendingUp className="h-5 w-5" />}
                     iconClassName="bg-amount-positive/10 text-amount-positive"
@@ -421,7 +341,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                     title="Egresos Totales"
                     value={isMixView && kpis.egresosBreakdown.length === 1
                         ? `${kpis.egresosBreakdown[0].symbol} ${formatNumber(kpis.egresosBreakdown[0].nativeTotal)}`
-                        : formatCurrencyUtil(kpis.totalEgresos, displayCurrencyCode, 'es-AR', decimalPlaces)
+                        : money.format(kpis.totalEgresos)
                     }
                     icon={<TrendingDown className="h-5 w-5" />}
                     iconClassName="bg-amount-negative/10 text-amount-negative"
@@ -434,7 +354,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                 {/* 3. Balance Neto */}
                 <DashboardKpiCard
                     title="Balance Neto"
-                    value={`${kpis.balance >= 0 ? "+" : ""}${formatCurrencyUtil(kpis.balance, displayCurrencyCode, 'es-AR', decimalPlaces)}`}
+                    value={money.formatWithSign(kpis.balance)}
                     icon={<Wallet className="h-5 w-5" />}
                     iconClassName={kpis.balance >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
                     description="Ingresos - Egresos"
@@ -446,7 +366,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                 {/* 4. Promedio Mensual */}
                 <DashboardKpiCard
                     title="Promedio Mensual"
-                    value={formatCurrencyUtil(kpis.monthlyAverage, displayCurrencyCode, 'es-AR', decimalPlaces)}
+                    value={money.format(kpis.monthlyAverage)}
                     icon={<Activity className="h-5 w-5" />}
                     description="Ingreso promedio / mes"
                     size="hero"
@@ -474,7 +394,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                             config={evolutionChartConfig}
                             gradient
                             showLegend
-                            tooltipFormatter={(value) => formatCurrencyUtil(value, displayCurrencyCode, 'es-AR', 0)}
+                            tooltipFormatter={(value) => money.format(value)}
                         />
                     ) : (
                         <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
@@ -490,26 +410,15 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                     icon={<PieChart className="w-4 h-4" />}
                 >
                     {distributionData.length > 0 ? (
-                        <div className="flex flex-col items-center gap-4">
-                            <BaseDonutChart
-                                data={distributionData}
-                                nameKey="name"
-                                valueKey="value"
-                                height={160}
-                                config={distributionChartConfig}
-                            />
-                            <div className="w-full space-y-1.5">
-                                {distributionData.slice(0, 4).map((item, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-sm">
-                                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.fill }} />
-                                        <span className="flex-1 truncate text-muted-foreground text-xs">{item.name}</span>
-                                        <span className="font-medium text-xs">{formatCurrencyUtil(item.value, displayCurrencyCode, 'es-AR', 0)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <BaseDonutChart
+                            data={distributionData}
+                            nameKey="name"
+                            valueKey="value"
+                            height={200}
+                            config={distributionChartConfig}
+                        />
                     ) : (
-                        <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
                             Sin datos de movimientos
                         </div>
                     )}
@@ -530,7 +439,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                             cellSize={14}
                             cellGap={3}
                             showLegend={false}
-                            valueFormatter={(v) => formatCurrencyUtil(v, displayCurrencyCode, 'es-AR', 0)}
+                            valueFormatter={(v) => money.format(v)}
                         />
                     ) : (
                         <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
@@ -551,7 +460,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
                     {insights.length > 0 ? (
                         <div className="space-y-2">
                             {insights.map((insight) => (
-                                <InsightCard key={insight.id} insight={insight} compact />
+                                <InsightCard key={insight.id} insight={insight} />
                             ))}
                         </div>
                     ) : (
@@ -619,7 +528,7 @@ export function FinancesOverviewView({ movements, wallets = [], currencyMode: ex
             {insights.length > 0 && (
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     {insights.slice(0, 3).map(insight => (
-                        <InsightCard key={insight.id} insight={insight} compact />
+                        <InsightCard key={insight.id} insight={insight} />
                     ))}
                 </div>
             )}

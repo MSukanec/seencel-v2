@@ -15,12 +15,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
-import { useSmartCurrency } from "@/hooks/use-smart-currency";
 import { useFormatCurrency } from "@/hooks/use-format-currency";
-import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
 import { useCurrency } from "@/providers/currency-context";
 import { useCurrencyOptional } from "@/providers/currency-context";
 import { useFinancialFeatures } from "@/hooks/use-financial-features";
+import { useMoney } from "@/hooks/use-money";
+import { sumMoney, calculateDisplayAmount as calcDisplayAmount } from "@/lib/money/money-service";
+import { createMoney } from "@/lib/money/money";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -30,26 +31,28 @@ interface ClientsOverviewProps {
 }
 
 export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
-    const {
-        calculateDisplayAmount,
-        sumDisplayAmounts,
-        displayCurrencyCode,
-        isSecondaryDisplay,
-        currentRate,
-        primaryCurrencyCode
-    } = useSmartCurrency();
+    // === Centralized money operations ===
+    const money = useMoney();
 
-    // Derived for compatibility
-    const displayCurrency = isSecondaryDisplay ? 'secondary' : 'primary';
+    // Derived values from money hook (compatibility aliases)
+    const calculateDisplayAmount = money.calculateDisplayAmount;
+    const displayCurrencyCode = money.displayCurrencyCode;
+    const isSecondaryDisplay = money.displayMode === 'secondary';
+    const currentRate = money.config.currentExchangeRate;
+    const primaryCurrencyCode = money.primaryCurrencyCode;
+
+    // Sum helper using money
+    const sumDisplayAmounts = <T extends { amount: number; currency_code?: string | null; exchange_rate?: number | null }>(items: T[]): number => {
+        return money.sum(items).total;
+    };
 
     // We still need context for specific currency objects (symbol etc) for breakdowns
     const {
         allCurrencies,
-        setDisplayCurrency,
         primaryCurrency: primaryCurrencyObj,
         secondaryCurrency: secondaryCurrencyObj,
-        currentExchangeRate: marketRate
-    } = useCurrency(); // Explicit useCurrency instead of optional for robust logic
+        currentExchangeRate: marketRate,
+    } = useCurrency();
 
     // Decimal-aware formatting
     const { formatNumber, decimalPlaces } = useFormatCurrency();
@@ -69,20 +72,9 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
         return allCurrencies.find(c => !c.is_default);
     }, [allCurrencies, functionalCurrencyId]);
 
-    // Local State for View Mode: 'mix' (Breakdown) vs 'ref' (Reference Total)
-    const [viewMode, setViewMode] = useState<'mix' | 'ref'>('mix');
-
-    // Enforce "Ref" View logic if we are in that mode
-    useEffect(() => {
-        if (showCurrencySelector && referenceCurrency && displayCurrency !== 'secondary') {
-            if (viewMode === 'ref') {
-                setDisplayCurrency('secondary');
-            }
-        }
-    }, [showCurrencySelector, referenceCurrency, displayCurrency, setDisplayCurrency, viewMode]);
-
-    const isMixView = viewMode === 'mix';
-    const isReferenceView = viewMode === 'ref';
+    // View mode controlled by useMoney (synced with toolbar via setDisplayMode)
+    const isMixView = money.displayMode === 'mix';
+    const isReferenceView = money.displayMode === 'secondary';
 
     // Helper to render value based on view mode
     const renderFinancialValue = (
@@ -130,7 +122,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
         return (
             <div className="flex flex-col">
                 <span className={mainValueClass}>
-                    {formatCurrencyUtil(primaryValue, isReferenceView && referenceCurrency ? referenceCurrency.code : primaryCurrencyObj?.code, 'es-AR', decimalPlaces)}
+                    {money.format(primaryValue, isReferenceView && referenceCurrency ? referenceCurrency.code : primaryCurrencyObj?.code)}
                 </span>
             </div>
         );
@@ -144,9 +136,9 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     const dominantCurrencyCode = useMemo(() => {
         if (!summary || summary.length === 0) return primaryCurrencyCode;
 
-        // Find the summary item with the highest functional committed amount
+        // Find the summary item with the highest committed amount
         const dominant = summary.reduce((prev, current) => {
-            return (current.total_functional_committed_amount > prev.total_functional_committed_amount)
+            return (current.total_committed_amount > prev.total_committed_amount)
                 ? current
                 : prev;
         }, summary[0]);
@@ -154,33 +146,57 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
         return dominant.currency_code || primaryCurrencyCode;
     }, [summary, primaryCurrencyCode]);
 
+    // Secondary currency code for comparisons
+    const secondaryCurrencyCode = money.config.secondaryCurrencyCode;
+
     // ========================================
+    // EFFECTIVE DISPLAY MODE FOR CALCULATIONS
+    // ========================================
+    // In Mix mode, we use the dominant currency for all calculations
+    // This ensures charts and totals are comparable (same currency unit)
+    const effectiveDisplayMode = useMemo(() => {
+        if (money.displayMode === 'mix') {
+            // In mix mode, convert everything to the dominant currency
+            return dominantCurrencyCode === secondaryCurrencyCode ? 'secondary' : 'functional';
+        }
+        return money.displayMode;
+    }, [money.displayMode, dominantCurrencyCode, secondaryCurrencyCode]);
+
     // KPI CALCULATIONS
     // ========================================
     const kpis = useMemo(() => {
-        // Calculate Totals using Smart Logic (Hook)
+        // Calculate Totals using Money Service with EFFECTIVE display mode
+        // In Mix mode, this uses the dominant currency for calculations
+        const config = money.config;
 
-        // Committed: Map summary to MonetaryItem interface
-        const totalCommitted = sumDisplayAmounts(summary.map(s => ({
-            amount: s.total_committed_amount,
-            functional_amount: s.total_functional_committed_amount,
-            currency_code: s.currency_code
-        })));
+        // Committed: Use exchange_rate from summary (stored at commitment time)
+        const committedResult = sumMoney(
+            summary.map(s => ({
+                amount: s.total_committed_amount,
+                currency_code: s.currency_code,
+                exchange_rate: Number(s.commitment_exchange_rate) || currentRate
+            })),
+            effectiveDisplayMode,
+            config
+        );
+        const totalCommitted = committedResult.total;
 
         // Paid: Map payments to MonetaryItem interface
-        const totalPaid = sumDisplayAmounts(payments.map(p => ({
-            amount: Number(p.amount),
-            functional_amount: Number(p.functional_amount),
-            currency_code: p.currency_code
-        })));
+        const paidResult = sumMoney(
+            payments.map(p => ({
+                amount: Number(p.amount),
+                currency_code: p.currency_code,
+                exchange_rate: Number(p.exchange_rate) || currentRate
+            })),
+            effectiveDisplayMode,
+            config
+        );
+        const totalPaid = paidResult.total;
 
-        // Balance: Use FUNCTIONAL values for correct cross-currency calculation
-        // The functional_balance_due is already converted to reference currency in the DB
-        // This prevents mixing ARS and USD without conversion
-        const totalBalance = summary.reduce((acc, s) => {
-            // Always use functional_balance_due for the consolidated number
-            return acc + (s.functional_balance_due ?? 0);
-        }, 0);
+        // Balance: Simple arithmetic - committed minus paid (both already converted)
+        // This is the correct approach because totalCommitted and totalPaid are already
+        // normalized to the display currency, so balance = committed - paid
+        const totalBalance = totalCommitted - totalPaid;
 
 
         // ========================================
@@ -225,21 +241,21 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
         const committedBreakdown = calculateBreakdown(summary.map(s => ({
             amount: s.total_committed_amount,
-            functional: s.total_functional_committed_amount,
+            functional: s.total_committed_amount, // Will be recalculated by view if needed
             currencyCode: s.currency_code || undefined,
             symbol: s.currency_symbol || undefined
         })));
 
         const paidBreakdown = calculateBreakdown(payments.map(p => ({
             amount: p.amount,
-            functional: p.functional_amount || p.amount,
+            functional: p.amount * (Number(p.exchange_rate) || 1),
             currencyCode: p.currency_code || undefined,
             symbol: p.currency_symbol || undefined
         })));
 
         const balanceBreakdown = calculateBreakdown(summary.map(s => ({
             amount: s.balance_due,
-            functional: s.functional_balance_due,
+            functional: s.balance_due, // No conversion needed for breakdown display
             currencyCode: s.currency_code || undefined,
             symbol: s.currency_symbol || undefined
         })));
@@ -250,9 +266,13 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             p.payment_month || (p.payment_date ? p.payment_date.substring(0, 7) : '')
         )).size || 1;
 
-        // Calculate total paid using functional amounts (already converted to reference currency)
+        // Calculate total paid using display amount logic
         const totalPaidFunctional = payments.reduce((acc, p) => {
-            return acc + (Number(p.functional_amount) || 0);
+            return acc + calculateDisplayAmount({
+                amount: Number(p.amount),
+                currency_code: p.currency_code,
+                exchange_rate: Number(p.exchange_rate) || 1
+            });
         }, 0);
 
         const monthlyAverage = totalPaidFunctional / (monthsWithPayments || 1);
@@ -265,8 +285,8 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
             const val = calculateDisplayAmount({
                 amount: Number(p.amount),
-                functional_amount: Number(p.functional_amount),
-                currency_code: p.currency_code
+                currency_code: p.currency_code,
+                exchange_rate: Number(p.exchange_rate) || 1
             });
 
             acc[month] = (acc[month] || 0) + val;
@@ -294,24 +314,26 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             balanceBreakdown,
             dominantCurrencyCode // Export this for UI usage
         };
-    }, [summary, payments, sumDisplayAmounts, calculateDisplayAmount, primaryCurrencyCode]);
+    }, [summary, payments, effectiveDisplayMode, money.config, calculateDisplayAmount, primaryCurrencyCode, currentRate]);
 
     // ========================================
     // CHART DATA: PAYMENT EVOLUTION + BALANCE
     // ========================================
     const evolutionData = useMemo(() => {
-        // Total committed amount across all summary items
+        const config = money.config;
+
+        // Total committed amount across all summary items (using effective mode)
         const totalCommitted = summary.reduce((acc, s) => {
-            // Use the display amount logic to handle multi-currency
-            const val = calculateDisplayAmount({
+            const moneyItem = createMoney({
                 amount: Number(s.total_committed_amount),
-                functional_amount: Number(s.total_functional_committed_amount) || null, // Use actual functional amount
-                currency_code: s.currency_code
-            });
+                currency_code: s.currency_code,
+                exchange_rate: Number(s.commitment_exchange_rate) || currentRate
+            }, config);
+            const val = calcDisplayAmount(moneyItem, effectiveDisplayMode, config);
             return acc + val;
         }, 0);
 
-        // Group payments by month
+        // Group payments by month (using effective mode)
         const grouped = payments.reduce((acc, p) => {
             let monthKey = "";
             if (p.payment_month) {
@@ -321,11 +343,12 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             }
 
             if (monthKey) {
-                const val = calculateDisplayAmount({
+                const moneyItem = createMoney({
                     amount: Number(p.amount),
-                    functional_amount: Number(p.functional_amount),
-                    currency_code: p.currency_code
-                });
+                    currency_code: p.currency_code,
+                    exchange_rate: Number(p.exchange_rate) || currentRate
+                }, config);
+                const val = calcDisplayAmount(moneyItem, effectiveDisplayMode, config);
                 acc[monthKey] = (acc[monthKey] || 0) + val;
             }
             return acc;
@@ -356,7 +379,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                 balance: Math.max(0, balance) // Saldo pendiente (decreases as you pay)
             };
         });
-    }, [payments, summary, calculateDisplayAmount]);
+    }, [payments, summary, effectiveDisplayMode, money.config, currentRate]);
 
     // Custom colors for this specific chart using centralized financial variables
     const evolutionChartConfig: ChartConfig = {
@@ -368,13 +391,15 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // CHART DATA: CLIENT DISTRIBUTION
     // ========================================
     const distributionData = useMemo(() => {
+        const config = money.config;
         const clientTotals = payments.reduce((acc, p) => {
             const clientName = p.client_name || "Desconocido";
-            const val = calculateDisplayAmount({
+            const moneyItem = createMoney({
                 amount: Number(p.amount),
-                functional_amount: Number(p.functional_amount),
-                currency_code: p.currency_code
-            });
+                currency_code: p.currency_code,
+                exchange_rate: Number(p.exchange_rate) || currentRate
+            }, config);
+            const val = calcDisplayAmount(moneyItem, effectiveDisplayMode, config);
 
             acc[clientName] = (acc[clientName] || 0) + val;
             return acc;
@@ -390,7 +415,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                 value,
                 fill: colors[i % colors.length]
             }));
-    }, [payments, calculateDisplayAmount]);
+    }, [payments, effectiveDisplayMode, money.config, currentRate]);
 
     const distributionChartConfig: ChartConfig = distributionData.reduce((acc, item, i) => {
         acc[item.name] = { label: item.name, color: item.fill };
@@ -408,8 +433,8 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             payments: payments,
             kpis: kpis,
             primaryCurrencyCode: primaryCurrencyCode || 'USD',
-            displayCurrency: displayCurrency as 'primary' | 'secondary',
-            formatCurrency: (amount, code) => formatCurrencyUtil(amount, code || displayCurrencyCode, 'es-AR', decimalPlaces),
+            displayCurrency: money.displayMode === 'secondary' ? 'secondary' : 'primary',
+            formatCurrency: (amount, code) => money.format(amount, code || displayCurrencyCode),
             currentRate: currentRate || 1,
             secondaryCurrencyCode: secondaryCurrencyObj?.code,
             calculateDisplayAmount
@@ -417,7 +442,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
         // Filter out dismissed insights
         return rawInsights.filter(insight => !dismissedIds.has(insight.id));
-    }, [summary, payments, kpis, primaryCurrencyCode, displayCurrency, displayCurrencyCode, currentRate, secondaryCurrencyObj?.code, calculateDisplayAmount, dismissedIds]);
+    }, [summary, payments, kpis, primaryCurrencyCode, money.displayMode, displayCurrencyCode, currentRate, secondaryCurrencyObj?.code, calculateDisplayAmount, dismissedIds, money]);
 
 
     // --- 8. ACTION HANDLERS ---
@@ -439,161 +464,64 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // ========================================
     return (
         <div className="space-y-6">
-            {/* ROW 1: Unified Financial Summary (MIGRATED TO DASHBOARD CARD) */}
-            <DashboardCard
-                title="Resumen Financiero"
-                description="Balance general y estado de cuentas"
-                icon={<Wallet className="w-5 h-5" />}
-                headerAction={
-                    showCurrencySelector && referenceCurrency && (
-                        <div className="flex items-center gap-2">
-                            <Tabs
-                                value={viewMode}
-                                onValueChange={(v) => setViewMode(v as any)}
-                                className="h-8"
-                            >
-                                <TabsList className="h-9 grid w-[200px] grid-cols-2">
-                                    <TabsTrigger value="mix" className="text-xs">
-                                        Mix Real
-                                    </TabsTrigger>
-                                    <TabsTrigger value="ref" className="text-xs">
-                                        Ref: {referenceCurrency.code}
-                                    </TabsTrigger>
-                                </TabsList>
-                            </Tabs>
-                        </div>
-                    )
-                }
-            >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 py-2">
-                    {/* 1. Compromisos */}
-                    <div className="space-y-2">
-                        <div className="h-6 flex items-center">
-                            <p className="text-sm font-medium text-muted-foreground">Compromisos Totales</p>
-                        </div>
-                        <div className="min-h-[3rem] flex items-center">
-                            {renderFinancialValue(kpis.totalCommitted, kpis.committedBreakdown)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">Valor total de contratos</p>
-                    </div>
+            {/* ROW 1: KPI Grid - 2x2 on mobile, 1x4 on desktop (Idéntico a Finanzas) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 1. Compromisos Totales */}
+                <DashboardKpiCard
+                    title="Compromisos Totales"
+                    value={isMixView && kpis.committedBreakdown.length === 1
+                        ? `${kpis.committedBreakdown[0].symbol} ${formatNumber(kpis.committedBreakdown[0].nativeTotal)}`
+                        : money.format(kpis.totalCommitted)
+                    }
+                    icon={<FileText className="h-5 w-5" />}
+                    iconClassName="bg-primary/10 text-primary"
+                    description="Valor total de contratos"
+                    currencyBreakdown={isMixView && kpis.committedBreakdown.length > 1 ? kpis.committedBreakdown : undefined}
+                    size="hero"
+                    compact
+                />
 
-                    {/* 2. Cobrado */}
-                    <div className="space-y-2">
-                        <div className="h-6 flex items-center justify-between">
-                            <p className="text-sm font-medium text-muted-foreground">Cobrado a la Fecha</p>
-                            {kpis.trendPercent !== 0 && (
-                                <span className={cn(
-                                    "text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1",
-                                    kpis.trendDirection === "up" ? "bg-emerald-500/10 text-emerald-600" : "bg-destructive/10 text-destructive"
-                                )}>
-                                    {kpis.trendDirection === "up" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                    {Math.abs(kpis.trendPercent).toFixed(0)}%
-                                </span>
-                            )}
-                        </div>
-                        <div className="min-h-[3rem] flex items-center">
-                            {renderFinancialValue(kpis.totalPaid, kpis.paidBreakdown)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">Ingresos reales</p>
-                    </div>
+                {/* 2. Cobrado a la Fecha */}
+                <DashboardKpiCard
+                    title="Cobrado a la Fecha"
+                    value={isMixView && kpis.paidBreakdown.length === 1
+                        ? `${kpis.paidBreakdown[0].symbol} ${formatNumber(kpis.paidBreakdown[0].nativeTotal)}`
+                        : money.format(kpis.totalPaid)
+                    }
+                    icon={<TrendingUp className="h-5 w-5" />}
+                    iconClassName="bg-amount-positive/10 text-amount-positive"
+                    description="Ingresos reales"
+                    trend={kpis.trendPercent !== 0 ? {
+                        value: `${Math.abs(kpis.trendPercent).toFixed(0)}%`,
+                        direction: kpis.trendDirection as "up" | "down" | "neutral"
+                    } : undefined}
+                    currencyBreakdown={isMixView && kpis.paidBreakdown.length > 1 ? kpis.paidBreakdown : undefined}
+                    size="hero"
+                    compact
+                />
 
-                    {/* 3. Saldo */}
-                    <div className="space-y-2">
-                        <div className="h-6 flex items-center">
-                            <p className="text-sm font-medium text-muted-foreground">{balanceTitle}</p>
-                        </div>
-                        <div className="min-h-[3rem] flex items-center">
-                            {(() => {
-                                const positiveItem = kpis.balanceBreakdown.find(i => i.nativeTotal > 0);
-                                const negativeItem = kpis.balanceBreakdown.find(i => i.nativeTotal < 0);
-                                const hasCrossCurrencyMix = isMixView && !!positiveItem && !!negativeItem && positiveItem.currencyCode !== negativeItem.currencyCode;
+                {/* 3. Saldo / Balance */}
+                <DashboardKpiCard
+                    title={balanceTitle}
+                    value={money.formatWithSign(kpis.totalBalance)}
+                    icon={<Wallet className="h-5 w-5" />}
+                    iconClassName={kpis.totalBalance >= 0 ? "bg-primary/10 text-primary" : "bg-amount-negative/10 text-amount-negative"}
+                    description={balanceSubtitle}
+                    size="hero"
+                    compact
+                    className={kpis.totalBalance >= 0 ? "" : "[&_h2]:text-amount-negative"}
+                />
 
-                                if (hasCrossCurrencyMix && positiveItem) {
-                                    // Cross-Currency Case: Debt in A, Credit in B.
-                                    // Goal: Show Net Balance in Debt Currency (A).
-
-                                    // Use global exchangeRate (Market Rate) not display rate (which is 1 in Primary View)
-                                    // If Debt is Primary (e.g. ARS) and we have Ref (USD) available
-                                    if (positiveItem.isPrimary) {
-                                        // TRUE NOMINAL BALANCE CALCULATION
-                                        // Goal: Calculate how much ARS is pending based on historical payments.
-                                        // 1. Start with Total Committed ARS
-                                        const totalCommittedARS = positiveItem.nativeTotal; // Assumption: Commitment is fully in ARS if nativeTotal > 0 and it's the only positive item? 
-                                        // Actually positiveItem.nativeTotal from 'balanceBreakdown' is simply (Committed - PaidSameCurrency). 
-                                        // It does not account for PaidOtherCurrency.
-                                        // So we need to reconstruct: Balance = CommittedARS - Sum(All Payments converted to ARS).
-
-                                        // We can find Total Committed in this currency from 'committedBreakdown'
-                                        const committedItem = kpis.committedBreakdown.find(c => c.currencyCode === positiveItem.currencyCode);
-                                        const initialDebt = committedItem ? committedItem.nativeTotal : 0;
-
-                                        // Calculate Total Paid converted to this currency (Historic)
-                                        const totalPaidConverted = payments.reduce((acc, p) => {
-                                            // 1. Payment in same currency (ARS)
-                                            if (p.currency_code === positiveItem.currencyCode) {
-                                                return acc + Number(p.amount);
-                                            }
-                                            // 2. Payment in Reference/Other (USD) -> Convert to ARS
-                                            // Rule: We need the rate used at moment of payment. 
-                                            // stored 'exchange_rate' is (ARS per USD).
-                                            // If p is USD, ARS = p.amount * p.exchange_rate
-                                            if (p.exchange_rate) {
-                                                if (p.currency_code !== positiveItem.currencyCode) {
-                                                    return acc + (Number(p.amount) * Number(p.exchange_rate));
-                                                }
-                                            }
-                                            return acc;
-                                        }, 0);
-
-                                        const trueNominalBalance = initialDebt - totalPaidConverted;
-
-                                        return (
-                                            <div className="flex flex-col">
-                                                <span className="text-3xl font-bold tracking-tight">
-                                                    {formatCurrencyUtil(trueNominalBalance, primaryCurrencyCode, 'es-AR', decimalPlaces)}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground italic">(Nominal Histórico)</span>
-                                            </div>
-                                        );
-                                    }
-
-                                    // If Debt is Secondary/Ref, just show the Net Functional directly
-                                    if (!positiveItem.isPrimary) {
-                                        return (
-                                            <div className="flex flex-col">
-                                                <span className="text-3xl font-bold tracking-tight">
-                                                    {formatCurrencyUtil(kpis.totalBalance, positiveItem.currencyCode, 'es-AR', decimalPlaces)}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground italic">(Neto)</span>
-                                            </div>
-                                        );
-                                    }
-                                }
-
-                                return renderFinancialValue(kpis.totalBalance, kpis.balanceBreakdown);
-                            })()}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            {balanceSubtitle}
-                        </p>
-                    </div>
-
-                    {/* 4. Promedio */}
-                    <div className="space-y-2">
-                        <div className="h-6 flex items-center">
-                            <p className="text-sm font-medium text-muted-foreground">Promedio Mensual</p>
-                        </div>
-                        <div className="min-h-[3rem] flex items-center">
-                            <div className="flex flex-col">
-                                <span className="text-3xl font-bold tracking-tight">
-                                    {formatCurrencyUtil(kpis.monthlyAverage, kpis.dominantCurrencyCode || secondaryCurrencyObj?.code || referenceCurrency?.code || primaryCurrencyCode, 'es-AR', decimalPlaces)}
-                                </span>
-                            </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Ingreso promedio / mes</p>
-                    </div>
-                </div>
-            </DashboardCard>
+                {/* 4. Promedio Mensual */}
+                <DashboardKpiCard
+                    title="Promedio Mensual"
+                    value={money.format(kpis.monthlyAverage)}
+                    icon={<Activity className="h-5 w-5" />}
+                    description="Ingreso promedio / mes"
+                    size="hero"
+                    compact
+                />
+            </div>
 
             {/* ROW 2: Charts */}
             <div className="grid gap-6 lg:grid-cols-2">
@@ -628,24 +556,15 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                     icon={<PieChart className="w-4 h-4" />}
                 >
                     {distributionData.length > 0 ? (
-                        <div className="flex items-center gap-4">
-                            <BaseDonutChart
-                                data={distributionData}
-                                nameKey="name"
-                                valueKey="value"
-                                height={200}
-                                config={distributionChartConfig}
-                            />
-                            <div className="flex-1 space-y-2">
-                                {distributionData.map((item, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-sm">
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
-                                        <span className="flex-1 truncate text-muted-foreground">{item.name}</span>
-                                        <span className="font-medium">{formatCurrencyUtil(item.value, displayCurrencyCode, 'es-AR', decimalPlaces)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <BaseDonutChart
+                            data={distributionData}
+                            nameKey="name"
+                            valueKey="value"
+                            height={200}
+                            config={distributionChartConfig}
+                            legendFormatter={(val) => money.format(val)}
+                            tooltipFormatter={(val) => money.format(val)}
+                        />
                     ) : (
                         <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
                             Sin datos de clientes
@@ -688,28 +607,39 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                 >
                     {recentActivity.length > 0 ? (
                         <div className="space-y-4">
-                            {recentActivity.map((payment, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                    <Avatar className="h-9 w-9">
-                                        <AvatarImage src={payment.client_avatar_url || undefined} />
-                                        <AvatarFallback className="text-xs">
-                                            {(payment.client_name || "?")[0]}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">
-                                            {payment.client_name || "Cliente desconocido"}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {formatDistanceToNow(new Date(payment.payment_date), { addSuffix: true, locale: es })}
-                                        </p>
+                            {recentActivity.map((payment, i) => {
+                                const hasCreatorAvatar = payment.creator_avatar_url;
+                                const creatorInitial = payment.creator_full_name?.charAt(0)?.toUpperCase() || '?';
+
+                                return (
+                                    <div key={i} className="flex items-center gap-3">
+                                        {/* Creator Avatar (como en Finanzas) */}
+                                        {hasCreatorAvatar ? (
+                                            <img
+                                                src={payment.creator_avatar_url || undefined}
+                                                alt={payment.creator_full_name || 'Usuario'}
+                                                className="h-9 w-9 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                                                {creatorInitial}
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">
+                                                {payment.client_name || "Pago registrado"}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {payment.creator_full_name && <span>{payment.creator_full_name} · </span>}
+                                                {formatDistanceToNow(new Date(payment.payment_date), { addSuffix: true, locale: es })}
+                                            </p>
+                                        </div>
+                                        <span className="text-sm font-semibold text-amount-positive">
+                                            +{payment.currency_symbol || "$"} {Number(payment.amount).toLocaleString('es-AR')}
+                                        </span>
                                     </div>
-                                    <span className="text-sm font-semibold text-amount-positive">
-                                        {/* Activity stays as original usually */}
-                                        +{payment.currency_symbol || "$"} {Number(payment.amount).toLocaleString('es-AR')}
-                                    </span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">

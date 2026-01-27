@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ViewFormFooter } from "@/components/shared/forms/view-form-footer";
 import { DetailField, DetailGrid, DetailSection } from "@/components/shared/forms/detail-field";
 import { AttachmentList, AttachmentItem } from "@/components/shared/attachments/attachment-list";
-import { useCurrencyOptional } from "@/providers/currency-context";
-import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
+import { useMoney } from "@/hooks/use-money";
 import { cn } from "@/lib/utils";
 import { getMovementAttachments, getAttachmentUrl } from "@/features/finance/actions";
 import {
@@ -39,8 +38,8 @@ export function MovementDetailModal({
     onEdit,
     onClose
 }: MovementDetailModalProps) {
-    const currencyContext = useCurrencyOptional();
-    const decimalPlaces = currencyContext?.decimalPlaces ?? 2;
+    // === Centralized money operations ===
+    const money = useMoney();
 
     // Attachments state
     const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -61,13 +60,9 @@ export function MovementDetailModal({
         return url;
     };
 
+    // Use centralized formatting
     const formatCurrency = (amount: number, currencyCode?: string) => {
-        return formatCurrencyUtil(
-            amount,
-            currencyCode || currencyContext?.primaryCurrency?.code || 'ARS',
-            'es-AR',
-            decimalPlaces
-        );
+        return money.format(amount, currencyCode);
     };
 
     const getMovementTypeLabel = (type: string) => {

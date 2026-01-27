@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useModal } from "@/providers/modal-store";
 import { QuoteForm } from "../forms/quote-form";
-import { formatCurrency } from "@/lib/currency-utils";
+import { useMoney } from "@/hooks/use-money";
 import { deleteQuote } from "../../actions";
 import { toast } from "sonner";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
@@ -59,6 +59,7 @@ export function QuotesList({
 }: QuotesListProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
+    const money = useMoney();
     const [searchQuery, setSearchQuery] = useState("");
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -283,7 +284,7 @@ export function QuotesList({
                                     {/* Total */}
                                     <div className="text-right min-w-[120px]">
                                         <p className="text-lg font-semibold">
-                                            {formatCurrency(quote.total_with_tax || 0)}
+                                            {money.format(quote.total_with_tax || 0)}
                                         </p>
                                         <p className="text-xs text-muted-foreground">Total</p>
                                     </div>

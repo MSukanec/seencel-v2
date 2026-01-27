@@ -209,15 +209,14 @@ const createCommitmentSchema = clientCommitmentSchema.omit({
     created_at: true,
     updated_at: true,
     is_deleted: true,
-    created_by: true,
-    functional_amount: true
+    created_by: true
 }).extend({
     // Allow strings for form handling, convert to numbers
     amount: z.union([z.string(), z.number()]).transform(val => Number(val)),
     exchange_rate: z.union([z.string(), z.number()]).optional().transform(val => val ? Number(val) : 1),
     currency_code: z.string().optional(),
     unit_name: z.string().nullable(),
-    concept: z.string().nullable(), // Was unit_description
+    concept: z.string().nullable(),
     description: z.string().nullable(),
 });
 
@@ -285,12 +284,7 @@ export async function createCommitmentAction(input: z.infer<typeof createCommitm
 
     if (!currencyCode) throw new Error("Error al validar la moneda del compromiso.");
 
-    // Latam Rule: Only USD is treated as foreign for functional calc
-    const isUSD = currencyCode === 'USD';
-    const functional_amount = isUSD
-        ? payload.amount * (payload.exchange_rate || 1)
-        : payload.amount;
-
+    // Insert commitment - functional_amount is calculated dynamically in views/frontend
     const { data, error } = await supabase
         .from('client_commitments')
         .insert({
@@ -303,8 +297,7 @@ export async function createCommitmentAction(input: z.infer<typeof createCommitm
             commitment_method: payload.commitment_method,
             unit_name: payload.unit_name,
             concept: payload.concept,
-            description: payload.description,
-            functional_amount
+            description: payload.description
         })
         .select()
         .single();
@@ -391,11 +384,8 @@ export async function updateCommitmentAction(input: z.infer<typeof updateCommitm
     // 3. Calc Functional Amount
     const newAmount = payload.amount ?? currentCommitment.amount;
     const newRate = payload.exchange_rate ?? currentCommitment.exchange_rate ?? 1;
-    const isUSD = currencyCode === 'USD';
 
-    // Latam rule
-    const functional_amount = isUSD ? newAmount * newRate : newAmount;
-
+    // Update commitment - functional amount calculated dynamically
     const { data, error } = await supabase
         .from('client_commitments')
         .update({
@@ -406,8 +396,7 @@ export async function updateCommitmentAction(input: z.infer<typeof updateCommitm
             unit_name: payload.unit_name,
             concept: payload.concept,
             description: payload.description,
-            client_id: payload.client_id, // Allow reassigning? schema permits.
-            functional_amount,
+            client_id: payload.client_id,
             updated_at: new Date().toISOString()
         })
         .eq('id', commitmentId)
@@ -520,12 +509,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
         throw new Error("Error al validar la moneda: No se pudo obtener información de la divisa.");
     }
 
-    // 2. Calculate functional amount logic (Latam Rule)
-    const isUSD = currencyCode === 'USD';
-    const functional_amount = isUSD
-        ? payload.amount * (payload.exchange_rate || 1)
-        : payload.amount;
-
+    // Insert payment - functional amount calculated dynamically in views/frontend
     const { data, error } = await supabase
         .from('client_payments')
         .insert({
@@ -541,8 +525,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
             payment_date: payload.payment_date,
             notes: payload.notes,
             reference: payload.reference,
-            status: payload.status,
-            functional_amount
+            status: payload.status
         })
         .select()
         .single();
@@ -725,21 +708,12 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
 
     if (!currencyCode) throw new Error("Error al validar moneda durante actualización.");
 
-    // 3. Calculate new functional amount (Latam Rule)
-    const newAmount = payload.amount ?? currentPayment.amount;
-    const newRate = payload.exchange_rate ?? currentPayment.exchange_rate ?? 1;
-
-    // Only multiply if it's USD
-    const isUSD = currencyCode === 'USD';
-    const functional_amount = isUSD
-        ? newAmount * newRate
-        : newAmount;
-
+    // Update payment - functional amount calculated dynamically
     const { data, error } = await supabase
         .from('client_payments')
         .update({
             project_id: payload.project_id,
-            organization_id: payload.organization_id, // Usually shouldn't change, but consistent with schema
+            organization_id: payload.organization_id,
             wallet_id: payload.wallet_id,
             client_id: payload.client_id,
             commitment_id: payload.commitment_id,
@@ -751,7 +725,6 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
             notes: payload.notes,
             reference: payload.reference,
             status: payload.status,
-            functional_amount,
             updated_at: new Date().toISOString()
         })
         .eq('id', paymentId)

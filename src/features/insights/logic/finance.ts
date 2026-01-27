@@ -20,7 +20,8 @@ export interface FinanceMovement {
     id: string;
     payment_date: string;
     amount: number;
-    functional_amount?: number;
+    exchange_rate?: number;
+    currency_code?: string;
     amount_sign: number; // 1 = income, -1 = expense
     wallet_id?: string;
     movement_type?: string;
@@ -35,6 +36,7 @@ export interface FinanceInsightsContext {
     movements: FinanceMovement[];
     wallets: WalletInfo[];
     formatCurrency: (amount: number) => string;
+    currentRate?: number; // Current exchange rate for conversions
 }
 
 // =============================================
@@ -79,7 +81,7 @@ export function generateFinanceInsights(context: FinanceInsightsContext): Insigh
     let totalEgresos = 0;
 
     movements.forEach(m => {
-        const amount = Math.abs(Number(m.functional_amount || m.amount) || 0);
+        const amount = Math.abs(Number(m.amount) || 0);
         if (m.amount_sign === 1) {
             totalIngresos += amount;
         } else {
@@ -130,7 +132,7 @@ export function generateFinanceInsights(context: FinanceInsightsContext): Insigh
     const walletBalances: Record<string, number> = {};
     movements.forEach(m => {
         const walletName = getWalletName(m.wallet_id, wallets);
-        const amount = Number(m.functional_amount || m.amount) || 0;
+        const amount = Number(m.amount) || 0;
         const signedAmount = amount * (m.amount_sign || 1);
         walletBalances[walletName] = (walletBalances[walletName] || 0) + signedAmount;
     });
@@ -235,7 +237,7 @@ export function generateFinanceInsights(context: FinanceInsightsContext): Insigh
     movements.forEach(m => {
         if (m.amount_sign === -1) {
             const month = m.payment_date.substring(0, 7);
-            const amount = Math.abs(Number(m.functional_amount || m.amount) || 0);
+            const amount = Math.abs(Number(m.amount) || 0);
             monthlyEgresos[month] = (monthlyEgresos[month] || 0) + amount;
         }
     });
@@ -270,7 +272,7 @@ export function generateFinanceInsights(context: FinanceInsightsContext): Insigh
     movements.forEach(m => {
         if (m.amount_sign === -1) {
             const type = getMovementTypeLabel(m.movement_type || '');
-            const amount = Math.abs(Number(m.functional_amount || m.amount) || 0);
+            const amount = Math.abs(Number(m.amount) || 0);
             egresosByType[type] = (egresosByType[type] || 0) + amount;
         }
     });
@@ -299,7 +301,7 @@ export function generateFinanceInsights(context: FinanceInsightsContext): Insigh
     movements.forEach(m => {
         if (m.amount_sign === 1) {
             const type = getMovementTypeLabel(m.movement_type || '');
-            const amount = Math.abs(Number(m.functional_amount || m.amount) || 0);
+            const amount = Math.abs(Number(m.amount) || 0);
             ingresosByType[type] = (ingresosByType[type] || 0) + amount;
         }
     });
@@ -333,7 +335,7 @@ export function generateFinanceInsights(context: FinanceInsightsContext): Insigh
         if (!monthlyData[month]) {
             monthlyData[month] = { ingresos: 0, egresos: 0 };
         }
-        const amount = Math.abs(Number(m.functional_amount || m.amount) || 0);
+        const amount = Math.abs(Number(m.amount) || 0);
         if (m.amount_sign === 1) {
             monthlyData[month].ingresos += amount;
         } else {

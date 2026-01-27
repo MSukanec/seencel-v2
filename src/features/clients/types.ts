@@ -108,10 +108,9 @@ export const clientCommitmentSchema = z.object({
     exchange_rate: z.number().positive(),
     commitment_method: z.enum([COMMITMENT_METHOD.FIXED]).default(COMMITMENT_METHOD.FIXED),
     unit_name: z.string().nullable(),
-    concept: z.string().nullable(), // Was unit_description
+    concept: z.string().nullable(),
     description: z.string().nullable(),
     created_by: z.string().uuid().nullable(),
-    functional_amount: z.number().nullable(),
     created_at: z.string(),
     updated_at: z.string(),
     is_deleted: z.boolean().default(false),
@@ -162,7 +161,7 @@ export const clientPaymentSchema = z.object({
     amount: z.number().positive(),
     currency_id: z.string().uuid(),
     exchange_rate: z.number().nullable(),
-    payment_date: z.string(), // date string
+    payment_date: z.string(),
     notes: z.string().nullable(),
     reference: z.string().nullable(),
     status: z.enum([
@@ -172,7 +171,6 @@ export const clientPaymentSchema = z.object({
         PAYMENT_STATUS.VOID
     ]).default(PAYMENT_STATUS.CONFIRMED),
     created_by: z.string().uuid().nullable(),
-    functional_amount: z.number().nullable(),
     created_at: z.string().nullable(),
     updated_at: z.string(),
     is_deleted: z.boolean().default(false).nullable(),
@@ -198,6 +196,9 @@ export const clientPaymentViewSchema = clientPaymentSchema.extend({
     currency_code: z.string().nullable(),
     commitment_concept: z.string().nullable(),
     schedule_notes: z.string().nullable(),
+    // Creator info (from organization_members -> users)
+    creator_full_name: z.string().nullable(),
+    creator_avatar_url: z.string().nullable(),
 });
 
 export type ClientPaymentView = z.infer<typeof clientPaymentViewSchema>;
@@ -210,15 +211,13 @@ export const clientFinancialSummarySchema = z.object({
     client_id: z.string().uuid(),
     project_id: z.string().uuid(),
     organization_id: z.string().uuid(),
-    currency_id: z.string().uuid().nullable(), // View has left join, could be null if no currency? But cross join suggests valid.
+    currency_id: z.string().uuid().nullable(),
     currency_code: z.string().nullable(),
     currency_symbol: z.string().nullable(),
     total_committed_amount: z.number(),
     total_paid_amount: z.number(),
     balance_due: z.number(),
-    total_functional_committed_amount: z.number(),
-    total_functional_paid_amount: z.number(),
-    functional_balance_due: z.number(),
+    commitment_exchange_rate: z.number().nullable(), // Exchange rate from commitments
 });
 
 export type ClientFinancialSummary = z.infer<typeof clientFinancialSummarySchema>;

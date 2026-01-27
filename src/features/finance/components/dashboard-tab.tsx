@@ -6,8 +6,8 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { InsightCard } from "@/features/insights/components/insight-card";
 import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock, BarChart3, Lightbulb } from "lucide-react";
 import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
-import { useCurrencyOptional } from "@/providers/currency-context";
-import { formatCurrency as formatCurrencyUtil, getAmountsByCurrency } from "@/lib/currency-utils";
+import { useMoney } from "@/hooks/use-money";
+import { getAmountsByCurrency } from "@/lib/currency-utils";
 
 interface DashboardTabProps {
     data: EnhancedDashboardData;
@@ -16,16 +16,17 @@ interface DashboardTabProps {
 
 export function DashboardTab({ data, payments }: DashboardTabProps) {
     const { kpis, charts, insights, recentActivity } = data;
-    const currencyContext = useCurrencyOptional();
-    const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
+
+    // === Centralized money operations ===
+    const money = useMoney();
 
     const formatCurrency = (amount: number) => {
-        return formatCurrencyUtil(amount, currencyContext?.primaryCurrency || 'ARS');
+        return money.format(amount);
     };
 
     // Calculate currency breakdown for expenses
     const expensePayments = payments || recentActivity;
-    const expenseBreakdown = getAmountsByCurrency(expensePayments as any, primaryCurrencyCode);
+    const expenseBreakdown = getAmountsByCurrency(expensePayments as any, money.primaryCurrencyCode);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
@@ -124,7 +125,7 @@ export function DashboardTab({ data, payments }: DashboardTabProps) {
                     ) : (
                         <div className="space-y-2">
                             {insights.map(insight => (
-                                <InsightCard key={insight.id} insight={insight} compact />
+                                <InsightCard key={insight.id} insight={insight} />
                             ))}
                         </div>
                     )}

@@ -13,7 +13,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatCurrency } from "@/lib/currency-utils";
 
 export interface CommitmentCardData {
     id: string;

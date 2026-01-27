@@ -11,9 +11,8 @@ import { Plus, Banknote, Wallet, TrendingUp, TrendingDown, FileSpreadsheet } fro
 import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useCurrencyOptional } from "@/providers/currency-context";
-import { formatCurrency as formatCurrencyUtil } from "@/lib/currency-utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useMoney } from "@/hooks/use-money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { useModal } from "@/providers/modal-store";
 import { MovementDetailModal } from "../modals/movement-detail-modal";
@@ -27,10 +26,10 @@ interface FinancesMovementsViewProps {
 }
 
 export function FinancesMovementsView({ movements, wallets = [], projects = [], showProjectColumn = false }: FinancesMovementsViewProps) {
-    const currencyContext = useCurrencyOptional();
     const { openModal, closeModal } = useModal();
-    const primaryCurrencyCode = currencyContext?.primaryCurrency?.code || 'ARS';
-    const decimalPlaces = currencyContext?.decimalPlaces ?? 2;
+
+    // === Centralized money operations ===
+    const money = useMoney();
 
     // Date range filter state
     const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
@@ -54,11 +53,9 @@ export function FinancesMovementsView({ movements, wallets = [], projects = [], 
         });
     }, [movements, dateRange]);
 
+    // Use centralized formatting from useMoney()
     const formatCurrency = (amount: number, currencyCode?: string) => {
-        if (currencyCode) {
-            return formatCurrencyUtil(amount, currencyCode, 'es-AR', decimalPlaces);
-        }
-        return formatCurrencyUtil(amount, primaryCurrencyCode, 'es-AR', decimalPlaces);
+        return money.format(amount, currencyCode);
     };
 
     const getWalletName = (walletId: string) => {
@@ -272,28 +269,24 @@ export function FinancesMovementsView({ movements, wallets = [], projects = [], 
         { label: "Anulado", value: "void" },
     ];
 
-    // Calculate KPI values
+    // Calculate KPI values using centralized MoneyService
     const kpiData = useMemo(() => {
-        let ingresos = 0;
-        let egresos = 0;
+        const kpiMovements = filteredMovements.map(m => ({
+            amount: m.amount,
+            currency_code: m.currency_code,
+            exchange_rate: m.exchange_rate,
+            amount_sign: m.amount_sign,
+        }));
 
-        filteredMovements.forEach(m => {
-            const amount = Number(m.functional_amount || m.amount) || 0;
-            const sign = Number(m.amount_sign ?? 1);
-            if (sign > 0) {
-                ingresos += amount;
-            } else {
-                egresos += amount;
-            }
-        });
+        const result = money.calculateKPIs(kpiMovements);
 
         return {
-            ingresos,
-            egresos,
-            balance: ingresos - egresos,
-            totalMovimientos: filteredMovements.length
+            ingresos: result.totalIngresos,
+            egresos: result.totalEgresos,
+            balance: result.balance,
+            totalMovimientos: result.totalMovements
         };
-    }, [filteredMovements]);
+    }, [filteredMovements, money]);
 
     return (
         <div className="space-y-6">

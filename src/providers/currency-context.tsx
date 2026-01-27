@@ -45,11 +45,11 @@ export function CurrencyProvider({
     const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrency>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('seencel_display_currency');
-            if (saved === 'primary' || saved === 'secondary' || saved === 'both') {
+            if (saved === 'primary' || saved === 'secondary' || saved === 'both' || saved === 'mix') {
                 return saved;
             }
         }
-        return 'primary';
+        return 'mix'; // Default to mix mode
     });
 
     const setDisplayCurrency = useCallback((currency: DisplayCurrency) => {
