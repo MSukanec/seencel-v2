@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { preferenceApi } from '@/lib/mercadopago/client';
 import { createClient } from '@/lib/supabase/server';
+import { getFeatureFlag } from '@/actions/feature-flags';
+
+// Test mode price: ~$0.10 USD in ARS (minimum for real testing)
+const TEST_PRICE_ARS = 150;
 
 export async function POST(request: NextRequest) {
     try {
@@ -11,6 +15,9 @@ export async function POST(request: NextRequest) {
         if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        // Check if test mode is active
+        const isTestMode = await getFeatureFlag('mercadopago_modo_test');
 
         // Get request body
         const body = await request.json();
@@ -49,12 +56,19 @@ export async function POST(request: NextRequest) {
             billing_period: billingPeriod || null,
             coupon_code: couponCode || null,
             coupon_discount: couponDiscount || null,
+            is_test: isTestMode, // Mark as test payment
         });
 
-        // Calculate final amount (with coupon if any)
-        const finalAmount = couponDiscount
-            ? Math.max(0, amount - couponDiscount)
-            : amount;
+        // Calculate final amount - override to test price if test mode is active
+        let finalAmount: number;
+        if (isTestMode) {
+            finalAmount = TEST_PRICE_ARS;
+            console.log('[TEST MODE] MercadoPago price overridden to', TEST_PRICE_ARS, 'ARS');
+        } else {
+            finalAmount = couponDiscount
+                ? Math.max(0, amount - couponDiscount)
+                : amount;
+        }
 
         // Build back URLs
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || '';

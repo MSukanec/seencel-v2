@@ -5,13 +5,15 @@ import { Plan, PlanFeatures } from "@/actions/plans";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Sparkles, Zap, Crown, Users, FileText, Plug2, Headphones, Shield, Wrench, FolderOpen, HardDrive, BarChart3, Webhook } from "lucide-react";
+import { Check, X, Sparkles, Zap, Crown, Users, FileText, Plug2, Headphones, Shield, Wrench, FolderOpen, HardDrive, BarChart3, Webhook, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/routing";
 
+export type PlanFlagStatus = 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
+
 export interface PlanPurchaseFlags {
-    pro: boolean;
-    teams: boolean;
+    pro: PlanFlagStatus;
+    teams: PlanFlagStatus;
 }
 
 interface PlansComparisonProps {
@@ -21,13 +23,17 @@ interface PlansComparisonProps {
      */
     isDashboard?: boolean;
     /**
-     * Feature flags for enabling/disabling plan purchases
+     * Feature flags status for each plan (not just boolean)
      */
     purchaseFlags?: PlanPurchaseFlags;
     /**
      * The current user's organization plan ID (to highlight their current plan)
      */
     currentPlanId?: string | null;
+    /**
+     * Whether the current user is an admin (can bypass maintenance/coming_soon)
+     */
+    isAdmin?: boolean;
 }
 
 // Feature modules organized by category (like Vercel's pricing page)
@@ -118,17 +124,31 @@ const getPlanGradient = (name: string) => {
     };
 };
 
-export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { pro: true, teams: true }, currentPlanId }: PlansComparisonProps) {
+export function PlansComparison({
+    plans,
+    isDashboard = false,
+    purchaseFlags = { pro: 'active', teams: 'active' },
+    currentPlanId,
+    isAdmin = false
+}: PlansComparisonProps) {
     const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
     const [selectedPlanIndex, setSelectedPlanIndex] = useState(1); // Default to Pro (middle plan)
 
-    // Check if a plan can be purchased based on feature flags
-    const canPurchasePlan = (planName: string): boolean => {
+    // Get the status of a plan from feature flags
+    const getPlanStatus = (planName: string): PlanFlagStatus => {
         const lower = planName.toLowerCase();
-        if (lower.includes("free")) return true; // Free is always available
+        if (lower.includes("free")) return 'active'; // Free is always active
         if (lower.includes("pro")) return purchaseFlags.pro;
         if (lower.includes("team")) return purchaseFlags.teams;
-        return true;
+        return 'active';
+    };
+
+    // Check if user can interact with the plan (click button)
+    // Admin can always interact, others only if status is 'active' or 'founders'
+    const canInteract = (planName: string): boolean => {
+        if (isAdmin) return true; // Admin bypass
+        const status = getPlanStatus(planName);
+        return status === 'active' || status === 'founders';
     };
 
     // Price mapping: planName -> { monthly, annual }
@@ -404,37 +424,123 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                                 </ul>
                             </CardContent>
 
-                            <CardFooter>
-                                {isCurrentPlan ? (
-                                    <Button
-                                        className="w-full"
-                                        variant="outline"
-                                        disabled
-                                    >
-                                        <Check className="h-4 w-4 mr-2" />
-                                        Plan Actual
-                                    </Button>
-                                ) : canPurchasePlan(plan.name) ? (
-                                    <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
-                                        <Button
-                                            className={cn(
-                                                "w-full",
-                                                isPopular && `${planColors.bg} hover:opacity-90 text-white border-0`
-                                            )}
-                                            variant={isPopular ? "default" : "outline"}
+                            <CardFooter className="flex-col gap-2">
+                                {(() => {
+                                    const status = getPlanStatus(plan.name);
+                                    const userCanClick = canInteract(plan.name);
+
+                                    if (isCurrentPlan) {
+                                        return (
+                                            <Button
+                                                className="w-full"
+                                                variant="outline"
+                                                disabled
+                                            >
+                                                <Check className="h-4 w-4 mr-2" />
+                                                Plan Actual
+                                            </Button>
+                                        );
+                                    }
+
+                                    // Show status indicator for non-active states
+                                    if (status !== 'active') {
+                                        const statusConfig = {
+                                            maintenance: {
+                                                icon: Wrench,
+                                                label: "En Mantenimiento",
+                                                sublabel: "Vuelve pronto",
+                                                bgColor: "bg-orange-500/10",
+                                                textColor: "text-orange-500",
+                                                borderColor: "border-orange-500/30"
+                                            },
+                                            coming_soon: {
+                                                icon: Clock,
+                                                label: "Próximamente",
+                                                sublabel: "Disponible pronto",
+                                                bgColor: "bg-blue-500/10",
+                                                textColor: "text-blue-500",
+                                                borderColor: "border-blue-500/30"
+                                            },
+                                            hidden: {
+                                                icon: Lock,
+                                                label: "No Disponible",
+                                                sublabel: "",
+                                                bgColor: "bg-muted",
+                                                textColor: "text-muted-foreground",
+                                                borderColor: "border-muted"
+                                            },
+                                            founders: {
+                                                icon: Crown,
+                                                label: "Solo Fundadores",
+                                                sublabel: "",
+                                                bgColor: "bg-amber-500/10",
+                                                textColor: "text-amber-500",
+                                                borderColor: "border-amber-500/30"
+                                            }
+                                        };
+
+                                        const config = statusConfig[status as keyof typeof statusConfig];
+                                        const StatusIcon = config?.icon || Lock;
+
+                                        return (
+                                            <>
+                                                {/* Status badge - always visible */}
+                                                <div className={cn(
+                                                    "w-full rounded-lg border py-3 px-4",
+                                                    config?.bgColor,
+                                                    config?.borderColor
+                                                )}>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <StatusIcon className={cn("h-4 w-4", config?.textColor)} />
+                                                        <span className={cn("text-sm font-medium", config?.textColor)}>
+                                                            {config?.label}
+                                                        </span>
+                                                    </div>
+                                                    {config?.sublabel && (
+                                                        <p className="text-xs text-muted-foreground text-center mt-1">
+                                                            {config.sublabel}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Admin bypass button */}
+                                                {isAdmin && (
+                                                    <Link
+                                                        href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}
+                                                        className="w-full"
+                                                    >
+                                                        <Button
+                                                            className="w-full"
+                                                            variant="outline"
+                                                            size="sm"
+                                                        >
+                                                            <Lock className="h-3 w-3 mr-1" />
+                                                            Admin: Comprar Igual
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                            </>
+                                        );
+                                    }
+
+                                    // Normal active state - full width button
+                                    return (
+                                        <Link
+                                            href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}
+                                            className="w-full"
                                         >
-                                            {isDashboard ? "Cambiar Plan" : "Empezar Ahora"}
-                                        </Button>
-                                    </Link>
-                                ) : (
-                                    <div className="w-full text-center">
-                                        <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-                                            <Wrench className="h-4 w-4" />
-                                            <span className="text-sm font-medium">En Mantenimiento</span>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">Vuelve pronto</p>
-                                    </div>
-                                )}
+                                            <Button
+                                                className={cn(
+                                                    "w-full",
+                                                    isPopular && `${planColors.bg} hover:opacity-90 text-white border-0`
+                                                )}
+                                                variant={isPopular ? "default" : "outline"}
+                                            >
+                                                {isDashboard ? "Cambiar Plan" : "Empezar Ahora"}
+                                            </Button>
+                                        </Link>
+                                    );
+                                })()}
                             </CardFooter>
                         </Card>
                     );
@@ -464,7 +570,7 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                             ))}
                         </div>
                         {plans[selectedPlanIndex] && (
-                            canPurchasePlan(plans[selectedPlanIndex].name) ? (
+                            canInteract(plans[selectedPlanIndex].name) ? (
                                 <Button
                                     size="sm"
                                     className={cn(
@@ -489,10 +595,18 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                             Características
                         </div>
                         {plans.map((plan) => {
-                            const planColors = getPlanGradient(plan.name);
-                            const isPurchasable = canPurchasePlan(plan.name);
+                            const planStatus = getPlanStatus(plan.name);
                             const isCurrentPlan = currentPlanId === plan.id;
                             const isPro = plan.name.toLowerCase().includes("pro");
+
+                            // Status config for non-active states
+                            const statusConfig: Record<string, { icon: typeof Clock; label: string; color: string }> = {
+                                maintenance: { icon: Wrench, label: "Mantenimiento", color: "text-orange-500" },
+                                coming_soon: { icon: Clock, label: "Próximamente", color: "text-blue-500" },
+                                hidden: { icon: Lock, label: "No Disponible", color: "text-muted-foreground" },
+                                founders: { icon: Crown, label: "Fundadores", color: "text-amber-500" }
+                            };
+
                             return (
                                 <div key={plan.id} className="text-center">
                                     <div className="font-semibold mb-2">{plan.name}</div>
@@ -506,23 +620,40 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                                             <Check className="h-4 w-4 mr-1" />
                                             Plan Actual
                                         </Button>
-                                    ) : isPurchasable ? (
+                                    ) : planStatus === 'active' ? (
                                         <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
                                             <Button
                                                 size="sm"
                                                 variant={isPro ? "default" : "outline"}
                                                 className={cn(
                                                     "w-full max-w-[140px]",
-                                                    isPro && `${planColors.bg} hover:opacity-90 text-white`
+                                                    isPro && `${getPlanGradient(plan.name).bg} hover:opacity-90 text-white`
                                                 )}
                                             >
                                                 {isDashboard ? "Cambiar" : "Empezar"}
                                             </Button>
                                         </Link>
                                     ) : (
-                                        <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs py-2">
-                                            <Wrench className="h-3 w-3" />
-                                            <span>Mantenimiento</span>
+                                        // Non-active status - show status indicator
+                                        <div className="flex flex-col items-center gap-1">
+                                            {(() => {
+                                                const config = statusConfig[planStatus];
+                                                const StatusIcon = config?.icon || Lock;
+                                                return (
+                                                    <div className={cn("flex items-center gap-1 text-xs py-1", config?.color)}>
+                                                        <StatusIcon className="h-3 w-3" />
+                                                        <span>{config?.label}</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                            {/* Admin bypass - small link */}
+                                            {isAdmin && (
+                                                <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
+                                                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2">
+                                                        Admin →
+                                                    </Button>
+                                                </Link>
+                                            )}
                                         </div>
                                     )}
                                 </div>

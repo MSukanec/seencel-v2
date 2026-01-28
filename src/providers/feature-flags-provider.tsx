@@ -5,7 +5,7 @@ import { FeatureFlag } from "@/actions/feature-flags";
 
 interface FeatureFlagsContextType {
     flags: Record<string, boolean>; // boolean is derived from status (active=true)
-    statuses: Record<string, 'active' | 'maintenance' | 'hidden' | 'founders'>;
+    statuses: Record<string, 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon'>;
     isAdmin: boolean;
 }
 
@@ -23,7 +23,7 @@ export function FeatureFlagsProvider({
     // Convert array to record for O(1) lookup
     const { flagsRecord, statusesRecord } = React.useMemo(() => {
         const fRecord: Record<string, boolean> = {};
-        const sRecord: Record<string, 'active' | 'maintenance' | 'hidden' | 'founders'> = {};
+        const sRecord: Record<string, 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon'> = {};
 
         flags.forEach(f => {
             fRecord[f.key] = f.value;

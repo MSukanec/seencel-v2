@@ -19,7 +19,7 @@ export interface FeatureFlag {
     flag_type: 'system' | 'feature';
     parent_id?: string | null;
     position?: number;
-    status: 'active' | 'maintenance' | 'hidden' | 'founders';
+    status: 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
 }
 
 /**
@@ -95,7 +95,7 @@ export async function getFeatureFlag(key: string): Promise<boolean> {
  * Update feature flag status directly
  * Updates both status and value(boolean)
  */
-export async function updateFeatureFlagStatus(key: string, status: 'active' | 'maintenance' | 'hidden' | 'founders') {
+export async function updateFeatureFlagStatus(key: string, status: 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon') {
     const supabase = await createClient();
 
     // Auto-update 'value' boolean based on status
@@ -176,11 +176,29 @@ export async function deleteFeatureFlag(id: string) {
 }
 
 /**
- * Get purchase enablement flags for plans
+ * Get purchase enablement flags for plans (returns status, not boolean)
  */
-export async function getPlanPurchaseFlags() {
+export async function getPlanPurchaseFlags(): Promise<{
+    pro: 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
+    teams: 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
+}> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("feature_flags")
+        .select("key, status, value")
+        .in("key", ["pro_purchases_enabled", "teams_purchases_enabled"]);
+
+    if (error || !data) {
+        console.error("Error fetching plan purchase flags:", error);
+        return { pro: 'active', teams: 'active' }; // Default to active if error
+    }
+
+    const proFlag = data.find(f => f.key === "pro_purchases_enabled");
+    const teamsFlag = data.find(f => f.key === "teams_purchases_enabled");
+
     return {
-        pro: true,
-        teams: true
+        pro: (proFlag?.status as 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon') || 'active',
+        teams: (teamsFlag?.status as 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon') || 'active'
     };
 }

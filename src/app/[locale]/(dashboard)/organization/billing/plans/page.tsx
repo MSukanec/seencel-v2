@@ -3,12 +3,14 @@ import { ContentLayout } from "@/components/layout";
 import { PlansComparison } from "@/features/billing/components/plans-comparison";
 import { PricingFaq } from "@/features/billing/components/pricing-faq";
 import { getPlanPurchaseFlags } from "@/actions/feature-flags";
+import { checkIsAdmin } from "@/features/profile/queries";
 
 export default async function BillingPlansPage() {
-    const [plans, purchaseFlags, currentPlanId] = await Promise.all([
+    const [plans, purchaseFlags, currentPlanId, isAdmin] = await Promise.all([
         getPlans(),
         getPlanPurchaseFlags(),
         getCurrentOrganizationPlanId(),
+        checkIsAdmin(),
     ]);
 
     return (
@@ -19,6 +21,7 @@ export default async function BillingPlansPage() {
                     isDashboard
                     purchaseFlags={purchaseFlags}
                     currentPlanId={currentPlanId}
+                    isAdmin={isAdmin}
                 />
                 <PricingFaq />
             </div>

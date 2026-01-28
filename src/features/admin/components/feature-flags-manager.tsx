@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { FeatureFlag, FlagCategory, updateFeatureFlagStatus } from "@/actions/feature-flags";
-import { Lock, EyeOff, Activity } from "lucide-react";
+import { Lock, EyeOff, Activity, Clock } from "lucide-react";
 import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
     'paypal_test_mode': 'PayPal: Modo Test',
 };
 
-type FlagStatus = 'active' | 'maintenance' | 'founders' | 'hidden';
+type FlagStatus = 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon';
 
 export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFlagsManagerProps) {
     const router = useRouter();
@@ -137,6 +137,12 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
                                             <span>Oculto</span>
                                         </div>
                                     </SelectItem>
+                                    <SelectItem value="coming_soon">
+                                        <div className="flex items-center gap-2">
+                                            <Clock className="h-3 w-3 text-blue-500" />
+                                            <span>Próximamente</span>
+                                        </div>
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -147,6 +153,7 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
             <div className="text-xs text-muted-foreground px-4 space-y-1 mt-8 border-t pt-4">
                 <p><b>Habilitado:</b> Visible y accesible para todos.</p>
                 <p><b>Mantenimiento:</b> Visible (Admin) / Bloqueado (Usuario).</p>
+                <p><b>Próximamente:</b> Muestra "Próximamente" en botones. Admin puede bypass.</p>
                 <p><b>Oculto:</b> Invisible (User) / Translúcido (Admin).</p>
             </div>
         </div>

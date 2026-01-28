@@ -217,6 +217,7 @@ export function CheckoutView({
     const [couponError, setCouponError] = useState<string | null>(null);
     const [couponLoading, setCouponLoading] = useState(false);
     const [mercadopagoLoading, setMercadopagoLoading] = useState(false);
+    const [paypalLoading, setPaypalLoading] = useState(false);
 
     // Terms state
     const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -942,7 +943,7 @@ export function CheckoutView({
                                     <Button
                                         size="lg"
                                         className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg"
-                                        disabled={!canProceed || mercadopagoLoading}
+                                        disabled={!canProceed || mercadopagoLoading || paypalLoading}
                                         onClick={async () => {
                                             if (paymentMethod === "transfer") {
                                                 // For bank transfer, use ARS with converted amount
@@ -1019,14 +1020,55 @@ export function CheckoutView({
                                                     setMercadopagoLoading(false);
                                                     // TODO: Show error toast
                                                 }
+                                            } else if (paymentMethod === "paypal") {
+                                                // PayPal checkout
+                                                setPaypalLoading(true);
+                                                try {
+                                                    // 1. Create PayPal order
+                                                    const createResponse = await fetch("/api/paypal/create-order", {
+                                                        method: "POST",
+                                                        headers: { "Content-Type": "application/json" },
+                                                        body: JSON.stringify({
+                                                            productType: isCourse ? "course" : "subscription",
+                                                            productId: isCourse ? course?.id : selectedPlanId,
+                                                            organizationId: !isCourse ? organizationId : undefined,
+                                                            billingPeriod: !isCourse ? billingCycle : undefined,
+                                                            amount: finalPrice, // USD for PayPal
+                                                            title: productName,
+                                                            couponCode: appliedCoupon?.code,
+                                                            couponDiscount: appliedCoupon?.discount,
+                                                        }),
+                                                    });
+
+                                                    if (!createResponse.ok) {
+                                                        throw new Error("Error al crear orden de PayPal");
+                                                    }
+
+                                                    const orderData = await createResponse.json();
+
+                                                    // 2. Redirect to PayPal approval URL
+                                                    // Note: For inline PayPal buttons, you'd use PayPalButtons component
+                                                    // This is a server-side flow - we need to redirect to PayPal
+                                                    const approvalUrl = `https://www.paypal.com/checkoutnow?token=${orderData.orderId}`;
+                                                    window.location.href = approvalUrl;
+
+                                                } catch (error) {
+                                                    console.error("PayPal error:", error);
+                                                    setPaypalLoading(false);
+                                                    // TODO: Show error toast
+                                                }
                                             }
-                                            // TODO: Handle paypal
                                         }}
                                     >
                                         {mercadopagoLoading ? (
                                             <>
                                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                 Redirigiendo a MercadoPago...
+                                            </>
+                                        ) : paypalLoading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Redirigiendo a PayPal...
                                             </>
                                         ) : (
                                             <>
