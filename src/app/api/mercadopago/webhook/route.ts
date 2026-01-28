@@ -1,0 +1,192 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { paymentApi, validateWebhookSignature } from '@/lib/mercadopago/client';
+import { createAdminClient } from '@/lib/supabase/server';
+
+export async function POST(request: NextRequest) {
+    try {
+        // Get headers for signature validation
+        const xSignature = request.headers.get('x-signature') || '';
+        const xRequestId = request.headers.get('x-request-id') || '';
+
+        // Get body
+        const body = await request.json();
+        const { action, data, type } = body;
+
+        // Get data.id for payment
+        const dataId = data?.id?.toString() || '';
+
+        // Log event immediately (before validation)
+        const supabase = await createAdminClient();
+        await supabase.from('payment_events').insert({
+            provider: 'mercadopago',
+            provider_event_id: xRequestId,
+            provider_event_type: type || action,
+            order_id: dataId,
+            raw_headers: { 'x-signature': xSignature, 'x-request-id': xRequestId },
+            raw_payload: body,
+            status: 'RECEIVED',
+        });
+
+        // Validate signature (optional in development)
+        if (process.env.NODE_ENV === 'production') {
+            const isValid = validateWebhookSignature(xSignature, xRequestId, dataId);
+            if (!isValid) {
+                console.error('Invalid webhook signature');
+                // Still return 200 to prevent retries
+                return NextResponse.json({ received: true, error: 'invalid_signature' });
+            }
+        }
+
+        // Handle payment events
+        if (type === 'payment' || action === 'payment.created' || action === 'payment.updated') {
+            await handlePaymentEvent(dataId, supabase);
+        }
+
+        // Always return 200 to prevent retries
+        return NextResponse.json({ received: true });
+
+    } catch (error) {
+        console.error('MercadoPago webhook error:', error);
+        // Still return 200 to prevent endless retries
+        return NextResponse.json({ received: true, error: 'processing_error' });
+    }
+}
+
+async function handlePaymentEvent(paymentId: string, supabase: any) {
+    try {
+        // Fetch payment details from MercadoPago
+        const payment = await paymentApi.get({ id: paymentId });
+
+        if (!payment || !payment.external_reference) {
+            console.error('Payment not found or no external_reference:', paymentId);
+            return;
+        }
+
+        // Update payment_events with full data
+        await supabase
+            .from('payment_events')
+            .update({
+                status: 'PROCESSED',
+                amount: payment.transaction_amount,
+                currency: payment.currency_id,
+                provider_payment_id: payment.id?.toString(),
+                processed_at: new Date().toISOString(),
+            })
+            .eq('order_id', paymentId);
+
+        // Only process approved payments
+        if (payment.status !== 'approved') {
+            console.log(`Payment ${paymentId} status: ${payment.status} - skipping`);
+            return;
+        }
+
+        // Parse external_reference
+        let metadata;
+        try {
+            metadata = JSON.parse(payment.external_reference);
+        } catch {
+            console.error('Failed to parse external_reference:', payment.external_reference);
+            return;
+        }
+
+        const {
+            user_id,
+            product_type,
+            product_id,
+            organization_id,
+            billing_period,
+            coupon_code,
+        } = metadata;
+
+        // Get internal user_id from auth_id
+        const { data: userData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_id', user_id)
+            .single();
+
+        if (!userData) {
+            console.error('User not found for auth_id:', user_id);
+            return;
+        }
+
+        const internalUserId = userData.id;
+
+        // Call appropriate handler based on product type
+        if (product_type === 'course') {
+            const { data, error } = await supabase.rpc('handle_payment_course_success', {
+                p_provider: 'mercadopago',
+                p_provider_payment_id: payment.id?.toString(),
+                p_user_id: internalUserId,
+                p_course_id: product_id,
+                p_amount: payment.transaction_amount,
+                p_currency: payment.currency_id || 'ARS',
+                p_metadata: { mp_payment_id: payment.id, payer_email: payment.payer?.email },
+            });
+
+            if (error) {
+                console.error('handle_payment_course_success error:', error);
+            } else {
+                console.log('Course payment processed:', data);
+            }
+
+        } else if (product_type === 'subscription') {
+            const { data, error } = await supabase.rpc('handle_payment_subscription_success', {
+                p_provider: 'mercadopago',
+                p_provider_payment_id: payment.id?.toString(),
+                p_user_id: internalUserId,
+                p_organization_id: organization_id,
+                p_plan_id: product_id,
+                p_billing_period: billing_period || 'monthly',
+                p_amount: payment.transaction_amount,
+                p_currency: payment.currency_id || 'ARS',
+                p_metadata: { mp_payment_id: payment.id, payer_email: payment.payer?.email },
+            });
+
+            if (error) {
+                console.error('handle_payment_subscription_success error:', error);
+            } else {
+                console.log('Subscription payment processed:', data);
+            }
+        }
+
+        // Update mp_preferences status
+        const { data: prefData } = await supabase
+            .from('mp_preferences')
+            .select('id')
+            .eq('user_id', internalUserId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (prefData) {
+            await supabase
+                .from('mp_preferences')
+                .update({
+                    status: 'completed',
+                    completed_at: new Date().toISOString(),
+                })
+                .eq('id', prefData.id);
+        }
+
+        // Redeem coupon if applicable
+        if (coupon_code && product_type === 'course') {
+            await supabase.rpc('redeem_coupon', {
+                p_code: coupon_code,
+                p_course_id: product_id,
+                p_order_id: payment.id?.toString(),
+                p_price: payment.transaction_amount,
+                p_currency: payment.currency_id || 'ARS',
+            });
+        }
+
+    } catch (error) {
+        console.error('handlePaymentEvent error:', error);
+    }
+}
+
+// MercadoPago also sends GET requests for validation
+export async function GET() {
+    return NextResponse.json({ status: 'ok' });
+}

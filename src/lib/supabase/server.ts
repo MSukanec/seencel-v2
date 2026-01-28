@@ -40,3 +40,7 @@ export function createServiceClient() {
     )
 }
 
+// Alias for createServiceClient (used by webhooks)
+export async function createAdminClient() {
+    return createServiceClient()
+}

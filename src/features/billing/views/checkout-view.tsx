@@ -216,6 +216,7 @@ export function CheckoutView({
     } | null>(null);
     const [couponError, setCouponError] = useState<string | null>(null);
     const [couponLoading, setCouponLoading] = useState(false);
+    const [mercadopagoLoading, setMercadopagoLoading] = useState(false);
 
     // Terms state
     const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -941,8 +942,8 @@ export function CheckoutView({
                                     <Button
                                         size="lg"
                                         className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg"
-                                        disabled={!canProceed}
-                                        onClick={() => {
+                                        disabled={!canProceed || mercadopagoLoading}
+                                        onClick={async () => {
                                             if (paymentMethod === "transfer") {
                                                 // For bank transfer, use ARS with converted amount
                                                 const transferAmount = isArsPayment
@@ -981,12 +982,58 @@ export function CheckoutView({
                                                         size: "md"
                                                     }
                                                 );
+                                            } else if (paymentMethod === "mercadopago") {
+                                                // MercadoPago checkout
+                                                setMercadopagoLoading(true);
+                                                try {
+                                                    const mpAmount = Math.round(finalPrice * exchangeRate);
+                                                    const response = await fetch("/api/mercadopago/preference", {
+                                                        method: "POST",
+                                                        headers: { "Content-Type": "application/json" },
+                                                        body: JSON.stringify({
+                                                            productType: isCourse ? "course" : "subscription",
+                                                            productId: isCourse ? course?.id : selectedPlanId,
+                                                            organizationId: !isCourse ? organizationId : undefined,
+                                                            billingPeriod: !isCourse ? billingCycle : undefined,
+                                                            amount: mpAmount,
+                                                            title: productName,
+                                                            couponCode: appliedCoupon?.code,
+                                                            couponDiscount: appliedCoupon?.discount
+                                                                ? Math.round(appliedCoupon.discount * exchangeRate)
+                                                                : undefined,
+                                                        }),
+                                                    });
+
+                                                    if (!response.ok) {
+                                                        throw new Error("Error al crear preferencia de pago");
+                                                    }
+
+                                                    const data = await response.json();
+                                                    if (data.init_point) {
+                                                        window.location.href = data.init_point;
+                                                    } else {
+                                                        throw new Error("No se recibió URL de pago");
+                                                    }
+                                                } catch (error) {
+                                                    console.error("MercadoPago error:", error);
+                                                    setMercadopagoLoading(false);
+                                                    // TODO: Show error toast
+                                                }
                                             }
-                                            // TODO: Handle mercadopago and paypal
+                                            // TODO: Handle paypal
                                         }}
                                     >
-                                        <Lock className="mr-2 h-4 w-4" />
-                                        Completar Compra
+                                        {mercadopagoLoading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Redirigiendo a MercadoPago...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Lock className="mr-2 h-4 w-4" />
+                                                Completar Compra
+                                            </>
+                                        )}
                                     </Button>
 
                                     <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
