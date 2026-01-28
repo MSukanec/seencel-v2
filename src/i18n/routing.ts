@@ -147,7 +147,8 @@ export const routing = defineRouting({
         },
         '/admin': '/admin',
         // Admin hub content
-        '/admin/hub-content': '/admin/hub-content'
+        '/admin/hub-content': '/admin/hub-content',
+        '/admin/emails': '/admin/emails'
     }
 });
 

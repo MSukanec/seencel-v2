@@ -19,6 +19,19 @@ export async function registerUser(prevState: any, formData: FormData) {
     // Artificial delay to prevent timing attacks and slow down bots
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    // Check if registration is blocked
+    const supabaseCheck = await createClient();
+    const { data: regFlag } = await supabaseCheck
+        .from('feature_flags')
+        .select('status')
+        .eq('key', 'auth_registration_enabled')
+        .single();
+
+    // If flag doesn't exist or status is not 'active', block registration
+    if (!regFlag || regFlag.status !== 'active') {
+        return { error: 'registration_blocked' };
+    }
+
     const validatedFields = registerSchema.safeParse({
         email: formData.get("email"),
         password: formData.get("password"),

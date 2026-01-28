@@ -273,6 +273,7 @@ export function useSidebarNavigation() {
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
                     { title: 'Plataforma', href: '/admin/system', icon: Monitor },
                     { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
+                    { title: 'Emails', href: '/admin/emails', icon: FileText },
                     { title: 'Changelog', href: '/admin/changelog', icon: FileText },
                     { title: 'Soporte', href: '/admin/support', icon: Wrench },
                     { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },

@@ -26,6 +26,7 @@ export default function SignupPage() {
                 if (result.error === "weak_password") errorMessage = t("weakPassword");
                 if (result.error === "invalid_domain") errorMessage = t("invalidEmail"); // Reusing invalid email for blocked domains
                 if (result.error === "email_taken") errorMessage = t("emailTaken");
+                if (result.error === "registration_blocked") errorMessage = "El registro está temporalmente deshabilitado. Por favor, intentá más tarde.";
 
                 setState({ error: errorMessage });
             } else if (result?.success) {
