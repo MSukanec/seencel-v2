@@ -13,7 +13,7 @@ interface CourseCardProps {
     isEnrolled?: boolean;
 }
 
-export function CourseCard({ course, className, basePath = '/academy', isEnrolled = false }: CourseCardProps) {
+export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false }: CourseCardProps) {
     const { details } = course;
 
     // Format price

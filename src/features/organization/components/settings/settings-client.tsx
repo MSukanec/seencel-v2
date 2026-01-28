@@ -5,7 +5,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import {
     MembersSettingsView,
     PermissionsSettingsView,
-    ActivitySettingsView,
     BillingSettingsView
 } from "@/features/organization/views";
 
@@ -32,9 +31,6 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
                     rolePermissions={data.rolePermissions}
                 />
             </TabsContent>
-            <TabsContent value="activity" className="m-0 h-full focus-visible:outline-none">
-                <ActivitySettingsView logs={data.activityLogs || []} />
-            </TabsContent>
             <TabsContent value="billing" className="m-0 h-full focus-visible:outline-none">
                 <BillingSettingsView
                     subscription={data.subscription}
@@ -44,4 +40,3 @@ export function SettingsClient({ data, organizationId }: SettingsClientProps) {
         </>
     );
 }
-

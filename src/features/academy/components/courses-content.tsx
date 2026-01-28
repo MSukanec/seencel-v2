@@ -17,7 +17,7 @@ interface CoursesContentProps {
     enrolledCourseIds?: string[];
 }
 
-export function CoursesContent({ courses, isDashboard = false, detailRoute = '/academy', enrolledCourseIds = [] }: CoursesContentProps) {
+export function CoursesContent({ courses, isDashboard = false, detailRoute = '/academy/courses', enrolledCourseIds = [] }: CoursesContentProps) {
     const t = useTranslations('Learning');
     const [searchQuery, setSearchQuery] = useState("");
 

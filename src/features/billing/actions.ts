@@ -75,3 +75,82 @@ export async function updateBillingProfile(formData: FormData) {
     return { success: true };
 }
 
+// ============================================================
+// COUPON VALIDATION
+// ============================================================
+
+export interface CouponValidationInput {
+    code: string;
+    productType: "course" | "subscription";
+    productId: string;
+    price: number;
+    currency: "USD" | "ARS";
+}
+
+export interface CouponValidationSuccess {
+    ok: true;
+    couponId: string;
+    couponCode: string;
+    type: "percent" | "fixed";
+    amount: number;
+    discount: number;
+    finalPrice: number;
+    isFree: boolean;
+}
+
+export interface CouponValidationError {
+    ok: false;
+    reason: string;
+    minimumRequired?: number;
+    limit?: number;
+    used?: number;
+}
+
+export type CouponValidationResult = CouponValidationSuccess | CouponValidationError;
+
+/**
+ * Validate a coupon code against a product
+ * Calls the validate_coupon_universal RPC function
+ */
+export async function validateCoupon(input: CouponValidationInput): Promise<CouponValidationResult> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.rpc("validate_coupon_universal", {
+        p_code: input.code,
+        p_product_type: input.productType,
+        p_product_id: input.productId,
+        p_price: input.price,
+        p_currency: input.currency
+    });
+
+    if (error) {
+        console.error("Error validating coupon:", error);
+        return { ok: false, reason: "DATABASE_ERROR" };
+    }
+
+    // The RPC returns a JSONB object
+    const result = data as Record<string, unknown>;
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            reason: result.reason as string,
+            minimumRequired: result.minimum_required as number | undefined,
+            limit: result.limit as number | undefined,
+            used: result.used as number | undefined
+        };
+    }
+
+    return {
+        ok: true,
+        couponId: result.coupon_id as string,
+        couponCode: result.coupon_code as string,
+        type: result.type as "percent" | "fixed",
+        amount: result.amount as number,
+        discount: result.discount as number,
+        finalPrice: result.final_price as number,
+        isFree: result.is_free as boolean
+    };
+}
+
+

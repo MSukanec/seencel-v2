@@ -17,7 +17,7 @@ export default async function PricingPage() {
     return (
         <div className="flex min-h-screen flex-col">
             <Header variant="public" user={profile} />
-            <main className="flex-1">
+            <main className="flex-1 pt-20">
                 <PlansComparison
                     plans={plans}
                     purchaseFlags={purchaseFlags}

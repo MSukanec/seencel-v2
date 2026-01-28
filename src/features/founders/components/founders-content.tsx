@@ -57,7 +57,7 @@ export function FoundersContent({ isDashboard = false }: FoundersContentProps) {
 
     // Founders program links to annual plans (required for founder status)
     const checkoutHref = {
-        pathname: "/organization/billing/checkout" as const,
+        pathname: "/checkout" as const,
         query: { product: "plan-pro", cycle: "annual" }
     };
 

@@ -26,10 +26,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor } from "lucide-react";
+import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, Hammer } from "lucide-react";
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { UserProfile } from "@/types/user";
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore, useActiveProjectId } from "@/store/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/routing";
@@ -48,6 +48,7 @@ export function MobileNav() {
     const router = useRouter();
     const { contexts, getNavItems } = useSidebarNavigation();
     const { activeContext, actions } = useLayoutStore();
+    const activeProjectId = useActiveProjectId();
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = React.useState(false);
 
@@ -97,6 +98,48 @@ export function MobileNav() {
                         <Accordion type="single" collapsible defaultValue={activeContext || undefined} onValueChange={(val) => {
                             if (val) actions.setActiveContext(val as any);
                         }}>
+                            {/* Add Project section if activeProjectId exists */}
+                            {activeProjectId && (
+                                <AccordionItem
+                                    value="project"
+                                    className="border-b border-border/40 last:border-0 data-[state=open]:border-border/60"
+                                >
+                                    <AccordionTrigger
+                                        className="hover:no-underline py-4 text-base font-medium text-foreground/80 data-[state=open]:text-primary data-[state=open]:font-semibold transition-all"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <Hammer className="h-5 w-5" />
+                                            Proyecto
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="flex flex-col gap-2 pl-4 pb-4">
+                                            {getNavItems('project').map((item, idx) => {
+                                                const isActive = pathname === item.href;
+                                                return (
+                                                    <Link
+                                                        key={idx}
+                                                        href={item.href as any}
+                                                        onClick={() => {
+                                                            setOpen(false);
+                                                            actions.setActiveContext('project');
+                                                        }}
+                                                        className={cn(
+                                                            "flex items-center gap-4 px-4 py-3.5 rounded-xl text-[15px] transition-all",
+                                                            isActive
+                                                                ? "bg-primary/10 text-primary font-medium shadow-sm"
+                                                                : "hover:bg-muted/50 text-foreground/70"
+                                                        )}
+                                                    >
+                                                        <item.icon className="h-4.5 w-4.5" />
+                                                        {item.title}
+                                                    </Link>
+                                                )
+                                            })}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )}
                             {contexts.map((ctx) => {
                                 const items = getNavItems(ctx.id);
                                 return (

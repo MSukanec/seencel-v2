@@ -121,13 +121,17 @@ export const routing = defineRouting({
             en: '/organization/billing/founders',
             es: '/organizacion/facturacion/fundadores'
         },
-        '/organization/billing/checkout': {
-            en: '/organization/billing/checkout',
-            es: '/organizacion/facturacion/checkout'
+        '/checkout': {
+            en: '/checkout',
+            es: '/checkout'
         },
         '/privacy': {
             en: '/privacy',
             es: '/privacidad'
+        },
+        '/terms': {
+            en: '/terms',
+            es: '/terminos'
         },
         // Setup catch-all if needed, but for now specific routes
         '/login': '/login',

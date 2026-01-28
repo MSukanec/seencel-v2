@@ -3,6 +3,7 @@ import { CourseLanding } from "@/features/academy/views/course-landing-view";
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/profile/queries";
+import { isUserEnrolledInCourse } from "@/actions/enrollment-actions";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
 
@@ -24,13 +25,17 @@ export default async function PublicCoursePage({ params }: PageProps) {
         notFound();
     }
 
+    // Check if user is enrolled in this course (only if course has ID)
+    const isEnrolled = course.id ? await isUserEnrolledInCourse(course.id) : false;
+
     return (
         <div className="flex min-h-screen flex-col bg-background">
             <Header variant="public" user={userProfile.profile} />
             <main>
-                <CourseLanding course={course} />
+                <CourseLanding course={course} isEnrolled={isEnrolled} />
             </main>
             <Footer />
         </div>
     );
 }
+

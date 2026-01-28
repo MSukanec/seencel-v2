@@ -128,6 +128,14 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
         };
     }, [activeSubcontracts, money.config, money.displayMode]);
 
+    // DEBUG: Verify displayMode is changing
+    console.log('[SUBCONTRACTS DEBUG]', {
+        displayMode: money.displayMode,
+        currentRate: money.config.currentExchangeRate,
+        totalContracted: kpis.totalContracted,
+        contractedBreakdown: kpis.contractedBreakdown,
+    });
+
     // Helper to get display value based on mode
     const getDisplayValue = (total: number, breakdown: any[]) => {
         if (money.displayMode === 'mix' && breakdown.length === 1) {

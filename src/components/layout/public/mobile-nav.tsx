@@ -31,7 +31,7 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
 
     const publicLinks = [
         ...(user ? [{ href: "/hub", label: tUser('dashboard'), icon: LayoutDashboard }] : []),
-        { href: "/features", label: tPublic('features'), icon: Rocket },
+        { href: "/#features", label: tPublic('features'), icon: Rocket },
         { href: "/academy/courses", label: tPublic('academy'), icon: GraduationCap },
         { href: "/founders", label: tPublic('founders'), icon: Users },
         { href: "/pricing", label: tPublic('pricing'), icon: CreditCard },

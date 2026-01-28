@@ -60,7 +60,7 @@ export function SidebarExpandableButtonBase({
             onClick={onClick}
             className={cn(
                 "group relative flex items-center w-full rounded-lg transition-colors duration-0",
-                "hover:bg-secondary/80 text-foreground",
+                "hover:bg-muted text-foreground",
                 "p-0",
                 heightClasses[height],
                 className

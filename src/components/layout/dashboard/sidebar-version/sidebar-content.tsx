@@ -5,13 +5,15 @@ import { cn } from "@/lib/utils";
 import { useLayoutStore, NavigationContext } from "@/store/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
-import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton } from "./buttons";
+import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
+import { SidebarPlanButton } from "./plan-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     PanelLeft,
     PanelLeftClose,
     ArrowLeft,
     Building,
+    EyeOff,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
@@ -188,14 +190,19 @@ export function SidebarContent({
 
     // Unified Render Helper for Nav Items (Sub-items)
     const renderNavItem = (item: any, idx: number) => {
-        if (item.hidden) return null;
-
         const status = item.status;
         const isDisabled = item.disabled;
+        const isHidden = item.hidden; // Hidden items shown only to admins with special styling
 
         // Badge
         let badge = null;
-        if (status === 'maintenance') {
+        if (isHidden) {
+            badge = (
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-gray-500/10 hover:bg-gray-500/20 shadow-none">
+                    <EyeOff className="h-3 w-3 text-gray-500" />
+                </Badge>
+            );
+        } else if (status === 'maintenance') {
             badge = (
                 <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
                     <Lock className="h-3 w-3 text-orange-500" />
@@ -225,7 +232,7 @@ export function SidebarContent({
                     onClick={onLinkClick}
                     badge={badge}
                     disabled={isDisabled}
-                    isLocked={!!status}
+                    isLocked={!!status || isHidden}
                 />
             </React.Fragment>
         );
@@ -277,6 +284,30 @@ export function SidebarContent({
                                 >
                                     Conocer más <ChevronRight className="h-3 w-3" />
                                 </Link>
+                            </div>
+                        </div>
+                    </HoverCardContent>
+                </HoverCard>
+            );
+        }
+
+        // Hidden items (admin only)
+        if (isHidden) {
+            return (
+                <HoverCard key={idx} openDelay={100} closeDelay={100}>
+                    <HoverCardTrigger asChild>
+                        <div className="w-full">{button}</div>
+                    </HoverCardTrigger>
+                    <HoverCardContent side="right" className="w-80" align="start">
+                        <div className="flex gap-4">
+                            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                                <EyeOff className="h-5 w-5 text-gray-600" />
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="text-sm font-semibold">Oculto para Usuarios</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    Este módulo está oculto para usuarios. Solo los administradores pueden verlo y acceder.
+                                </p>
                             </div>
                         </div>
                     </HoverCardContent>
@@ -519,23 +550,7 @@ export function SidebarContent({
                                 onClick={handleBack}
                             />
                             <div className="w-full h-px bg-border/30 my-1" />
-                            {projectNavItems.map((item, idx) => (
-                                <React.Fragment key={idx}>
-                                    {item.sectionHeader && isExpanded && (
-                                        <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                            {item.sectionHeader}
-                                        </div>
-                                    )}
-                                    <SidebarNavButton
-                                        icon={item.icon}
-                                        label={item.title}
-                                        href={item.href}
-                                        isActive={pathname === item.href}
-                                        isExpanded={isExpanded}
-                                        onClick={onLinkClick}
-                                    />
-                                </React.Fragment>
-                            ))}
+                            {projectNavItems.map(renderNavItem)}
                         </nav>
                     )}
 
@@ -614,6 +629,12 @@ export function SidebarContent({
                         {/* SidebarNavButton for toggle REMOVED */}
 
                         {/* Feedback Button REMOVED - Moved to User Menu */}
+
+                        {/* Plan Status Button */}
+                        <SidebarPlanButton isExpanded={isExpanded} />
+
+                        {/* Admin Button (only visible to admins) */}
+                        <SidebarAdminButton isExpanded={isExpanded} />
 
                         {/* Notifications Button */}
                         <SidebarNotificationsButton isExpanded={isExpanded} />

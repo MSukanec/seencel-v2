@@ -74,7 +74,7 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
         // Build Flags
         const flgItems: CategoryItem[] = flags.map(f => ({
             id: f.id,
-            name: FLAG_TRANSLATIONS[f.key] || f.key,
+            name: FLAG_TRANSLATIONS[f.key] || f.description || f.key,
             parent_id: f.category_id || null, // Will match category ID if exists
             order: f.position || 99,
             // Extra props

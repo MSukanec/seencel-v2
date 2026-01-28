@@ -42,7 +42,7 @@ export function SidebarNavButton({
         <div
             className={cn(
                 "group relative flex items-center w-full rounded-lg transition-colors duration-0",
-                "hover:bg-secondary/80 text-muted-foreground hover:text-foreground",
+                "hover:bg-muted text-muted-foreground hover:text-foreground",
                 "p-0 min-h-[32px]",
                 isActive && "bg-secondary text-foreground",
                 disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground",

@@ -39,9 +39,6 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                         <TabsTrigger value="permissions" className={tabTriggerClass}>
                             Permisos
                         </TabsTrigger>
-                        <TabsTrigger value="activity" className={tabTriggerClass}>
-                            Actividad
-                        </TabsTrigger>
                         <TabsTrigger value="billing" className={tabTriggerClass}>
                             Facturación
                         </TabsTrigger>

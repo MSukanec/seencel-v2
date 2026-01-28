@@ -415,15 +415,17 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                                         Plan Actual
                                     </Button>
                                 ) : canPurchasePlan(plan.name) ? (
-                                    <Button
-                                        className={cn(
-                                            "w-full",
-                                            isPopular && `${planColors.bg} hover:opacity-90 text-white border-0`
-                                        )}
-                                        variant={isPopular ? "default" : "outline"}
-                                    >
-                                        {isDashboard ? "Cambiar Plan" : "Empezar Ahora"}
-                                    </Button>
+                                    <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
+                                        <Button
+                                            className={cn(
+                                                "w-full",
+                                                isPopular && `${planColors.bg} hover:opacity-90 text-white border-0`
+                                            )}
+                                            variant={isPopular ? "default" : "outline"}
+                                        >
+                                            {isDashboard ? "Cambiar Plan" : "Empezar Ahora"}
+                                        </Button>
+                                    </Link>
                                 ) : (
                                     <div className="w-full text-center">
                                         <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
@@ -489,20 +491,34 @@ export function PlansComparison({ plans, isDashboard = false, purchaseFlags = { 
                         {plans.map((plan) => {
                             const planColors = getPlanGradient(plan.name);
                             const isPurchasable = canPurchasePlan(plan.name);
+                            const isCurrentPlan = currentPlanId === plan.id;
+                            const isPro = plan.name.toLowerCase().includes("pro");
                             return (
                                 <div key={plan.id} className="text-center">
                                     <div className="font-semibold mb-2">{plan.name}</div>
-                                    {isPurchasable ? (
+                                    {isCurrentPlan ? (
                                         <Button
                                             size="sm"
-                                            variant={plan.name.toLowerCase().includes("pro") ? "default" : "outline"}
-                                            className={cn(
-                                                "w-full max-w-[140px]",
-                                                plan.name.toLowerCase().includes("pro") && `${planColors.bg} hover:opacity-90 text-white`
-                                            )}
+                                            variant="outline"
+                                            disabled
+                                            className="w-full max-w-[140px]"
                                         >
-                                            {isDashboard ? "Cambiar" : "Empezar"}
+                                            <Check className="h-4 w-4 mr-1" />
+                                            Plan Actual
                                         </Button>
+                                    ) : isPurchasable ? (
+                                        <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
+                                            <Button
+                                                size="sm"
+                                                variant={isPro ? "default" : "outline"}
+                                                className={cn(
+                                                    "w-full max-w-[140px]",
+                                                    isPro && `${planColors.bg} hover:opacity-90 text-white`
+                                                )}
+                                            >
+                                                {isDashboard ? "Cambiar" : "Empezar"}
+                                            </Button>
+                                        </Link>
                                     ) : (
                                         <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs py-2">
                                             <Wrench className="h-3 w-3" />

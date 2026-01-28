@@ -134,3 +134,32 @@ export async function deleteEnrollment(id: string) {
     return { success: true };
 }
 
+// Check if current user is enrolled in a specific course
+export async function isUserEnrolledInCourse(courseId: string): Promise<boolean> {
+    const supabase = await createClient();
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    // Get internal user ID
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", user.id)
+        .single();
+
+    if (!userData) return false;
+
+    // Check enrollment
+    const { data: enrollment, error } = await supabase
+        .from("course_enrollments")
+        .select("id")
+        .eq("user_id", userData.id)
+        .eq("course_id", courseId)
+        .eq("status", "active")
+        .maybeSingle();
+
+    return !!enrollment && !error;
+}
+

@@ -57,6 +57,7 @@ import { DEFAULT_ENABLED_SECTIONS } from "../types/course-marketing";
 interface CourseLandingProps {
     course: Course;
     isDashboard?: boolean;
+    isEnrolled?: boolean;
 }
 
 // Icon mapping for modules
@@ -71,7 +72,7 @@ const moduleIcons: Record<string, React.ElementType> = {
     Image: ImageIcon,
 };
 
-export function CourseLanding({ course, isDashboard = false }: CourseLandingProps) {
+export function CourseLanding({ course, isDashboard = false, isEnrolled = false }: CourseLandingProps) {
     const t = useTranslations("Course");
 
     // Merge course-specific enabled sections with defaults
@@ -83,8 +84,13 @@ export function CourseLanding({ course, isDashboard = false }: CourseLandingProp
 
     // Checkout link for course purchase
     const checkoutHref = {
-        pathname: "/organization/billing/checkout" as const,
+        pathname: "/checkout" as const,
         query: { product: `course-${course.slug}`, cycle: "one-time" }
+    };
+
+    // Course dashboard link for enrolled users
+    const courseHref = {
+        pathname: `/academia/mis-cursos/${course.slug}` as const
     };
 
     // Calculate totals
@@ -165,16 +171,29 @@ export function CourseLanding({ course, isDashboard = false }: CourseLandingProp
 
                         {/* CTA - Left aligned */}
                         <div className="flex flex-col sm:flex-row gap-4 justify-start">
-                            <Button
-                                asChild
-                                size="lg"
-                                className="h-14 px-10 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
-                            >
-                                <Link href={checkoutHref}>
-                                    {t("hero.cta")}
-                                    <ArrowRight className="ml-2 h-5 w-5" />
-                                </Link>
-                            </Button>
+                            {isEnrolled ? (
+                                <Button
+                                    asChild
+                                    size="lg"
+                                    className="h-14 px-10 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
+                                >
+                                    <a href={`/academia/mis-cursos/${course.slug}`}>
+                                        {t("hero.continueCta")}
+                                        <ArrowRight className="ml-2 h-5 w-5" />
+                                    </a>
+                                </Button>
+                            ) : (
+                                <Button
+                                    asChild
+                                    size="lg"
+                                    className="h-14 px-10 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
+                                >
+                                    <Link href={checkoutHref}>
+                                        {t("hero.cta")}
+                                        <ArrowRight className="ml-2 h-5 w-5" />
+                                    </Link>
+                                </Button>
+                            )}
                         </div>
                     </div>
 

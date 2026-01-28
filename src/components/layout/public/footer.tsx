@@ -38,7 +38,7 @@ export function Footer() {
                         <h4 className="font-semibold text-foreground tracking-tight">Producto</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>
-                                <Link href="/features" className="hover:text-primary transition-colors">Características</Link>
+                                <a href="/#features" className="hover:text-primary transition-colors">Características</a>
                             </li>
                             <li>
                                 <Link href="/pricing" className="hover:text-primary transition-colors">Precios</Link>

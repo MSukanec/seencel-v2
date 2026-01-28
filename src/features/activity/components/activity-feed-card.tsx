@@ -5,7 +5,6 @@ import { es } from "date-fns/locale";
 import { Activity, ArrowRight } from "lucide-react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/routing";
 import { moduleConfigs, actionConfigs, getActionVerb } from "@/config/audit-logs";
 
@@ -29,6 +28,38 @@ interface ActivityLog {
 interface ActivityFeedCardProps {
     activity: ActivityLog[];
     className?: string;
+}
+
+// Helper to build natural sentence
+// Example: "Matías Sukanec actualizó el subcontrato "Contratista General""
+function buildActivitySentence(
+    userName: string,
+    actionLabel: string,
+    singularModule: string,
+    entityName: string | null
+): React.ReactNode {
+    // Determine article based on module
+    const getArticle = (module: string): string => {
+        // Feminine words
+        const feminine = ['tarea', 'organización', 'entrada', 'categoría', 'tarjeta', 'columna', 'etiqueta', 'compra', 'importación'];
+        const isFeminine = feminine.some(f => module.includes(f));
+        return isFeminine ? 'la' : 'el';
+    };
+
+    const article = getArticle(singularModule);
+
+    return (
+        <span className="text-sm leading-relaxed">
+            <span className="font-semibold text-foreground">{userName}</span>
+            <span className="text-muted-foreground"> {actionLabel.toLowerCase()} {article} {singularModule}</span>
+            {entityName && (
+                <>
+                    <span className="text-muted-foreground"> </span>
+                    <span className="font-semibold text-foreground">{entityName}</span>
+                </>
+            )}
+        </span>
+    );
 }
 
 export function ActivityFeedCard({ activity, className }: ActivityFeedCardProps) {
@@ -63,11 +94,15 @@ export function ActivityFeedCard({ activity, className }: ActivityFeedCardProps)
                         // Get module config - try both field names
                         const entityType = log.target_table || log.entity_type || "";
                         const moduleConfig = moduleConfigs[entityType];
-                        const ModuleIcon = moduleConfig?.icon;
+
+                        // Use singularLabel for natural sentences, fallback to formatted table name
+                        const singularModule = moduleConfig?.singularLabel ||
+                            entityType.replace(/_/g, ' ').toLowerCase();
 
                         // Get action config
                         const actionVerb = getActionVerb(log.action);
                         const actionConfig = actionConfigs[actionVerb];
+                        const actionLabel = actionConfig?.label || actionVerb;
 
                         // Get user info - try both field name patterns
                         const userName = log.full_name || log.user_name || log.email || "Usuario";
@@ -78,12 +113,12 @@ export function ActivityFeedCard({ activity, className }: ActivityFeedCardProps)
                         const entityName = log.entity_name || metadata.name ||
                             (metadata.first_name && metadata.last_name
                                 ? `${metadata.first_name} ${metadata.last_name}`
-                                : metadata.first_name || null);
+                                : metadata.first_name || metadata.title || null);
 
                         return (
                             <div
                                 key={log.id || i}
-                                className="px-4 py-3 hover:bg-muted/30 transition-colors"
+                                className="px-6 py-3 hover:bg-muted/30 transition-colors"
                             >
                                 <div className="flex items-start gap-3">
                                     {/* User Avatar */}
@@ -96,40 +131,15 @@ export function ActivityFeedCard({ activity, className }: ActivityFeedCardProps)
 
                                     {/* Content */}
                                     <div className="flex-1 min-w-0">
-                                        {/* User + Action */}
-                                        <div className="flex flex-wrap items-center gap-1.5 text-sm">
-                                            <span className="font-medium text-foreground">
-                                                {userName}
-                                            </span>
-
-                                            {/* Action Badge */}
-                                            {actionConfig && (
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`text-[10px] px-1.5 py-0 h-5 font-medium ${actionConfig.color}`}
-                                                >
-                                                    {actionConfig.label.toLowerCase()}
-                                                </Badge>
-                                            )}
-
-                                            {/* Module Badge */}
-                                            {moduleConfig && (
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`text-[10px] px-1.5 py-0 h-5 font-medium gap-1 ${moduleConfig.color}`}
-                                                >
-                                                    {ModuleIcon && <ModuleIcon className="h-2.5 w-2.5" />}
-                                                    {moduleConfig.label}
-                                                </Badge>
+                                        {/* Natural Sentence */}
+                                        <div className="leading-snug">
+                                            {buildActivitySentence(
+                                                userName,
+                                                actionLabel,
+                                                singularModule,
+                                                entityName
                                             )}
                                         </div>
-
-                                        {/* Entity Name if available */}
-                                        {entityName && (
-                                            <p className="text-sm text-muted-foreground mt-0.5 truncate">
-                                                "{entityName}"
-                                            </p>
-                                        )}
 
                                         {/* Timestamp */}
                                         <p className="text-[11px] text-muted-foreground/70 mt-1">
@@ -148,4 +158,3 @@ export function ActivityFeedCard({ activity, className }: ActivityFeedCardProps)
         </DashboardCard>
     );
 }
-
