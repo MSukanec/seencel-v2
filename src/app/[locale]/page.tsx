@@ -6,6 +6,40 @@ import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Globe2, ShieldCheck, B
 import { Link } from "@/i18n/routing";
 import { getTranslations } from 'next-intl/server';
 import { getUserProfile } from "@/features/profile/queries";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'SEENCEL | Gestión Inteligente de Construcción',
+  description: 'Plataforma integral para gestionar proyectos de construcción. Control de presupuestos, cronogramas, equipos y documentación en tiempo real.',
+  keywords: ['construcción', 'gestión de proyectos', 'presupuestos', 'software construcción', 'project management'],
+  authors: [{ name: 'Seencel' }],
+  openGraph: {
+    title: 'SEENCEL | Gestión Inteligente de Construcción',
+    description: 'Plataforma integral para gestionar proyectos de construcción. Control de presupuestos, cronogramas, equipos y documentación en tiempo real.',
+    url: 'https://seencel.com',
+    siteName: 'SEENCEL',
+    images: [
+      {
+        url: 'https://seencel.com/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'SEENCEL - Gestión de Construcción',
+      },
+    ],
+    locale: 'es_AR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SEENCEL | Gestión Inteligente de Construcción',
+    description: 'Plataforma integral para gestionar proyectos de construcción.',
+    images: ['https://seencel.com/og-image.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default async function Home() {
   const t = await getTranslations('Landing');

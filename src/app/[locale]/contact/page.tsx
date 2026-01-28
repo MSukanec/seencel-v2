@@ -2,6 +2,13 @@ import { getUserProfile } from "@/features/profile/queries";
 // import { ContactView } from "@/features/contact/components/contact-view";
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Contacto | SEENCEL',
+    description: 'Ponete en contacto con el equipo de Seencel. Estamos para ayudarte con cualquier consulta.',
+    robots: { index: true, follow: true },
+};
 
 export default async function ContactPage() {
     const { profile } = await getUserProfile();
