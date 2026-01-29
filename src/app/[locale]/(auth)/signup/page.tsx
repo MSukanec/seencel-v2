@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerUser } from "@/actions/auth/register";
+import { getAcquisitionParams, type AcquisitionParams } from "@/hooks/use-acquisition-params";
 
 export default function SignupPage() {
     const t = useTranslations("Auth.Register");
@@ -20,6 +21,21 @@ export default function SignupPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Acquisition params from sessionStorage
+    const [acquisitionParams, setAcquisitionParams] = useState<AcquisitionParams>({
+        utm_source: null,
+        utm_medium: null,
+        utm_campaign: null,
+        utm_content: null,
+        landing_page: null,
+        referrer: null,
+    });
+
+    // Load acquisition params on mount
+    useEffect(() => {
+        setAcquisitionParams(getAcquisitionParams());
+    }, []);
 
     const passwordsMatch = password === confirmPassword;
     const canSubmit = password.length > 0 && confirmPassword.length > 0 && passwordsMatch;
@@ -93,6 +109,14 @@ export default function SignupPage() {
                                 autoComplete="off"
                             />
                         </div>
+
+                        {/* UTM Acquisition Hidden Fields */}
+                        <input type="hidden" name="utm_source" value={acquisitionParams.utm_source || ""} />
+                        <input type="hidden" name="utm_medium" value={acquisitionParams.utm_medium || ""} />
+                        <input type="hidden" name="utm_campaign" value={acquisitionParams.utm_campaign || ""} />
+                        <input type="hidden" name="utm_content" value={acquisitionParams.utm_content || ""} />
+                        <input type="hidden" name="landing_page" value={acquisitionParams.landing_page || ""} />
+                        <input type="hidden" name="referrer" value={acquisitionParams.referrer || ""} />
 
                         <div className="grid gap-2">
                             <Label htmlFor="email">{t("emailLabel")}</Label>

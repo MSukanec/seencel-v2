@@ -8,6 +8,7 @@ import { UserProfile } from "@/types/user";
 import { UserProvider } from "@/context/user-context";
 import { QueryProvider } from "@/providers/query-provider";
 import { ContextSidebarProvider } from "@/providers/context-sidebar-provider";
+import { PresenceProvider } from "@/providers/presence-provider";
 
 export function LayoutSwitcher({
     children,
@@ -36,12 +37,22 @@ export function LayoutSwitcher({
     return (
         <QueryProvider>
             <UserProvider user={user}>
-                <ContextSidebarProvider>
-                    <SidebarLayout user={user}>
-                        {children}
-                    </SidebarLayout>
-                </ContextSidebarProvider>
-                <GlobalDrawer />
+                {user?.id ? (
+                    <PresenceProvider userId={user.id}>
+                        <ContextSidebarProvider>
+                            <SidebarLayout user={user}>
+                                {children}
+                            </SidebarLayout>
+                        </ContextSidebarProvider>
+                        <GlobalDrawer />
+                    </PresenceProvider>
+                ) : (
+                    <ContextSidebarProvider>
+                        <SidebarLayout user={user}>
+                            {children}
+                        </SidebarLayout>
+                    </ContextSidebarProvider>
+                )}
             </UserProvider>
         </QueryProvider>
     );

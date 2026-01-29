@@ -2,10 +2,10 @@ import { PageWrapper } from "@/components/layout";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { setRequestLocale } from 'next-intl/server';
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile } from "@/features/users/queries";
 import { getUserOrganizations, getRecentOrganizationsCount } from "@/features/organization/queries";
 import { getActiveHeroSections } from "@/features/hero-sections/queries";
-import { getUserTimezone } from "@/features/preferences/actions";
+import { getUserTimezone } from "@/features/users/queries";
 import { getRecentPublicCourses } from "@/features/academy/course-queries";
 import { DashboardHomeView } from "@/features/dashboard-home/components/dashboard-home-view";
 
@@ -41,6 +41,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
     // Derived data
     const activeOrg = organizations.find(o => o.id === activeOrgId);
     const activeOrgName = activeOrg?.name;
+    const activeOrgLogo = activeOrg?.logo_path || null;
 
     return (
         <PageWrapper type="dashboard">
@@ -48,6 +49,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
                 user={profile}
                 activeOrgId={activeOrgId}
                 activeOrgName={activeOrgName}
+                activeOrgLogo={activeOrgLogo}
                 heroSlides={heroSlides}
                 userTimezone={userTimezone || undefined}
                 recentCourses={recentCourses}

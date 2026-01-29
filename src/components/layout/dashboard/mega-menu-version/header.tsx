@@ -31,7 +31,6 @@ import Image from "next/image";
 import { UserProfile } from "@/types/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLayoutStore } from "@/store/layout-store";
-import { FeedbackButton } from "@/features/feedback/components/feedback-button";
 import { PlanStatusButton } from "@/features/billing/components/plan-status-button";
 import { PublicMobileHeader } from "../../public/mobile-header";
 
@@ -324,7 +323,6 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                             {variant === 'app' && (
                                 <div className="hidden md:flex items-center gap-2">
                                     <PlanStatusButton />
-                                    <FeedbackButton />
                                 </div>
                             )}
 

@@ -4,24 +4,54 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { optimizeImage } from '@/lib/image-optimizer';
 
+// ============================================================================
+// Types
+// ============================================================================
+
+export type UserPreferencesUpdate = {
+    language?: 'en' | 'es';
+    theme?: 'light' | 'dark' | 'system';
+    layout?: 'default' | 'sidebar';
+    timezone?: string;
+    sidebar_project_avatars?: boolean;
+};
+
+type ActionResponse = { success: boolean; error?: string; avatar_url?: string };
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+async function getPublicUserId(supabase: any, authId: string) {
+    const { data: publicUser, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authId)
+        .single();
+
+    if (error || !publicUser) {
+        console.error("Error finding public user:", error);
+        throw new Error("Public user not found");
+    }
+    return publicUser.id;
+}
+
+// ============================================================================
+// Profile Actions
+// ============================================================================
+
 export async function updateUserProfile(formData: FormData) {
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    // Extract form data
     const firstName = formData.get('first_name') as string;
     const lastName = formData.get('last_name') as string;
-    const email = formData.get('email') as string; // Read-only usually, but checked
     const phone = formData.get('phone') as string;
     const birthdate = formData.get('birthdate') as string || null;
     const country = formData.get('country') as string || null;
-    // Schema verification:
-    // users: full_name
-    // user_data: first_name, last_name, phone_e164, birthdate, country
 
-    // We need to resolve the public user ID first
     const { data: publicUser } = await supabase
         .from('users')
         .select('id')
@@ -41,8 +71,7 @@ export async function updateUserProfile(formData: FormData) {
 
     if (userError) throw new Error("Failed to update user record");
 
-    // 2. Upsert public.user_data
-    // We use upsert based on user_id unique constraint
+    // 2. Update public.user_data
     const { error: userDataError } = await supabase
         .from('user_data')
         .update({
@@ -64,27 +93,57 @@ export async function updateUserProfile(formData: FormData) {
     return { success: true };
 }
 
-// --- Avatar Management Actions ---
+// ============================================================================
+// Preferences Actions
+// ============================================================================
 
+export async function updateUserPreferences(preferences: UserPreferencesUpdate) {
+    const supabase = await createClient();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
 
-// Helper to separate ID resolution logic
-async function getPublicUserId(supabase: any, authId: string) {
-    const { data: publicUser, error } = await supabase
+    const { data: publicUser } = await supabase
         .from('users')
         .select('id')
-        .eq('auth_id', authId)
+        .eq('auth_id', user.id)
         .single();
 
-    if (error || !publicUser) {
-        console.error("Error finding public user:", error);
-        throw new Error("Public user not found");
+    if (!publicUser) throw new Error("Public user not found");
+
+    const userId = publicUser.id;
+
+    // Build update object dynamically
+    const updateData: Record<string, any> = {};
+    if (preferences.language) updateData.language = preferences.language;
+    if (preferences.theme) updateData.theme = preferences.theme;
+    if (preferences.timezone) updateData.timezone = preferences.timezone;
+    if (preferences.sidebar_project_avatars !== undefined) updateData.sidebar_project_avatars = preferences.sidebar_project_avatars;
+    if (preferences.layout) {
+        updateData.layout = preferences.layout === 'sidebar' ? 'classic' : 'experimental';
     }
-    return publicUser.id;
+
+    const { data, error } = await supabase
+        .from('user_preferences')
+        .update(updateData)
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("[updateUserPreferences] Error:", error);
+        throw new Error("Failed to update preferences");
+    }
+
+    revalidatePath('/settings');
+    revalidatePath('/', 'layout');
+
+    return { success: true };
 }
 
-// Return type for UI handling
-type ActionResponse = { success: boolean; error?: string; avatar_url?: string };
+// ============================================================================
+// Avatar Actions
+// ============================================================================
 
 export async function uploadAvatar(formData: FormData): Promise<ActionResponse> {
     try {
@@ -98,7 +157,6 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
         const file = formData.get('file') as File;
         if (!file) throw new Error("No file uploaded");
 
-        // Validate file size/type if needed
         if (file.size > 10 * 1024 * 1024) throw new Error("File too large (max 10MB input)");
 
         let fileExt = file.name.split('.').pop();
@@ -106,7 +164,6 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
         let finalBuffer: Buffer;
 
         try {
-            // Optimize!
             const arrayBuffer = await file.arrayBuffer();
             const rawBuffer = Buffer.from(arrayBuffer);
             const { buffer, extension, mimeType } = await optimizeImage(rawBuffer);
@@ -153,7 +210,6 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
             throw new Error(`Profile update failed: ${updateError.message}`);
         }
 
-
         revalidatePath('/settings');
         return { success: true, avatar_url: publicUrl };
     } catch (error) {
@@ -189,12 +245,10 @@ export async function restoreProviderAvatar() {
 
     const userId = await getPublicUserId(supabase, user.id);
 
-    // 1. Get Provider Avatar from Auth Metadata
     const providerAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
 
     if (!providerAvatar) throw new Error("No provider avatar found");
 
-    // 2. Update Public Profile
     const { error } = await supabase
         .from('users')
         .update({
@@ -207,4 +261,3 @@ export async function restoreProviderAvatar() {
     revalidatePath('/settings');
     return { success: true, avatar_url: providerAvatar };
 }
-

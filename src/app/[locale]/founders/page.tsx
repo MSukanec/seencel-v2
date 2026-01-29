@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile } from "@/features/users/queries";
 import { FoundersContent } from "@/features/founders/components/founders-content";
 
 export default async function FoundersPage() {

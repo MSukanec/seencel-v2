@@ -13,6 +13,13 @@ const registerSchema = z.object({
         .regex(/[a-z]/, "Must contain at least one lowercase letter")
         .regex(/[0-9]/, "Must contain at least one number"),
     website_url: z.string().optional(), // Honeypot field
+    // UTM acquisition fields (optional)
+    utm_source: z.string().optional(),
+    utm_medium: z.string().optional(),
+    utm_campaign: z.string().optional(),
+    utm_content: z.string().optional(),
+    landing_page: z.string().optional(),
+    referrer: z.string().optional(),
 });
 
 export async function registerUser(prevState: any, formData: FormData) {
@@ -36,6 +43,13 @@ export async function registerUser(prevState: any, formData: FormData) {
         email: formData.get("email"),
         password: formData.get("password"),
         website_url: formData.get("website_url"),
+        // UTM params
+        utm_source: formData.get("utm_source") || undefined,
+        utm_medium: formData.get("utm_medium") || undefined,
+        utm_campaign: formData.get("utm_campaign") || undefined,
+        utm_content: formData.get("utm_content") || undefined,
+        landing_page: formData.get("landing_page") || undefined,
+        referrer: formData.get("referrer") || undefined,
     });
 
     if (!validatedFields.success) {
@@ -45,7 +59,17 @@ export async function registerUser(prevState: any, formData: FormData) {
         return { error: "validation_error" };
     }
 
-    const { email, password, website_url } = validatedFields.data;
+    const {
+        email,
+        password,
+        website_url,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
+        landing_page,
+        referrer,
+    } = validatedFields.data;
 
     // Honeypot check: If this field is filled, it's a bot.
     if (website_url) {
@@ -66,6 +90,15 @@ export async function registerUser(prevState: any, formData: FormData) {
         password,
         options: {
             emailRedirectTo: `${origin}/auth/callback`,
+            // Pass UTM acquisition data to be stored in raw_user_meta_data
+            data: {
+                utm_source: utm_source || null,
+                utm_medium: utm_medium || null,
+                utm_campaign: utm_campaign || null,
+                utm_content: utm_content || null,
+                landing_page: landing_page || null,
+                referrer: referrer || null,
+            },
         },
     });
 

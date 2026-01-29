@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
-import { getUserProfile, checkIsAdmin } from "@/features/profile/queries";
+import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
 import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
 import { PlansComparison } from "@/features/billing/components/plans-comparison";
 import { PricingFaq } from "@/features/billing/components/pricing-faq";

@@ -92,7 +92,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                         </TabsList>
                     }
                 >
-                    <TabsContent value="overview" className="flex-1 m-0 data-[state=inactive]:hidden">
+                    <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <OrganizationOverviewView
                             user={user}
                             organization={organization as unknown as import("@/features/organization/types").Organization}
@@ -102,7 +102,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                         />
                     </TabsContent>
 
-                    <TabsContent value="activity" className="flex-1 m-0 data-[state=inactive]:hidden">
+                    <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ActivitySettingsView logs={activityLogs} />
                     </TabsContent>
                 </PageWrapper>

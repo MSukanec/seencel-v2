@@ -4,6 +4,11 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname } from "next/navigation";
+import { useModal } from "@/providers/modal-store";
+import { FeedbackForm } from "@/components/shared/forms/feedback-form";
+import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
+import { MessageSquarePlus } from "lucide-react";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -23,6 +28,8 @@ interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     backButton?: React.ReactNode
     /** Desktop toolbar - renders as second row in header */
     toolbar?: React.ReactNode
+    /** Hide feedback button (default: false) */
+    hideFeedback?: boolean
 }
 
 export function PageHeader({
@@ -34,10 +41,28 @@ export function PageHeader({
     icon,
     backButton,
     toolbar,
+    hideFeedback = false,
     ...props
 }: PageHeaderProps) {
     const pathname = usePathname();
     const { contexts, getNavItems } = useSidebarNavigation();
+    const { openModal, closeModal } = useModal();
+    const t = useTranslations('Feedback');
+
+    // Open feedback modal handler
+    const handleOpenFeedback = () => {
+        openModal(
+            <FeedbackForm
+                onSuccess={closeModal}
+                onCancel={closeModal}
+            />,
+            {
+                title: t('title') || "Enviar Comentarios",
+                description: t('modalDescription') || "Envíanos tus comentarios o reporta un problema.",
+                size: 'md'
+            }
+        );
+    };
 
     // Helper to find the matching item in all contexts
     const findActiveItem = () => {
@@ -113,6 +138,17 @@ export function PageHeader({
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
+                        {!hideFeedback && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleOpenFeedback}
+                                className="h-8 gap-2 px-3 text-xs font-medium"
+                            >
+                                <MessageSquarePlus className="h-4 w-4" />
+                                Reportar problema
+                            </Button>
+                        )}
                         {actions}
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import { getUserProfile, checkIsAdmin } from "@/features/profile/queries";
+import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { LayoutSwitcher } from "@/components/layout";
 import { getFeatureFlags, getFeatureFlag } from "@/actions/feature-flags";

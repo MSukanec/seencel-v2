@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
 import { UserProfile } from '@/types/user';
 
+// ============================================================================
+// User Profile Query
+// ============================================================================
+
 export async function getUserProfile(): Promise<{ profile: UserProfile | null; error: string | null }> {
     const supabase = await createClient();
 
@@ -12,7 +16,6 @@ export async function getUserProfile(): Promise<{ profile: UserProfile | null; e
     }
 
     // 2. Fetch User + User Data
-    // we query 'users' and left join 'user_data' on user_id
     const { data: userRecord, error: dbError } = await supabase
         .from('users')
         .select(`
@@ -44,18 +47,11 @@ export async function getUserProfile(): Promise<{ profile: UserProfile | null; e
     }
 
     // 3. Transform to flat structure
-    // user_data is an array (relation) or object (single) depending on definitions. 
-    // Since constraint is unique(user_id), it returns an array of 0 or 1 usually, unless 'single()' is not applied to the join?
-    // Supabase standard join returns an array unless mapped or using !inner if strict 1:1. 
-    // Let's assume array and take first.
-
-    // Actually, let's fix the type assertion safely
     const userData = Array.isArray(userRecord.user_data)
         ? userRecord.user_data[0]
         : userRecord.user_data;
 
     const profile: UserProfile = {
-        // User fields
         id: userRecord.id,
         auth_id: userRecord.auth_id,
         email: userRecord.email,
@@ -80,16 +76,16 @@ export async function getUserProfile(): Promise<{ profile: UserProfile | null; e
     return { profile, error: null };
 }
 
-/**
- * Check if the current user has admin role
- */
+// ============================================================================
+// Admin Check
+// ============================================================================
+
 export async function checkIsAdmin(): Promise<boolean> {
     const supabase = await createClient();
 
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     if (authError || !authUser) return false;
 
-    // Get user with role info
     const { data: userWithRole, error } = await supabase
         .from('users')
         .select(`
@@ -103,8 +99,33 @@ export async function checkIsAdmin(): Promise<boolean> {
 
     if (error || !userWithRole) return false;
 
-    // Check if role name is 'admin'
     const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
     return roleName === 'admin';
 }
 
+// ============================================================================
+// User Timezone Query
+// ============================================================================
+
+export async function getUserTimezone(): Promise<string | null> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!publicUser) return null;
+
+    const { data: prefs } = await supabase
+        .from('user_preferences')
+        .select('timezone')
+        .eq('user_id', publicUser.id)
+        .single();
+
+    return prefs?.timezone || null;
+}

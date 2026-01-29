@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getPlans } from "@/actions/plans";
+import { getFeatureFlag } from "@/actions/feature-flags";
 import { getCountries } from "@/features/countries/queries";
 import { getCourseBySlug } from "@/features/academy/course-queries";
 import { getUserOrganizations } from "@/features/organization/queries";
@@ -9,6 +10,7 @@ import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ShoppingCart } from "lucide-react";
 import { CheckoutView } from "@/features/billing/views/checkout-view";
+import { redirect } from "next/navigation";
 
 // Metadata
 export async function generateMetadata({
@@ -37,6 +39,15 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
     // Determine product type from URL parameter
     const isCourse = productParam.startsWith("course-");
     const isPlan = productParam.startsWith("plan-");
+
+    // Check feature flag for course purchases
+    if (isCourse) {
+        const coursePurchasesEnabled = await getFeatureFlag("course_purchases_enabled");
+        if (!coursePurchasesEnabled) {
+            // Redirect to academy if course purchases are disabled
+            redirect("/academia");
+        }
+    }
 
     // Extract slug from product parameter
     const productSlug = isCourse

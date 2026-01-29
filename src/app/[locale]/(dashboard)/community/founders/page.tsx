@@ -1,6 +1,6 @@
 import { ContentLayout } from "@/components/layout";
 import { ComingSoonBlock } from "@/components/ui/coming-soon-block";
-import { checkIsAdmin } from "@/features/profile/queries";
+import { checkIsAdmin } from "@/features/users/queries";
 import { setRequestLocale } from 'next-intl/server';
 import { PageWrapper } from "@/components/layout";
 import { Sparkles, Users, Trophy, Star } from "lucide-react";

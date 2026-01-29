@@ -1,0 +1,217 @@
+"use client";
+
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useOrganization } from "@/context/organization-context";
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface PresenceContextType {
+    sessionId: string | null;
+    isTracking: boolean;
+}
+
+const PresenceContext = createContext<PresenceContextType>({
+    sessionId: null,
+    isTracking: false,
+});
+
+// ============================================================================
+// Hook
+// ============================================================================
+
+export function usePresence() {
+    return useContext(PresenceContext);
+}
+
+// ============================================================================
+// Provider
+// ============================================================================
+
+interface PresenceProviderProps {
+    children: ReactNode;
+    userId: string;
+}
+
+// Heartbeat interval: 45 seconds
+const HEARTBEAT_INTERVAL = 45 * 1000;
+
+/**
+ * Generates a unique session ID per browser tab
+ * Uses sessionStorage to persist across page navigations within the same tab
+ */
+function getOrCreateSessionId(): string {
+    if (typeof window === 'undefined') return '';
+
+    const STORAGE_KEY = 'seencel_session_id';
+    let sessionId = sessionStorage.getItem(STORAGE_KEY);
+
+    if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem(STORAGE_KEY, sessionId);
+    }
+
+    return sessionId;
+}
+
+/**
+ * Derives a readable view name from the pathname
+ */
+function deriveViewName(pathname: string): string {
+    // Remove locale prefix (e.g., /es/dashboard -> /dashboard)
+    const cleanPath = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '');
+
+    // Map common paths to readable names
+    const pathMap: Record<string, string> = {
+        '': 'Hub',
+        '/': 'Hub',
+        '/organization': 'Organization',
+        '/organization/team': 'Team',
+        '/organization/roles': 'Roles',
+        '/organization/billing': 'Billing',
+        '/projects': 'Projects',
+        '/contacts': 'Contacts',
+        '/quotes': 'Quotes',
+        '/reports': 'Reports',
+        '/insights': 'Insights',
+        '/preferences': 'Preferences',
+        '/academy': 'Academy',
+        '/community': 'Community',
+        '/finance': 'Finance',
+        '/materials': 'Materials',
+    };
+
+    // Check for exact match
+    if (pathMap[cleanPath]) {
+        return pathMap[cleanPath];
+    }
+
+    // Check for prefix matches (e.g., /projects/abc -> Projects Detail)
+    for (const [prefix, name] of Object.entries(pathMap)) {
+        if (prefix && cleanPath.startsWith(prefix + '/')) {
+            return `${name} Detail`;
+        }
+    }
+
+    // Fallback: capitalize the first segment
+    const segments = cleanPath.split('/').filter(Boolean);
+    if (segments.length > 0) {
+        return segments[0].charAt(0).toUpperCase() + segments[0].slice(1);
+    }
+
+    return 'Unknown';
+}
+
+export function PresenceProvider({ children, userId }: PresenceProviderProps) {
+    const { activeOrgId } = useOrganization();
+    const pathname = usePathname();
+    const sessionIdRef = useRef<string>('');
+    const lastPathRef = useRef<string>('');
+    const [isTracking, setIsTracking] = useState(false);
+
+    // Initialize session ID on mount
+    useEffect(() => {
+        sessionIdRef.current = getOrCreateSessionId();
+    }, []);
+
+    // ========================================================================
+    // Heartbeat Effect
+    // ========================================================================
+    useEffect(() => {
+        if (!userId || !activeOrgId || !sessionIdRef.current) return;
+
+        const supabase = createClient();
+
+        const sendHeartbeat = async () => {
+            try {
+                await supabase.rpc('heartbeat', {
+                    p_org_id: activeOrgId,
+                    p_session_id: sessionIdRef.current,
+                    p_status: 'online',
+                });
+                setIsTracking(true);
+            } catch (error) {
+                console.error('[Presence] Heartbeat failed:', error);
+            }
+        };
+
+        // Send initial heartbeat
+        sendHeartbeat();
+
+        // Set up interval
+        const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+
+        // Cleanup
+        return () => {
+            clearInterval(interval);
+        };
+    }, [userId, activeOrgId]);
+
+    // ========================================================================
+    // Navigation Tracking Effect
+    // ========================================================================
+    useEffect(() => {
+        if (!userId || !activeOrgId || !sessionIdRef.current) return;
+        if (!pathname) return;
+
+        // Skip if same path
+        if (pathname === lastPathRef.current) return;
+        lastPathRef.current = pathname;
+
+        const supabase = createClient();
+        const viewName = deriveViewName(pathname);
+
+        const trackNavigation = async () => {
+            try {
+                await supabase.rpc('analytics_track_navigation', {
+                    p_org_id: activeOrgId,
+                    p_session_id: sessionIdRef.current,
+                    p_view_name: viewName,
+                });
+            } catch (error) {
+                // Navigation tracking is non-critical, just log
+                console.error('[Presence] Navigation tracking failed:', error);
+            }
+        };
+
+        trackNavigation();
+    }, [pathname, userId, activeOrgId]);
+
+    // ========================================================================
+    // Visibility Change Effect (tab switching)
+    // ========================================================================
+    useEffect(() => {
+        if (!userId || !activeOrgId || !sessionIdRef.current) return;
+
+        const supabase = createClient();
+
+        const handleVisibilityChange = async () => {
+            const status = document.hidden ? 'away' : 'online';
+
+            try {
+                await supabase.rpc('heartbeat', {
+                    p_org_id: activeOrgId,
+                    p_session_id: sessionIdRef.current,
+                    p_status: status,
+                });
+            } catch (error) {
+                // Non-critical
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [userId, activeOrgId]);
+
+    return (
+        <PresenceContext.Provider value={{ sessionId: sessionIdRef.current, isTracking }}>
+            {children}
+        </PresenceContext.Provider>
+    );
+}

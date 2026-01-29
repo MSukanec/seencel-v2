@@ -158,7 +158,7 @@ export function ActivitySettingsView({ logs = [] }: ActivitySettingsViewProps) {
     );
 
     return (
-        <>
+        <div className="h-full flex flex-col">
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
@@ -169,6 +169,6 @@ export function ActivitySettingsView({ logs = [] }: ActivitySettingsViewProps) {
             <ContentLayout variant="wide">
                 <ActivityLogsDataTable data={filteredLogs} />
             </ContentLayout>
-        </>
+        </div>
     );
 }

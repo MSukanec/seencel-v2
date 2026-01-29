@@ -14,15 +14,15 @@ import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/store/layout-store";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { useTransition } from "react";
-import { updateUserPreferences } from "@/features/preferences/actions";
+import { updateUserPreferences } from "@/features/users/actions";
 import { TIMEZONES, detectBrowserTimezone } from "@/lib/timezone-data";
 import { toast } from "sonner";
 
-interface PreferencesTabProps {
+interface PreferencesViewProps {
     initialTimezone?: string | null;
 }
 
-export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
+export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
     const { setTheme, theme } = useTheme();
     const { actions } = useLayoutStore();
     const t = useTranslations("Settings");

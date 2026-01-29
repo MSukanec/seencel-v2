@@ -11,13 +11,13 @@ import { Bell, Shield, User, Building, Settings2, Check, Crown, Users, Sparkles,
 import { getTranslations } from 'next-intl/server';
 import { getUserOrganizations } from "@/features/organization/queries";
 import { SwitchOrganizationButton } from "@/features/organization/components/switch-organization-button";
-import { getUserProfile } from "@/features/profile/queries";
-import { ProfileForm } from "@/features/profile/components/ProfileForm";
-import { PreferencesTab } from "@/features/preferences/components/preferences-tab";
-import { getUserTimezone } from "@/features/preferences/actions";
+import { getUserProfile } from "@/features/users/queries";
+import { ProfileForm } from "@/features/users/components/profile-form";
+import { PreferencesView } from "@/features/users/views/preferences-view";
+import { getUserTimezone } from "@/features/users/queries";
 import { getStorageUrl } from "@/lib/storage-utils";
 import { AvatarStack } from "@/components/ui/avatar-stack";
-import { AvatarManager } from "@/features/profile/components/AvatarManager";
+import { AvatarManager } from "@/features/users/components/avatar-manager";
 import { HeaderTitleUpdater } from "@/components/layout";
 import { getCountries } from "@/features/countries/queries";
 import { getBillingProfile } from "@/features/billing/queries";
@@ -230,7 +230,7 @@ export default async function SettingsPage({
                         </TabsContent>
 
                         <TabsContent value="preferences" className="space-y-6 mt-0">
-                            <PreferencesTab initialTimezone={userTimezone} />
+                            <PreferencesView initialTimezone={userTimezone} />
                         </TabsContent>
                     </div>
                 </Tabs>

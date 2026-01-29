@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile } from "@/features/users/queries";
 import { DemoCard, MiniKanban, MiniBudget, MiniHealthBlob, MiniGantt } from "@/features/interactive-demos";
 import { Kanban, HeartPulse, BarChart3, FileStack, Calculator, Calendar } from "lucide-react";
 

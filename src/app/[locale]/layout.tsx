@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { AcquisitionTracker } from "@/components/shared/acquisition-tracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -87,6 +88,7 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <AcquisitionTracker />
             {children}
             <ModalProvider />
             <Toaster />

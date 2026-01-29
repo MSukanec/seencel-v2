@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Globe2, ShieldCheck, Building2, HardHat, Layers } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { getTranslations } from 'next-intl/server';
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile } from "@/features/users/queries";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

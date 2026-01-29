@@ -2,7 +2,7 @@ import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { getMessages } from 'next-intl/server';
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile } from "@/features/users/queries";
 import { Shield, Lock, FileText, Database, Share2, Trash2, Mail, Building2, Scale, Zap, Info, CheckCircle2, Globe, Server } from "lucide-react";
 import Link from "next/link";
 

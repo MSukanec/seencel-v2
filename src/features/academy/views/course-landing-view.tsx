@@ -58,6 +58,7 @@ interface CourseLandingProps {
     course: Course;
     isDashboard?: boolean;
     isEnrolled?: boolean;
+    isPurchaseEnabled?: boolean;
 }
 
 // Icon mapping for modules
@@ -72,7 +73,7 @@ const moduleIcons: Record<string, React.ElementType> = {
     Image: ImageIcon,
 };
 
-export function CourseLanding({ course, isDashboard = false, isEnrolled = false }: CourseLandingProps) {
+export function CourseLanding({ course, isDashboard = false, isEnrolled = false, isPurchaseEnabled = true }: CourseLandingProps) {
     const t = useTranslations("Course");
 
     // Merge course-specific enabled sections with defaults
@@ -182,7 +183,7 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false 
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </a>
                                 </Button>
-                            ) : (
+                            ) : isPurchaseEnabled ? (
                                 <Button
                                     asChild
                                     size="lg"
@@ -193,7 +194,7 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false 
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </Link>
                                 </Button>
-                            )}
+                            ) : null}
                         </div>
                     </div>
 
@@ -910,22 +911,24 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false 
                                     <span className="text-zinc-400">{course.currency}</span>
                                 </div>
 
-                                <div className="flex flex-col items-center gap-4">
-                                    <Button
-                                        asChild
-                                        size="lg"
-                                        className="h-16 px-12 text-xl font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/25 transition-all hover:shadow-primary/40 hover:scale-105"
-                                    >
-                                        <Link href={checkoutHref}>
-                                            {t("finalCta.cta")}
-                                            <ArrowRight className="ml-3 h-6 w-6" />
-                                        </Link>
-                                    </Button>
+                                {isPurchaseEnabled && (
+                                    <div className="flex flex-col items-center gap-4">
+                                        <Button
+                                            asChild
+                                            size="lg"
+                                            className="h-16 px-12 text-xl font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/25 transition-all hover:shadow-primary/40 hover:scale-105"
+                                        >
+                                            <Link href={checkoutHref}>
+                                                {t("finalCta.cta")}
+                                                <ArrowRight className="ml-3 h-6 w-6" />
+                                            </Link>
+                                        </Button>
 
-                                    <p className="text-sm text-zinc-500">
-                                        {t("finalCta.guarantee")}
-                                    </p>
-                                </div>
+                                        <p className="text-sm text-zinc-500">
+                                            {t("finalCta.guarantee")}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </section>

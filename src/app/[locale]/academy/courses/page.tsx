@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
-import { getUserProfile } from "@/features/profile/queries";
+import { getUserProfile } from "@/features/users/queries";
 import { getCourses, getUserEnrollments } from "@/actions/courses";
 import { CoursesContent } from "@/features/academy/components/courses-content";
 

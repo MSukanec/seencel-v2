@@ -8,9 +8,12 @@ import {
     ArrowRight,
     Calendar,
     Clock,
+    Lock,
+    Crown,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { getStorageUrl } from "@/lib/storage-utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +21,14 @@ import { HeaderNotificationsButton } from "@/components/shared/header-notificati
 import { HeroCarousel, type HeroSlide } from "@/components/shared/hero-carousel";
 import type { UserProfile } from "@/types/user";
 import type { HeroSection } from "@/features/hero-sections/queries";
+import { useFeatureFlags } from "@/providers/feature-flags-provider";
+import { useOrganization } from "@/context/organization-context";
 
 interface DashboardHomeViewProps {
     user: UserProfile | null;
     activeOrgId?: string;
     activeOrgName?: string;
+    activeOrgLogo?: string | null;
     heroSlides?: HeroSection[];
     userTimezone?: string; // IANA timezone e.g. "America/Argentina/Buenos_Aires"
     recentCourses?: { id: string; slug: string; title: string; status: string; created_at: string }[];
@@ -47,11 +53,36 @@ export function DashboardHomeView({
     user,
     activeOrgId,
     activeOrgName,
+    activeOrgLogo,
     heroSlides = [],
     userTimezone,
     recentCourses = [],
     communityOrgsCount = 0
 }: DashboardHomeViewProps) {
+    // Feature flags integration - same logic as sidebar
+    const { statuses, isAdmin } = useFeatureFlags();
+    const { isFounder } = useOrganization();
+
+    // Helper to compute card status from feature flags
+    const getCardStatus = (flagKey: string): { status: 'active' | 'maintenance' | 'founders' | 'hidden'; disabled: boolean } => {
+        const flag = statuses[flagKey] || 'active';
+
+        if (flag === 'hidden') {
+            return { status: 'hidden', disabled: !isAdmin };
+        }
+        if (flag === 'maintenance') {
+            return { status: 'maintenance', disabled: !isAdmin };
+        }
+        if (flag === 'founders') {
+            return { status: 'founders', disabled: !(isAdmin || isFounder) };
+        }
+        return { status: 'active', disabled: false };
+    };
+
+    // Card statuses based on feature flags
+    const workspaceStatus = getCardStatus('context_workspace_enabled');
+    const academyStatus = getCardStatus('context_academy_enabled');
+    const communityStatus = getCardStatus('context_community_enabled');
 
     // Transform courses to news format
     const academyNews = recentCourses.map(c => ({
@@ -147,17 +178,32 @@ export function DashboardHomeView({
                     transition={{ duration: 0.5 }}
                     className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
                 >
-                    <div>
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium mb-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <div className="flex items-center gap-5">
+                        {/* Organization Logo */}
+                        {activeOrgLogo && (
+                            <div className="shrink-0 h-20 w-20 md:h-24 md:w-24 rounded-xl overflow-hidden border border-border/50 shadow-lg bg-background">
+                                <img
+                                    src={getStorageUrl(
+                                        activeOrgLogo.startsWith('organizations/') ? activeOrgLogo : `organizations/${activeOrgLogo}`,
+                                        'public-assets'
+                                    ) || ''}
+                                    alt={activeOrgName || 'Organization'}
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                        )}
+                        <div>
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium mb-1">
+                                <Calendar className="h-4 w-4" />
+                                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </div>
+                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
+                                {getGreeting()}, <span className="text-primary">{user?.first_name || 'Arquitecto'}</span>
+                            </h1>
+                            <p className="text-muted-foreground mt-2 text-lg">
+                                Bienvenido a tu centro de control Seencel.
+                            </p>
                         </div>
-                        <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-                            {getGreeting()}, <span className="text-primary">{user?.first_name || 'Arquitecto'}</span>
-                        </h1>
-                        <p className="text-muted-foreground mt-2 text-lg">
-                            Bienvenido a tu centro de control Seencel.
-                        </p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -172,39 +218,50 @@ export function DashboardHomeView({
                     animate="visible"
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
-                    {/* Work Card */}
-                    <DashboardCard
-                        title="Espacio de Trabajo"
-                        description={activeOrgName || "Gestiona tus obras y proyectos"}
-                        icon={Briefcase}
-                        href="/organization"
-                        actionLabel={activeOrgId ? "Ir a Obras" : "Crear Organización"}
-                        news={[]} // No mock news for workspace
-                        variants={itemVariants}
-                    />
+                    {/* Work Card - Conditionally rendered based on workspace flag */}
+                    {workspaceStatus.status !== 'hidden' && (
+                        <DashboardCard
+                            title="Espacio de Trabajo"
+                            description={activeOrgName || "Gestiona tus obras y proyectos"}
+                            icon={Briefcase}
+                            href="/organization"
+                            actionLabel={activeOrgId ? "Ir a Obras" : "Crear Organización"}
+                            news={[]}
+                            variants={itemVariants}
+                            status={workspaceStatus.status}
+                            disabled={workspaceStatus.disabled}
+                        />
+                    )}
 
-                    {/* Academy Card */}
-                    <DashboardCard
-                        title="Academia Seencel"
-                        description="Cursos y formación continua"
-                        icon={GraduationCap}
-                        href="/academy/my-courses"
-                        actionLabel="Mis Cursos"
-                        news={academyNews}
-                        variants={itemVariants}
-                    />
+                    {/* Academy Card - Conditionally rendered based on academy flag */}
+                    {academyStatus.status !== 'hidden' && (
+                        <DashboardCard
+                            title="Academia Seencel"
+                            description="Cursos y formación continua"
+                            icon={GraduationCap}
+                            href="/academy/my-courses"
+                            actionLabel="Mis Cursos"
+                            news={academyNews}
+                            variants={itemVariants}
+                            status={academyStatus.status}
+                            disabled={academyStatus.disabled}
+                        />
+                    )}
 
-                    {/* Community Card - Always visible, with "Próximamente" */}
-                    <DashboardCard
-                        title="Comunidad"
-                        description="Conecta con otros profesionales"
-                        icon={Users}
-                        href="/community"
-                        actionLabel="Próximamente"
-                        isComingSoon={true}
-                        news={communityNews}
-                        variants={itemVariants}
-                    />
+                    {/* Community Card - Conditionally rendered based on community flag */}
+                    {communityStatus.status !== 'hidden' && (
+                        <DashboardCard
+                            title="Comunidad"
+                            description="Conecta con otros profesionales"
+                            icon={Users}
+                            href="/community"
+                            actionLabel={communityStatus.status === 'active' ? "Ver Comunidad" : "Próximamente"}
+                            news={communityNews}
+                            variants={itemVariants}
+                            status={communityStatus.status}
+                            disabled={communityStatus.disabled}
+                        />
+                    )}
                 </motion.div>
             </div>
         </div>
@@ -226,7 +283,8 @@ interface DashboardCardProps {
     actionLabel: string;
     news: NewsItem[];
     variants: any;
-    isComingSoon?: boolean;
+    status?: 'active' | 'maintenance' | 'founders' | 'hidden';
+    disabled?: boolean;
 }
 
 function DashboardCard({
@@ -237,31 +295,55 @@ function DashboardCard({
     actionLabel,
     news,
     variants,
-    isComingSoon = false
+    status = 'active',
+    disabled = false
 }: DashboardCardProps) {
+    const isLocked = disabled || status === 'maintenance' || status === 'founders';
+
+    // Badge based on status
+    const renderBadge = () => {
+        if (status === 'maintenance') {
+            return (
+                <Badge variant="secondary" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Mantenimiento
+                </Badge>
+            );
+        }
+        if (status === 'founders') {
+            return (
+                <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Fundadores
+                </Badge>
+            );
+        }
+        return null;
+    };
 
     const CardContentWrapper = ({ children }: { children: React.ReactNode }) => (
         <motion.div variants={variants} className="h-full">
             <Card className={cn(
                 "h-full transition-all duration-300 border-border/50 overflow-hidden relative group",
-                !isComingSoon && "hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 cursor-pointer",
-                isComingSoon && "opacity-90"
+                !isLocked && "hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 cursor-pointer",
+                isLocked && "opacity-60 grayscale-[30%]"
             )}>
                 {/* Background Gradient on Hover */}
-                {!isComingSoon && (
+                {!isLocked && (
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-tr from-primary to-transparent" />
                 )}
 
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                    <div className="p-2.5 rounded-xl bg-primary/10 transition-colors">
-                        <Icon className="h-6 w-6 text-primary" />
+                    <div className={cn(
+                        "p-2.5 rounded-xl transition-colors",
+                        isLocked ? "bg-muted" : "bg-primary/10"
+                    )}>
+                        <Icon className={cn(
+                            "h-6 w-6",
+                            isLocked ? "text-muted-foreground" : "text-primary"
+                        )} />
                     </div>
-                    {isComingSoon && (
-                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Próximamente
-                        </Badge>
-                    )}
+                    {renderBadge()}
                 </CardHeader>
                 <CardContent className="space-y-4 pt-2">
                     <div>
@@ -282,7 +364,7 @@ function DashboardCard({
                         ))}
                     </div>
 
-                    {!isComingSoon && (
+                    {!isLocked && (
                         <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
                             {actionLabel}
                             <ArrowRight className="ml-1 h-3 w-3" />
@@ -293,7 +375,7 @@ function DashboardCard({
         </motion.div>
     );
 
-    if (isComingSoon) {
+    if (isLocked) {
         return <CardContentWrapper>...</CardContentWrapper>;
     }
 
