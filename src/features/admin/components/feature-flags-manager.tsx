@@ -14,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface FeatureFlagsManagerProps {
     initialFlags: FeatureFlag[];
@@ -32,11 +33,14 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
     'pro_purchases_enabled': 'Habilitar Compra Plan Pro',
     'teams_purchases_enabled': 'Habilitar Compra Plan Teams',
     'course_purchases_enabled': 'Habilitar Compra Cursos',
-    'mp_test_mode': 'MercadoPago: Modo Test',
-    'paypal_test_mode': 'PayPal: Modo Test',
+    'mp_enabled': 'MercadoPago',
+    'paypal_enabled': 'PayPal',
 };
 
 type FlagStatus = 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon';
+
+// Flags that should use a simple Switch (on/off) instead of status dropdown
+const SIMPLE_TOGGLE_FLAGS = ['mp_enabled', 'paypal_enabled'];
 
 export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFlagsManagerProps) {
     const router = useRouter();
@@ -97,55 +101,74 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
                 renderEndContent={(item) => {
                     if (item.isFolder) return null;
 
+                    const isSimpleToggle = SIMPLE_TOGGLE_FLAGS.includes(item.originalKey);
+
                     return (
                         <div className="flex items-center gap-4 mr-2">
                             <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground hidden xl:inline-flex">
                                 {item.originalKey}
                             </Badge>
 
-                            <Select
-                                value={item.status as FlagStatus}
-                                onValueChange={(val) => handleStatusChange(item.originalKey, val as FlagStatus)}
-                                disabled={isPending}
-                            >
-                                <SelectTrigger className="w-[140px] h-8 text-xs">
-                                    <div className="flex items-center gap-2">
-                                        <SelectValue />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="active">
+                            {/* Simple Switch for payment method flags */}
+                            {isSimpleToggle ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">
+                                        {item.status === 'active' ? 'Habilitado' : 'Deshabilitado'}
+                                    </span>
+                                    <Switch
+                                        checked={item.status === 'active'}
+                                        onCheckedChange={(checked) =>
+                                            handleStatusChange(item.originalKey, checked ? 'active' : 'hidden')
+                                        }
+                                        disabled={isPending}
+                                    />
+                                </div>
+                            ) : (
+                                /* Status dropdown for other flags */
+                                <Select
+                                    value={item.status as FlagStatus}
+                                    onValueChange={(val) => handleStatusChange(item.originalKey, val as FlagStatus)}
+                                    disabled={isPending}
+                                >
+                                    <SelectTrigger className="w-[140px] h-8 text-xs">
                                         <div className="flex items-center gap-2">
-                                            <Activity className="h-3 w-3 text-green-500" />
-                                            <span>Habilitado</span>
+                                            <SelectValue />
                                         </div>
-                                    </SelectItem>
-                                    <SelectItem value="maintenance">
-                                        <div className="flex items-center gap-2">
-                                            <Lock className="h-3 w-3 text-orange-500" />
-                                            <span>Mantenimiento</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="founders">
-                                        <div className="flex items-center gap-2">
-                                            <Lock className="h-3 w-3 text-yellow-500" />
-                                            <span>Fundadores</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="hidden">
-                                        <div className="flex items-center gap-2">
-                                            <EyeOff className="h-3 w-3 text-gray-500" />
-                                            <span>Oculto</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="coming_soon">
-                                        <div className="flex items-center gap-2">
-                                            <Clock className="h-3 w-3 text-blue-500" />
-                                            <span>Próximamente</span>
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="active">
+                                            <div className="flex items-center gap-2">
+                                                <Activity className="h-3 w-3 text-green-500" />
+                                                <span>Habilitado</span>
+                                            </div>
+                                        </SelectItem>
+                                        <SelectItem value="maintenance">
+                                            <div className="flex items-center gap-2">
+                                                <Lock className="h-3 w-3 text-orange-500" />
+                                                <span>Mantenimiento</span>
+                                            </div>
+                                        </SelectItem>
+                                        <SelectItem value="founders">
+                                            <div className="flex items-center gap-2">
+                                                <Lock className="h-3 w-3 text-yellow-500" />
+                                                <span>Fundadores</span>
+                                            </div>
+                                        </SelectItem>
+                                        <SelectItem value="hidden">
+                                            <div className="flex items-center gap-2">
+                                                <EyeOff className="h-3 w-3 text-gray-500" />
+                                                <span>Oculto</span>
+                                            </div>
+                                        </SelectItem>
+                                        <SelectItem value="coming_soon">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-3 w-3 text-blue-500" />
+                                                <span>Próximamente</span>
+                                            </div>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                     );
                 }}

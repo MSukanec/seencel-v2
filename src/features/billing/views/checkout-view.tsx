@@ -81,6 +81,11 @@ export interface PlanPurchaseFlags {
     teams: PlanFlagStatus;
 }
 
+export interface PaymentMethodFlags {
+    mercadopagoEnabled: boolean;
+    paypalEnabled: boolean;
+}
+
 interface CheckoutViewProps {
     productType: "plan" | "course";
     plans: Plan[];
@@ -104,6 +109,10 @@ interface CheckoutViewProps {
      * Feature flags status for each plan
      */
     purchaseFlags?: PlanPurchaseFlags;
+    /**
+     * Payment gateway test mode flags
+     */
+    paymentMethodFlags?: PaymentMethodFlags;
     /**
      * Admin can bypass disabled plans
      */
@@ -179,6 +188,7 @@ export function CheckoutView({
     exchangeRate = 1,
     userCountryCode = null,
     purchaseFlags = { pro: 'active', teams: 'active' },
+    paymentMethodFlags = { mercadopagoEnabled: true, paypalEnabled: true },
     isAdmin = false
 }: CheckoutViewProps) {
     const t = useTranslations("Founders.checkout");
@@ -505,16 +515,16 @@ export function CheckoutView({
                                                 ? statusConfig[planStatus]
                                                 : null;
 
-                                            // Determine badge colors: plan colors for coming_soon, orange for maintenance, muted for hidden
+                                            // Determine badge colors: solid backgrounds with white text
                                             const getBadgeColors = () => {
                                                 if (!statusInfo) return { bg: '', text: '' };
-                                                if (statusInfo.usePlanColors) {
-                                                    return { bg: colors.bg, text: colors.text };
-                                                }
                                                 if (planStatus === 'maintenance') {
-                                                    return { bg: 'bg-orange-500/10', text: 'text-orange-500' };
+                                                    return { bg: 'bg-orange-500', text: 'text-white' };
                                                 }
-                                                return { bg: 'bg-muted', text: 'text-muted-foreground' };
+                                                if (planStatus === 'coming_soon') {
+                                                    return { bg: colors.solid, text: 'text-white' };
+                                                }
+                                                return { bg: 'bg-muted-foreground', text: 'text-white' };
                                             };
                                             const badgeColors = getBadgeColors();
 
@@ -542,17 +552,16 @@ export function CheckoutView({
                                                         />
                                                     )}
 
-                                                    {/* Status badge for disabled plans */}
+                                                    {/* Status badge for disabled plans - positioned on top edge */}
                                                     {statusInfo && (
-                                                        <div className={cn(
-                                                            "absolute top-3 right-3 px-2 py-1 rounded-md flex items-center gap-1.5",
-                                                            badgeColors.bg
+                                                        <span className={cn(
+                                                            "absolute -top-3 right-4 px-2 py-0.5 text-xs font-semibold rounded-full flex items-center gap-1",
+                                                            badgeColors.bg,
+                                                            badgeColors.text
                                                         )}>
-                                                            <statusInfo.icon className={cn("h-3 w-3", badgeColors.text)} />
-                                                            <span className={cn("text-xs font-medium", badgeColors.text)}>
-                                                                {statusInfo.label}
-                                                            </span>
-                                                        </div>
+                                                            <statusInfo.icon className="h-3 w-3" />
+                                                            {statusInfo.label}
+                                                        </span>
                                                     )}
 
                                                     {/* Popular badge - only show if plan is active */}
@@ -679,17 +688,36 @@ export function CheckoutView({
                                         const isLocked = !isArgentina && (value === "transfer" || value === "mercadopago");
                                         if (!isLocked) setPaymentMethod(value);
                                     }}
-                                    className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
+                                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
                                 >
                                     {orderedPaymentMethods.map((method) => {
                                         const Icon = method.icon;
                                         const isSelected = paymentMethod === method.id;
                                         const isLocked = !isArgentina && (method.id === "transfer" || method.id === "mercadopago");
 
+                                        // Check if payment method is disabled in feature flags
+                                        const isPaymentFlagDisabled = (
+                                            (method.id === "mercadopago" && !paymentMethodFlags.mercadopagoEnabled) ||
+                                            (method.id === "paypal" && !paymentMethodFlags.paypalEnabled)
+                                        );
+
+                                        // Visual disabled state (shown to everyone including admin)
+                                        const showDisabledVisual = isPaymentFlagDisabled || isLocked;
+
+                                        // Functional disabled state (admin can still select)
+                                        const isClickDisabled = isLocked || (isPaymentFlagDisabled && !isAdmin);
+
                                         return (
                                             <div key={method.id} className="relative">
+                                                {/* Disabled/maintenance badge - show for ALL users when flag is off */}
+                                                {isPaymentFlagDisabled && (
+                                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 text-xs font-semibold rounded-full flex items-center gap-1 bg-orange-500 text-white whitespace-nowrap z-10">
+                                                        <Wrench className="h-3 w-3" />
+                                                        En Mantenimiento
+                                                    </span>
+                                                )}
                                                 {/* Locked badge for non-Argentina users */}
-                                                {isLocked && (
+                                                {isLocked && !isPaymentFlagDisabled && (
                                                     <Badge
                                                         variant="secondary"
                                                         className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap z-10 px-1.5 py-0.5"
@@ -698,23 +726,31 @@ export function CheckoutView({
                                                     </Badge>
                                                 )}
                                                 <Label
-                                                    htmlFor={`payment-${method.id}`}
+                                                    htmlFor={isClickDisabled ? undefined : `payment-${method.id}`}
                                                     className={cn(
-                                                        "flex flex-row sm:flex-col items-center gap-3 sm:gap-0 p-3 sm:p-4 rounded-xl border-2 transition-all",
-                                                        isLocked
-                                                            ? "cursor-not-allowed opacity-50 border-border"
+                                                        "flex flex-row sm:flex-col items-center gap-3 sm:gap-0 p-3 sm:p-4 rounded-xl border-2 transition-all h-full",
+                                                        // Visual state - show disabled look when flag is off (even for admin)
+                                                        showDisabledVisual
+                                                            ? "opacity-50 border-border"
+                                                            : "",
+                                                        // Cursor based on click ability
+                                                        isClickDisabled
+                                                            ? "cursor-not-allowed"
                                                             : "cursor-pointer",
-                                                        isSelected && !isLocked
-                                                            ? "border-primary bg-primary/5"
-                                                            : !isLocked && "border-border hover:border-primary/50"
+                                                        // Selection state (admin can select even disabled-looking items)
+                                                        isSelected && !isClickDisabled
+                                                            ? "border-primary bg-primary/5 !opacity-100"
+                                                            : !showDisabledVisual && "border-border hover:border-primary/50"
                                                     )}
+                                                    onClick={isClickDisabled ? (e) => e.preventDefault() : undefined}
                                                 >
-                                                    <RadioGroupItem
-                                                        value={method.id}
-                                                        id={`payment-${method.id}`}
-                                                        className="sr-only"
-                                                        disabled={isLocked}
-                                                    />
+                                                    {!isClickDisabled && (
+                                                        <RadioGroupItem
+                                                            value={method.id}
+                                                            id={`payment-${method.id}`}
+                                                            className="sr-only"
+                                                        />
+                                                    )}
                                                     <div className={cn(
                                                         "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center sm:mb-2 overflow-hidden flex-shrink-0",
                                                         method.bgClass

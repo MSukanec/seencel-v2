@@ -202,3 +202,34 @@ export async function getPlanPurchaseFlags(): Promise<{
         teams: (teamsFlag?.status as 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon') || 'active'
     };
 }
+
+/**
+ * Get payment method enabled status
+ * Returns true if the payment method is ENABLED (production mode)
+ * Returns false if DISABLED (blocked/maintenance mode for users)
+ */
+export async function getPaymentMethodFlags(): Promise<{
+    mercadopagoEnabled: boolean;
+    paypalEnabled: boolean;
+}> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("feature_flags")
+        .select("key, value")
+        .in("key", ["mp_enabled", "paypal_enabled"]);
+
+    if (error || !data) {
+        console.error("Error fetching payment method flags:", error);
+        return { mercadopagoEnabled: true, paypalEnabled: true }; // Default to enabled if error
+    }
+
+    const mpFlag = data.find(f => f.key === "mp_enabled");
+    const paypalFlag = data.find(f => f.key === "paypal_enabled");
+
+    // value = true means ENABLED, value = false means DISABLED/maintenance
+    return {
+        mercadopagoEnabled: mpFlag?.value ?? true,
+        paypalEnabled: paypalFlag?.value ?? true
+    };
+}

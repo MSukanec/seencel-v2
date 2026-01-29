@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getPlans } from "@/actions/plans";
-import { getFeatureFlag, getPlanPurchaseFlags } from "@/actions/feature-flags";
+import { getFeatureFlag, getPlanPurchaseFlags, getPaymentMethodFlags } from "@/actions/feature-flags";
 import { getCountries } from "@/features/countries/queries";
 import { getCourseBySlug } from "@/features/academy/course-queries";
 import { getUserOrganizations } from "@/features/organization/queries";
@@ -58,7 +58,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
             : productParam;
 
     // Fetch data based on product type
-    const [plans, countries, course, userOrgs, exchangeRate, userCountryCode, purchaseFlags, isAdmin] = await Promise.all([
+    const [plans, countries, course, userOrgs, exchangeRate, userCountryCode, purchaseFlags, paymentMethodFlags, isAdmin] = await Promise.all([
         getPlans(),
         getCountries(),
         isCourse ? getCourseBySlug(productSlug) : Promise.resolve(null),
@@ -66,6 +66,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
         getExchangeRate("USD", "ARS"),
         getUserCountryCode(),
         getPlanPurchaseFlags(),
+        getPaymentMethodFlags(),
         checkIsAdmin()
     ]);
 
@@ -90,6 +91,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                     exchangeRate={exchangeRate}
                     userCountryCode={userCountryCode}
                     purchaseFlags={purchaseFlags}
+                    paymentMethodFlags={paymentMethodFlags}
                     isAdmin={isAdmin}
                 />
             </ContentLayout>
