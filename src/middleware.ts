@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
 
     // Public paths that valid users shouldn't necessarily be forced out of,
     // BUT if they are logged in, we verify onboarding.
-    const isAuthPath = ["/login", "/signup", "/auth/callback"].some(p => pathWithoutLocale.startsWith(p));
+    const isAuthPath = ["/login", "/signup", "/auth/callback", "/forgot-password", "/update-password"].some(p => pathWithoutLocale.startsWith(p));
     const isOnboardingPath = pathWithoutLocale.startsWith("/onboarding") || pathWithoutLocale.startsWith("/bienvenida");
     const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static", "/images"].some(p => pathname.startsWith(p)) || /\.(?:jpg|jpeg|gif|png|svg|ico|webp|js|json|xml|txt|webmanifest)$/i.test(pathname);
 
@@ -90,10 +90,15 @@ export async function middleware(request: NextRequest) {
     } else {
         // User is NOT logged in
 
-        // If trying to access protected routes (organization, onboarding, etc)
-        // Allowing public landing page (root /) and auth paths
-        // Also allow specific public information pages
-        const publicPrefixes = ["/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/academy", "/about", "/portal"];
+        // Public pages - must include BOTH English and Spanish paths due to i18n routing
+        // English paths: /privacy, /terms, /contact, /founders, /pricing, /features, /courses, /academy, /about, /portal, /community
+        // Spanish paths: /privacidad, /terminos, /contacto, /fundadores, /precios, /caracteristicas, /cursos, /academia, /sobre, /portal, /comunidad
+        const publicPrefixes = [
+            // English
+            "/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/academy", "/about", "/portal", "/community", "/offline",
+            // Spanish translations
+            "/privacidad", "/terminos", "/contacto", "/fundadores", "/precios", "/caracteristicas", "/cursos", "/academia", "/sobre", "/comunidad"
+        ];
         const isPublicPage = pathWithoutLocale === "/" || isAuthPath || publicPrefixes.some(p => pathWithoutLocale.startsWith(p));
 
         if (!isPublicPage) {
