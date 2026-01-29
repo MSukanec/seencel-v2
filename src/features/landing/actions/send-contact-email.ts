@@ -93,8 +93,8 @@ export async function sendContactEmail(formData: z.infer<typeof formSchema>): Pr
         return { success: true }; // Silent success
     }
 
-    // 3. Send Email
-    const toEmail = process.env.CONTACT_EMAIL || "contacto@seencel.com";
+    // 3. Send Email - Using verified domain seencel.com
+    const toEmail = "contacto@seencel.com";
 
     console.log("=== CONTACT EMAIL ===");
     console.log("To:", toEmail);
@@ -103,10 +103,10 @@ export async function sendContactEmail(formData: z.infer<typeof formSchema>): Pr
 
     try {
         const { data: emailData, error } = await resend.emails.send({
-            from: "Seencel Contact <onboarding@resend.dev>",
+            from: "Seencel Contacto <noreply@seencel.com>",
             to: [toEmail],
             replyTo: data.email,
-            subject: `[Seencel Contacto] ${data.subject}`,
+            subject: `[Contacto Web] ${data.subject}`,
             html: getEmailHtml({
                 firstName: data.firstName,
                 lastName: data.lastName,
