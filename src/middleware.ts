@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
     // Public paths that valid users shouldn't necessarily be forced out of,
     // BUT if they are logged in, we verify onboarding.
     const isAuthPath = ["/login", "/signup", "/auth/callback"].some(p => pathWithoutLocale.startsWith(p));
-    const isOnboardingPath = pathWithoutLocale.startsWith("/onboarding");
+    const isOnboardingPath = pathWithoutLocale.startsWith("/onboarding") || pathWithoutLocale.startsWith("/bienvenida");
     const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static", "/images"].some(p => pathname.startsWith(p)) || /\.(?:jpg|jpeg|gif|png|svg|ico|webp|js|json|xml|txt|webmanifest)$/i.test(pathname);
 
     if (isPublicStatic) return response;

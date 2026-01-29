@@ -59,7 +59,8 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
     if (preferences.timezone) updateData.timezone = preferences.timezone;
     if (preferences.sidebar_project_avatars !== undefined) updateData.sidebar_project_avatars = preferences.sidebar_project_avatars;
     if (preferences.layout) {
-        updateData.layout = preferences.layout === 'default' ? 'lab' : 'experimental';
+        // sidebar (our main UI) = 'classic' in DB, default = 'experimental'
+        updateData.layout = preferences.layout === 'sidebar' ? 'classic' : 'experimental';
     }
 
     console.log("[updateUserPreferences] userId:", userId, "updateData:", updateData);
