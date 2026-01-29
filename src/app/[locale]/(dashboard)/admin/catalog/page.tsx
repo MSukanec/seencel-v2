@@ -1,9 +1,9 @@
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskKinds, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
 import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
-import { TasksCatalogView, DivisionsCatalogView, ParametersCatalogView } from "@/features/tasks/views";
-import { MaterialsCatalogView } from "@/features/materials/views";
+import { TasksCatalogView, DivisionsCatalogView, ParametersCatalogView, ElementsCatalogView } from "@/features/tasks/views";
+import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
-import { Wrench, ClipboardList, Package, Shield, FolderTree, Settings2 } from "lucide-react";
+import { Wrench, ClipboardList, Package, Shield, FolderTree, Settings2, Boxes } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -93,6 +93,10 @@ export default async function AdminCatalogPage() {
                             <ClipboardList className="h-4 w-4 mr-2" />
                             Tareas
                         </TabsTrigger>
+                        <TabsTrigger value="elements" className={tabTriggerClass}>
+                            <Boxes className="h-4 w-4 mr-2" />
+                            Elementos
+                        </TabsTrigger>
                         <TabsTrigger value="parameters" className={tabTriggerClass}>
                             <Settings2 className="h-4 w-4 mr-2" />
                             Parámetros
@@ -134,6 +138,18 @@ export default async function AdminCatalogPage() {
                     <ContentLayout variant="wide">
                         <DivisionsCatalogView
                             divisions={divisionsResult.data}
+                            isAdminMode={true}
+                        />
+                    </ContentLayout>
+                </TabsContent>
+
+                <TabsContent value="elements" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <ElementsCatalogView
+                            elements={elementsResult.data}
+                            parameters={parametersResult.data}
+                            elementParameterLinks={elementParameterLinksResult.data}
+                            units={taskUnitsResult.data}
                             isAdminMode={true}
                         />
                     </ContentLayout>

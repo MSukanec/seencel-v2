@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper, ContentLayout } from "@/components/layout";
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { CapitalPageView } from "@/features/capital/views/capital-page-view";
 import { Landmark } from "lucide-react";

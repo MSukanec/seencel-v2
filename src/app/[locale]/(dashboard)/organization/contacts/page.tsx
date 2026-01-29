@@ -1,4 +1,4 @@
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { cn } from "@/lib/utils";
 import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/actions/contacts";
 import {

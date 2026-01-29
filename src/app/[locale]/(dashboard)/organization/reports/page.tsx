@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationProjects } from "@/features/projects/queries";
 import { getOrganizationPdfTheme } from "@/features/organization/actions/pdf-settings";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";

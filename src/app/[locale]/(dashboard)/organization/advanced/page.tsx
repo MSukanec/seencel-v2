@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getIndexTypes } from "@/features/advanced/queries";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";

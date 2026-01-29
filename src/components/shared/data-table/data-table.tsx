@@ -166,6 +166,7 @@ export function DataTable<TData, TValue>({
                 cell: ({ row }: { row: any }) => {
                     // Check for attachments automatically
                     const hasAttachments = enableAttachmentIndicator && (
+                        row.original.has_attachments === true ||
                         (Array.isArray(row.original.attachments) && row.original.attachments.length > 0) ||
                         (Array.isArray(row.original.media_links) && row.original.media_links.length > 0) ||
                         (Array.isArray(row.original.files) && row.original.files.length > 0) ||

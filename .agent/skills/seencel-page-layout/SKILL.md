@@ -5,9 +5,67 @@ description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en 
 
 # Seencel Page Layout Standard
 
+## 🚨 NAMING CONVENTION: PAGES vs VIEWS (CRÍTICO)
+
+> [!CAUTION]
+> Esta convención es **OBLIGATORIA**. No hay excepciones. Si no la seguís, el código se rechaza.
+
+### Estructura en `views/`
+
+```
+src/features/[feature]/views/
+├── [feature]-page.tsx           # 🎛️ ORQUESTADOR de tabs (Client Component)
+├── [feature]-dashboard-view.tsx # 👁️ VISTA del tab "Dashboard"
+├── [feature]-payments-view.tsx  # 👁️ VISTA del tab "Pagos"
+├── [feature]-concepts-view.tsx  # 👁️ VISTA del tab "Conceptos"
+└── [feature]-settings-view.tsx  # 👁️ VISTA del tab "Ajustes"
+```
+
+### Naming Pattern
+
+| Tipo de Archivo | Sufijo | Propósito | Ejemplo |
+|-----------------|--------|-----------|---------|
+| **Orquestador de Tabs** | `-page.tsx` | Contiene `TabsContent`, renderiza las views | `general-costs-page.tsx` |
+| **Vista de Tab** | `-view.tsx` | Contenido de UN tab específico | `general-costs-payments-view.tsx` |
+
+### Ejemplo Real: `general-costs`
+
+```
+src/features/general-costs/
+├── actions.ts
+├── types.ts
+├── forms/
+│   ├── general-costs-payment-form.tsx
+│   ├── general-costs-concept-form.tsx
+│   └── general-costs-category-form.tsx
+└── views/
+    ├── general-costs-page.tsx           # Orquesta: DashboardView, PaymentsView, etc.
+    ├── general-costs-dashboard-view.tsx # Tab "Visión General"
+    ├── general-costs-payments-view.tsx  # Tab "Pagos"
+    ├── general-costs-concepts-view.tsx  # Tab "Conceptos"
+    └── general-costs-settings-view.tsx  # Tab "Ajustes"
+```
+
+### Flujo de Imports
+
+```
+app/[locale]/.../page.tsx (Server)
+    └── imports → GeneralCostsPageClient from views/general-costs-page.tsx
+                      └── imports → GeneralCostsDashboardView from views/general-costs-dashboard-view.tsx
+                      └── imports → GeneralCostsPaymentsView from views/general-costs-payments-view.tsx
+                      └── imports → GeneralCostsSettingsView from views/general-costs-settings-view.tsx
+```
+
+> [!WARNING]
+> **NO confundir:**
+> - `-page.tsx` en `views/` → Client Component que orquesta tabs
+> - `page.tsx` en `app/` → Server Component que hace fetch de datos
+
+---
+
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
-1.  **Architecture**: `PAGE.tsx` (Server) orquesta layouts → `VIEWS` (Client) contienen lógica.
+1.  **Architecture**: `PAGE.tsx` en `app/` (Server) hace fetch → `[feature]-page.tsx` en `views/` (Client) orquesta tabs → `[feature]-*-view.tsx` contienen UI.
 2.  **Tabs**: Siempre van en el **Header** (prop `tabs` de `PageWrapper`), nunca en el body.
 3.  **Metadata**: TODA página debe exportar `generateMetadata` (con título y robots).
 4.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
@@ -39,18 +97,36 @@ Reservado **EXCLUSIVAMENTE** para componentes genéricos:
 Toda la lógica específica de features vive aquí:
 
 ```
-src/features/
-├── auth/
-│   └── components/
-├── finance/
-│   ├── components/
-│   ├── actions.ts
-│   └── queries.ts
-├── projects/
-├── kanban/
-├── organization/
-└── clients/
+src/features/[feature]/
+├── TABLES.md                            # 📋 SOLO LECTURA - Esquema de tablas DB
+├── actions.ts                           # Server actions
+├── types.ts                             # TypeScript types
+├── forms/                               # 📝 Formularios (ver skill seencel-forms-modals)
+│   ├── [feature]-[entity]-form.tsx
+│   └── [feature]-[other]-form.tsx
+├── components/                          # 🧩 (OPCIONAL) Componentes UI auxiliares
+└── views/                               # 👁️ TODAS las vistas
+    ├── [feature]-page.tsx               # 🎛️ ORQUESTADOR (contiene TabsContent)
+    ├── [feature]-dashboard-view.tsx     # Vista tab Dashboard
+    ├── [feature]-[tab1]-view.tsx        # Vista tab 1
+    ├── [feature]-[tab2]-view.tsx        # Vista tab 2
+    └── [feature]-settings-view.tsx      # Vista tab Settings
 ```
+
+> [!CAUTION]
+> **TABLES.md es SOLO LECTURA**. Contiene el esquema de las tablas de la base de datos del feature.
+> - ✅ **PERMITIDO**: Leerlo para entender la estructura de datos
+> - ⛔ **PROHIBIDO**: Modificarlo. Solo el usuario puede editarlo.
+
+> [!IMPORTANT]
+> **Forms:** SIEMPRE van en `src/features/[feature]/forms/`, NO en `components/forms/`.
+> Ver skill `seencel-forms-modals` para naming convention de forms.
+
+> [!IMPORTANT]
+> **Views:** TODO contenido visual de tabs va en `views/`. El orquestador termina en `-page.tsx`, las vistas individuales en `-view.tsx`.
+
+> [!NOTE]
+> **Components:** OPCIONAL. Solo se crea si hay componentes UI reutilizables que las views usan.
 
 **Regla**: Si un componente importa lógica de negocio (actions, queries) → pertenece a Features.
 

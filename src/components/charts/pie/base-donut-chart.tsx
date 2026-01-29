@@ -9,6 +9,7 @@ import {
 import { CHART_DEFAULTS, formatCurrency } from '../chart-config';
 import { cn } from '@/lib/utils';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { useMoney } from '@/hooks/use-money';
 
 interface BaseDonutChartProps {
     data: any[];
@@ -19,6 +20,10 @@ interface BaseDonutChartProps {
     height?: number;
     className?: string;
     chartClassName?: string;
+    /** 
+     * Custom tooltip formatter. If not provided and autoFormat is true,
+     * uses useMoney().format automatically.
+     */
     tooltipFormatter?: (value: number) => string;
     centerLabel?: string;
     // Legend
@@ -28,6 +33,11 @@ interface BaseDonutChartProps {
     maxLegendItems?: number;
     // Shadcn
     config?: ChartConfig;
+    /**
+     * If true (default), uses useMoney for formatting.
+     * Set to false to use legacy formatCurrency or custom formatter.
+     */
+    autoFormat?: boolean;
 }
 
 export function BaseDonutChart({
@@ -39,15 +49,21 @@ export function BaseDonutChart({
     height = 160,
     className,
     chartClassName,
-    tooltipFormatter = formatCurrency,
+    tooltipFormatter,
     centerLabel,
     showLegend = true,
     showPercentage = true,
     legendFormatter,
     maxLegendItems = 8,
-    config = {}
+    config = {},
+    autoFormat = true
 }: BaseDonutChartProps) {
-    const formatValue = legendFormatter || tooltipFormatter;
+    // Use useMoney for automatic formatting when autoFormat is enabled
+    const money = useMoney();
+
+    // Determine the formatter to use
+    const effectiveTooltipFormatter = tooltipFormatter ?? (autoFormat ? money.format : formatCurrency);
+    const formatValue = legendFormatter ?? effectiveTooltipFormatter;
 
     // Sort data by value descending and calculate totals
     const { sortedData, total, legendData, othersValue } = useMemo(() => {
@@ -80,7 +96,7 @@ export function BaseDonutChart({
                     <PieChart>
                         <ChartTooltip
                             cursor={false}
-                            content={<ChartTooltipContent formatter={tooltipFormatter as any} hideLabel />}
+                            content={<ChartTooltipContent formatter={effectiveTooltipFormatter as any} hideLabel />}
                         />
                         <Pie
                             data={sortedData}

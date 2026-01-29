@@ -3,27 +3,15 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 
 // Define a local type if not imported, or use any for flexibility during dev
 export const columns: ColumnDef<any>[] = [
-    {
+    createDateColumn<any>({
         accessorKey: "payment_date",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-        cell: ({ row }) => {
-            const date = new Date(row.original.payment_date);
-            return (
-                <div className="flex flex-col">
-                    <span className="text-sm font-medium">{date.toLocaleDateString()}</span>
-                    <span className="text-xs text-muted-foreground capitalize">
-                        {format(date, 'MMMM yyyy', { locale: es })}
-                    </span>
-                </div>
-            );
-        },
-    },
+        showAvatar: false,
+    }),
     {
         accessorKey: "subcontract_title",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Subcontrato" />,
@@ -38,35 +26,16 @@ export const columns: ColumnDef<any>[] = [
         enableSorting: true,
         enableHiding: false,
     },
-    {
+    createTextColumn<any>({
         accessorKey: "wallet_name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Billetera" />,
-        cell: ({ row }) => (
-            <span className="text-sm text-foreground/80">{row.original.wallet_name || "-"}</span>
-        ),
-    },
-    {
+        title: "Billetera",
+        muted: true,
+    }),
+    createMoneyColumn<any>({
         accessorKey: "amount",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Monto" />,
-        cell: ({ row }) => {
-            const amount = row.original.amount;
-            const currency = row.original.currency_symbol || "$";
-            const rate = row.original.exchange_rate;
-
-            return (
-                <div className="flex flex-col">
-                    <span className="font-mono font-medium text-amount-positive">
-                        {currency} {Number(amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    {rate && rate > 1 && (
-                        <span className="text-xs text-muted-foreground font-mono">
-                            Cot: {Number(rate).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </span>
-                    )}
-                </div>
-            );
-        },
-    },
+        prefix: "-",
+        colorMode: "negative",
+    }),
     {
         accessorKey: "status",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,

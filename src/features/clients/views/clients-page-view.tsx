@@ -11,10 +11,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { useCurrency } from "@/providers/currency-context";
-import { useFinancialFeatures } from "@/hooks/use-financial-features";
-import { useMoney } from "@/hooks/use-money";
-import type { DisplayMode } from "@/lib/money/money";
 
 import { ProjectClientView, ClientFinancialSummary, ClientPaymentView, ClientRole, OrganizationFinancialData } from "@/features/clients/types";
 import { ClientsOverview } from "./clients-overview-view";
@@ -63,32 +59,7 @@ export function ClientsPageClient({
 
     const currentTab = searchParams.get("view") || defaultTab;
 
-    // --- CURRENCY TOOLBAR STATE (Usando SOLO useMoney) ---
-    const { primaryCurrency, secondaryCurrency } = useCurrency();
-    const { showCurrencySelector } = useFinancialFeatures();
-    const money = useMoney();
-
-    // Map between UI tabs and DisplayMode
-    type CurrencyViewMode = 'mix' | 'primary' | 'secondary';
-
-    const modeToView = (mode: DisplayMode): CurrencyViewMode => {
-        if (mode === 'mix') return 'mix';
-        if (mode === 'secondary') return 'secondary';
-        return 'primary'; // functional -> primary
-    };
-
-    const viewToMode = (view: CurrencyViewMode): DisplayMode => {
-        if (view === 'mix') return 'mix';
-        if (view === 'secondary') return 'secondary';
-        return 'functional'; // primary -> functional
-    };
-
-    const currencyMode = modeToView(money.displayMode);
-
-    const handleCurrencyModeChange = (mode: CurrencyViewMode) => {
-        money.setDisplayMode(viewToMode(mode));
-    };
-
+    // --- DATE RANGE FILTER ---
     // Date range filter
     const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
 
@@ -103,26 +74,7 @@ export function ClientsPageClient({
         });
     }, [payments, dateRange]);
 
-    // Currency mode selector element (for Toolbar)
-    const currencyModeSelector = showCurrencySelector && secondaryCurrency ? (
-        <Tabs
-            value={currencyMode}
-            onValueChange={(v) => handleCurrencyModeChange(v as CurrencyViewMode)}
-            className="h-9"
-        >
-            <TabsList className="h-9 grid grid-cols-3 w-auto">
-                <TabsTrigger value="mix" className="text-xs px-3">
-                    Mix
-                </TabsTrigger>
-                <TabsTrigger value="primary" className="text-xs px-3">
-                    {primaryCurrency?.code || 'ARS'}
-                </TabsTrigger>
-                <TabsTrigger value="secondary" className="text-xs px-3">
-                    {secondaryCurrency.code}
-                </TabsTrigger>
-            </TabsList>
-        </Tabs>
-    ) : null;
+
 
     // --- HEALTH FILTER STATE ---
     const [healthFilterActive, setHealthFilterActive] = useState(false);
@@ -222,14 +174,11 @@ export function ClientsPageClient({
                         <Toolbar
                             portalToHeader={true}
                             leftActions={
-                                <>
-                                    {currencyModeSelector}
-                                    <DateRangeFilter
-                                        title="Período"
-                                        value={dateRange}
-                                        onChange={(value) => setDateRange(value)}
-                                    />
-                                </>
+                                <DateRangeFilter
+                                    title="Período"
+                                    value={dateRange}
+                                    onChange={(value) => setDateRange(value)}
+                                />
                             }
                         />
                         <ClientsOverview summary={financialSummary} payments={filteredPayments} />

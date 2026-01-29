@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { ContactWithRelations, ContactType } from "@/types/contact";
-import { Button } from "@/components/ui/button";
-import { Plus, Search, LayoutGrid, List } from "lucide-react";
+import { Plus, LayoutGrid, List, Upload } from "lucide-react";
 import { ContactForm } from "@/features/contact/forms/contact-form";
-import { ContactCard } from "./contact-card";
 import { ContactsDataTable } from "./contacts-data-table";
 import { useModal } from "@/providers/modal-store";
 import { useRouter } from "next/navigation";
 import { deleteContact } from "@/actions/contacts";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { BulkImportModal } from "@/components/shared/import/import-modal";
+import { createImportBatch, importContactsBatch, revertImportBatch } from "@/actions/import-actions";
+import { getContactTypes, createContactType } from "@/actions/contacts";
+import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
+import { ImportConfig } from "@/lib/import-utils";
 
 interface ContactsListProps {
     organizationId: string;
@@ -22,6 +26,7 @@ type ViewMode = "grid" | "table";
 
 export function ContactsList({ organizationId, initialContacts, contactTypes }: ContactsListProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
+    const [searchQuery, setSearchQuery] = useState("");
     const { openModal, closeModal } = useModal();
     const router = useRouter();
 
@@ -45,39 +50,91 @@ export function ContactsList({ organizationId, initialContacts, contactTypes }: 
         );
     };
 
-    const handleOpenEdit = (contact: ContactWithRelations) => {
-        openModal(
-            <ContactForm
-                organizationId={organizationId}
-                contactTypes={contactTypes}
-                initialData={contact}
-                onSuccess={handleSuccess}
-            />,
+    // Import config
+    const contactImportConfig: ImportConfig<any> = {
+        entityLabel: "Contactos",
+        entityId: "contactos",
+        columns: [
+            { id: "first_name", label: "Nombre", required: true, example: "Juan" },
+            { id: "last_name", label: "Apellido", required: false, example: "Pérez" },
             {
-                title: "Editar Contacto",
-                description: `Modificando a ${contact.full_name}`,
-                size: "lg"
+                id: "email",
+                label: "Email",
+                type: "email",
+                unique: true,
+                normalization: normalizeEmail,
+                validation: (val) => {
+                    const normalized = normalizeEmail(val);
+                    if (!normalized) return undefined;
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(normalized)) return "Email inválido";
+                }
+            },
+            {
+                id: "phone",
+                label: "Teléfono",
+                type: "phone",
+                normalization: normalizePhone
+            },
+            { id: "company_name", label: "Empresa", required: false },
+            { id: "location", label: "Ubicación", required: false },
+            { id: "notes", label: "Notas", required: false },
+            {
+                id: "contact_types",
+                label: "Tipo",
+                required: false,
+                example: "Cliente",
+                foreignKey: {
+                    table: 'contact_types',
+                    labelField: 'name',
+                    valueField: 'id',
+                    fetchOptions: async (orgId) => {
+                        const types = await getContactTypes(orgId);
+                        return types.map(t => ({ id: t.id, label: t.name }));
+                    },
+                    allowCreate: true,
+                    createAction: async (orgId, name) => {
+                        const newType = await createContactType(orgId, name);
+                        return { id: newType.id };
+                    }
+                }
+            },
+        ],
+        onImport: async (data) => {
+            try {
+                const batch = await createImportBatch(organizationId, "contacts", data.length);
+                await importContactsBatch(organizationId, data, batch.id);
+                return { success: data.length, errors: [], batchId: batch.id };
+            } catch (error) {
+                console.error("Import error:", error);
+                throw error;
+            }
+        },
+        onRevert: async (batchId) => {
+            await revertImportBatch(batchId, 'contacts');
+        }
+    };
+
+    const handleOpenImport = () => {
+        openModal(
+            <BulkImportModal config={contactImportConfig} organizationId={organizationId} />,
+            {
+                size: "2xl",
+                title: `Importar ${contactImportConfig.entityLabel}`,
+                description: "Sigue los pasos para importar datos masivamente."
             }
         );
     };
 
-    const handleDelete = async (contact: ContactWithRelations) => {
-        if (confirm(`¿Estás seguro de eliminar a ${contact.full_name || 'este contacto'}?`)) {
-            await deleteContact(contact.id);
-            router.refresh();
-        }
-    };
-
-
-
     return (
-        <div className="space-y-4">
-            <ContactsDataTable
-                organizationId={organizationId}
-                contacts={initialContacts}
-                contactTypes={contactTypes}
-                viewMode={viewMode}
-                viewToggle={
+        <>
+            {/* Toolbar with portal to header */}
+            <Toolbar
+                portalToHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Buscar contactos..."
+                leftActions={
                     <ToolbarTabs
                         value={viewMode}
                         onValueChange={(v) => setViewMode(v as ViewMode)}
@@ -87,8 +144,30 @@ export function ContactsList({ organizationId, initialContacts, contactTypes }: 
                         ]}
                     />
                 }
+                actions={[
+                    {
+                        label: "Nuevo Contacto",
+                        icon: Plus,
+                        onClick: handleOpenCreate,
+                    },
+                    {
+                        label: "Importar",
+                        icon: Upload,
+                        onClick: handleOpenImport,
+                    }
+                ]}
             />
-        </div>
+
+            {/* Data Table - now without deprecated toolbar props */}
+            <ContactsDataTable
+                organizationId={organizationId}
+                contacts={initialContacts}
+                contactTypes={contactTypes}
+                viewMode={viewMode}
+                globalFilter={searchQuery}
+                onGlobalFilterChange={setSearchQuery}
+            />
+        </>
     );
 }
 

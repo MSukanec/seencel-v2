@@ -4,6 +4,8 @@
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useMoney } from "@/hooks/use-money";
+import type { MoneyInput } from "@/lib/money";
 
 /** Currency breakdown item for bi-monetary display */
 export interface CurrencyBreakdownItem {
@@ -16,7 +18,21 @@ export interface CurrencyBreakdownItem {
 
 interface DashboardKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     title: string;
-    value: string | number;
+    /** 
+     * @deprecated Use `amount` instead for automatic currency formatting.
+     * Pre-formatted display value (legacy mode) 
+     */
+    value?: string | number;
+    /** 
+     * Raw monetary amount - will be formatted automatically using useMoney.
+     * Preferred over `value` for new code.
+     */
+    amount?: number;
+    /**
+     * Optional array of monetary items for automatic breakdown calculation.
+     * Only used when `amount` is provided.
+     */
+    items?: MoneyInput[];
     icon?: React.ReactNode;
     trend?: {
         value: string | number;
@@ -97,22 +113,45 @@ function parseValueString(value: string): { prefix: string; number: number | nul
 export function DashboardKpiCard({
     title,
     value,
+    amount,
+    items,
     icon,
     trend,
     className,
     iconClassName,
     description,
-    currencyBreakdown,
-    decimalPlaces = 2,
+    currencyBreakdown: externalBreakdown,
+    decimalPlaces: externalDecimalPlaces,
     compact = true,  // Default to compact for modern look
     size = 'large',  // Default to large for impact
     ...props
 }: DashboardKpiCardProps) {
+    // Use useMoney for automatic formatting when amount is provided
+    const money = useMoney();
+
+    // Determine display value: prefer `amount` (new) over `value` (legacy)
+    const displayValue = amount !== undefined
+        ? money.format(amount)
+        : value ?? '';
+
+    // Auto-calculate breakdown from items if provided
+    const currencyBreakdown = items && items.length > 0
+        ? money.sum(items).breakdown.map(b => ({
+            ...b,
+            functionalTotal: b.nativeTotal
+        }))
+        : externalBreakdown;
+
+    // Use config decimal places when using amount mode
+    const decimalPlaces = amount !== undefined
+        ? money.config.decimalPlaces
+        : (externalDecimalPlaces ?? 2);
+
     // Only show breakdown if there are 2+ currencies
     const showBreakdown = currencyBreakdown && currencyBreakdown.length > 1;
 
-    const formatValue = (amount: number) => {
-        return amount.toLocaleString('es-AR', {
+    const formatValue = (val: number) => {
+        return val.toLocaleString('es-AR', {
             minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces
         });
@@ -126,11 +165,11 @@ export function DashboardKpiCard({
             'hero': 'text-5xl'
         };
 
-        // If compact mode and value is a string with a number, parse and format
-        if (compact && typeof value === 'string') {
+        // If compact mode and displayValue is a string with a number, parse and format
+        if (compact && typeof displayValue === 'string') {
             // Special case: percentage values - render as-is with suffix styling
-            if (value.endsWith('%')) {
-                const numPart = value.slice(0, -1);
+            if (displayValue.endsWith('%')) {
+                const numPart = displayValue.slice(0, -1);
                 return (
                     <h2 className={cn("font-bold tracking-tight mt-2 flex items-baseline gap-1", sizeClasses[size])}>
                         <span>{numPart}</span>
@@ -139,7 +178,7 @@ export function DashboardKpiCard({
                 );
             }
 
-            const parsed = parseValueString(value);
+            const parsed = parseValueString(displayValue);
             if (parsed.number !== null) {
                 const formatted = formatCompactValue(parsed.number);
                 return (
@@ -156,9 +195,9 @@ export function DashboardKpiCard({
             }
         }
 
-        // If compact mode and value is a number
-        if (compact && typeof value === 'number') {
-            const formatted = formatCompactValue(value);
+        // If compact mode and displayValue is a number
+        if (compact && typeof displayValue === 'number') {
+            const formatted = formatCompactValue(displayValue);
             return (
                 <h2 className={cn("font-bold tracking-tight mt-2 flex items-baseline gap-1", sizeClasses[size])}>
                     <span>{formatted.value}</span>
@@ -170,11 +209,11 @@ export function DashboardKpiCard({
         }
 
         // For large/hero sizes without compact, still try to separate prefix
-        if (size !== 'default' && typeof value === 'string') {
-            const parsed = parseValueString(value);
+        if (size !== 'default' && typeof displayValue === 'string') {
+            const parsed = parseValueString(displayValue);
             if (parsed.prefix) {
                 // Get the remaining part after prefix
-                const remaining = value.substring(value.indexOf(parsed.prefix) + parsed.prefix.length).trim();
+                const remaining = displayValue.substring(displayValue.indexOf(parsed.prefix) + parsed.prefix.length).trim();
                 return (
                     <h2 className={cn("font-bold tracking-tight mt-2 flex items-baseline gap-1", sizeClasses[size])}>
                         <span className="text-lg font-semibold text-muted-foreground">{parsed.prefix}</span>
@@ -184,9 +223,9 @@ export function DashboardKpiCard({
             }
         }
 
-        // Default: render value as-is
+        // Default: render displayValue as-is
         return (
-            <h2 className={cn("font-bold tracking-tight mt-2", sizeClasses[size])}>{value}</h2>
+            <h2 className={cn("font-bold tracking-tight mt-2", sizeClasses[size])}>{displayValue}</h2>
         );
     };
 

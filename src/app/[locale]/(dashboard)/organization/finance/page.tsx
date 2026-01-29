@@ -3,9 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { getFinancialMovements } from "@/features/organization/queries";
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
-import { FinancePageClient } from "@/features/finance/components/views/finance-page-client";
+import { FinancePageClient } from "@/features/finance/views/finances-page";
 import { DollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
 

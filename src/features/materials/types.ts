@@ -3,6 +3,22 @@
 import { z } from "zod";
 
 // ==========================================
+// Material Type (Category)
+// ==========================================
+
+export interface MaterialType {
+    id: string;
+    organization_id: string | null;
+    name: string;
+    description: string | null;
+    created_at: string;
+    is_system: boolean;
+    is_deleted: boolean;
+    deleted_at: string | null;
+    updated_at: string;
+}
+
+// ==========================================
 // Material Payment Schema
 // ==========================================
 
@@ -12,6 +28,7 @@ export const materialPaymentSchema = z.object({
     organization_id: z.string().uuid(),
     purchase_id: z.string().uuid().nullable(),
     wallet_id: z.string().uuid().nullable(),
+    material_type_id: z.string().uuid().nullable(),
     amount: z.number(),
     currency_id: z.string().uuid(),
     exchange_rate: z.number().nullable(),
@@ -22,7 +39,6 @@ export const materialPaymentSchema = z.object({
     image_url: z.string().nullable(),
     created_by: z.string().uuid().nullable(),
     updated_by: z.string().uuid().nullable(),
-    functional_amount: z.number().nullable(),
     created_at: z.string().nullable(),
     updated_at: z.string(),
     is_deleted: z.boolean().default(false).nullable(),
@@ -38,7 +54,14 @@ export const materialPaymentViewSchema = materialPaymentSchema.extend({
     wallet_name: z.string().nullable(),
     currency_symbol: z.string().nullable(),
     currency_code: z.string().nullable(),
-    purchase_reference: z.string().nullable(), // Or purchase concept
+    purchase_reference: z.string().nullable(),
+    invoice_number: z.string().nullable(),
+    provider_name: z.string().nullable(),
+    project_name: z.string().nullable(),
+    material_type_name: z.string().nullable(),
+    creator_full_name: z.string().nullable(),
+    creator_avatar_url: z.string().nullable(),
+    has_attachments: z.boolean().default(false),
 });
 
 export type MaterialPaymentView = z.infer<typeof materialPaymentViewSchema>;

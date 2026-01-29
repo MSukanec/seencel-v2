@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { TrendingUp, Info, Calendar, Percent, DollarSign, Download } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useMoney } from "@/hooks/use-money";
@@ -17,9 +17,6 @@ import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCurrency } from "@/providers/currency-context";
-import { useFinancialFeatures } from "@/hooks/use-financial-features";
 
 // ✅ Recharts + Project Chart Components
 import {
@@ -31,8 +28,6 @@ import {
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { CHART_DEFAULTS } from '@/components/charts/chart-config';
-
-export type CurrencyViewMode = 'mix' | 'primary' | 'secondary';
 
 interface SubcontractAdjustmentViewProps {
     subcontract: any;
@@ -51,43 +46,10 @@ export function SubcontractAdjustmentView({
     indexTypeName,
     indexHistory = []
 }: SubcontractAdjustmentViewProps) {
-    // ✅ Extract displayMode and sum from useMoney
+    // ✅ Extract displayMode and sum from useMoney (global context)
     const { format: formatMoney, config, displayMode, sum } = useMoney();
 
-    // Currency context for selector
-    const { primaryCurrency, secondaryCurrency, setDisplayCurrency } = useCurrency();
-    const { showCurrencySelector } = useFinancialFeatures();
-    const [currencyMode, setCurrencyMode] = useState<CurrencyViewMode>('mix');
 
-    const handleCurrencyModeChange = (mode: CurrencyViewMode) => {
-        setCurrencyMode(mode);
-        if (mode === 'mix' || mode === 'primary') {
-            setDisplayCurrency('primary');
-        } else if (mode === 'secondary') {
-            setDisplayCurrency('secondary');
-        }
-    };
-
-    // Currency mode tabs element
-    const currencyModeSelector = showCurrencySelector && secondaryCurrency ? (
-        <Tabs
-            value={currencyMode}
-            onValueChange={(v) => handleCurrencyModeChange(v as CurrencyViewMode)}
-            className="h-9"
-        >
-            <TabsList className="h-9 grid grid-cols-3 w-auto">
-                <TabsTrigger value="mix" className="text-xs px-3">
-                    Mix
-                </TabsTrigger>
-                <TabsTrigger value="primary" className="text-xs px-3">
-                    {primaryCurrency?.code || 'ARS'}
-                </TabsTrigger>
-                <TabsTrigger value="secondary" className="text-xs px-3">
-                    {secondaryCurrency.code}
-                </TabsTrigger>
-            </TabsList>
-        </Tabs>
-    ) : null;
 
     // Export handler
     const handleExport = () => {
@@ -282,10 +244,9 @@ export function SubcontractAdjustmentView({
 
     return (
         <>
-            {/* Toolbar with currency selector and export */}
+            {/* Toolbar with export */}
             <Toolbar
                 portalToHeader
-                leftActions={currencyModeSelector}
                 actions={[
                     {
                         label: "Exportar",
@@ -336,7 +297,7 @@ export function SubcontractAdjustmentView({
 
                             <DashboardKpiCard
                                 title="Diferencia a Pagar"
-                                value={formatMoney(Math.abs(difference))}
+                                amount={Math.abs(difference)}
                                 icon={<DollarSign className="h-5 w-5" />}
                                 description="Adicional por redeterminación"
                                 compact={true}
@@ -357,7 +318,7 @@ export function SubcontractAdjustmentView({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <DashboardKpiCard
                         title="Saldo Original (Pendiente)"
-                        value={formatMoney(remaining)}
+                        amount={remaining}
                         description="Sin aplicar ajuste por índice"
                         compact={true}
                         size="large"
@@ -365,7 +326,7 @@ export function SubcontractAdjustmentView({
 
                     <DashboardKpiCard
                         title="Saldo Ajustado"
-                        value={formatMoney(adjustedRemaining)}
+                        amount={adjustedRemaining}
                         description="Con redeterminación aplicada"
                         compact={true}
                         size="large"

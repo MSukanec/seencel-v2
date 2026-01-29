@@ -17,20 +17,17 @@ import {
     ArrowDownRight,
     Landmark
 } from "lucide-react";
-import type { CurrencyViewMode } from "./capital-page-view";
 
 interface CapitalOverviewViewProps {
     movements: any[];
     participants: any[];
     wallets: { id: string; wallet_name: string }[];
-    currencyMode: CurrencyViewMode;
 }
 
 export function CapitalOverviewView({
     movements,
     participants,
     wallets,
-    currencyMode,
 }: CapitalOverviewViewProps) {
     const { format } = useMoney();
 

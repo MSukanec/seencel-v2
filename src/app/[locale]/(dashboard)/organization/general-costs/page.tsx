@@ -1,11 +1,11 @@
-import { GeneralCostsClient } from "@/features/finance/components/general-costs-client";
+import { GeneralCostsPageClient } from "@/features/general-costs/views/general-costs-page";
 import {
     getGeneralCostCategories,
     getGeneralCosts,
     getGeneralCostPayments,
     getGeneralCostsDashboard,
     getActiveOrganizationId
-} from "@/actions/general-costs";
+} from "@/features/general-costs/actions";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -64,7 +64,7 @@ export default async function GeneralCostsPage() {
                 }
             >
                 <ContentLayout variant="wide">
-                    <GeneralCostsClient
+                    <GeneralCostsPageClient
                         organizationId={organizationId}
                         categories={categories}
                         concepts={concepts}

@@ -121,7 +121,7 @@ export async function revertImportBatch(batchId: string, entityTable: string = '
     if (batchError) throw new Error("Failed to update batch status");
 
     // 2. Soft delete records associated with this batch
-    const allowedTables = ['contacts', 'client_payments'];
+    const allowedTables = ['contacts', 'client_payments', 'subcontract_payments', 'material_payments'];
     if (!allowedTables.includes(entityTable)) throw new Error("Invalid entity table for revert");
 
     const { error: recordsError } = await supabase
@@ -496,6 +496,158 @@ export async function importSubcontractPaymentsBatch(
 
         if (error) {
             console.error("Bulk subcontract payment insert failed:", error);
+            throw new Error("Bulk insert failed: " + error.message);
+        }
+    }
+
+    revalidatePath('/project');
+    return {
+        success: records.length,
+        errors,
+        skipped: payments.length - records.length
+    };
+}
+
+
+export async function importMaterialPaymentsBatch(
+    organizationId: string,
+    projectId: string,
+    payments: any[],
+    batchId: string
+) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    // 1. Get material types for lookup
+    const { data: materialTypes } = await supabase
+        .from('material_types')
+        .select('id, name')
+        .or(`organization_id.eq.${organizationId},is_system.eq.true`)
+        .eq('is_deleted', false);
+
+    const typeMap = new Map<string, string>();
+    materialTypes?.forEach((t: any) => {
+        if (t.name) typeMap.set(t.name.toLowerCase().trim(), t.id);
+    });
+
+    // 2. Get currencies for code lookup
+    const { data: currencies } = await supabase
+        .from('currencies')
+        .select('id, code');
+
+    const currencyMap = new Map<string, any>();
+    currencies?.forEach((c: any) => {
+        if (c.code) currencyMap.set(c.code.toUpperCase(), c);
+    });
+
+    // 3. Get wallets for name lookup
+    const { data: wallets } = await supabase
+        .from('organization_wallets_view')
+        .select('id, wallet_name')
+        .eq('organization_id', organizationId);
+
+    const walletMap = new Map<string, string>();
+    wallets?.forEach((w: any) => {
+        if (w.wallet_name) walletMap.set(w.wallet_name.toLowerCase().trim(), w.id);
+    });
+
+    // 4. Transform and validate records
+    const errors: any[] = [];
+    const records = payments
+        .map((payment, index) => {
+            // Resolve material_type_id (optional)
+            let material_type_id = null;
+            if (payment.material_type_name) {
+                const rawValue = String(payment.material_type_name).trim();
+                // Check if it's already a UUID
+                const directMatch = materialTypes?.find(t => t.id === rawValue);
+                if (directMatch) {
+                    material_type_id = directMatch.id;
+                } else {
+                    material_type_id = typeMap.get(rawValue.toLowerCase()) || null;
+                }
+            }
+
+            // Resolve currency_id
+            let currency_id = null;
+            const rawCurrency = String(payment.currency_code || 'ARS').trim();
+            const directCurrency = currencies?.find(c => c.id === rawCurrency);
+
+            if (directCurrency) {
+                currency_id = directCurrency.id;
+            } else {
+                const currencyCode = rawCurrency.toUpperCase();
+                const currency = currencyMap.get(currencyCode);
+                if (currency) {
+                    currency_id = currency.id;
+                } else {
+                    errors.push({ row: index + 1, error: `Moneda no encontrada: "${rawCurrency}"` });
+                    return null;
+                }
+            }
+
+            // Resolve wallet_id (optional)
+            let wallet_id = null;
+            if (payment.wallet_name) {
+                const rawWallet = String(payment.wallet_name).trim();
+                const directWallet = wallets?.find(w => w.id === rawWallet);
+                if (directWallet) {
+                    wallet_id = directWallet.id;
+                } else {
+                    wallet_id = walletMap.get(rawWallet.toLowerCase()) || null;
+                }
+            }
+            if (!wallet_id && wallets && wallets.length > 0) {
+                wallet_id = wallets[0].id;
+            }
+
+            if (!wallet_id) {
+                errors.push({ row: index + 1, error: "No se encontró billetera y no hay billetera por defecto." });
+                return null;
+            }
+
+            // Parse date
+            const parsedDate = parseFlexibleDate(payment.payment_date);
+            const payment_date = parsedDate || new Date();
+
+            const amount = Number(payment.amount) || 0;
+            const exchange_rate = Number(payment.exchange_rate) || 1;
+
+            return {
+                project_id: projectId,
+                organization_id: organizationId,
+                wallet_id,
+                material_type_id,
+                amount,
+                currency_id,
+                exchange_rate,
+                payment_date: payment_date.toISOString(),
+                notes: payment.notes || null,
+                reference: payment.reference || null,
+                status: 'confirmed',
+                import_batch_id: batchId,
+                created_by: user.id,
+                is_deleted: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+        })
+        .filter(Boolean);
+
+    if (errors.length > 0) {
+        console.warn("Material import warnings:", errors);
+    }
+
+    // 5. Insert valid records
+    if (records.length > 0) {
+        const { error } = await supabase
+            .from('material_payments')
+            .insert(records);
+
+        if (error) {
+            console.error("Bulk material payment insert failed:", error);
             throw new Error("Bulk insert failed: " + error.message);
         }
     }

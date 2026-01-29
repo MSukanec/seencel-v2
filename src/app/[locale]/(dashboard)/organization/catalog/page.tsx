@@ -2,7 +2,7 @@ import { getUserOrganizations } from "@/features/organization/queries";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskKinds } from "@/features/tasks/queries";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy } from "@/features/materials/queries";
 import { TasksCatalogView, DivisionsCatalogView } from "@/features/tasks/views";
-import { MaterialsCatalogView } from "@/features/materials/views";
+import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Wrench, ClipboardList, Package, FolderTree } from "lucide-react";
 import { redirect } from "next/navigation";

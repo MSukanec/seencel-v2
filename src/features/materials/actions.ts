@@ -28,7 +28,6 @@ export async function createMaterialPaymentAction(input: z.infer<typeof createMa
 
     // Handling FormData input if necessary
     let payload = input as any;
-    let currencyCodeToCheck: string | null = null;
     let mediaFilesJson: string | null = null;
 
     if (input instanceof FormData) {
@@ -38,47 +37,12 @@ export async function createMaterialPaymentAction(input: z.infer<typeof createMa
             amount: Number(raw.amount),
             exchange_rate: raw.exchange_rate ? Number(raw.exchange_rate) : null,
             purchase_id: raw.purchase_id === '' ? null : raw.purchase_id,
+            material_type_id: raw.material_type_id === '' ? null : raw.material_type_id,
         };
-        currencyCodeToCheck = raw.currency_code as string || null;
         mediaFilesJson = raw.media_files as string || null;
     } else {
-        currencyCodeToCheck = (input as any).currency_code || null;
         mediaFilesJson = (input as any).media_files || null;
     }
-
-    // 1. Fetch currency to check code for functional amount calc
-    let currencyCode: string | null = currencyCodeToCheck;
-
-    if (!currencyCode) {
-        const { data: publicCurrency } = await supabase
-            .from('currencies')
-            .select('code')
-            .eq('id', payload.currency_id)
-            .single();
-
-        if (publicCurrency) {
-            currencyCode = publicCurrency.code;
-        } else {
-            const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
-                .select('currency_code')
-                .eq('organization_id', payload.organization_id)
-                .eq('currency_id', payload.currency_id)
-                .single();
-
-            if (viewCurrency) currencyCode = viewCurrency.currency_code;
-        }
-    }
-
-    if (!currencyCode) {
-        throw new Error("Error al validar la moneda: No se pudo obtener información de la divisa.");
-    }
-
-    // 2. Calculate functional amount (Latam Rule: USD multiplies by rate)
-    const isUSD = currencyCode === 'USD';
-    const functional_amount = isUSD
-        ? payload.amount * (payload.exchange_rate || 1)
-        : payload.amount;
 
     const { data, error } = await supabase
         .from('material_payments')
@@ -94,17 +58,18 @@ export async function createMaterialPaymentAction(input: z.infer<typeof createMa
             notes: payload.notes,
             reference: payload.reference,
             status: payload.status,
-            functional_amount
+            material_type_id: payload.material_type_id,
         })
         .select()
         .single();
 
     if (error) {
         console.error("Error creating material payment:", error);
-        throw new Error("Error al registrar el pago de material.");
+        console.error("Payload was:", JSON.stringify(payload, null, 2));
+        throw new Error(`Error al registrar el pago de material: ${error.message || error.code || 'Unknown error'}`);
     }
 
-    // 3. Handle Media Attachment if needed
+    // Handle Media Attachment if needed
     if (mediaFilesJson && data?.id && user?.id) {
         try {
             const mediaList = JSON.parse(mediaFilesJson);
@@ -161,7 +126,6 @@ export async function updateMaterialPaymentAction(input: z.infer<typeof updateMa
     const { data: { user } } = await supabase.auth.getUser();
 
     let payload = input as any;
-    let currencyCodeToCheck: string | null = null;
     let paymentId: string | null = null;
     let mediaFilesJson: string | null = null;
 
@@ -174,11 +138,9 @@ export async function updateMaterialPaymentAction(input: z.infer<typeof updateMa
             purchase_id: raw.purchase_id === '' ? null : raw.purchase_id,
         };
         paymentId = raw.id as string || (input as any).id;
-        currencyCodeToCheck = raw.currency_code as string || null;
         mediaFilesJson = raw.media_files as string || null;
     } else {
         paymentId = input.id;
-        currencyCodeToCheck = (input as any).currency_code || null;
         mediaFilesJson = (input as any).media_files || null;
     }
 
@@ -186,49 +148,16 @@ export async function updateMaterialPaymentAction(input: z.infer<typeof updateMa
         throw new Error("No se proporcionó ID para actualizar el pago.");
     }
 
-    // 1. Fetch current payment
+    // Fetch current payment to get organization_id if needed
     const { data: currentPayment, error: fetchError } = await supabase
         .from('material_payments')
-        .select('amount, exchange_rate, currency_id, organization_id')
+        .select('organization_id')
         .eq('id', paymentId)
         .single();
 
     if (fetchError || !currentPayment) {
         throw new Error("No se encontró el pago a actualizar.");
     }
-
-    // 2. Fetch currency details 
-    let currencyCode: string | null = currencyCodeToCheck;
-
-    if (!currencyCode) {
-        const currencyIdToCheck = payload.currency_id ?? currentPayment.currency_id;
-
-        const { data: pubCurrency } = await supabase
-            .from('currencies')
-            .select('code')
-            .eq('id', currencyIdToCheck)
-            .single();
-
-        if (pubCurrency) {
-            currencyCode = pubCurrency.code;
-        } else {
-            const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
-                .select('currency_code')
-                .eq('organization_id', currentPayment.organization_id)
-                .eq('currency_id', currencyIdToCheck)
-                .single();
-            if (viewCurrency) currencyCode = viewCurrency.currency_code;
-        }
-    }
-
-    if (!currencyCode) throw new Error("Error al validar moneda durante actualización.");
-
-    // 3. Calculate new functional amount
-    const newAmount = payload.amount ?? currentPayment.amount;
-    const newRate = payload.exchange_rate ?? currentPayment.exchange_rate ?? 1;
-    const isUSD = currencyCode === 'USD';
-    const functional_amount = isUSD ? newAmount * newRate : newAmount;
 
     const { data, error } = await supabase
         .from('material_payments')
@@ -244,7 +173,7 @@ export async function updateMaterialPaymentAction(input: z.infer<typeof updateMa
             notes: payload.notes,
             reference: payload.reference,
             status: payload.status,
-            functional_amount,
+            material_type_id: payload.material_type_id,
             updated_at: new Date().toISOString()
         })
         .eq('id', paymentId)
@@ -330,22 +259,31 @@ export async function deleteMaterialPaymentAction(paymentId: string) {
 export async function getMaterialPurchasesAction(projectId: string) {
     const supabase = await createClient();
 
-    // For now, return empty array - will be populated when material_purchases table exists
-    // TODO: Implement when material_purchases table is ready
+    // material_purchases was renamed to material_invoices
+    // This query returns purchases/invoices for the dropdown
     const { data, error } = await supabase
-        .from('material_purchases')
-        .select('id, reference, concept, supplier_name')
+        .from('material_invoices')
+        .select('id, invoice_number, notes, provider_id')
         .eq('project_id', projectId)
-        .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
     if (error) {
         // Table might not exist yet, return empty array
-        console.warn("Error fetching material purchases (table may not exist yet):", error.message);
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("material_invoices table may not exist yet, returning empty array");
+            return [];
+        }
+        console.warn("Error fetching material invoices:", error.message);
         return [];
     }
 
-    return data || [];
+    // Transform to expected format for dropdown
+    return (data || []).map((inv: any) => ({
+        id: inv.id,
+        reference: inv.invoice_number || null,
+        concept: inv.notes || null,
+        supplier_name: null, // Would need a join to get this
+    }));
 }
 
 // ===============================================
@@ -752,3 +690,76 @@ export async function deletePurchaseOrder(orderId: string) {
 }
 
 
+// ===============================================
+// Material Types (Categories)
+// ===============================================
+
+import { MaterialType } from "@/features/materials/types";
+
+export async function getMaterialTypes(organizationId: string): Promise<MaterialType[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('material_types')
+        .select('*')
+        .or(`organization_id.eq.${organizationId},is_system.eq.true`)
+        .eq('is_deleted', false)
+        .order('name');
+
+    if (error) {
+        console.error('Error fetching material types:', error);
+        return [];
+    }
+
+    return data as MaterialType[];
+}
+
+export async function createMaterialType(data: Partial<MaterialType>) {
+    const supabase = await createClient();
+    const { data: newType, error } = await supabase
+        .from('material_types')
+        .insert({
+            organization_id: data.organization_id,
+            name: data.name,
+            description: data.description,
+            is_system: data.is_system || false
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/project');
+    return newType;
+}
+
+export async function updateMaterialType(id: string, data: Partial<MaterialType>) {
+    const supabase = await createClient();
+    const { data: updatedType, error } = await supabase
+        .from('material_types')
+        .update({
+            name: data.name,
+            description: data.description,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/project');
+    return updatedType;
+}
+
+export async function deleteMaterialType(id: string) {
+    const supabase = await createClient();
+    // Soft delete
+    const { error } = await supabase
+        .from('material_types')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/project');
+    return true;
+}

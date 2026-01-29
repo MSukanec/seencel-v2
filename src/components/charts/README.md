@@ -92,3 +92,73 @@ config={{
 3. Accept `ChartConfig` for Shadcn compatibility
 4. Export from `index.ts`
 5. Add usage example to this README
+
+---
+
+## 💰 autoFormat & useMoney Integration
+
+> **IMPORTANTE**: Todos los charts tienen `autoFormat=true` por defecto.
+> Esto significa que usan `useMoney()` internamente para formatear valores monetarios.
+
+### Comportamiento por Defecto
+
+```tsx
+// ✅ RECOMENDADO - El chart formatea automáticamente
+<BaseDonutChart
+  data={categoryData}
+  nameKey="name"
+  valueKey="value"
+/>
+// Tooltip y legend muestran: "$ 1.500.000" automáticamente
+```
+
+### Desactivar autoFormat (casos especiales)
+
+```tsx
+// Solo si necesitás formateo custom (ej: porcentajes, unidades)
+<BaseAreaChart
+  data={data}
+  autoFormat={false}
+  tooltipFormatter={(v) => `${v}%`}
+  yAxisFormatter={(v) => `${v}%`}
+/>
+```
+
+### Migración de Código Legacy
+
+```tsx
+// ANTES (legacy) - formatters manuales
+<BaseDonutChart
+  tooltipFormatter={money.format}
+  legendFormatter={money.format}
+/>
+
+// DESPUÉS (nuevo) - autoFormat lo hace
+<BaseDonutChart />
+```
+
+### ⚠️ NO Hacer
+
+```tsx
+// ❌ INCORRECTO - No pre-formatear los datos
+const badData = categories.map(cat => ({
+  name: cat.name,
+  value: money.format(cat.total) // ¡NO! Esto rompe cálculos
+}));
+
+// ❌ INCORRECTO - No usar formatters externos cuando autoFormat=true
+<BaseDonutChart
+  autoFormat={true} // default
+  tooltipFormatter={customFormatter} // Se ignora!
+/>
+```
+
+### Props Relacionados
+
+| Prop | Tipo | Default | Descripción |
+|------|------|---------|-------------|
+| `autoFormat` | `boolean` | `true` | Usar useMoney() para formateo |
+| `tooltipFormatter` | `(value: number) => string` | - | Solo aplica si `autoFormat=false` |
+| `yAxisFormatter` | `(value: number) => string` | - | Solo aplica si `autoFormat=false` |
+| `legendFormatter` | `(value: number) => string` | - | Solo aplica si `autoFormat=false` |
+

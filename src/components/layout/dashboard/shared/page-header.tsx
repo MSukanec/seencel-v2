@@ -9,6 +9,7 @@ import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { MessageSquarePlus } from "lucide-react";
+import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -138,16 +139,22 @@ export function PageHeader({
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
-                        {!hideFeedback && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleOpenFeedback}
-                                className="h-8 gap-2 px-3 text-xs font-medium"
-                            >
-                                <MessageSquarePlus className="h-4 w-4" />
-                                Reportar problema
-                            </Button>
+                        {/* Hide currency selector and feedback in admin routes */}
+                        {!pathname.includes('/admin/') && (
+                            <>
+                                <CurrencyModeSelector />
+                                {!hideFeedback && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleOpenFeedback}
+                                        className="h-8 gap-2 px-3 text-xs font-medium"
+                                    >
+                                        <MessageSquarePlus className="h-4 w-4" />
+                                        Reportar problema
+                                    </Button>
+                                )}
+                            </>
                         )}
                         {actions}
                     </div>

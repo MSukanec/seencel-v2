@@ -26,6 +26,7 @@ import {
     DisplayMode,
     createMoney,
     calculateDisplayAmount as calcDisplayAmount,
+    convertToFunctional,
     sumMoney,
     sumMoneyWithSign,
     formatAmount,
@@ -89,6 +90,9 @@ export interface UseMoneyReturn {
     // === Conversion ===
     /** Calculate display amount for a single item */
     calculateDisplayAmount: (item: MoneyInput) => number;
+
+    /** Convert to functional currency (ALWAYS converts, ignores displayMode - for charts) */
+    toFunctionalAmount: (item: MoneyInput) => number;
 
     /** Create a Money object from raw input */
     createMoney: (item: MoneyInput) => Money;
@@ -176,6 +180,12 @@ export function useMoney(options: UseMoneyOptions = {}): UseMoneyReturn {
         return createMoney(item, config);
     }, [config]);
 
+    // Always convert to functional currency (for charts)
+    const toFunctionalAmountFn = useCallback((item: MoneyInput): number => {
+        const money = createMoney(item, config);
+        return convertToFunctional(money, config);
+    }, [config]);
+
     // === Formatting functions ===
     const format = useCallback((amount: number, currencyCode?: string): string => {
         return formatAmount(amount, currencyCode || displayCurrencyCode, config);
@@ -225,6 +235,7 @@ export function useMoney(options: UseMoneyOptions = {}): UseMoneyReturn {
 
         // Conversion
         calculateDisplayAmount: calculateDisplayAmountFn,
+        toFunctionalAmount: toFunctionalAmountFn,
         createMoney: createMoneyFn,
 
         // Formatting

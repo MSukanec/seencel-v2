@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MaterialsPageView } from "@/features/materials/views";
+import { MaterialsPageView } from "@/features/materials/views/materials-page";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
 import {
@@ -8,7 +8,7 @@ import {
     getPurchaseOrders,
     getProvidersForProject
 } from "@/features/materials/queries";
-import { getMaterialPurchasesAction } from "@/features/materials/actions";
+import { getMaterialPurchasesAction, getMaterialTypes } from "@/features/materials/actions";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { notFound } from "next/navigation";
 
@@ -78,13 +78,14 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
     }
 
     // Fetch data for all tabs
-    const [payments, purchases, financialData, requirements, orders, providers] = await Promise.all([
+    const [payments, purchases, financialData, requirements, orders, providers, materialTypes] = await Promise.all([
         getMaterialPayments(projectId),
         getMaterialPurchasesAction(projectId),
         getOrganizationFinancialData(activeOrgId),
         getProjectMaterialRequirements(projectId),
         getPurchaseOrders(projectId),
-        getProvidersForProject(activeOrgId)
+        getProvidersForProject(activeOrgId),
+        getMaterialTypes(activeOrgId)
     ]);
 
     return (
@@ -98,6 +99,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
             requirements={requirements}
             orders={orders}
             providers={providers}
+            materialTypes={materialTypes}
         />
     );
 }

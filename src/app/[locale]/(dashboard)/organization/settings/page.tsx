@@ -1,4 +1,4 @@
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { SettingsClient } from "@/features/organization/components/settings/settings-client";
 import { redirect } from "next/navigation";

@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { SitelogShell } from '@/features/sitelog/components/sitelog-shell';
-import { getActiveOrganizationId } from "@/actions/general-costs";
+import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getSiteLogTypes, getSiteLogs } from "@/actions/sitelog";
 
 interface Props {

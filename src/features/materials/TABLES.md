@@ -21,15 +21,18 @@ create table public.material_payments (
   is_deleted boolean null default false,
   deleted_at timestamp with time zone null,
   updated_by uuid null,
-  functional_amount numeric(20, 2) null,
+  material_type_id uuid null,
+  import_batch_id uuid null,
   constraint material_payments_pkey primary key (id),
   constraint material_payments_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
   constraint material_payments_currency_id_fkey foreign KEY (currency_id) references currencies (id) on delete RESTRICT,
+  constraint material_payments_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id) on delete set null,
   constraint material_payments_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
-  constraint material_payments_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
-  constraint material_payments_purchase_fkey foreign KEY (purchase_id) references material_purchases (id) on delete set null,
   constraint material_payments_wallet_id_fkey foreign KEY (wallet_id) references organization_wallets (id) on delete RESTRICT,
   constraint material_payments_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint fk_material_payments_type foreign KEY (material_type_id) references material_types (id) on delete set null,
+  constraint material_payments_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint material_payments_purchase_fkey foreign KEY (purchase_id) references material_invoices (id) on delete set null,
   constraint material_payments_amount_positive check ((amount > (0)::numeric)),
   constraint material_payments_status_check check (
     (
@@ -60,6 +63,16 @@ create index IF not exists material_payments_project_id_payment_date_idx on publ
 
 create index IF not exists material_payments_organization_id_payment_date_idx on public.material_payments using btree (organization_id, payment_date desc) TABLESPACE pg_default;
 
+create index IF not exists idx_material_payments_type on public.material_payments using btree (material_type_id) TABLESPACE pg_default;
+
+create index IF not exists idx_material_payments_import_batch on public.material_payments using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
+
+create index IF not exists idx_material_payments_material_type on public.material_payments using btree (material_type_id) TABLESPACE pg_default
+where
+  (material_type_id is not null);
+
 create trigger on_material_payment_audit
 after INSERT
 or DELETE
@@ -72,14 +85,123 @@ or
 update on material_payments for EACH row
 execute FUNCTION handle_updated_by ();
 
-create trigger set_functional_amount_material_payments BEFORE INSERT
-or
-update on material_payments for EACH row
-execute FUNCTION set_material_payment_functional_amount ();
-
 create trigger set_material_payments_updated_at BEFORE
 update on material_payments for EACH row
 execute FUNCTION set_timestamp ();
+
+# Vista MATERIAL_PAYMENTS_VIEW:
+
+create view public.material_payments_view as
+select
+  mp.id,
+  mp.organization_id,
+  mp.project_id,
+  mp.payment_date,
+  date_trunc(
+    'month'::text,
+    mp.payment_date::timestamp with time zone
+  ) as payment_month,
+  mp.amount,
+  mp.currency_id,
+  cur.code as currency_code,
+  cur.symbol as currency_symbol,
+  COALESCE(mp.exchange_rate, 1::numeric) as exchange_rate,
+  mp.status,
+  mp.wallet_id,
+  w.name as wallet_name,
+  mp.notes,
+  mp.reference,
+  mp.purchase_id,
+  mi.invoice_number,
+  mi.provider_id,
+  COALESCE(
+    prov.company_name,
+    (prov.first_name || ' '::text) || prov.last_name
+  ) as provider_name,
+  p.name as project_name,
+  mp.created_by,
+  u.full_name as creator_full_name,
+  u.avatar_url as creator_avatar_url,
+  mp.created_at,
+  mp.updated_at,
+  (
+    exists (
+      select
+        1
+      from
+        media_links ml
+      where
+        ml.material_payment_id = mp.id
+    )
+  ) as has_attachments
+from
+  material_payments mp
+  left join material_invoices mi on mi.id = mp.purchase_id
+  left join contacts prov on prov.id = mi.provider_id
+  left join projects p on p.id = mp.project_id
+  left join organization_members om on om.id = mp.created_by
+  left join users u on u.id = om.user_id
+  left join wallets w on w.id = mp.wallet_id
+  left join currencies cur on cur.id = mp.currency_id
+where
+  mp.is_deleted = false
+  or mp.is_deleted is null;
+
+# Tabla MATERIAL_TYPES:
+
+create table public.material_types (
+  id uuid not null default gen_random_uuid (),
+  organization_id uuid null,
+  name text not null,
+  description text null,
+  created_at timestamp with time zone not null default now(),
+  is_system boolean not null default false,
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  updated_at timestamp with time zone not null default now(),
+  created_by uuid null,
+  updated_by uuid null,
+  constraint material_types_pkey primary key (id),
+  constraint fk_material_types_org foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint material_types_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint material_types_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint material_types_system_org_check check (
+    (
+      (
+        (is_system = true)
+        and (organization_id is null)
+      )
+      or (
+        (is_system = false)
+        and (organization_id is not null)
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create unique INDEX IF not exists uq_material_types_system_name on public.material_types using btree (lower(name)) TABLESPACE pg_default
+where
+  (
+    (is_system = true)
+    and (is_deleted = false)
+  );
+
+create unique INDEX IF not exists uq_material_types_org_name on public.material_types using btree (organization_id, lower(name)) TABLESPACE pg_default
+where
+  (
+    (is_system = false)
+    and (is_deleted = false)
+  );
+
+create index IF not exists idx_material_types_list on public.material_types using btree (is_system, organization_id, is_deleted, name) TABLESPACE pg_default;
+
+create trigger set_updated_by_material_types BEFORE
+update on material_types for EACH row
+execute FUNCTION handle_updated_by ();
+
+create trigger trg_set_updated_at_material_types BEFORE
+update on material_types for EACH row
+execute FUNCTION set_updated_at ();
 
 # Tabla MATERIALS:
 

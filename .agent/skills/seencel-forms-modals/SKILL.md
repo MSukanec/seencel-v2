@@ -34,22 +34,44 @@ openModal(<MyFormComponent onSuccess={closeModal} />, {
 
 ---
 
-## Naming Convention & Location (OBLIGATORIO)
+## Naming Convention & Location (🚨 OBLIGATORIO)
 
-### Ubicación
-Los formularios **SIEMPRE** deben ir dentro de la carpeta `components/forms` de su respectivo feature.
+### Ubicación de Forms
 
-`src/features/[feature]/components/forms/`
+> [!CAUTION]
+> Los formularios **SIEMPRE** deben ir en la carpeta `forms/` **directamente dentro del feature**, NO dentro de `components/`.
 
-### Naming
-El nombre del archivo debe seguir el patrón: `[feature]-[entity]-form.tsx`.
+```
+src/features/[feature]/
+├── actions.ts
+├── types.ts
+├── forms/                         # ✅ CORRECTO: forms/ al nivel del feature
+│   ├── [feature]-[entity]-form.tsx
+│   └── [feature]-[other]-form.tsx
+├── components/                    # Solo componentes de UI (tablas, cards, etc.)
+│   └── ...
+└── views/
+    └── ...
+```
 
-*   ✅ `subcontracts-subcontract-form.tsx`
-*   ✅ `materials-request-form.tsx`
-*   ❌ `form.tsx`
-*   ❌ `create-form.tsx`
+❌ **INCORRECTO**: `src/features/[feature]/components/forms/`
+✅ **CORRECTO**: `src/features/[feature]/forms/`
 
+### Naming Pattern
 
+El nombre del archivo **DEBE** seguir el patrón: `[feature]-[entity]-form.tsx`
+
+| Ejemplo Correcto | Ejemplo Incorrecto |
+|------------------|-------------------|
+| `general-costs-payment-form.tsx` | `payment-form.tsx` |
+| `general-costs-category-form.tsx` | `category-form.tsx` |
+| `finance-movement-form.tsx` | `movement-form.tsx` |
+| `sitelog-entry-form.tsx` | `entry-form.tsx` |
+| `clients-payment-form.tsx` | `form.tsx` |
+| `subcontracts-adjustment-form.tsx` | `create-form.tsx` |
+
+> [!IMPORTANT]
+> El prefijo del feature es **OBLIGATORIO** para evitar ambigüedad. Un archivo llamado `payment-form.tsx` no indica a qué feature pertenece.
 ---
 
 ## ⚠️ PATRÓN OBLIGATORIO: Footer Sticky en Modales

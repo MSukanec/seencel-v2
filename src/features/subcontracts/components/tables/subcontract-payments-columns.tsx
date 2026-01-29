@@ -3,8 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 
 // Type for subcontract payment data
 export interface SubcontractPaymentRow {
@@ -30,43 +29,15 @@ export interface SubcontractPaymentRow {
 }
 
 export const subcontractPaymentsColumns: ColumnDef<SubcontractPaymentRow>[] = [
-    {
+    createDateColumn<SubcontractPaymentRow>({
         accessorKey: "payment_date",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-        cell: ({ row }) => {
-            const date = new Date(row.original.payment_date);
-            return (
-                <div className="flex flex-col">
-                    <span className="text-sm font-medium">{date.toLocaleDateString()}</span>
-                    <span className="text-xs text-muted-foreground capitalize">
-                        {format(date, 'MMMM yyyy', { locale: es })}
-                    </span>
-                </div>
-            );
-        },
-    },
-    {
+        showAvatar: false,
+    }),
+    createMoneyColumn<SubcontractPaymentRow>({
         accessorKey: "amount",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Monto" />,
-        cell: ({ row }) => {
-            const amount = row.original.amount;
-            const symbol = row.original.currency?.symbol || "$";
-            const rate = row.original.exchange_rate;
-
-            return (
-                <div className="flex flex-col">
-                    <span className="font-mono font-medium text-amount-negative">
-                        {symbol} {amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    {rate && rate > 1 && (
-                        <span className="text-xs text-muted-foreground font-mono">
-                            Cot: {rate.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </span>
-                    )}
-                </div>
-            );
-        },
-    },
+        prefix: "-",
+        colorMode: "negative",
+    }),
     {
         accessorKey: "wallet",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Billetera" />,
@@ -113,13 +84,10 @@ export const subcontractPaymentsColumns: ColumnDef<SubcontractPaymentRow>[] = [
             return value.includes(row.getValue(id));
         },
     },
-    {
+    createTextColumn<SubcontractPaymentRow>({
         accessorKey: "reference",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Referencia" />,
-        cell: ({ row }) => (
-            <span className="text-sm text-muted-foreground truncate max-w-[150px] inline-block">
-                {row.original.reference || "-"}
-            </span>
-        ),
-    },
+        title: "Referencia",
+        truncate: 150,
+        muted: true,
+    }),
 ];

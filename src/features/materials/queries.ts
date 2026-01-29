@@ -10,18 +10,17 @@ import { MaterialPaymentView, OrganizationFinancialData, MaterialRequirement } f
 export async function getMaterialPayments(projectId: string): Promise<MaterialPaymentView[]> {
     const supabase = await createClient();
 
-    // Simple select without joins - joins may fail if table schema is incomplete
+    // Use the VIEW which includes joined fields (wallet, currency, creator info)
     const { data, error } = await supabase
-        .from('material_payments')
+        .from('material_payments_view')
         .select('*')
         .eq('project_id', projectId)
-        .eq('is_deleted', false)
         .order('payment_date', { ascending: false });
 
     if (error) {
-        // If table doesn't exist yet, return empty array gracefully
+        // If view doesn't exist yet, return empty array gracefully
         if (error.code === '42P01' || error.message?.includes('does not exist')) {
-            console.warn("material_payments table does not exist yet, returning empty array");
+            console.warn("material_payments_view does not exist yet, returning empty array");
             return [];
         }
         console.error("Error fetching material payments:", error);
@@ -29,13 +28,10 @@ export async function getMaterialPayments(projectId: string): Promise<MaterialPa
         return [];
     }
 
-    // Transform to match MaterialPaymentView (wallet/currency info will be null until joins are set up)
+    // Transform to match MaterialPaymentView
     return (data || []).map((p: any) => ({
         ...p,
-        wallet_name: null, // TODO: Join when relationship is established
-        currency_symbol: null,
-        currency_code: null,
-        purchase_reference: null,
+        purchase_reference: p.invoice_number || null, // Alias for backwards compatibility
     }));
 }
 

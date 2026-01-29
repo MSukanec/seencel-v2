@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface EmptyStateProps {
     title: string;
-    description: string;
+    description: React.ReactNode;
     icon: LucideIcon;
     action?: React.ReactNode;
     className?: string;

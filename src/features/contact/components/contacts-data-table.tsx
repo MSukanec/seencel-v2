@@ -35,9 +35,11 @@ interface ContactsDataTableProps {
     viewMode: "table" | "grid";
     viewToggle?: React.ReactNode;
     toolbarInHeader?: boolean;
+    globalFilter?: string;
+    onGlobalFilterChange?: (value: string) => void;
 }
 
-export function ContactsDataTable({ organizationId, contacts, contactTypes, viewMode, viewToggle, toolbarInHeader = false }: ContactsDataTableProps) {
+export function ContactsDataTable({ organizationId, contacts, contactTypes, viewMode, viewToggle, toolbarInHeader = false, globalFilter, onGlobalFilterChange }: ContactsDataTableProps) {
     const { openModal, closeModal } = useModal();
     const router = useRouter();
     const [deletingContact, setDeletingContact] = useState<ContactWithRelations | null>(null);
@@ -314,14 +316,13 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
             <DataTable
                 columns={columns}
                 data={optimisticContacts}
-                searchPlaceholder="Buscar"
                 viewMode={viewMode}
                 enableRowSelection={true}
                 enableRowActions={true}
                 onEdit={handleOpenEdit}
                 onDelete={handleDelete}
-                leftActions={viewToggle}
-                toolbarInHeader={toolbarInHeader}
+                globalFilter={globalFilter}
+                onGlobalFilterChange={onGlobalFilterChange}
                 pageSize={50}
                 facetedFilters={[
                     {

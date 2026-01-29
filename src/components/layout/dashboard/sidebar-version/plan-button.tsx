@@ -4,6 +4,7 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { useOrganization } from "@/context/organization-context";
 import { Crown, Sparkles, Users } from "lucide-react";
 import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,6 +46,7 @@ const getPlanStyle = (name: string) => {
 };
 
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
+    const { activeOrgId } = useOrganization();
     const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -73,7 +75,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
         }
 
         loadPlanData();
-    }, []);
+    }, [activeOrgId]); // Refresh when organization changes
 
     // Loading skeleton - same height as button
     if (loading) {

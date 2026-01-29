@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Plus, Users, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useModal } from "@/providers/modal-store";
 import { SubcontractsSubcontractForm } from "../components/forms/subcontracts-subcontract-form";
@@ -17,9 +16,6 @@ import { DeleteConfirmationDialog } from "@/components/shared/forms/general/dele
 import { toast } from "sonner";
 
 import { useMoney } from "@/hooks/use-money";
-import { useCurrency } from "@/providers/currency-context";
-import { useFinancialFeatures } from "@/hooks/use-financial-features";
-import type { DisplayMode } from "@/lib/money/money";
 
 interface SubcontractsListViewProps {
     projectId: string;
@@ -34,33 +30,10 @@ interface SubcontractsListViewProps {
 export function SubcontractsListView({ projectId, organizationId, providers, currencies, initialSubcontracts = [], defaultCurrencyId, indexTypes = [] }: SubcontractsListViewProps) {
     const { openModal, closeModal } = useModal();
     const money = useMoney();
-    const { primaryCurrency, secondaryCurrency } = useCurrency();
-    const { showCurrencySelector } = useFinancialFeatures();
     const subcontracts = initialSubcontracts;
 
     // Search state
     const [searchQuery, setSearchQuery] = useState("");
-
-    // Currency mode mapping
-    type CurrencyViewMode = 'mix' | 'primary' | 'secondary';
-
-    const modeToView = (mode: DisplayMode): CurrencyViewMode => {
-        if (mode === 'mix') return 'mix';
-        if (mode === 'secondary') return 'secondary';
-        return 'primary';
-    };
-
-    const viewToMode = (view: CurrencyViewMode): DisplayMode => {
-        if (view === 'mix') return 'mix';
-        if (view === 'secondary') return 'secondary';
-        return 'functional';
-    };
-
-    const currencyMode = modeToView(money.displayMode);
-
-    const handleCurrencyModeChange = (mode: CurrencyViewMode) => {
-        money.setDisplayMode(viewToMode(mode));
-    };
 
     // Filter active subcontracts for calculations
     const activeSubcontracts = useMemo(() =>
@@ -226,33 +199,13 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
         router.push(window.location.pathname + '/' + subcontract.id);
     };
 
-    // Currency mode selector element (for Toolbar)
-    const currencyModeSelector = showCurrencySelector && secondaryCurrency ? (
-        <Tabs
-            value={currencyMode}
-            onValueChange={(v) => handleCurrencyModeChange(v as CurrencyViewMode)}
-            className="h-9"
-        >
-            <TabsList className="h-9 grid grid-cols-3 w-auto">
-                <TabsTrigger value="mix" className="text-xs px-3">
-                    Mix
-                </TabsTrigger>
-                <TabsTrigger value="primary" className="text-xs px-3">
-                    {primaryCurrency?.code || 'ARS'}
-                </TabsTrigger>
-                <TabsTrigger value="secondary" className="text-xs px-3">
-                    {secondaryCurrency.code}
-                </TabsTrigger>
-            </TabsList>
-        </Tabs>
-    ) : null;
+
 
     return (
         <div className="space-y-4 h-full flex flex-col">
             {/* Toolbar Portal to Header */}
             <Toolbar
                 portalToHeader={true}
-                leftActions={currencyModeSelector}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 searchPlaceholder="Buscar subcontratos..."
@@ -269,14 +222,14 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-2">
                 <DashboardKpiCard
                     title="Total Contratado"
-                    value={getDisplayValue(kpis.totalContracted, kpis.contractedBreakdown)}
+                    amount={kpis.totalContracted}
                     icon={<Wallet className="h-4 w-4" />}
                     currencyBreakdown={money.displayMode === 'mix' && kpis.contractedBreakdown.length > 1 ? kpis.contractedBreakdown : undefined}
                     description="Monto total acumulado"
                 />
                 <DashboardKpiCard
                     title="Total Pagado"
-                    value={getDisplayValue(kpis.totalPaid, kpis.paidBreakdown)}
+                    amount={kpis.totalPaid}
                     icon={<CheckCircle2 className="h-4 w-4" />}
                     currencyBreakdown={money.displayMode === 'mix' && kpis.paidBreakdown.length > 1 ? kpis.paidBreakdown : undefined}
                     iconClassName="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20"
@@ -284,7 +237,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
                 />
                 <DashboardKpiCard
                     title="Restante por Pagar"
-                    value={getDisplayValue(kpis.totalRemaining, kpis.remainingBreakdown)}
+                    amount={kpis.totalRemaining}
                     icon={<AlertCircle className="h-4 w-4" />}
                     currencyBreakdown={money.displayMode === 'mix' && kpis.remainingBreakdown.length > 1 ? kpis.remainingBreakdown : undefined}
                     iconClassName="text-amber-600 bg-amber-100 dark:bg-amber-900/20"

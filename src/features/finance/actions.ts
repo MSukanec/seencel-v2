@@ -102,3 +102,44 @@ export async function getAttachmentUrl(
 
     return { url: data.signedUrl };
 }
+
+/**
+ * Delete a financial movement from its source table
+ * Routes to the correct table based on movement_type
+ */
+export async function deleteFinanceMovement(
+    movementId: string,
+    movementType: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // Map movement type to the correct table
+    const tableMap: Record<string, string> = {
+        'client_payment': 'client_payments',
+        'material_payment': 'material_payments',
+        'personnel_payment': 'personnel_payments',
+        'partner_contribution': 'partner_contributions',
+        'partner_withdrawal': 'partner_withdrawals',
+        'general_cost_payment': 'general_cost_payments',
+        'wallet_transfer': 'wallet_transfers',
+        'currency_exchange': 'currency_exchanges',
+    };
+
+    const table = tableMap[movementType];
+
+    if (!table) {
+        return { success: false, error: `Unknown movement type: ${movementType}` };
+    }
+
+    const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', movementId);
+
+    if (error) {
+        console.error(`Error deleting from ${table}:`, error);
+        return { success: false, error: "Error al eliminar el movimiento" };
+    }
+
+    return { success: true };
+}

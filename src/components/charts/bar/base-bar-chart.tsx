@@ -13,6 +13,7 @@ import { CHART_DEFAULTS, formatCurrency, formatCompactNumber } from '../chart-co
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { useMoney } from '@/hooks/use-money';
 
 interface BaseBarChartProps {
     data: any[];
@@ -27,12 +28,18 @@ interface BaseBarChartProps {
     showGrid?: boolean;
     yAxisFormatter?: (value: number) => string;
     xAxisFormatter?: (value: string) => string;
+    /** Custom tooltip formatter. If not provided, uses useMoney().format */
     tooltipFormatter?: (value: number) => string;
     layout?: 'horizontal' | 'vertical';
     barSize?: number;
     radius?: [number, number, number, number];
     // Shadcn Config
     config?: ChartConfig;
+    /**
+     * If true (default), uses useMoney for formatting.
+     * Set to false to use legacy formatCurrency/formatCompactNumber.
+     */
+    autoFormat?: boolean;
 }
 
 export function BaseBarChart({
@@ -46,9 +53,9 @@ export function BaseBarChart({
     chartClassName,
     color = "var(--primary)", // Default to primary
     showGrid = true,
-    yAxisFormatter = formatCompactNumber,
+    yAxisFormatter,
     xAxisFormatter,
-    tooltipFormatter = formatCurrency,
+    tooltipFormatter,
     layout = 'horizontal',
     barSize,
     radius = [4, 4, 0, 0], // Top rounded
@@ -57,8 +64,17 @@ export function BaseBarChart({
             label: title || "Valor",
             color: color
         }
-    }
+    },
+    autoFormat = true
 }: BaseBarChartProps) {
+    // Use useMoney for automatic formatting
+    const money = useMoney();
+
+    // Determine effective formatters
+    const effectiveTooltipFormatter = tooltipFormatter ?? (autoFormat ? money.format : formatCurrency);
+    const effectiveYAxisFormatter = yAxisFormatter ?? (autoFormat
+        ? (value: number) => money.formatCompact(value)
+        : formatCompactNumber);
     const ChartContent = (
         <ChartContainer config={config} className={cn("w-full", chartClassName)} style={{ height }}>
             <BarChart
@@ -85,7 +101,7 @@ export function BaseBarChart({
                 <YAxis
                     type={layout === 'vertical' ? 'category' : 'number'}
                     dataKey={layout === 'vertical' ? xKey : undefined}
-                    tickFormatter={yAxisFormatter}
+                    tickFormatter={effectiveYAxisFormatter}
                     fontSize={CHART_DEFAULTS.fontSize}
                     tickLine={false}
                     axisLine={false}
@@ -93,7 +109,7 @@ export function BaseBarChart({
                 />
                 <ChartTooltip
                     cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
-                    content={<ChartTooltipContent formatter={tooltipFormatter as any} hideLabel={false} />}
+                    content={<ChartTooltipContent formatter={effectiveTooltipFormatter as any} hideLabel={false} />}
                 />
                 <Bar
                     dataKey={yKey}

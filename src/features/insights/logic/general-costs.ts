@@ -1,4 +1,4 @@
-import { GeneralCostByCategory, GeneralCostMonthlySummary, GeneralCostPaymentView } from "@/types/general-costs";
+import { GeneralCostByCategory, GeneralCostMonthlySummary, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { Insight, InsightContext } from "../types";
 import { allInsightRules } from "./rules";
 

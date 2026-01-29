@@ -4,11 +4,11 @@ import { useMemo, useState } from "react";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
+import { createDateColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Landmark, Wallet, TrendingUp, TrendingDown, Download, Upload, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
-import { es } from "date-fns/locale";
+import { isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useMoney } from "@/hooks/use-money";
@@ -101,21 +101,10 @@ export function CapitalMovementsView({
 
     // Columns
     const columns: ColumnDef<any>[] = [
-        {
+        createDateColumn<any>({
             accessorKey: "payment_date",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-            cell: ({ row }) => {
-                const date = new Date(row.original.payment_date);
-                return (
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium">{date.toLocaleDateString()}</span>
-                        <span className="text-xs text-muted-foreground capitalize">
-                            {format(date, 'MMMM yyyy', { locale: es })}
-                        </span>
-                    </div>
-                );
-            },
-        },
+            showAvatar: false,
+        }),
         {
             accessorKey: "type",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
@@ -150,29 +139,14 @@ export function CapitalMovementsView({
                 <span className="text-sm text-foreground/80">{getWalletName(row.original.wallet_id)}</span>
             ),
         },
-        {
+        createMoneyColumn<any>({
             accessorKey: "amount",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Monto" className="justify-end" />,
-            cell: ({ row }) => {
-                const amount = Number(row.original.amount);
-                const isContribution = row.original.type === 'contribution';
-                const exchangeRate = Number(row.original.exchange_rate);
-                const hasExchangeRate = exchangeRate && exchangeRate !== 1;
-
-                return (
-                    <div className="flex flex-col items-end text-right">
-                        <span className={cn("font-mono font-medium", isContribution ? "text-amount-positive" : "text-amount-negative")}>
-                            {isContribution ? "+" : "-"}{formatCurrency(Math.abs(amount), row.original.currency_code)}
-                        </span>
-                        {hasExchangeRate && (
-                            <span className="text-xs text-muted-foreground">
-                                Cot. {exchangeRate.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
-                            </span>
-                        )}
-                    </div>
-                );
-            }
-        },
+            prefix: "auto",
+            colorMode: "auto",
+            signKey: "type",
+            signPositiveValue: "contribution",
+            currencyKey: "currency_code",
+        }),
         {
             accessorKey: "status",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,

@@ -5,6 +5,7 @@ import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, DollarSign, TrendingUp, AlertCircle, Building2, FileSignature } from "lucide-react";
+import { useMoney } from "@/hooks/use-money";
 
 interface QuoteOverviewViewProps {
     quote: QuoteView;
@@ -13,12 +14,9 @@ interface QuoteOverviewViewProps {
 
 export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewProps) {
     const isContract = quote.quote_type === 'contract';
-    const currencySymbol = quote.currency_symbol || '$';
 
-    // Helper to format currency
-    const formatCurrency = (amount: number) => {
-        return `${currencySymbol} ${(amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-    };
+    // Use centralized money formatting
+    const money = useMoney();
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -115,7 +113,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
                             {/* Revised Contract Value (Main KPI) */}
                             <DashboardKpiCard
                                 title="Contrato Revisado"
-                                value={formatCurrency(contractSummary.revised_contract_value || 0)}
+                                amount={contractSummary.revised_contract_value || 0}
                                 icon={<DollarSign className="h-5 w-5" />}
                                 iconClassName="bg-emerald-500/10 text-emerald-600"
                                 description="Valor actual incluyendo adicionales aprobados"
@@ -124,7 +122,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
                             {/* Change Orders Impact */}
                             <DashboardKpiCard
                                 title="Impacto de Adicionales"
-                                value={formatCurrency(contractSummary.approved_changes_value || 0)}
+                                amount={contractSummary.approved_changes_value || 0}
                                 icon={<TrendingUp className="h-5 w-5" />}
                                 iconClassName="bg-blue-500/10 text-blue-600"
                                 trend={{
@@ -136,7 +134,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
                             {/* Original Value */}
                             <DashboardKpiCard
                                 title="Contrato Original"
-                                value={formatCurrency(contractSummary.original_contract_value || 0)}
+                                amount={contractSummary.original_contract_value || 0}
                                 description="Monto firmado inicialmente"
                                 className="opacity-80"
                             />
@@ -145,7 +143,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
                             {contractSummary.pending_changes_value > 0 && (
                                 <DashboardKpiCard
                                     title="Pendiente de Aprobación"
-                                    value={formatCurrency(contractSummary.pending_changes_value)}
+                                    amount={contractSummary.pending_changes_value}
                                     iconClassName="bg-orange-500/10 text-orange-600"
                                     description={`${contractSummary.pending_change_order_count} adicionales en revisión`}
                                 />
@@ -156,7 +154,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
                         <>
                             <DashboardKpiCard
                                 title="Total Presupuestado"
-                                value={formatCurrency(quote.total_with_tax || 0)}
+                                amount={quote.total_with_tax || 0}
                                 icon={<DollarSign className="h-5 w-5" />}
                                 iconClassName="bg-primary/10 text-primary"
                                 description={`${quote.tax_label || 'Tax'} incluido (${quote.tax_pct}%)`}
@@ -164,7 +162,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
 
                             <DashboardKpiCard
                                 title="Subtotal"
-                                value={formatCurrency(quote.subtotal_with_markup || 0)}
+                                amount={quote.subtotal_with_markup || 0}
                                 description="Antes de impuestos y descuentos"
                             />
 
@@ -172,7 +170,7 @@ export function QuoteOverviewView({ quote, contractSummary }: QuoteOverviewViewP
                                 <DashboardKpiCard
                                     title="Descuento Aplicado"
                                     value={`${quote.discount_pct}%`}
-                                    description={`-${formatCurrency((quote.subtotal_with_markup || 0) - (quote.total_after_discount || 0))}`}
+                                    description={`-${money.format((quote.subtotal_with_markup || 0) - (quote.total_after_discount || 0))}`}
                                     iconClassName="bg-green-100 text-green-700"
                                 />
                             )}

@@ -45,6 +45,9 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     const [conflictsResolved, setConflictsResolved] = useState(false);
     const [isDetectingConflicts, setIsDetectingConflicts] = useState(false);
 
+    // Import progress state
+    const [importProgress, setImportProgress] = useState<{ total: number; current: number; phase: string }>({ total: 0, current: 0, phase: '' });
+
     const handleBack = () => {
         if (step === 'mapping') setStep('upload');
         if (step === 'validation') setStep('mapping');
@@ -114,6 +117,9 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
 
     const handleImport = async () => {
         setStep('importing');
+        const totalRecords = mappedData.length;
+        setImportProgress({ total: totalRecords, current: 0, phase: 'Preparando datos...' });
+
         try {
             // Apply resolutions if any
             let dataToImport = mappedData;
@@ -145,6 +151,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
 
             // Execute creations in parallel
             if (pendingCreations.length > 0) {
+                setImportProgress(prev => ({ ...prev, phase: `Creando ${pendingCreations.length} registro(s) automático(s)...` }));
                 try {
                     const results = await Promise.all(
                         pendingCreations.map(async (item) => {
@@ -182,6 +189,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                 dataToImport = filterIgnoredRows(dataToImport, config, configResolutions);
             }
 
+            setImportProgress(prev => ({ ...prev, phase: `Importando ${dataToImport.length} registro(s)...`, current: 0 }));
             const result = await config.onImport(dataToImport);
 
             if (result.success > 0) {
@@ -301,10 +309,28 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                     {step === 'importing' && (
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="flex flex-col items-center justify-center h-full gap-4"
+                            className="flex flex-col items-center justify-center h-full gap-6 p-8"
                         >
-                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                            <p className="text-muted-foreground">{t('headers.importing')}</p>
+                            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                            <div className="text-center space-y-2">
+                                <p className="text-lg font-medium">{t('headers.importing')}</p>
+                                <p className="text-sm text-muted-foreground">{importProgress.phase}</p>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="w-full max-w-md space-y-2">
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-primary rounded-full"
+                                        initial={{ width: '0%' }}
+                                        animate={{ width: '100%' }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Procesando...</span>
+                                    <span>{importProgress.total} registro{importProgress.total !== 1 ? 's' : ''}</span>
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                     {step === 'result' && importResult && (

@@ -24,7 +24,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useModal } from "@/providers/modal-store";
-import { MaterialForm, type MaterialCategory, type Unit, type Material } from "@/features/materials/components/forms/material-form";
+import { MaterialForm, type MaterialCategory, type Unit, type Material } from "@/features/materials/forms/material-form";
 import { CategoryForm } from "@/features/admin/components/forms/category-form";
 import { deleteMaterial } from "@/features/materials/actions";
 import { createMaterialCategory, updateMaterialCategory, deleteMaterialCategory } from "@/features/admin/material-actions";

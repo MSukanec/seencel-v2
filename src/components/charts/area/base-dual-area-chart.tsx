@@ -11,6 +11,7 @@ import { CHART_DEFAULTS, formatCurrency, formatCompactNumber } from '../chart-co
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { useMoney } from '@/hooks/use-money';
 
 interface BaseDualAreaChartProps {
     data: any[];
@@ -33,12 +34,18 @@ interface BaseDualAreaChartProps {
     showGrid?: boolean;
     yAxisFormatter?: (value: number) => string;
     xAxisFormatter?: (value: string) => string;
+    /** Custom tooltip formatter. If not provided, uses useMoney().format */
     tooltipFormatter?: (value: number) => string;
     /** Show gradient fill for primary area */
     gradient?: boolean;
     /** Show legend at bottom */
     showLegend?: boolean;
     config?: ChartConfig;
+    /**
+     * If true (default), uses useMoney for formatting.
+     * Set to false to use legacy formatCurrency/formatCompactNumber.
+     */
+    autoFormat?: boolean;
 }
 
 export function BaseDualAreaChart({
@@ -56,13 +63,23 @@ export function BaseDualAreaChart({
     className,
     chartClassName,
     showGrid = true,
-    yAxisFormatter = formatCompactNumber,
+    yAxisFormatter,
     xAxisFormatter,
-    tooltipFormatter = formatCurrency,
+    tooltipFormatter,
     gradient = true,
     showLegend = true,
-    config
+    config,
+    autoFormat = true
 }: BaseDualAreaChartProps) {
+    // Use useMoney for automatic formatting
+    const money = useMoney();
+
+    // Determine effective formatters - wrap to match expected signatures
+    const effectiveTooltipFormatter = tooltipFormatter ?? (autoFormat ? money.format : formatCurrency);
+    const effectiveYAxisFormatter = yAxisFormatter ?? (autoFormat
+        ? (value: number) => money.formatCompact(value)
+        : formatCompactNumber);
+
     const gradientId = `fill-${primaryKey}`;
 
     // Build config from props if not provided
@@ -150,7 +167,7 @@ export function BaseDualAreaChart({
                         dy={4}
                     />
                     <YAxis
-                        tickFormatter={yAxisFormatter}
+                        tickFormatter={effectiveYAxisFormatter}
                         fontSize={11}
                         tickLine={false}
                         axisLine={false}
@@ -159,7 +176,7 @@ export function BaseDualAreaChart({
                     />
                     <ChartTooltip
                         cursor={{ stroke: `var(--color-${primaryKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
-                        content={<ChartTooltipContent formatter={tooltipFormatter as any} />}
+                        content={<ChartTooltipContent formatter={effectiveTooltipFormatter as any} />}
                     />
                     {/* Secondary Area - with subtle gradient fill */}
                     <Area

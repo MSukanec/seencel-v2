@@ -12,6 +12,7 @@ import { CHART_DEFAULTS, formatCurrency, formatCompactNumber } from '../chart-co
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { useMoney } from '@/hooks/use-money';
 
 interface BaseAreaChartProps {
     data: any[];
@@ -26,10 +27,16 @@ interface BaseAreaChartProps {
     showGrid?: boolean;
     yAxisFormatter?: (value: number) => string;
     xAxisFormatter?: (value: string) => string;
+    /** Custom tooltip formatter. If not provided, uses useMoney().format */
     tooltipFormatter?: (value: number) => string;
     tooltipLabelFormatter?: (value: string) => string;
     gradient?: boolean;
     config?: ChartConfig;
+    /**
+     * If true (default), uses useMoney for formatting.
+     * Set to false to use legacy formatCurrency/formatCompactNumber.
+     */
+    autoFormat?: boolean;
 }
 
 export function BaseAreaChart({
@@ -43,9 +50,9 @@ export function BaseAreaChart({
     chartClassName,
     color = "var(--chart-1)",
     showGrid = true,
-    yAxisFormatter = formatCompactNumber,
+    yAxisFormatter,
     xAxisFormatter,
-    tooltipFormatter = formatCurrency,
+    tooltipFormatter,
     tooltipLabelFormatter,
     gradient = true,
     config = {
@@ -53,8 +60,18 @@ export function BaseAreaChart({
             label: "Valor",
             color: color
         }
-    }
+    },
+    autoFormat = true
 }: BaseAreaChartProps) {
+    // Use useMoney for automatic formatting
+    const money = useMoney();
+
+    // Determine effective formatters - wrap to match expected signatures
+    const effectiveTooltipFormatter = tooltipFormatter ?? (autoFormat ? money.format : formatCurrency);
+    const effectiveYAxisFormatter = yAxisFormatter ?? (autoFormat
+        ? (value: number) => money.formatCompact(value)
+        : formatCompactNumber);
+
     const gradientId = `fill-${yKey}`; // Simplificado usando el ID de Shadcn
 
     // If no specific color is provided in config[yKey].color, fallback to the `color` prop
@@ -93,7 +110,7 @@ export function BaseAreaChart({
                     minTickGap={30}
                 />
                 <YAxis
-                    tickFormatter={yAxisFormatter}
+                    tickFormatter={effectiveYAxisFormatter}
                     fontSize={CHART_DEFAULTS.fontSize}
                     tickLine={false}
                     axisLine={false}
@@ -102,7 +119,7 @@ export function BaseAreaChart({
                     cursor={{ stroke: `var(--color-${yKey})`, strokeWidth: 1, strokeDasharray: '4 4' }}
                     content={
                         <ChartTooltipContent
-                            formatter={tooltipFormatter as any}
+                            formatter={effectiveTooltipFormatter as any}
                             labelFormatter={tooltipLabelFormatter}
                         />
                     }

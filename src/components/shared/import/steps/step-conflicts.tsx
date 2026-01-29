@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Plus, ArrowRight, Check, X } from "lucide-react";
+import { AlertTriangle, Plus, ArrowRight, Check, X, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -60,14 +60,27 @@ export function ImportStepConflicts({
     // Count pure conflicts (missing values)
     const totalMissing = conflicts.reduce((acc, c) => acc + c.missingValues.length, 0);
 
-    // Count resolved MISSING values (we don't count matches as "resolved work" for the user, but we track them)
-    // Actually, simply check if all MISSING values have a resolution in the state
+    // Helper to check if a resolution is truly resolved (can proceed)
+    const isValueResolved = (res: ValueResolution | undefined): boolean => {
+        if (!res || !res.action) return false;
+        if (res.action === 'ignore' || res.action === 'create') return true;
+        if (res.action === 'map') return !!res.targetId;
+        return false;
+    };
+
+    // Helper to determine badge color: 'success' | 'muted' | 'error'
+    const getBadgeColor = (res: ValueResolution | undefined): 'success' | 'muted' | 'error' => {
+        if (!res || !res.action) return 'error';
+        if (res.action === 'ignore') return 'muted'; // Omitir = neutral gray
+        if (res.action === 'create') return 'success';
+        if (res.action === 'map' && res.targetId) return 'success';
+        return 'error';
+    };
+
+    // Count resolved MISSING values
     const missingResolvedCount = conflicts.reduce((acc, c) => {
         const fieldResolutions = resolutions[c.field] || {};
-        const resolvedForField = c.missingValues.filter(val => {
-            const res = fieldResolutions[val];
-            return res && res.action !== null;
-        }).length;
+        const resolvedForField = c.missingValues.filter(val => isValueResolved(fieldResolutions[val])).length;
         return acc + resolvedForField;
     }, 0);
 
@@ -155,40 +168,40 @@ export function ImportStepConflicts({
             exit={{ opacity: 0, x: -20 }}
             className="flex flex-col h-full"
         >
-            {/* Summary Bar */}
-            <div className="p-6 pb-2">
-                <div className={cn(
-                    "border rounded-lg p-4 flex items-center gap-3",
-                    totalMissing > 0 ? "bg-amber-500/10 border-amber-500/20" : "bg-green-500/10 border-green-500/20"
-                )}>
-                    <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center",
-                        totalMissing > 0 ? "bg-amber-500/20 text-amber-600" : "bg-green-500/20 text-green-600"
-                    )}>
-                        {totalMissing > 0 ? <AlertTriangle className="h-6 w-6" /> : <Check className="h-6 w-6" />}
-                    </div>
-                    <div className="flex-1">
+            {/* Summary Bar with Legend */}
+            <div className="p-6 pb-4">
+                <div className="border rounded-lg p-4 bg-background">
+                    <div className="flex items-center gap-3">
                         <div className={cn(
-                            "text-lg font-semibold",
-                            totalMissing > 0 ? "text-amber-700" : "text-green-700"
+                            "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                            totalMissing > 0 ? "bg-amber-500/20 text-amber-600" : "bg-green-500/20 text-green-600"
                         )}>
-                            {totalMissing > 0
-                                ? `${totalMissing} valor${totalMissing > 1 ? 'es' : ''} no encontrado${totalMissing > 1 ? 's' : ''}`
-                                : "Todos los valores coinciden"
-                            }
+                            {totalMissing > 0 ? <AlertTriangle className="h-6 w-6" /> : <Check className="h-6 w-6" />}
                         </div>
-                        <div className={cn(
-                            "text-xs",
-                            totalMissing > 0 ? "text-amber-600/80" : "text-green-600/80"
-                        )}>
-                            {totalMissing > 0 ? "Resuelve los conflictos antes de continuar" : "Revisa las coincidencias automáticas"}
+                        <div className="flex-1">
+                            <div className="text-base font-semibold">
+                                {totalMissing > 0
+                                    ? `${totalMissing} valor${totalMissing > 1 ? 'es' : ''} no encontrado${totalMissing > 1 ? 's' : ''}`
+                                    : "Todos los valores coinciden"
+                                }
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                                {totalMissing > 0 ? "Resuelve los conflictos antes de continuar" : "Revisa las coincidencias automáticas"}
+                            </div>
                         </div>
+                        {totalMissing > 0 && (
+                            <Badge variant={isAllResolved ? "default" : "secondary"}>
+                                {missingResolvedCount} / {totalMissing} resueltos
+                            </Badge>
+                        )}
                     </div>
-                    {totalMissing > 0 && (
-                        <Badge variant={isAllResolved ? "default" : "secondary"}>
-                            {missingResolvedCount} / {totalMissing} resueltos
-                        </Badge>
-                    )}
+                    {/* Legend inline */}
+                    <div className="mt-3 pt-3 border-t flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                        <span className="font-medium">Para cada valor:</span>
+                        <span>🔗 <strong>Matchear</strong> con existente</span>
+                        <span>✨ <strong>Crear</strong> automáticamente</span>
+                        <span>✖️ <strong>Omitir</strong> (queda vacío)</span>
+                    </div>
                 </div>
             </div>
 
@@ -200,6 +213,22 @@ export function ImportStepConflicts({
                             <div key={conflict.field} className="border rounded-lg overflow-hidden">
                                 <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between">
                                     <div className="font-medium text-sm">{conflict.fieldLabel}</div>
+                                    {/* Bulk create button */}
+                                    {conflict.allowCreate && conflict.missingValues.length > 0 && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-xs gap-1"
+                                            onClick={() => {
+                                                conflict.missingValues.forEach(val => {
+                                                    handleResolutionChange(conflict.field, val, 'create', undefined);
+                                                });
+                                            }}
+                                        >
+                                            <Sparkles className="h-3 w-3" />
+                                            Crear todos ({conflict.missingValues.length})
+                                        </Button>
+                                    )}
                                     <div className="flex gap-2">
                                         {(() => {
                                             const missingCount = conflict.missingValues.length;
@@ -231,26 +260,29 @@ export function ImportStepConflicts({
                                     </div>
                                 </div>
                                 <div className="divide-y text-sm">
-                                    {/* Missing Values (Conflicts) */}
-                                    {conflict.missingValues.map((value) => {
+                                    {/* Missing Values (Conflicts) - Sorted alphabetically */}
+                                    {[...conflict.missingValues].sort((a, b) => a.localeCompare(b, 'es')).map((value) => {
                                         const resolution = resolutions[conflict.field]?.[value];
                                         const isCreating = creatingValues.has(`${conflict.field}:${value}`);
-                                        const isResolved = !!resolution?.action;
+                                        const isResolved = isValueResolved(resolution);
+
 
                                         return (
                                             <div
                                                 key={`missing-${value}`}
                                                 className={cn(
                                                     "px-4 py-3 flex items-center gap-4 transition-colors",
-                                                    isResolved ? "bg-success/5" : "hover:bg-muted/30"
+                                                    getBadgeColor(resolution) === 'success' ? "bg-success/5" :
+                                                        getBadgeColor(resolution) === 'muted' ? "bg-muted/20" :
+                                                            "hover:bg-muted/30"
                                                 )}
                                             >
                                                 <div className="min-w-[140px]">
                                                     <span className={cn(
                                                         "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold shadow-sm transition-colors",
-                                                        isResolved
-                                                            ? "bg-success text-white"
-                                                            : "bg-error text-white"
+                                                        getBadgeColor(resolution) === 'success' ? "bg-success text-white" :
+                                                            getBadgeColor(resolution) === 'muted' ? "bg-muted-foreground/50 text-white" :
+                                                                "bg-error text-white"
                                                     )}>
                                                         {value}
                                                     </span>
@@ -300,7 +332,7 @@ export function ImportStepConflicts({
                                                         variant={resolution?.action === 'ignore' ? "destructive" : "ghost"}
                                                         onClick={() => handleResolutionChange(conflict.field, value, 'ignore')}
                                                         className="shrink-0 h-8 w-8 p-0"
-                                                        title="Ignorar fila"
+                                                        title="Omitir (queda vacío)"
                                                     >
                                                         <X className="h-4 w-4" />
                                                     </Button>
@@ -309,13 +341,13 @@ export function ImportStepConflicts({
                                         );
                                     })}
 
-                                    {/* Matched Values (Auto-resolved) */}
-                                    {conflict.matchedValues?.map((match) => {
+                                    {/* Matched Values (Auto-resolved) - Sorted alphabetically */}
+                                    {[...(conflict.matchedValues || [])].sort((a, b) => a.original.localeCompare(b.original, 'es')).map((match) => {
                                         const resolution = resolutions[conflict.field]?.[match.original];
                                         const isCreating = creatingValues.has(`${conflict.field}:${match.original}`);
                                         // A match is implicitly resolved unless overridden
                                         const currentTargetId = resolution?.action === 'map' ? resolution.targetId : match.targetId;
-                                        const isResolved = resolution ? (!!resolution.action) : true; // Default true for match
+                                        const isResolved = resolution ? isValueResolved(resolution) : true; // Default true for match
                                         const isIgnored = resolution?.action === 'ignore';
 
                                         return (
@@ -323,15 +355,26 @@ export function ImportStepConflicts({
                                                 key={`match-${match.original}`}
                                                 className={cn(
                                                     "px-4 py-3 flex items-center gap-4 transition-colors",
-                                                    isResolved && !isIgnored ? "bg-success/5" : "hover:bg-muted/30"
+                                                    (() => {
+                                                        // For matches, default to 'success' if no override exists
+                                                        if (!resolution) return "bg-success/5";
+                                                        const color = getBadgeColor(resolution);
+                                                        if (color === 'success') return "bg-success/5";
+                                                        if (color === 'muted') return "bg-muted/20";
+                                                        return "hover:bg-muted/30";
+                                                    })()
                                                 )}
                                             >
                                                 <div className="min-w-[140px]">
                                                     <span className={cn(
                                                         "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold shadow-sm transition-colors",
-                                                        (isResolved && !isIgnored)
-                                                            ? "bg-success text-white"
-                                                            : "bg-error text-white"
+                                                        (() => {
+                                                            if (!resolution) return "bg-success text-white";
+                                                            const color = getBadgeColor(resolution);
+                                                            if (color === 'success') return "bg-success text-white";
+                                                            if (color === 'muted') return "bg-muted-foreground/50 text-white";
+                                                            return "bg-error text-white";
+                                                        })()
                                                     )}>
                                                         {match.original}
                                                     </span>

@@ -216,7 +216,6 @@ export function ProjectsDataTable({
                         title="No hay proyectos"
                         description="Aún no has creado ningún proyecto en esta organización."
                         icon={Ban}
-                        action={<CreateProjectButton organizationId={organizationId} currentProjectCount={projects.length} maxProjects={maxProjects} />}
                     />
                 );
             }}

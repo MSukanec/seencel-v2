@@ -181,13 +181,13 @@ export function SubcontractPaymentsView({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <DashboardKpiCard
                         title="Monto Contrato"
-                        value={`${contractSymbol} ${contractAmount.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`}
+                        amount={contractAmount}
                         icon={<CircleDollarSign className="h-6 w-6" />}
                         size="default"
                     />
                     <DashboardKpiCard
                         title="Total Pagado"
-                        value={formatMoney(paidSummary.total)}
+                        amount={paidSummary.total}
                         icon={<Wallet className="h-6 w-6" />}
                         iconClassName="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"
                         description={`${payments.length} pago${payments.length !== 1 ? 's' : ''} registrado${payments.length !== 1 ? 's' : ''}`}
@@ -195,7 +195,7 @@ export function SubcontractPaymentsView({
                     />
                     <DashboardKpiCard
                         title="Saldo Pendiente"
-                        value={`${remaining < 0 ? '+' : ''}${formatMoney(Math.abs(remaining))}`}
+                        amount={remaining}
                         icon={<Banknote className="h-6 w-6" />}
                         iconClassName={remaining > 0
                             ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600"
