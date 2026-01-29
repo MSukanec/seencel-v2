@@ -5,10 +5,10 @@ import { CourseWithDetails } from "@/types/courses";
 import { CourseCard } from "./course-card";
 import { useTranslations } from "next-intl";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Sparkles, ArrowRight, GraduationCap } from "lucide-react";
 import { Link } from "@/i18n/routing";
+import { Card } from "@/components/ui/card";
 
 interface CoursesContentProps {
     courses: CourseWithDetails[];
@@ -101,24 +101,13 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
             {/* Courses List */}
             <div className="max-w-7xl mx-auto w-full flex flex-col gap-6 p-4 md:p-8">
 
-                {/* Title Section - Only on dashboard */}
-                {isDashboard && (
-                    <div className="flex flex-col gap-2">
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t('title')}</h1>
-                        <p className="text-muted-foreground max-w-2xl text-lg">
-                            {t('description')}
-                        </p>
-                    </div>
-                )}
-
-                {/* Search Toolbar with Card background */}
-                <Card className="p-3">
-                    <Toolbar
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        searchPlaceholder="Buscar cursos..."
-                    />
-                </Card>
+                {/* Search Toolbar - in header */}
+                <Toolbar
+                    portalToHeader
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    searchPlaceholder="Buscar cursos..."
+                />
 
                 {/* Courses Grid */}
                 {filteredCourses.length > 0 ? (

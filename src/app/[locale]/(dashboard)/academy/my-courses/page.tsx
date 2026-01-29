@@ -1,14 +1,30 @@
+import type { Metadata } from "next";
 import { getCourses, getUserEnrollments } from "@/actions/courses";
 import { CoursesContent } from "@/features/academy/components/courses-content";
 import { PageWrapper } from "@/components/layout";
 import { Video } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
+
+// ✅ METADATA OBLIGATORIA
+export async function generateMetadata({
+    params
+}: {
+    params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+    const t = await getTranslations({ locale: (await params).locale, namespace: 'Learning' });
+    return {
+        title: `${t('myCourses')} | SEENCEL`,
+        description: t('description'),
+        robots: "noindex, nofollow", // 🔒 Dashboard siempre privado
+    };
+}
 
 export default async function MyCoursesPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
     setRequestLocale(locale);
+    const t = await getTranslations({ locale, namespace: 'Learning' });
 
     // Require authentication
     const supabase = await createClient();
@@ -22,15 +38,13 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
     const enrolledCourseIds = await getUserEnrollments();
 
     return (
-        <PageWrapper type="page" title="Mis Cursos" icon={<Video />}>
-            <div className="container mx-auto p-6 max-w-7xl">
-                <CoursesContent
-                    courses={courses}
-                    detailRoute="/academy/courses"
-                    isDashboard={true}
-                    enrolledCourseIds={Array.from(enrolledCourseIds)}
-                />
-            </div>
+        <PageWrapper type="page" title={t('myCourses')} icon={<Video />}>
+            <CoursesContent
+                courses={courses}
+                detailRoute="/academy/courses"
+                isDashboard={true}
+                enrolledCourseIds={Array.from(enrolledCourseIds)}
+            />
         </PageWrapper>
     );
 }

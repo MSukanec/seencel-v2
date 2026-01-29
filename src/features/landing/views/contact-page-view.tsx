@@ -7,10 +7,38 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { CountrySelector, Country } from "@/components/ui/country-selector";
 import { sendContactEmail } from "../actions/send-contact-email";
 import { toast } from "sonner";
 import { Loader2, Mail, MessageSquare, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Static list of common countries for contact form
+const CONTACT_COUNTRIES: Country[] = [
+    { id: "AR", name: "Argentina", alpha_2: "AR" },
+    { id: "BO", name: "Bolivia", alpha_2: "BO" },
+    { id: "BR", name: "Brasil", alpha_2: "BR" },
+    { id: "CL", name: "Chile", alpha_2: "CL" },
+    { id: "CO", name: "Colombia", alpha_2: "CO" },
+    { id: "CR", name: "Costa Rica", alpha_2: "CR" },
+    { id: "CU", name: "Cuba", alpha_2: "CU" },
+    { id: "DO", name: "República Dominicana", alpha_2: "DO" },
+    { id: "EC", name: "Ecuador", alpha_2: "EC" },
+    { id: "SV", name: "El Salvador", alpha_2: "SV" },
+    { id: "ES", name: "España", alpha_2: "ES" },
+    { id: "GT", name: "Guatemala", alpha_2: "GT" },
+    { id: "HN", name: "Honduras", alpha_2: "HN" },
+    { id: "MX", name: "México", alpha_2: "MX" },
+    { id: "NI", name: "Nicaragua", alpha_2: "NI" },
+    { id: "PA", name: "Panamá", alpha_2: "PA" },
+    { id: "PY", name: "Paraguay", alpha_2: "PY" },
+    { id: "PE", name: "Perú", alpha_2: "PE" },
+    { id: "PR", name: "Puerto Rico", alpha_2: "PR" },
+    { id: "UY", name: "Uruguay", alpha_2: "UY" },
+    { id: "VE", name: "Venezuela", alpha_2: "VE" },
+    { id: "US", name: "Estados Unidos", alpha_2: "US" },
+    { id: "OTHER", name: "Otro", alpha_2: null },
+];
 
 export function ContactPageView() {
     const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +49,7 @@ export function ContactPageView() {
         lastName: "",
         email: "",
         phone: "",
-        country: "Argentina",
+        country: "AR", // Country ID
         subject: "",
         message: "",
         _gotcha: "", // Honeypot field
@@ -39,7 +67,13 @@ export function ContactPageView() {
         setIsLoading(true);
 
         try {
-            const result = await sendContactEmail(formData);
+            // Convert country ID to country name for the email
+            const countryName = CONTACT_COUNTRIES.find(c => c.id === formData.country)?.name || formData.country;
+
+            const result = await sendContactEmail({
+                ...formData,
+                country: countryName,
+            });
 
             if (result.success) {
                 setIsSuccess(true);
@@ -129,7 +163,7 @@ export function ContactPageView() {
                                             lastName: "",
                                             email: "",
                                             phone: "",
-                                            country: "Argentina",
+                                            country: "AR",
                                             subject: "",
                                             message: "",
                                             _gotcha: "",
@@ -214,14 +248,12 @@ export function ContactPageView() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="country">País *</Label>
-                                                <Input
-                                                    id="country"
+                                                <Label>País *</Label>
+                                                <CountrySelector
                                                     value={formData.country}
-                                                    onChange={(e) => handleChange("country", e.target.value)}
-                                                    placeholder="Argentina"
-                                                    required
-                                                    minLength={2}
+                                                    onChange={(value) => handleChange("country", value)}
+                                                    countries={CONTACT_COUNTRIES}
+                                                    placeholder="Seleccionar país..."
                                                 />
                                             </div>
                                         </div>

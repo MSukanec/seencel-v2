@@ -119,6 +119,7 @@
     },
     "Learning": {
         "title": "Academia",
+        "myCourses": "Mis Cursos",
         "description": "Base de conocimiento y lecciones aprendidas",
         "items": {
             "courses": "Cursos",
