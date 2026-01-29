@@ -101,13 +101,15 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
             {/* Courses List */}
             <div className="max-w-7xl mx-auto w-full flex flex-col gap-6 p-4 md:p-8">
 
-                {/* Search Toolbar - in header */}
-                <Toolbar
-                    portalToHeader
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    searchPlaceholder="Buscar cursos..."
-                />
+                {/* Search Toolbar - only in dashboard */}
+                {isDashboard && (
+                    <Toolbar
+                        portalToHeader
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        searchPlaceholder="Buscar cursos..."
+                    />
+                )}
 
                 {/* Courses Grid */}
                 {filteredCourses.length > 0 ? (

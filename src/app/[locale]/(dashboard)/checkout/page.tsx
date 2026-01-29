@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getPlans } from "@/actions/plans";
-import { getFeatureFlag } from "@/actions/feature-flags";
+import { getFeatureFlag, getPlanPurchaseFlags } from "@/actions/feature-flags";
 import { getCountries } from "@/features/countries/queries";
 import { getCourseBySlug } from "@/features/academy/course-queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getExchangeRate, getUserCountryCode } from "@/features/billing/queries";
+import { checkIsAdmin } from "@/features/users/queries";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ShoppingCart } from "lucide-react";
@@ -57,13 +58,15 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
             : productParam;
 
     // Fetch data based on product type
-    const [plans, countries, course, userOrgs, exchangeRate, userCountryCode] = await Promise.all([
+    const [plans, countries, course, userOrgs, exchangeRate, userCountryCode, purchaseFlags, isAdmin] = await Promise.all([
         getPlans(),
         getCountries(),
         isCourse ? getCourseBySlug(productSlug) : Promise.resolve(null),
         getUserOrganizations(),
         getExchangeRate("USD", "ARS"),
-        getUserCountryCode()
+        getUserCountryCode(),
+        getPlanPurchaseFlags(),
+        checkIsAdmin()
     ]);
 
     // Parse cycle parameter
@@ -86,6 +89,8 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                     organizationId={userOrgs.activeOrgId || undefined}
                     exchangeRate={exchangeRate}
                     userCountryCode={userCountryCode}
+                    purchaseFlags={purchaseFlags}
+                    isAdmin={isAdmin}
                 />
             </ContentLayout>
         </PageWrapper>

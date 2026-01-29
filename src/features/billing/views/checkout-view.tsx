@@ -38,6 +38,7 @@ import {
     X,
     Loader2,
     ArrowRight,
+    Wrench,
 } from "lucide-react";
 
 // Coupon error messages (client-side utility)
@@ -72,6 +73,14 @@ interface CourseCheckout {
     isFoundersIncluded?: boolean;
 }
 
+// Types for plan status (same as plans-comparison.tsx)
+export type PlanFlagStatus = 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
+
+export interface PlanPurchaseFlags {
+    pro: PlanFlagStatus;
+    teams: PlanFlagStatus;
+}
+
 interface CheckoutViewProps {
     productType: "plan" | "course";
     plans: Plan[];
@@ -90,7 +99,15 @@ interface CheckoutViewProps {
     countries?: Country[];
     organizationId?: string;
     exchangeRate?: number;
-    userCountryCode?: string | null; // User's country alpha_2 code (e.g., 'AR')
+    userCountryCode?: string | null;
+    /**
+     * Feature flags status for each plan
+     */
+    purchaseFlags?: PlanPurchaseFlags;
+    /**
+     * Admin can bypass disabled plans
+     */
+    isAdmin?: boolean;
 }
 
 const planIcons: Record<string, React.ElementType> = {
@@ -160,7 +177,9 @@ export function CheckoutView({
     countries = [],
     organizationId,
     exchangeRate = 1,
-    userCountryCode = null
+    userCountryCode = null,
+    purchaseFlags = { pro: 'active', teams: 'active' },
+    isAdmin = false
 }: CheckoutViewProps) {
     const t = useTranslations("Founders.checkout");
     const isCourse = productType === "course";
@@ -168,13 +187,41 @@ export function CheckoutView({
     // Country-based payment logic
     const isArgentina = userCountryCode === "AR";
 
+    // Get the status of a plan from feature flags
+    const getPlanStatus = (planSlug: string): PlanFlagStatus => {
+        const lower = planSlug.toLowerCase();
+        if (lower.includes("pro")) return purchaseFlags.pro;
+        if (lower.includes("team")) return purchaseFlags.teams;
+        return 'active';
+    };
+
+    // Check if user can select the plan
+    const canSelectPlan = (planSlug: string): boolean => {
+        if (isAdmin) return true; // Admin bypass
+        const status = getPlanStatus(planSlug);
+        return status === 'active' || status === 'founders';
+    };
+
     // Filter to only purchasable plans (exclude free)
     const purchasablePlans = plans.filter(p =>
         p.slug !== "free" && p.monthly_amount && p.monthly_amount > 0
     );
 
-    // Find initial plan or default to first purchasable
-    const initialPlan = purchasablePlans.find(p => p.slug === initialPlanSlug) || purchasablePlans[0];
+    // Find initial plan or default to first purchasable that's selectable
+    const findInitialPlan = () => {
+        // First try user's requested plan if selectable
+        const requested = purchasablePlans.find(p => p.slug === initialPlanSlug);
+        if (requested && canSelectPlan(requested.slug || '')) return requested;
+
+        // Then find first selectable plan
+        const firstSelectable = purchasablePlans.find(p => canSelectPlan(p.slug || ''));
+        if (firstSelectable) return firstSelectable;
+
+        // Fallback to first (even if disabled) for admins
+        return purchasablePlans[0];
+    };
+
+    const initialPlan = findInitialPlan();
 
     // Core state - default payment method based on country and product type
     // Transfer only available for courses, not for subscription plans
@@ -443,23 +490,73 @@ export function CheckoutView({
                                                 : plan.monthly_amount;
                                             const colors = planColors[plan.slug || ""] || planColors.pro;
 
+                                            // Feature flag status
+                                            const planStatus = getPlanStatus(plan.slug || '');
+                                            const isDisabled = !canSelectPlan(plan.slug || '');
+
+                                            // Status config for disabled states
+                                            // For coming_soon, use plan colors to maintain brand consistency
+                                            const statusConfig: Record<string, { icon: typeof Wrench; label: string; usePlanColors?: boolean }> = {
+                                                maintenance: { icon: Wrench, label: "En Mantenimiento" },
+                                                coming_soon: { icon: Clock, label: "Próximamente", usePlanColors: true },
+                                                hidden: { icon: Lock, label: "No Disponible" },
+                                            };
+                                            const statusInfo = planStatus !== 'active' && planStatus !== 'founders'
+                                                ? statusConfig[planStatus]
+                                                : null;
+
+                                            // Determine badge colors: plan colors for coming_soon, orange for maintenance, muted for hidden
+                                            const getBadgeColors = () => {
+                                                if (!statusInfo) return { bg: '', text: '' };
+                                                if (statusInfo.usePlanColors) {
+                                                    return { bg: colors.bg, text: colors.text };
+                                                }
+                                                if (planStatus === 'maintenance') {
+                                                    return { bg: 'bg-orange-500/10', text: 'text-orange-500' };
+                                                }
+                                                return { bg: 'bg-muted', text: 'text-muted-foreground' };
+                                            };
+                                            const badgeColors = getBadgeColors();
+
                                             return (
                                                 <Label
                                                     key={plan.id}
-                                                    htmlFor={plan.id}
+                                                    htmlFor={isDisabled ? undefined : plan.id}
                                                     className={cn(
-                                                        "relative flex flex-col p-5 rounded-xl border-2 cursor-pointer transition-all",
-                                                        isSelected
+                                                        "relative flex flex-col p-5 rounded-xl border-2 transition-all",
+                                                        isDisabled
+                                                            ? "cursor-not-allowed opacity-60 border-border bg-muted/30"
+                                                            : "cursor-pointer",
+                                                        !isDisabled && isSelected
                                                             ? `${colors.border} ${colors.bg}`
-                                                            : "border-border hover:border-muted-foreground/50"
+                                                            : !isDisabled && "border-border hover:border-muted-foreground/50"
                                                     )}
+                                                    onClick={isDisabled ? (e) => e.preventDefault() : undefined}
                                                 >
-                                                    <RadioGroupItem
-                                                        value={plan.id}
-                                                        id={plan.id}
-                                                        className="sr-only"
-                                                    />
-                                                    {plan.slug === "teams" && (
+                                                    {/* Radio button - hidden if disabled */}
+                                                    {!isDisabled && (
+                                                        <RadioGroupItem
+                                                            value={plan.id}
+                                                            id={plan.id}
+                                                            className="sr-only"
+                                                        />
+                                                    )}
+
+                                                    {/* Status badge for disabled plans */}
+                                                    {statusInfo && (
+                                                        <div className={cn(
+                                                            "absolute top-3 right-3 px-2 py-1 rounded-md flex items-center gap-1.5",
+                                                            badgeColors.bg
+                                                        )}>
+                                                            <statusInfo.icon className={cn("h-3 w-3", badgeColors.text)} />
+                                                            <span className={cn("text-xs font-medium", badgeColors.text)}>
+                                                                {statusInfo.label}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Popular badge - only show if plan is active */}
+                                                    {plan.slug === "teams" && !statusInfo && (
                                                         <span className={cn(
                                                             "absolute -top-3 left-4 px-2 py-0.5 text-xs font-semibold rounded-full text-white",
                                                             colors.solid
@@ -470,9 +567,9 @@ export function CheckoutView({
                                                     <div className="flex items-center gap-3 mb-3">
                                                         <div className={cn(
                                                             "w-10 h-10 rounded-lg flex items-center justify-center",
-                                                            colors.bg
+                                                            isDisabled ? "bg-muted" : colors.bg
                                                         )}>
-                                                            <Icon className={cn("h-5 w-5", colors.text)} />
+                                                            <Icon className={cn("h-5 w-5", isDisabled ? "text-muted-foreground" : colors.text)} />
                                                         </div>
                                                         <div>
                                                             <h3 className="font-bold">{plan.name}</h3>

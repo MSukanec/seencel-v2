@@ -22,12 +22,30 @@ import {
     Zap,
     Crown,
     Users,
+    Wrench,
+    Clock,
 } from "lucide-react";
+
+// Types for plan status (same as plans-comparison.tsx)
+export type PlanFlagStatus = 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
+
+export interface PlanPurchaseFlags {
+    pro: PlanFlagStatus;
+    teams: PlanFlagStatus;
+}
 
 interface CheckoutContentProps {
     plans: Plan[];
     initialPlanSlug?: string;
     initialCycle?: "monthly" | "annual";
+    /**
+     * Feature flags status for each plan
+     */
+    purchaseFlags?: PlanPurchaseFlags;
+    /**
+     * Admin can bypass disabled plans
+     */
+    isAdmin?: boolean;
 }
 
 const planIcons: Record<string, React.ElementType> = {
@@ -57,17 +75,47 @@ const paymentMethods = [
 export function CheckoutContent({
     plans,
     initialPlanSlug,
-    initialCycle = "annual"
+    initialCycle = "annual",
+    purchaseFlags = { pro: 'active', teams: 'active' },
+    isAdmin = false
 }: CheckoutContentProps) {
     const t = useTranslations("Founders.checkout");
+
+    // Get the status of a plan from feature flags
+    const getPlanStatus = (planSlug: string): PlanFlagStatus => {
+        const lower = planSlug.toLowerCase();
+        if (lower.includes("pro")) return purchaseFlags.pro;
+        if (lower.includes("team")) return purchaseFlags.teams;
+        return 'active';
+    };
+
+    // Check if user can select the plan
+    const canSelectPlan = (planSlug: string): boolean => {
+        if (isAdmin) return true; // Admin bypass
+        const status = getPlanStatus(planSlug);
+        return status === 'active' || status === 'founders';
+    };
 
     // Filter to only purchasable plans (exclude free)
     const purchasablePlans = plans.filter(p =>
         p.slug !== "free" && p.monthly_amount && p.monthly_amount > 0
     );
 
-    // Find initial plan or default to first purchasable
-    const initialPlan = purchasablePlans.find(p => p.slug === initialPlanSlug) || purchasablePlans[0];
+    // Find initial plan or default to first purchasable that's selectable
+    const findInitialPlan = () => {
+        // First try user's requested plan if selectable
+        const requested = purchasablePlans.find(p => p.slug === initialPlanSlug);
+        if (requested && canSelectPlan(requested.slug || '')) return requested;
+
+        // Then find first selectable plan
+        const firstSelectable = purchasablePlans.find(p => canSelectPlan(p.slug || ''));
+        if (firstSelectable) return firstSelectable;
+
+        // Fallback to first (even if disabled) for admins
+        return purchasablePlans[0];
+    };
+
+    const initialPlan = findInitialPlan();
 
     const [selectedPlanId, setSelectedPlanId] = useState(initialPlan?.id || "");
     const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">(initialCycle);
@@ -147,30 +195,69 @@ export function CheckoutContent({
                                             ? plan.annual_amount
                                             : plan.monthly_amount;
 
+                                        // Feature flag status
+                                        const planStatus = getPlanStatus(plan.slug || '');
+                                        const isDisabled = !canSelectPlan(plan.slug || '');
+
+                                        // Status config for disabled states
+                                        const statusConfig: Record<string, { icon: typeof Wrench; label: string; bgColor: string; textColor: string }> = {
+                                            maintenance: { icon: Wrench, label: "En Mantenimiento", bgColor: "bg-orange-500/10", textColor: "text-orange-500" },
+                                            coming_soon: { icon: Clock, label: "Próximamente", bgColor: "bg-blue-500/10", textColor: "text-blue-500" },
+                                            hidden: { icon: Lock, label: "No Disponible", bgColor: "bg-muted", textColor: "text-muted-foreground" },
+                                        };
+                                        const statusInfo = planStatus !== 'active' && planStatus !== 'founders'
+                                            ? statusConfig[planStatus]
+                                            : null;
+
                                         return (
                                             <Label
                                                 key={plan.id}
-                                                htmlFor={plan.id}
+                                                htmlFor={isDisabled ? undefined : plan.id}
                                                 className={cn(
-                                                    "relative flex flex-col p-6 rounded-xl border-2 cursor-pointer transition-all",
-                                                    isSelected
+                                                    "relative flex flex-col p-6 rounded-xl border-2 transition-all",
+                                                    isDisabled
+                                                        ? "cursor-not-allowed opacity-60 border-border bg-muted/30"
+                                                        : "cursor-pointer",
+                                                    !isDisabled && isSelected
                                                         ? "border-primary bg-primary/5"
-                                                        : "border-border hover:border-primary/50"
+                                                        : !isDisabled && "border-border hover:border-primary/50"
                                                 )}
+                                                onClick={isDisabled ? (e) => e.preventDefault() : undefined}
                                             >
-                                                <RadioGroupItem
-                                                    value={plan.id}
-                                                    id={plan.id}
-                                                    className="absolute top-4 right-4"
-                                                />
-                                                {plan.slug === "teams" && (
+                                                {/* Radio button - hidden if disabled */}
+                                                {!isDisabled && (
+                                                    <RadioGroupItem
+                                                        value={plan.id}
+                                                        id={plan.id}
+                                                        className="absolute top-4 right-4"
+                                                    />
+                                                )}
+
+                                                {/* Status badge for disabled plans */}
+                                                {statusInfo && (
+                                                    <div className={cn(
+                                                        "absolute top-4 right-4 px-2 py-1 rounded-md flex items-center gap-1.5",
+                                                        statusInfo.bgColor
+                                                    )}>
+                                                        <statusInfo.icon className={cn("h-3 w-3", statusInfo.textColor)} />
+                                                        <span className={cn("text-xs font-medium", statusInfo.textColor)}>
+                                                            {statusInfo.label}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Popular badge - only show if plan is active */}
+                                                {plan.slug === "teams" && !statusInfo && (
                                                     <span className="absolute -top-3 left-4 px-2 py-0.5 text-xs font-semibold bg-primary text-primary-foreground rounded-full">
                                                         Popular
                                                     </span>
                                                 )}
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                        <Icon className="h-6 w-6 text-primary" />
+                                                    <div className={cn(
+                                                        "w-12 h-12 rounded-xl flex items-center justify-center",
+                                                        isDisabled ? "bg-muted" : "bg-primary/10"
+                                                    )}>
+                                                        <Icon className={cn("h-6 w-6", isDisabled ? "text-muted-foreground" : "text-primary")} />
                                                     </div>
                                                     <div>
                                                         <h3 className="font-bold text-lg">{plan.name}</h3>
