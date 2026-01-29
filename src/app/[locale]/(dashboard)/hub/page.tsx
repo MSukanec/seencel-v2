@@ -7,7 +7,7 @@ import { getUserOrganizations, getRecentOrganizationsCount } from "@/features/or
 import { getActiveHeroSections } from "@/features/hero-sections/queries";
 import { getUserTimezone } from "@/features/users/queries";
 import { getRecentPublicCourses } from "@/features/academy/course-queries";
-import { DashboardHomeView } from "@/features/dashboard-home/components/dashboard-home-view";
+import { HubView } from "@/features/hub";
 
 export default async function HubPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -45,7 +45,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
 
     return (
         <PageWrapper type="dashboard">
-            <DashboardHomeView
+            <HubView
                 user={profile}
                 activeOrgId={activeOrgId}
                 activeOrgName={activeOrgName}

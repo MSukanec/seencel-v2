@@ -115,3 +115,29 @@ export async function getPlanBySlug(slug: string): Promise<Plan | null> {
     return data;
 }
 
+/**
+ * Gets the plan features for a specific organization.
+ * Used to check feature limits (max_projects, max_members, etc.)
+ */
+export async function getOrganizationPlanFeatures(organizationId: string): Promise<PlanFeatures | null> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("organizations")
+        .select(`
+            plan:plans!plan_id (
+                features
+            )
+        `)
+        .eq("id", organizationId)
+        .single();
+
+    if (error || !data) {
+        console.error("Error fetching organization plan features:", error);
+        return null;
+    }
+
+    // Extract features from the nested plan object
+    const planData = data.plan as any;
+    return planData?.features || null;
+}

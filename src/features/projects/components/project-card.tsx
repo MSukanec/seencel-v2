@@ -5,10 +5,16 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MapPin, Calendar, Building2, Hammer, ImageOff, Pencil, Trash2 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MapPin, Calendar, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useLayoutStore } from "@/store/layout-store";
 
 interface ProjectCardProps {
@@ -18,24 +24,13 @@ interface ProjectCardProps {
     onDelete?: (project: Project) => void;
 }
 
-// Spanish translations for status
-const STATUS_LABELS: Record<string, string> = {
-    "active": "Activo",
-    "completed": "Completado",
-    "paused": "Pausado",
-    "cancelled": "Cancelado",
-    "Activo": "Activo",
-    "Finalizado": "Completado",
-    "Detenido": "Pausado",
-    "Cancelado": "Cancelado",
-};
-
 /**
  * ProjectCard - A beautiful card component for displaying project information
  * Features a hero image with gradient overlay, project name, and key metadata badges
  */
 export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCardProps) {
     const locale = useLocale();
+    const t = useTranslations('Project.status');
     const { actions } = useLayoutStore();
 
     // Get accent color for the card
@@ -50,8 +45,9 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${project.image_bucket}/${project.image_path}`
         : project.image_url;
 
-    // Get translated status
-    const statusLabel = STATUS_LABELS[project.status] || project.status;
+    // Get translated status using next-intl
+    const statusKey = (project.status?.toLowerCase() || 'active') as string;
+    const statusLabel = t(statusKey) || project.status;
 
     const handleActionClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -155,30 +151,44 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                         )}
                     </div>
 
-                    {/* Action Buttons - Visible on Hover */}
+                    {/* Action Menu - Always Visible */}
                     {(onEdit || onDelete) && (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1" onClick={handleActionClick}>
-                            {onEdit && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={handleActionClick}>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => onEdit(project)}
+                                    className="h-8 w-8 shrink-0"
                                 >
-                                    <Pencil className="h-4 w-4" />
+                                    <MoreHorizontal className="h-4 w-4" />
                                 </Button>
-                            )}
-                            {onDelete && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={() => onDelete(project)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                                {onEdit && (
+                                    <DropdownMenuItem onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onEdit(project);
+                                    }}>
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Editar
+                                    </DropdownMenuItem>
+                                )}
+                                {onDelete && (
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            onDelete(project);
+                                        }}
+                                        className="text-destructive focus:text-destructive"
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Eliminar
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </div>
             </Card>

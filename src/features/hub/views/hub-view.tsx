@@ -5,6 +5,7 @@ import {
     Briefcase,
     GraduationCap,
     Users,
+    Building,
     ArrowRight,
     Calendar,
     Clock,
@@ -24,7 +25,7 @@ import type { HeroSection } from "@/features/hero-sections/queries";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
 import { useOrganization } from "@/context/organization-context";
 
-interface DashboardHomeViewProps {
+interface HubViewProps {
     user: UserProfile | null;
     activeOrgId?: string;
     activeOrgName?: string;
@@ -49,7 +50,7 @@ function formatRelativeDate(dateStr: string): string {
     return `Hace ${Math.floor(diffDays / 30)} mes${diffDays >= 60 ? 'es' : ''}`;
 }
 
-export function DashboardHomeView({
+export function HubView({
     user,
     activeOrgId,
     activeOrgName,
@@ -58,7 +59,7 @@ export function DashboardHomeView({
     userTimezone,
     recentCourses = [],
     communityOrgsCount = 0
-}: DashboardHomeViewProps) {
+}: HubViewProps) {
     // Feature flags integration - same logic as sidebar
     const { statuses, isAdmin } = useFeatureFlags();
     const { isFounder } = useOrganization();
@@ -81,6 +82,7 @@ export function DashboardHomeView({
 
     // Card statuses based on feature flags
     const workspaceStatus = getCardStatus('context_workspace_enabled');
+    const portalStatus = getCardStatus('context_portal_enabled');
     const academyStatus = getCardStatus('context_academy_enabled');
     const communityStatus = getCardStatus('context_community_enabled');
 
@@ -178,32 +180,17 @@ export function DashboardHomeView({
                     transition={{ duration: 0.5 }}
                     className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
                 >
-                    <div className="flex items-center gap-5">
-                        {/* Organization Logo */}
-                        {activeOrgLogo && (
-                            <div className="shrink-0 h-20 w-20 md:h-24 md:w-24 rounded-xl overflow-hidden border border-border/50 shadow-lg bg-background">
-                                <img
-                                    src={getStorageUrl(
-                                        activeOrgLogo.startsWith('organizations/') ? activeOrgLogo : `organizations/${activeOrgLogo}`,
-                                        'public-assets'
-                                    ) || ''}
-                                    alt={activeOrgName || 'Organization'}
-                                    className="h-full w-full object-cover"
-                                />
-                            </div>
-                        )}
-                        <div>
-                            <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium mb-1">
-                                <Calendar className="h-4 w-4" />
-                                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                            </div>
-                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-                                {getGreeting()}, <span className="text-primary">{user?.first_name || 'Arquitecto'}</span>
-                            </h1>
-                            <p className="text-muted-foreground mt-2 text-lg">
-                                Bienvenido a tu centro de control Seencel.
-                            </p>
+                    <div>
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium mb-1">
+                            <Calendar className="h-4 w-4" />
+                            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </div>
+                        <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
+                            {getGreeting()}, <span className="text-primary">{user?.first_name || 'Arquitecto'}</span>
+                        </h1>
+                        <p className="text-muted-foreground mt-2 text-lg">
+                            Bienvenido a tu centro de control Seencel.
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -230,6 +217,23 @@ export function DashboardHomeView({
                             variants={itemVariants}
                             status={workspaceStatus.status}
                             disabled={workspaceStatus.disabled}
+                        />
+                    )}
+
+                    {/* Portal de Clientes Card - between Workspace and Academy */}
+                    {portalStatus.status !== 'hidden' && (
+                        <DashboardCard
+                            title="Portal de Clientes"
+                            description="Accede a tu portal como cliente"
+                            icon={Building}
+                            href="/portal"
+                            actionLabel="Ir a Mi Portal"
+                            news={[
+                                { title: "Tus proyectos y pagos", date: "Disponible" },
+                            ]}
+                            variants={itemVariants}
+                            status={portalStatus.status}
+                            disabled={portalStatus.disabled}
                         />
                     )}
 

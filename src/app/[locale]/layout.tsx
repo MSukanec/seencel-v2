@@ -10,6 +10,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { AcquisitionTracker } from "@/components/shared/acquisition-tracker";
+import { NavigationProgress } from "@/components/shared/navigation-progress";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,11 +37,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/icons/icon-96x96.png", sizes: "96x96", type: "image/png" },
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
     ],
     apple: "/icons/icon-192x192.png",
-    shortcut: "/icons/icon-96x96.png",
+    shortcut: "/favicon.ico",
   },
 };
 
@@ -88,6 +91,9 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <Suspense fallback={null}>
+              <NavigationProgress />
+            </Suspense>
             <AcquisitionTracker />
             {children}
             <ModalProvider />

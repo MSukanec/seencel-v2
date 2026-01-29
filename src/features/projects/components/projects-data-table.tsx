@@ -13,13 +13,13 @@ import { useLayoutStore } from "@/store/layout-store";
 import { ProjectStatusBadge } from "./project-status-badge";
 import { deleteProject } from "@/features/projects/actions";
 import { useModal } from "@/providers/modal-store";
-import { CreateProjectButton } from "./create-project-button";
+import { CreateProjectButton, useCreateProjectAction } from "./create-project-button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ProjectCard } from "@/features/projects/components/project-card";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
-import { Circle, Timer, CheckCircle2, Ban, FolderSearch } from "lucide-react";
+import { Circle, Timer, CheckCircle2, Ban, FolderSearch, Plus } from "lucide-react";
 import { DataTableEmptyState } from "@/components/shared/data-table/data-table-empty-state";
 import { Button } from "@/components/ui/button";
 
@@ -32,12 +32,19 @@ interface ProjectsDataTableProps {
     viewToggle?: React.ReactNode;
     pageSize?: number;
     viewMode: "table" | "grid";
+    /** Max projects allowed by plan (-1 = unlimited) */
+    maxProjects?: number;
 }
 
-export function ProjectsDataTable({ projects, organizationId, lastActiveProjectId, viewToggle, viewMode = "table" }: ProjectsDataTableProps) {
+export function ProjectsDataTable({ projects, organizationId, lastActiveProjectId, viewToggle, viewMode = "table", maxProjects = -1 }: ProjectsDataTableProps) {
     const router = useRouter();
     const { actions } = useLayoutStore();
     const { openModal, closeModal } = useModal();
+    const handleCreateProject = useCreateProjectAction(organizationId);
+
+    // Check if limit is reached (-1 means unlimited)
+    const isUnlimited = maxProjects === -1;
+    const canCreateProject = isUnlimited || projects.length < maxProjects;
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
     // 🚀 OPTIMISTIC UI: Instant visual updates for delete
@@ -254,7 +261,12 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                 data={optimisticProjects}
                 searchPlaceholder="Buscar proyectos..."
                 onRowClick={handleNavigateToProject}
-                toolbar={<CreateProjectButton organizationId={organizationId} />}
+                toolbar={<CreateProjectButton organizationId={organizationId} currentProjectCount={projects.length} maxProjects={maxProjects} />}
+                actions={canCreateProject ? [{
+                    label: "Nuevo Proyecto",
+                    icon: Plus,
+                    onClick: handleCreateProject,
+                }] : undefined}
                 leftActions={viewToggle}
                 facetedFilters={[
                     {
@@ -275,6 +287,7 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                 ]}
                 pageSize={50}
                 viewMode={viewMode}
+                showToolbar={true}
                 toolbarInHeader={true}
                 enableRowActions={true}
                 onView={handleNavigateToProject}
@@ -315,7 +328,7 @@ export function ProjectsDataTable({ projects, organizationId, lastActiveProjectI
                             title="No hay proyectos"
                             description="Aún no has creado ningún proyecto en esta organización."
                             icon={Ban}
-                            action={<CreateProjectButton organizationId={organizationId} />}
+                            action={<CreateProjectButton organizationId={organizationId} currentProjectCount={projects.length} maxProjects={maxProjects} />}
                         />
                     );
                 }}

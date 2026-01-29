@@ -11,6 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { ContentLayout } from "@/components/layout";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { getStorageUrl } from "@/lib/storage-utils";
 import type {
     Organization,
     DashboardStats,
@@ -46,17 +47,41 @@ export function OrganizationOverviewView({
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('greeting.morning') : hour < 18 ? t('greeting.afternoon') : t('greeting.evening');
 
+    // Organization logo URL
+    const logoUrl = organization.logo_path
+        ? getStorageUrl(
+            organization.logo_path.startsWith('organizations/')
+                ? organization.logo_path
+                : `organizations/${organization.logo_path}`,
+            'public-assets'
+        )
+        : null;
+
     return (
         <ContentLayout variant="wide">
             <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-                {/* 1. Header (Simplified - No buttons, no operational status) */}
+                {/* 1. Header with Organization Logo */}
                 <div className="border-b border-border/40 pb-6">
-                    <h1 className="text-4xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                        {greeting}, {userName}.
-                    </h1>
-                    <p className="text-muted-foreground mt-2 text-lg">
-                        {t('header.subtitle')} <span className="font-semibold text-foreground">{organization.name}</span> {t('header.subtitleSuffix')}
-                    </p>
+                    <div className="flex items-center gap-5">
+                        {/* Organization Logo */}
+                        {logoUrl && (
+                            <div className="shrink-0 h-20 w-20 md:h-24 md:w-24 rounded-xl overflow-hidden border border-border/50 shadow-lg bg-background">
+                                <img
+                                    src={logoUrl}
+                                    alt={organization.name}
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                        )}
+                        <div>
+                            <h1 className="text-4xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+                                {greeting}, {userName}.
+                            </h1>
+                            <p className="text-muted-foreground mt-2 text-lg">
+                                {t('header.subtitle')} <span className="font-semibold text-foreground">{organization.name}</span> {t('header.subtitleSuffix')}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* 2. KPI Grid (Real Data - No Hardcoded Values) */}

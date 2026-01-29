@@ -16,11 +16,13 @@ interface ProjectsListProps {
     projects: Project[];
     organizationId: string;
     lastActiveProjectId?: string | null;
+    /** Max projects allowed by plan (-1 = unlimited) */
+    maxProjects?: number;
 }
 
 type ViewMode = "grid" | "table";
 
-export function ProjectsList({ projects, organizationId, lastActiveProjectId }: ProjectsListProps) {
+export function ProjectsList({ projects, organizationId, lastActiveProjectId, maxProjects = -1 }: ProjectsListProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const { openModal, closeModal } = useModal();
     const router = useRouter();
@@ -84,6 +86,7 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId }: 
                 organizationId={organizationId}
                 lastActiveProjectId={lastActiveProjectId}
                 viewMode={viewMode}
+                maxProjects={maxProjects}
                 viewToggle={
                     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
                         <Button

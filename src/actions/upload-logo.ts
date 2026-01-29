@@ -68,6 +68,8 @@ export async function uploadOrganizationLogo(formData: FormData) {
         const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
 
         revalidatePath('/organization/identity');
+        revalidatePath('/hub'); // Refresh sidebar org selector
+        revalidatePath('/', 'layout'); // Refresh entire layout for sidebar
         return { success: true, logoUrl: publicUrl };
 
     } catch (error: any) {

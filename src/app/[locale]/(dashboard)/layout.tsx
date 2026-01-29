@@ -10,6 +10,10 @@ import { CurrencyProvider } from "@/providers/currency-context";
 import { Currency } from "@/types/currency";
 import MaintenancePage from "./maintenance/page";
 
+// Revalidate every 30 seconds to keep feature flags fresh without sacrificing performance
+// (force-dynamic was causing every navigation to be slow)
+export const revalidate = 30;
+
 export default async function DashboardLayout({
     children,
 }: {

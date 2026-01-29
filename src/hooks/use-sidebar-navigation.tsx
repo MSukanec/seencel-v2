@@ -57,6 +57,7 @@ export interface ContextItem {
 
 const ALL_CONTEXTS: ContextItem[] = [
     { id: 'organization', label: 'Organización', icon: Briefcase },
+    { id: 'portal', label: 'Portal de Clientes', icon: Building },
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
@@ -67,6 +68,7 @@ export const contextRoutes: Record<NavigationContext, string> = {
     home: '/hub',
     organization: '/organization',
     project: '/organization/projects',
+    portal: '/portal',
     learnings: '/academy/courses',
     community: '/community',
     admin: '/admin'
@@ -84,6 +86,7 @@ export function useSidebarNavigation() {
             // Mapping: Context ID -> Feature Flag Key
             let flagKey = null;
             if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
+            if (ctx.id === 'portal') flagKey = 'context_portal_enabled';
             if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
             if (ctx.id === 'community') flagKey = 'context_community_enabled';
 
@@ -256,6 +259,9 @@ export function useSidebarNavigation() {
                     }),
                 ];
                 return projectItems.filter((i): i is NavItem => i !== null);
+            case 'portal':
+                // Portal is a direct link, no subitems
+                return [];
             case 'learnings':
                 return [
                     { title: 'Mis Cursos', href: '/academy/my-courses', icon: Video },

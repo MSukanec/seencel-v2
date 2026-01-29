@@ -23,6 +23,7 @@ interface FeatureFlagsManagerProps {
 // Translation Dictionary
 const FLAG_TRANSLATIONS: Record<string, string> = {
     'context_workspace_enabled': 'Acceso Espacio de Trabajo',
+    'context_portal_enabled': 'Acceso Portal de Clientes',
     'context_academy_enabled': 'Acceso Academia',
     'context_community_enabled': 'Acceso Comunidad',
     'context_community_map_enabled': 'Comunidad: Mapa Seencel',
