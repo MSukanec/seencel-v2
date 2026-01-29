@@ -103,7 +103,7 @@ export async function sendContactEmail(formData: z.infer<typeof formSchema>): Pr
 
     try {
         const { data: emailData, error } = await resend.emails.send({
-            from: "Seencel Contacto <noreply@seencel.com>",
+            from: "Seencel Formulario <sistema@seencel.com>",
             to: [toEmail],
             replyTo: data.email,
             subject: `[Contacto Web] ${data.subject}`,
