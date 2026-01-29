@@ -326,27 +326,29 @@ export function Header({ variant = 'app', user, activeOrgId }: { variant?: 'publ
                                 </div>
                             )}
 
+                            {/* Contact button - always visible in public variant */}
+                            {variant === 'public' && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
+                                >
+                                    <Link href="/contact">{tPublic('contact')}</Link>
+                                </Button>
+                            )}
+
                             {variant === 'app' || user ? (
                                 <>
                                     {variant === 'public' && (
-                                        <>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
-                                                className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
-                                            >
-                                                <Link href="/contact">{tPublic('contact')}</Link>
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                asChild
-                                                className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
-                                            >
-                                                <Link href="/hub">{tUser('dashboard')}</Link>
-                                            </Button>
-                                        </>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                            className="mr-2 h-8 gap-2 px-3 text-xs font-medium"
+                                        >
+                                            <Link href="/hub">{tUser('dashboard')}</Link>
+                                        </Button>
                                     )}
 
                                     {variant === 'app' && (
