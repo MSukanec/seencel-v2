@@ -132,13 +132,13 @@ export default function SignupPage() {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="confirmPassword">{t("confirmPasswordLabel") || "Confirmar contraseña"}</Label>
+                            <Label htmlFor="confirmPassword">{t("confirmPasswordLabel")}</Label>
                             <div className="relative">
                                 <Input
                                     id="confirmPassword"
                                     name="confirmPassword"
                                     type={showConfirmPassword ? "text" : "password"}
-                                    placeholder={t("confirmPasswordPlaceholder") || "Repetí tu contraseña"}
+                                    placeholder={t("confirmPasswordPlaceholder")}
                                     required
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -154,7 +154,7 @@ export default function SignupPage() {
                                 </button>
                             </div>
                             {confirmPassword.length > 0 && !passwordsMatch && (
-                                <p className="text-xs text-destructive">Las contraseñas no coinciden</p>
+                                <p className="text-xs text-destructive">{t("passwordMismatch")}</p>
                             )}
                         </div>
 

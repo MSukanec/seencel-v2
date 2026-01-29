@@ -28,7 +28,7 @@ interface LayoutState {
 export const useLayoutStore = create<LayoutState>()(
     persist(
         (set) => ({
-            layoutMode: 'default', // Default to existing layout initially
+            layoutMode: 'sidebar', // Always use sidebar layout
             activeContext: 'home',
             activeProjectId: null,
             sidebarMode: 'expanded_hover',

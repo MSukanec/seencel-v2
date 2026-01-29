@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Monitor, LayoutDashboard, PanelLeft, Clock } from "lucide-react";
+import { Monitor, PanelLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/store/layout-store";
 import { useRouter, usePathname } from "@/i18n/routing";
@@ -24,7 +24,7 @@ interface PreferencesTabProps {
 
 export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
     const { setTheme, theme } = useTheme();
-    const { layoutMode, actions } = useLayoutStore();
+    const { actions } = useLayoutStore();
     const t = useTranslations("Settings");
     const locale = useLocale();
     const router = useRouter();
@@ -48,12 +48,6 @@ export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
         if (newTheme === 'light' || newTheme === 'dark') {
             updateUserPreferences({ theme: newTheme });
         }
-    };
-
-    // Handle Layout Change
-    const onLayoutChange = (newLayout: 'default' | 'sidebar') => {
-        actions.setLayoutMode(newLayout);
-        updateUserPreferences({ layout: newLayout });
     };
 
     // Handle Timezone Change
@@ -151,34 +145,6 @@ export function PreferencesTab({ initialTimezone }: PreferencesTabProps) {
                             current={theme}
                             onClick={() => onThemeChange("dark")}
                             type="dark"
-                        />
-                    </div>
-                </div>
-
-                <Separator />
-
-                {/* LAYOUT */}
-                <div className="space-y-4">
-                    <div className="space-y-1">
-                        <Label className="text-base">{t('Preferences.layout.title')}</Label>
-                        <p className="text-sm text-muted-foreground">
-                            {t('Preferences.layout.description')}
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 w-full">
-                        <LayoutCard
-                            label={t('Preferences.layout.options.default')}
-                            value="default"
-                            current={layoutMode}
-                            onClick={() => onLayoutChange('default')}
-                            icon={<LayoutDashboard className="h-6 w-6" />}
-                        />
-                        <LayoutCard
-                            label={t('Preferences.layout.options.sidebar')}
-                            value="sidebar"
-                            current={layoutMode}
-                            onClick={() => onLayoutChange('sidebar')}
-                            icon={<PanelLeft className="h-6 w-6" />}
                         />
                     </div>
                 </div>
@@ -309,45 +275,3 @@ function ThemePreview({
         </div>
     );
 }
-
-
-function LayoutCard({
-    label,
-    value,
-    current,
-    onClick,
-    icon
-}: {
-    label: string;
-    value: string;
-    current?: string;
-    onClick: () => void;
-    icon: React.ReactNode;
-}) {
-    const isActive = current === value;
-
-    return (
-        <div
-            onClick={onClick}
-            className={cn(
-                "cursor-pointer flex-1 rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground transition-all",
-                isActive ? "border-primary bg-accent" : "border-muted bg-transparent"
-            )}
-        >
-            <div className="space-y-2 rounded-lg p-4 bg-card text-card-foreground">
-                <div className="flex justify-center mb-4">
-                    {icon}
-                </div>
-                <div className="text-center font-semibold text-sm">
-                    {label}
-                </div>
-            </div>
-            {isActive && (
-                <div className="flex justify-center pb-2">
-                    <div className="h-2 w-2 rounded-full bg-primary" />
-                </div>
-            )}
-        </div>
-    );
-}
-
