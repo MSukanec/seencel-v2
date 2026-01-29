@@ -25,7 +25,7 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                 <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
 
                 <div className="relative z-20 flex h-full flex-col justify-between p-12 text-white">
-                    <div className="flex items-center gap-3 font-medium text-lg">
+                    <Link href="/" className="flex items-center gap-3 font-medium text-lg hover:opacity-80 transition-opacity">
                         <div className="relative h-8 w-8">
                             <Image
                                 src="/logo.png"
@@ -35,7 +35,7 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                             />
                         </div>
                         SEENCEL
-                    </div>
+                    </Link>
 
                     <div className="space-y-6 max-w-lg">
                         <blockquote className="space-y-2">
@@ -66,7 +66,7 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                     mode === "onboarding" ? "max-w-[600px]" : "max-w-[400px]"
                 )}>
                     <div className="flex flex-col gap-2 text-center mb-6">
-                        <div className="mx-auto mb-4 h-12 w-12 relative flex items-center justify-center">
+                        <Link href="/" className="mx-auto mb-4 h-12 w-12 relative flex items-center justify-center hover:opacity-80 transition-opacity">
                             <Image
                                 src="/logo.png"
                                 alt="SEENCEL"
@@ -74,7 +74,7 @@ export function AuthLayout({ children, title, description, mode }: AuthLayoutPro
                                 height={60}
                                 className="object-contain"
                             />
-                        </div>
+                        </Link>
                         <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
                         <p className="text-sm text-balance text-muted-foreground">
                             {description}
