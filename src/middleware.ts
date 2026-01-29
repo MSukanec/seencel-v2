@@ -6,6 +6,14 @@ import { routing } from "./i18n/routing";
 const handleI18nRouting = createMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl;
+
+    // CRITICAL: Auth callback must be handled WITHOUT locale prefix
+    // Skip i18n routing entirely for auth callback to prevent 404
+    if (pathname.startsWith('/auth/callback')) {
+        return NextResponse.next();
+    }
+
     // 1. Run I18n Middleware first to generate the response with locale
     const response = handleI18nRouting(request);
 
@@ -36,7 +44,6 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // 4. Define Paths
-    const { pathname } = request.nextUrl;
     // Remove locale prefix to check logical path (e.g. /es/onboarding -> /onboarding)
     const pathWithoutLocale = pathname.replace(/^\/(en|es)/, "") || "/";
 
@@ -44,7 +51,7 @@ export async function middleware(request: NextRequest) {
     // BUT if they are logged in, we verify onboarding.
     const isAuthPath = ["/login", "/signup", "/auth/callback"].some(p => pathWithoutLocale.startsWith(p));
     const isOnboardingPath = pathWithoutLocale.startsWith("/onboarding");
-    const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static", "/images"].some(p => pathname.startsWith(p)) || /\.(?:jpg|jpeg|gif|png|svg|ico|webp|js)$/i.test(pathname);
+    const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static", "/images"].some(p => pathname.startsWith(p)) || /\.(?:jpg|jpeg|gif|png|svg|ico|webp|js|json|xml|txt|webmanifest)$/i.test(pathname);
 
     if (isPublicStatic) return response;
 
@@ -99,6 +106,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)", "/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)", "/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)"],
 };
 
