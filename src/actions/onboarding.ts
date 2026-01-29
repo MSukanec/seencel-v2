@@ -152,11 +152,33 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
             }
 
             // B. Update Organization Preferences (Source of Truth for Default)
+            // Also find and set the tax_label based on country
+            let taxLabelId: string | null = null;
+            if (validatedFields.data.countryCode) {
+                const { data: taxLabelData } = await supabase
+                    .from("tax_labels")
+                    .select("id")
+                    .contains("country_codes", [validatedFields.data.countryCode.toUpperCase()])
+                    .single();
+
+                if (taxLabelData) {
+                    taxLabelId = taxLabelData.id;
+                } else {
+                    // Fallback to generic TAX label
+                    const { data: fallbackLabel } = await supabase
+                        .from("tax_labels")
+                        .select("id")
+                        .eq("code", "TAX")
+                        .single();
+                    taxLabelId = fallbackLabel?.id || null;
+                }
+            }
+
             const { error: prefUpdateError } = await supabase
                 .from("organization_preferences")
                 .update({
                     default_currency_id: currencyData.id,
-                    ...(taxLabel && { default_tax_label: taxLabel }) // Save tax label if provided
+                    ...(taxLabelId && { default_tax_label_id: taxLabelId })
                 })
                 .eq("organization_id", org.id);
 
