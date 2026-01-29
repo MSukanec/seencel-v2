@@ -135,8 +135,6 @@ export function ConceptsTable({ data, categories, organizationId }: ConceptsTabl
                     <DataTable
                         columns={columns}
                         data={data}
-                        searchPlaceholder="Buscar conceptos..."
-                        showToolbar={true}
                         showPagination={true}
                         pageSize={10}
                         enableRowActions={true}

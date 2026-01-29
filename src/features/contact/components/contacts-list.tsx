@@ -87,7 +87,6 @@ export function ContactsList({ organizationId, initialContacts, contactTypes }: 
                         ]}
                     />
                 }
-                toolbarInHeader={true}
             />
         </div>
     );

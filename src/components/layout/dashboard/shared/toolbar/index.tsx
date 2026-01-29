@@ -1,7 +1,7 @@
 "use client";
 
 import { Table } from "@tanstack/react-table";
-import { Search, X, Plus, MoreHorizontal, LayoutTemplate } from "lucide-react";
+import { Search, X, Plus, MoreHorizontal, LayoutTemplate, Lock } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { DataTableFacetedFilter } from "./toolbar-faceted-filter";
@@ -27,6 +27,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FeatureGuard } from "@/components/ui/feature-guard";
 
 export interface ToolbarProps<TData> {
     // Generic Mode
@@ -89,7 +90,7 @@ export function Toolbar<TData>({
     mobileShowSearch = true,
     mobileShowFilters = true,
 
-    mobileShowViewToggler = false,
+    mobileShowViewToggler = true,
     portalToHeader = false,
 }: ToolbarProps<TData>) {
     const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
@@ -194,69 +195,118 @@ export function Toolbar<TData>({
 
     // Mobile Action Button Renderer
     const renderMobileActionButton = () => {
-        // Option 1: Legacy Children (or singular Mobile handler prop which we are deprecating in favor of 'actions')
-        if (!actions && children) return children; // Fallback, though likely rendered weirdly in mobile portal
+        // Option 1: Legacy Children - don't render anything in mobile if using legacy children
+        if (!actions && children) return null;
 
         // Option 2: No actions
         if (!primaryAction) return null;
 
         const Icon = primaryAction.icon ? primaryAction.icon : Plus;
+        const isLocked = primaryAction.featureGuard && !primaryAction.featureGuard.isEnabled;
 
-        return (
-            <>
-                {hasMultipleActions ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className={cn(
-                                    "pointer-events-auto",
-                                    "w-14 h-14 rounded-full",
-                                    "bg-primary text-primary-foreground",
-                                    "flex items-center justify-center",
-                                    "shadow-lg shadow-primary/30",
-                                    "active:scale-95 transition-transform"
-                                )}
-                            >
-                                <Icon className="h-6 w-6" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top" align="end" className="w-56 mb-2">
-                            {/* Render MAIN action as the first item too, or keep it separate? 
-                                 User said: "el boton '+' abriria un popover si hay mas de una opciion disponible"
-                                 Usually clicking FAB does main, long press does menu? 
-                                 Or clicking FAB opens menu with ALL options?
-                                 User said: "el boton '+' abriria un popover" -> implies menu trigger.
-                             */}
-                            <DropdownMenuItem onClick={primaryAction.onClick} className="font-medium">
-                                {primaryAction.icon && <primaryAction.icon className="mr-2 h-4 w-4" />}
-                                {primaryAction.label}
-                            </DropdownMenuItem>
-                            {actions.slice(1).map((action, idx) => (
-                                <DropdownMenuItem key={idx} onClick={action.onClick}>
-                                    {action.icon && <action.icon className="mr-2 h-4 w-4" />}
-                                    {action.label}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <button
-                        onClick={primaryAction.onClick}
-                        className={cn(
-                            "pointer-events-auto",
-                            "w-14 h-14 rounded-full",
-                            "bg-primary text-primary-foreground",
-                            "flex items-center justify-center",
-                            "shadow-lg shadow-primary/30",
-                            "active:scale-95 transition-transform"
-                        )}
-                    >
-                        <Icon className="h-6 w-6" />
-                    </button>
+        // FAB button component
+        const FABButton = ({ locked, onClick }: { locked: boolean; onClick?: () => void }) => (
+            <button
+                onClick={onClick}
+                className={cn(
+                    "pointer-events-auto",
+                    "w-14 h-14 rounded-full",
+                    locked
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-primary text-primary-foreground",
+                    "flex items-center justify-center",
+                    locked
+                        ? "shadow-lg shadow-black/10"
+                        : "shadow-lg shadow-primary/30",
+                    "active:scale-95 transition-transform",
+                    "relative"
                 )}
-            </>
-        )
+            >
+                <Icon className="h-6 w-6" />
+                {/* Lock badge overlay for locked state */}
+                {locked && (
+                    <div
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-md"
+                        style={{ backgroundColor: 'var(--plan-pro)' }}
+                    >
+                        <Lock className="h-3 w-3 text-white" />
+                    </div>
+                )}
+            </button>
+        );
+
+        // For single action (not multiple)
+        if (!hasMultipleActions) {
+            if (isLocked) {
+                // Locked: Show HoverCard with upgrade prompt on hover/click
+                return (
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <FABButton locked={true} />
+                        </SheetTrigger>
+                        <SheetContent side="bottom" className="rounded-t-3xl outline-none">
+                            <SheetHeader className="mb-4 text-left px-6 pt-6">
+                                <SheetTitle className="flex items-center gap-2">
+                                    <Lock className="h-5 w-5" style={{ color: 'var(--plan-pro)' }} />
+                                    Función Bloqueada
+                                </SheetTitle>
+                            </SheetHeader>
+                            <div className="px-6 pb-8 space-y-4">
+                                <p className="text-sm text-muted-foreground">
+                                    {primaryAction.featureGuard?.customMessage ||
+                                        `"${primaryAction.featureGuard?.featureName}" requiere el plan ${primaryAction.featureGuard?.requiredPlan || "PRO"}.`}
+                                </p>
+                                <ToolbarButton
+                                    className="w-full h-12"
+                                    onClick={() => window.location.href = '/organization/billing/plans'}
+                                >
+                                    Actualizar a {primaryAction.featureGuard?.requiredPlan || "PRO"}
+                                </ToolbarButton>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+                );
+            }
+            // Not locked: Normal FAB
+            return <FABButton locked={false} onClick={primaryAction.onClick} />;
+        }
+
+        // Multiple actions: Dropdown menu
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <FABButton locked={!!isLocked} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="end" className="w-56 mb-2">
+                    <DropdownMenuItem
+                        onClick={isLocked ? undefined : primaryAction.onClick}
+                        className={cn("font-medium", isLocked && "opacity-50")}
+                        disabled={isLocked}
+                    >
+                        {primaryAction.icon && <primaryAction.icon className="mr-2 h-4 w-4" />}
+                        {primaryAction.label}
+                        {isLocked && <Lock className="ml-auto h-3 w-3" style={{ color: 'var(--plan-pro)' }} />}
+                    </DropdownMenuItem>
+                    {actions.slice(1).map((action, idx) => {
+                        const actionLocked = action.featureGuard && !action.featureGuard.isEnabled;
+                        return (
+                            <DropdownMenuItem
+                                key={idx}
+                                onClick={actionLocked ? undefined : action.onClick}
+                                className={actionLocked ? "opacity-50" : ""}
+                                disabled={actionLocked}
+                            >
+                                {action.icon && <action.icon className="mr-2 h-4 w-4" />}
+                                {action.label}
+                                {actionLocked && <Lock className="ml-auto h-3 w-3" style={{ color: 'var(--plan-pro)' }} />}
+                            </DropdownMenuItem>
+                        );
+                    })}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
     }
+
 
     return (
         <>
@@ -297,10 +347,14 @@ export function Toolbar<TData>({
                                         </SheetTrigger>
                                         <SheetContent side="bottom" className="rounded-t-3xl outline-none">
                                             <SheetHeader className="mb-4 text-left px-6 pt-6">
-                                                <SheetTitle>Cambiar Vista</SheetTitle>
+                                                <SheetTitle className="flex items-center gap-2">
+                                                    <LayoutTemplate className="h-5 w-5 text-primary" />
+                                                    Cambiar Vista
+                                                </SheetTitle>
                                             </SheetHeader>
                                             <div className="px-6 pb-8">
-                                                <div className="flex justify-center w-full">
+                                                {/* Scale up the view toggle buttons for mobile touch */}
+                                                <div className="flex justify-center w-full [&_button]:h-12 [&_button]:px-6 [&_button]:text-base">
                                                     {leftActions}
                                                 </div>
                                             </div>

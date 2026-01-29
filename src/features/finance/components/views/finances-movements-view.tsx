@@ -321,32 +321,11 @@ export function FinancesMovementsView({ movements, wallets = [], projects = [], 
             <DataTable
                 columns={columns}
                 data={filteredMovements}
-                searchKey="description"
-                searchPlaceholder="Buscar movimientos..."
                 enableRowSelection={true}
                 enableRowActions={true}
                 onRowClick={handleRowClick}
                 initialSorting={[{ id: "payment_date", desc: true }]}
-                facetedFilters={[
-                    {
-                        columnId: "status",
-                        title: "Estado",
-                        options: statusOptions
-                    }
-                ]}
-                leftActions={
-                    <DateRangeFilter
-                        title="Fechas"
-                        value={dateRange}
-                        onChange={(value) => setDateRange(value)}
-                    />
-                }
-                toolbarInHeader={true}
                 onClearFilters={() => setDateRange(undefined)}
-                actions={[
-                    { label: "Nuevo Movimiento", icon: Plus, onClick: () => console.log("New Movement") },
-                    { label: "Exportar Excel", icon: FileSpreadsheet, onClick: () => console.log("Export Excel") }
-                ]}
             />
         </div>
     );

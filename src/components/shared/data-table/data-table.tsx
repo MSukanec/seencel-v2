@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { DataTablePagination } from "./data-table-pagination";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DataTableSkeleton } from "./data-table-skeleton";
 import { cn } from "@/lib/utils";
 import { DataTableRowActions } from "./data-table-row-actions";
@@ -34,30 +33,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Paperclip, X, Trash2 } from "lucide-react";
 
-import { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
-
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
-    searchKey?: string;
-    searchPlaceholder?: string;
     isLoading?: boolean;
     onRowClick?: (row: TData) => void;
-    toolbar?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
     pageSize?: number;
     showPagination?: boolean;
-    showToolbar?: boolean;
     stickyHeader?: boolean;
-    leftActions?: React.ReactNode;
-    facetedFilters?: {
-        columnId: string;
-        title: string;
-        options: {
-            label: string;
-            value: string;
-            icon?: React.ComponentType<{ className?: string }>;
-        }[];
-    }[];
     viewMode?: "table" | "grid";
     renderGridItem?: (item: TData) => React.ReactNode;
     gridClassName?: string;
@@ -78,26 +61,44 @@ interface DataTableProps<TData, TValue> {
         onClick: (data: TData) => void;
         variant?: "default" | "destructive";
     }[];
-    toolbarInHeader?: boolean;
-    actions?: ToolbarAction[] | ((args: { table: Table<TData> }) => ToolbarAction[]);
+    /** External global filter value (controlled by parent/Toolbar) */
+    globalFilter?: string;
+    /** Callback when global filter changes (controlled by parent/Toolbar) */
+    onGlobalFilterChange?: (value: string) => void;
+    /** Callback when filters should be cleared */
     onClearFilters?: () => void;
+
+    // =========================================================================
+    // DEPRECATED PROPS - Accepted for backward compatibility but NOT rendered
+    // The toolbar should be managed at the Page/View level using the Toolbar component
+    // =========================================================================
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    searchPlaceholder?: string;
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    searchKey?: string;
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    showToolbar?: boolean;
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    toolbarInHeader?: boolean;
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    toolbar?: React.ReactNode | ((props: { table: Table<TData> }) => React.ReactNode);
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    leftActions?: React.ReactNode;
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    actions?: any[] | ((props: { table: Table<TData> }) => any[]);
+    /** @deprecated Use Toolbar component at Page/View level instead */
+    facetedFilters?: any[];
 }
 
 export function DataTable<TData, TValue>({
     columns,
     data,
-    searchKey,
-    searchPlaceholder = "Buscar...",
     isLoading = false,
     onRowClick,
-    toolbar,
     emptyState,
     pageSize = 10,
     showPagination = true,
-    showToolbar = false,  // DEPRECATED: Toolbar se maneja en la View con portalToHeader
     stickyHeader = true,
-    leftActions,
-    facetedFilters,
     viewMode = "table",
     renderGridItem,
     gridClassName = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
@@ -113,15 +114,19 @@ export function DataTable<TData, TValue>({
     onDelete,
     onBulkDelete,
     customActions,
-    toolbarInHeader = false,
-    actions,
+    globalFilter: externalGlobalFilter,
+    onGlobalFilterChange,
     onClearFilters,
 }: DataTableProps<TData, TValue> & { meta?: any }) {
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
-    const [globalFilter, setGlobalFilter] = React.useState("");
+
+    // Use internal state if not controlled externally
+    const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("");
+    const globalFilter = externalGlobalFilter ?? internalGlobalFilter;
+    const setGlobalFilter = onGlobalFilterChange ?? setInternalGlobalFilter;
 
     const tableColumns = React.useMemo(() => {
         const baseColumns = [...columns];
@@ -193,7 +198,7 @@ export function DataTable<TData, TValue>({
 
     const table = useReactTable({
         data,
-        columns: tableColumns, // Use memoized columns with selection
+        columns: tableColumns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -219,54 +224,8 @@ export function DataTable<TData, TValue>({
         },
     });
 
-    const resolvedActions = React.useMemo(() => {
-        if (typeof actions === 'function') {
-            return actions({ table });
-        }
-        return actions;
-    }, [actions, table]);
-
     return (
         <div className={cn("space-y-4", (data.length === 0 && emptyState) ? "h-full flex flex-col" : "")}>
-            {/* Toolbar */}
-            {showToolbar && (
-                <div className={cn("transition-all", toolbarInHeader ? "contents" : "")}>
-                    {/* If toolbarInHeader, we don't render the Card wrapper, or we let the Toolbar handle portal */}
-                    {/* Actually, existing code wrapped it in Card. If portaling, we likely want to avoid the Card visual in the body */}
-                    {toolbarInHeader ? (
-                        <Toolbar
-                            table={table}
-                            portalToHeader={true}
-                            globalFilter={globalFilter}
-                            setGlobalFilter={setGlobalFilter}
-                            searchPlaceholder={searchPlaceholder}
-                            leftActions={leftActions}
-                            facetedFilters={facetedFilters}
-                            /* bulkActions now handled in Selection Header inside table, not here */
-                            actions={resolvedActions}
-                            children={
-                                typeof toolbar === "function" ? toolbar({ table }) : toolbar
-                            }
-                        />
-                    ) : (
-                        <Card className="p-4">
-                            <Toolbar
-                                table={table}
-                                globalFilter={globalFilter}
-                                setGlobalFilter={setGlobalFilter}
-                                searchPlaceholder={searchPlaceholder}
-                                leftActions={leftActions}
-                                facetedFilters={facetedFilters}
-                                /* bulkActions now handled in Selection Header inside table, not here */
-                                actions={resolvedActions}
-                            >
-                                {typeof toolbar === "function" ? toolbar({ table }) : toolbar}
-                            </Toolbar>
-                        </Card>
-                    )}
-                </div>
-            )}
-
             {/* Table Container */}
             {data.length === 0 && emptyState ? (
                 // Full Page Empty State (No Table Structure)
@@ -285,9 +244,7 @@ export function DataTable<TData, TValue>({
                         ))}
                         {table.getRowModel().rows.length === 0 && (
                             <div className="col-span-full">
-                                {/* Use standard empty state for No Results (Filtered) vs No Data */}
                                 <Card className="flex flex-col items-center justify-center py-12 text-muted-foreground p-8">
-                                    {/* ... SVG ... */}
                                     <p className="font-medium">No se encontraron resultados</p>
                                     <p className="text-sm mt-1">Intenta ajustar los filtros o la búsqueda</p>
                                 </Card>
@@ -298,7 +255,6 @@ export function DataTable<TData, TValue>({
                     <Card className="overflow-hidden">
                         <div className="relative w-full overflow-auto">
                             <UiTable>
-                                { /* ... Header & Body ... */}
                                 <TableHeader
                                     className={cn(
                                         stickyHeader && "sticky top-0 z-10 bg-card/95 backdrop-blur-sm",
@@ -325,7 +281,6 @@ export function DataTable<TData, TValue>({
                                                             key={header.id}
                                                             className={cn(
                                                                 "h-11 text-[11px] font-medium text-muted-foreground relative",
-                                                                // Only hide overflow when NOT selecting and last column
                                                                 !(isSelecting && isLast) && "overflow-hidden",
                                                                 isFirst ? "px-4" : isLast ? "px-6" : "px-4"
                                                             )}
@@ -350,7 +305,6 @@ export function DataTable<TData, TValue>({
                                                                 <div
                                                                     className={cn(
                                                                         "absolute flex items-center transition-all duration-300 ease-out",
-                                                                        // Last column: anchor to right and let content extend left
                                                                         isLast
                                                                             ? "right-0 top-0 bottom-0 px-6"
                                                                             : "inset-0",
@@ -361,14 +315,12 @@ export function DataTable<TData, TValue>({
                                                                     )}
                                                                 >
                                                                     {isFirst ? (
-                                                                        /* Checkbox in first column */
                                                                         <Checkbox
                                                                             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
                                                                             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                                                                             aria-label="Seleccionar todo"
                                                                         />
                                                                     ) : index === 1 ? (
-                                                                        /* Selection info in second column */
                                                                         <div className="flex items-center gap-3">
                                                                             <span className="text-sm font-medium text-foreground whitespace-nowrap">
                                                                                 {table.getSelectedRowModel().rows.length} seleccionado(s)
@@ -384,9 +336,7 @@ export function DataTable<TData, TValue>({
                                                                             </Button>
                                                                         </div>
                                                                     ) : isLast ? (
-                                                                        /* Bulk actions in last column - positioned to extend left */
                                                                         <div className="flex items-center gap-2 whitespace-nowrap">
-                                                                            {/* Default Delete Button (if onBulkDelete or onDelete exists) */}
                                                                             {(onBulkDelete || onDelete) && (
                                                                                 <Button
                                                                                     variant="ghost"
@@ -395,10 +345,8 @@ export function DataTable<TData, TValue>({
                                                                                     onClick={() => {
                                                                                         const selectedRows = table.getSelectedRowModel().rows.map(r => r.original);
                                                                                         if (onBulkDelete) {
-                                                                                            // Use bulk delete handler (passes array + reset callback)
                                                                                             onBulkDelete(selectedRows, () => table.resetRowSelection());
                                                                                         } else if (onDelete && selectedRows.length === 1) {
-                                                                                            // Fallback: single delete if only 1 row selected
                                                                                             onDelete(selectedRows[0]);
                                                                                         }
                                                                                     }}
@@ -407,7 +355,6 @@ export function DataTable<TData, TValue>({
                                                                                     Eliminar
                                                                                 </Button>
                                                                             )}
-                                                                            {/* Custom bulk actions */}
                                                                             {typeof bulkActions === "function"
                                                                                 ? bulkActions({ table })
                                                                                 : bulkActions}
@@ -427,7 +374,6 @@ export function DataTable<TData, TValue>({
                                         <DataTableSkeleton columnCount={columns.length} rowCount={pageSize} />
                                     ) : table.getRowModel().rows?.length ? (
                                         table.getRowModel().rows.map((row, rowIndex) => {
-                                            const isLastRow = rowIndex === table.getRowModel().rows.length - 1;
                                             const isSelected = row.getIsSelected();
 
                                             return (
@@ -440,7 +386,6 @@ export function DataTable<TData, TValue>({
                                                         isSelected && "bg-primary/5 border-l-2 border-l-primary"
                                                     )}
                                                     onClick={(e) => {
-                                                        // Don't trigger row click if clicking on interactive elements
                                                         const target = e.target as HTMLElement;
                                                         const isInteractive = target.closest('button, input, [role="checkbox"], [role="menuitem"], [data-radix-collection-item]');
                                                         if (!isInteractive) {
@@ -457,11 +402,9 @@ export function DataTable<TData, TValue>({
                                             );
                                         })
                                     ) : (
-                                        // Empty state for FILTERED results (No matches)
                                         <TableRow>
                                             <TableCell colSpan={columns.length} className="h-32 text-center">
                                                 <div className="w-full flex flex-col items-center justify-center py-8 text-muted-foreground">
-                                                    {/* Same SVG/Message for No Results */}
                                                     <p className="font-medium">No hay resultados</p>
                                                     <p className="text-sm mt-1">Intenta ajustar los filtros.</p>
                                                     <Button
@@ -488,13 +431,12 @@ export function DataTable<TData, TValue>({
                 )
             )}
 
-            {/* Pagination - only show when rows exceed pageSize */}
+            {/* Pagination */}
             {
                 showPagination && !isLoading && table.getFilteredRowModel().rows.length > pageSize && (
                     <DataTablePagination table={table} />
                 )
             }
-        </div >
+        </div>
     );
 }
-

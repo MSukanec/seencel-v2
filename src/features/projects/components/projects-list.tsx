@@ -4,13 +4,15 @@ import { useState } from "react";
 import { Project } from "@/types/project";
 import { ProjectsDataTable } from "./projects-data-table";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Plus, Circle, Timer, CheckCircle2, Ban } from "lucide-react";
 import { useModal } from "@/providers/modal-store";
 import { useRouter } from "next/navigation";
 import { deleteProject } from "@/features/projects/actions";
 import { ProjectForm } from "./project-form";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { useCreateProjectAction } from "./create-project-button";
 
 interface ProjectsListProps {
     projects: Project[];
@@ -24,10 +26,18 @@ type ViewMode = "grid" | "table";
 
 export function ProjectsList({ projects, organizationId, lastActiveProjectId, maxProjects = -1 }: ProjectsListProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
+    const [searchQuery, setSearchQuery] = useState("");
     const { openModal, closeModal } = useModal();
     const router = useRouter();
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Create project action
+    const handleCreateProject = useCreateProjectAction(organizationId);
+
+    // Check if limit is reached (-1 means unlimited)
+    const isUnlimited = maxProjects === -1;
+    const canCreateProject = isUnlimited || projects.length < maxProjects;
 
     const handleSuccess = () => {
         router.refresh();
@@ -35,7 +45,6 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId, ma
     };
 
     const handleEdit = (project: { id: string; name: string }) => {
-        // Find the full project data from the projects array
         const fullProject = projects.find(p => p.id === project.id);
         if (!fullProject) return;
 
@@ -64,7 +73,7 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId, ma
             if (result.success) {
                 toast.success("Proyecto eliminado correctamente");
                 setProjectToDelete(null);
-                router.refresh(); // Refresh the list after successful deletion
+                router.refresh();
             } else {
                 toast.error(result.error || "Error al eliminar el proyecto");
             }
@@ -79,34 +88,74 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId, ma
         setProjectToDelete(project);
     };
 
+    // Status filter options
+    const statusOptions = [
+        { value: "active", label: "Activo", icon: Circle },
+        { value: "planning", label: "En Planificación", icon: Timer },
+        { value: "completed", label: "Completado", icon: CheckCircle2 },
+        { value: "inactive", label: "Inactivo", icon: Ban },
+    ];
+
+    // Dynamic type options from projects
+    const typeOptions = Array.from(new Set(projects.map(p => p.project_type_name).filter(Boolean)))
+        .map(type => ({ label: type!, value: type! }));
+
+    // Dynamic modality options from projects
+    const modalityOptions = Array.from(new Set(projects.map(p => p.project_modality_name).filter(Boolean)))
+        .map(modality => ({ label: modality!, value: modality! }));
+
+    // View toggle component
+    const viewToggle = (
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setViewMode("grid")}
+            >
+                <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setViewMode("table")}
+            >
+                <List className="h-4 w-4" />
+            </Button>
+        </div>
+    );
+
     return (
         <div className="space-y-4">
+            {/* Toolbar - Portals to header */}
+            <Toolbar
+                portalToHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Buscar proyectos..."
+                leftActions={viewToggle}
+                actions={[{
+                    label: "Nuevo Proyecto",
+                    icon: Plus,
+                    onClick: handleCreateProject,
+                    featureGuard: {
+                        isEnabled: canCreateProject,
+                        featureName: "Crear más proyectos",
+                        requiredPlan: "PRO",
+                        customMessage: `Has alcanzado el límite de ${maxProjects} proyecto${maxProjects !== 1 ? 's' : ''} de tu plan actual (${projects.length}/${maxProjects}). Actualiza a PRO para crear proyectos ilimitados.`
+                    }
+                }]}
+            />
+
             <ProjectsDataTable
                 projects={projects}
                 organizationId={organizationId}
                 lastActiveProjectId={lastActiveProjectId}
                 viewMode={viewMode}
                 maxProjects={maxProjects}
-                viewToggle={
-                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-                        <Button
-                            variant={viewMode === "grid" ? "default" : "ghost"}
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setViewMode("grid")}
-                        >
-                            <LayoutGrid className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={viewMode === "table" ? "default" : "ghost"}
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setViewMode("table")}
-                        >
-                            <List className="h-4 w-4" />
-                        </Button>
-                    </div>
-                }
+                globalFilter={searchQuery}
+                onGlobalFilterChange={setSearchQuery}
             />
 
             <DeleteConfirmationDialog
@@ -129,4 +178,3 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId, ma
         </div>
     );
 }
-

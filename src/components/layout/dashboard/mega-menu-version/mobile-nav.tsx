@@ -20,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ArrowLeft, Hammer } from "lucide-react";
+import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ArrowLeft, Hammer, Sparkles, Mail } from "lucide-react";
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { useLayoutStore, useActiveProjectId } from "@/store/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -307,47 +307,8 @@ export function MobileNav() {
 
                 {/* Footer: User Profile */}
                 <div className="border-t p-3 mt-auto bg-background/80 backdrop-blur-xl">
-                    <div className="flex items-center justify-between">
-                        {/* Theme Toggle */}
-                        {mounted && (
-                            <div className="flex items-center rounded-full border bg-muted/50 p-0.5">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setTheme("system")}
-                                    className={cn(
-                                        "h-7 w-7 rounded-full",
-                                        theme === 'system' && "bg-background shadow-sm"
-                                    )}
-                                >
-                                    <Monitor className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setTheme("light")}
-                                    className={cn(
-                                        "h-7 w-7 rounded-full",
-                                        theme === 'light' && "bg-background shadow-sm"
-                                    )}
-                                >
-                                    <Sun className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setTheme("dark")}
-                                    className={cn(
-                                        "h-7 w-7 rounded-full",
-                                        theme === 'dark' && "bg-background shadow-sm"
-                                    )}
-                                >
-                                    <Moon className="h-3.5 w-3.5" />
-                                </Button>
-                            </div>
-                        )}
-
-                        {/* User Avatar with Dropdown */}
+                    <div className="flex items-center justify-end">
+                        {/* User Avatar with Dropdown - SAME OPTIONS AS DESKTOP */}
                         {user ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -365,6 +326,7 @@ export function MobileNav() {
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-56" align="end" forceMount>
+                                    {/* User Info Header */}
                                     <DropdownMenuLabel className="font-normal">
                                         <div className="flex flex-col space-y-1">
                                             <p className="text-sm font-medium leading-none">{user.full_name || "User"}</p>
@@ -375,6 +337,7 @@ export function MobileNav() {
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
 
+                                    {/* 1. Configuración */}
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings" onClick={() => setOpen(false)}>
                                             <Settings className="mr-2 h-4 w-4" />
@@ -384,6 +347,77 @@ export function MobileNav() {
 
                                     <DropdownMenuSeparator />
 
+                                    {/* 2. Feedback */}
+                                    <DropdownMenuItem onClick={() => setOpen(false)}>
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        Feedback
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator />
+
+                                    {/* 3. Home */}
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/" onClick={() => setOpen(false)}>
+                                            <Home className="mr-2 h-4 w-4" />
+                                            Ir a Inicio
+                                        </Link>
+                                    </DropdownMenuItem>
+
+                                    {/* 4. Contacto */}
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/contact" onClick={() => setOpen(false)}>
+                                            <Mail className="mr-2 h-4 w-4" />
+                                            Contacto
+                                        </Link>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator />
+
+                                    {/* 5. Theme Toggle */}
+                                    {mounted && (
+                                        <div className="flex items-center justify-between px-2 py-2">
+                                            <span className="text-sm text-muted-foreground">Tema</span>
+                                            <div className="flex items-center rounded-full border bg-background">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setTheme("system")}
+                                                    className={cn(
+                                                        "h-6 w-6 rounded-full",
+                                                        theme === 'system' && "bg-muted"
+                                                    )}
+                                                >
+                                                    <Monitor className="h-3 w-3" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setTheme("light")}
+                                                    className={cn(
+                                                        "h-6 w-6 rounded-full",
+                                                        theme === 'light' && "bg-muted"
+                                                    )}
+                                                >
+                                                    <Sun className="h-3 w-3" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setTheme("dark")}
+                                                    className={cn(
+                                                        "h-6 w-6 rounded-full",
+                                                        theme === 'dark' && "bg-muted"
+                                                    )}
+                                                >
+                                                    <Moon className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <DropdownMenuSeparator />
+
+                                    {/* 6. Logout */}
                                     <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                                         <LogOut className="mr-2 h-4 w-4" />
                                         Cerrar Sesión

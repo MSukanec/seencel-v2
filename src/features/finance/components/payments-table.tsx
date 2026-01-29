@@ -325,33 +325,12 @@ export function PaymentsTable({ data, concepts, wallets, currencies, organizatio
             <DataTable
                 columns={columns}
                 data={filteredPayments}
-                searchKey="general_cost_name"
-                searchPlaceholder="Buscar pagos..."
                 enableRowSelection={true}
                 enableRowActions={true}
                 onEdit={handleOpenForm}
                 onDelete={handleDeleteClick}
                 initialSorting={[{ id: "payment_date", desc: true }]}
-                facetedFilters={[
-                    {
-                        columnId: "status",
-                        title: "Estado",
-                        options: statusOptions
-                    }
-                ]}
-                leftActions={
-                    <DateRangeFilter
-                        title="Fechas"
-                        value={dateRange}
-                        onChange={(value) => setDateRange(value)}
-                    />
-                }
-                toolbarInHeader={true}
                 onClearFilters={() => setDateRange(undefined)}
-                actions={[
-                    { label: "Registrar Pago", icon: Plus, onClick: () => handleOpenForm() },
-                    { label: "Exportar Excel", icon: FileSpreadsheet, onClick: () => console.log("Export Excel") }
-                ]}
             />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

@@ -13,6 +13,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { FeatureGuard } from "@/components/ui/feature-guard"
 
 // --- ToolbarButton (Replacement for Shadcn Button) ---
 function ToolbarButton({
@@ -46,6 +47,17 @@ export interface ToolbarAction {
     icon?: React.ComponentType<{ className?: string }>
     variant?: VariantProps<typeof buttonVariants>["variant"]
     disabled?: boolean
+    /** Optional feature guard for plan-gated actions */
+    featureGuard?: {
+        /** Whether the feature is enabled (user has access) */
+        isEnabled: boolean
+        /** Name of the feature being guarded */
+        featureName: string
+        /** Required plan to access the feature */
+        requiredPlan?: "PRO" | "ENTERPRISE"
+        /** Custom message to show when blocked */
+        customMessage?: string
+    }
 }
 
 interface ToolbarSplitButtonProps {
@@ -62,37 +74,44 @@ function ToolbarSplitButton({
     useMoreIcon = true,
     className,
 }: ToolbarSplitButtonProps) {
-    // If no secondary actions, just render the main button
+    const Icon = mainAction.icon
+    const isGuarded = mainAction.featureGuard && !mainAction.featureGuard.isEnabled
+
+    // Wrapper component for FeatureGuard
+    const MainButton = (
+        <ToolbarButton
+            variant={mainAction.variant || "default"}
+            onClick={mainAction.onClick}
+            disabled={mainAction.disabled || isGuarded}
+            className={!secondaryActions || secondaryActions.length === 0 ? className : "rounded-r-none border-r border-r-primary-foreground/20 focus:z-10"}
+        >
+            {Icon && <Icon className="mr-2 h-4 w-4" />}
+            {mainAction.label}
+        </ToolbarButton>
+    )
+
+    // Wrap with FeatureGuard if needed
+    const GuardedMainButton = mainAction.featureGuard ? (
+        <FeatureGuard
+            isEnabled={mainAction.featureGuard.isEnabled}
+            featureName={mainAction.featureGuard.featureName}
+            requiredPlan={mainAction.featureGuard.requiredPlan}
+            customMessage={mainAction.featureGuard.customMessage}
+        >
+            {MainButton}
+        </FeatureGuard>
+    ) : MainButton
+
+    // If no secondary actions, just render the main button (possibly guarded)
     if (!secondaryActions || secondaryActions.length === 0) {
-        const Icon = mainAction.icon
-        return (
-            <ToolbarButton
-                variant={mainAction.variant || "default"}
-                onClick={mainAction.onClick}
-                disabled={mainAction.disabled}
-                className={className}
-            >
-                {Icon && <Icon className="mr-2 h-4 w-4" />}
-                {mainAction.label}
-            </ToolbarButton>
-        )
+        return GuardedMainButton
     }
 
     // Render Split Button
-    const Icon = mainAction.icon
-
     return (
         <div className={cn("flex items-center rounded-md shadow-sm", className)}>
-            {/* Main Action Part */}
-            <ToolbarButton
-                variant={mainAction.variant || "default"}
-                onClick={mainAction.onClick}
-                disabled={mainAction.disabled}
-                className="rounded-r-none border-r border-r-primary-foreground/20 focus:z-10"
-            >
-                {Icon && <Icon className="mr-2 h-4 w-4" />}
-                {mainAction.label}
-            </ToolbarButton>
+            {/* Main Action Part - Wrapped in FeatureGuard if needed */}
+            {GuardedMainButton}
 
             {/* Dropdown Part */}
             <DropdownMenu>

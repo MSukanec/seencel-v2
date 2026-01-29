@@ -234,38 +234,10 @@ export function SubcontractsPaymentsView({
             <DataTable
                 columns={columns}
                 data={optimisticPayments}
-                searchKey="provider_name"
-                searchPlaceholder="Buscar por proveedor..."
                 enableRowSelection={true}
                 enableRowActions={true}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                facetedFilters={[
-                    {
-                        columnId: "status",
-                        title: "Estado",
-                        options: statusOptions
-                    }
-                ]}
-                toolbarInHeader={true}
-                showToolbar={true}
-                actions={[
-                    {
-                        label: "Nuevo Pago",
-                        icon: Plus,
-                        onClick: handleNewPayment
-                    },
-                    {
-                        label: "Importar",
-                        icon: Upload,
-                        onClick: handleOpenImport
-                    },
-                    {
-                        label: "Exportar Excel",
-                        icon: FileSpreadsheet,
-                        onClick: () => toast.info("Próximamente: Exportación de pagos")
-                    }
-                ]}
                 bulkActions={({ table }) => {
                     const selectedRows = table.getSelectedRowModel().rows;
                     const selectedCount = selectedRows.length;
