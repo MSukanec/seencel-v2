@@ -70,6 +70,9 @@ export interface Plan {
     billing_period: 'monthly' | 'annual';
     currency: string;
     features: any; // JSONB with feature flags
+    monthly_amount?: number | null;
+    annual_amount?: number | null;
+    slug?: string | null;
 }
 
 export interface OrganizationSubscription {
@@ -86,13 +89,13 @@ export interface OrganizationSubscription {
 
 export interface OrganizationBillingCycle {
     id: string;
-    period_start: string;
-    period_end: string;
-    total_amount: number;
-    status: string;
-    paid: boolean;
-    currency_code: string;
     created_at: string;
+    amount: number;
+    currency: string;
+    status: string;
+    billing_period: string;
+    plan?: { name: string }[] | { name: string } | null;
+    payment?: { provider: string }[] | { provider: string } | null;
 }
 
 export interface Currency {

@@ -85,6 +85,7 @@ export default async function SettingsPage({
             <ContentLayout variant="settings">
                 <HeaderTitleUpdater title={
                     <div className="flex items-center gap-2 text-sm">
+                        <Settings2 className="h-4 w-4 text-muted-foreground" />
                         <span className="text-muted-foreground">{t('myAccount')}</span>
                         <span className="text-muted-foreground">/</span>
                         <span className="font-semibold text-foreground">{t('title')}</span>

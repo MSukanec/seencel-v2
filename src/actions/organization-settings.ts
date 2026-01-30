@@ -53,7 +53,8 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         orgCurrenciesRes,
         orgWalletsRes, // organization_currencies_view
         allCurrenciesRes, // currencies
-        allWalletsRes // wallets
+        allWalletsRes, // wallets
+        organizationRes // Fallback: organization with plan
     ] = await Promise.all([
         supabase
             .from('organization_members_full_view')
@@ -92,12 +93,12 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .eq('organization_id', organizationId)
             .eq('status', 'active')
             .single(),
-
+        // Historial de suscripciones - usar organization_subscriptions con joins
         supabase
-            .from('organization_billing_cycles')
-            .select('*')
+            .from('organization_subscriptions')
+            .select('id, created_at, amount, currency, status, billing_period, plan:plan_id(name), payment:payment_id(provider)')
             .eq('organization_id', organizationId)
-            .order('period_start', { ascending: false })
+            .order('created_at', { ascending: false })
             .limit(12),
 
         supabase
@@ -121,8 +122,34 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .order('wallet_name', { ascending: true }),
 
         supabase.from('currencies').select('*').order('name'),
-        supabase.from('wallets').select('*').eq('is_active', true).order('name')
+        supabase.from('wallets').select('*').eq('is_active', true).order('name'),
+
+        // Fallback: Get organization with its plan directly
+        supabase
+            .from('organizations')
+            .select('*, plan:plans(*)')
+            .eq('id', organizationId)
+            .single()
     ]);
+
+    // Build subscription data - use actual subscription or create virtual one from org.plan
+    let subscription = subscriptionRes.data as OrganizationSubscription | null;
+
+    // If no active subscription but org has a plan, create a virtual subscription for display
+    if (!subscription && organizationRes.data?.plan) {
+        const org = organizationRes.data;
+        subscription = {
+            id: 'virtual-' + organizationId,
+            status: 'active',
+            billing_period: 'one-time', // One-time purchases don't auto-renew
+            started_at: org.created_at,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 days
+            amount: org.plan.monthly_amount || 0,
+            currency: 'USD',
+            plan_id: org.plan.id,
+            plan: org.plan
+        };
+    }
 
     return {
         members: (membersRes.data || []) as OrganizationMemberDetail[],
@@ -131,7 +158,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         permissions: (permissionsRes.data || []) as Permission[],
         rolePermissions: (rolePermissionsRes.data || []) as RolePermission[],
         activityLogs: (activityLogsRes.data || []) as OrganizationActivityLog[],
-        subscription: (subscriptionRes.data) as OrganizationSubscription | null,
+        subscription: subscription,
         billingCycles: (billingCyclesRes.data || []) as OrganizationBillingCycle[],
         preferences: (preferencesRes.data) as OrganizationPreferences | null,
         contactCurrencies: (orgCurrenciesRes.data || []) as OrganizationCurrency[],

@@ -17,10 +17,10 @@ interface CourseCardProps {
 export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false, isPurchaseEnabled = true }: CourseCardProps) {
     const { details } = course;
 
-    // Format price
+    // Format price - show USD explicitly
     const formattedPrice = isPurchaseEnabled
         ? (course.price
-            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(course.price)
+            ? `USD ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(course.price)}`
             : 'Free')
         : '-';
 
