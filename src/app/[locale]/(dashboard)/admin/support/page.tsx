@@ -4,6 +4,7 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PurchaseCleanupTool } from "@/features/admin/support/components/purchase-cleanup-tool";
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -48,11 +49,16 @@ export default async function SupportPage({ params }: PageProps) {
             >
                 <TabsContent value="tickets" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <div className="flex items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
-                            <div className="text-center text-muted-foreground">
-                                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                                <p className="text-lg font-medium">Tickets de Soporte</p>
-                                <p className="text-sm">Gestiona los chats y tickets de soporte de usuarios</p>
+                        <div className="space-y-6">
+                            {/* Herramienta de Cleanup */}
+                            <PurchaseCleanupTool />
+
+                            {/* Placeholder para futuros tickets */}
+                            <div className="flex items-center justify-center h-40 border-2 border-dashed border-border rounded-lg">
+                                <div className="text-center text-muted-foreground">
+                                    <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">Más herramientas de soporte próximamente...</p>
+                                </div>
                             </div>
                         </div>
                     </ContentLayout>
