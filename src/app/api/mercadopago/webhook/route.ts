@@ -130,9 +130,31 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
             });
 
             if (error) {
-                console.error('handle_payment_course_success error:', error);
+                console.error('handle_payment_course_success RPC error:', error);
+                // Log RPC error to system_error_logs
+                await supabase.from('system_error_logs').insert({
+                    domain: 'payment',
+                    entity: 'webhook',
+                    function_name: 'handle_payment_course_success',
+                    error_message: error.message,
+                    context: { payment_id: payment.id, user_id: internalUserId, course_id: product_id },
+                    severity: 'critical'
+                });
             } else {
                 console.log('Course payment processed:', data);
+                // Check for warning_step (partial failure)
+                const result = data as { status: string; warning_step?: string; payment_id?: string };
+                if (result.status === 'ok_with_warning' && result.warning_step) {
+                    console.warn('⚠️ Course payment had a step failure:', result.warning_step);
+                    await supabase.from('system_error_logs').insert({
+                        domain: 'payment',
+                        entity: 'step_failure',
+                        function_name: result.warning_step,
+                        error_message: `Step failed during course payment processing`,
+                        context: { payment_id: result.payment_id, user_id: internalUserId, course_id: product_id },
+                        severity: 'warning'
+                    });
+                }
             }
 
         } else if (product_type === 'subscription') {
@@ -149,9 +171,30 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
             });
 
             if (error) {
-                console.error('handle_payment_subscription_success error:', error);
+                console.error('handle_payment_subscription_success RPC error:', error);
+                await supabase.from('system_error_logs').insert({
+                    domain: 'payment',
+                    entity: 'webhook',
+                    function_name: 'handle_payment_subscription_success',
+                    error_message: error.message,
+                    context: { payment_id: payment.id, user_id: internalUserId, org_id: orgId, plan_id: product_id },
+                    severity: 'critical'
+                });
             } else {
                 console.log('Subscription payment processed:', data);
+                // Check for warning_step (partial failure)
+                const result = data as { status: string; warning_step?: string; payment_id?: string; subscription_id?: string };
+                if (result.status === 'ok_with_warning' && result.warning_step) {
+                    console.warn('⚠️ Subscription payment had a step failure:', result.warning_step);
+                    await supabase.from('system_error_logs').insert({
+                        domain: 'payment',
+                        entity: 'step_failure',
+                        function_name: result.warning_step,
+                        error_message: `Step failed during subscription payment processing`,
+                        context: { payment_id: result.payment_id, subscription_id: result.subscription_id, user_id: internalUserId, org_id: orgId, plan_id: product_id },
+                        severity: 'warning'
+                    });
+                }
             }
         }
 

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PurchaseCleanupTool } from "@/features/admin/support/components/purchase-cleanup-tool";
 import { TestUserStatusDashboard } from "@/features/admin/support/components/test-user-status-dashboard";
+import { SystemErrorsViewer } from "@/features/admin/support/components/system-errors-viewer";
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -54,8 +55,13 @@ export default async function SupportPage({ params }: PageProps) {
                             {/* Estado actual del usuario de prueba */}
                             <TestUserStatusDashboard />
 
-                            {/* Herramienta de Cleanup */}
-                            <PurchaseCleanupTool />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Herramienta de Cleanup */}
+                                <PurchaseCleanupTool />
+
+                                {/* Visor de errores del sistema */}
+                                <SystemErrorsViewer />
+                            </div>
 
                             {/* Placeholder para futuros tickets */}
                             <div className="flex items-center justify-center h-40 border-2 border-dashed border-border rounded-lg">

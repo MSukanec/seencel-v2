@@ -270,3 +270,64 @@ export async function getTestUserStatus(): Promise<{ success: boolean; data?: Te
     }
 }
 
+/**
+ * System error type for payment step failures
+ */
+export interface SystemError {
+    id: string;
+    domain: string;
+    scope: string;
+    functionName: string;
+    message: string;
+    context: Record<string, unknown>;
+    severity: string;
+    createdAt: string;
+}
+
+/**
+ * Obtiene errores del sistema recientes (últimos 24h por defecto)
+ */
+export async function getSystemErrors(hours: number = 24): Promise<{ success: boolean; errors?: SystemError[]; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        // Verificar autenticación
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: "No autenticado" };
+        }
+
+        const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+        const { data, error } = await supabase
+            .from('system_error_logs')
+            .select('*')
+            .gte('created_at', since)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            console.error("Error fetching system_error_logs:", error);
+            return { success: false, error: error.message };
+        }
+
+        const errors: SystemError[] = (data || []).map((e: Record<string, unknown>) => ({
+            id: e.id as string,
+            domain: e.domain as string,
+            scope: e.entity as string, // entity in DB = scope in our type
+            functionName: e.function_name as string,
+            message: e.error_message as string, // error_message in DB
+            context: (e.context || {}) as Record<string, unknown>,
+            severity: e.severity as string,
+            createdAt: e.created_at as string
+        }));
+
+        return { success: true, errors };
+    } catch (error) {
+        console.error("Error en getSystemErrors:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Error desconocido"
+        };
+    }
+}

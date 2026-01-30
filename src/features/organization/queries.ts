@@ -457,7 +457,7 @@ export async function getOrganizationFinancialData(orgId: string) {
     const { data: preferences } = await supabase
         .from('organization_preferences')
         // Using 'maybeSingle' to avoid error if no preferences found (just returns null)
-        .select('default_currency_id, functional_currency_id, default_wallet_id, currency_decimal_places, use_currency_exchange, insight_config, default_tax_label')
+        .select('default_currency_id, functional_currency_id, default_wallet_id, currency_decimal_places, use_currency_exchange, insight_config, default_tax_label_id')
         .eq('organization_id', orgId)
         .maybeSingle();
 
@@ -532,7 +532,7 @@ export async function getOrganizationFinancialData(orgId: string) {
     return {
         defaultCurrencyId: preferences?.default_currency_id || formattedCurrencies[0]?.id, // Fallback to first if no default set
         defaultWalletId: formattedWallets.find(w => w.is_default)?.id || formattedWallets[0]?.id, // Return organization_wallet.id
-        defaultTaxLabel: preferences?.default_tax_label || 'IVA', // Default to IVA
+        defaultTaxLabel: preferences?.default_tax_label_id || 'IVA', // Default to IVA
         currencies: formattedCurrencies,
         wallets: formattedWallets,
         preferences: preferences ? {

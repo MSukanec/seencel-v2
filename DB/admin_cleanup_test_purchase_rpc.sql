@@ -102,11 +102,11 @@ BEGIN
         v_deleted_items := array_append(v_deleted_items, 'organization_subscriptions (' || v_affected_count || ')'); 
     END IF;
     
-    -- 3. Resetear plan_id de la organización ESPECÍFICA
-    UPDATE organizations SET plan_id = NULL WHERE id = v_org_id AND plan_id IS NOT NULL;
+    -- 3. Resetear plan_id de la organización ESPECÍFICA al plan FREE
+    UPDATE organizations SET plan_id = '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2' WHERE id = v_org_id AND plan_id IS DISTINCT FROM '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'organizations.plan_id → null'); 
+        v_deleted_items := array_append(v_deleted_items, 'organizations.plan_id → FREE'); 
     END IF;
     
     -- 4. Borrar payments del usuario específico
