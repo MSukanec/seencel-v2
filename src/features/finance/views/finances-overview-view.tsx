@@ -486,15 +486,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                     )}
                 </DashboardCard>
             </div>
-
-            {/* INSIGHTS: Narrative insights about finances */}
-            {insights.length > 0 && (
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {insights.slice(0, 3).map(insight => (
-                        <InsightCard key={insight.id} insight={insight} />
-                    ))}
-                </div>
-            )}
         </div>
     );
 }

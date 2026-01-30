@@ -5,12 +5,12 @@ import { MaterialPaymentView } from "@/features/materials/types";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { InsightCard } from "@/features/insights/components/insight-card";
+import { generateMaterialsInsights } from "@/features/insights/logic/materials";
 import { DollarSign, TrendingUp, CreditCard, PieChart as PieChartIcon, Clock, BarChart3, Lightbulb } from "lucide-react";
 import { LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
 import { useMoney } from "@/hooks/use-money";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import type { Insight } from "@/features/insights/types";
 
 interface MaterialsOverviewViewProps {
     projectId: string;
@@ -97,36 +97,16 @@ export function MaterialsOverviewView({ projectId, orgId, payments }: MaterialsO
     }, [payments, money]);
 
     // =============================================
-    // Insights - Generated client-side
+    // Insights - Generated using rules engine
     // =============================================
-    const insights = useMemo((): Insight[] => {
-        const result: Insight[] = [];
-
-        if (kpis.concentrationPct >= 50) {
-            result.push({
-                id: "high-concentration",
-                severity: "warning",
-                title: "Alta Concentración",
-                description: `El tipo "${kpis.topTypeName}" representa el ${kpis.concentrationPct}% de tus gastos.`,
-                priority: 2,
-            });
-        }
-
-        if (charts.monthlyEvolution.length >= 3) {
-            const recent = charts.monthlyEvolution.slice(-3);
-            if (recent[2]?.amount > recent[0]?.amount) {
-                result.push({
-                    id: "upward-trend",
-                    severity: "info",
-                    title: "Tendencia Ascendente",
-                    description: "Los gastos de materiales han aumentado en los últimos meses.",
-                    priority: 3,
-                });
-            }
-        }
-
-        return result;
-    }, [kpis, charts]);
+    const insights = useMemo(() => {
+        return generateMaterialsInsights({
+            monthlyData: charts.monthlyEvolution.map(m => ({ month: m.month, value: m.amount })),
+            typeDistribution: charts.typeDistribution,
+            paymentCount: kpis.paymentCount,
+            currentMonth: new Date().getMonth() + 1
+        });
+    }, [charts, kpis.paymentCount]);
 
     const recentActivity = payments.slice(0, 5);
 
