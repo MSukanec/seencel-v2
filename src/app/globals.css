@@ -46,101 +46,8 @@
   --radius-sm: calc(var(--radius) - 4px);
 }
 
-/*
-  Using HSL color space for variables to allow opacity modifiers in Tailwind.
-  e.g. bg-primary/20 works if --primary is defined as channels.
-  However, Tailwind v4 'color-mix' strategy handles CSS variables usually fine if defined as full colors.
-  For simplicity in v4, we can define full hex/rgb in vars. 
-*/
+/* Theme variables bridge for Tailwind v4 */
 
-@layer base {
-  :root {
-    /* Light Mode: "Paper & Ink" */
-    --background: 0 0% 99%;
-    /* #FCFCFC - Almost white, but not blinding */
-    --foreground: 240 10% 3.9%;
-    /* #09090B - Deep charcoal */
-
-    --card: 0 0% 100%;
-    /* Pure white for cards to pop against background */
-    --card-foreground: 240 10% 3.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-
-    --primary: 158 45% 45%;
-    /* A more sophisticated, desaturated Emerald */
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 240 4.8% 95.9%;
-    /* Subtle grey for secondary actions */
-    --secondary-foreground: 240 5.9% 10%;
-
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 5.9% 90%;
-    /* Soft borders */
-    --input: 240 5.9% 90%;
-    --ring: 158 45% 45%;
-
-    --radius: 1rem;
-    /* More organic, rounded corners (16px) */
-  }
-
-  .dark {
-    /* Dark Mode: "Midnight Glass" */
-    --background: 240 10% 4%;
-    /* #0A0A0B - Rich dark, not pitch black */
-    --foreground: 0 0% 98%;
-
-    --card: 240 10% 5%;
-    /* Slightly lighter than bg */
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 10% 4%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 158 50% 50%;
-    /* Lighter emerald for dark mode visibility */
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 3.7% 15.9%;
-    /* Subtle dark borders */
-    --input: 240 3.7% 15.9%;
-    --ring: 158 50% 50%;
-  }
-
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased;
-  }
-}
-
-/*
-  ---break--- 
-*/
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -216,8 +123,8 @@
      Inspired by modern dashboard designs (purple→pink→orange→yellow→cyan).
      Order matters: used sequentially in multi-series charts.
      ============================================ */
-  --chart-1: #8B5CF6;
-  /* Violet - Primary accent */
+  --chart-1: oklch(0.744 0.16 126.36);
+  /* Primary - Brand color */
   --chart-2: #EC4899;
   /* Pink - Secondary */
   --chart-3: #F97316;
@@ -226,8 +133,8 @@
   /* Yellow/Gold - Highlight */
   --chart-5: #06B6D4;
   /* Cyan - Cool contrast */
-  --chart-6: #10B981;
-  /* Emerald - Success/Growth */
+  --chart-6: #8B5CF6;
+  /* Violet - Was primary accent */
   --chart-7: #6366F1;
   /* Indigo - Deep accent */
   --chart-8: #F43F5E;
@@ -259,12 +166,11 @@
 */
 
 .dark {
-  --background: oklch(0.322 0 0);
-  /* HSL 0 0 22 converted to OKLCH */
+  --background: oklch(26.033% 0.00003 271.152);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
+  --card: oklch(29% 0.00003 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
+  --popover: oklch(0.30 0.007 290);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.744 0.16 126.36);
   --primary-foreground: oklch(0.985 0 0);
@@ -278,10 +184,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.744 0.16 126.36);
-  /* Chart colors and financial amounts are in :root only - HEX colors work in both themes */
   /* Sidebar */
-  --sidebar: oklch(0.25 0 0);
-  /* HSL 0 0 14 */
+  --sidebar: oklch(29% 0.00003 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);

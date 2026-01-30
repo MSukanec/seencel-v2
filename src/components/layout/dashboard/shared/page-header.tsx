@@ -163,7 +163,7 @@ export function PageHeader({
                 {/* Row 2: Toolbar Portal Target - Auto-hides when empty */}
                 <div
                     id="toolbar-portal-root"
-                    className="px-8 py-2 border-t border-border/50 empty:hidden empty:p-0 empty:border-0"
+                    className="px-8 py-2 empty:hidden empty:p-0"
                 />
 
                 {children}

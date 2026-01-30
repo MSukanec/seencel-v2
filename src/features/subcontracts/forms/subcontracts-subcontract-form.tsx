@@ -7,7 +7,7 @@ import * as z from "zod";
 import { CalendarIcon, TrendingUp, Info } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { createSubcontractAction, updateSubcontractAction } from "../../actions";
+import { createSubcontractAction, updateSubcontractAction } from "../actions";
 import { getIndexValueByPeriod } from "@/features/advanced/queries";
 import { MONTH_NAMES } from "@/features/advanced/types";
 
@@ -44,6 +44,7 @@ const formSchema = z.object({
     provider_id: z.string().min(1, "Debes seleccionar un proveedor"),
     amount_total: z.number().min(0).optional(),
     currency_id: z.string().min(1, "La moneda es requerida"),
+    exchange_rate: z.number().positive("El tipo de cambio debe ser mayor a 0").optional(),
     date: z.date().optional(),
     start_date: z.date().optional(),
     description: z.string().optional(),
@@ -98,6 +99,7 @@ export function SubcontractsSubcontractForm({
             provider_id: initialData?.contact_id || initialData?.provider_id || undefined,
             amount_total: initialData?.amount_total || undefined,
             currency_id: initialData?.currency_id || defaultCurrencyId || undefined,
+            exchange_rate: initialData?.exchange_rate || 1,
             date: initialData?.date ? new Date(initialData.date) : undefined,
             description: initialData?.notes || "",
             // Index fields
@@ -163,6 +165,7 @@ export function SubcontractsSubcontractForm({
                     title: values.title,
                     amount_total: values.amount_total,
                     currency_id: values.currency_id,
+                    exchange_rate: values.exchange_rate || 1,
                     date: values.date,
                     notes: values.description,
                     status: initialData.status,
@@ -177,6 +180,7 @@ export function SubcontractsSubcontractForm({
                     title: values.title,
                     amount_total: values.amount_total,
                     currency_id: values.currency_id,
+                    exchange_rate: values.exchange_rate || 1,
                     date: values.date,
                     notes: values.description,
                     status: 'draft',
@@ -291,20 +295,42 @@ export function SubcontractsSubcontractForm({
                             />
                         </div>
 
-                        {/* ROW 2: Title */}
-                        <FormField
-                            control={form.control}
-                            name="title"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Título del Contrato</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Ej. Instalación Eléctrica Torre A" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {/* ROW 2: Title + Exchange Rate */}
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_150px] gap-4">
+                            <FormField
+                                control={form.control}
+                                name="title"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Título del Contrato</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej. Instalación Eléctrica Torre A" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="exchange_rate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tipo de Cambio</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                step="0.0001"
+                                                placeholder="1.00"
+                                                {...field}
+                                                onChange={e => field.onChange(e.target.valueAsNumber)}
+                                                value={field.value || ''}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         {/* ROW 3: Amount & Currency */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

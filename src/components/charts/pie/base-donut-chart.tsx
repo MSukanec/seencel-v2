@@ -110,7 +110,7 @@ export function BaseDonutChart({
                             {sortedData.map((entry, index) => (
                                 <Cell
                                     key={`cell-${index}`}
-                                    fill={entry.fill || entry.color || `var(--color-${entry[nameKey]}, var(--chart-${(index % 8) + 1}))`}
+                                    fill={entry.fill || entry.color || `var(--chart-${(index % 8) + 1})`}
                                 />
                             ))}
                         </Pie>

@@ -12,8 +12,6 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMoney } from "@/hooks/use-money";
-import { createMoney } from "@/lib/money/money";
-import { calculateDisplayAmount as calcDisplayAmount } from "@/lib/money/money-service";
 
 interface SubcontractCardProps {
     subcontract: any;
@@ -36,28 +34,31 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
     const avatarFallback = (providerName[0] || "").toUpperCase();
     const imageUrl = subcontract.provider_image || contact?.image_url;
 
-    // Calculate display amounts using Money system
+    // Use useMoney.sum() for proper bimonetary conversion respecting displayMode
     const currencyCode = subcontract.currency_code || "ARS";
-    const exchangeRate = subcontract.exchange_rate || currentRate;
+    const exchangeRate = Number(subcontract.exchange_rate) || currentRate;
 
-    // Create Money objects for proper conversion
-    const totalMoney = createMoney(
-        { amount: subcontract.amount_total || 0, currency_code: currencyCode, exchange_rate: exchangeRate },
-        money.config
-    );
-    const paidMoney = createMoney(
-        { amount: subcontract.paid_amount || 0, currency_code: currencyCode, exchange_rate: exchangeRate },
-        money.config
-    );
-    const remainingMoney = createMoney(
-        { amount: subcontract.remaining_amount || 0, currency_code: currencyCode, exchange_rate: exchangeRate },
-        money.config
-    );
+    // Create items for sum() - each subcontract amount as a single-item array
+    const totalItem = [{ amount: Number(subcontract.amount_total || 0), currency_code: currencyCode, exchange_rate: exchangeRate }];
+    const paidItem = [{ amount: Number(subcontract.paid_amount || 0), currency_code: currencyCode, exchange_rate: exchangeRate }];
+    const remainingItem = [{ amount: Number(subcontract.remaining_amount || 0), currency_code: currencyCode, exchange_rate: exchangeRate }];
 
-    // Calculate display amounts
-    const totalDisplayAmount = calcDisplayAmount(totalMoney, money.displayMode, money.config);
-    const paidDisplayAmount = calcDisplayAmount(paidMoney, money.displayMode, money.config);
-    const remainingDisplayAmount = calcDisplayAmount(remainingMoney, money.displayMode, money.config);
+    // DEBUG: Log conversion data
+    console.log('[SubcontractCard DEBUG]', {
+        title: subcontract.title,
+        rawCurrencyCode: subcontract.currency_code,
+        usedCurrencyCode: currencyCode,
+        rawExchangeRate: subcontract.exchange_rate,
+        usedExchangeRate: exchangeRate,
+        displayMode: money.displayMode,
+        currentRate: currentRate,
+        amount_total: subcontract.amount_total,
+    });
+
+    // Get converted totals using sum() which respects displayMode
+    const totalDisplay = money.sum(totalItem).total;
+    const paidDisplay = money.sum(paidItem).total;
+    const remainingDisplay = money.sum(remainingItem).total;
 
     const startDate = subcontract.start_date
         ? format(new Date(subcontract.start_date), "dd MMM yyyy", { locale: es })
@@ -134,7 +135,7 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] uppercase text-muted-foreground font-semibold">Total</span>
                         <span className="font-mono font-medium text-foreground">
-                            {money.format(totalDisplayAmount)}
+                            {money.format(totalDisplay)}
                         </span>
                     </div>
 
@@ -142,7 +143,7 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] uppercase text-muted-foreground font-semibold">Pagado</span>
                         <span className="font-mono font-medium text-amount-positive">
-                            {money.format(paidDisplayAmount)}
+                            {money.format(paidDisplay)}
                         </span>
                     </div>
 
@@ -150,15 +151,22 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] uppercase text-muted-foreground font-semibold">Restante</span>
                         <span className="font-mono font-medium text-amount-negative">
-                            {money.format(remainingDisplayAmount)}
+                            {money.format(remainingDisplay)}
                         </span>
                     </div>
                 </div>
 
-                {/* Date */}
+                {/* Date + Exchange Rate DEBUG */}
                 <div className="flex items-center gap-2 text-muted-foreground min-w-[120px]">
                     <Calendar className="h-4 w-4" />
                     <span>{startDate}</span>
+                </div>
+                {/* DEBUG: Show exchange rate */}
+                <div className="flex flex-col items-end text-xs">
+                    <span className="text-[10px] uppercase text-amber-500 font-semibold">TC</span>
+                    <span className="font-mono text-amber-400">
+                        {subcontract.exchange_rate ?? 'NULL'} ({currencyCode})
+                    </span>
                 </div>
             </div>
 

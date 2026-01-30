@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SubcontractDetailPage, generateSubcontractMetadata } from "@/features/subcontracts/views/details";
+import { SubcontractDetailPage, generateSubcontractMetadata } from "@/features/subcontracts/views/details/subcontract-detail-page";
 
 interface SubcontractDetailPageProps {
     params: Promise<{

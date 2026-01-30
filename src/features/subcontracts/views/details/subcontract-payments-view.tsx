@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
+import { ColumnDef } from "@tanstack/react-table";
 import { Plus, Banknote, Wallet, CircleDollarSign, Upload, Download } from "lucide-react";
 import { useModal } from "@/providers/modal-store";
-import { SubcontractPaymentForm } from "@/features/subcontracts/components/forms/subcontract-payment-form";
+import { SubcontractPaymentForm } from "@/features/subcontracts/forms/subcontract-payment-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,7 +12,13 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { useMoney } from "@/hooks/use-money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { SubcontractPaymentsDataTable } from "@/features/subcontracts/components/tables/subcontract-payments-data-table";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
+import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
+import { Badge } from "@/components/ui/badge";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
+import { deleteSubcontractPaymentAction } from "@/features/subcontracts/actions";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
 interface SubcontractPaymentsViewProps {
     subcontract: any;
@@ -33,12 +40,87 @@ export function SubcontractPaymentsView({
     const { format: formatMoney, sum, config } = useMoney();
     const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
 
-    // Calculate summary using functional amounts
-    const paymentsWithCurrency = payments.map(p => ({
-        amount: Number(p.functional_amount || p.amount || 0),
-        currency_code: config.functionalCurrencyCode,
+    // Optimistic UI
+    const {
+        optimisticItems: optimisticPayments,
+        removeItem: optimisticRemove,
+        isPending
+    } = useOptimisticList({
+        items: payments,
+        getItemId: (payment) => payment.id,
+    });
+
+    // === INLINE COLUMN DEFINITIONS (Standard Pattern) ===
+    const columns: ColumnDef<any>[] = useMemo(() => [
+        createDateColumn<any>({
+            accessorKey: "payment_date",
+            showAvatar: false,
+        }),
+        createMoneyColumn<any>({
+            accessorKey: "amount",
+            prefix: "-",
+            colorMode: "negative",
+        }),
+        {
+            accessorKey: "wallet",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Billetera" />,
+            cell: ({ row }) => (
+                <span className="text-sm text-foreground/80">{row.original.wallet?.name || "-"}</span>
+            ),
+        },
+        {
+            accessorKey: "status",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
+            cell: ({ row }) => {
+                const status = row.original.status;
+                let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
+                let className = "";
+
+                switch (status) {
+                    case "confirmed":
+                        variant = "outline";
+                        className = "bg-amount-positive/10 text-amount-positive border-amount-positive/20";
+                        break;
+                    case "pending":
+                        variant = "outline";
+                        className = "bg-amber-500/10 text-amber-600 border-amber-500/20";
+                        break;
+                    case "rejected":
+                        variant = "destructive";
+                        break;
+                    case "void":
+                        variant = "secondary";
+                        break;
+                }
+
+                return (
+                    <Badge variant={variant} className={className}>
+                        {status === "confirmed" ? "Confirmado" :
+                            status === "pending" ? "Pendiente" :
+                                status === "rejected" ? "Rechazado" :
+                                    status === "void" ? "Anulado" : status}
+                    </Badge>
+                );
+            },
+            filterFn: (row, id, value) => {
+                return value.includes(row.getValue(id));
+            },
+        },
+        createTextColumn<any>({
+            accessorKey: "reference",
+            title: "Referencia",
+            truncate: 150,
+            muted: true,
+        }),
+    ], []);
+
+    // Calculate summary using proper money items with actual currency data
+    const paymentItems = payments.map(p => ({
+        amount: Number(p.amount || 0),
+        currency_code: p.currency?.code || config.functionalCurrencyCode,
+        exchange_rate: Number(p.exchange_rate) || config.currentExchangeRate
     }));
-    const paidSummary = sum(paymentsWithCurrency);
+    const paidSummary = sum(paymentItems);
 
     const contractAmount = Number(subcontract.amount_total || 0);
     const contractCurrencyCode = subcontract.currency?.code || config.functionalCurrencyCode;
@@ -62,7 +144,7 @@ export function SubcontractPaymentsView({
     // ========================================
     // FILTERED DATA
     // ========================================
-    const filteredPayments = payments.filter(payment => {
+    const filteredPayments = optimisticPayments.filter(payment => {
         if (statusFilter.size > 0 && !statusFilter.has(payment.status)) {
             return false;
         }
@@ -79,26 +161,87 @@ export function SubcontractPaymentsView({
                 organizationId={organizationId}
                 subcontracts={[subcontract]}
                 financialData={financialData}
-                initialData={{ subcontract_id: subcontract.id }}
                 onSuccess={() => {
                     closeModal();
+                    toast.success("Pago registrado");
                     router.refresh();
                 }}
             />,
             {
                 title: "Nuevo Pago",
-                description: `Registrar pago para ${subcontract.contact?.full_name || subcontract.title || 'este subcontrato'}`,
+                description: "Registra un pago para este subcontrato.",
                 size: "lg"
             }
         );
     };
 
+    const handleEdit = (payment: any) => {
+        openModal(
+            <SubcontractPaymentForm
+                projectId={projectId}
+                organizationId={organizationId}
+                subcontracts={[subcontract]}
+                financialData={financialData}
+                initialData={payment}
+                onSuccess={() => {
+                    closeModal();
+                    toast.success("Pago actualizado");
+                    router.refresh();
+                }}
+            />,
+            {
+                title: "Editar Pago",
+                description: "Modifica los detalles del pago.",
+                size: "lg"
+            }
+        );
+    };
+
+    const [paymentToDelete, setPaymentToDelete] = useState<any | null>(null);
+    const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
+    const resetSelectionRef = useRef<(() => void) | null>(null);
+
+    const handleDelete = (payment: any) => {
+        setPaymentToDelete(payment);
+    };
+
+    const handleBulkDelete = (selectedPayments: any[], resetSelection: () => void) => {
+        setBulkDeleteIds(selectedPayments.map(p => p.id));
+        resetSelectionRef.current = resetSelection;
+    };
+
+    const confirmDelete = async () => {
+        if (!paymentToDelete && bulkDeleteIds.length === 0) return;
+
+        const idsToDelete = paymentToDelete ? [paymentToDelete.id] : bulkDeleteIds;
+        setPaymentToDelete(null);
+        setBulkDeleteIds([]);
+
+        if (resetSelectionRef.current) {
+            resetSelectionRef.current();
+            resetSelectionRef.current = null;
+        }
+
+        for (const paymentId of idsToDelete) {
+            optimisticRemove(paymentId, async () => {
+                try {
+                    await deleteSubcontractPaymentAction(paymentId);
+                } catch (error) {
+                    toast.error("Error al eliminar el pago");
+                    router.refresh();
+                }
+            });
+        }
+
+        toast.success(idsToDelete.length === 1 ? "Pago eliminado" : `${idsToDelete.length} pagos eliminados`);
+    };
+
     const handleImport = () => {
-        toast.info("Próximamente: Importación de pagos");
+        toast.info("Importación de pagos en desarrollo");
     };
 
     const handleExport = () => {
-        toast.info("Próximamente: Exportación de pagos");
+        toast.info("Exportación de pagos en desarrollo");
     };
 
     // ========================================
@@ -106,26 +249,13 @@ export function SubcontractPaymentsView({
     // ========================================
     if (payments.length === 0) {
         return (
-            <>
-                <Toolbar
-                    portalToHeader
-                    actions={[
-                        {
-                            label: "Nuevo Pago",
-                            icon: Plus,
-                            onClick: handleNewPayment,
-                            variant: "default"
-                        }
-                    ]}
+            <div className="h-full flex items-center justify-center">
+                <EmptyState
+                    icon={Banknote}
+                    title="Sin pagos registrados"
+                    description="Registra el primer pago de este subcontrato."
                 />
-                <div className="h-full flex items-center justify-center">
-                    <EmptyState
-                        icon={Banknote}
-                        title="Sin pagos registrados"
-                        description="Registra el primer pago para este subcontrato."
-                    />
-                </div>
-            </>
+            </div>
         );
     }
 
@@ -187,7 +317,7 @@ export function SubcontractPaymentsView({
                     />
                     <DashboardKpiCard
                         title="Total Pagado"
-                        amount={paidSummary.total}
+                        items={paymentItems}
                         icon={<Wallet className="h-6 w-6" />}
                         iconClassName="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"
                         description={`${payments.length} pago${payments.length !== 1 ? 's' : ''} registrado${payments.length !== 1 ? 's' : ''}`}
@@ -205,17 +335,47 @@ export function SubcontractPaymentsView({
                     />
                 </div>
 
-                {/* Data Table - Using specialized component */}
+                {/* Data Table - Using standard DataTable with inline columns */}
                 <div className="flex-1 min-h-0">
-                    <SubcontractPaymentsDataTable
+                    <DataTable
+                        columns={columns}
                         data={filteredPayments}
-                        subcontract={subcontract}
-                        financialData={financialData}
-                        projectId={projectId}
-                        organizationId={organizationId}
+                        enableRowSelection={true}
+                        enableRowActions={true}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onBulkDelete={handleBulkDelete}
+                        initialSorting={[{ id: "payment_date", desc: true }]}
                     />
                 </div>
             </div>
+
+            <DeleteConfirmationDialog
+                open={!!paymentToDelete || bulkDeleteIds.length > 0}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPaymentToDelete(null);
+                        setBulkDeleteIds([]);
+                    }
+                }}
+                onConfirm={confirmDelete}
+                title={bulkDeleteIds.length > 0 ? `¿Eliminar ${bulkDeleteIds.length} pagos?` : "¿Eliminar pago?"}
+                description={
+                    bulkDeleteIds.length > 0 ? (
+                        <span>
+                            Estás a punto de eliminar <strong>{bulkDeleteIds.length} pagos</strong> seleccionados. Esta acción no se puede deshacer.
+                        </span>
+                    ) : (
+                        <span>
+                            Estás a punto de eliminar un pago por <strong>
+                                {paymentToDelete?.currency?.symbol || config.functionalCurrencySymbol} {paymentToDelete?.amount?.toLocaleString('es-AR')}
+                            </strong>. Esta acción no se puede deshacer.
+                        </span>
+                    )
+                }
+                confirmLabel="Eliminar"
+                isDeleting={isPending}
+            />
         </>
     );
 }

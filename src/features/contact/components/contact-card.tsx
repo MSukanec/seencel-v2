@@ -25,7 +25,7 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
     const avatarUrl = contact.resolved_avatar_url || contact.image_url;
 
     return (
-        <Card className="group relative flex flex-col items-center text-center p-6 h-[400px] bg-card hover:bg-accent/40 transition-colors border-border/50 shadow-sm">
+        <Card className="group relative flex flex-col items-center text-center p-6 h-[400px] bg-card hover:bg-accent/40 transition-colors border-border/50 shadow-sm cursor-pointer">
 
             {/* Top Actions - Always Visible */}
             <div className="absolute top-4 right-4">

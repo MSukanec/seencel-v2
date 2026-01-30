@@ -129,26 +129,35 @@ export function DashboardKpiCard({
     // Use useMoney for automatic formatting when amount is provided
     const money = useMoney();
 
-    // Determine display value: prefer `amount` (new) over `value` (legacy)
-    const displayValue = amount !== undefined
-        ? money.format(amount)
-        : value ?? '';
+    // Calculate sum from items if provided (for bimonetary support)
+    const sumResult = items && items.length > 0 ? money.sum(items) : null;
 
-    // Auto-calculate breakdown from items if provided
-    const currencyBreakdown = items && items.length > 0
-        ? money.sum(items).breakdown.map(b => ({
+    // Priority: items (bimonetary) -> amount (single value) -> value (legacy string)
+    let displayValue: string | number;
+    if (sumResult) {
+        // Use the aggregated total from useMoney.sum() - this respects displayMode!
+        displayValue = money.format(sumResult.total);
+    } else if (amount !== undefined) {
+        displayValue = money.format(amount);
+    } else {
+        displayValue = value ?? '';
+    }
+
+    // Auto-calculate breakdown from sumResult if available
+    const currencyBreakdown = sumResult
+        ? sumResult.breakdown.map(b => ({
             ...b,
             functionalTotal: b.nativeTotal
         }))
         : externalBreakdown;
 
-    // Use config decimal places when using amount mode
-    const decimalPlaces = amount !== undefined
+    // Use config decimal places when using amount/items mode
+    const decimalPlaces = (sumResult || amount !== undefined)
         ? money.config.decimalPlaces
         : (externalDecimalPlaces ?? 2);
 
-    // Only show breakdown if there are 2+ currencies
-    const showBreakdown = currencyBreakdown && currencyBreakdown.length > 1;
+    // Only show breakdown if there are 2+ currencies AND we're in mix mode
+    const showBreakdown = currencyBreakdown && currencyBreakdown.length > 1 && money.displayMode === 'mix';
 
     const formatValue = (val: number) => {
         return val.toLocaleString('es-AR', {

@@ -440,3 +440,4 @@ export async function getProvidersForProject(organizationId: string): Promise<{
         name: c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Sin nombre',
     }));
 }
+

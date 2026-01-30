@@ -293,6 +293,7 @@ const createSubcontractSchema = z.object({
     title: z.string().optional().nullable(),
     amount_total: z.number().min(0).optional().nullable(),
     currency_id: z.string().uuid().optional().nullable(),
+    exchange_rate: z.number().positive().optional().nullable(),
     date: z.date().optional().nullable(), // contract date
     notes: z.string().optional().nullable(),
     status: z.string().default('draft'), // active, completed, cancelled, draft
@@ -376,6 +377,7 @@ export async function updateSubcontractAction(input: z.infer<typeof updateSubcon
             contact_id: input.contact_id,
             amount_total: input.amount_total,
             currency_id: input.currency_id,
+            exchange_rate: input.exchange_rate,
             date: input.date,
             notes: input.notes,
             status: input.status,

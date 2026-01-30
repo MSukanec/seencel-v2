@@ -37,13 +37,11 @@ interface PageProps {
     params: Promise<{
         projectId: string;
     }>;
-    searchParams: Promise<{
-        view?: string;
-    }>;
+    searchParams: Promise<{ view?: string }>;
 }
 
 // ============================================
-// PAGE COMPONENT
+// PAGE COMPONENT (Server Component)
 // ============================================
 export default async function MaterialsPage({ params, searchParams }: PageProps) {
     const { projectId } = await params;
@@ -77,7 +75,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
         notFound();
     }
 
-    // Fetch data for all tabs
+    // Fetch data for all tabs - payments are used for dashboard KPIs via useMoney().sum()
     const [payments, purchases, financialData, requirements, orders, providers, materialTypes] = await Promise.all([
         getMaterialPayments(projectId),
         getMaterialPurchasesAction(projectId),
@@ -103,5 +101,3 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
         />
     );
 }
-
-

@@ -39,12 +39,13 @@ export function SubcontractOverviewView({ subcontract, payments, financialData, 
     const contractCurrencyCode = subcontract.currency?.code || config.functionalCurrencyCode;
     const contractSymbol = subcontract.currency?.symbol || config.functionalCurrencySymbol;
 
-    // Sum payments using functional amounts
-    const paymentsWithCurrency = payments.map(p => ({
-        amount: Number(p.functional_amount || p.amount || 0),
-        currency_code: config.functionalCurrencyCode, // Use functional for aggregation
+    // Sum payments using proper money items with actual currency data
+    const paymentItems = payments.map(p => ({
+        amount: Number(p.amount || 0),
+        currency_code: p.currency?.code || config.functionalCurrencyCode,
+        exchange_rate: Number(p.exchange_rate) || config.currentExchangeRate
     }));
-    const paidSummary = sum(paymentsWithCurrency);
+    const paidSummary = sum(paymentItems);
     const totalPaidFunctional = paidSummary.total;
 
     // For progress, convert contract amount to functional if needed

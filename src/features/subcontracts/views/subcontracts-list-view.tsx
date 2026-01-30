@@ -7,8 +7,8 @@ import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
 import { useModal } from "@/providers/modal-store";
-import { SubcontractsSubcontractForm } from "../components/forms/subcontracts-subcontract-form";
-import { SubcontractCard } from "../components/cards/subcontract-card";
+import { SubcontractsSubcontractForm } from "../forms/subcontracts-subcontract-form";
+import { SubcontractCard } from "../components/subcontract-card";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import { deleteSubcontractAction } from "@/features/subcontracts/actions";
@@ -23,11 +23,12 @@ interface SubcontractsListViewProps {
     providers: { id: string; name: string; image?: string | null; fallback?: string }[];
     currencies: { id: string; code: string; symbol: string; name: string }[];
     initialSubcontracts: any[];
+    payments?: any[]; // For accurate Total Paid calculation with individual exchange_rates
     defaultCurrencyId?: string | null;
     indexTypes?: { id: string; name: string; periodicity: string }[];
 }
 
-export function SubcontractsListView({ projectId, organizationId, providers, currencies, initialSubcontracts = [], defaultCurrencyId, indexTypes = [] }: SubcontractsListViewProps) {
+export function SubcontractsListView({ projectId, organizationId, providers, currencies, initialSubcontracts = [], payments = [], defaultCurrencyId, indexTypes = [] }: SubcontractsListViewProps) {
     const { openModal, closeModal } = useModal();
     const money = useMoney();
     const subcontracts = initialSubcontracts;
@@ -91,22 +92,53 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
             return money.sum(items).total;
         };
 
+        // Calculate Total Paid from ACTUAL PAYMENTS with their own exchange_rates
+        const calculateTotalPaid = () => {
+            // Filter only confirmed/pending payments (not cancelled/void)
+            const confirmedPayments = payments.filter(p =>
+                p.status !== 'void' && p.status !== 'cancelled' && p.status !== 'rejected'
+            );
+
+            const items = confirmedPayments.map(p => ({
+                amount: Number(p.amount || 0),
+                currency_code: p.currency_code || 'ARS',
+                exchange_rate: Number(p.exchange_rate) || money.config.currentExchangeRate || 1
+            }));
+            return money.sum(items).total;
+        };
+
         return {
             totalContracted: calculateTotal('amount_total'),
-            totalPaid: calculateTotal('paid_amount'),
+            totalPaid: calculateTotalPaid(),
             totalRemaining: calculateTotal('remaining_amount'),
             contractedBreakdown: calculateBreakdown('amount_total'),
             paidBreakdown: calculateBreakdown('paid_amount'),
             remainingBreakdown: calculateBreakdown('remaining_amount'),
         };
-    }, [activeSubcontracts, money.config, money.displayMode]);
+    }, [activeSubcontracts, payments, money.config, money.displayMode]);
 
     // DEBUG: Verify displayMode is changing
     console.log('[SUBCONTRACTS DEBUG]', {
         displayMode: money.displayMode,
         currentRate: money.config.currentExchangeRate,
         totalContracted: kpis.totalContracted,
-        contractedBreakdown: kpis.contractedBreakdown,
+        totalPaid: kpis.totalPaid,
+        paymentsCount: payments.length,
+        // Log first 3 payments with their exchange_rates
+        samplePayments: payments.slice(0, 3).map(p => ({
+            id: p.id,
+            amount: p.amount,
+            currency_code: p.currency_code,
+            exchange_rate: p.exchange_rate,
+            status: p.status
+        })),
+        // Log first 3 subcontracts with their exchange_rates
+        sampleSubcontracts: activeSubcontracts.slice(0, 3).map(s => ({
+            title: s.title,
+            amount_total: s.amount_total,
+            currency_code: s.currency_code,
+            exchange_rate: s.exchange_rate,
+        }))
     });
 
     // Helper to get display value based on mode
@@ -202,7 +234,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
 
 
     return (
-        <div className="space-y-4 h-full flex flex-col">
+        <div className="h-full flex flex-col">
             {/* Toolbar Portal to Header */}
             <Toolbar
                 portalToHeader={true}
@@ -218,61 +250,64 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
                 ]}
             />
 
-            {/* KPI GRID */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-2">
-                <DashboardKpiCard
-                    title="Total Contratado"
-                    amount={kpis.totalContracted}
-                    icon={<Wallet className="h-4 w-4" />}
-                    currencyBreakdown={money.displayMode === 'mix' && kpis.contractedBreakdown.length > 1 ? kpis.contractedBreakdown : undefined}
-                    description="Monto total acumulado"
-                />
-                <DashboardKpiCard
-                    title="Total Pagado"
-                    amount={kpis.totalPaid}
-                    icon={<CheckCircle2 className="h-4 w-4" />}
-                    currencyBreakdown={money.displayMode === 'mix' && kpis.paidBreakdown.length > 1 ? kpis.paidBreakdown : undefined}
-                    iconClassName="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20"
-                    description="Pagos confirmados"
-                />
-                <DashboardKpiCard
-                    title="Restante por Pagar"
-                    amount={kpis.totalRemaining}
-                    icon={<AlertCircle className="h-4 w-4" />}
-                    currencyBreakdown={money.displayMode === 'mix' && kpis.remainingBreakdown.length > 1 ? kpis.remainingBreakdown : undefined}
-                    iconClassName="text-amber-600 bg-amber-100 dark:bg-amber-900/20"
-                    description="Pendiente de saldar"
-                />
-                <DashboardKpiCard
-                    title="Subcontratos"
-                    value={totalCount}
-                    icon={<Users className="h-4 w-4" />}
-                    description={`${activeCount} activos`}
-                    iconClassName="text-blue-600 bg-blue-100 dark:bg-blue-900/20"
-                />
-            </div>
-
-            {/* Subcontracts List */}
+            {/* Scrollable Content - KPIs + Cards together */}
             <div className="flex-1 min-h-0 overflow-auto">
-                {filteredSubcontracts.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                        {filteredSubcontracts.map((subcontract) => (
-                            <SubcontractCard
-                                key={subcontract.id}
-                                subcontract={subcontract}
-                                onView={handleView}
-                                onEdit={handleEdit}
-                                onDelete={handleDeleteClick}
-                            />
-                        ))}
+                <div className="space-y-4">
+                    {/* KPI GRID */}
+                    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                        <DashboardKpiCard
+                            title="Total Contratado"
+                            amount={kpis.totalContracted}
+                            icon={<Wallet className="h-4 w-4" />}
+                            currencyBreakdown={money.displayMode === 'mix' && kpis.contractedBreakdown.length > 1 ? kpis.contractedBreakdown : undefined}
+                            description="Monto total acumulado"
+                        />
+                        <DashboardKpiCard
+                            title="Total Pagado"
+                            amount={kpis.totalPaid}
+                            icon={<CheckCircle2 className="h-4 w-4" />}
+                            currencyBreakdown={money.displayMode === 'mix' && kpis.paidBreakdown.length > 1 ? kpis.paidBreakdown : undefined}
+                            iconClassName="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20"
+                            description="Pagos confirmados"
+                        />
+                        <DashboardKpiCard
+                            title="Restante por Pagar"
+                            amount={kpis.totalRemaining}
+                            icon={<AlertCircle className="h-4 w-4" />}
+                            currencyBreakdown={money.displayMode === 'mix' && kpis.remainingBreakdown.length > 1 ? kpis.remainingBreakdown : undefined}
+                            iconClassName="text-amber-600 bg-amber-100 dark:bg-amber-900/20"
+                            description="Pendiente de saldar"
+                        />
+                        <DashboardKpiCard
+                            title="Subcontratos"
+                            value={totalCount}
+                            icon={<Users className="h-4 w-4" />}
+                            description={`${activeCount} activos`}
+                            iconClassName="text-blue-600 bg-blue-100 dark:bg-blue-900/20"
+                        />
                     </div>
-                ) : (
-                    <EmptyState
-                        icon={Users}
-                        title={searchQuery ? "Sin resultados" : "No tienes subcontratos"}
-                        description={searchQuery ? `No se encontraron subcontratos para "${searchQuery}"` : "Aquí aparecerán los contratos con proveedores y subcontratistas."}
-                    />
-                )}
+
+                    {/* Subcontracts List */}
+                    {filteredSubcontracts.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                            {filteredSubcontracts.map((subcontract) => (
+                                <SubcontractCard
+                                    key={subcontract.id}
+                                    subcontract={subcontract}
+                                    onView={handleView}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDeleteClick}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState
+                            icon={Users}
+                            title={searchQuery ? "Sin resultados" : "No tienes subcontratos"}
+                            description={searchQuery ? `No se encontraron subcontratos para "${searchQuery}"` : "Aquí aparecerán los contratos con proveedores y subcontratistas."}
+                        />
+                    )}
+                </div>
             </div>
 
             <DeleteConfirmationDialog

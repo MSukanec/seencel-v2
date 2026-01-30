@@ -249,4 +249,31 @@ export interface PurchaseOrderItemFormData {
     notes?: string | null;
 }
 
+// ==========================================
+// Materials Dashboard Types
+// ==========================================
 
+import { Insight } from "@/features/insights/types";
+
+export interface DashboardKpi {
+    label: string;
+    value: string | number;
+    trend?: string;
+    trendUp?: boolean;
+    description?: string;
+}
+
+export interface MaterialsDashboardData {
+    kpis: {
+        totalExpense: DashboardKpi;
+        monthlyAverage: DashboardKpi;
+        totalPayments: DashboardKpi;
+        typeConcentration: DashboardKpi;
+    };
+    charts: {
+        monthlyEvolution: { month: string; amount: number }[];
+        typeDistribution: { name: string; value: number; color?: string }[];
+    };
+    insights: Insight[];
+    recentActivity: MaterialPaymentView[];
+}

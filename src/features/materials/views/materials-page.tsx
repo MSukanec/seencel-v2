@@ -84,7 +84,7 @@ export function MaterialsPageView({
                 icon={<Package />}
             >
                 <TabsContent value="overview" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
-                    <MaterialsOverviewView projectId={projectId} orgId={orgId} />
+                    <MaterialsOverviewView projectId={projectId} orgId={orgId} payments={payments} />
                 </TabsContent>
                 <TabsContent value="requirements" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsRequirementsView projectId={projectId} orgId={orgId} requirements={requirements} />
