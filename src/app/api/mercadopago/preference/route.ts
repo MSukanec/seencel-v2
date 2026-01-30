@@ -47,17 +47,27 @@ export async function POST(request: NextRequest) {
             .eq('auth_id', user.id)
             .single();
 
-        // Build external_reference with all metadata
-        const externalReference = JSON.stringify({
-            user_id: user.id,
-            product_type: productType,
-            product_id: productId,
-            organization_id: organizationId || null,
-            billing_period: billingPeriod || null,
-            coupon_code: couponCode || null,
-            coupon_discount: couponDiscount || null,
-            is_test: isTestMode, // Mark as test payment
-        });
+        // Build external_reference with compact format (MP limit: 256 chars)
+        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test
+        // Use 'x' for null values to keep parsing simple
+        const externalReference = [
+            productType, // subscription | course
+            user.id.slice(0, 36), // auth user UUID
+            organizationId || 'x',
+            productId.slice(0, 36), // plan_id or course_id
+            billingPeriod || 'x',
+            couponCode || 'x',
+            isTestMode ? '1' : '0',
+        ].join('|');
+
+        // Validate length (MP max 256)
+        if (externalReference.length > 256) {
+            console.error('external_reference too long:', externalReference.length);
+            return NextResponse.json(
+                { error: 'Reference too long' },
+                { status: 400 }
+            );
+        }
 
         // Calculate final amount - override to test price if test mode is active
         let finalAmount: number;
