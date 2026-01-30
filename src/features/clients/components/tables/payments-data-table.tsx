@@ -141,6 +141,7 @@ export function PaymentsDataTable({
                 return {
                     success: result.success,
                     errors: result.errors,
+                    warnings: result.warnings,
                     batchId: batch.id
                 };
             } catch (error: any) {

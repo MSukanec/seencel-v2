@@ -141,3 +141,45 @@ export async function getOrganizationPlanFeatures(organizationId: string): Promi
     const planData = data.plan as any;
     return planData?.features || null;
 }
+
+/**
+ * Checks if the current user's organization is a founder.
+ * Returns true if organization has settings.is_founder = true
+ */
+export async function isOrganizationFounder(): Promise<boolean> {
+    const supabase = await createClient();
+
+    // 1. Get Current User
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    // 2. Get User's active organization ID from preferences
+    const { data: userData } = await supabase
+        .from('users')
+        .select(`
+            id,
+            user_preferences!inner (
+                last_organization_id
+            )
+        `)
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData || !userData.user_preferences) return false;
+
+    const pref = Array.isArray(userData.user_preferences)
+        ? (userData.user_preferences as any)[0]
+        : (userData.user_preferences as any);
+
+    const orgId = pref?.last_organization_id;
+    if (!orgId) return false;
+
+    // 3. Get the organization's settings.is_founder
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('settings')
+        .eq('id', orgId)
+        .single();
+
+    return (orgData?.settings as any)?.is_founder === true;
+}

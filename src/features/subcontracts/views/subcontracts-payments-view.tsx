@@ -189,7 +189,7 @@ export function SubcontractsPaymentsView({
         onImport: async (data) => {
             const batch = await createImportBatch(orgId, "subcontract_payments", data.length);
             const result = await importSubcontractPaymentsBatch(orgId, projectId, data, batch.id);
-            return { success: result.success, errors: result.errors, batchId: batch.id };
+            return { success: result.success, errors: result.errors, warnings: result.warnings, batchId: batch.id };
         },
         onRevert: async (batchId) => {
             await revertImportBatch(batchId, 'subcontract_payments');

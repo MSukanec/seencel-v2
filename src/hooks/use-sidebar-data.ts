@@ -3,7 +3,15 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/context/organization-context";
-import { Organization, Project } from "@/components/layout/dashboard/sidebar-version/buttons";
+import { Project } from "@/components/layout/dashboard/sidebar-version/buttons";
+
+// Extended Organization type with founder info
+interface Organization {
+    id: string;
+    name: string;
+    logo_path?: string | null;
+    isFounder?: boolean;
+}
 import { fetchProjectsAction } from "@/features/projects/actions/fetch-projects";
 import { saveLastActiveProject, fetchLastActiveProject } from "@/features/projects/actions";
 
@@ -63,7 +71,7 @@ export function useSidebarData(): SidebarData {
             try {
                 const { data } = await supabase
                     .from('organizations')
-                    .select('id, name, logo_path')
+                    .select('id, name, logo_path, settings')
                     .eq('id', orgId)
                     .single();
 
@@ -72,6 +80,7 @@ export function useSidebarData(): SidebarData {
                         id: data.id,
                         name: data.name,
                         logo_path: buildLogoUrl(data.logo_path),
+                        isFounder: (data.settings as any)?.is_founder === true,
                     });
                 }
             } catch (error) {
@@ -97,8 +106,9 @@ export function useSidebarData(): SidebarData {
                     const newData = payload.new as any;
                     setCurrentOrg((prev) => ({
                         ...prev!,
-                        name: newData.name, // In case name changes too
+                        name: newData.name,
                         logo_path: buildLogoUrl(newData.logo_path),
+                        isFounder: newData.settings?.is_founder === true,
                     }));
                 }
             )

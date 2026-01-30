@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { Link, useRouter } from "@/i18n/routing";
 import { useLayoutStore } from "@/store/layout-store";
-import { ChevronsUpDown, Briefcase, Check, Plus, Building } from "lucide-react";
+import { ChevronsUpDown, Briefcase, Check, Plus, Building, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -48,6 +48,7 @@ export interface Organization {
     id: string;
     name: string;
     logo_path?: string | null;
+    isFounder?: boolean;
 }
 
 export interface Project {
@@ -131,20 +132,29 @@ export function SidebarBrandButton({
         ? (projects.find(p => p.id === currentProject.id) || currentProject)
         : currentProject;
 
-    // Render avatar for organization
+    // Render avatar for organization (with optional founder badge)
     const renderOrgAvatar = (org: Organization | null | undefined, size: "sm" | "md" = "md") => {
         const sizeClass = size === "sm" ? "h-5 w-5" : "h-7 w-7";
         const textSize = size === "sm" ? "text-[8px]" : "text-[10px]";
+        const showFounderBadge = org?.isFounder && size === "md";
 
         return (
-            <Avatar className={cn(sizeClass, "rounded-lg")}>
-                {org?.logo_path && (
-                    <AvatarImage src={org.logo_path} alt={org?.name || ""} />
+            <div className="relative">
+                <Avatar className={cn(sizeClass, "rounded-lg")}>
+                    {org?.logo_path && (
+                        <AvatarImage src={org.logo_path} alt={org?.name || ""} />
+                    )}
+                    <AvatarFallback className={cn(textSize, "rounded-lg bg-primary/10 text-primary font-semibold")}>
+                        {getInitials(org?.name || "")}
+                    </AvatarFallback>
+                </Avatar>
+                {/* Founder Crown Badge */}
+                {showFounderBadge && (
+                    <div className="absolute -top-1.5 -right-1.5 animate-pulse">
+                        <Crown className="h-4 w-4 text-amber-500 fill-amber-400 drop-shadow-[0_0_6px_rgba(245,158,11,0.8)]" />
+                    </div>
                 )}
-                <AvatarFallback className={cn(textSize, "rounded-lg bg-primary/10 text-primary font-semibold")}>
-                    {getInitials(org?.name || "")}
-                </AvatarFallback>
-            </Avatar>
+            </div>
         );
     };
 

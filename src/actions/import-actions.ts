@@ -216,6 +216,18 @@ export async function importPaymentsBatch(
 
     if (!user) throw new Error("Unauthorized");
 
+    // === AMOUNT SIGN ANALYSIS ===
+    // Detect if amounts have mixed signs (some positive, some negative)
+    const rawAmounts = payments.map(p => Number(p.amount) || 0);
+    const positiveCount = rawAmounts.filter(a => a > 0).length;
+    const negativeCount = rawAmounts.filter(a => a < 0).length;
+    const hasMixedSigns = positiveCount > 0 && negativeCount > 0;
+
+    const warnings: string[] = [];
+    if (hasMixedSigns) {
+        warnings.push(`Detectamos ${positiveCount} valores positivos y ${negativeCount} negativos. Los montos negativos (posibles devoluciones) se convirtieron a positivos.`);
+    }
+
     // 1. Get project clients for name lookup
     const { data: projectClients } = await supabase
         .from('project_clients_view')
@@ -284,11 +296,15 @@ export async function importPaymentsBatch(
             const parsedDate = parseFlexibleDate(payment.payment_date);
             const payment_date = parsedDate || new Date();
 
+            // NORMALIZE AMOUNT: Always use absolute value (DB constraint requires positive)
+            const rawAmount = Number(payment.amount) || 0;
+            const amount = Math.abs(rawAmount);
+
             return {
                 project_id: projectId,
                 organization_id: organizationId,
                 client_id,
-                amount: Number(payment.amount) || 0,
+                amount,
                 currency_id,
                 wallet_id,
                 exchange_rate: Number(payment.exchange_rate) || 1,
@@ -324,6 +340,7 @@ export async function importPaymentsBatch(
     return {
         success: records.length,
         errors,
+        warnings,
         skipped: payments.length - records.length
     };
 }
@@ -339,6 +356,18 @@ export async function importSubcontractPaymentsBatch(
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error("Unauthorized");
+
+    // === AMOUNT SIGN ANALYSIS ===
+    // Detect if amounts have mixed signs (some positive, some negative)
+    const rawAmounts = payments.map(p => Number(p.amount) || 0);
+    const positiveCount = rawAmounts.filter(a => a > 0).length;
+    const negativeCount = rawAmounts.filter(a => a < 0).length;
+    const hasMixedSigns = positiveCount > 0 && negativeCount > 0;
+
+    const warnings: string[] = [];
+    if (hasMixedSigns) {
+        warnings.push(`Detectamos ${positiveCount} valores positivos y ${negativeCount} negativos. Los montos negativos (posibles devoluciones) se convirtieron a positivos.`);
+    }
 
     // 1. Get subcontracts for lookup (Title or Provider)
     const { data: subcontracts } = await supabase
@@ -458,7 +487,9 @@ export async function importSubcontractPaymentsBatch(
             const parsedDate = parseFlexibleDate(payment.payment_date);
             const payment_date = parsedDate || new Date();
 
-            const amount = Number(payment.amount) || 0;
+            // NORMALIZE AMOUNT: Always use absolute value (DB constraint requires positive)
+            const rawAmount = Number(payment.amount) || 0;
+            const amount = Math.abs(rawAmount);
             const exchange_rate = Number(payment.exchange_rate) || 1;
 
             // Note: functional_amount is now calculated by DB trigger
@@ -504,6 +535,7 @@ export async function importSubcontractPaymentsBatch(
     return {
         success: records.length,
         errors,
+        warnings,
         skipped: payments.length - records.length
     };
 }
@@ -519,6 +551,20 @@ export async function importMaterialPaymentsBatch(
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error("Unauthorized");
+
+    // === AMOUNT SIGN ANALYSIS ===
+    // Detect if amounts have mixed signs (some positive, some negative)
+    // This happens when user has purchases AND returns in the same import
+    const rawAmounts = payments.map(p => Number(p.amount) || 0);
+    const positiveCount = rawAmounts.filter(a => a > 0).length;
+    const negativeCount = rawAmounts.filter(a => a < 0).length;
+    const hasMixedSigns = positiveCount > 0 && negativeCount > 0;
+
+    // We'll add a warning if mixed signs detected
+    const warnings: string[] = [];
+    if (hasMixedSigns) {
+        warnings.push(`Detectamos ${positiveCount} valores positivos y ${negativeCount} negativos. Los montos negativos (posibles devoluciones) se convirtieron a positivos. Si esto no es correcto, revisá los datos originales.`);
+    }
 
     // 1. Get material types for lookup
     const { data: materialTypes } = await supabase
@@ -612,7 +658,9 @@ export async function importMaterialPaymentsBatch(
             const parsedDate = parseFlexibleDate(payment.payment_date);
             const payment_date = parsedDate || new Date();
 
-            const amount = Number(payment.amount) || 0;
+            // NORMALIZE AMOUNT: Always use absolute value (DB constraint requires positive)
+            const rawAmount = Number(payment.amount) || 0;
+            const amount = Math.abs(rawAmount);
             const exchange_rate = Number(payment.exchange_rate) || 1;
 
             return {
@@ -656,6 +704,7 @@ export async function importMaterialPaymentsBatch(
     return {
         success: records.length,
         errors,
+        warnings, // NEW: Return warnings for UI to display
         skipped: payments.length - records.length
     };
 }

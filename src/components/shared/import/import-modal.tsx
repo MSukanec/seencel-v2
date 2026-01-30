@@ -8,7 +8,7 @@ import { ImportStepMapping } from "./steps/step-mapping";
 import { ImportStepValidation } from "./steps/step-validation";
 import { ImportStepConflicts } from "./steps/step-conflicts";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useModal } from "@/providers/modal-store";
 import { updateMappingPatterns } from "@/actions/import-mapping";
@@ -37,7 +37,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     const [mapping, setMapping] = useState<Record<string, string>>({}); // Header -> ColumnId
     const [isMappingValid, setIsMappingValid] = useState(false);
     const [mappedData, setMappedData] = useState<any[]>([]);
-    const [importResult, setImportResult] = useState<{ success: number; errors: any[]; batchId?: string } | null>(null);
+    const [importResult, setImportResult] = useState<{ success: number; errors: any[]; warnings?: string[]; batchId?: string } | null>(null);
 
     // NEW: Conflict resolution state
     const [conflicts, setConflicts] = useState<FKConflict[]>([]);
@@ -359,6 +359,23 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                                     }
                                 </p>
                             </div>
+
+                            {/* Warnings Section (amber) */}
+                            {importResult.warnings && importResult.warnings.length > 0 && (
+                                <div className="w-full max-w-md mt-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                        <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                                            Advertencias
+                                        </p>
+                                    </div>
+                                    <div className="border border-amber-500/30 rounded-md bg-amber-500/5 p-3">
+                                        {importResult.warnings.map((w, i) => (
+                                            <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{w}</p>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {importResult.errors.length > 0 && (
                                 <div className="w-full max-w-md mt-4 flex flex-col min-h-0 flex-1">

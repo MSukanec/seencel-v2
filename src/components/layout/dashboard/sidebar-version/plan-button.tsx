@@ -6,14 +6,13 @@ import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/context/organization-context";
 import { Crown, Sparkles, Users } from "lucide-react";
-import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
+import { getPlans, getCurrentOrganizationPlanId, Plan, isOrganizationFounder } from "@/actions/plans";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ============================================================================
 // SIDEBAR PLAN BUTTON
 // ============================================================================
-// EXACT COPY of SidebarNavButton structure with plan-specific colors
-// Same dimensions, padding, icon size - only colors change per plan
+// Shows current plan - icon glows when org is a founder
 // ============================================================================
 
 interface SidebarPlanButtonProps {
@@ -48,15 +47,19 @@ const getPlanStyle = (name: string) => {
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
     const { activeOrgId } = useOrganization();
     const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+    const [isFounder, setIsFounder] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadPlanData() {
             try {
-                const [plans, currentPlanId] = await Promise.all([
+                const [plans, currentPlanId, founderStatus] = await Promise.all([
                     getPlans(),
                     getCurrentOrganizationPlanId(),
+                    isOrganizationFounder(),
                 ]);
+
+                setIsFounder(founderStatus);
 
                 if (currentPlanId && plans.length > 0) {
                     const found = plans.find((p) => p.id === currentPlanId);
@@ -75,9 +78,9 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
         }
 
         loadPlanData();
-    }, [activeOrgId]); // Refresh when organization changes
+    }, [activeOrgId]);
 
-    // Loading skeleton - same height as button
+    // Loading skeleton
     if (loading) {
         return (
             <div className="w-full">
@@ -94,7 +97,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
     const styles = getPlanStyle(currentPlan.name);
     const Icon = styles.icon;
 
-    // EXACT SAME STRUCTURE AS SidebarNavButton
+    // Content - icon glows for founders
     const content = (
         <div
             className={cn(
@@ -104,15 +107,18 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
                 styles.hoverBg
             )}
         >
-            {/* Icon - 16x16 - EXACT SAME as SidebarNavButton */}
+            {/* Icon - with glow animation for founders */}
             <div className={cn(
                 "w-8 h-8 flex items-center justify-center shrink-0",
                 styles.iconColor
             )}>
-                <Icon className="h-4 w-4" />
+                <Icon className={cn(
+                    "h-4 w-4 transition-all",
+                    isFounder && "animate-pulse drop-shadow-[0_0_6px_rgba(234,179,8,0.8)]"
+                )} />
             </div>
 
-            {/* Label - Single line, left-aligned - EXACT SAME as SidebarNavButton */}
+            {/* Label */}
             <span className={cn(
                 "text-[13px] font-medium truncate transition-opacity duration-200 ease-in-out text-left",
                 isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0",
@@ -123,10 +129,11 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
         </div>
     );
 
-    // Wrap in Link - EXACT SAME pattern as SidebarNavButton
     return (
         <Link href="/organization/billing/plans" className="w-full block">
             {content}
         </Link>
     );
 }
+
+
