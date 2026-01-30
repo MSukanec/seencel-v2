@@ -166,9 +166,9 @@ export default function CheckoutSuccessPage() {
                         {isCourse ? (
                             <>
                                 <Button size="lg" className="flex-1" asChild>
-                                    <Link href={courseId ? `/cursos/${courseId}` : "/cursos"}>
+                                    <Link href="/academy/my-courses">
                                         <BookOpen className="w-4 h-4 mr-2" />
-                                        {courseId ? "Ir al Curso" : "Ver Mis Cursos"}
+                                        Ver Mis Cursos
                                     </Link>
                                 </Button>
                                 <Button size="lg" variant="outline" className="flex-1" asChild>

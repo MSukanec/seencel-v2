@@ -241,23 +241,19 @@ export function CheckoutView({
 
     const initialPlan = findInitialPlan();
 
-    // Core state - default payment method based on country and product type
-    // Transfer only available for courses, not for subscription plans
+    // Core state - default payment method based on country
+    // Transfer is now available for both courses and plans (one-time payments)
     const [selectedPlanId, setSelectedPlanId] = useState(initialPlan?.id || "");
     const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">(initialCycle);
     const [paymentMethod, setPaymentMethod] = useState(
-        isArgentina ? (isCourse ? "transfer" : "mercadopago") : "paypal"
+        isArgentina ? "transfer" : "paypal"
     );
 
     // Payment methods ordered by country
-    // Transfer is only available for courses (one-time payments), not subscriptions
-    const availablePaymentMethods = isCourse
-        ? paymentMethods
-        : paymentMethods.filter(m => m.id !== "transfer");
-
+    // Transfer is available for all products (one-time payments) for Argentina only
     const orderedPaymentMethods = isArgentina
-        ? availablePaymentMethods
-        : [...availablePaymentMethods].reverse();
+        ? paymentMethods
+        : [...paymentMethods].reverse();
 
     // Invoice/Billing state
     const [needsInvoice, setNeedsInvoice] = useState(false);

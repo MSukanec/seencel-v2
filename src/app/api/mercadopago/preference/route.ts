@@ -80,11 +80,17 @@ export async function POST(request: NextRequest) {
                 : amount;
         }
 
-        // Build back URLs
+        // Build back URLs with product info for success page
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || '';
-        const successUrl = `${baseUrl}/checkout/success?source=mercadopago`;
-        const pendingUrl = `${baseUrl}/checkout/pending?source=mercadopago`;
-        const failureUrl = `${baseUrl}/checkout/failure?source=mercadopago`;
+
+        // Add product type and ID to success URL for proper routing
+        const productParams = productType === 'course'
+            ? `product_type=course&course_id=${productId}`
+            : `product_type=subscription&org_id=${organizationId || ''}`;
+
+        const successUrl = `${baseUrl}/checkout/success?source=mercadopago&${productParams}`;
+        const pendingUrl = `${baseUrl}/checkout/pending?source=mercadopago&${productParams}`;
+        const failureUrl = `${baseUrl}/checkout/failure?source=mercadopago&${productParams}`;
 
         // Create preference
         const preference = await preferenceApi.create({

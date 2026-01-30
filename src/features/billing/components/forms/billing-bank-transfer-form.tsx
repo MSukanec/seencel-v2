@@ -231,7 +231,7 @@ export function BankTransferForm({
                                 window.location.href = successUrl;
                             }}
                         >
-                            Ir al Curso
+                            {isCourse ? "Ir al Curso" : "Ir al Hub"}
                             <ExternalLink className="ml-2 h-4 w-4" />
                         </Button>
                     </div>
