@@ -15,6 +15,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatDateForDB } from "@/lib/timezone-data";
 import { createMaterialPaymentAction, updateMaterialPaymentAction } from "@/features/materials/actions";
 import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
 import { OrganizationFinancialData, MaterialPurchase, MaterialType } from "@/features/materials/types";
@@ -109,7 +110,7 @@ export function MaterialPaymentForm({
             const formData = new FormData();
             formData.append('project_id', projectId);
             formData.append('organization_id', organizationId);
-            formData.append('payment_date', date ? date.toISOString() : new Date().toISOString());
+            formData.append('payment_date', formatDateForDB(date) || formatDateForDB(new Date())!);
             formData.append('purchase_id', purchaseId);
             formData.append('wallet_id', walletId);
             formData.append('amount', amount);

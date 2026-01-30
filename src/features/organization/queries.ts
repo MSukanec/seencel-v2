@@ -480,23 +480,14 @@ export async function getOrganizationFinancialData(orgId: string) {
 
     // 3. Fetch Enabled Wallets (Use View)
     // Using the view ensures we bypass RLS issues on the raw 'organization_wallets' table if any.
+    // The view already contains wallet_name, currency_id, currency_symbol etc.
     const { data: orgWalletsView } = await supabase
         .from('organization_wallets_view')
         .select('*')
         .eq('organization_id', orgId)
         .eq('is_active', true);
 
-    // 4. Fetch Details for these wallets manually. 
-    // We only fetch 'currency_id' and map it to the already fetched 'orgCurrencies' to avoid double-fetching or RLS issues on the 'currencies' relation.
-    let walletsDetails: any[] = [];
-    if (orgWalletsView && orgWalletsView.length > 0) {
-        const walletIds = orgWalletsView.map((ow: any) => ow.wallet_id);
-        const { data: details } = await supabase
-            .from('wallets')
-            .select('id, name, currency_id')
-            .in('id', walletIds);
-        walletsDetails = details || [];
-    }
+    // NOTE: Removed separate query to 'wallets' table - the view already provides all needed info
 
     // Determine effective default ID
     const effectiveDefaultId = preferences?.default_currency_id
@@ -515,23 +506,23 @@ export async function getOrganizationFinancialData(orgId: string) {
         }))
         .sort((a, b) => (Number(b.is_default) - Number(a.is_default))); // Default first
 
-    // Format Wallets
+    // Format Wallets - using view data directly (no longer fetching from wallets table)
     const formattedWallets = (orgWalletsView || [])
         .map((ow: any) => {
-            const detail = walletsDetails.find(d => d.id === ow.wallet_id);
+            // The view should contain currency info directly (currency_id, currency_symbol)
             // Resolve currency from the orgCurrencies list if possible
-            const walletCurrency = detail?.currency_id
-                ? formattedCurrencies.find(c => c.id === detail.currency_id)
+            const walletCurrency = ow.currency_id
+                ? formattedCurrencies.find(c => c.id === ow.currency_id)
                 : null;
 
             return {
                 id: ow.id, // organization_wallet id (from view)
                 wallet_id: ow.wallet_id, // pure wallet definition id (useful for comparisons)
-                name: ow.wallet_name || detail?.name || "Unknown Wallet",
+                name: ow.wallet_name || "Unknown Wallet",
                 balance: ow.balance || 0,
                 // Use resolved currency info, fallback to view data or defaults
-                currency_symbol: walletCurrency?.symbol || "$",
-                currency_code: walletCurrency?.code,
+                currency_symbol: walletCurrency?.symbol || ow.currency_symbol || "$",
+                currency_code: walletCurrency?.code || ow.currency_code,
                 // Check if it's default either by flag or by preference match
                 is_default: Boolean(ow.is_default || (preferences?.default_wallet_id === ow.wallet_id))
             };

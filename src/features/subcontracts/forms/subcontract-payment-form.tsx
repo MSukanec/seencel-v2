@@ -15,6 +15,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatDateForDB } from "@/lib/timezone-data";
 import { createSubcontractPaymentAction, updateSubcontractPaymentAction } from "@/features/subcontracts/actions";
 import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
 
@@ -96,7 +97,7 @@ export function SubcontractPaymentForm({
             const formData = new FormData();
             formData.append('project_id', projectId);
             formData.append('organization_id', organizationId);
-            formData.append('payment_date', date ? date.toISOString() : new Date().toISOString());
+            formData.append('payment_date', formatDateForDB(date) || formatDateForDB(new Date())!);
             if (subcontractId) formData.append('subcontract_id', subcontractId);
             formData.append('wallet_id', walletId);
             formData.append('amount', amount);

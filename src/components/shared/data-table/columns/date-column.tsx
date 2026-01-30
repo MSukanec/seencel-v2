@@ -92,9 +92,18 @@ export function createDateColumn<TData>(
             const value = row.getValue(accessorKey);
             if (!value) return <span className="text-muted-foreground">-</span>;
 
-            const date = new Date(value as string);
-            const relativeText = getRelativeDate(date, relativeMode);
-            const dateText = relativeText || formatStandardDate(date);
+            // IMPORTANT: DB DATE columns return "YYYY-MM-DD" strings.
+            // new Date("2026-01-16") is interpreted as UTC midnight.
+            // In UTC-3 (Argentina), this becomes "2026-01-15 21:00" local time.
+            // By appending "T12:00", we ensure the date is interpreted at midday,
+            // so even with timezone offset, it stays on the correct calendar day.
+            const dateValue = String(value);
+            const dateToFormat = dateValue.includes('T')
+                ? new Date(dateValue)
+                : new Date(dateValue + 'T12:00:00');
+
+            const relativeText = getRelativeDate(dateToFormat, relativeMode);
+            const dateText = relativeText || formatStandardDate(dateToFormat);
 
             // Avatar data
             const avatarUrl = showAvatar ? (row.original as any)[avatarUrlKey as string] : null;
@@ -116,7 +125,7 @@ export function createDateColumn<TData>(
                         <span className="text-sm font-medium">{dateText}</span>
                         {showTime && (
                             <span className="text-xs text-muted-foreground">
-                                {formatTime(date)}
+                                {formatTime(dateToFormat)}
                             </span>
                         )}
                     </div>

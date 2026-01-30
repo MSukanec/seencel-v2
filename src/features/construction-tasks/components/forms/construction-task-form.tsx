@@ -16,6 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateForDB } from "@/lib/timezone-data";
 
 interface ConstructionTaskFormProps {
     projectId: string;
@@ -85,8 +86,8 @@ export function ConstructionTaskForm({
                 custom_name: customName.trim(),
                 custom_unit: customUnit.trim() || null,
                 quantity: parseFloat(quantity),
-                start_date: startDate?.toISOString().split('T')[0] || null,
-                end_date: endDate?.toISOString().split('T')[0] || null,
+                start_date: formatDateForDB(startDate),
+                end_date: formatDateForDB(endDate),
                 status: status as "pending" | "in_progress" | "completed" | "paused",
                 progress_percent: parseInt(progressPercent),
                 notes: notes.trim() || null,

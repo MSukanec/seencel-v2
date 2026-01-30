@@ -174,6 +174,11 @@ export function SubcontractAdjustmentView({
     const adjustedRemaining = remaining * accumulatedCoefficient;
     const difference = adjustedRemaining - remaining;
 
+    // Items arrays for KPI cards (for proper currency display)
+    const remainingItems = [{ amount: remaining, currency_code: config.functionalCurrencyCode, exchange_rate: 1 }];
+    const adjustedRemainingItems = [{ amount: adjustedRemaining, currency_code: config.functionalCurrencyCode, exchange_rate: 1 }];
+    const differenceItems = [{ amount: Math.abs(difference), currency_code: config.functionalCurrencyCode, exchange_rate: 1 }];
+
     const basePeriodLabel = subcontract.base_period_month && subcontract.base_period_year
         ? `${MONTH_NAMES[subcontract.base_period_month - 1]} ${subcontract.base_period_year}`
         : 'N/A';
@@ -342,7 +347,6 @@ export function SubcontractAdjustmentView({
                         icon={<TrendingUp className="h-5 w-5" />}
                         description="Redeterminación aplicada al saldo pendiente"
                         compact={false}
-                        size="default"
                     />
 
                     {/* 2. Variación - muestra como porcentaje */}
@@ -352,7 +356,6 @@ export function SubcontractAdjustmentView({
                         icon={<Percent className="h-5 w-5" />}
                         description={`Base: ${basePeriodLabel}`}
                         compact={false}
-                        size="default"
                     />
 
                     {latestIndexValue && (
@@ -367,16 +370,14 @@ export function SubcontractAdjustmentView({
                                     direction: variation >= 0 ? "up" : "down"
                                 }}
                                 compact={false}
-                                size="default"
                             />
 
                             <DashboardKpiCard
                                 title="Diferencia a Pagar"
-                                amount={Math.abs(difference)}
+                                items={differenceItems}
                                 icon={<DollarSign className="h-5 w-5" />}
                                 description="Adicional por redeterminación"
                                 compact={true}
-                                size="default"
                             />
                         </>
                     )}
@@ -393,18 +394,16 @@ export function SubcontractAdjustmentView({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <DashboardKpiCard
                         title="Saldo Original (Pendiente)"
-                        amount={remaining}
+                        items={remainingItems}
                         description="Sin aplicar ajuste por índice"
                         compact={true}
-                        size="large"
                     />
 
                     <DashboardKpiCard
                         title="Saldo Ajustado"
-                        amount={adjustedRemaining}
+                        items={adjustedRemainingItems}
                         description="Con redeterminación aplicada"
                         compact={true}
-                        size="large"
                     />
                 </div>
                 {/* Charts Row - Side by Side on Desktop */}

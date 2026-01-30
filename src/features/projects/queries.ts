@@ -88,16 +88,24 @@ export async function getProjectById(projectId: string) {
 export async function getProjectFinancialMovements(projectId: string) {
     const supabase = await createClient();
 
+    // First get the project to know its organization
+    const { data: project } = await supabase
+        .from('projects')
+        .select('organization_id')
+        .eq('id', projectId)
+        .single();
+
     const { data, error } = await supabase
         .from('unified_financial_movements_view')
         .select('*')
         .eq('project_id', projectId)
         .order('payment_date', { ascending: false });
 
-    // Fetch Wallets for mapping
+    // Fetch Wallets for mapping using the view (has proper RLS)
     const { data: wallets } = await supabase
-        .from('wallets')
-        .select('id, name');
+        .from('organization_wallets_view')
+        .select('id, wallet_name')
+        .eq('organization_id', project?.organization_id || '');
 
     if (error) {
         console.error("Error fetching project financial movements:", error);
@@ -106,7 +114,7 @@ export async function getProjectFinancialMovements(projectId: string) {
 
     return {
         movements: data || [],
-        wallets: wallets || []
+        wallets: (wallets || []).map(w => ({ id: w.id, name: w.wallet_name }))
     };
 }
 

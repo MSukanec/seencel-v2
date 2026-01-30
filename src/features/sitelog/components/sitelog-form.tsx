@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { formatDateForDB } from "@/lib/timezone-data";
 import { Switch } from "@/components/ui/switch";
 import { SiteLog, SiteLogType } from "@/types/sitelog";
 import { toast } from "sonner";
@@ -140,7 +141,7 @@ export function SitelogForm({
         formData.append('project_id', projectId);
         formData.append('organization_id', organizationId);
         formData.append('comments', values.comments);
-        formData.append('log_date', values.log_date.toISOString());
+        formData.append('log_date', formatDateForDB(values.log_date)!);
         formData.append('severity', values.severity);
         formData.append('is_public', String(values.is_public));
 

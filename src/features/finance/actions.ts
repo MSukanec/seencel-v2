@@ -15,7 +15,7 @@ export interface MovementAttachment {
 type MovementType =
     | 'client_payment'
     | 'material_payment'
-    | 'personnel_payment'
+    | 'labor_payment'
     | 'partner_contribution'
     | 'partner_withdrawal'
     | 'general_cost_payment';
@@ -34,7 +34,7 @@ export async function getMovementAttachments(
     const columnMap: Record<MovementType, string> = {
         'client_payment': 'client_payment_id',
         'material_payment': 'material_payment_id',
-        'personnel_payment': 'personnel_payment_id',
+        'labor_payment': 'labor_payment_id',
         'partner_contribution': 'partner_contribution_id',
         'partner_withdrawal': 'partner_withdrawal_id',
         'general_cost_payment': 'general_cost_payment_id',
@@ -117,7 +117,7 @@ export async function deleteFinanceMovement(
     const tableMap: Record<string, string> = {
         'client_payment': 'client_payments',
         'material_payment': 'material_payments',
-        'personnel_payment': 'personnel_payments',
+        'labor_payment': 'labor_payments',
         'partner_contribution': 'partner_contributions',
         'partner_withdrawal': 'partner_withdrawals',
         'general_cost_payment': 'general_cost_payments',

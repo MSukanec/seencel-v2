@@ -70,3 +70,51 @@ export function isKnownTimezone(value: string): boolean {
     return TIMEZONES.some(t => t.value === value);
 }
 
+/**
+ * Format a Date object for database storage (DATE columns).
+ * 
+ * CRITICAL: This function preserves the LOCAL date without converting to UTC.
+ * Use this instead of toISOString() when storing dates in DATE columns.
+ * 
+ * Problem with toISOString():
+ * - User in Argentina (UTC-3) selects Jan 30 at 00:00 local
+ * - toISOString() converts to UTC: Jan 29 21:00:00Z
+ * - Database DATE column stores only the date part: Jan 29 ❌
+ * 
+ * @param date - Date object to format
+ * @returns String in YYYY-MM-DD format (local date, no timezone conversion)
+ * 
+ * @example
+ * // User selects January 30th in any timezone
+ * formatDateForDB(new Date(2026, 0, 30)) // Returns "2026-01-30"
+ */
+export function formatDateForDB(date: Date | null | undefined): string | null {
+    if (!date) return null;
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format a Date object for database storage with time (TIMESTAMP columns).
+ * Preserves local date/time - use when you specifically want local time stored.
+ * 
+ * For TIMESTAMPTZ columns where you DO want UTC conversion, use toISOString().
+ * 
+ * @param date - Date object to format  
+ * @returns String in YYYY-MM-DD HH:MM:SS format (local time)
+ */
+export function formatDateTimeForDB(date: Date | null | undefined): string | null {
+    if (!date) return null;
+
+    const datePart = formatDateForDB(date);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${datePart} ${hours}:${minutes}:${seconds}`;
+}
+

@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { AttachmentList, AttachmentItem } from "@/components/shared/attachments/attachment-list";
 
 import { cn } from "@/lib/utils";
+import { formatDateForDB } from "@/lib/timezone-data";
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { createGeneralCostPayment, updateGeneralCostPayment } from "@/features/general-costs/actions";
 import { useMoney } from "@/hooks/use-money";
@@ -95,7 +96,7 @@ export function PaymentForm({
 
         try {
             const payload = {
-                payment_date: paymentDate.toISOString(),
+                payment_date: formatDateForDB(paymentDate)!,
                 general_cost_id: generalCostId || undefined,
                 amount: parseFloat(amount),
                 status,

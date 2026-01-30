@@ -4,268 +4,162 @@
 
 create view public.unified_financial_movements_view as
 select
-  cp.id,
-  cp.organization_id,
-  cp.project_id,
-  cp.amount,
-  cp.currency_id,
-  COALESCE(cp.exchange_rate, 1::numeric) as exchange_rate,
-  cp.payment_date,
-  COALESCE(cp.notes, cp.reference, 'Pago de cliente'::text) as description,
-  cp.reference,
-  cp.wallet_id,
-  cp.status,
-  cp.created_by,
-  cp.created_at,
-  cp.updated_at,
-  'client_payment'::text as movement_type,
-  cp.client_id,
-  null::uuid as material_id,
-  null::uuid as personnel_id,
-  null::uuid as purchase_id,
-  null::uuid as partner_id,
-  null::uuid as general_cost_id,
-  null::uuid as financial_operation_id,
-  1 as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  COALESCE(c.full_name, c.company_name) as entity_name
+  gcp.id,
+  'general_cost'::text as movement_type,
+  gcp.organization_id,
+  null::uuid as project_id,
+  gcp.payment_date as date,
+  date_trunc(
+    'month'::text,
+    gcp.payment_date::timestamp with time zone
+  ) as payment_month,
+  gcp.amount,
+  gcp.currency_id,
+  cur.code as currency_code,
+  cur.symbol as currency_symbol,
+  gcp.exchange_rate,
+  gcp.amount * COALESCE(gcp.exchange_rate, 1::numeric) as functional_amount,
+  gcp.status,
+  gcp.wallet_id,
+  w.name as wallet_name,
+  gc.name as concept_name,
+  gcc.name as category_name,
+  null::text as contact_name,
+  gcp.notes,
+  gcp.reference,
+  gcp.created_at,
+  gcp.created_by,
+  u_created.full_name as creator_name,
+  u_created.avatar_url as creator_avatar_url,
+  (
+    exists (
+      select
+        1
+      from
+        media_links ml
+      where
+        ml.general_cost_payment_id = gcp.id
+    )
+  ) as has_attachments
 from
-  client_payments cp
-  left join organization_members om on om.id = cp.created_by
-  left join users u on u.id = om.user_id
-  left join project_clients pc on pc.id = cp.client_id
-  left join contacts c on c.id = pc.contact_id
+  general_costs_payments gcp
+  left join currencies cur on cur.id = gcp.currency_id
+  left join organization_wallets ow on ow.id = gcp.wallet_id
+  left join wallets w on w.id = ow.wallet_id
+  left join general_costs gc on gc.id = gcp.general_cost_id
+  left join general_cost_categories gcc on gcc.id = gc.category_id
+  left join organization_members om_created on om_created.id = gcp.created_by
+  left join users u_created on u_created.id = om_created.user_id
 where
-  cp.is_deleted is not true
+  gcp.is_deleted = false
 union all
 select
   mp.id,
+  'material_payment'::text as movement_type,
   mp.organization_id,
   mp.project_id,
+  mp.payment_date as date,
+  date_trunc(
+    'month'::text,
+    mp.payment_date::timestamp with time zone
+  ) as payment_month,
   mp.amount,
   mp.currency_id,
-  COALESCE(mp.exchange_rate, 1::numeric) as exchange_rate,
-  mp.payment_date,
-  COALESCE(mp.notes, mp.reference, 'Pago de material'::text) as description,
-  mp.reference,
-  mp.wallet_id,
+  cur.code as currency_code,
+  cur.symbol as currency_symbol,
+  mp.exchange_rate,
+  mp.amount * COALESCE(mp.exchange_rate, 1::numeric) as functional_amount,
   mp.status,
-  mp.created_by,
+  mp.wallet_id,
+  w.name as wallet_name,
+  mt.name as concept_name,
+  null::text as category_name,
+  COALESCE(
+    prov.company_name,
+    (prov.first_name || ' '::text) || prov.last_name
+  ) as contact_name,
+  mp.notes,
+  mp.reference,
   mp.created_at,
-  mp.updated_at,
-  'material_payment'::text as movement_type,
-  null::uuid as client_id,
-  null::uuid as material_id,
-  null::uuid as personnel_id,
-  mp.purchase_id,
-  null::uuid as partner_id,
-  null::uuid as general_cost_id,
-  null::uuid as financial_operation_id,
-  '-1'::integer as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  COALESCE(mp.notes, mp.reference, 'Material'::text) as entity_name
+  mp.created_by,
+  u_created.full_name as creator_name,
+  u_created.avatar_url as creator_avatar_url,
+  (
+    exists (
+      select
+        1
+      from
+        media_links ml
+      where
+        ml.material_payment_id = mp.id
+    )
+  ) as has_attachments
 from
   material_payments mp
-  left join organization_members om on om.id = mp.created_by
-  left join users u on u.id = om.user_id
+  left join currencies cur on cur.id = mp.currency_id
+  left join organization_wallets ow on ow.id = mp.wallet_id
+  left join wallets w on w.id = ow.wallet_id
+  left join material_types mt on mt.id = mp.material_type_id
+  left join material_invoices mi on mi.id = mp.purchase_id
+  left join contacts prov on prov.id = mi.provider_id
+  left join organization_members om_created on om_created.id = mp.created_by
+  left join users u_created on u_created.id = om_created.user_id
 where
-  mp.is_deleted is not true
+  mp.is_deleted = false
+  or mp.is_deleted is null
 union all
 select
-  pp.id,
-  pp.organization_id,
-  pp.project_id,
-  pp.amount,
-  pp.currency_id,
-  COALESCE(pp.exchange_rate, 1::numeric) as exchange_rate,
-  pp.payment_date,
-  COALESCE(pp.notes, pp.reference, 'Pago de personal'::text) as description,
-  pp.reference,
-  pp.wallet_id,
-  pp.status,
-  pp.created_by,
-  pp.created_at,
-  pp.updated_at,
-  'personnel_payment'::text as movement_type,
-  null::uuid as client_id,
-  null::uuid as material_id,
-  pp.personnel_id,
-  null::uuid as purchase_id,
-  null::uuid as partner_id,
-  null::uuid as general_cost_id,
-  null::uuid as financial_operation_id,
-  '-1'::integer as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  c.full_name as entity_name
-from
-  personnel_payments pp
-  left join organization_members om on om.id = pp.created_by
-  left join users u on u.id = om.user_id
-  left join project_personnel ppe on ppe.id = pp.personnel_id
-  left join contacts c on c.id = ppe.contact_id
-where
-  pp.is_deleted is not true
-union all
-select
-  pc.id,
-  pc.organization_id,
-  pc.project_id,
-  pc.amount,
-  pc.currency_id,
-  COALESCE(pc.exchange_rate, 1::numeric) as exchange_rate,
-  pc.contribution_date as payment_date,
-  COALESCE(pc.notes, pc.reference, 'Aporte de socio'::text) as description,
-  pc.reference,
-  pc.wallet_id,
-  pc.status,
-  pc.created_by,
-  pc.created_at,
-  pc.updated_at,
-  'partner_contribution'::text as movement_type,
-  null::uuid as client_id,
-  null::uuid as material_id,
-  null::uuid as personnel_id,
-  null::uuid as purchase_id,
-  pc.partner_id,
-  null::uuid as general_cost_id,
-  null::uuid as financial_operation_id,
-  1 as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  COALESCE(c.full_name, c.company_name) as entity_name
-from
-  partner_contributions pc
-  left join organization_members om on om.id = pc.created_by
-  left join users u on u.id = om.user_id
-  left join capital_participants cp on cp.id = pc.partner_id
-  left join contacts c on c.id = cp.contact_id
-where
-  pc.is_deleted is not true
-union all
-select
-  pw.id,
-  pw.organization_id,
-  pw.project_id,
-  pw.amount,
-  pw.currency_id,
-  COALESCE(pw.exchange_rate, 1::numeric) as exchange_rate,
-  pw.withdrawal_date as payment_date,
-  COALESCE(pw.notes, pw.reference, 'Retiro de socio'::text) as description,
-  pw.reference,
-  pw.wallet_id,
-  pw.status,
-  pw.created_by,
-  pw.created_at,
-  pw.updated_at,
-  'partner_withdrawal'::text as movement_type,
-  null::uuid as client_id,
-  null::uuid as material_id,
-  null::uuid as personnel_id,
-  null::uuid as purchase_id,
-  pw.partner_id,
-  null::uuid as general_cost_id,
-  null::uuid as financial_operation_id,
-  '-1'::integer as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  COALESCE(c.full_name, c.company_name) as entity_name
-from
-  partner_withdrawals pw
-  left join organization_members om on om.id = pw.created_by
-  left join users u on u.id = om.user_id
-  left join capital_participants cp on cp.id = pw.partner_id
-  left join contacts c on c.id = cp.contact_id
-where
-  pw.is_deleted is not true
-union all
-select
-  gcp.id,
-  gcp.organization_id,
-  null::uuid as project_id,
-  gcp.amount,
-  gcp.currency_id,
-  COALESCE(gcp.exchange_rate, 1::numeric) as exchange_rate,
-  gcp.payment_date,
+  lp.id,
+  'labor_payment'::text as movement_type,
+  lp.organization_id,
+  lp.project_id,
+  lp.payment_date as date,
+  date_trunc(
+    'month'::text,
+    lp.payment_date::timestamp with time zone
+  ) as payment_month,
+  lp.amount,
+  lp.currency_id,
+  cur.code as currency_code,
+  cur.symbol as currency_symbol,
+  lp.exchange_rate,
+  lp.amount * COALESCE(lp.exchange_rate, 1::numeric) as functional_amount,
+  lp.status,
+  lp.wallet_id,
+  w.name as wallet_name,
+  lt.name as concept_name,
+  null::text as category_name,
   COALESCE(
-    gcp.notes,
-    gcp.reference,
-    'Pago de gasto general'::text
-  ) as description,
-  gcp.reference,
-  gcp.wallet_id,
-  gcp.status,
-  gcp.created_by,
-  gcp.created_at,
-  gcp.updated_at,
-  'general_cost_payment'::text as movement_type,
-  null::uuid as client_id,
-  null::uuid as material_id,
-  null::uuid as personnel_id,
-  null::uuid as purchase_id,
-  null::uuid as partner_id,
-  gcp.general_cost_id,
-  null::uuid as financial_operation_id,
-  '-1'::integer as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  gc.name as entity_name
+    ct.display_name_override,
+    ct.full_name,
+    concat(ct.first_name, ' ', ct.last_name)
+  ) as contact_name,
+  lp.notes,
+  lp.reference,
+  lp.created_at,
+  lp.created_by,
+  u_created.full_name as creator_name,
+  u_created.avatar_url as creator_avatar_url,
+  (
+    exists (
+      select
+        1
+      from
+        media_links ml
+      where
+        ml.labor_payment_id = lp.id
+    )
+  ) as has_attachments
 from
-  general_costs_payments gcp
-  left join organization_members om on om.id = gcp.created_by
-  left join users u on u.id = om.user_id
-  left join general_costs gc on gc.id = gcp.general_cost_id
+  labor_payments lp
+  left join currencies cur on cur.id = lp.currency_id
+  left join organization_wallets ow on ow.id = lp.wallet_id
+  left join wallets w on w.id = ow.wallet_id
+  left join project_labor pl on pl.id = lp.labor_id
+  left join contacts ct on ct.id = pl.contact_id
+  left join labor_types lt on lt.id = pl.labor_type_id
+  left join organization_members om_created on om_created.id = lp.created_by
+  left join users u_created on u_created.id = om_created.user_id
 where
-  gcp.is_deleted is not true
-union all
-select
-  fom.id,
-  fom.organization_id,
-  fom.project_id,
-  fom.amount,
-  fom.currency_id,
-  COALESCE(fom.exchange_rate, 1::numeric) as exchange_rate,
-  fo.operation_date as payment_date,
-  COALESCE(
-    fo.description,
-    case fo.type
-      when 'wallet_transfer'::text then 'Transferencia entre billeteras'::text
-      when 'currency_exchange'::text then 'Cambio de moneda'::text
-      else null::text
-    end
-  ) as description,
-  null::text as reference,
-  fom.wallet_id,
-  'completed'::text as status,
-  fom.created_by,
-  fom.created_at,
-  fom.updated_at,
-  fo.type as movement_type,
-  null::uuid as client_id,
-  null::uuid as material_id,
-  null::uuid as personnel_id,
-  null::uuid as purchase_id,
-  null::uuid as partner_id,
-  null::uuid as general_cost_id,
-  fom.financial_operation_id,
-  case fom.direction
-    when 'in'::text then 1
-    when 'out'::text then '-1'::integer
-    else null::integer
-  end as amount_sign,
-  u.full_name as creator_full_name,
-  u.avatar_url as creator_avatar_url,
-  case fo.type
-    when 'wallet_transfer'::text then 'Transferencia'::text
-    when 'currency_exchange'::text then 'Cambio de moneda'::text
-    else null::text
-  end as entity_name
-from
-  financial_operation_movements fom
-  join financial_operations fo on fo.id = fom.financial_operation_id
-  left join organization_members om on om.id = fom.created_by
-  left join users u on u.id = om.user_id
-where
-  fom.is_deleted is not true;
+  lp.is_deleted = false
+  or lp.is_deleted is null;

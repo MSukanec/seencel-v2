@@ -131,6 +131,18 @@ export function SubcontractPaymentsView({
         : contractAmount * (subcontract.exchange_rate || config.currentExchangeRate || 1);
     const remaining = contractFunctional - paidSummary.total;
 
+    // Create items arrays for KPI cards (for proper currency conversion)
+    const contractItems = [{
+        amount: contractAmount,
+        currency_code: contractCurrencyCode,
+        exchange_rate: Number(subcontract.exchange_rate) || config.currentExchangeRate || 1
+    }];
+    const remainingItems = [{
+        amount: remaining,
+        currency_code: config.functionalCurrencyCode,
+        exchange_rate: 1
+    }];
+
     // ========================================
     // FILTER OPTIONS
     // ========================================
@@ -311,9 +323,8 @@ export function SubcontractPaymentsView({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <DashboardKpiCard
                         title="Monto Contrato"
-                        amount={contractAmount}
+                        items={contractItems}
                         icon={<CircleDollarSign className="h-6 w-6" />}
-                        size="default"
                     />
                     <DashboardKpiCard
                         title="Total Pagado"
@@ -321,17 +332,15 @@ export function SubcontractPaymentsView({
                         icon={<Wallet className="h-6 w-6" />}
                         iconClassName="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"
                         description={`${payments.length} pago${payments.length !== 1 ? 's' : ''} registrado${payments.length !== 1 ? 's' : ''}`}
-                        size="default"
                     />
                     <DashboardKpiCard
                         title="Saldo Pendiente"
-                        amount={remaining}
+                        items={remainingItems}
                         icon={<Banknote className="h-6 w-6" />}
                         iconClassName={remaining > 0
                             ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600"
                             : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"
                         }
-                        size="default"
                     />
                 </div>
 

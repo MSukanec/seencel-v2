@@ -1,0 +1,363 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { LaborPaymentView, LaborCategory, LaborType, ProjectLabor, ProjectLaborView } from "./types";
+
+// ==========================================
+// Labor Categories (Types of workers)
+// ==========================================
+
+/**
+ * Get labor categories for an organization (includes system categories + org-specific)
+ */
+export async function getLaborCategories(organizationId: string): Promise<LaborCategory[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('labor_categories')
+        .select('*')
+        .or(`organization_id.eq.${organizationId},is_system.eq.true`)
+        .eq('is_deleted', false)
+        .order('is_system', { ascending: false }) // System first
+        .order('name');
+
+    if (error) {
+        console.error('Error fetching labor categories:', error);
+        return [];
+    }
+
+    return data as LaborCategory[];
+}
+
+// Alias for backwards compatibility
+export const getLaborTypes = getLaborCategories;
+
+interface CreateLaborCategoryInput {
+    organization_id: string;
+    name: string;
+    description?: string | null;
+    unit_id?: string | null;
+}
+
+export async function createLaborCategory(input: CreateLaborCategoryInput): Promise<{ success: boolean; data?: LaborCategory; error?: string }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_categories')
+        .insert({
+            organization_id: input.organization_id,
+            name: input.name,
+            description: input.description || null,
+            unit_id: input.unit_id || null,
+            is_system: false, // Never create system categories from UI
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating labor category:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/project/[projectId]/labor', 'page');
+    return { success: true, data: data as LaborCategory };
+}
+
+interface UpdateLaborCategoryInput extends Partial<CreateLaborCategoryInput> {
+    id: string;
+}
+
+export async function updateLaborCategory(input: UpdateLaborCategoryInput): Promise<{ success: boolean; data?: LaborCategory; error?: string }> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {};
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.description !== undefined) updateData.description = input.description;
+    if (input.unit_id !== undefined) updateData.unit_id = input.unit_id;
+
+    const { data, error } = await supabase
+        .from('labor_categories')
+        .update(updateData)
+        .eq('id', input.id)
+        .eq('is_system', false) // Prevent updating system categories
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating labor category:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/project/[projectId]/labor', 'page');
+    return { success: true, data: data as LaborCategory };
+}
+
+export async function deleteLaborCategory(id: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('labor_categories')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('is_system', false); // Prevent deleting system categories
+
+    if (error) {
+        console.error('Error deleting labor category:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/project/[projectId]/labor', 'page');
+    return { success: true };
+}
+
+// ==========================================
+// Project Labor (Workers assigned to project)
+// ==========================================
+
+export async function getProjectLabor(projectId: string): Promise<ProjectLabor[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('project_labor')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching project labor:', error);
+        return [];
+    }
+
+    return data as ProjectLabor[];
+}
+
+/**
+ * Get project labor from the view (includes contact info, payments stats, etc.)
+ */
+export async function getProjectLaborView(projectId: string): Promise<ProjectLaborView[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('project_labor_view')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching project labor view:', error);
+        return [];
+    }
+
+    return data as ProjectLaborView[];
+}
+
+interface CreateProjectLaborInput {
+    project_id: string;
+    organization_id: string;
+    contact_id: string;
+    labor_type_id?: string | null;
+    status: string;
+    start_date?: string | null;
+    end_date?: string | null;
+    notes?: string | null;
+}
+
+export async function createProjectLabor(input: CreateProjectLaborInput): Promise<{ success: boolean; data?: ProjectLabor; error?: string }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('project_labor')
+        .insert({
+            project_id: input.project_id,
+            organization_id: input.organization_id,
+            contact_id: input.contact_id,
+            labor_type_id: input.labor_type_id || null,
+            status: input.status,
+            start_date: input.start_date || null,
+            end_date: input.end_date || null,
+            notes: input.notes || null,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating project labor:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/project/${input.project_id}/labor`);
+    return { success: true, data: data as ProjectLabor };
+}
+
+interface UpdateProjectLaborInput extends Partial<CreateProjectLaborInput> {
+    id: string;
+}
+
+export async function updateProjectLabor(input: UpdateProjectLaborInput): Promise<{ success: boolean; data?: ProjectLabor; error?: string }> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {};
+    if (input.contact_id !== undefined) updateData.contact_id = input.contact_id;
+    if (input.labor_type_id !== undefined) updateData.labor_type_id = input.labor_type_id;
+    if (input.status !== undefined) updateData.status = input.status;
+    if (input.start_date !== undefined) updateData.start_date = input.start_date;
+    if (input.end_date !== undefined) updateData.end_date = input.end_date;
+    if (input.notes !== undefined) updateData.notes = input.notes;
+
+    const { data, error } = await supabase
+        .from('project_labor')
+        .update(updateData)
+        .eq('id', input.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating project labor:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/project/${input.project_id}/labor`);
+    return { success: true, data: data as ProjectLabor };
+}
+
+export async function deleteProjectLabor(id: string, projectId: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('project_labor')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting project labor:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/project/${projectId}/labor`);
+    return { success: true };
+}
+
+// ==========================================
+// Labor Payments
+// ==========================================
+
+export async function getLaborPayments(projectId: string): Promise<LaborPaymentView[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('labor_payments_view')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('payment_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching labor payments:', error);
+        return [];
+    }
+
+    return data as LaborPaymentView[];
+}
+
+export async function getLaborPaymentsByOrg(organizationId: string): Promise<LaborPaymentView[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('labor_payments_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('payment_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching labor payments:', error);
+        return [];
+    }
+
+    return data as LaborPaymentView[];
+}
+
+// ==========================================
+// Mutations
+// ==========================================
+
+export async function createLaborPayment(data: {
+    project_id: string;
+    organization_id: string;
+    labor_id?: string | null;
+    amount: number;
+    currency_id: string;
+    exchange_rate: number;
+    payment_date: string;
+    wallet_id?: string | null;
+    status?: string;
+    notes?: string | null;
+    reference?: string | null;
+}) {
+    const supabase = await createClient();
+    const { data: newPayment, error } = await supabase
+        .from('labor_payments')
+        .insert({
+            project_id: data.project_id,
+            organization_id: data.organization_id,
+            labor_id: data.labor_id,
+            amount: data.amount,
+            currency_id: data.currency_id,
+            exchange_rate: data.exchange_rate,
+            payment_date: data.payment_date,
+            wallet_id: data.wallet_id,
+            status: data.status || 'confirmed',
+            notes: data.notes,
+            reference: data.reference,
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/project/${data.project_id}/labor`);
+    return newPayment;
+}
+
+export async function updateLaborPayment(id: string, data: {
+    labor_id?: string | null;
+    amount?: number;
+    currency_id?: string;
+    exchange_rate?: number;
+    payment_date?: string;
+    wallet_id?: string | null;
+    status?: string;
+    notes?: string | null;
+    reference?: string | null;
+}, projectId: string) {
+    const supabase = await createClient();
+    const { data: updatedPayment, error } = await supabase
+        .from('labor_payments')
+        .update({
+            labor_id: data.labor_id,
+            amount: data.amount,
+            currency_id: data.currency_id,
+            exchange_rate: data.exchange_rate,
+            payment_date: data.payment_date,
+            wallet_id: data.wallet_id,
+            status: data.status,
+            notes: data.notes,
+            reference: data.reference,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/project/${projectId}/labor`);
+    return updatedPayment;
+}
+
+export async function deleteLaborPayment(id: string, projectId: string) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from('labor_payments')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/project/${projectId}/labor`);
+    return true;
+}

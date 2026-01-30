@@ -5,6 +5,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PurchaseCleanupTool } from "@/features/admin/support/components/purchase-cleanup-tool";
+import { TestUserStatusDashboard } from "@/features/admin/support/components/test-user-status-dashboard";
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -50,6 +51,9 @@ export default async function SupportPage({ params }: PageProps) {
                 <TabsContent value="tickets" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
                         <div className="space-y-6">
+                            {/* Estado actual del usuario de prueba */}
+                            <TestUserStatusDashboard />
+
                             {/* Herramienta de Cleanup */}
                             <PurchaseCleanupTool />
 

@@ -14,6 +14,7 @@ import {
     CreditCard,
     FileChartColumn,
     Hammer,
+    HardHat,
     Video,
     Monitor,
     Info,
@@ -236,6 +237,11 @@ export function useSidebarNavigation() {
                         title: 'Materiales',
                         href: activeProjectId ? `${projectBase}/materials` : '/organization/projects',
                         icon: Package
+                    }),
+                    getItemStatus('sidebar_project_labor', {
+                        title: 'Mano de Obra',
+                        href: activeProjectId ? `${projectBase}/labor` : '/organization/projects',
+                        icon: HardHat
                     }),
                     getItemStatus('sidebar_project_subcontracts', {
                         title: 'Subcontratos',
