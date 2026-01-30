@@ -1,7 +1,7 @@
 "use client";
 
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
-import { useRef, forwardRef, useImperativeHandle } from "react";
+import { useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 
 interface TurnstileCaptchaProps {
     onVerify: (token: string) => void;
@@ -13,6 +13,14 @@ export interface TurnstileCaptchaRef {
     reset: () => void;
 }
 
+/**
+ * Cloudflare Turnstile CAPTCHA component.
+ * 
+ * CURRENTLY DISABLED: Auto-bypasses if NEXT_PUBLIC_TURNSTILE_SITE_KEY is not set.
+ * To enable: Add the env vars and the widget will appear automatically.
+ * 
+ * See: src/features/emails/README.md for setup instructions.
+ */
 export const TurnstileCaptcha = forwardRef<TurnstileCaptchaRef, TurnstileCaptchaProps>(
     ({ onVerify, onError, onExpire }, ref) => {
         const turnstileRef = useRef<TurnstileInstance>(null);
@@ -24,14 +32,17 @@ export const TurnstileCaptcha = forwardRef<TurnstileCaptchaRef, TurnstileCaptcha
             },
         }));
 
-        // Don't render in development if no site key
-        if (!siteKey) {
-            console.warn("Turnstile: NEXT_PUBLIC_TURNSTILE_SITE_KEY not set");
-            // In dev, auto-verify with a dummy token
-            if (process.env.NODE_ENV === "development") {
-                // Auto-call onVerify with test token after a short delay
-                setTimeout(() => onVerify("dev-bypass-token"), 100);
+        // BYPASS: If no site key configured, auto-verify immediately
+        // This allows registration to work without Turnstile configured
+        useEffect(() => {
+            if (!siteKey) {
+                // Auto-call onVerify with bypass token
+                onVerify("turnstile-not-configured-bypass");
             }
+        }, [siteKey, onVerify]);
+
+        // Don't render widget if no site key
+        if (!siteKey) {
             return null;
         }
 
@@ -54,3 +65,4 @@ export const TurnstileCaptcha = forwardRef<TurnstileCaptchaRef, TurnstileCaptcha
 );
 
 TurnstileCaptcha.displayName = "TurnstileCaptcha";
+
