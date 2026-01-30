@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { sendContactEmail } from "../actions/send-contact-email";
 import { toast } from "sonner";
 import { Loader2, Mail, MessageSquare, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { TurnstileCaptcha, type TurnstileCaptchaRef } from "@/components/shared/turnstile-captcha";
 
 // Static list of common countries for contact form
 const CONTACT_COUNTRIES: Country[] = [
@@ -43,6 +44,8 @@ const CONTACT_COUNTRIES: Country[] = [
 export function ContactPageView() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const captchaRef = useRef<TurnstileCaptchaRef>(null);
 
     const [formData, setFormData] = useState({
         firstName: "",
@@ -64,6 +67,12 @@ export function ContactPageView() {
             return;
         }
 
+        // Captcha check
+        if (!captchaToken) {
+            toast.error("Por favor, completá la verificación de seguridad");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -79,6 +88,9 @@ export function ContactPageView() {
                 setIsSuccess(true);
                 toast.success("¡Mensaje enviado correctamente!");
             } else {
+                // Reset captcha on error
+                captchaRef.current?.reset();
+                setCaptchaToken(null);
                 toast.error(result.message || "Error al enviar el mensaje");
             }
         } catch (error) {
@@ -168,6 +180,7 @@ export function ContactPageView() {
                                             message: "",
                                             _gotcha: "",
                                         });
+                                        setCaptchaToken(null);
                                     }}
                                 >
                                     Enviar otro mensaje
@@ -287,10 +300,17 @@ export function ContactPageView() {
                                             </p>
                                         </div>
 
+                                        <TurnstileCaptcha
+                                            ref={captchaRef}
+                                            onVerify={(token) => setCaptchaToken(token)}
+                                            onError={() => toast.error("Error de verificación")}
+                                            onExpire={() => setCaptchaToken(null)}
+                                        />
+
                                         <Button
                                             type="submit"
                                             className="w-full"
-                                            disabled={isLoading}
+                                            disabled={isLoading || !captchaToken}
                                             size="lg"
                                         >
                                             {isLoading ? (

@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/features/emails/lib/send-email";
 import { PurchaseConfirmationEmail } from "@/features/emails/templates/purchase-confirmation-email";
 import { AdminSaleNotificationEmail } from "@/features/emails/templates/admin-sale-notification-email";
+import { WelcomeEmail } from "@/features/emails/templates/welcome-email";
 
 // Max emails to process per run (avoid timeout)
 const BATCH_SIZE = 10;
@@ -166,6 +167,15 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
                     currency={String(data.currency || "USD")}
                     paymentId={String(data.payment_id || "")}
                     purchaseDate={purchaseDate}
+                />
+            );
+        }
+
+        case "welcome": {
+            return (
+                <WelcomeEmail
+                    firstName={String(data.user_name || "Usuario")}
+                    email={String(data.user_email || "")}
                 />
             );
         }

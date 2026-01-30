@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2, ArrowLeft, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
+import { TurnstileCaptcha, type TurnstileCaptchaRef } from "@/components/shared/turnstile-captcha";
 
 export default function ForgotPasswordPage() {
     const t = useTranslations("Auth.ForgotPassword");
@@ -17,21 +18,32 @@ export default function ForgotPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const captchaRef = useRef<TurnstileCaptchaRef>(null);
     const supabase = createClient();
 
     const handleReset = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!captchaToken) {
+            setError("Por favor, completá la verificación de seguridad");
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setSuccess(false);
 
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
+            captchaToken,
         });
 
         if (error) {
             setError(error.message);
             setLoading(false);
+            captchaRef.current?.reset();
+            setCaptchaToken(null);
         } else {
             setSuccess(true);
             setLoading(false);
@@ -59,13 +71,20 @@ export default function ForgotPasswordPage() {
                         />
                     </div>
 
+                    <TurnstileCaptcha
+                        ref={captchaRef}
+                        onVerify={(token) => setCaptchaToken(token)}
+                        onError={() => setError("Error de verificación. Intentá de nuevo.")}
+                        onExpire={() => setCaptchaToken(null)}
+                    />
+
                     {error && (
                         <Alert variant="destructive">
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
 
-                    <Button type="submit" disabled={loading} className="w-full h-11">
+                    <Button type="submit" disabled={loading || !captchaToken} className="w-full h-11">
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {t("submitButton")}
                     </Button>
@@ -97,3 +116,4 @@ export default function ForgotPasswordPage() {
         </AuthLayout>
     );
 }
+
