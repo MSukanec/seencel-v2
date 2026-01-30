@@ -3,13 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-    LayoutDashboard,
-    PlayCircle,
-    BookOpen,
-    FileText,
-    MessageSquare
-} from "lucide-react";
 
 interface StudentCourseTabsProps {
     courseSlug: string;
@@ -23,31 +16,26 @@ export function StudentCourseTabs({ courseSlug }: StudentCourseTabsProps) {
         {
             href: baseUrl,
             label: "Visión General",
-            icon: LayoutDashboard,
             exactMatch: true
         },
         {
             href: `${baseUrl}/player`,
             label: "Reproductor",
-            icon: PlayCircle,
             activeMatch: "/player"
         },
         {
             href: `${baseUrl}/content`,
             label: "Contenido",
-            icon: BookOpen,
             activeMatch: "/content"
         },
         {
             href: `${baseUrl}/notes`,
             label: "Apuntes",
-            icon: FileText,
             activeMatch: "/notes"
         },
         {
             href: `${baseUrl}/forum`,
             label: "Foro",
-            icon: MessageSquare,
             activeMatch: "/forum"
         }
     ];
@@ -73,7 +61,6 @@ export function StudentCourseTabs({ courseSlug }: StudentCourseTabsProps) {
                                     : "border-transparent text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <tab.icon className="h-4 w-4" />
                             <span>{tab.label}</span>
                         </Link>
                     );

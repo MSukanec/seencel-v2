@@ -139,8 +139,8 @@ export function PageHeader({
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
-                        {/* Hide currency selector and feedback in admin routes */}
-                        {!pathname.includes('/admin/') && (
+                        {/* Only show currency selector and feedback in org/project routes */}
+                        {(pathname.includes('/org/') || pathname.includes('/project/')) && (
                             <>
                                 <CurrencyModeSelector />
                                 {!hideFeedback && (

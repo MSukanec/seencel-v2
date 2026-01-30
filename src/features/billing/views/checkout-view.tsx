@@ -202,55 +202,6 @@ export function CheckoutView({
     const t = useTranslations("Founders.checkout");
     const isCourse = productType === "course";
 
-    // Admin bypass for maintenance mode
-    const [adminBypassMaintenance, setAdminBypassMaintenance] = useState(false);
-
-    // Show maintenance state if course purchases are disabled (unless admin bypassed)
-    if (isCourse && !coursePurchasesEnabled && !adminBypassMaintenance) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] py-16 px-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
-                    <Wrench className="h-10 w-10 text-orange-500" />
-                </div>
-                <h2 className="text-2xl font-bold mb-3">
-                    Servicio en Mantenimiento
-                </h2>
-                <p className="text-muted-foreground max-w-md mb-6">
-                    En este momento la compra de cursos está temporalmente deshabilitada mientras realizamos mejoras en el sistema. Por favor, intentá nuevamente más tarde.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Link href="/contact">
-                        <Button variant="default" className="gap-2">
-                            <MessageCircle className="h-4 w-4" />
-                            Contactar Soporte
-                        </Button>
-                    </Link>
-                    <Link href="/academy/courses">
-                        <Button variant="outline">
-                            Volver a Cursos
-                        </Button>
-                    </Link>
-                </div>
-
-                {/* Admin bypass button */}
-                {isAdmin && (
-                    <div className="mt-8 pt-6 border-t border-dashed border-muted-foreground/30 w-full max-w-md">
-                        <p className="text-xs text-muted-foreground mb-3">Modo Administrador</p>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
-                            onClick={() => setAdminBypassMaintenance(true)}
-                        >
-                            <ShieldCheck className="h-4 w-4" />
-                            Continuar al Checkout (Admin)
-                        </Button>
-                    </div>
-                )}
-            </div>
-        );
-    }
-
     // Country-based payment logic
     const isArgentina = userCountryCode === "AR";
 
@@ -339,6 +290,56 @@ export function CheckoutView({
 
     // Modal hook
     const { openModal, closeModal } = useModal();
+
+    // Admin bypass for maintenance mode (must be after all other hooks)
+    const [adminBypassMaintenance, setAdminBypassMaintenance] = useState(false);
+
+    // Show maintenance state if course purchases are disabled (unless admin bypassed)
+    // This early return must come AFTER all hooks
+    if (isCourse && !coursePurchasesEnabled && !adminBypassMaintenance) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-16 px-4 text-center">
+                <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
+                    <Wrench className="h-10 w-10 text-orange-500" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">
+                    Servicio en Mantenimiento
+                </h2>
+                <p className="text-muted-foreground max-w-md mb-6">
+                    En este momento la compra de cursos está temporalmente deshabilitada mientras realizamos mejoras en el sistema. Por favor, intentá nuevamente más tarde.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <Link href="/contact">
+                        <Button variant="default" className="gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            Contactar Soporte
+                        </Button>
+                    </Link>
+                    <Link href="/academy/courses">
+                        <Button variant="outline">
+                            Volver a Cursos
+                        </Button>
+                    </Link>
+                </div>
+
+                {/* Admin bypass button */}
+                {isAdmin && (
+                    <div className="mt-8 pt-6 border-t border-dashed border-muted-foreground/30 w-full max-w-md">
+                        <p className="text-xs text-muted-foreground mb-3">Modo Administrador</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
+                            onClick={() => setAdminBypassMaintenance(true)}
+                        >
+                            <ShieldCheck className="h-4 w-4" />
+                            Continuar al Checkout (Admin)
+                        </Button>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     // Determine current product and pricing
     const currentPlan = purchasablePlans.find((p) => p.id === selectedPlanId);
