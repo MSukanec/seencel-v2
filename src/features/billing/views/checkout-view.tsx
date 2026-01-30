@@ -40,6 +40,7 @@ import {
     Loader2,
     ArrowRight,
     Wrench,
+    MessageCircle,
 } from "lucide-react";
 
 // Coupon error messages (client-side utility)
@@ -118,6 +119,10 @@ interface CheckoutViewProps {
      * Admin can bypass disabled plans
      */
     isAdmin?: boolean;
+    /**
+     * Whether course purchases are enabled (false = maintenance mode)
+     */
+    coursePurchasesEnabled?: boolean;
 }
 
 const planIcons: Record<string, React.ElementType> = {
@@ -190,10 +195,41 @@ export function CheckoutView({
     userCountryCode = null,
     purchaseFlags = { pro: 'active', teams: 'active' },
     paymentMethodFlags = { mercadopagoEnabled: true, paypalEnabled: true },
-    isAdmin = false
+    isAdmin = false,
+    coursePurchasesEnabled = true
 }: CheckoutViewProps) {
     const t = useTranslations("Founders.checkout");
     const isCourse = productType === "course";
+
+    // Show maintenance state if course purchases are disabled
+    if (isCourse && !coursePurchasesEnabled) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full py-16 px-4 text-center">
+                <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
+                    <Wrench className="h-10 w-10 text-orange-500" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">
+                    Servicio en Mantenimiento
+                </h2>
+                <p className="text-muted-foreground max-w-md mb-6">
+                    En este momento la compra de cursos está temporalmente deshabilitada mientras realizamos mejoras en el sistema. Por favor, intentá nuevamente más tarde.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <Link href="/contact">
+                        <Button variant="default" className="gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            Contactar Soporte
+                        </Button>
+                    </Link>
+                    <Link href="/academy/courses">
+                        <Button variant="outline">
+                            Volver a Cursos
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     // Country-based payment logic
     const isArgentina = userCountryCode === "AR";
