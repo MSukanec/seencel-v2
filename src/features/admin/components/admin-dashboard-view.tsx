@@ -1,14 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { AdminCharts } from "./admin-charts";
-import { Activity, Users, Building, Folder, UserPlus, Zap, UserMinus, Timer, TrendingDown } from "lucide-react";
+import { Activity, Users, Building, Folder, UserPlus, Zap, UserMinus, Timer, TrendingDown, Lightbulb } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { getViewName } from "@/lib/view-name-map";
+import { InsightCard } from "@/features/insights/components/insight-card";
+import { generateAdminInsights } from "@/features/insights/logic/admin";
 import type { DashboardData, AdminUser } from "../queries";
 
 interface AdminDashboardViewProps {
@@ -17,6 +20,11 @@ interface AdminDashboardViewProps {
 
 export function AdminDashboardView({ data }: AdminDashboardViewProps) {
     const { kpis, charts, lists } = data;
+
+    // Generate insights from dashboard data
+    const insights = useMemo(() => {
+        return generateAdminInsights({ kpis, charts, lists });
+    }, [kpis, charts, lists]);
 
     const formatDuration = (seconds: number) => {
         if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -202,6 +210,21 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     </div>
                 </DashboardCard>
             </div>
+
+            {/* Insights Row */}
+            {insights.length > 0 && (
+                <DashboardCard
+                    title="Insights"
+                    description="Análisis automático de tu plataforma"
+                    icon={<Lightbulb className="h-4 w-4" />}
+                >
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {insights.slice(0, 6).map((insight) => (
+                            <InsightCard key={insight.id} insight={insight} />
+                        ))}
+                    </div>
+                </DashboardCard>
+            )}
 
             {/* Charts Row */}
             <AdminCharts charts={charts} />
