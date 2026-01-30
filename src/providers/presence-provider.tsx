@@ -78,15 +78,40 @@ function deriveViewName(pathname: string): string {
         '/reports': 'Reports',
         '/insights': 'Insights',
         '/preferences': 'Preferences',
-        '/academy': 'Academy',
         '/community': 'Community',
         '/finance': 'Finance',
         '/materials': 'Materials',
+        // Academy general pages
+        '/academy': 'Academia',
+        '/academy/courses': 'Academia - Catálogo',
+        '/academy/my-courses': 'Academia - Mis Cursos',
     };
 
     // Check for exact match
     if (pathMap[cleanPath]) {
         return pathMap[cleanPath];
+    }
+
+    // === SPECIAL: Extract course name from academy paths ===
+    // Patterns: /academy/courses/[slug], /academy/my-courses/[slug]/[tab]
+    const coursePatterns = [
+        /^\/academy\/courses\/([^\/]+)/,
+        /^\/academy\/my-courses\/([^\/]+)/,
+    ];
+
+    for (const pattern of coursePatterns) {
+        const match = cleanPath.match(pattern);
+        if (match && match[1]) {
+            const courseSlug = match[1];
+            // Known course names mapping
+            const courseNames: Record<string, string> = {
+                'master-archicad': 'Master ArchiCAD',
+            };
+            // Return known name or format the slug nicely
+            return courseNames[courseSlug] || courseSlug
+                .replace(/-/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase());
+        }
     }
 
     // Check for prefix matches (e.g., /projects/abc -> Projects Detail)

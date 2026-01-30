@@ -120,7 +120,7 @@ export interface DashboardData {
         engagement: { name: string; value: number }[];
         activityByHour: { hour: string; value: number }[];
         userGrowth: { name: string; users: number }[];
-        sources: { name: string; value: number; fill: string }[];
+        countryDistribution: { name: string; value: number; fill: string }[];
     };
     lists: {
         recentActivity: AdminUser[];
@@ -148,7 +148,8 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
         bounceRes,
         durationRes,
         journeysRes,
-        atRiskRes
+        atRiskRes,
+        countriesRes
     ] = await Promise.all([
         supabase.from('analytics_general_kpis_view').select('*').single(),
         supabase.from('analytics_realtime_overview_view').select('*').single(),
@@ -166,7 +167,9 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
         supabase.from('analytics_bounce_rate_view').select('*').single(),
         supabase.from('analytics_session_duration_view').select('*').single(),
         supabase.from('analytics_user_journeys_view').select('*').limit(50), // Last 50 steps
-        supabase.from('analytics_at_risk_users_view').select('*').limit(5)
+        supabase.from('analytics_at_risk_users_view').select('*').limit(5),
+        // Country distribution from user_data
+        supabase.from('analytics_users_by_country_view').select('*').limit(10)
     ]);
 
     // 2. Parse Data
@@ -210,12 +213,13 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
         value: hourlyMap.get(i) || 0
     }));
 
-    // Charts: Sources (Placeholder - requires attribution tracking)
-    const sources = [
-        { name: "Directo", value: 65, fill: "var(--chart-1)" },
-        { name: "Orgánico", value: 25, fill: "var(--chart-2)" },
-        { name: "Referido", value: 10, fill: "var(--chart-3)" },
-    ];
+    // Charts: Country Distribution
+    const chartColors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+    const countryDistribution = (countriesRes.data || []).map((c: any, index: number) => ({
+        name: c.country_name || 'Sin definir',
+        value: Number(c.user_count) || 0,
+        fill: chartColors[index % chartColors.length]
+    }));
 
     // Lists transformation
     const recentActivity = (recentActivityRes.data || []).map((record: any) => ({
@@ -282,7 +286,7 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
             engagement,
             activityByHour,
             userGrowth,
-            sources
+            countryDistribution
         },
         lists: {
             recentActivity,
@@ -426,5 +430,87 @@ export async function getMaterialCategoriesHierarchy(): Promise<MaterialCategory
     }
 
     return data || [];
+}
+
+// ============================================================================
+// User Journeys (for Activity View)
+// ============================================================================
+
+export interface UserJourney {
+    session_id: string;
+    user_name: string;
+    avatar_url: string | null;
+    started_at: string | null;
+    steps: { view: string; duration: number }[];
+}
+
+/**
+ * Get user journeys ordered by most recent session first
+ */
+export async function getUserJourneys(limit: number = 50): Promise<UserJourney[]> {
+    const supabase = await createClient();
+
+    const { data: journeysRaw, error } = await supabase
+        .from('analytics_user_journeys_view')
+        .select('*')
+        .order('entered_at', { ascending: false })
+        .limit(limit * 10); // Get more steps to group into sessions
+
+    if (error) {
+        console.error("Error fetching user journeys:", error);
+        return [];
+    }
+
+    if (!journeysRaw || journeysRaw.length === 0) return [];
+
+    // Group by session_id and track earliest timestamp
+    const journeyMap = new Map<string, {
+        user_name: string;
+        avatar_url: string | null;
+        started_at: string | null;
+        steps: { view: string; duration: number; entered_at: string }[];
+    }>();
+
+    journeysRaw.forEach((step: any) => {
+        if (!journeyMap.has(step.session_id)) {
+            journeyMap.set(step.session_id, {
+                user_name: step.full_name || 'Anónimo',
+                avatar_url: step.avatar_url,
+                started_at: step.entered_at,
+                steps: []
+            });
+        }
+        const journey = journeyMap.get(step.session_id)!;
+        journey.steps.push({
+            view: getViewName(step.view_name),
+            duration: step.duration_seconds || 0,
+            entered_at: step.entered_at
+        });
+        // Track the earliest timestamp as session start
+        if (step.entered_at && (!journey.started_at || step.entered_at < journey.started_at)) {
+            journey.started_at = step.entered_at;
+        }
+    });
+
+    // Convert to array and sort by most recent session
+    const sortedJourneys = Array.from(journeyMap.entries())
+        .map(([session_id, data]) => ({
+            session_id,
+            user_name: data.user_name,
+            avatar_url: data.avatar_url,
+            started_at: data.started_at,
+            // Sort steps within session by time (oldest first)
+            steps: data.steps
+                .sort((a, b) => new Date(a.entered_at).getTime() - new Date(b.entered_at).getTime())
+                .map(s => ({ view: s.view, duration: s.duration }))
+        }))
+        .sort((a, b) => {
+            if (!a.started_at) return 1;
+            if (!b.started_at) return -1;
+            return new Date(b.started_at).getTime() - new Date(a.started_at).getTime();
+        })
+        .slice(0, limit);
+
+    return sortedJourneys;
 }
 

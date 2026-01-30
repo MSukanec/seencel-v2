@@ -3,18 +3,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-    AreaChart, Area, PieChart, Pie, Cell
+    AreaChart, Area
 } from 'recharts';
 import { useEffect, useState } from "react";
 import { DashboardData } from "@/features/admin/queries";
-import { ChartTooltip, PieChartTooltip } from "@/components/ui/chart-tooltip";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
+import { LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
 
 interface AdminChartsProps {
     charts: DashboardData['charts'];
 }
-
-// Colors
-const COLORS = ['#84cc16', '#10b981', '#06b6d4', '#8b5cf6']; // Lime, Emerald, Cyan, Violet
 
 export function AdminCharts({ charts }: AdminChartsProps) {
     const [isClient, setIsClient] = useState(false);
@@ -103,41 +101,25 @@ export function AdminCharts({ charts }: AdminChartsProps) {
                 </CardContent>
             </Card>
 
-            {/* 4. Fuentes de Adquisición */}
+            {/* 4. Distribución por País */}
             <Card className="col-span-1">
                 <CardHeader>
-                    <CardTitle className="text-base">Fuentes de Adquisición</CardTitle>
-                    <CardDescription>De dónde vienen los usuarios</CardDescription>
+                    <CardTitle className="text-base">Países</CardTitle>
+                    <CardDescription>Distribución de usuarios</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[250px] relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={charts.sources}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {charts.sources.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip content={<PieChartTooltip />} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        {/* Legend */}
-                        <div className="absolute bottom-0 w-full flex justify-center gap-4 text-[10px] text-muted-foreground">
-                            {charts.sources.map((entry, index) => (
-                                <div key={entry.name} className="flex items-center gap-1">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                    <span>{entry.name}</span>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="h-[200px]">
+                        <BaseDonutChart
+                            data={charts.countryDistribution}
+                            nameKey="name"
+                            valueKey="value"
+                            height={140}
+                            showLegend={true}
+                            showPercentage={true}
+                            autoFormat={false}
+                            tooltipFormatter={(val) => `${val} usuarios`}
+                            legendFormatter={(val) => `${val}`}
+                        />
                     </div>
                 </CardContent>
             </Card>

@@ -4,7 +4,7 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { BarChart as BarChartIcon, Clock, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardData } from "@/features/admin/queries";
-import { LazyBarChart as BaseBarChart, LazyAreaChart as BaseAreaChart, LazyPieChart as BasePieChart } from "@/components/charts/lazy-charts";
+import { LazyBarChart as BaseBarChart, LazyAreaChart as BaseAreaChart, LazyDonutChart as BaseDonutChart } from "@/components/charts/lazy-charts";
 
 interface AdminChartsProps {
     charts: DashboardData['charts'];
@@ -32,14 +32,6 @@ const growthConfig = {
     }
 };
 
-const sourcesConfig = {
-    "Directo": { label: "Directo", color: "var(--chart-1)" },
-    "Redes Sociales": { label: "Redes Sociales", color: "var(--chart-2)" },
-    "Orgánico": { label: "Orgánico", color: "var(--chart-3)" },
-    "Referido": { label: "Referido", color: "var(--chart-4)" },
-    "Otro": { label: "Otro", color: "var(--chart-5)" },
-};
-
 export function AdminCharts({ charts }: AdminChartsProps) {
     const [isClient, setIsClient] = useState(false);
 
@@ -55,11 +47,8 @@ export function AdminCharts({ charts }: AdminChartsProps) {
         )
     }
 
-    // Pre-calculate colors for Pie Chart to avoid CSS variable issues with spaces in keys
-    const sourcesData = charts.sources.map(item => ({
-        ...item,
-        fill: sourcesConfig[item.name as keyof typeof sourcesConfig]?.color || "var(--muted)"
-    }));
+    // Country data is already prepared with fill colors from the query
+    const countryData = charts.countryDistribution;
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -128,22 +117,24 @@ export function AdminCharts({ charts }: AdminChartsProps) {
                 </div>
             </DashboardCard>
 
-            {/* 4. Fuentes de Adquisición */}
+            {/* 4. Distribución por País */}
             <DashboardCard
-                title="Adquisición"
-                description="Fuentes de tráfico"
+                title="Países"
+                description="Distribución de usuarios"
                 icon={<PieChartIcon className="h-4 w-4" />}
                 className="col-span-1"
             >
                 <div className="h-[250px] w-full">
-                    <BasePieChart
-                        data={sourcesData}
+                    <BaseDonutChart
+                        data={countryData}
                         nameKey="name"
                         valueKey="value"
-                        height={250}
-                        innerRadius={60}
-                        config={sourcesConfig}
-                        chartClassName="h-full"
+                        height={140}
+                        showLegend={true}
+                        showPercentage={true}
+                        autoFormat={false}
+                        tooltipFormatter={(val) => `${val} usuarios`}
+                        legendFormatter={(val) => `${val}`}
                     />
                 </div>
             </DashboardCard>

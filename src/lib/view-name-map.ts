@@ -27,11 +27,9 @@ export const VIEW_NAME_MAP: Record<string, string> = {
     'organization/kanban': 'Kanban',
     'kanban': 'Kanban',
 
-    // Academia / Learning
-    'learning/courses': 'Academia - Cursos',
-    'learning/dashboard': 'Academia - Dashboard',
-    'cursos': 'Cursos',
-    'master-archicad': 'Master ArchiCAD',
+    // Academia - Páginas generales (no cursos específicos)
+    'academy/courses': 'Academia - Catálogo',
+    'academy/my-courses': 'Academia - Mis Cursos',
 
     // Admin
     'admin': 'Admin General',
@@ -56,6 +54,14 @@ export const VIEW_NAME_MAP: Record<string, string> = {
 };
 
 /**
+ * Mapeo de slugs de cursos a nombres legibles
+ */
+const COURSE_NAME_MAP: Record<string, string> = {
+    'master-archicad': 'Master ArchiCAD',
+    // Agregar más cursos aquí según se necesiten
+};
+
+/**
  * Normaliza un slug para que coincida con las claves del mapa.
  * Convierte: "es/organization_dashboard?tab=1" → "organization/dashboard"
  */
@@ -69,12 +75,43 @@ function normalizeSlug(slug: string): string {
 }
 
 /**
+ * Formatea un slug como título legible
+ */
+function formatSlugAsTitle(slug: string): string {
+    return slug
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Extrae el nombre del curso desde una ruta de academia
+ * Ej: "academy/my-courses/master-archicad/content" → "Master ArchiCAD"
+ */
+function extractCourseName(normalized: string): string | null {
+    // Patrones: academy/courses/[slug], academy/my-courses/[slug], academy/my-courses/[slug]/content, etc.
+    const coursePatterns = [
+        /^academy\/courses\/([^\/]+)/,
+        /^academy\/my-courses\/([^\/]+)/,
+    ];
+
+    for (const pattern of coursePatterns) {
+        const match = normalized.match(pattern);
+        if (match && match[1]) {
+            const courseSlug = match[1];
+            // Buscar nombre conocido o formatear el slug
+            return COURSE_NAME_MAP[courseSlug] || formatSlugAsTitle(courseSlug);
+        }
+    }
+    return null;
+}
+
+/**
  * Traduce un slug de página a un nombre legible.
  * 
  * @example
  * getViewName("es/organization_dashboard") // → "Dashboard"
- * getViewName("learning/courses?id=123")   // → "Academia"
- * getViewName(null)                         // → "Navegando"
+ * getViewName("academy/my-courses/master-archicad/content") // → "Master ArchiCAD"
+ * getViewName(null) // → "Navegando"
  */
 export function getViewName(slug: string | null | undefined): string {
     if (!slug) return 'Navegando';
@@ -86,9 +123,15 @@ export function getViewName(slug: string | null | undefined): string {
         return VIEW_NAME_MAP[normalized];
     }
 
+    // Para cursos específicos de academia, extraer el nombre del curso
+    const courseName = extractCourseName(normalized);
+    if (courseName) {
+        return courseName;
+    }
+
     // Buscar coincidencias parciales para rutas dinámicas
     if (normalized.includes('project/')) return 'Detalle Proyecto';
-    if (normalized.includes('learning/')) return 'Academia';
+    if (normalized.includes('academy/')) return 'Academia';
     if (normalized.includes('admin/')) return 'Admin';
     if (normalized.includes('organization/')) return 'Dashboard';
 
@@ -97,4 +140,3 @@ export function getViewName(slug: string | null | undefined): string {
         .replace(/\//g, ' › ')
         .replace(/\b\w/g, c => c.toUpperCase()) || 'Inicio';
 }
-

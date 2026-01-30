@@ -3,7 +3,7 @@
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { AdminCharts } from "./admin-charts";
-import { Activity, Users, Building, Folder, UserPlus, Zap, UserMinus, Timer, TrendingDown, Route } from "lucide-react";
+import { Activity, Users, Building, Folder, UserPlus, Zap, UserMinus, Timer, TrendingDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -205,49 +205,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
 
             {/* Charts Row */}
             <AdminCharts charts={charts} />
-
-            {/* User Journeys */}
-            <DashboardCard
-                title="User Journeys"
-                description="Flujo de navegación de usuarios reales (Últimas Sesiones)"
-                icon={<Route className="h-4 w-4" />}
-            >
-                <div className="space-y-4">
-                    {lists.userJourneys.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <Route className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                            <p className="text-sm">Aún no hay datos de sesiones.</p>
-                            <p className="text-xs mt-1">Los journeys aparecerán cuando el frontend implemente <code className="bg-muted px-1 rounded">session_id</code>.</p>
-                        </div>
-                    ) : (
-                        lists.userJourneys.map((journey) => (
-                            <div key={journey.session_id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                <Avatar className="h-8 w-8 mt-0.5">
-                                    <AvatarImage src={journey.avatar_url || ""} />
-                                    <AvatarFallback>{journey.user_name?.[0] || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-sm font-medium">{journey.user_name}</span>
-                                        <span className="text-xs text-muted-foreground">• Session ID: {journey.session_id.slice(0, 8)}</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1">
-                                        {journey.steps.map((step, i) => (
-                                            <span key={i} className="inline-flex items-center">
-                                                <Badge variant="outline" className="text-[10px] h-6 bg-background px-2 font-medium">
-                                                    {step.view}
-                                                    {step.duration > 0 && <span className="ml-1.5 text-muted-foreground font-normal border-l pl-1.5">{formatDuration(step.duration)}</span>}
-                                                </Badge>
-                                                {i < journey.steps.length - 1 && <span className="mx-1 text-muted-foreground/40 text-xs">→</span>}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </DashboardCard>
         </div>
     );
 }
+

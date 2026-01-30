@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Activity } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
-import { getAdminDashboardData } from "@/features/admin/queries";
+import { getAdminDashboardData, getUserJourneys } from "@/features/admin/queries";
+import { getAllActivityLogs } from "@/actions/admin-actions";
 import { AdminDashboardView } from "@/features/admin/components/admin-dashboard-view";
 import { AdminActivityView } from "@/features/admin/components/admin-activity-view";
 import { setRequestLocale } from 'next-intl/server';
@@ -20,7 +21,11 @@ export default async function AdminPage({ params }: PageProps) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect('/auth/login');
 
-    const dashboardData = await getAdminDashboardData();
+    const [dashboardData, activityLogs, userJourneys] = await Promise.all([
+        getAdminDashboardData(),
+        getAllActivityLogs(500),
+        getUserJourneys(50)
+    ]);
 
     return (
         <Tabs defaultValue="dashboard" className="w-full h-full flex flex-col">
@@ -59,7 +64,7 @@ export default async function AdminPage({ params }: PageProps) {
 
                 <TabsContent value="activity" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <AdminActivityView />
+                        <AdminActivityView logs={activityLogs} userJourneys={userJourneys} />
                     </ContentLayout>
                 </TabsContent>
             </PageWrapper>

@@ -131,7 +131,7 @@ export async function cleanupTestPurchase(email: string): Promise<{ success: boo
  */
 const TEST_USER = {
     email: "matusukanec@gmail.com",
-    organizationId: "6d617475-c2f1-4e3d-b924-0c8dbdd44e25"
+    organizationId: "0d5e28fe-8fe2-4fe4-9835-4fe21b4f2abb"
 };
 
 export interface TestUserStatus {
