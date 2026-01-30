@@ -59,6 +59,7 @@ interface CourseLandingProps {
     isDashboard?: boolean;
     isEnrolled?: boolean;
     isPurchaseEnabled?: boolean;
+    isAdmin?: boolean;
 }
 
 // Icon mapping for modules
@@ -73,7 +74,7 @@ const moduleIcons: Record<string, React.ElementType> = {
     Image: ImageIcon,
 };
 
-export function CourseLanding({ course, isDashboard = false, isEnrolled = false, isPurchaseEnabled = true }: CourseLandingProps) {
+export function CourseLanding({ course, isDashboard = false, isEnrolled = false, isPurchaseEnabled = true, isAdmin = false }: CourseLandingProps) {
     const t = useTranslations("Course");
 
     // Merge course-specific enabled sections with defaults
@@ -183,7 +184,7 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false,
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </a>
                                 </Button>
-                            ) : isPurchaseEnabled ? (
+                            ) : (isPurchaseEnabled || isAdmin) ? (
                                 <Button
                                     asChild
                                     size="lg"
@@ -911,7 +912,7 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false,
                                     <span className="text-zinc-400">{course.currency}</span>
                                 </div>
 
-                                {isPurchaseEnabled && (
+                                {(isPurchaseEnabled || isAdmin) && (
                                     <div className="flex flex-col items-center gap-4">
                                         <Button
                                             asChild

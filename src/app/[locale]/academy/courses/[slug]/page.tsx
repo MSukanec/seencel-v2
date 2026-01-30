@@ -32,6 +32,9 @@ export default async function PublicCoursePage({ params }: PageProps) {
     // Check if user is enrolled in this course (only if course has ID)
     const isEnrolled = course.id ? await isUserEnrolledInCourse(course.id) : false;
 
+    // Check if user is admin (role_id = 1)
+    const isAdmin = String(userProfile.profile?.role_id) === "1";
+
     return (
         <div className="flex min-h-screen flex-col bg-background">
             <Header variant="public" user={userProfile.profile} />
@@ -40,6 +43,7 @@ export default async function PublicCoursePage({ params }: PageProps) {
                     course={course}
                     isEnrolled={isEnrolled}
                     isPurchaseEnabled={isPurchaseEnabled}
+                    isAdmin={isAdmin}
                 />
             </main>
             <Footer />

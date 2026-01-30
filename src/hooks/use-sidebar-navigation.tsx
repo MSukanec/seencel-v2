@@ -29,6 +29,7 @@ import {
     HeartPulse,
     Handshake,
     Landmark,
+    LayoutTemplate,
 } from "lucide-react";
 import { NavigationContext } from "@/store/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -279,7 +280,7 @@ export function useSidebarNavigation() {
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
                     { title: 'Plataforma', href: '/admin/system', icon: Monitor },
                     { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
-                    { title: 'Emails', href: '/admin/emails', icon: FileText },
+                    { title: 'Plantillas', href: '/admin/emails', icon: LayoutTemplate },
                     { title: 'Changelog', href: '/admin/changelog', icon: FileText },
                     { title: 'Soporte', href: '/admin/support', icon: Wrench },
                     { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },
