@@ -41,6 +41,7 @@ import {
     ArrowRight,
     Wrench,
     MessageCircle,
+    ShieldCheck,
 } from "lucide-react";
 
 // Coupon error messages (client-side utility)
@@ -201,10 +202,13 @@ export function CheckoutView({
     const t = useTranslations("Founders.checkout");
     const isCourse = productType === "course";
 
-    // Show maintenance state if course purchases are disabled
-    if (isCourse && !coursePurchasesEnabled) {
+    // Admin bypass for maintenance mode
+    const [adminBypassMaintenance, setAdminBypassMaintenance] = useState(false);
+
+    // Show maintenance state if course purchases are disabled (unless admin bypassed)
+    if (isCourse && !coursePurchasesEnabled && !adminBypassMaintenance) {
         return (
-            <div className="flex flex-col items-center justify-center h-full py-16 px-4 text-center">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-16 px-4 text-center">
                 <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
                     <Wrench className="h-10 w-10 text-orange-500" />
                 </div>
@@ -227,6 +231,22 @@ export function CheckoutView({
                         </Button>
                     </Link>
                 </div>
+
+                {/* Admin bypass button */}
+                {isAdmin && (
+                    <div className="mt-8 pt-6 border-t border-dashed border-muted-foreground/30 w-full max-w-md">
+                        <p className="text-xs text-muted-foreground mb-3">Modo Administrador</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 border-orange-500/50 text-orange-500 hover:bg-orange-500/10"
+                            onClick={() => setAdminBypassMaintenance(true)}
+                        >
+                            <ShieldCheck className="h-4 w-4" />
+                            Continuar al Checkout (Admin)
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     }

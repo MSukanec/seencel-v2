@@ -15,9 +15,10 @@ interface CoursesContentProps {
     isDashboard?: boolean;
     detailRoute?: string;
     enrolledCourseIds?: string[];
+    isPurchaseEnabled?: boolean;
 }
 
-export function CoursesContent({ courses, isDashboard = false, detailRoute = '/academy/courses', enrolledCourseIds = [] }: CoursesContentProps) {
+export function CoursesContent({ courses, isDashboard = false, detailRoute = '/academy/courses', enrolledCourseIds = [], isPurchaseEnabled = true }: CoursesContentProps) {
     const t = useTranslations('Learning');
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -120,6 +121,7 @@ export function CoursesContent({ courses, isDashboard = false, detailRoute = '/a
                                 course={course}
                                 basePath={detailRoute}
                                 isEnrolled={enrolledCourseIds.includes(course.id)}
+                                isPurchaseEnabled={isPurchaseEnabled}
                             />
                         ))}
                     </div>

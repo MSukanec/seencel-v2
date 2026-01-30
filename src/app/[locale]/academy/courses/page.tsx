@@ -3,15 +3,19 @@ import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/users/queries";
 import { getCourses, getUserEnrollments } from "@/actions/courses";
 import { CoursesContent } from "@/features/academy/components/courses-content";
+import { getFeatureFlag } from "@/actions/feature-flags";
 
 import { setRequestLocale } from 'next-intl/server';
 
 export default async function CoursesPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
     setRequestLocale(locale);
-    const { profile } = await getUserProfile();
-    const courses = await getCourses();
-    const enrolledCourseIds = await getUserEnrollments();
+    const [{ profile }, courses, enrolledCourseIds, isPurchaseEnabled] = await Promise.all([
+        getUserProfile(),
+        getCourses(),
+        getUserEnrollments(),
+        getFeatureFlag("course_purchases_enabled")
+    ]);
 
     return (
         <div className="flex min-h-screen flex-col bg-background">
@@ -23,6 +27,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                         courses={courses}
                         detailRoute="/academy/courses"
                         enrolledCourseIds={Array.from(enrolledCourseIds)}
+                        isPurchaseEnabled={isPurchaseEnabled}
                     />
                 </div>
             </main>

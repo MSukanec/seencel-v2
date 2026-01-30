@@ -11,15 +11,18 @@ interface CourseCardProps {
     className?: string;
     basePath?: string;
     isEnrolled?: boolean;
+    isPurchaseEnabled?: boolean;
 }
 
-export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false }: CourseCardProps) {
+export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false, isPurchaseEnabled = true }: CourseCardProps) {
     const { details } = course;
 
     // Format price
-    const formattedPrice = course.price
-        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(course.price)
-        : 'Free';
+    const formattedPrice = isPurchaseEnabled
+        ? (course.price
+            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(course.price)
+            : 'Free')
+        : '-';
 
     return (
         <Card className={cn("overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow", className)}>

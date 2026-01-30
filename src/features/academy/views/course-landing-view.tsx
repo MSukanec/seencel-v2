@@ -160,15 +160,23 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false,
 
                         {/* Price - Left aligned */}
                         <div className="flex items-center justify-start gap-4 mb-10">
-                            {course.originalPrice && (
-                                <span className="text-xl text-zinc-500 line-through">
-                                    ${course.originalPrice}
+                            {(isPurchaseEnabled || isAdmin) ? (
+                                <>
+                                    {course.originalPrice && (
+                                        <span className="text-xl text-zinc-500 line-through">
+                                            ${course.originalPrice}
+                                        </span>
+                                    )}
+                                    <span className="text-4xl md:text-5xl font-bold text-white">
+                                        ${course.price}
+                                    </span>
+                                    <span className="text-zinc-400 font-medium">/ año</span>
+                                </>
+                            ) : (
+                                <span className="text-2xl text-zinc-400 font-medium">
+                                    Precio no disponible
                                 </span>
                             )}
-                            <span className="text-4xl md:text-5xl font-bold text-white">
-                                ${course.price}
-                            </span>
-                            <span className="text-zinc-400 font-medium">/ año</span>
                         </div>
 
                         {/* CTA - Left aligned */}
@@ -900,17 +908,25 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false,
                                 </p>
 
                                 {/* Price recap */}
-                                <div className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl bg-zinc-800/50 border border-zinc-700 mb-8">
-                                    {course.originalPrice && (
-                                        <span className="text-xl text-zinc-500 line-through">
-                                            ${course.originalPrice}
+                                {(isPurchaseEnabled || isAdmin) ? (
+                                    <div className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl bg-zinc-800/50 border border-zinc-700 mb-8">
+                                        {course.originalPrice && (
+                                            <span className="text-xl text-zinc-500 line-through">
+                                                ${course.originalPrice}
+                                            </span>
+                                        )}
+                                        <span className="text-4xl font-bold text-white">
+                                            ${course.price}
                                         </span>
-                                    )}
-                                    <span className="text-4xl font-bold text-white">
-                                        ${course.price}
-                                    </span>
-                                    <span className="text-zinc-400">{course.currency}</span>
-                                </div>
+                                        <span className="text-zinc-400">{course.currency}</span>
+                                    </div>
+                                ) : (
+                                    <div className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl bg-zinc-800/50 border border-zinc-700 mb-8">
+                                        <span className="text-xl text-zinc-400">
+                                            Precio no disponible temporalmente
+                                        </span>
+                                    </div>
+                                )}
 
                                 {(isPurchaseEnabled || isAdmin) && (
                                     <div className="flex flex-col items-center gap-4">
