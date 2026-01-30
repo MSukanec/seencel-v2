@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useOrganization } from "@/context/organization-context";
 import { Crown, Sparkles, Users } from "lucide-react";
 import { getPlans, getCurrentOrganizationPlanId, Plan, isOrganizationFounder } from "@/actions/plans";
+import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ============================================================================
@@ -124,7 +125,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
                 isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0",
                 styles.iconColor
             )}>
-                {currentPlan.name}
+                {getPlanDisplayName(currentPlan.name)}
             </span>
         </div>
     );

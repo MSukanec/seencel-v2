@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CountrySelector } from "@/components/ui/country-selector";
 import { cn } from "@/lib/utils";
+import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Plan } from "@/actions/plans";
 import { Link } from "@/i18n/routing";
 import { useModal } from "@/providers/modal-store";
@@ -581,7 +582,7 @@ export function CheckoutView({
                                                             <Icon className={cn("h-5 w-5", isDisabled ? "text-muted-foreground" : colors.text)} />
                                                         </div>
                                                         <div>
-                                                            <h3 className="font-bold">{plan.name}</h3>
+                                                            <h3 className="font-bold">{getPlanDisplayName(plan.name)}</h3>
                                                             <p className="text-xs text-muted-foreground">
                                                                 {plan.billing_type === "per_user" ? "Por usuario" : "Fijo"}
                                                             </p>

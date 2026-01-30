@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Sparkles, Zap, Crown, Users, FileText, Plug2, Headphones, Shield, Wrench, FolderOpen, HardDrive, BarChart3, Webhook, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
 
 export type PlanFlagStatus = 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
@@ -390,7 +391,7 @@ export function PlansComparison({
                                     )}>
                                         <PlanIcon className="h-5 w-5" />
                                     </div>
-                                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                                    <CardTitle className="text-xl">{getPlanDisplayName(plan.name)}</CardTitle>
                                 </div>
                                 <CardDescription>
                                     {plan.billing_type === "per_user" ? "Por usuario / mes" : "Tarifa plana"}
@@ -565,7 +566,7 @@ export function PlansComparison({
                                             : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
-                                    {plan.name}
+                                    {getPlanDisplayName(plan.name)}
                                 </button>
                             ))}
                         </div>
@@ -609,7 +610,7 @@ export function PlansComparison({
 
                             return (
                                 <div key={plan.id} className="text-center">
-                                    <div className="font-semibold mb-2">{plan.name}</div>
+                                    <div className="font-semibold mb-2">{getPlanDisplayName(plan.name)}</div>
                                     {isCurrentPlan ? (
                                         <Button
                                             size="sm"

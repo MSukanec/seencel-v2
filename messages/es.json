@@ -1593,5 +1593,19 @@
     "ProjectHealth": {
         "title": "Salud del Proyecto",
         "subtitle": "Indicadores de estado, avance y estabilidad del proyecto."
+    },
+    "Founders": {
+        "checkout": {
+            "title": "Checkout",
+            "selectPlan": "Seleccionar Plan",
+            "billingCycle": "Período de Facturación",
+            "monthly": "Mensual",
+            "annual": "Anual",
+            "founderBadge": "Edición Fundadores",
+            "paymentMethod": "Método de Pago",
+            "orderSummary": "Resumen del Pedido",
+            "subtotal": "Subtotal",
+            "total": "Total"
+        }
     }
 }

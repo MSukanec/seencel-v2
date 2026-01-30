@@ -71,7 +71,7 @@ export const contextRoutes: Record<NavigationContext, string> = {
     organization: '/organization',
     project: '/organization/projects',
     portal: '/portal',
-    learnings: '/academy/courses',
+    learnings: '/academy/my-courses',
     community: '/community',
     admin: '/admin'
 };

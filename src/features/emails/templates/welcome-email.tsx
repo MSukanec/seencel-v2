@@ -1,53 +1,51 @@
 import * as React from 'react';
 import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { t, type EmailLocale } from '../lib/email-translations';
 
 interface WelcomeEmailProps {
     firstName: string;
     email: string;
+    locale?: EmailLocale;
 }
 
-export function WelcomeEmail({ firstName, email }: Readonly<WelcomeEmailProps>) {
+export function WelcomeEmail({ firstName, email, locale = 'es' }: Readonly<WelcomeEmailProps>) {
     return (
         <div style={emailBaseStyles.container}>
             <EmailHeader />
 
             <div style={emailBaseStyles.content}>
-                <h1 style={emailBaseStyles.title}>Bienvenido a SEENCEL</h1>
+                <h1 style={emailBaseStyles.title}>{t('welcome', 'title', locale)}</h1>
 
-                <p style={emailBaseStyles.greeting}>Hola {firstName},</p>
+                <p style={emailBaseStyles.greeting}>{t('welcome', 'greeting', locale)} {firstName},</p>
 
                 <p style={emailBaseStyles.text}>
-                    Tu cuenta ha sido creada exitosamente. Ahora sos parte de la comunidad
-                    de profesionales que están transformando la gestión de sus proyectos
-                    de construcción.
+                    {t('welcome', 'body', locale)}
                 </p>
 
                 <div style={emailBaseStyles.card}>
-                    <h3 style={emailBaseStyles.cardTitle}>Tu cuenta</h3>
+                    <h3 style={emailBaseStyles.cardTitle}>{t('welcome', 'accountLabel', locale)}</h3>
                     <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>Email:</span>
+                        <span style={emailBaseStyles.cardLabel}>{t('welcome', 'emailLabel', locale)}</span>
                         <span style={emailBaseStyles.cardValue}>{email}</span>
                     </div>
                 </div>
 
                 <p style={emailBaseStyles.text}>
-                    Ya podés crear tu primera organización, agregar proyectos, invitar
-                    a tu equipo y monitorear presupuestos y avances.
+                    {t('welcome', 'nextSteps', locale)}
                 </p>
 
                 <div style={emailBaseStyles.ctaContainer}>
                     <a href="https://seencel.com/hub" style={emailBaseStyles.cta}>
-                        Ir al Dashboard
+                        {t('common', 'goToDashboard', locale)}
                     </a>
                 </div>
 
                 <p style={emailBaseStyles.smallText}>
-                    Si tenés alguna pregunta, respondé a este email o visitá nuestra
-                    sección de ayuda.
+                    {t('welcome', 'help', locale)}
                 </p>
             </div>
 
-            <EmailFooter />
+            <EmailFooter locale={locale} />
         </div>
     );
 }

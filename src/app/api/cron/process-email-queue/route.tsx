@@ -4,6 +4,7 @@ import { sendEmail } from "@/features/emails/lib/send-email";
 import { PurchaseConfirmationEmail } from "@/features/emails/templates/purchase-confirmation-email";
 import { AdminSaleNotificationEmail } from "@/features/emails/templates/admin-sale-notification-email";
 import { WelcomeEmail } from "@/features/emails/templates/welcome-email";
+import { type EmailLocale } from "@/features/emails/lib/email-translations";
 
 // Max emails to process per run (avoid timeout)
 const BATCH_SIZE = 10;
@@ -141,6 +142,7 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
             const productName = String(data.product_name || "");
             const billingCycle = productName.includes("annual") ? "annual" : "monthly";
             const planName = productName.replace(/\s*\((monthly|annual)\)/i, "");
+            const locale = (data.locale as EmailLocale) || 'es';
 
             return (
                 <PurchaseConfirmationEmail
@@ -152,6 +154,7 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
                     paymentMethod="mercadopago"
                     transactionId={String(data.payment_id || "")}
                     purchaseDate={purchaseDate}
+                    locale={locale}
                 />
             );
         }
@@ -172,10 +175,12 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
         }
 
         case "welcome": {
+            const welcomeLocale = (data.locale as EmailLocale) || 'es';
             return (
                 <WelcomeEmail
                     firstName={String(data.user_name || "Usuario")}
                     email={String(data.user_email || "")}
+                    locale={welcomeLocale}
                 />
             );
         }

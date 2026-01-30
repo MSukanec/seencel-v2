@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { type EmailLocale, getFooterText } from './email-translations';
 
 /**
  * Shared base styles for all email templates
@@ -220,16 +221,22 @@ export function EmailHeader() {
 /**
  * Email footer component
  */
-export function EmailFooter() {
+interface EmailFooterProps {
+    locale?: EmailLocale;
+}
+
+export function EmailFooter({ locale = 'es' }: EmailFooterProps) {
+    const footerText = getFooterText(locale);
+
     return (
         <div style={emailBaseStyles.footer}>
             <p style={emailBaseStyles.footerText}>
-                © {new Date().getFullYear()} SEENCEL. Todos los derechos reservados.
+                © {new Date().getFullYear()} SEENCEL. {footerText.copyright}
             </p>
             <p style={emailBaseStyles.footerLinks}>
-                <a href="https://seencel.com/privacy" style={emailBaseStyles.footerLink}>Privacidad</a>
+                <a href="https://seencel.com/privacy" style={emailBaseStyles.footerLink}>{footerText.privacy}</a>
                 {' • '}
-                <a href="https://seencel.com/terms" style={emailBaseStyles.footerLink}>Términos</a>
+                <a href="https://seencel.com/terms" style={emailBaseStyles.footerLink}>{footerText.terms}</a>
             </p>
         </div>
     );

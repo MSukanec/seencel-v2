@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Plan } from "@/actions/plans";
 import {
     CreditCard,
@@ -260,7 +261,7 @@ export function CheckoutContent({
                                                         <Icon className={cn("h-6 w-6", isDisabled ? "text-muted-foreground" : "text-primary")} />
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-bold text-lg">{plan.name}</h3>
+                                                        <h3 className="font-bold text-lg">{getPlanDisplayName(plan.name)}</h3>
                                                         <p className="text-sm text-muted-foreground">
                                                             {plan.billing_type === "per_user" ? "Por usuario" : "Fijo"}
                                                         </p>
@@ -402,7 +403,7 @@ export function CheckoutContent({
                                             <PlanIcon className="h-6 w-6 text-primary" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold">{currentPlan.name} Plan</h3>
+                                            <h3 className="font-bold">{getPlanDisplayName(currentPlan.name)}</h3>
                                             <p className="text-sm text-muted-foreground">
                                                 {isAnnual ? "Facturación anual" : "Facturación mensual"}
                                             </p>
