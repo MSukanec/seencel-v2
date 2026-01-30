@@ -325,7 +325,7 @@ function DashboardCard({
         return null;
     };
 
-    const CardContentWrapper = ({ children }: { children: React.ReactNode }) => (
+    const CardContentWrapper = () => (
         <motion.div variants={variants} className="h-full">
             <Card className={cn(
                 "h-full transition-all duration-300 border-border/50 overflow-hidden relative group",
@@ -380,12 +380,12 @@ function DashboardCard({
     );
 
     if (isLocked) {
-        return <CardContentWrapper>...</CardContentWrapper>;
+        return <CardContentWrapper />;
     }
 
     return (
         <Link href={href as any}>
-            <CardContentWrapper>...</CardContentWrapper>
+            <CardContentWrapper />
         </Link>
     );
 }

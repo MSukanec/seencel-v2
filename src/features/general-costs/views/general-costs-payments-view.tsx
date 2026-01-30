@@ -148,24 +148,28 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
 
     // Calculate KPI values
     const kpiData = useMemo(() => {
-        let totalGastos = 0;
-        let totalConfirmados = 0;
-        let totalPendientes = 0;
+        const allItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+        const confirmedItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+        const pendingItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
 
         filteredPayments.forEach(p => {
-            const amount = Number(p.amount) || 0;
-            totalGastos += amount;
+            const item = {
+                amount: Number(p.amount) || 0,
+                currency_code: p.currency_code || 'ARS',
+                exchange_rate: Number(p.exchange_rate) || 1
+            };
+            allItems.push(item);
             if (p.status === 'confirmed') {
-                totalConfirmados += amount;
+                confirmedItems.push(item);
             } else if (p.status === 'pending') {
-                totalPendientes += amount;
+                pendingItems.push(item);
             }
         });
 
         return {
-            totalGastos,
-            totalConfirmados,
-            totalPendientes,
+            allItems,
+            confirmedItems,
+            pendingItems,
             totalPagos: filteredPayments.length
         };
     }, [filteredPayments]);
@@ -293,19 +297,19 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <DashboardKpiCard
                     title="Total Gastos"
-                    amount={kpiData.totalGastos}
+                    items={kpiData.allItems}
                     icon={<TrendingDown className="h-5 w-5" />}
                     iconClassName="bg-amount-negative/10 text-amount-negative"
                 />
                 <DashboardKpiCard
                     title="Confirmados"
-                    amount={kpiData.totalConfirmados}
+                    items={kpiData.confirmedItems}
                     icon={<DollarSign className="h-5 w-5" />}
                     iconClassName="bg-amount-positive/10 text-amount-positive"
                 />
                 <DashboardKpiCard
                     title="Pendientes"
-                    amount={kpiData.totalPendientes}
+                    items={kpiData.pendingItems}
                     icon={<DollarSign className="h-5 w-5" />}
                     iconClassName="bg-amber-500/10 text-amber-600"
                 />

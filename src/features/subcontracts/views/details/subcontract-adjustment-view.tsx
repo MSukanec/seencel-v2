@@ -123,15 +123,55 @@ export function SubcontractAdjustmentView({
     const remaining = contractTotal - totalPaid;
 
     // ============================================
-    // ADJUSTMENT CALCULATIONS
+    // ADJUSTMENT CALCULATIONS - ACCUMULATED MONTHLY %
     // ============================================
-    const baseValue = Number(subcontract.base_index_value);
-    const currentValue = latestIndexValue || baseValue;
-    const coefficient = baseValue > 0 ? currentValue / baseValue : 1;
-    const variation = (coefficient - 1) * 100;
+    // Calculate accumulated coefficient from base period to latest index
+    const accumulatedCoefficient = useMemo(() => {
+        if (!indexHistory.length) return 1;
+
+        const baseMonth = subcontract.base_period_month;
+        const baseYear = subcontract.base_period_year;
+        const basePeriodDate = baseMonth && baseYear
+            ? new Date(baseYear, baseMonth - 1, 1)
+            : null;
+
+        // Build index map
+        const indexMap = new Map<string, number>();
+        indexHistory.forEach(idx => {
+            const year = idx.period_year < 100 ? 2000 + idx.period_year : idx.period_year;
+            const key = `${idx.period_month}-${year}`;
+            if (idx.values) {
+                indexMap.set(key, Object.values(idx.values)[0] as number);
+            }
+        });
+
+        // Accumulate from base period to latest
+        let accumulated = 1;
+        const sortedHistory = [...indexHistory].sort((a, b) => {
+            const yearA = a.period_year < 100 ? 2000 + a.period_year : a.period_year;
+            const yearB = b.period_year < 100 ? 2000 + b.period_year : b.period_year;
+            return yearA - yearB || (a.period_month || 1) - (b.period_month || 1);
+        });
+
+        for (const idx of sortedHistory) {
+            const year = idx.period_year < 100 ? 2000 + idx.period_year : idx.period_year;
+            const indexDate = new Date(year, (idx.period_month || 1) - 1, 1);
+
+            // Only accumulate AFTER base period
+            if (basePeriodDate && indexDate > basePeriodDate) {
+                const key = `${idx.period_month}-${year}`;
+                const monthlyPercent = indexMap.get(key) || 0;
+                accumulated *= (1 + monthlyPercent / 100);
+            }
+        }
+
+        return accumulated;
+    }, [indexHistory, subcontract.base_period_month, subcontract.base_period_year]);
+
+    const variation = (accumulatedCoefficient - 1) * 100;
 
     // OPTION B: Calculate on REMAINING balance
-    const adjustedRemaining = remaining * coefficient;
+    const adjustedRemaining = remaining * accumulatedCoefficient;
     const difference = adjustedRemaining - remaining;
 
     const basePeriodLabel = subcontract.base_period_month && subcontract.base_period_year
@@ -160,17 +200,26 @@ export function SubcontractAdjustmentView({
         // Sort payments by date
         paymentsWithDate.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-        // Build index map for quick lookup (month-year -> indexValue)
+        // Build index map for quick lookup (month-year -> monthly percentage)
         const indexMap = new Map<string, number>();
         indexHistory.forEach(idx => {
             const year = idx.period_year < 100 ? 2000 + idx.period_year : idx.period_year;
             const key = `${idx.period_month}-${year}`;
             if (idx.values) {
+                // Values are stored as percentages (e.g., 3.2 means 3.2%)
                 indexMap.set(key, Object.values(idx.values)[0] as number);
             }
         });
 
-        // Find date range: from first payment or first index (whichever is earlier)
+        // Get base period from subcontract
+        const baseMonth = subcontract.base_period_month;
+        const baseYear = subcontract.base_period_year;
+        const basePeriodDate = baseMonth && baseYear
+            ? new Date(baseYear, baseMonth - 1, 1)
+            : null;
+
+
+        // Find date range
         const firstPaymentDate = paymentsWithDate.length > 0 ? paymentsWithDate[0].date : null;
         const firstIndexDate = indexHistory.length > 0
             ? new Date(
@@ -179,7 +228,6 @@ export function SubcontractAdjustmentView({
             )
             : null;
 
-        // Get the latest index date
         const lastIndex = indexHistory.length > 0 ? indexHistory[indexHistory.length - 1] : null;
         const lastIndexDate = lastIndex
             ? new Date(
@@ -188,7 +236,6 @@ export function SubcontractAdjustmentView({
             )
             : null;
 
-        // Determine start date (1 month before first payment if exists, else first index)
         let startDate: Date | null = null;
         if (firstPaymentDate && firstIndexDate) {
             startDate = firstPaymentDate < firstIndexDate ? firstPaymentDate : firstIndexDate;
@@ -198,22 +245,36 @@ export function SubcontractAdjustmentView({
             startDate = firstIndexDate;
         }
 
-        // Determine end date (current month or last index)
         const now = new Date();
         let endDate = lastIndexDate || now;
         if (endDate < now) endDate = now;
 
         if (!startDate) return [];
 
-        // Generate months from start to end
-        const months: { month: string; pagado: number; saldo: number; saldoAjustado: number }[] = [];
+        // Generate months from start to end with ACCUMULATED coefficient
+        const months: { month: string; pagado: number; saldo: number; saldoAjustado: number; indice: number; coefAcumulado: number }[] = [];
         const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+        // Accumulated coefficient starts at 1 (100%)
+        let accumulatedCoefficient = 1;
 
         while (current <= endDate) {
             const month = current.getMonth() + 1;
             const year = current.getFullYear();
-            const periodEndDate = new Date(year, month, 0); // Last day of month
-            const monthLabel = `${MONTH_NAMES[month - 1]?.slice(0, 3) || month} ${String(year).slice(2)}`;
+            const periodEndDate = new Date(year, month, 0);
+
+            // Get monthly inflation percentage for this period
+            const indexKey = `${month}-${year}`;
+            const monthlyPercent = indexMap.get(indexKey) || 0; // Default 0% if no data
+
+            // Accumulate: multiply by (1 + monthly%/100)
+            // Only accumulate AFTER the base period
+            if (basePeriodDate && current > basePeriodDate) {
+                accumulatedCoefficient *= (1 + monthlyPercent / 100);
+            } else if (!basePeriodDate) {
+                // If no base period defined, accumulate from start
+                accumulatedCoefficient *= (1 + monthlyPercent / 100);
+            }
 
             // Sum ALL payments up to and including this period
             const cumulativePaid = paymentsWithDate
@@ -223,16 +284,17 @@ export function SubcontractAdjustmentView({
             // Remaining for this period
             const monthRemaining = contractTotal - cumulativePaid;
 
-            // Get index value for this period (if exists), otherwise use baseValue (coef=1)
-            const indexKey = `${month}-${year}`;
-            const indexValue = indexMap.get(indexKey) || baseValue;
-            const periodCoefficient = baseValue > 0 ? indexValue / baseValue : 1;
+            // Month label with index percentage
+            const monthAbbr = MONTH_NAMES[month - 1]?.slice(0, 3) || String(month);
+            const monthLabel = `${monthAbbr} ${String(year).slice(2)}\n(${monthlyPercent.toFixed(1)}%)`;
 
             months.push({
                 month: monthLabel,
                 pagado: cumulativePaid,
                 saldo: monthRemaining,
-                saldoAjustado: monthRemaining * periodCoefficient,
+                saldoAjustado: monthRemaining * accumulatedCoefficient,
+                indice: monthlyPercent,
+                coefAcumulado: accumulatedCoefficient,
             });
 
             // Move to next month
@@ -240,7 +302,20 @@ export function SubcontractAdjustmentView({
         }
 
         return months;
-    }, [indexHistory, payments, contractTotal, baseValue, currentRate, effectiveDisplayMode, config]);
+    }, [indexHistory, payments, contractTotal, subcontract.base_period_month, subcontract.base_period_year, currentRate, effectiveDisplayMode, config]);
+
+    // ============================================
+    // PAYMENT SPEED vs INFLATION calculations
+    // ============================================
+    const paymentProgress = contractTotal > 0
+        ? (totalPaid / contractTotal) * 100
+        : 0;
+
+    // Accumulated inflation since base period
+    const inflationProgress = variation; // Already calculated as percentage
+
+    // Determine who's "winning"
+    const isWinning = paymentProgress > inflationProgress;
 
     return (
         <>
@@ -284,7 +359,7 @@ export function SubcontractAdjustmentView({
                         <>
                             <DashboardKpiCard
                                 title="Coeficiente de Ajuste"
-                                value={coefficient.toFixed(4)}
+                                value={accumulatedCoefficient.toFixed(4)}
                                 icon={<Percent className="h-5 w-5" />}
                                 trend={{
                                     value: `${variation >= 0 ? '+' : ''}${variation.toFixed(1)}%`,
@@ -332,96 +407,158 @@ export function SubcontractAdjustmentView({
                         size="large"
                     />
                 </div>
-                {/* Evolution Chart - Using project chart components */}
-                {chartData.length > 1 && (
+                {/* Charts Row - Side by Side on Desktop */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Evolution Chart - LEFT */}
+                    {chartData.length > 1 && (
+                        <DashboardCard
+                            title="Evolución del Saldo"
+                            description="Monto adeudado, pagos acumulados y saldo ajustado"
+                            icon={<TrendingUp className="h-4 w-4" />}
+                            compact
+                        >
+                            {/* Custom Legend */}
+                            <div className="flex items-center justify-end gap-4 mb-2">
+                                <div className="flex items-center gap-1.5 text-xs">
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#EF4444' }} />
+                                    <span className="text-muted-foreground">Saldo Pendiente</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs">
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                                    <span className="text-muted-foreground">Pagos Acumulados</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs">
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#8B5CF6' }} />
+                                    <span className="text-muted-foreground">Saldo Ajustado</span>
+                                </div>
+                            </div>
+                            <ChartContainer
+                                config={{
+                                    saldo: { label: 'Saldo Pendiente', color: '#EF4444' },
+                                    pagado: { label: 'Pagos Acumulados', color: '#22c55e' },
+                                    saldoAjustado: { label: 'Saldo Ajustado', color: '#8B5CF6' }
+                                } satisfies ChartConfig}
+                                className="w-full"
+                                style={{ height: 276 }}
+                            >
+                                <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_DEFAULTS.gridColor} />
+                                    <XAxis
+                                        dataKey="month"
+                                        fontSize={11}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        minTickGap={20}
+                                        tick={{ fill: '#a1a1aa' }}
+                                        dy={4}
+                                    />
+                                    <YAxis
+                                        tickFormatter={(v: number) => formatMoney(v)}
+                                        fontSize={11}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        width={40}
+                                        tick={{ fill: '#a1a1aa' }}
+                                    />
+                                    <ChartTooltip
+                                        cursor={{ stroke: '#EF4444', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                        content={<ChartTooltipContent formatter={(v) => formatMoney(Number(v) || 0)} />}
+                                    />
+                                    {/* Línea 1: Saldo Pendiente (baja con pagos) */}
+                                    <Line
+                                        type="monotone"
+                                        dataKey="saldo"
+                                        name="Saldo Pendiente"
+                                        stroke="var(--color-saldo)"
+                                        strokeWidth={2}
+                                        dot={false}
+                                        animationDuration={CHART_DEFAULTS.animationDuration}
+                                    />
+                                    {/* Línea 2: Pagos Acumulados (sube) */}
+                                    <Line
+                                        type="monotone"
+                                        dataKey="pagado"
+                                        name="Pagos Acumulados"
+                                        stroke="var(--color-pagado)"
+                                        strokeWidth={2}
+                                        dot={false}
+                                        animationDuration={CHART_DEFAULTS.animationDuration}
+                                    />
+                                    {/* Línea 3: Saldo Ajustado (punteada) */}
+                                    <Line
+                                        type="monotone"
+                                        dataKey="saldoAjustado"
+                                        name="Saldo Ajustado"
+                                        stroke="var(--color-saldoAjustado)"
+                                        strokeWidth={2}
+                                        strokeDasharray="5 5"
+                                        dot={false}
+                                        animationDuration={CHART_DEFAULTS.animationDuration}
+                                    />
+                                </LineChart>
+                            </ChartContainer>
+                        </DashboardCard>
+                    )}
+
+                    {/* Payment Speed vs Inflation - RIGHT */}
                     <DashboardCard
-                        title="Evolución del Saldo"
-                        description="Monto adeudado, pagos acumulados y saldo ajustado"
+                        title="Velocidad de Pago vs Inflación"
+                        description={isWinning
+                            ? "✅ Estás pagando más rápido de lo que sube la inflación"
+                            : "⚠️ La inflación está superando tu ritmo de pagos"
+                        }
                         icon={<TrendingUp className="h-4 w-4" />}
                         compact
                     >
-                        {/* Custom Legend */}
-                        <div className="flex items-center justify-end gap-4 mb-2">
-                            <div className="flex items-center gap-1.5 text-xs">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#3B82F6' }} />
-                                <span className="text-muted-foreground">Saldo Pendiente</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#22c55e' }} />
-                                <span className="text-muted-foreground">Pagos Acumulados</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#8B5CF6' }} />
-                                <span className="text-muted-foreground">Saldo Ajustado</span>
+                        <div className="flex flex-col justify-center h-[276px] py-4">
+                            <div className="space-y-8">
+                                {/* Payment Progress */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-muted-foreground">Pagado del Contrato</span>
+                                        <span className={cn(
+                                            "text-2xl font-bold",
+                                            isWinning ? "text-green-500" : "text-muted-foreground"
+                                        )}>
+                                            {paymentProgress.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(paymentProgress, 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatMoney(totalPaid)} de {formatMoney(contractTotal)}
+                                    </p>
+                                </div>
+
+                                {/* Inflation Progress */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-muted-foreground">Inflación Acumulada</span>
+                                        <span className={cn(
+                                            "text-2xl font-bold",
+                                            !isWinning ? "text-red-500" : "text-muted-foreground"
+                                        )}>
+                                            +{inflationProgress.toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-red-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(inflationProgress * 2, 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Diferencia: {formatMoney(Math.abs(difference))}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <ChartContainer
-                            config={{
-                                saldo: { label: 'Saldo Pendiente', color: '#3B82F6' },
-                                pagado: { label: 'Pagos Acumulados', color: '#22c55e' },
-                                saldoAjustado: { label: 'Saldo Ajustado', color: '#8B5CF6' }
-                            } satisfies ChartConfig}
-                            className="w-full"
-                            style={{ height: 276 }}
-                        >
-                            <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_DEFAULTS.gridColor} />
-                                <XAxis
-                                    dataKey="month"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    minTickGap={20}
-                                    tick={{ fill: '#a1a1aa' }}
-                                    dy={4}
-                                />
-                                <YAxis
-                                    tickFormatter={(v: number) => formatMoney(v)}
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    width={40}
-                                    tick={{ fill: '#a1a1aa' }}
-                                />
-                                <ChartTooltip
-                                    cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                    content={<ChartTooltipContent formatter={(v) => formatMoney(Number(v) || 0)} />}
-                                />
-                                {/* Línea 1: Saldo Pendiente (baja con pagos) */}
-                                <Line
-                                    type="monotone"
-                                    dataKey="saldo"
-                                    name="Saldo Pendiente"
-                                    stroke="var(--color-saldo)"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    animationDuration={CHART_DEFAULTS.animationDuration}
-                                />
-                                {/* Línea 2: Pagos Acumulados (sube) */}
-                                <Line
-                                    type="monotone"
-                                    dataKey="pagado"
-                                    name="Pagos Acumulados"
-                                    stroke="var(--color-pagado)"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    animationDuration={CHART_DEFAULTS.animationDuration}
-                                />
-                                {/* Línea 3: Saldo Ajustado (punteada) */}
-                                <Line
-                                    type="monotone"
-                                    dataKey="saldoAjustado"
-                                    name="Saldo Ajustado"
-                                    stroke="var(--color-saldoAjustado)"
-                                    strokeWidth={2}
-                                    strokeDasharray="5 5"
-                                    dot={false}
-                                    animationDuration={CHART_DEFAULTS.animationDuration}
-                                />
-                            </LineChart>
-                        </ChartContainer>
                     </DashboardCard>
-                )}
+                </div>
 
                 {chartData.length <= 1 && (
                     <DashboardCard

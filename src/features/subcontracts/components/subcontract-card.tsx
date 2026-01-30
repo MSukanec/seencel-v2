@@ -15,12 +15,13 @@ import { useMoney } from "@/hooks/use-money";
 
 interface SubcontractCardProps {
     subcontract: any;
+    payments?: any[]; // Payments for this subcontract to calculate totals
     onView: (subcontract: any) => void;
     onEdit: (subcontract: any) => void;
     onDelete: (subcontract: any) => void;
 }
 
-export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: SubcontractCardProps) {
+export function SubcontractCard({ subcontract, payments = [], onView, onEdit, onDelete }: SubcontractCardProps) {
     const money = useMoney();
     const currentRate = money.config.currentExchangeRate;
 
@@ -34,31 +35,34 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
     const avatarFallback = (providerName[0] || "").toUpperCase();
     const imageUrl = subcontract.provider_image || contact?.image_url;
 
-    // Use useMoney.sum() for proper bimonetary conversion respecting displayMode
+    // Subcontract total (monto contratado) - always in functional currency (ARS)
     const currencyCode = subcontract.currency_code || "ARS";
     const exchangeRate = Number(subcontract.exchange_rate) || currentRate;
-
-    // Create items for sum() - each subcontract amount as a single-item array
-    const totalItem = [{ amount: Number(subcontract.amount_total || 0), currency_code: currencyCode, exchange_rate: exchangeRate }];
-    const paidItem = [{ amount: Number(subcontract.paid_amount || 0), currency_code: currencyCode, exchange_rate: exchangeRate }];
-    const remainingItem = [{ amount: Number(subcontract.remaining_amount || 0), currency_code: currencyCode, exchange_rate: exchangeRate }];
-
-    // DEBUG: Log conversion data
-    console.log('[SubcontractCard DEBUG]', {
-        title: subcontract.title,
-        rawCurrencyCode: subcontract.currency_code,
-        usedCurrencyCode: currencyCode,
-        rawExchangeRate: subcontract.exchange_rate,
-        usedExchangeRate: exchangeRate,
-        displayMode: money.displayMode,
-        currentRate: currentRate,
-        amount_total: subcontract.amount_total,
+    const totalFunctional = money.toFunctionalAmount({
+        amount: Number(subcontract.amount_total || 0),
+        currency_code: currencyCode,
+        exchange_rate: exchangeRate
     });
 
-    // Get converted totals using sum() which respects displayMode
-    const totalDisplay = money.sum(totalItem).total;
-    const paidDisplay = money.sum(paidItem).total;
-    const remainingDisplay = money.sum(remainingItem).total;
+    // Calculate paid amount from individual payments - ALWAYS in functional currency
+    // This ensures USD payments are converted to ARS for accurate totals
+    const confirmedPayments = payments.filter(p =>
+        p.status === 'confirmed' && p.subcontract_id === subcontract.id
+    );
+    const paidFunctional = confirmedPayments.reduce((sum, p) => {
+        return sum + money.toFunctionalAmount({
+            amount: Number(p.amount || 0),
+            currency_code: p.currency_code || 'ARS',
+            exchange_rate: Number(p.exchange_rate) || currentRate
+        });
+    }, 0);
+
+    // Now convert functional totals to display currency based on displayMode
+    const totalDisplay = money.sum([{ amount: totalFunctional, currency_code: 'ARS', exchange_rate: 1 }]).total;
+    const paidDisplay = money.sum([{ amount: paidFunctional, currency_code: 'ARS', exchange_rate: 1 }]).total;
+
+    // Remaining = Total - Paid
+    const remainingDisplay = totalDisplay - paidDisplay;
 
     const startDate = subcontract.start_date
         ? format(new Date(subcontract.start_date), "dd MMM yyyy", { locale: es })
@@ -93,8 +97,11 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
             break;
     }
 
-    // Progress for the gradient line
-    const progress = Math.min(100, Math.max(0, subcontract.progress_percentage || 0));
+    // Progress for the gradient line (calculated from payments)
+    const contractTotal = Number(subcontract.amount_total || 0);
+    const progress = contractTotal > 0
+        ? Math.min(100, Math.max(0, (paidDisplay / totalDisplay) * 100))
+        : 0;
 
     return (
         <div
@@ -156,17 +163,10 @@ export function SubcontractCard({ subcontract, onView, onEdit, onDelete }: Subco
                     </div>
                 </div>
 
-                {/* Date + Exchange Rate DEBUG */}
+                {/* Date */}
                 <div className="flex items-center gap-2 text-muted-foreground min-w-[120px]">
                     <Calendar className="h-4 w-4" />
                     <span>{startDate}</span>
-                </div>
-                {/* DEBUG: Show exchange rate */}
-                <div className="flex flex-col items-end text-xs">
-                    <span className="text-[10px] uppercase text-amber-500 font-semibold">TC</span>
-                    <span className="font-mono text-amber-400">
-                        {subcontract.exchange_rate ?? 'NULL'} ({currencyCode})
-                    </span>
                 </div>
             </div>
 

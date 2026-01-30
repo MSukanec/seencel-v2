@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Banknote, Upload, Download } from "lucide-react";
+import { Plus, Banknote, Upload, Download, TrendingDown, DollarSign, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase, MaterialType } from "../types";
@@ -19,6 +19,8 @@ import { DeleteConfirmationDialog } from "@/components/shared/forms/general/dele
 import { useModal } from "@/providers/modal-store";
 import { useRouter } from "next/navigation";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
+import { useMoney } from "@/hooks/use-money";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 
 // Import System
 import { ImportConfig } from "@/lib/import-utils";
@@ -166,6 +168,11 @@ export function MaterialsPaymentsView({
         createTextColumn<MaterialPaymentView>({
             accessorKey: "provider_name",
             title: "Proveedor",
+            muted: true,
+        }),
+        createTextColumn<MaterialPaymentView>({
+            accessorKey: "notes",
+            title: "Notas",
             muted: true,
         }),
         createTextColumn<MaterialPaymentView>({
@@ -323,6 +330,36 @@ export function MaterialsPaymentsView({
         : optimisticPayments;
 
     // ========================================
+    // KPI CALCULATIONS
+    // ========================================
+    const kpiData = useMemo(() => {
+        const allItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+        const confirmedItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+        const pendingItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
+
+        filteredPayments.forEach(p => {
+            const item = {
+                amount: Number(p.amount) || 0,
+                currency_code: p.currency_code || 'ARS',
+                exchange_rate: Number(p.exchange_rate) || 1
+            };
+            allItems.push(item);
+            if (p.status === 'confirmed') {
+                confirmedItems.push(item);
+            } else if (p.status === 'pending') {
+                pendingItems.push(item);
+            }
+        });
+
+        return {
+            allItems,
+            confirmedItems,
+            pendingItems,
+            cantidadPagos: filteredPayments.length
+        };
+    }, [filteredPayments]);
+
+    // ========================================
     // RENDER
     // ========================================
     return (
@@ -362,7 +399,35 @@ export function MaterialsPaymentsView({
                         description="Registrá el primer pago de materiales usando el botón en la barra superior."
                     />
                 ) : (
-                    <div className="h-full flex flex-col">
+                    <div className="space-y-6">
+                        {/* KPI Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <DashboardKpiCard
+                                title="Total Pagos"
+                                items={kpiData.allItems}
+                                icon={<TrendingDown className="h-5 w-5" />}
+                                iconClassName="bg-amount-negative/10 text-amount-negative"
+                            />
+                            <DashboardKpiCard
+                                title="Confirmados"
+                                items={kpiData.confirmedItems}
+                                icon={<DollarSign className="h-5 w-5" />}
+                                iconClassName="bg-amount-positive/10 text-amount-positive"
+                            />
+                            <DashboardKpiCard
+                                title="Pendientes"
+                                items={kpiData.pendingItems}
+                                icon={<DollarSign className="h-5 w-5" />}
+                                iconClassName="bg-amber-500/10 text-amber-600"
+                            />
+                            <DashboardKpiCard
+                                title="Cantidad"
+                                value={kpiData.cantidadPagos.toString()}
+                                icon={<Receipt className="h-5 w-5" />}
+                            />
+                        </div>
+
+                        {/* DataTable */}
                         <DataTable
                             columns={columns}
                             data={filteredPayments}

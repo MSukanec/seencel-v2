@@ -117,29 +117,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
         };
     }, [activeSubcontracts, payments, money.config, money.displayMode]);
 
-    // DEBUG: Verify displayMode is changing
-    console.log('[SUBCONTRACTS DEBUG]', {
-        displayMode: money.displayMode,
-        currentRate: money.config.currentExchangeRate,
-        totalContracted: kpis.totalContracted,
-        totalPaid: kpis.totalPaid,
-        paymentsCount: payments.length,
-        // Log first 3 payments with their exchange_rates
-        samplePayments: payments.slice(0, 3).map(p => ({
-            id: p.id,
-            amount: p.amount,
-            currency_code: p.currency_code,
-            exchange_rate: p.exchange_rate,
-            status: p.status
-        })),
-        // Log first 3 subcontracts with their exchange_rates
-        sampleSubcontracts: activeSubcontracts.slice(0, 3).map(s => ({
-            title: s.title,
-            amount_total: s.amount_total,
-            currency_code: s.currency_code,
-            exchange_rate: s.exchange_rate,
-        }))
-    });
+
 
     // Helper to get display value based on mode
     const getDisplayValue = (total: number, breakdown: any[]) => {
@@ -294,6 +272,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
                                 <SubcontractCard
                                     key={subcontract.id}
                                     subcontract={subcontract}
+                                    payments={payments}
                                     onView={handleView}
                                     onEdit={handleEdit}
                                     onDelete={handleDeleteClick}
