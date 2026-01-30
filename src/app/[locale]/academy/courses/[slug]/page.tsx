@@ -2,7 +2,7 @@ import { getCourseBySlug } from "@/features/academy/course-queries";
 import { CourseLanding } from "@/features/academy/views/course-landing-view";
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
-import { getUserProfile } from "@/features/users/queries";
+import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
 import { isUserEnrolledInCourse } from "@/actions/enrollment-actions";
 import { getFeatureFlag } from "@/actions/feature-flags";
 import { setRequestLocale } from 'next-intl/server';
@@ -19,10 +19,11 @@ export default async function PublicCoursePage({ params }: PageProps) {
     const { slug, locale } = await params;
     setRequestLocale(locale);
 
-    const [userProfile, course, isPurchaseEnabled] = await Promise.all([
+    const [userProfile, course, isPurchaseEnabled, isAdmin] = await Promise.all([
         getUserProfile(),
         getCourseBySlug(slug),
         getFeatureFlag("course_purchases_enabled"),
+        checkIsAdmin(),
     ]);
 
     if (!course) {
@@ -31,9 +32,6 @@ export default async function PublicCoursePage({ params }: PageProps) {
 
     // Check if user is enrolled in this course (only if course has ID)
     const isEnrolled = course.id ? await isUserEnrolledInCourse(course.id) : false;
-
-    // Check if user is admin (role_id = 1)
-    const isAdmin = String(userProfile.profile?.role_id) === "1";
 
     return (
         <div className="flex min-h-screen flex-col bg-background">

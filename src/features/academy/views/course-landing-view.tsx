@@ -105,7 +105,7 @@ export function CourseLanding({ course, isDashboard = false, isEnrolled = false,
             {/* SECTION 1: HERO */}
             {/* ============================================ */}
             {sections.hero && (
-                <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+                <section className="relative min-h-screen flex items-center overflow-hidden">
                     {/* Background Image with Overlay */}
                     <div className="absolute inset-0 z-0">
                         <img
