@@ -14,6 +14,11 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // Service Worker must be served from root without any redirects
+    if (pathname === '/sw.js') {
+        return NextResponse.next();
+    }
+
     // 1. Run I18n Middleware first to generate the response with locale
     const response = handleI18nRouting(request);
 
