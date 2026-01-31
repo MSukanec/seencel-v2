@@ -91,6 +91,8 @@ export async function createPayPalOrder({
                 brand_name: 'SEENCEL',
                 landing_page: 'NO_PREFERENCE',
                 user_action: 'PAY_NOW',
+                return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/checkout/success?source=paypal`,
+                cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/checkout/failure?source=paypal`,
             },
         }),
     });
