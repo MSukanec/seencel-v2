@@ -17,12 +17,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Check if test mode is enabled via feature flag
-        const isTestMode = await getFeatureFlag('paypal_modo_test');
-        // When PayPal is disabled for users (paypal_enabled = false), use sandbox credentials
-        // This allows admins to test with sandbox while users can't access PayPal
+        // Check if PayPal is enabled
+        // When disabled (paypal_enabled = false): use sandbox credentials + test prices
+        // When enabled (paypal_enabled = true): use production credentials + real prices
         const paypalEnabled = await getFeatureFlag('paypal_enabled');
-        const sandboxMode = !paypalEnabled; // Disabled for users = sandbox mode for testing
+        const sandboxMode = !paypalEnabled;
+        const isTestMode = !paypalEnabled; // Same logic - disabled = test mode
 
         // Get request body
         const body = await request.json();
