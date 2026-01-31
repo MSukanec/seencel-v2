@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPayPalOrder } from '@/lib/paypal/client';
 import { createClient } from '@/lib/supabase/server';
 import { getFeatureFlag } from '@/actions/feature-flags';
+import crypto from 'crypto';
 
 // Test mode price: $0.10 USD (minimum for real testing)
 const TEST_PRICE_USD = 0.10;
@@ -55,26 +56,90 @@ export async function POST(request: NextRequest) {
                 : amount;
         }
 
-        // Build custom_id with all metadata (similar to MP's external_reference)
-        const customId = JSON.stringify({
-            user_id: user.id,
-            product_type: productType,
-            product_id: productId,
-            organization_id: organizationId || null,
-            billing_period: billingPeriod || null,
-            coupon_code: couponCode || null,
-            coupon_discount: couponDiscount || null,
-            is_test: isTestMode, // Mark as test payment
-        });
+        // Generate a short unique ID for paypal_preferences (fits in PayPal's 127 char limit)
+        const preferenceId = crypto.randomUUID().replace(/-/g, '').substring(0, 21); // 21 chars, URL-safe
 
-        // Create PayPal order
+        // Get coupon_id if coupon code was provided
+        let couponId: string | null = null;
+        if (couponCode) {
+            const { data: coupon } = await supabase
+                .from('coupons')
+                .select('id')
+                .ilike('code', couponCode)
+                .single();
+            couponId = coupon?.id || null;
+        }
+
+        // Get plan slug if this is a subscription
+        let planSlug: string | null = null;
+        if (productType === 'subscription') {
+            const { data: plan } = await supabase
+                .from('plans')
+                .select('slug')
+                .eq('id', productId)
+                .single();
+            planSlug = plan?.slug || null;
+        }
+
+        // Get internal user_id (users.id) from auth_id (same pattern as MercadoPago)
+        const { data: internalUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_id', user.id)
+            .single();
+
+        if (!internalUser) {
+            return NextResponse.json(
+                { error: 'User not found' },
+                { status: 400 }
+            );
+        }
+
+        // Save preference to database (similar to mp_preferences pattern)
+        const { error: insertError } = await supabase
+            .from('paypal_preferences')
+            .insert({
+                id: preferenceId,
+                user_id: internalUser.id,
+                organization_id: productType === 'subscription' ? organizationId : null,
+                plan_id: productType === 'subscription' ? productId : null,
+                plan_slug: planSlug,
+                billing_period: billingPeriod || null,
+                amount: finalAmount,
+                currency: 'USD',
+                product_type: productType,
+                course_id: productType === 'course' ? productId : null,
+                coupon_id: couponId,
+                coupon_code: couponCode || null,
+                discount_amount: couponDiscount || 0,
+                is_test: isTestMode,
+                is_sandbox: sandboxMode,
+                status: 'pending',
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h expiry
+            });
+
+        if (insertError) {
+            console.error('Error saving PayPal preference:', insertError);
+            return NextResponse.json(
+                { error: 'Failed to save order data' },
+                { status: 500 }
+            );
+        }
+
+        // Create PayPal order with preference ID as custom_id
         const order = await createPayPalOrder({
             amount: finalAmount,
             currency: 'USD',
             description: isTestMode ? `[TEST] ${title}` : title,
-            customId,
+            customId: preferenceId, // Short ID that fits PayPal's limit
             sandboxMode,
         });
+
+        // Update preference with PayPal order ID
+        await supabase
+            .from('paypal_preferences')
+            .update({ order_id: order.id })
+            .eq('id', preferenceId);
 
         // Find the approval URL from PayPal's response links
         const approveLink = order.links?.find(

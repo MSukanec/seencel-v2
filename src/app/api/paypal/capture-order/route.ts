@@ -36,30 +36,28 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Get order details for metadata
+        // Get order details for custom_id (which is our preference ID)
         const orderDetails = await getPayPalOrderDetails(orderId, sandboxMode);
         const purchaseUnit = orderDetails.purchase_units?.[0];
-        const customId = purchaseUnit?.custom_id;
+        const preferenceId = purchaseUnit?.custom_id;
 
-        if (!customId) {
+        if (!preferenceId) {
             return NextResponse.json({ error: 'Missing order metadata' }, { status: 400 });
         }
 
-        // Parse metadata
-        let metadata;
-        try {
-            metadata = JSON.parse(customId);
-        } catch {
-            return NextResponse.json({ error: 'Invalid order metadata' }, { status: 400 });
-        }
+        const adminSupabase = await createAdminClient();
 
-        const {
-            product_type,
-            product_id,
-            organization_id,
-            billing_period,
-            coupon_code,
-        } = metadata;
+        // Look up preference from database (new pattern using paypal_preferences table)
+        const { data: preference, error: prefError } = await adminSupabase
+            .from('paypal_preferences')
+            .select('*')
+            .eq('id', preferenceId)
+            .single();
+
+        if (prefError || !preference) {
+            console.error('PayPal preference not found:', preferenceId, prefError);
+            return NextResponse.json({ error: 'Order metadata not found' }, { status: 400 });
+        }
 
         // Get capture details for payment amount
         const capture = captureResult.purchase_units?.[0]?.payments?.captures?.[0];
@@ -67,19 +65,8 @@ export async function POST(request: NextRequest) {
         const captureCurrency = capture?.amount?.currency_code || 'USD';
         const captureId = capture?.id;
 
-        // Get internal user_id
-        const adminSupabase = await createAdminClient();
-        const { data: userData } = await adminSupabase
-            .from('users')
-            .select('id')
-            .eq('auth_id', user.id)
-            .single();
-
-        if (!userData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 400 });
-        }
-
-        const internalUserId = userData.id;
+        // Get internal user_id from preference (it's already the internal ID)
+        const internalUserId = preference.user_id;
 
         // Log payment event
         await adminSupabase.from('payment_events').insert({
@@ -88,6 +75,7 @@ export async function POST(request: NextRequest) {
             provider_event_type: 'PAYMENT.CAPTURE.COMPLETED',
             provider_payment_id: captureId,
             order_id: orderId,
+            custom_id: preferenceId,
             amount: captureAmount,
             currency: captureCurrency,
             raw_payload: captureResult,
@@ -95,16 +83,29 @@ export async function POST(request: NextRequest) {
             processed_at: new Date().toISOString(),
         });
 
+        // Update preference status
+        await adminSupabase
+            .from('paypal_preferences')
+            .update({
+                status: 'completed',
+                captured_at: new Date().toISOString(),
+            })
+            .eq('id', preferenceId);
+
         // Call appropriate handler based on product type
-        if (product_type === 'course') {
-            const { data, error } = await adminSupabase.rpc('handle_payment_course_success', {
+        if (preference.product_type === 'course') {
+            const { error } = await adminSupabase.rpc('handle_payment_course_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
-                p_course_id: product_id,
+                p_course_id: preference.course_id,
                 p_amount: captureAmount,
                 p_currency: captureCurrency,
-                p_metadata: { paypal_order_id: orderId, paypal_capture_id: captureId },
+                p_metadata: {
+                    paypal_order_id: orderId,
+                    paypal_capture_id: captureId,
+                    preference_id: preferenceId,
+                },
             });
 
             if (error) {
@@ -112,17 +113,21 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Failed to process course payment' }, { status: 500 });
             }
 
-        } else if (product_type === 'subscription') {
-            const { data, error } = await adminSupabase.rpc('handle_payment_subscription_success', {
+        } else if (preference.product_type === 'subscription') {
+            const { error } = await adminSupabase.rpc('handle_payment_subscription_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
-                p_organization_id: organization_id,
-                p_plan_id: product_id,
-                p_billing_period: billing_period || 'monthly',
+                p_organization_id: preference.organization_id,
+                p_plan_id: preference.plan_id,
+                p_billing_period: preference.billing_period || 'monthly',
                 p_amount: captureAmount,
                 p_currency: captureCurrency,
-                p_metadata: { paypal_order_id: orderId, paypal_capture_id: captureId },
+                p_metadata: {
+                    paypal_order_id: orderId,
+                    paypal_capture_id: captureId,
+                    preference_id: preferenceId,
+                },
             });
 
             if (error) {
@@ -132,10 +137,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Redeem coupon if applicable
-        if (coupon_code && product_type === 'course') {
+        if (preference.coupon_code && preference.product_type === 'course') {
             await adminSupabase.rpc('redeem_coupon', {
-                p_code: coupon_code,
-                p_course_id: product_id,
+                p_code: preference.coupon_code,
+                p_course_id: preference.course_id,
                 p_order_id: orderId,
                 p_price: captureAmount,
                 p_currency: captureCurrency,
