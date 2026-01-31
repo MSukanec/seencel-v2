@@ -19,6 +19,33 @@ export interface OrganizationBasic {
     planName: string | null;
 }
 
+// =============================================================================
+// SUPPORT MESSAGES TYPES
+// =============================================================================
+
+export interface SupportChat {
+    userId: string;
+    userEmail: string;
+    userName: string | null;
+    userAvatar: string | null;
+    lastMessage: string;
+    lastMessageAt: string;
+    lastMessageSender: 'user' | 'admin';
+    unreadCount: number;
+}
+
+export interface SupportMessage {
+    id: string;
+    userId: string;
+    message: string;
+    sender: 'user' | 'admin';
+    createdAt: string;
+    readByAdmin: boolean;
+    readByUser: boolean;
+}
+
+
+
 /**
  * Lista todos los usuarios ADMIN (para selector de soporte)
  * Filtra por role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2' (admin role)
@@ -457,3 +484,221 @@ export async function getSystemErrors(hours: number = 24): Promise<{ success: bo
         };
     }
 }
+
+// =============================================================================
+// SUPPORT MESSAGES FUNCTIONS
+// =============================================================================
+
+/**
+ * Obtiene todos los chats de soporte agrupados por usuario
+ * Ordena por último mensaje (más reciente primero)
+ */
+export async function getSupportChats(): Promise<{ success: boolean; chats?: SupportChat[]; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener todos los mensajes con info del usuario
+        const { data: messages, error } = await supabase
+            .from("support_messages")
+            .select(`
+                id,
+                user_id,
+                message,
+                sender,
+                created_at,
+                read_by_admin,
+                users:user_id (
+                    email,
+                    full_name,
+                    avatar_url
+                )
+            `)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching support messages:", error);
+            return { success: false, error: error.message };
+        }
+
+        // Agrupar por user_id
+        const chatMap = new Map<string, {
+            userId: string;
+            userEmail: string;
+            userName: string | null;
+            userAvatar: string | null;
+            messages: typeof messages;
+        }>();
+
+        (messages || []).forEach((msg: any) => {
+            if (!chatMap.has(msg.user_id)) {
+                chatMap.set(msg.user_id, {
+                    userId: msg.user_id,
+                    userEmail: msg.users?.email || "Sin email",
+                    userName: msg.users?.full_name || null,
+                    userAvatar: msg.users?.avatar_url || null,
+                    messages: []
+                });
+            }
+            chatMap.get(msg.user_id)!.messages.push(msg);
+        });
+
+        // Convertir a array de SupportChat
+        const chats: SupportChat[] = Array.from(chatMap.values()).map(chat => {
+            const lastMsg = chat.messages[0]; // Ya está ordenado desc
+            const unreadCount = chat.messages.filter(
+                (m: any) => m.sender === 'user' && !m.read_by_admin
+            ).length;
+
+            return {
+                userId: chat.userId,
+                userEmail: chat.userEmail,
+                userName: chat.userName,
+                userAvatar: chat.userAvatar,
+                lastMessage: lastMsg?.message || "",
+                lastMessageAt: lastMsg?.created_at || "",
+                lastMessageSender: lastMsg?.sender || 'user',
+                unreadCount
+            };
+        });
+
+        // Ordenar: primero los no leídos, luego por fecha
+        chats.sort((a, b) => {
+            if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+            if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+            return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+        });
+
+        return { success: true, chats };
+    } catch (error) {
+        console.error("Error en getSupportChats:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Obtiene todos los mensajes de un chat específico
+ */
+export async function getChatMessages(userId: string): Promise<{ success: boolean; messages?: SupportMessage[]; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("support_messages")
+            .select("id, user_id, message, sender, created_at, read_by_admin, read_by_user")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true });
+
+        if (error) {
+            console.error("Error fetching chat messages:", error);
+            return { success: false, error: error.message };
+        }
+
+        const messages: SupportMessage[] = (data || []).map((m: any) => ({
+            id: m.id,
+            userId: m.user_id,
+            message: m.message,
+            sender: m.sender,
+            createdAt: m.created_at,
+            readByAdmin: m.read_by_admin,
+            readByUser: m.read_by_user
+        }));
+
+        return { success: true, messages };
+    } catch (error) {
+        console.error("Error en getChatMessages:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Envía un mensaje como admin
+ */
+export async function sendAdminMessage(userId: string, message: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        // Verificar autenticación
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: "No autenticado" };
+        }
+
+        const { error } = await supabase
+            .from("support_messages")
+            .insert({
+                user_id: userId,
+                message: message.trim(),
+                sender: 'admin',
+                read_by_admin: true, // El admin ya lo vio porque lo escribió
+                read_by_user: false
+            });
+
+        if (error) {
+            console.error("Error sending admin message:", error);
+            return { success: false, error: error.message };
+        }
+
+        revalidatePath("/admin/support");
+        return { success: true };
+    } catch (error) {
+        console.error("Error en sendAdminMessage:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Marca todos los mensajes de un usuario como leídos por admin
+ */
+export async function markChatAsRead(userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        const { error } = await supabase
+            .from("support_messages")
+            .update({ read_by_admin: true })
+            .eq("user_id", userId)
+            .eq("sender", "user")
+            .eq("read_by_admin", false);
+
+        if (error) {
+            console.error("Error marking chat as read:", error);
+            return { success: false, error: error.message };
+        }
+
+        revalidatePath("/admin/support");
+        return { success: true };
+    } catch (error) {
+        console.error("Error en markChatAsRead:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Obtiene el conteo de chats con mensajes sin leer
+ */
+export async function getUnreadChatsCount(): Promise<{ success: boolean; count?: number; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener mensajes no leídos del usuario
+        const { data, error } = await supabase
+            .from("support_messages")
+            .select("user_id")
+            .eq("sender", "user")
+            .eq("read_by_admin", false);
+
+        if (error) {
+            console.error("Error counting unread chats:", error);
+            return { success: false, error: error.message };
+        }
+
+        // Contar usuarios únicos con mensajes sin leer
+        const uniqueUsers = new Set((data || []).map((m: any) => m.user_id));
+
+        return { success: true, count: uniqueUsers.size };
+    } catch (error) {
+        console.error("Error en getUnreadChatsCount:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+

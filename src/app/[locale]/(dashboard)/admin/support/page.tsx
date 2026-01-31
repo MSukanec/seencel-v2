@@ -1,10 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, HelpCircle } from "lucide-react";
+import { MessageCircle, HelpCircle, Bug } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SupportToolsContainer } from "@/features/admin/support/components/support-tools-container";
+import { SupportInboxView } from "@/features/admin/support/components/support-inbox-view";
+
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -32,7 +34,16 @@ export default async function SupportPage({ params }: PageProps) {
                         >
                             <div className="flex items-center gap-2">
                                 <MessageCircle className="h-4 w-4" />
-                                <span>Tickets</span>
+                                <span>Mensajes</span>
+                            </div>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="debug"
+                            className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Bug className="h-4 w-4" />
+                                <span>Debug</span>
                             </div>
                         </TabsTrigger>
                         <TabsTrigger
@@ -47,23 +58,21 @@ export default async function SupportPage({ params }: PageProps) {
                     </TabsList>
                 }
             >
+                {/* Tab: Mensajes de soporte */}
                 <TabsContent value="tickets" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <div className="space-y-6">
-                            {/* Unified Support Tools with user/org selectors */}
-                            <SupportToolsContainer />
-
-                            {/* Placeholder para futuros tickets */}
-                            <div className="flex items-center justify-center h-40 border-2 border-dashed border-border rounded-lg">
-                                <div className="text-center text-muted-foreground">
-                                    <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                                    <p className="text-sm">Más herramientas de soporte próximamente...</p>
-                                </div>
-                            </div>
-                        </div>
+                        <SupportInboxView />
                     </ContentLayout>
                 </TabsContent>
 
+                {/* Tab: Herramientas de Debug */}
+                <TabsContent value="debug" className="m-0 h-full focus-visible:outline-none">
+                    <ContentLayout variant="wide">
+                        <SupportToolsContainer />
+                    </ContentLayout>
+                </TabsContent>
+
+                {/* Tab: FAQ */}
                 <TabsContent value="faq" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
                         <div className="flex items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
@@ -79,3 +88,4 @@ export default async function SupportPage({ params }: PageProps) {
         </Tabs>
     );
 }
+
