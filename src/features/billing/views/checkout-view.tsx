@@ -742,7 +742,7 @@ export function CheckoutView({
                                         const isLocked = !isArgentina && (value === "transfer" || value === "mercadopago");
                                         if (!isLocked) setPaymentMethod(value);
                                     }}
-                                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+                                    className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
                                 >
                                     {orderedPaymentMethods.map((method) => {
                                         const Icon = method.icon;
@@ -1233,11 +1233,13 @@ export function CheckoutView({
 
                                                     const orderData = await createResponse.json();
 
-                                                    // 2. Redirect to PayPal approval URL
-                                                    // Note: For inline PayPal buttons, you'd use PayPalButtons component
-                                                    // This is a server-side flow - we need to redirect to PayPal
-                                                    const approvalUrl = `https://www.paypal.com/checkoutnow?token=${orderData.orderId}`;
-                                                    window.location.href = approvalUrl;
+                                                    // 2. Redirect to PayPal approval URL (from API response)
+                                                    // The API returns the correct URL (sandbox or production)
+                                                    if (orderData.approveUrl) {
+                                                        window.location.href = orderData.approveUrl;
+                                                    } else {
+                                                        throw new Error("No se recibió URL de aprobación de PayPal");
+                                                    }
 
                                                 } catch (error) {
                                                     console.error("PayPal error:", error);

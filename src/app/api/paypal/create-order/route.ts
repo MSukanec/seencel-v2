@@ -76,9 +76,15 @@ export async function POST(request: NextRequest) {
             sandboxMode,
         });
 
+        // Find the approval URL from PayPal's response links
+        const approveLink = order.links?.find(
+            (link: { rel: string; href: string }) => link.rel === 'approve'
+        );
+
         return NextResponse.json({
             orderId: order.id,
             status: order.status,
+            approveUrl: approveLink?.href || null,
         });
 
     } catch (error) {
