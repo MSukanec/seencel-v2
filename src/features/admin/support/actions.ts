@@ -3,19 +3,95 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-/**
- * Datos hardcodeados del usuario de prueba
- */
-const TEST_USER = {
-    email: "matusukanec@gmail.com",
-    organizationId: "0d5e28fe-8fe2-4fe4-9835-4fe21b4f2abb"
-};
+// =============================================================================
+// USER/ORG LISTING FOR ADMIN SUPPORT
+// =============================================================================
+
+export interface UserBasic {
+    id: string;
+    email: string;
+    fullName: string | null;
+}
+
+export interface OrganizationBasic {
+    id: string;
+    name: string;
+    planName: string | null;
+}
 
 /**
- * Limpia todos los datos de compra de prueba para el usuario hardcodeado.
+ * Lista todos los usuarios (para selector admin)
+ */
+export async function getAllUsers(): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("users")
+            .select("id, email, full_name")
+            .order("email");
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        return {
+            success: true,
+            users: (data || []).map(u => ({
+                id: u.id,
+                email: u.email,
+                fullName: u.full_name
+            }))
+        };
+    } catch (error) {
+        console.error("Error en getAllUsers:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Lista las organizaciones de un usuario específico
+ */
+export async function getUserOrganizations(userId: string): Promise<{ success: boolean; organizations?: OrganizationBasic[]; error?: string }> {
+    try {
+        const supabase = await createClient();
+
+        // Get orgs where user is a member
+        const { data, error } = await supabase
+            .from("organization_members")
+            .select(`
+                organization_id,
+                organizations:organization_id (
+                    id,
+                    name,
+                    plans:plan_id (name)
+                )
+            `)
+            .eq("user_id", userId);
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        return {
+            success: true,
+            organizations: (data || []).map((m: any) => ({
+                id: m.organizations.id,
+                name: m.organizations.name,
+                planName: m.organizations.plans?.name || null
+            }))
+        };
+    } catch (error) {
+        console.error("Error en getUserOrganizations:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Limpia todos los datos de compra de prueba para el usuario/org seleccionado.
  * Usa RPC con SECURITY DEFINER para bypass RLS.
  */
-export async function cleanupTestPurchase(email: string): Promise<{ success: boolean; message: string }> {
+export async function cleanupTestPurchase(email: string, orgId: string): Promise<{ success: boolean; message: string }> {
     try {
         const supabase = await createClient();
 
@@ -28,7 +104,7 @@ export async function cleanupTestPurchase(email: string): Promise<{ success: boo
         // Llamar RPC que bypassa RLS
         const { data, error } = await supabase.rpc('admin_cleanup_test_purchase', {
             p_user_email: email,
-            p_org_id: TEST_USER.organizationId
+            p_org_id: orgId
         });
 
         if (error) {
@@ -121,21 +197,21 @@ export interface TestUserStatus {
 }
 
 /**
- * Obtiene el estado actual del usuario de prueba hardcodeado
+ * Obtiene el estado actual del usuario seleccionado
  */
-export async function getTestUserStatus(): Promise<{ success: boolean; data?: TestUserStatus; error?: string }> {
+export async function getTestUserStatus(userId: string, orgId: string): Promise<{ success: boolean; data?: TestUserStatus; error?: string }> {
     try {
         const supabase = await createClient();
 
-        // 1. Obtener usuario
+        // 1. Obtener usuario por ID
         const { data: user } = await supabase
             .from("users")
             .select("id, email, full_name, created_at")
-            .ilike("email", TEST_USER.email)
+            .eq("id", userId)
             .single();
 
         if (!user) {
-            return { success: false, error: "Usuario de prueba no encontrado" };
+            return { success: false, error: "Usuario no encontrado" };
         }
 
         // 2. Obtener organización con plan
@@ -149,7 +225,7 @@ export async function getTestUserStatus(): Promise<{ success: boolean; data?: Te
                 settings,
                 plans:plan_id (name)
             `)
-            .eq("id", TEST_USER.organizationId)
+            .eq("id", orgId)
             .single();
 
         // 3. Obtener suscripción activa
@@ -163,7 +239,7 @@ export async function getTestUserStatus(): Promise<{ success: boolean; data?: Te
                 expires_at,
                 plans:plan_id (name)
             `)
-            .eq("organization_id", TEST_USER.organizationId)
+            .eq("organization_id", orgId)
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
