@@ -4,9 +4,7 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PurchaseCleanupTool } from "@/features/admin/support/components/purchase-cleanup-tool";
-import { TestUserStatusDashboard } from "@/features/admin/support/components/test-user-status-dashboard";
-import { SystemErrorsViewer } from "@/features/admin/support/components/system-errors-viewer";
+import { SupportToolsContainer } from "@/features/admin/support/components/support-tools-container";
 
 interface PageProps {
     params: Promise<{ locale: string }>;
@@ -52,16 +50,8 @@ export default async function SupportPage({ params }: PageProps) {
                 <TabsContent value="tickets" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
                         <div className="space-y-6">
-                            {/* Estado actual del usuario de prueba */}
-                            <TestUserStatusDashboard />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Herramienta de Cleanup */}
-                                <PurchaseCleanupTool />
-
-                                {/* Visor de errores del sistema */}
-                                <SystemErrorsViewer />
-                            </div>
+                            {/* Unified Support Tools with user/org selectors */}
+                            <SupportToolsContainer />
 
                             {/* Placeholder para futuros tickets */}
                             <div className="flex items-center justify-center h-40 border-2 border-dashed border-border rounded-lg">

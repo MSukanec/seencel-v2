@@ -4,43 +4,33 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Home, Receipt, Sparkles, GraduationCap, BookOpen, Loader2 } from "lucide-react";
+import { Home, BookOpen, Receipt, Loader2, Rocket, GraduationCap, PartyPopper, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-// Confetti particle component
-function ConfettiPiece({ delay, left }: { delay: number; left: number }) {
-    const colors = [
-        "bg-green-400",
-        "bg-blue-400",
-        "bg-yellow-400",
-        "bg-pink-400",
-        "bg-purple-400",
-        "bg-orange-400",
-    ];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomSize = Math.random() * 8 + 6; // 6-14px
-    const randomDuration = Math.random() * 2 + 3; // 3-5s
-
+// Floating emoji component
+function FloatingEmoji({ emoji, delay, x }: { emoji: string; delay: number; x: number }) {
     return (
         <div
-            className={`absolute ${randomColor} rounded-sm opacity-90`}
+            className="absolute text-4xl opacity-0"
             style={{
-                left: `${left}%`,
-                top: "-20px",
-                width: `${randomSize}px`,
-                height: `${randomSize}px`,
-                animation: `confetti-fall ${randomDuration}s ease-out ${delay}s forwards`,
+                left: `${x}%`,
+                bottom: "-50px",
+                animation: `float-up 4s ease-out ${delay}s forwards`,
             }}
-        />
+        >
+            {emoji}
+        </div>
     );
 }
 
 export default function CheckoutSuccessPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [confettiPieces, setConfettiPieces] = useState<{ id: number; delay: number; left: number }[]>([]);
     const [isCapturing, setIsCapturing] = useState(false);
     const [capturedPaymentId, setCapturedPaymentId] = useState<string | null>(null);
+    const [capturedProductType, setCapturedProductType] = useState<string | null>(null);
+    const [capturedCourseId, setCapturedCourseId] = useState<string | null>(null);
+    const [showContent, setShowContent] = useState(false);
 
     // Use ref to prevent double capture in React StrictMode
     const captureAttemptedRef = useRef(false);
@@ -52,9 +42,9 @@ export default function CheckoutSuccessPage() {
     // PayPal returns the order ID as 'token' parameter
     const paypalToken = searchParams.get("token");
 
-    // Product type detection - from external_reference parsing
-    const productType = searchParams.get("product_type"); // "subscription" | "course"
-    const courseId = searchParams.get("course_id");
+    // Product type detection - from URL params OR captured from PayPal response
+    const productType = searchParams.get("product_type") || capturedProductType;
+    const courseId = searchParams.get("course_id") || capturedCourseId;
 
     const isCourse = productType === "course" || !!courseId;
 
@@ -86,6 +76,14 @@ export default function CheckoutSuccessPage() {
 
                 const data = await response.json();
                 setCapturedPaymentId(data.captureId || data.orderId);
+
+                // Set product type from PayPal response for correct UI
+                if (data.productType) {
+                    setCapturedProductType(data.productType);
+                }
+                if (data.courseId) {
+                    setCapturedCourseId(data.courseId);
+                }
             } catch (error) {
                 console.error("PayPal capture error:", error);
                 const errorMessage = encodeURIComponent(error instanceof Error ? error.message : "Error al procesar el pago");
@@ -98,24 +96,30 @@ export default function CheckoutSuccessPage() {
         capturePayPalPayment();
     }, [source, paypalToken, capturedPaymentId, router]);
 
-    // Generate confetti on mount (only if not capturing or after successful capture)
+    // Trigger content animation after capturing completes
     useEffect(() => {
-        if (isCapturing) return;
-        const pieces = Array.from({ length: 50 }, (_, i) => ({
-            id: i,
-            delay: Math.random() * 2,
-            left: Math.random() * 100,
-        }));
-        setConfettiPieces(pieces);
+        if (!isCapturing) {
+            const timer = setTimeout(() => setShowContent(true), 100);
+            return () => clearTimeout(timer);
+        }
     }, [isCapturing]);
+
+    // Floating emojis data
+    const emojis = isCourse
+        ? ["🎓", "📚", "✨", "🎉", "🌟", "💡", "🚀", "📖"]
+        : ["🚀", "⭐", "🎉", "💪", "🔥", "✨", "🏆", "💎"];
 
     // Show loading state while capturing PayPal payment
     if (isCapturing) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-primary/5">
                 <div className="flex flex-col items-center text-center space-y-4">
-                    <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                    <p className="text-lg text-muted-foreground">Procesando tu pago con PayPal...</p>
+                    <div className="relative">
+                        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                        <div className="absolute inset-0 blur-xl bg-primary/30 animate-pulse" />
+                    </div>
+                    <p className="text-xl text-muted-foreground">Procesando tu pago...</p>
+                    <p className="text-sm text-muted-foreground/60">Esto solo tomará un momento ✨</p>
                 </div>
             </div>
         );
@@ -123,142 +127,188 @@ export default function CheckoutSuccessPage() {
 
     return (
         <>
-            {/* Confetti Animation Styles */}
+            {/* Animation Styles */}
             <style jsx global>{`
-                @keyframes confetti-fall {
+                @keyframes float-up {
                     0% {
-                        transform: translateY(0) rotate(0deg);
+                        transform: translateY(0) rotate(0deg) scale(1);
+                        opacity: 0;
+                    }
+                    10% {
                         opacity: 1;
                     }
                     100% {
-                        transform: translateY(100vh) rotate(720deg);
+                        transform: translateY(-100vh) rotate(360deg) scale(0.5);
                         opacity: 0;
-                    }
-                }
-                @keyframes pulse-glow {
-                    0%, 100% {
-                        box-shadow: 0 0 20px 0 oklch(var(--primary) / 0.4);
-                    }
-                    50% {
-                        box-shadow: 0 0 40px 10px oklch(var(--primary) / 0.6);
                     }
                 }
                 @keyframes bounce-in {
                     0% {
-                        transform: scale(0);
+                        transform: scale(0) rotate(-10deg);
                         opacity: 0;
                     }
                     50% {
-                        transform: scale(1.2);
+                        transform: scale(1.2) rotate(5deg);
+                    }
+                    70% {
+                        transform: scale(0.9) rotate(-3deg);
                     }
                     100% {
-                        transform: scale(1);
+                        transform: scale(1) rotate(0deg);
                         opacity: 1;
                     }
                 }
+                @keyframes slide-up {
+                    0% {
+                        transform: translateY(30px);
+                        opacity: 0;
+                    }
+                    100% {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes pulse-glow {
+                    0%, 100% {
+                        filter: drop-shadow(0 0 20px oklch(var(--primary) / 0.5));
+                    }
+                    50% {
+                        filter: drop-shadow(0 0 40px oklch(var(--primary) / 0.8));
+                    }
+                }
+                @keyframes wiggle {
+                    0%, 100% { transform: rotate(-3deg); }
+                    50% { transform: rotate(3deg); }
+                }
             `}</style>
 
-            {/* Confetti Container */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-                {confettiPieces.map((piece) => (
-                    <ConfettiPiece key={piece.id} delay={piece.delay} left={piece.left} />
+            {/* Floating Emojis Container */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-40">
+                {emojis.map((emoji, i) => (
+                    <FloatingEmoji
+                        key={i}
+                        emoji={emoji}
+                        delay={i * 0.3}
+                        x={10 + (i * 12)}
+                    />
                 ))}
             </div>
 
-            {/* Main Content - Centered */}
+            {/* Main Content */}
             <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background via-background to-primary/5">
-                <div className="flex flex-col items-center text-center space-y-8 max-w-md">
-                    {/* Success Icon with Animation */}
-                    <div
-                        className="w-28 h-28 rounded-full bg-primary flex items-center justify-center shadow-2xl"
-                        style={{
-                            animation: "bounce-in 0.6s ease-out, pulse-glow 2s ease-in-out infinite",
-                        }}
-                    >
-                        {isCourse ? (
-                            <GraduationCap className="w-16 h-16 text-white" strokeWidth={2} />
-                        ) : (
-                            <CheckCircle2 className="w-16 h-16 text-white" strokeWidth={2.5} />
-                        )}
+                <div className="relative flex flex-col items-center text-center space-y-8 max-w-md">
+
+                    {/* Big Background Text */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 select-none pointer-events-none">
+                        <span className="text-[12rem] font-black text-muted/10 leading-none whitespace-nowrap">
+                            {isCourse ? "🎓" : "🚀"}
+                        </span>
                     </div>
 
-                    {/* Title with Sparkles - Differentiated by product type */}
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-center gap-2">
-                            <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
-                            <h1 className="text-4xl font-bold text-primary">
-                                {isCourse ? "¡Curso Adquirido!" : "¡Pago Exitoso!"}
-                            </h1>
-                            <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
-                        </div>
-                        <p className="text-muted-foreground text-lg">
+                    {/* Animated Icon */}
+                    <div
+                        className={`relative transition-all duration-700 ${showContent ? 'opacity-100' : 'opacity-0'}`}
+                        style={{ animation: showContent ? 'bounce-in 0.8s ease-out' : 'none' }}
+                    >
+                        <div
+                            className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-2xl"
+                            style={{ animation: 'pulse-glow 2s ease-in-out infinite' }}
+                        >
                             {isCourse ? (
-                                <>
-                                    Ya tienes acceso completo al curso. <br />
-                                    <span className="text-primary font-medium">¡Comienza a aprender ahora!</span>
-                                </>
+                                <GraduationCap className="w-16 h-16 text-white" strokeWidth={2} />
                             ) : (
-                                <>
-                                    Tu pago ha sido procesado correctamente. <br />
-                                    <span className="text-primary font-medium">¡Bienvenido al equipo!</span>
-                                </>
+                                <Rocket className="w-16 h-16 text-white" strokeWidth={2} />
+                            )}
+                        </div>
+                        {/* Decorative sparkles */}
+                        <Sparkles
+                            className="absolute -top-2 -right-2 w-8 h-8 text-yellow-400"
+                            style={{ animation: 'wiggle 0.5s ease-in-out infinite' }}
+                        />
+                        <PartyPopper
+                            className="absolute -bottom-1 -left-3 w-7 h-7 text-pink-400"
+                            style={{ animation: 'wiggle 0.6s ease-in-out infinite reverse' }}
+                        />
+                    </div>
+
+                    {/* Title & Description */}
+                    <div
+                        className={`space-y-3 transition-all duration-700 delay-200 ${showContent ? 'opacity-100' : 'opacity-0'}`}
+                        style={{ animation: showContent ? 'slide-up 0.6s ease-out 0.2s both' : 'none' }}
+                    >
+                        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent">
+                            {isCourse ? "¡A aprender! 🎉" : "¡Bienvenido al equipo! 🚀"}
+                        </h1>
+                        <p className="text-xl text-muted-foreground">
+                            {isCourse ? (
+                                <>Tu curso ya está listo. <span className="text-primary font-medium">¡Dale que arrancamos!</span></>
+                            ) : (
+                                <>Tu plan está activo. <span className="text-primary font-medium">¡Hora de construir!</span></>
                             )}
                         </p>
                     </div>
 
                     {/* Payment Details Card */}
                     {paymentId && (
-                        <div className="bg-card border rounded-xl px-8 py-5 space-y-2 w-full shadow-lg">
-                            <p className="text-sm text-muted-foreground">ID de Transacción</p>
-                            <p className="font-mono text-sm bg-muted px-3 py-1.5 rounded">{paymentId}</p>
-                            {status === "approved" && (
-                                <span className="inline-flex items-center gap-1.5 text-sm text-primary font-medium">
-                                    <CheckCircle2 className="w-4 h-4" /> Pago Aprobado
-                                </span>
-                            )}
+                        <div
+                            className={`bg-card/80 backdrop-blur border rounded-2xl px-6 py-4 space-y-2 w-full shadow-xl transition-all duration-700 delay-400 ${showContent ? 'opacity-100' : 'opacity-0'}`}
+                            style={{ animation: showContent ? 'slide-up 0.6s ease-out 0.4s both' : 'none' }}
+                        >
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">ID de Transacción</p>
+                            <p className="font-mono text-sm bg-muted/50 px-3 py-1.5 rounded-lg">{paymentId}</p>
+                            <p className="text-xs text-muted-foreground">
+                                via <span className="capitalize font-semibold text-foreground">{source}</span>
+                            </p>
                         </div>
                     )}
 
-                    {/* Source Badge */}
-                    <p className="text-sm text-muted-foreground">
-                        Procesado via <span className="capitalize font-semibold text-foreground">{source}</span>
-                    </p>
-
-                    {/* Actions - Differentiated by product type */}
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2 w-full">
+                    {/* Actions */}
+                    <div
+                        className={`flex flex-col sm:flex-row gap-3 pt-2 w-full transition-all duration-700 delay-600 ${showContent ? 'opacity-100' : 'opacity-0'}`}
+                        style={{ animation: showContent ? 'slide-up 0.6s ease-out 0.6s both' : 'none' }}
+                    >
                         {isCourse ? (
                             <>
-                                <Button size="lg" className="flex-1" asChild>
+                                <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
                                     <Link href="/academy/my-courses">
-                                        <BookOpen className="w-4 h-4 mr-2" />
-                                        Ver Mis Cursos
+                                        <BookOpen className="w-5 h-5 mr-2" />
+                                        Ir a Mis Cursos
                                     </Link>
                                 </Button>
-                                <Button size="lg" variant="outline" className="flex-1" asChild>
+                                <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
                                     <Link href="/">
-                                        <Home className="w-4 h-4 mr-2" />
-                                        Ir al Inicio
+                                        <Home className="w-5 h-5 mr-2" />
+                                        Inicio
                                     </Link>
                                 </Button>
                             </>
                         ) : (
                             <>
-                                <Button size="lg" className="flex-1" asChild>
-                                    <Link href="/">
-                                        <Home className="w-4 h-4 mr-2" />
-                                        Ir al Inicio
+                                <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
+                                    <Link href="/organization">
+                                        <Rocket className="w-5 h-5 mr-2" />
+                                        Ir al Dashboard
                                     </Link>
                                 </Button>
-                                <Button size="lg" variant="outline" className="flex-1" asChild>
-                                    <Link href="/organizacion/configuracion?tab=billing">
-                                        <Receipt className="w-4 h-4 mr-2" />
-                                        Ver Suscripción
+                                <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
+                                    <Link href="/organization/settings?tab=billing">
+                                        <Receipt className="w-5 h-5 mr-2" />
+                                        Ver Plan
                                     </Link>
                                 </Button>
                             </>
                         )}
                     </div>
 
+                    {/* Fun footer message */}
+                    <p
+                        className={`text-sm text-muted-foreground/70 pt-4 transition-all duration-700 delay-700 ${showContent ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                        {isCourse
+                            ? "El conocimiento es poder 💪"
+                            : "Grandes cosas están por venir ✨"
+                        }
+                    </p>
                 </div>
             </div>
         </>

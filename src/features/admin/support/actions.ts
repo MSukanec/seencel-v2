@@ -20,15 +20,20 @@ export interface OrganizationBasic {
 }
 
 /**
- * Lista todos los usuarios (para selector admin)
+ * Lista todos los usuarios ADMIN (para selector de soporte)
+ * Filtra por role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2' (admin role)
  */
 export async function getAllUsers(): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> {
     try {
         const supabase = await createClient();
 
+        // Only fetch admin users (role_id for admins)
+        const ADMIN_ROLE_ID = 'd5606324-af8d-487e-8c8e-552511fce2a2';
+
         const { data, error } = await supabase
             .from("users")
             .select("id, email, full_name")
+            .eq("role_id", ADMIN_ROLE_ID)
             .order("email");
 
         if (error) {
@@ -84,6 +89,45 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
     } catch (error) {
         console.error("Error en getUserOrganizations:", error);
         return { success: false, error: error instanceof Error ? error.message : "Error" };
+    }
+}
+
+/**
+ * Gets the current logged-in user's ID and their active organization ID
+ */
+export async function getCurrentUserAndOrg(): Promise<{ userId: string | null; orgId: string | null }> {
+    try {
+        const supabase = await createClient();
+
+        // Get auth user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { userId: null, orgId: null };
+
+        // Get internal user and their active org
+        const { data: userData } = await supabase
+            .from("users")
+            .select(`
+                id,
+                user_preferences!inner (
+                    last_organization_id
+                )
+            `)
+            .eq("auth_id", user.id)
+            .single();
+
+        if (!userData) return { userId: null, orgId: null };
+
+        const pref = Array.isArray(userData.user_preferences)
+            ? (userData.user_preferences as any)[0]
+            : (userData.user_preferences as any);
+
+        return {
+            userId: userData.id,
+            orgId: pref?.last_organization_id || null
+        };
+    } catch (error) {
+        console.error("Error en getCurrentUserAndOrg:", error);
+        return { userId: null, orgId: null };
     }
 }
 
@@ -245,7 +289,8 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
             .maybeSingle();
 
         // 4. Obtener enrollments
-        const { data: enrollments } = await supabase
+        console.log("[getTestUserStatus] Querying enrollments for user.id:", user.id);
+        const { data: enrollments, error: enrollmentsError } = await supabase
             .from("course_enrollments")
             .select(`
                 id,
@@ -254,6 +299,11 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
                 courses:course_id (title, slug)
             `)
             .eq("user_id", user.id);
+
+        if (enrollmentsError) {
+            console.error("[getTestUserStatus] Enrollments error:", enrollmentsError);
+        }
+        console.log("[getTestUserStatus] Enrollments found:", enrollments?.length || 0, enrollments);
 
         // 5. Obtener payments
         const { data: payments } = await supabase

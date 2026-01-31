@@ -14,26 +14,33 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Trash2, AlertTriangle, CheckCircle2, Loader2, User } from "lucide-react";
 import { cleanupTestPurchase } from "../actions";
 
-// Hardcoded test user - same as in actions.ts
-const TEST_EMAIL = "matusukanec@gmail.com";
-const TEST_ORG_ID = "0d5e28fe-8fe2-4fe4-9835-4fe21b4f2abb";
+interface PurchaseCleanupToolProps {
+    userEmail: string | null;
+    userId: string | null;
+    orgId: string | null;
+    orgName: string | null;
+}
 
-export function PurchaseCleanupTool() {
+export function PurchaseCleanupTool({ userEmail, userId, orgId, orgName }: PurchaseCleanupToolProps) {
     const [loading, setLoading] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
+    const isDisabled = !userEmail || !orgId;
+
     const handleConfirmedCleanup = async () => {
+        if (!userEmail || !orgId) return;
+
         setShowConfirm(false);
         setLoading(true);
         setResult(null);
 
         try {
-            console.log("[PurchaseCleanupTool] Calling cleanupTestPurchase for:", TEST_EMAIL);
-            const response = await cleanupTestPurchase(TEST_EMAIL);
+            console.log("[PurchaseCleanupTool] Calling cleanupTestPurchase for:", userEmail, orgId);
+            const response = await cleanupTestPurchase(userEmail, orgId);
             console.log("[PurchaseCleanupTool] Response:", response);
             setResult(response);
         } catch (error) {
@@ -53,7 +60,11 @@ export function PurchaseCleanupTool() {
                         Resetear Usuario de Prueba
                     </CardTitle>
                     <CardDescription>
-                        Limpia todos los datos de compra de <span className="font-medium text-foreground">{TEST_EMAIL}</span>
+                        {userEmail ? (
+                            <>Limpia todos los datos de compra de <span className="font-medium text-foreground">{userEmail}</span></>
+                        ) : (
+                            <span className="text-muted-foreground italic">Selecciona un usuario arriba</span>
+                        )}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -67,13 +78,18 @@ export function PurchaseCleanupTool() {
                     <Button
                         variant="destructive"
                         onClick={() => setShowConfirm(true)}
-                        disabled={loading}
+                        disabled={loading || isDisabled}
                         className="w-full"
                     >
                         {loading ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 Limpiando...
+                            </>
+                        ) : isDisabled ? (
+                            <>
+                                <User className="h-4 w-4 mr-2" />
+                                Selecciona Usuario/Org
                             </>
                         ) : (
                             <>
@@ -110,8 +126,8 @@ export function PurchaseCleanupTool() {
                             <div className="space-y-3">
                                 <p>Esto borrará <strong>TODOS</strong> los datos de compra de:</p>
                                 <div className="bg-muted p-3 rounded-md text-sm space-y-1">
-                                    <p><strong>Email:</strong> {TEST_EMAIL}</p>
-                                    <p><strong>Org ID:</strong> {TEST_ORG_ID}</p>
+                                    <p><strong>Email:</strong> {userEmail}</p>
+                                    <p><strong>Organización:</strong> {orgName || orgId}</p>
                                 </div>
                                 <p>Se eliminarán:</p>
                                 <ul className="list-disc list-inside text-sm space-y-1">

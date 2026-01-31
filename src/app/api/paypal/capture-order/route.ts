@@ -188,6 +188,8 @@ export async function POST(request: NextRequest) {
             orderId,
             captureId,
             status: 'COMPLETED',
+            productType: preference.product_type,
+            courseId: preference.course_id || null,
         });
 
     } catch (error: any) {
