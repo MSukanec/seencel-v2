@@ -4,9 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { getFeatureFlag } from '@/actions/feature-flags';
 import crypto from 'crypto';
 
-// Test mode price: $0.10 USD (minimum for real testing)
-const TEST_PRICE_USD = 0.10;
-
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -18,11 +15,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if PayPal is enabled
-        // When disabled (paypal_enabled = false): use sandbox credentials + test prices
-        // When enabled (paypal_enabled = true): use production credentials + real prices
+        // When disabled (paypal_enabled = false): use sandbox credentials
+        // When enabled (paypal_enabled = true): use production credentials
         const paypalEnabled = await getFeatureFlag('paypal_enabled');
         const sandboxMode = !paypalEnabled;
-        const isTestMode = !paypalEnabled; // Same logic - disabled = test mode
+        const isTestMode = !paypalEnabled; // Sandbox = test mode (for logging/tracking)
 
         // Get request body
         const body = await request.json();
@@ -45,16 +42,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Calculate final amount - override to test price if test mode is active
-        let finalAmount: number;
-        if (isTestMode) {
-            finalAmount = TEST_PRICE_USD;
-            console.log('[TEST MODE] PayPal price overridden to', TEST_PRICE_USD, 'USD');
-        } else {
-            finalAmount = couponDiscount
-                ? Math.max(0, amount - couponDiscount)
-                : amount;
-        }
+        // Calculate final amount (apply coupon discount if present)
+        // Uses real product price - no test price override
+        const finalAmount = couponDiscount
+            ? Math.max(0, amount - couponDiscount)
+            : amount;
 
         // Generate a short unique ID for paypal_preferences (fits in PayPal's 127 char limit)
         const preferenceId = crypto.randomUUID().replace(/-/g, '').substring(0, 21); // 21 chars, URL-safe
