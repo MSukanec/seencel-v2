@@ -5,6 +5,7 @@ import { PageWrapper, ContentLayout } from "@/components/layout";
 import { getFinancialMovements } from "@/features/organization/queries";
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
+import { getClientsByOrganization } from "@/features/clients/queries";
 import { FinancePageClient } from "@/features/finance/views/finances-page";
 import { DollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -28,12 +29,14 @@ export default async function FinancePage({ params }: { params: Promise<{ locale
         redirect('/');
     }
 
-    const [movementsData, settingsData] = await Promise.all([
+    const [movementsData, settingsData, clientsData] = await Promise.all([
         getFinancialMovements(),
-        getOrganizationSettingsData(orgId)
+        getOrganizationSettingsData(orgId),
+        getClientsByOrganization(orgId)
     ]);
 
     const { movements, wallets, projects, error } = movementsData;
+    const clients = clientsData.data || [];
 
     if (error || !movements) {
         return (
@@ -49,6 +52,24 @@ export default async function FinancePage({ params }: { params: Promise<{ locale
         );
     }
 
+    // Build financialData object for client payment form
+    // IMPORTANT: Use org-specific data, NOT global lists
+    // - wallets: org wallets from movements query
+    // - currencies: contactCurrencies (org-specific), NOT availableCurrencies (global)
+    const orgCurrencies = (settingsData.contactCurrencies || []).map((c: any) => ({
+        id: c.currency_id || c.id,
+        code: c.currency_code || c.code,
+        symbol: c.currency_symbol || c.symbol,
+        name: c.currency_name || c.name,
+    }));
+
+    const financialData = {
+        wallets: wallets || [],
+        currencies: orgCurrencies,
+        defaultWalletId: wallets?.[0]?.id || null,
+        defaultCurrencyId: orgCurrencies[0]?.id || null,
+    };
+
     return (
         <FinancePageClient
             title={t('title')}
@@ -56,6 +77,8 @@ export default async function FinancePage({ params }: { params: Promise<{ locale
             wallets={wallets}
             projects={projects}
             organizationId={orgId}
+            clients={clients}
+            financialData={financialData}
             settingsData={{
                 preferences: settingsData.preferences,
                 contactCurrencies: settingsData.contactCurrencies,
@@ -72,3 +95,4 @@ export default async function FinancePage({ params }: { params: Promise<{ locale
         />
     );
 }
+

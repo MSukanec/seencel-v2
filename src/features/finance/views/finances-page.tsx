@@ -18,8 +18,10 @@ interface FinancePageClientProps {
     title: string;
     movements: any[];
     wallets: { id: string; wallet_name: string }[];
-    projects: any[];
+    projects: { id: string; name: string }[];
     organizationId: string;
+    clients?: any[];
+    financialData?: any;
     settingsData: {
         preferences: any;
         contactCurrencies: any;
@@ -41,6 +43,8 @@ export function FinancePageClient({
     wallets,
     projects,
     organizationId,
+    clients = [],
+    financialData,
     settingsData,
     tabLabels
 }: FinancePageClientProps) {
@@ -114,9 +118,12 @@ export function FinancePageClient({
                             organizationId={organizationId}
                             currencies={settingsData.availableCurrencies?.map((c: any) => ({
                                 id: c.id,
+                                name: c.name,
                                 code: c.code,
                                 symbol: c.symbol
                             })) ?? []}
+                            clients={clients}
+                            financialData={financialData}
                         />
                     </TabsContent>
                     <TabsContent value="settings" className="m-0 focus-visible:outline-none">

@@ -161,7 +161,7 @@ export function FinanceMovementForm({
         return (
             <div className="flex flex-col h-full min-h-0">
                 {/* Type selector at top */}
-                <div className="mb-4">
+                <div className="shrink-0 mb-4">
                     <FormGroup label="Tipo de Movimiento" required>
                         <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
                             <SelectTrigger>
@@ -184,8 +184,8 @@ export function FinanceMovementForm({
                     </FormGroup>
                 </div>
 
-                {/* Client Payment Form with project selector */}
-                <div className="flex-1 min-h-0">
+                {/* Client Payment Form with project selector - flex-1 flex flex-col to propagate height */}
+                <div className="flex-1 min-h-0 flex flex-col">
                     <ClientPaymentForm
                         organizationId={organizationId}
                         clients={clients}

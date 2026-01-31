@@ -65,6 +65,11 @@ export function Footer() {
                                     {t('privacyPolicy')}
                                 </Link>
                             </li>
+                            <li>
+                                <Link href="/terms" className="hover:text-primary transition-colors">
+                                    {t('termsOfService')}
+                                </Link>
+                            </li>
                         </ul>
                     </div>
                 </div>

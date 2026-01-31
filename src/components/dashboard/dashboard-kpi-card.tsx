@@ -122,15 +122,16 @@ export function DashboardKpiCard({
     description,
     currencyBreakdown: externalBreakdown,
     decimalPlaces: externalDecimalPlaces,
-    compact = true,  // Default to compact for modern look
+    compact,  // No default - use org preference if not explicitly set
     size = 'large',  // Default to large for impact
     ...props
 }: DashboardKpiCardProps) {
     // Use useMoney for automatic formatting when amount is provided
     const money = useMoney();
 
-    // Use organization preference for compact mode (default to false = full numbers)
-    const useCompact = compact ?? money.config.kpiCompactFormat ?? false;
+    // Use organization preference for compact mode
+    // If compact is explicitly passed, use it. Otherwise use org preference (default false = full numbers)
+    const useCompact = compact !== undefined ? compact : (money.config.kpiCompactFormat ?? false);
 
     // Calculate sum from items if provided (for bimonetary support)
     const sumResult = items && items.length > 0 ? money.sum(items) : null;

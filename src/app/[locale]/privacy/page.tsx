@@ -25,7 +25,7 @@ export default async function PrivacyPage() {
         <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10">
             <Header variant="public" user={profile} />
 
-            <main className="flex-1">
+            <main className="flex-1 pt-8 md:pt-12">
                 <div className="container px-4 md:px-6 mx-auto py-12 md:py-20 max-w-4xl">
                     {/* Header */}
                     <div className="mb-12 text-center md:text-left">

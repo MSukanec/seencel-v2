@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useModal } from "@/providers/modal-store";
 import { toast } from "sonner";
 import { FormFooter } from "@/components/shared/forms/form-footer";
@@ -68,6 +68,20 @@ export function PaymentForm({
     // Project state for organization context
     const [selectedProjectId, setSelectedProjectId] = useState(externalProjectId || "");
     const projectId = externalProjectId || selectedProjectId;
+
+    // Filter clients by selected project
+    const filteredClients = useMemo(() => {
+        if (!projectId) return [];
+        return clients.filter((c: any) => c.project_id === projectId);
+    }, [clients, projectId]);
+
+    // Reset client when project changes
+    useEffect(() => {
+        if (showProjectSelector) {
+            setClientId("");
+            setCommitmentId("");
+        }
+    }, [selectedProjectId, showProjectSelector]);
 
     // File Upload State
     const [files, setFiles] = useState<UploadedFile[]>(
@@ -263,7 +277,8 @@ export function PaymentForm({
                         <Combobox
                             value={clientId}
                             onValueChange={setClientId}
-                            options={clients
+                            disabled={showProjectSelector && !projectId}
+                            options={filteredClients
                                 .sort((a, b) => (a.contact_full_name || "").localeCompare(b.contact_full_name || ""))
                                 .map((client) => ({
                                     value: client.id,
@@ -272,7 +287,7 @@ export function PaymentForm({
                                     fallback: (client.contact_full_name || "C").substring(0, 2).toUpperCase()
                                 }))
                             }
-                            placeholder="Seleccionar cliente"
+                            placeholder={showProjectSelector && !projectId ? "Seleccioná un proyecto primero" : "Seleccionar cliente"}
                             searchPlaceholder="Buscar cliente..."
                             emptyMessage="No se encontró el cliente."
                         />
@@ -314,7 +329,7 @@ export function PaymentForm({
                             <SelectContent>
                                 {wallets.map((wallet: any) => (
                                     <SelectItem key={wallet.id} value={wallet.id}>
-                                        {wallet.name}
+                                        {wallet.wallet_name || wallet.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

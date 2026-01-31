@@ -285,7 +285,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                     } : undefined}
                     currencyBreakdown={isMixView && kpis.ingresosBreakdown.length > 1 ? kpis.ingresosBreakdown : undefined}
                     size="hero"
-                    compact
                 />
 
                 {/* 2. Egresos Totales */}
@@ -297,7 +296,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                     description="Pagos y retiros"
                     currencyBreakdown={isMixView && kpis.egresosBreakdown.length > 1 ? kpis.egresosBreakdown : undefined}
                     size="hero"
-                    compact
                 />
 
                 {/* 3. Balance Neto */}
@@ -308,7 +306,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                     iconClassName={kpis.balance >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
                     description="Ingresos - Egresos"
                     size="hero"
-                    compact
                     className={kpis.balance >= 0 ? "[&_h2]:text-amount-positive" : "[&_h2]:text-amount-negative"}
                 />
 
@@ -319,7 +316,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                     icon={<Activity className="h-5 w-5" />}
                     description="Ingreso promedio / mes"
                     size="hero"
-                    compact
                 />
             </div>
 
