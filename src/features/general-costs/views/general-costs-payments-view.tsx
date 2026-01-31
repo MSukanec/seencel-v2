@@ -35,7 +35,7 @@ interface GeneralCostsPaymentsViewProps {
     data: GeneralCostPaymentView[];
     concepts: GeneralCost[];
     wallets: { id: string; wallet_name: string }[];
-    currencies: { id: string; code: string; symbol: string }[];
+    currencies: { id: string; name: string; code: string; symbol: string }[];
     organizationId: string;
 }
 

@@ -36,12 +36,15 @@ import {
 interface FinancesMovementsViewProps {
     movements: any[];
     wallets?: any[];
-    projects?: any[];
+    projects?: { id: string; name: string }[];
     showProjectColumn?: boolean;
     // Form context for unified movement modal
     organizationId?: string;
     currencies?: { id: string; name: string; code: string; symbol: string }[];
     generalCostConcepts?: any[];
+    // Client payment context
+    clients?: any[];
+    financialData?: any;
     onRefresh?: () => void;
 }
 
@@ -53,6 +56,8 @@ export function FinancesMovementsView({
     organizationId,
     currencies = [],
     generalCostConcepts = [],
+    clients = [],
+    financialData,
     onRefresh
 }: FinancesMovementsViewProps) {
     const { openModal, closeModal } = useModal();
@@ -106,6 +111,9 @@ export function FinancesMovementsView({
                 concepts={generalCostConcepts}
                 wallets={wallets}
                 currencies={currencies}
+                projects={projects}
+                clients={clients}
+                financialData={financialData}
                 onSuccess={() => {
                     closeModal();
                     onRefresh?.();

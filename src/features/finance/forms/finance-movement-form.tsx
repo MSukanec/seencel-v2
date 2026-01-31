@@ -27,6 +27,9 @@ import { cn } from "@/lib/utils";
 import { formatDateForDB } from "@/lib/timezone-data";
 import { createGeneralCostPayment } from "@/features/general-costs/actions";
 
+// Import ClientPaymentForm
+import { PaymentForm as ClientPaymentForm } from "@/features/clients/components/forms/payment-form";
+
 // === Movement Types ===
 type MovementTypeId = "general_cost" | "client_payment";
 
@@ -37,10 +40,16 @@ const MOVEMENT_TYPE_OPTIONS = [
 
 // === Props ===
 interface FinanceMovementFormProps {
+    // General Costs context
     concepts?: { id: string; name: string }[];
     wallets?: { id: string; wallet_name: string }[];
     currencies?: { id: string; name: string; code: string; symbol: string }[];
     organizationId: string;
+    // Client Payment context
+    projects?: { id: string; name: string }[];
+    clients?: any[];
+    financialData?: any;
+    // Callbacks
     onSuccess?: () => void;
     onCancel?: () => void;
 }
@@ -51,6 +60,9 @@ export function FinanceMovementForm({
     wallets = [],
     currencies = [],
     organizationId,
+    projects = [],
+    clients = [],
+    financialData,
     onSuccess,
     onCancel,
 }: FinanceMovementFormProps) {
@@ -93,12 +105,6 @@ export function FinanceMovementForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // For now, only general_cost is implemented
-        if (movementType === "client_payment") {
-            toast.info("Para registrar cobros de clientes, usá la sección de Clientes");
-            return;
-        }
 
         if (!amount || parseFloat(amount) <= 0) {
             toast.error("El monto debe ser mayor a 0");
@@ -150,6 +156,86 @@ export function FinanceMovementForm({
         }
     };
 
+    // If client_payment is selected and we have the necessary data, render the client payment form
+    if (movementType === "client_payment" && financialData) {
+        return (
+            <div className="flex flex-col h-full min-h-0">
+                {/* Type selector at top */}
+                <div className="mb-4">
+                    <FormGroup label="Tipo de Movimiento" required>
+                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {MOVEMENT_TYPE_OPTIONS.map((option) => {
+                                    const Icon = option.icon;
+                                    return (
+                                        <SelectItem key={option.id} value={option.id}>
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-4 w-4 text-muted-foreground" />
+                                                <span>{option.label}</span>
+                                            </div>
+                                        </SelectItem>
+                                    );
+                                })}
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
+                </div>
+
+                {/* Client Payment Form with project selector */}
+                <div className="flex-1 min-h-0">
+                    <ClientPaymentForm
+                        organizationId={organizationId}
+                        clients={clients}
+                        financialData={financialData}
+                        projects={projects}
+                        showProjectSelector={true}
+                        onSuccess={onSuccess}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // Show message if client_payment selected but no financial data
+    if (movementType === "client_payment" && !financialData) {
+        return (
+            <div className="flex flex-col h-full min-h-0">
+                {/* Type selector at top */}
+                <div className="mb-4">
+                    <FormGroup label="Tipo de Movimiento" required>
+                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {MOVEMENT_TYPE_OPTIONS.map((option) => {
+                                    const Icon = option.icon;
+                                    return (
+                                        <SelectItem key={option.id} value={option.id}>
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-4 w-4 text-muted-foreground" />
+                                                <span>{option.label}</span>
+                                            </div>
+                                        </SelectItem>
+                                    );
+                                })}
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
+                </div>
+
+                <div className="flex-1 flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">
+                        No hay datos financieros disponibles para registrar cobros.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             {/* Scrollable content */}
@@ -157,9 +243,9 @@ export function FinanceMovementForm({
                 <div className="space-y-4">
                     {/* Movement Type Selector */}
                     <FormGroup label="Tipo de Movimiento" required>
-                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId)}>
+                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
                             <SelectTrigger>
-                                <SelectValue />
+                                <SelectValue placeholder="Seleccionar tipo de movimiento" />
                             </SelectTrigger>
                             <SelectContent>
                                 {MOVEMENT_TYPE_OPTIONS.map((option) => {
@@ -177,18 +263,7 @@ export function FinanceMovementForm({
                         </Select>
                     </FormGroup>
 
-                    {/* Show message for client payment */}
-                    {movementType === "client_payment" && (
-                        <div className="p-4 rounded-lg bg-muted/50 text-center">
-                            <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-sm text-muted-foreground">
-                                Los cobros de clientes se registran desde la sección de Clientes,
-                                donde podés seleccionar el proyecto y compromiso.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* General Cost Form Fields */}
+                    {/* General Cost Form Fields - only show when selected */}
                     {movementType === "general_cost" && (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -339,8 +414,8 @@ export function FinanceMovementForm({
                 </div>
             </div>
 
-            {/* Sticky Footer - only show when type is selected and not client_payment */}
-            {movementType !== "" && movementType !== "client_payment" && (
+            {/* Sticky Footer - only show when general_cost is selected */}
+            {movementType === "general_cost" && (
                 <FormFooter
                     className="-mx-4 -mb-4 mt-6"
                     isLoading={isLoading}
