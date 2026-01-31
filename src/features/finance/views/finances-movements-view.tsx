@@ -40,7 +40,7 @@ interface FinancesMovementsViewProps {
     showProjectColumn?: boolean;
     // Form context for unified movement modal
     organizationId?: string;
-    currencies?: { id: string; code: string; symbol: string }[];
+    currencies?: { id: string; name: string; code: string; symbol: string }[];
     generalCostConcepts?: any[];
     onRefresh?: () => void;
 }
@@ -114,7 +114,7 @@ export function FinancesMovementsView({
             />,
             {
                 title: "Nuevo Movimiento",
-                description: "Selecciona el tipo de movimiento que deseas registrar.",
+                description: "Seleccioná el tipo de movimiento y completá los datos.",
                 size: "lg"
             }
         );

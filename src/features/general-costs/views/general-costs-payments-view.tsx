@@ -2,11 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Receipt, DollarSign, TrendingDown, FileSpreadsheet, Loader2 } from "lucide-react";
+import { Plus, Receipt, DollarSign, TrendingDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { deleteGeneralCostPayment } from "@/features/general-costs/actions";
@@ -16,10 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
-import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/providers/modal-store";
 
 import { useMoney } from "@/hooks/use-money";
@@ -53,28 +49,6 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
     const [paymentToDelete, setPaymentToDelete] = useState<GeneralCostPaymentView | null>(null);
     const [isDeleting, startDeleteTransition] = useTransition();
 
-    // Date range filter state
-    const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
-
-    // Filter payments by date range
-    const filteredPayments = useMemo(() => {
-        if (!dateRange || (!dateRange.from && !dateRange.to)) {
-            return data;
-        }
-        return data.filter(p => {
-            const date = startOfDay(new Date(p.payment_date));
-            const from = dateRange.from ? startOfDay(dateRange.from) : null;
-            const to = dateRange.to ? endOfDay(dateRange.to) : null;
-            if (from && to) {
-                return (isAfter(date, from) || isEqual(date, from)) &&
-                    (isBefore(date, to) || isEqual(date, to));
-            }
-            if (from) return isAfter(date, from) || isEqual(date, from);
-            if (to) return isBefore(date, to) || isEqual(date, to);
-            return true;
-        });
-    }, [data, dateRange]);
-
     // Use centralized formatting
     const formatCurrency = (amount: number, currencyCode?: string) => {
         return money.format(amount, currencyCode);
@@ -96,7 +70,7 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                 description: payment
                     ? "Modificá los datos del pago de gasto general."
                     : "Registrá un nuevo pago de gasto general.",
-                size: "md"
+                size: "lg"
             }
         );
     };
@@ -121,7 +95,7 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
             {
                 title: "Detalle del Pago",
                 description: "Información del pago de gasto general.",
-                size: "md"
+                size: "lg"
             }
         );
     };
@@ -152,7 +126,7 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
         const confirmedItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
         const pendingItems: { amount: number; currency_code: string; exchange_rate?: number }[] = [];
 
-        filteredPayments.forEach(p => {
+        data.forEach(p => {
             const item = {
                 amount: Number(p.amount) || 0,
                 currency_code: p.currency_code || 'ARS',
@@ -170,9 +144,9 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
             allItems,
             confirmedItems,
             pendingItems,
-            totalPagos: filteredPayments.length
+            totalPagos: data.length
         };
-    }, [filteredPayments]);
+    }, [data]);
 
     const columns: ColumnDef<GeneralCostPaymentView>[] = [
         createDateColumn<GeneralCostPaymentView>({
@@ -269,18 +243,21 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
 
     if (data.length === 0) {
         return (
-            <div className="h-full flex items-center justify-center">
-                <EmptyState
-                    icon={Receipt}
-                    title="Sin pagos registrados"
-                    description="No hay pagos de gastos generales registrados."
-                    action={
-                        <Button onClick={() => handleOpenForm()} size="lg">
-                            <Plus className="mr-2 h-4 w-4" /> Registrar Pago
-                        </Button>
-                    }
+            <>
+                <Toolbar
+                    portalToHeader
+                    actions={[
+                        { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() }
+                    ]}
                 />
-            </div>
+                <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                        icon={Receipt}
+                        title="Sin pagos registrados"
+                        description="No hay pagos de gastos generales registrados."
+                    />
+                </div>
+            </>
         );
     }
 
@@ -292,71 +269,78 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
     ];
 
     return (
-        <div className="space-y-6">
-            {/* KPI Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <DashboardKpiCard
-                    title="Total Gastos"
-                    items={kpiData.allItems}
-                    icon={<TrendingDown className="h-5 w-5" />}
-                    iconClassName="bg-amount-negative/10 text-amount-negative"
-                />
-                <DashboardKpiCard
-                    title="Confirmados"
-                    items={kpiData.confirmedItems}
-                    icon={<DollarSign className="h-5 w-5" />}
-                    iconClassName="bg-amount-positive/10 text-amount-positive"
-                />
-                <DashboardKpiCard
-                    title="Pendientes"
-                    items={kpiData.pendingItems}
-                    icon={<DollarSign className="h-5 w-5" />}
-                    iconClassName="bg-amber-500/10 text-amber-600"
-                />
-                <DashboardKpiCard
-                    title="Total Pagos"
-                    value={kpiData.totalPagos.toString()}
-                    icon={<Receipt className="h-5 w-5" />}
-                />
-            </div>
-
-            {/* Payments Table */}
-            <DataTable
-                columns={columns}
-                data={filteredPayments}
-                enableRowSelection={true}
-                enableRowActions={true}
-                onEdit={handleOpenForm}
-                onDelete={handleDeleteClick}
-                onRowClick={handleRowClick}
-                initialSorting={[{ id: "payment_date", desc: true }]}
-                onClearFilters={() => setDateRange(undefined)}
+        <>
+            <Toolbar
+                portalToHeader
+                actions={[
+                    { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() }
+                ]}
             />
+            <div className="space-y-6">
+                {/* KPI Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <DashboardKpiCard
+                        title="Total Gastos"
+                        items={kpiData.allItems}
+                        icon={<TrendingDown className="h-5 w-5" />}
+                        iconClassName="bg-amount-negative/10 text-amount-negative"
+                    />
+                    <DashboardKpiCard
+                        title="Confirmados"
+                        items={kpiData.confirmedItems}
+                        icon={<DollarSign className="h-5 w-5" />}
+                        iconClassName="bg-amount-positive/10 text-amount-positive"
+                    />
+                    <DashboardKpiCard
+                        title="Pendientes"
+                        items={kpiData.pendingItems}
+                        icon={<DollarSign className="h-5 w-5" />}
+                        iconClassName="bg-amber-500/10 text-amber-600"
+                    />
+                    <DashboardKpiCard
+                        title="Total Pagos"
+                        value={kpiData.totalPagos.toString()}
+                        icon={<Receipt className="h-5 w-5" />}
+                    />
+                </div>
 
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará el registro del pago.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault();
-                                confirmDelete();
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={isDeleting}
-                        >
-                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Eliminar
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
+                {/* Payments Table */}
+                <DataTable
+                    columns={columns}
+                    data={data}
+                    enableRowSelection={true}
+                    enableRowActions={true}
+                    onEdit={handleOpenForm}
+                    onDelete={handleDeleteClick}
+                    onRowClick={handleRowClick}
+                    initialSorting={[{ id: "payment_date", desc: true }]}
+                />
+
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminará el registro del pago.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    confirmDelete();
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Eliminar
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </>
     );
 }

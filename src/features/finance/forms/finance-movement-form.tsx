@@ -1,231 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import {
-    DollarSign,
-    TrendingUp,
-    TrendingDown,
-    ArrowRightLeft,
-    Receipt,
-    Package,
-    Wrench,
-    Wallet,
-    Users,
-    ArrowLeft,
-    Landmark,
-    ArrowUpFromLine,
-    ExternalLink
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { CalendarIcon, Receipt, Users } from "lucide-react";
 
-// === Form imports (lazy) ===
-import { PaymentForm as GeneralCostsPaymentForm } from "@/features/general-costs/forms/general-costs-payment-form";
-// These will be added as we integrate more forms:
-// import { PaymentForm as ClientPaymentForm } from "@/features/clients/components/forms/payment-form";
-// import { SubcontractPaymentForm } from "@/features/subcontracts/components/forms/subcontract-payment-form";
-// import { MaterialPaymentForm } from "@/features/materials/components/forms/material-payment-form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { FormGroup } from "@/components/ui/form-group";
+import { FormFooter } from "@/components/shared/forms/form-footer";
+import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
+
+import { cn } from "@/lib/utils";
+import { formatDateForDB } from "@/lib/timezone-data";
+import { createGeneralCostPayment } from "@/features/general-costs/actions";
 
 // === Movement Types ===
-export type MovementCategory = 'income' | 'expense' | 'transfer';
+type MovementTypeId = "general_cost" | "client_payment";
 
-export interface MovementType {
-    id: string;
-    label: string;
-    description: string;
-    icon: React.ElementType;
-    category: MovementCategory;
-    form: 'general_cost' | 'client_payment' | 'subcontract_payment' | 'material_payment' | 'wallet_transfer' | 'currency_exchange';
-    available: boolean;
-}
-
-const MOVEMENT_TYPES: MovementType[] = [
-    // === INGRESOS ===
-    {
-        id: 'client_payment',
-        label: 'Cobro de Cliente',
-        description: 'Registrar un pago recibido de un cliente',
-        icon: Users,
-        category: 'income',
-        form: 'client_payment',
-        available: false, // TODO: Integrate client payment form
-    },
-    {
-        id: 'partner_contribution',
-        label: 'Aporte de Capital',
-        description: 'Ingreso de capital de socios',
-        icon: Landmark,
-        category: 'income',
-        form: 'general_cost', // Uses general costs with different type
-        available: false, // TODO: Create specific flow
-    },
-    // === EGRESOS ===
-    {
-        id: 'general_cost',
-        label: 'Gastos Generales',
-        description: 'Servicios, sueldos y gastos operativos',
-        icon: Receipt,
-        category: 'expense',
-        form: 'general_cost',
-        available: true,
-    },
-    {
-        id: 'subcontract_payment',
-        label: 'Pago de Subcontrato',
-        description: 'Pago a un subcontratista',
-        icon: Wrench,
-        category: 'expense',
-        form: 'subcontract_payment',
-        available: false,
-    },
-    {
-        id: 'material_payment',
-        label: 'Pago de Materiales',
-        description: 'Pago de compra de materiales',
-        icon: Package,
-        category: 'expense',
-        form: 'material_payment',
-        available: false,
-    },
-    {
-        id: 'partner_withdrawal',
-        label: 'Retiro de Capital',
-        description: 'Retiro de capital de socios',
-        icon: ArrowUpFromLine,
-        category: 'expense',
-        form: 'general_cost',
-        available: false,
-    },
-    // === TRANSFERENCIAS ===
-    {
-        id: 'wallet_transfer',
-        label: 'Transferencia entre Billeteras',
-        description: 'Mover dinero entre cuentas',
-        icon: ArrowRightLeft,
-        category: 'transfer',
-        form: 'wallet_transfer',
-        available: false,
-    },
-    {
-        id: 'currency_exchange',
-        label: 'Cambio de Moneda',
-        description: 'Convertir entre monedas',
-        icon: DollarSign,
-        category: 'transfer',
-        form: 'currency_exchange',
-        available: false,
-    },
+const MOVEMENT_TYPE_OPTIONS = [
+    { id: "general_cost" as const, label: "Gasto General", icon: Receipt },
+    { id: "client_payment" as const, label: "Cobro de Cliente", icon: Users },
 ];
-
-const CATEGORY_CONFIG: Record<MovementCategory, { label: string; icon: React.ElementType; color: string; bgColor: string; link: string }> = {
-    income: { label: 'Ingresos', icon: TrendingUp, color: 'text-amount-positive', bgColor: 'bg-amount-positive/10', link: '/clients' },
-    expense: { label: 'Egresos', icon: TrendingDown, color: 'text-amount-negative', bgColor: 'bg-amount-negative/10', link: '/general-costs' },
-    transfer: { label: 'Transferencias', icon: ArrowRightLeft, color: 'text-muted-foreground', bgColor: 'bg-muted', link: '/finance' },
-};
 
 // === Props ===
 interface FinanceMovementFormProps {
-    // General Costs context
-    concepts?: any[];
+    concepts?: { id: string; name: string }[];
     wallets?: { id: string; wallet_name: string }[];
-    currencies?: { id: string; code: string; symbol: string }[];
+    currencies?: { id: string; name: string; code: string; symbol: string }[];
     organizationId: string;
-    // Project context (optional - for project-level payments)
-    projectId?: string;
-    // Callbacks
     onSuccess?: () => void;
     onCancel?: () => void;
-}
-
-// === Type Selector Card ===
-function TypeCard({
-    type,
-    onClick,
-    disabled
-}: {
-    type: MovementType;
-    onClick: () => void;
-    disabled?: boolean;
-}) {
-    const Icon = type.icon;
-
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled || !type.available}
-            className={cn(
-                "relative flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left h-16",
-                "hover:border-primary hover:bg-primary/5",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                disabled || !type.available
-                    ? "opacity-50 cursor-not-allowed border-muted"
-                    : "border-border cursor-pointer"
-            )}
-        >
-            <div className={cn(
-                "p-2 rounded-lg shrink-0",
-                CATEGORY_CONFIG[type.category].bgColor
-            )}>
-                <Icon className={cn(
-                    "h-4 w-4",
-                    CATEGORY_CONFIG[type.category].color
-                )} />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm truncate">{type.label}</p>
-                <p className="text-xs text-muted-foreground truncate">{type.description}</p>
-            </div>
-            {!type.available && (
-                <span className="shrink-0 text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                    Pronto
-                </span>
-            )}
-        </button>
-    );
-}
-
-// === Category Section ===
-function CategorySection({
-    category,
-    types,
-    onSelectType,
-    closeModal
-}: {
-    category: MovementCategory;
-    types: MovementType[];
-    onSelectType: (type: MovementType) => void;
-    closeModal?: () => void;
-}) {
-    const config = CATEGORY_CONFIG[category];
-    const Icon = config.icon;
-
-    return (
-        <div className="space-y-2 flex flex-col">
-            <Link
-                href={config.link}
-                onClick={closeModal}
-                className={cn(
-                    "flex items-center gap-2 group hover:underline w-fit",
-                    config.color
-                )}
-            >
-                <Icon className="h-4 w-4" />
-                <span className="text-sm font-semibold">{config.label}</span>
-                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>
-            <div className="flex flex-col gap-2">
-                {types.map((type) => (
-                    <TypeCard
-                        key={type.id}
-                        type={type}
-                        onClick={() => onSelectType(type)}
-                    />
-                ))}
-            </div>
-        </div>
-    );
 }
 
 // === Main Component ===
@@ -234,119 +51,303 @@ export function FinanceMovementForm({
     wallets = [],
     currencies = [],
     organizationId,
-    projectId,
     onSuccess,
     onCancel,
 }: FinanceMovementFormProps) {
-    const [selectedType, setSelectedType] = useState<MovementType | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const uploadRef = useRef<MultiFileUploadRef>(null);
 
-    // Group types by category
-    const incomeTypes = MOVEMENT_TYPES.filter(t => t.category === 'income');
-    const expenseTypes = MOVEMENT_TYPES.filter(t => t.category === 'expense');
-    const transferTypes = MOVEMENT_TYPES.filter(t => t.category === 'transfer');
+    // Movement type selector - starts empty so user must select
+    const [movementType, setMovementType] = useState<MovementTypeId | "">("");
 
-    // Handle back to type selection
-    const handleBack = () => {
-        setSelectedType(null);
+    // Form state (Gasto General)
+    const [paymentDate, setPaymentDate] = useState<Date>(new Date());
+    const [generalCostId, setGeneralCostId] = useState<string>("");
+    const [amount, setAmount] = useState<string>("");
+    const [status, setStatus] = useState<string>("confirmed");
+    const [currencyId, setCurrencyId] = useState<string>(currencies[0]?.id || "");
+    const [walletId, setWalletId] = useState<string>(wallets[0]?.id || "");
+    const [notes, setNotes] = useState<string>("");
+    const [reference, setReference] = useState<string>("");
+    const [exchangeRate, setExchangeRate] = useState<string>("");
+    const [files, setFiles] = useState<UploadedFile[]>([]);
+
+    // Update default currency/wallet when data loads
+    useEffect(() => {
+        if (!currencyId && currencies.length > 0) {
+            setCurrencyId(currencies[0].id);
+        }
+    }, [currencies, currencyId]);
+
+    useEffect(() => {
+        if (!walletId && wallets.length > 0) {
+            setWalletId(wallets[0].id);
+        }
+    }, [wallets, walletId]);
+
+    // Prepare concepts for combobox
+    const conceptOptions = [
+        { value: "", label: "Sin concepto (Varios)" },
+        ...concepts.map(c => ({ value: c.id, label: c.name }))
+    ];
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // For now, only general_cost is implemented
+        if (movementType === "client_payment") {
+            toast.info("Para registrar cobros de clientes, usá la sección de Clientes");
+            return;
+        }
+
+        if (!amount || parseFloat(amount) <= 0) {
+            toast.error("El monto debe ser mayor a 0");
+            return;
+        }
+
+        if (!walletId) {
+            toast.error("Seleccioná una billetera");
+            return;
+        }
+
+        if (!currencyId) {
+            toast.error("Seleccioná una moneda");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Upload files first if any are pending
+            let finalFiles = files;
+            if (uploadRef.current) {
+                const uploaded = await uploadRef.current.startUpload();
+                if (uploaded) finalFiles = uploaded;
+            }
+
+            const payload = {
+                organization_id: organizationId,
+                payment_date: formatDateForDB(paymentDate)!,
+                general_cost_id: generalCostId || undefined,
+                amount: parseFloat(amount),
+                status,
+                currency_id: currencyId,
+                wallet_id: walletId,
+                notes: notes || undefined,
+                reference: reference || undefined,
+                exchange_rate: exchangeRate ? parseFloat(exchangeRate) : undefined,
+                media_files: finalFiles && finalFiles.length > 0 ? finalFiles : undefined,
+            };
+
+            await createGeneralCostPayment(payload);
+            toast.success("Pago registrado correctamente");
+            onSuccess?.();
+        } catch (error) {
+            console.error("Error creating payment:", error);
+            toast.error("Error al registrar el pago");
+        } finally {
+            setIsLoading(false);
+        }
     };
-
-    // Handle form success
-    const handleFormSuccess = () => {
-        onSuccess?.();
-    };
-
-    // === TYPE SELECTION VIEW ===
-    if (!selectedType) {
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2">
-                <CategorySection
-                    category="income"
-                    types={incomeTypes}
-                    onSelectType={setSelectedType}
-                    closeModal={onCancel}
-                />
-                <CategorySection
-                    category="expense"
-                    types={expenseTypes}
-                    onSelectType={setSelectedType}
-                    closeModal={onCancel}
-                />
-                <CategorySection
-                    category="transfer"
-                    types={transferTypes}
-                    onSelectType={setSelectedType}
-                    closeModal={onCancel}
-                />
-            </div>
-        );
-    }
-
-    // === FORM VIEW ===
-    const Icon = selectedType.icon;
-    const categoryConfig = CATEGORY_CONFIG[selectedType.category];
 
     return (
-        <div className="flex flex-col h-full min-h-0">
-            {/* Header with back button */}
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBack}
-                    className="h-8 w-8 p-0"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div className={cn(
-                    "p-2 rounded-lg",
-                    CATEGORY_CONFIG[selectedType.category].bgColor
-                )}>
-                    <Icon className={cn(
-                        "h-4 w-4",
-                        CATEGORY_CONFIG[selectedType.category].color
-                    )} />
-                </div>
-                <div>
-                    <p className="font-semibold text-sm">{selectedType.label}</p>
-                    <p className="text-xs text-muted-foreground">{selectedType.description}</p>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="space-y-4">
+                    {/* Movement Type Selector */}
+                    <FormGroup label="Tipo de Movimiento" required>
+                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId)}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {MOVEMENT_TYPE_OPTIONS.map((option) => {
+                                    const Icon = option.icon;
+                                    return (
+                                        <SelectItem key={option.id} value={option.id}>
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-4 w-4 text-muted-foreground" />
+                                                <span>{option.label}</span>
+                                            </div>
+                                        </SelectItem>
+                                    );
+                                })}
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
+
+                    {/* Show message for client payment */}
+                    {movementType === "client_payment" && (
+                        <div className="p-4 rounded-lg bg-muted/50 text-center">
+                            <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground">
+                                Los cobros de clientes se registran desde la sección de Clientes,
+                                donde podés seleccionar el proyecto y compromiso.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* General Cost Form Fields */}
+                    {movementType === "general_cost" && (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Fecha */}
+                                <FormGroup label="Fecha de Pago" required>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !paymentDate && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {paymentDate
+                                                    ? format(paymentDate, "d 'de' MMMM 'de' yyyy", { locale: es })
+                                                    : "Seleccionar fecha"}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={paymentDate}
+                                                onSelect={(date) => date && setPaymentDate(date)}
+                                                initialFocus
+                                                locale={es}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </FormGroup>
+
+                                {/* Estado */}
+                                <FormGroup label="Estado">
+                                    <Select value={status} onValueChange={setStatus}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="confirmed">Confirmado</SelectItem>
+                                            <SelectItem value="pending">Pendiente</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+                            </div>
+
+                            {/* Concepto */}
+                            <FormGroup label="Concepto">
+                                <Combobox
+                                    options={conceptOptions}
+                                    value={generalCostId}
+                                    onValueChange={setGeneralCostId}
+                                    placeholder="Buscar concepto..."
+                                    searchPlaceholder="Buscar..."
+                                />
+                            </FormGroup>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Billetera */}
+                                <FormGroup label="Billetera" required>
+                                    <Select value={walletId} onValueChange={setWalletId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar billetera" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {wallets.map((wallet) => (
+                                                <SelectItem key={wallet.id} value={wallet.id}>
+                                                    {wallet.wallet_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+
+                                {/* Monto */}
+                                <FormGroup label="Monto" required>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                </FormGroup>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Moneda */}
+                                <FormGroup label="Moneda" required>
+                                    <Select value={currencyId} onValueChange={setCurrencyId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar moneda" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencies.map((curr) => (
+                                                <SelectItem key={curr.id} value={curr.id}>
+                                                    {curr.name} ({curr.symbol})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormGroup>
+
+                                {/* Tipo de Cambio */}
+                                <FormGroup label="Tipo de Cambio">
+                                    <Input
+                                        type="number"
+                                        step="0.0001"
+                                        min="0"
+                                        value={exchangeRate}
+                                        onChange={(e) => setExchangeRate(e.target.value)}
+                                        placeholder="Ej: 1050.50"
+                                    />
+                                </FormGroup>
+                            </div>
+
+                            {/* Notas */}
+                            <FormGroup label="Notas">
+                                <Textarea
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    placeholder="Descripción del pago..."
+                                    rows={3}
+                                />
+                            </FormGroup>
+
+                            {/* Referencia */}
+                            <FormGroup label="Referencia">
+                                <Input
+                                    value={reference}
+                                    onChange={(e) => setReference(e.target.value)}
+                                    placeholder="Nro. de recibo, factura, etc."
+                                />
+                            </FormGroup>
+
+                            {/* Comprobante */}
+                            <FormGroup label="Comprobante">
+                                <MultiFileUpload
+                                    ref={uploadRef}
+                                    folderPath={`organizations/${organizationId}/payments`}
+                                    onUploadComplete={setFiles}
+                                    maxSizeMB={5}
+                                />
+                            </FormGroup>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Form content */}
-            <div className="flex-1 min-h-0">
-                {selectedType.form === 'general_cost' && (
-                    <GeneralCostsPaymentForm
-                        concepts={concepts}
-                        wallets={wallets}
-                        currencies={currencies}
-                        organizationId={organizationId}
-                        onSuccess={handleFormSuccess}
-                        onCancel={onCancel}
-                    />
-                )}
-
-                {/* Placeholder for other forms */}
-                {selectedType.form !== 'general_cost' && (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                        <Wallet className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                        <p className="text-lg font-medium text-muted-foreground">
-                            {selectedType.label}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Este formulario estará disponible próximamente.
-                        </p>
-                        <Button
-                            variant="outline"
-                            className="mt-4"
-                            onClick={handleBack}
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Volver
-                        </Button>
-                    </div>
-                )}
-            </div>
-        </div>
+            {/* Sticky Footer - only show when type is selected and not client_payment */}
+            {movementType !== "" && movementType !== "client_payment" && (
+                <FormFooter
+                    className="-mx-4 -mb-4 mt-6"
+                    isLoading={isLoading}
+                    submitLabel="Registrar Pago"
+                    onCancel={onCancel}
+                />
+            )}
+        </form>
     );
 }

@@ -6,11 +6,11 @@ import {
     getGeneralCostsDashboard,
     getActiveOrganizationId
 } from "@/features/general-costs/actions";
+import { getOrganizationFinancialData } from "@/features/organization/queries";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 
 // Reusable tab trigger style
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -26,19 +26,16 @@ export default async function GeneralCostsPage() {
         );
     }
 
-    const supabase = await createClient();
-
-    const [categories, concepts, payments, dashboardData, walletsRes, currenciesRes] = await Promise.all([
+    const [categories, concepts, payments, dashboardData, financialData] = await Promise.all([
         getGeneralCostCategories(organizationId),
         getGeneralCosts(organizationId),
         getGeneralCostPayments(organizationId),
         getGeneralCostsDashboard(organizationId),
-        supabase.from('organization_wallets_view').select('id, wallet_name').eq('organization_id', organizationId),
-        supabase.from('currencies').select('id, code, symbol').eq('is_active', true)
+        getOrganizationFinancialData(organizationId)
     ]);
 
-    const wallets = walletsRes.data || [];
-    const currencies = currenciesRes.data || [];
+    const wallets = financialData.wallets.map(w => ({ id: w.id, wallet_name: w.name }));
+    const currencies = financialData.currencies.map(c => ({ id: c.id, name: c.name, code: c.code, symbol: c.symbol }));
 
     return (
         <Tabs defaultValue="dashboard" className="h-full flex flex-col">

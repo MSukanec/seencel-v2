@@ -342,7 +342,7 @@ export async function deleteGeneralCost(id: string) {
 
 // Payments Mutations
 
-export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentView>) {
+export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentView> & { media_files?: any[] }) {
     const supabase = await createClient();
     // We must map from the View type (potentially) to the Table schema
     // data.general_cost_id, data.amount, etc.
@@ -356,12 +356,37 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
             wallet_id: data.wallet_id,
             payment_date: data.payment_date,
             status: data.status || 'confirmed',
-            // fields from view might not map 1:1, ensure we use basic fields
+            notes: data.notes,
+            reference: data.reference,
+            exchange_rate: data.exchange_rate,
         })
         .select()
         .single();
 
     if (error) throw new Error(error.message);
+
+    // Handle media files if provided
+    if (data.media_files && data.media_files.length > 0 && newPayment) {
+        const mediaLinks = data.media_files.map(file => ({
+            organization_id: data.organization_id,
+            general_cost_payment_id: newPayment.id,
+            bucket: file.bucket || 'seencel',
+            file_path: file.path,
+            file_name: file.name,
+            file_type: file.type?.split('/')[0] || 'other',
+            file_size: file.size,
+            mime_type: file.type,
+        }));
+
+        const { error: mediaError } = await supabase
+            .from('media_links')
+            .insert(mediaLinks);
+
+        if (mediaError) {
+            console.error('Error inserting media links:', mediaError);
+        }
+    }
+
     revalidatePath('/organization/general-costs');
     return newPayment;
 }
@@ -389,12 +414,11 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
 
 export async function deleteGeneralCostPayment(id: string) {
     const supabase = await createClient();
+    // TODO: Investigate RLS issue with soft delete UPDATE
+    // Using hard DELETE temporarily until resolved
     const { error } = await supabase
         .from('general_costs_payments')
-        .update({
-            is_deleted: true,
-            deleted_at: new Date().toISOString()
-        })
+        .delete()
         .eq('id', id);
 
     if (error) throw new Error(error.message);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -16,6 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { FormGroup } from "@/components/ui/form-group";
@@ -24,6 +25,7 @@ import { ViewFormFooter } from "@/components/shared/forms/view-form-footer";
 import { DetailField, DetailGrid, DetailSection } from "@/components/shared/forms/detail-field";
 import { Badge } from "@/components/ui/badge";
 import { AttachmentList, AttachmentItem } from "@/components/shared/attachments/attachment-list";
+import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
 
 import { cn } from "@/lib/utils";
 import { formatDateForDB } from "@/lib/timezone-data";
@@ -36,7 +38,7 @@ interface PaymentFormProps {
     initialData?: GeneralCostPaymentView | null;
     concepts: GeneralCost[];
     wallets: { id: string; wallet_name: string }[];
-    currencies: { id: string; code: string; symbol: string }[];
+    currencies: { id: string; name: string; code: string; symbol: string }[];
     organizationId: string;
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -58,6 +60,7 @@ export function PaymentForm({
     const isEditing = !!initialData;
     const [isLoading, setIsLoading] = useState(false);
     const money = useMoney();
+    const uploadRef = useRef<MultiFileUploadRef>(null);
 
     // Form state
     const [paymentDate, setPaymentDate] = useState<Date>(
@@ -73,6 +76,7 @@ export function PaymentForm({
     const [exchangeRate, setExchangeRate] = useState<string>(
         initialData?.exchange_rate?.toString() || ""
     );
+    const [files, setFiles] = useState<UploadedFile[]>([]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,6 +99,13 @@ export function PaymentForm({
         setIsLoading(true);
 
         try {
+            // Upload files first if any are pending
+            let finalFiles = files;
+            if (uploadRef.current) {
+                const uploaded = await uploadRef.current.startUpload();
+                if (uploaded) finalFiles = uploaded;
+            }
+
             const payload = {
                 payment_date: formatDateForDB(paymentDate)!,
                 general_cost_id: generalCostId || undefined,
@@ -105,6 +116,7 @@ export function PaymentForm({
                 notes: notes || undefined,
                 reference: reference || undefined,
                 exchange_rate: exchangeRate ? parseFloat(exchangeRate) : undefined,
+                media_files: finalFiles && finalFiles.length > 0 ? finalFiles : undefined,
             };
 
             if (isEditing && initialData) {
@@ -324,17 +336,48 @@ export function PaymentForm({
                         </Popover>
                     </FormGroup>
 
-                    {/* Concepto */}
-                    <FormGroup label="Concepto">
-                        <Select value={generalCostId || "none"} onValueChange={(v) => setGeneralCostId(v === "none" ? "" : v)}>
+                    {/* Estado */}
+                    <FormGroup label="Estado">
+                        <Select value={status} onValueChange={setStatus}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar concepto" />
+                                <SelectValue placeholder="Estado" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">Sin concepto (Varios)</SelectItem>
-                                {concepts.map((concept) => (
-                                    <SelectItem key={concept.id} value={concept.id}>
-                                        {concept.name}
+                                <SelectItem value="confirmed">Confirmado</SelectItem>
+                                <SelectItem value="pending">Pendiente</SelectItem>
+                                <SelectItem value="overdue">Vencido</SelectItem>
+                                <SelectItem value="cancelled">Cancelado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
+
+                    {/* Concepto - Full width */}
+                    <FormGroup label="Concepto" className="md:col-span-2">
+                        <Combobox
+                            options={[
+                                { value: "", label: "Sin concepto (Varios)" },
+                                ...concepts.map((concept) => ({
+                                    value: concept.id,
+                                    label: concept.name
+                                }))
+                            ]}
+                            value={generalCostId}
+                            onValueChange={setGeneralCostId}
+                            placeholder="Buscar concepto..."
+                            emptyMessage="No se encontraron conceptos"
+                        />
+                    </FormGroup>
+
+                    {/* Billetera */}
+                    <FormGroup label="Billetera" required>
+                        <Select value={walletId} onValueChange={setWalletId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar billetera" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {wallets.map((wallet) => (
+                                    <SelectItem key={wallet.id} value={wallet.id}>
+                                        {wallet.wallet_name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -362,46 +405,15 @@ export function PaymentForm({
                             <SelectContent>
                                 {currencies.map((curr) => (
                                     <SelectItem key={curr.id} value={curr.id}>
-                                        {curr.code} ({curr.symbol})
+                                        {curr.name} ({curr.symbol})
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </FormGroup>
 
-                    {/* Billetera */}
-                    <FormGroup label="Billetera" required>
-                        <Select value={walletId} onValueChange={setWalletId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar billetera" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {wallets.map((wallet) => (
-                                    <SelectItem key={wallet.id} value={wallet.id}>
-                                        {wallet.wallet_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    {/* Estado */}
-                    <FormGroup label="Estado">
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Estado" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="pending">Pendiente</SelectItem>
-                                <SelectItem value="overdue">Vencido</SelectItem>
-                                <SelectItem value="cancelled">Cancelado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    {/* Cotización (opcional) */}
-                    <FormGroup label="Cotización" helpText="Tipo de cambio si aplica">
+                    {/* Cotización */}
+                    <FormGroup label="Tipo de Cambio">
                         <Input
                             type="number"
                             step="0.01"
@@ -412,22 +424,36 @@ export function PaymentForm({
                         />
                     </FormGroup>
 
-                    {/* Referencia */}
-                    <FormGroup label="Referencia" helpText="Nro. de recibo, factura, etc.">
+                    {/* Notas - Full width */}
+                    <FormGroup label="Notas" className="md:col-span-2">
+                        <Textarea
+                            placeholder="Descripción del pago..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            rows={2}
+                        />
+                    </FormGroup>
+
+                    {/* Referencia - Full width */}
+                    <FormGroup label="Referencia" className="md:col-span-2">
                         <Input
-                            placeholder="Ej: FAC-001"
+                            placeholder="Nro. de recibo, factura, etc."
                             value={reference}
                             onChange={(e) => setReference(e.target.value)}
                         />
                     </FormGroup>
 
-                    {/* Notas - Full width */}
-                    <FormGroup label="Descripción / Notas" className="md:col-span-2">
-                        <Textarea
-                            placeholder="Descripción del pago..."
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            rows={3}
+                    {/* Comprobante - Full width */}
+                    <FormGroup label="Comprobante" className="md:col-span-2">
+                        <MultiFileUpload
+                            ref={uploadRef}
+                            bucket="private-assets"
+                            folderPath={`organizations/${organizationId}/finance/general-costs`}
+                            onUploadComplete={setFiles}
+                            initialFiles={files}
+                            autoUpload={false}
+                            maxSizeMB={5}
+                            className="w-full"
                         />
                     </FormGroup>
                 </div>

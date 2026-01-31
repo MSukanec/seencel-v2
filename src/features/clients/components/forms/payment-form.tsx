@@ -22,21 +22,26 @@ import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/c
 import { OrganizationFinancialData } from "../../types";
 
 interface PaymentFormProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     clients: any[];
     financialData: OrganizationFinancialData;
     initialData?: any;
     onSuccess?: () => void;
+    // Optional: for organization context where project must be selected
+    projects?: { id: string; name: string }[];
+    showProjectSelector?: boolean;
 }
 
 export function PaymentForm({
-    projectId,
+    projectId: externalProjectId,
     organizationId,
     clients,
     financialData,
     initialData,
-    onSuccess
+    onSuccess,
+    projects = [],
+    showProjectSelector = false
 }: PaymentFormProps) {
     const { closeModal } = useModal();
     const [isLoading, setIsLoading] = useState(false);
@@ -52,13 +57,17 @@ export function PaymentForm({
     const [walletId, setWalletId] = useState(initialData?.wallet_id || defaultWalletId || "");
     const [amount, setAmount] = useState(initialData?.amount || "");
     const [currencyId, setCurrencyId] = useState(initialData?.currency_id || defaultCurrencyId || "");
-    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate || "1.0000");
+    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate || "");
     const [status, setStatus] = useState(initialData?.status || "confirmed");
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [reference, setReference] = useState(initialData?.reference || "");
     const [commitmentId, setCommitmentId] = useState(initialData?.commitment_id || "");
     const [commitments, setCommitments] = useState<any[]>([]);
     const [loadingCommitments, setLoadingCommitments] = useState(false);
+
+    // Project state for organization context
+    const [selectedProjectId, setSelectedProjectId] = useState(externalProjectId || "");
+    const projectId = externalProjectId || selectedProjectId;
 
     // File Upload State
     const [files, setFiles] = useState<UploadedFile[]>(
@@ -122,6 +131,13 @@ export function PaymentForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate project when selector is shown
+        if (showProjectSelector && !projectId) {
+            toast.error("Seleccioná un proyecto");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -179,6 +195,26 @@ export function PaymentForm({
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
+                {/* Project Selector - only shown when in organization context */}
+                {showProjectSelector && (
+                    <div className="mb-4">
+                        <FormGroup label="Proyecto" required>
+                            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar proyecto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {projects.map((project) => (
+                                        <SelectItem key={project.id} value={project.id}>
+                                            {project.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Fecha de Pago */}
                     <FormGroup label="Fecha de Pago" required>
@@ -207,6 +243,21 @@ export function PaymentForm({
                         </Popover>
                     </FormGroup>
 
+                    {/* Estado */}
+                    <FormGroup label="Estado" required>
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="confirmed">Confirmado</SelectItem>
+                                <SelectItem value="pending">Pendiente</SelectItem>
+                                <SelectItem value="rejected">Rechazado</SelectItem>
+                                <SelectItem value="void">Anulado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
+
                     {/* Cliente */}
                     <FormGroup label="Cliente" required>
                         <Combobox
@@ -225,6 +276,33 @@ export function PaymentForm({
                             searchPlaceholder="Buscar cliente..."
                             emptyMessage="No se encontró el cliente."
                         />
+                    </FormGroup>
+
+                    {/* Compromiso */}
+                    <FormGroup label="Compromiso">
+                        <Select
+                            disabled={!clientId || loadingCommitments}
+                            value={commitmentId || "none"}
+                            onValueChange={(v) => setCommitmentId(v === "none" ? "" : v)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder={
+                                    !clientId
+                                        ? "Selecciona un cliente primero"
+                                        : loadingCommitments
+                                            ? "Cargando..."
+                                            : "Seleccionar compromiso"
+                                } />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Sin compromiso</SelectItem>
+                                {commitments.map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                        {c.concept || c.unit_description || c.unit_name || "Compromiso"} - {c.currency?.symbol}{c.amount}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </FormGroup>
 
                     {/* Billetera */}
@@ -272,7 +350,7 @@ export function PaymentForm({
                     </FormGroup>
 
                     {/* Tipo de Cambio */}
-                    <FormGroup label="Tipo de Cambio" helpText="Cotización si aplica">
+                    <FormGroup label="Tipo de Cambio">
                         <Input
                             type="number"
                             step="0.0001"
@@ -281,42 +359,6 @@ export function PaymentForm({
                             value={exchangeRate}
                             onChange={(e) => setExchangeRate(e.target.value)}
                         />
-                    </FormGroup>
-
-                    {/* Compromiso */}
-                    <FormGroup label="Compromiso" helpText={!clientId ? "Selecciona un cliente primero" : undefined}>
-                        <Select
-                            disabled={!clientId || loadingCommitments}
-                            value={commitmentId || "none"}
-                            onValueChange={(v) => setCommitmentId(v === "none" ? "" : v)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder={loadingCommitments ? "Cargando..." : "Seleccionar compromiso"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Sin compromiso</SelectItem>
-                                {commitments.map((c: any) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                        {c.concept || c.unit_description || c.unit_name || "Compromiso"} - {c.currency?.symbol}{c.amount}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-
-                    {/* Estado */}
-                    <FormGroup label="Estado" required>
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="pending">Pendiente</SelectItem>
-                                <SelectItem value="rejected">Rechazado</SelectItem>
-                                <SelectItem value="void">Anulado</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </FormGroup>
 
                     {/* Notas */}

@@ -18,7 +18,7 @@ interface GeneralCostsPageClientProps {
     payments: GeneralCostPaymentView[];
     dashboardData: EnhancedDashboardData;
     wallets: { id: string; wallet_name: string }[];
-    currencies: { id: string; code: string; symbol: string }[];
+    currencies: { id: string; name: string; code: string; symbol: string }[];
 }
 
 export function GeneralCostsPageClient({ organizationId, categories, concepts, payments, dashboardData, wallets, currencies }: GeneralCostsPageClientProps) {
@@ -67,7 +67,7 @@ export function GeneralCostsPageClient({ organizationId, categories, concepts, p
             </TabsContent>
             <TabsContent value="payments" className="m-0 h-full focus-visible:outline-none">
                 <GeneralCostsPaymentsView
-                    data={payments}
+                    data={filteredPayments}
                     concepts={concepts}
                     wallets={wallets}
                     currencies={currencies}
