@@ -145,6 +145,7 @@ export interface OrganizationPreferences {
     currency_decimal_places: number; // 0, 1, or 2 - controls decimal display globally
     insight_config?: any; // JSONB
     default_tax_label?: string; // IVA, VAT, Sales Tax, etc.
+    kpi_compact_format?: boolean; // true = 10K, false = 10.568 (default)
 }
 
 export interface OrganizationSettingsData {

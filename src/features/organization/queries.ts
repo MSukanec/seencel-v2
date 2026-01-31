@@ -457,7 +457,7 @@ export async function getOrganizationFinancialData(orgId: string) {
     const { data: preferences } = await supabase
         .from('organization_preferences')
         // Using 'maybeSingle' to avoid error if no preferences found (just returns null)
-        .select('default_currency_id, functional_currency_id, default_wallet_id, currency_decimal_places, use_currency_exchange, insight_config, default_tax_label_id')
+        .select('default_currency_id, functional_currency_id, default_wallet_id, currency_decimal_places, use_currency_exchange, insight_config, default_tax_label_id, kpi_compact_format')
         .eq('organization_id', orgId)
         .maybeSingle();
 

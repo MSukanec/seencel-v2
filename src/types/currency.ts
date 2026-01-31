@@ -54,6 +54,9 @@ export interface CurrencyContextValue {
     // Decimal places preference (0, 1, or 2)
     decimalPlaces: number;
 
+    // KPI format preference (true = compact like 10K, false = full like 10.568)
+    kpiCompactFormat: boolean;
+
     // Loading state
     isLoading: boolean;
 }

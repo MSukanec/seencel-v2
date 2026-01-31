@@ -83,6 +83,9 @@ export interface MoneyConfig {
     /** Number of decimal places to display (0, 1, or 2) */
     decimalPlaces: number;
 
+    /** Whether to use compact format for KPIs (10K vs 10.568) */
+    kpiCompactFormat: boolean;
+
     /** Locale for formatting (e.g., 'es-AR') */
     locale: string;
 }
@@ -102,6 +105,7 @@ export const DEFAULT_CONFIG: MoneyConfig = {
     secondaryCurrencySymbol: 'US$',
     currentExchangeRate: 1,
     decimalPlaces: 2,
+    kpiCompactFormat: false,
     locale: 'es-AR',
 };
 

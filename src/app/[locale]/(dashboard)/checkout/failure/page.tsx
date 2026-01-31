@@ -10,7 +10,8 @@ export default function CheckoutFailurePage() {
     const searchParams = useSearchParams();
 
     const source = searchParams.get("source") || "unknown";
-    const paymentId = searchParams.get("payment_id") || searchParams.get("collection_id");
+    const paymentId = searchParams.get("payment_id") || searchParams.get("collection_id") || searchParams.get("token");
+    const errorMessage = searchParams.get("error");
 
     return (
         <ContentLayout variant="narrow" className="py-16">
@@ -28,11 +29,13 @@ export default function CheckoutFailurePage() {
                     </p>
                 </div>
 
-                {/* Info */}
+                {/* Error Message */}
                 <div className="bg-amount-negative/10 border border-amount-negative/20 rounded-lg px-6 py-4 max-w-md">
                     <p className="text-sm">
-                        El pago fue rechazado o cancelado.
-                        No se realizó ningún cargo a tu cuenta.
+                        {errorMessage
+                            ? decodeURIComponent(errorMessage)
+                            : "El pago fue rechazado o cancelado. No se realizó ningún cargo a tu cuenta."
+                        }
                     </p>
                 </div>
 

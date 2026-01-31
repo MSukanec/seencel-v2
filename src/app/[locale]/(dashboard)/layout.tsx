@@ -60,6 +60,9 @@ export default async function DashboardLayout({
     // Get decimal places preference (default to 2)
     const decimalPlaces = financialData?.preferences?.currency_decimal_places ?? 2;
 
+    // Get KPI compact format preference (default to false = full numbers)
+    const kpiCompactFormat = financialData?.preferences?.kpi_compact_format ?? false;
+
     return (
         <OrganizationProvider
             activeOrgId={activeOrgId || null}
@@ -70,6 +73,7 @@ export default async function DashboardLayout({
                 currencies={currencies}
                 defaultExchangeRate={defaultExchangeRate}
                 decimalPlaces={decimalPlaces}
+                kpiCompactFormat={kpiCompactFormat}
             >
                 <FeatureFlagsProvider flags={flags} isAdmin={isAdmin}>
                     <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>

@@ -129,6 +129,9 @@ export function DashboardKpiCard({
     // Use useMoney for automatic formatting when amount is provided
     const money = useMoney();
 
+    // Use organization preference for compact mode (default to false = full numbers)
+    const useCompact = compact ?? money.config.kpiCompactFormat ?? false;
+
     // Calculate sum from items if provided (for bimonetary support)
     const sumResult = items && items.length > 0 ? money.sum(items) : null;
 
@@ -174,8 +177,11 @@ export function DashboardKpiCard({
             'hero': 'text-5xl'
         };
 
+        // Dynamic size: smaller text for full numbers, larger for compact
+        const effectiveSize = useCompact ? size : (size === 'hero' ? 'large' : size === 'large' ? 'default' : size);
+
         // If compact mode and displayValue is a string with a number, parse and format
-        if (compact && typeof displayValue === 'string') {
+        if (useCompact && typeof displayValue === 'string') {
             // Special case: percentage values - render as-is with suffix styling
             if (displayValue.endsWith('%')) {
                 const numPart = displayValue.slice(0, -1);
@@ -205,7 +211,7 @@ export function DashboardKpiCard({
         }
 
         // If compact mode and displayValue is a number
-        if (compact && typeof displayValue === 'number') {
+        if (useCompact && typeof displayValue === 'number') {
             const formatted = formatCompactValue(displayValue);
             return (
                 <h2 className={cn("font-bold tracking-tight mt-2 flex items-baseline gap-1", sizeClasses[size])}>

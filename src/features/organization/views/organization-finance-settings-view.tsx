@@ -344,6 +344,26 @@ export function FinanceSettingsView({
                                         </Select>
                                     </FormGroup>
 
+                                    {/* KPI Format Selector */}
+                                    <div className="flex flex-row items-center justify-between rounded-lg border p-4 bg-background">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium">Formato de KPIs</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                Cómo mostrar los números grandes en dashboards.
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-mono text-muted-foreground">
+                                                {preferences?.kpi_compact_format ? "$ 10K" : "$ 10.568"}
+                                            </span>
+                                            <Switch
+                                                checked={preferences?.kpi_compact_format || false}
+                                                onCheckedChange={(val) => handleUpdatePreference('kpi_compact_format', val)}
+                                                disabled={isPending}
+                                            />
+                                        </div>
+                                    </div>
+
                                     {/* Default Tax Label Selector */}
                                     <FormGroup label="Etiqueta de Impuesto" helpText="Nombre del impuesto usado por defecto en cotizaciones (IVA, VAT, etc).">
                                         <Select

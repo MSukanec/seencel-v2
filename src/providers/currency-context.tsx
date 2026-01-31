@@ -16,6 +16,7 @@ interface CurrencyProviderProps {
     currencies: Currency[];
     defaultExchangeRate?: number;
     decimalPlaces?: number; // Organization preference for decimal display
+    kpiCompactFormat?: boolean; // Organization preference for KPI format
 }
 
 /**
@@ -30,7 +31,8 @@ export function CurrencyProvider({
     children,
     currencies,
     defaultExchangeRate = 1,
-    decimalPlaces = 2
+    decimalPlaces = 2,
+    kpiCompactFormat = false
 }: CurrencyProviderProps) {
     // Find primary and secondary currencies
     const primaryCurrency = useMemo(() =>
@@ -139,6 +141,7 @@ export function CurrencyProvider({
         convertFromFunctional,
         calculateBreakdown,
         decimalPlaces,
+        kpiCompactFormat,
         isLoading: false,
     }), [
         primaryCurrency,
@@ -152,6 +155,7 @@ export function CurrencyProvider({
         convertFromFunctional,
         calculateBreakdown,
         decimalPlaces,
+        kpiCompactFormat,
     ]);
 
     return (

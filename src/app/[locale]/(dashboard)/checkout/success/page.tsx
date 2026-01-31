@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Home, Receipt, Sparkles, GraduationCap, BookOpen, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -36,10 +37,13 @@ function ConfettiPiece({ delay, left }: { delay: number; left: number }) {
 
 export default function CheckoutSuccessPage() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [confettiPieces, setConfettiPieces] = useState<{ id: number; delay: number; left: number }[]>([]);
     const [isCapturing, setIsCapturing] = useState(false);
-    const [captureError, setCaptureError] = useState<string | null>(null);
     const [capturedPaymentId, setCapturedPaymentId] = useState<string | null>(null);
+
+    // Use ref to prevent double capture in React StrictMode
+    const captureAttemptedRef = useRef(false);
 
     const source = searchParams.get("source") || "mercadopago";
     const paymentId = searchParams.get("payment_id") || searchParams.get("collection_id") || capturedPaymentId;
@@ -57,7 +61,11 @@ export default function CheckoutSuccessPage() {
     // Capture PayPal payment when returning from PayPal approval
     useEffect(() => {
         async function capturePayPalPayment() {
-            if (source !== "paypal" || !paypalToken || capturedPaymentId) return;
+            // Skip if not PayPal, no token, already captured, or already attempted
+            if (source !== "paypal" || !paypalToken || capturedPaymentId || captureAttemptedRef.current) return;
+
+            // Mark as attempted immediately to prevent double execution
+            captureAttemptedRef.current = true;
 
             setIsCapturing(true);
             try {
@@ -69,21 +77,26 @@ export default function CheckoutSuccessPage() {
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error || "Error al capturar el pago");
+                    console.error("PayPal capture error:", errorData);
+                    // Redirect to failure page with error details
+                    const errorMessage = encodeURIComponent(errorData.error || "Error al procesar el pago");
+                    router.replace(`/checkout/failure?source=paypal&error=${errorMessage}&token=${paypalToken}`);
+                    return;
                 }
 
                 const data = await response.json();
                 setCapturedPaymentId(data.captureId || data.orderId);
             } catch (error) {
                 console.error("PayPal capture error:", error);
-                setCaptureError(error instanceof Error ? error.message : "Error al procesar el pago");
+                const errorMessage = encodeURIComponent(error instanceof Error ? error.message : "Error al procesar el pago");
+                router.replace(`/checkout/failure?source=paypal&error=${errorMessage}`);
             } finally {
                 setIsCapturing(false);
             }
         }
 
         capturePayPalPayment();
-    }, [source, paypalToken, capturedPaymentId]);
+    }, [source, paypalToken, capturedPaymentId, router]);
 
     // Generate confetti on mount (only if not capturing or after successful capture)
     useEffect(() => {
@@ -103,24 +116,6 @@ export default function CheckoutSuccessPage() {
                 <div className="flex flex-col items-center text-center space-y-4">
                     <Loader2 className="w-12 h-12 animate-spin text-primary" />
                     <p className="text-lg text-muted-foreground">Procesando tu pago con PayPal...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show error if capture failed
-    if (captureError) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <div className="flex flex-col items-center text-center space-y-4 max-w-md">
-                    <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-8 h-8 text-destructive" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-destructive">Error en el pago</h1>
-                    <p className="text-muted-foreground">{captureError}</p>
-                    <Button asChild>
-                        <Link href="/checkout">Intentar de nuevo</Link>
-                    </Button>
                 </div>
             </div>
         );

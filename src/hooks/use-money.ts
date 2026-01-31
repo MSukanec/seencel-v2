@@ -138,7 +138,7 @@ export function useMoney(options: UseMoneyOptions = {}): UseMoneyReturn {
     const config: MoneyConfig = useMemo(() => {
         if (!currencyContext) return DEFAULT_CONFIG;
 
-        const { primaryCurrency, secondaryCurrency, currentExchangeRate, decimalPlaces } = currencyContext;
+        const { primaryCurrency, secondaryCurrency, currentExchangeRate, decimalPlaces, kpiCompactFormat } = currencyContext;
 
         return {
             functionalCurrencyCode: primaryCurrency?.code || 'ARS',
@@ -147,6 +147,7 @@ export function useMoney(options: UseMoneyOptions = {}): UseMoneyReturn {
             secondaryCurrencySymbol: secondaryCurrency?.symbol || 'US$',
             currentExchangeRate: currentExchangeRate > 0 ? currentExchangeRate : 1,
             decimalPlaces: decimalPlaces ?? 2,
+            kpiCompactFormat: kpiCompactFormat ?? false,
             locale: 'es-AR',
         };
     }, [currencyContext]);

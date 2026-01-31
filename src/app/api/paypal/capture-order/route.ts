@@ -26,10 +26,25 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });
         }
 
+        // Log the mode being used
+        console.log(`[PayPal Capture] orderId=${orderId}, sandboxMode=${sandboxMode}, paypalEnabled=${paypalEnabled}`);
+
         // Capture the payment
-        const captureResult = await capturePayPalOrder(orderId, sandboxMode);
+        let captureResult;
+        try {
+            captureResult = await capturePayPalOrder(orderId, sandboxMode);
+        } catch (captureError: any) {
+            console.error('[PayPal Capture] Failed:', captureError.message);
+            return NextResponse.json({
+                error: captureError.message || 'Failed to capture PayPal payment',
+                details: 'Check server logs for more information'
+            }, { status: 400 });
+        }
+
+        console.log(`[PayPal Capture] Result status: ${captureResult.status}`);
 
         if (captureResult.status !== 'COMPLETED') {
+            console.error('[PayPal Capture] Not completed:', captureResult);
             return NextResponse.json({
                 error: 'Payment not completed',
                 status: captureResult.status
