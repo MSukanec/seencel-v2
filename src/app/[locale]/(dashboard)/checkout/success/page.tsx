@@ -84,6 +84,9 @@ export default function CheckoutSuccessPage() {
                 if (data.courseId) {
                     setCapturedCourseId(data.courseId);
                 }
+
+                // Force refresh of server components (sidebar, etc.) to update plan/founder status
+                router.refresh();
             } catch (error) {
                 console.error("PayPal capture error:", error);
                 const errorMessage = encodeURIComponent(error instanceof Error ? error.message : "Error al procesar el pago");
@@ -103,6 +106,13 @@ export default function CheckoutSuccessPage() {
             return () => clearTimeout(timer);
         }
     }, [isCapturing]);
+
+    // For non-PayPal payments (MercadoPago), refresh on mount to update sidebar
+    useEffect(() => {
+        if (source !== "paypal") {
+            router.refresh();
+        }
+    }, [source, router]);
 
     // Floating emojis data
     const emojis = isCourse
