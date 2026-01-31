@@ -63,7 +63,8 @@ const ALL_CONTEXTS: ContextItem[] = [
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
-    // Admin moved to sidebar footer (SidebarAdminButton)
+    // Admin visible only to admins (filtered in useMemo below)
+    { id: 'admin', label: 'Administración', icon: Hammer },
 ];
 
 export const contextRoutes: Record<NavigationContext, string> = {
@@ -85,14 +86,17 @@ export function useSidebarNavigation() {
 
     const contexts = useMemo(() => {
         return ALL_CONTEXTS.map(ctx => {
+            // Admin context: Only visible to admins
+            if (ctx.id === 'admin') {
+                return isAdmin ? ctx : null;
+            }
+
             // Mapping: Context ID -> Feature Flag Key
             let flagKey = null;
             if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
             if (ctx.id === 'portal') flagKey = 'context_portal_enabled';
             if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
             if (ctx.id === 'community') flagKey = 'context_community_enabled';
-
-            // Admin is handled separately via SidebarAdminButton
 
             if (!flagKey) return ctx;
 

@@ -36,7 +36,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
     return (
         <div className="flex flex-col gap-6">
             {/* Hero KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <DashboardKpiCard
                     title="En línea ahora"
                     value={kpis.activeNow}

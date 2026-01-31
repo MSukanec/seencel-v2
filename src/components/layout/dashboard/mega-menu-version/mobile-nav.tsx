@@ -28,6 +28,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/routing";
 import { useTheme } from "next-themes";
 import { useUser } from "@/context/user-context";
+import { useOrganization } from "@/context/organization-context";
 
 // Types for drill-down navigation
 type NavigationLevel = 'main' | 'context';
@@ -40,6 +41,7 @@ export function MobileNav() {
     const [isAnimating, setIsAnimating] = React.useState(false);
 
     const { user } = useUser();
+    const { activeOrgId } = useOrganization();
     const pathname = usePathname();
     const router = useRouter();
     const { contexts, getNavItems } = useSidebarNavigation();
@@ -136,20 +138,25 @@ export function MobileNav() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[100vw] sm:w-[100vw] p-0 flex flex-col border-none overflow-hidden">
                 {/* Header - changes based on level */}
-                <SheetHeader className="p-4 border-b bg-background/80 backdrop-blur-xl sticky top-0 z-10 flex flex-row items-center justify-between">
+                <SheetHeader className="p-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b bg-background/80 backdrop-blur-xl sticky top-0 z-10 flex flex-row items-center justify-between gap-3">
                     {level === 'main' ? (
                         <SheetTitle className="text-lg font-semibold">Menú</SheetTitle>
                     ) : (
-                        <button
-                            onClick={navigateBack}
-                            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors -ml-1"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            <span>Menú</span>
-                        </button>
+                        <>
+                            <button
+                                onClick={navigateBack}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            {/* Current Context Display - Name only, no icon */}
+                            {currentContext && (
+                                <span className="font-semibold text-foreground flex-1">{currentContext.label}</span>
+                            )}
+                        </>
                     )}
                     <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground rounded-full">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-full ml-auto">
                             <X className="h-4 w-4" />
                         </Button>
                     </SheetTrigger>
@@ -248,25 +255,8 @@ export function MobileNav() {
                         <div className="h-full overflow-y-auto">
                             {currentContext && (
                                 <>
-                                    {/* Context Header */}
-                                    <div className="px-4 py-3 border-b border-border/50 bg-muted/30">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-                                                <currentContext.icon className="h-5 w-5 text-primary" />
-                                            </div>
-                                            <div>
-                                                <h2 className="font-semibold text-foreground">
-                                                    {currentContext.label}
-                                                </h2>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {currentItems.length} opciones
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Navigation Items */}
-                                    <nav className="p-3 space-y-1">
+                                    {/* Navigation Items - No header here, it's now in the main header */}
+                                    <nav className="p-2 space-y-0.5">
                                         {currentItems.map((item, idx) => {
                                             const isActive = pathname === item.href;
                                             const Icon = item.icon;
@@ -280,14 +270,14 @@ export function MobileNav() {
                                                         actions.setActiveContext(activeContextId as any);
                                                     }}
                                                     className={cn(
-                                                        "flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all group",
+                                                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] transition-all group",
                                                         isActive
                                                             ? "bg-primary/10 text-primary font-medium"
                                                             : "hover:bg-muted/60 text-foreground/70 hover:text-foreground"
                                                     )}
                                                 >
                                                     <div className={cn(
-                                                        "flex items-center justify-center w-9 h-9 rounded-lg transition-colors",
+                                                        "flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
                                                         isActive
                                                             ? "bg-primary/15"
                                                             : "bg-muted/40 group-hover:bg-muted/60"
@@ -305,21 +295,21 @@ export function MobileNav() {
                     </div>
                 </div>
 
-                {/* Footer: User Profile */}
-                <div className="border-t p-3 mt-auto bg-background/80 backdrop-blur-xl">
+                {/* Footer: User Profile Only */}
+                <div className="border-t p-2 mt-auto bg-background/80 backdrop-blur-xl">
                     <div className="flex items-center justify-end">
                         {/* User Avatar with Dropdown - SAME OPTIONS AS DESKTOP */}
                         {user ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-muted/60 transition-colors">
+                                    <button className="flex items-center gap-3 p-1 rounded-xl hover:bg-muted/60 transition-colors">
                                         <div className="text-right hidden sm:block">
                                             <p className="text-sm font-medium leading-none">{user.full_name || "User"}</p>
                                             <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
                                         </div>
-                                        <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm rounded-lg">
+                                        <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm rounded-lg">
                                             <AvatarImage src={user.avatar_url || ""} alt={user.full_name || "User"} />
-                                            <AvatarFallback className="bg-primary/10 text-primary font-bold rounded-lg text-xs">
+                                            <AvatarFallback className="bg-primary/10 text-primary font-bold rounded-lg">
                                                 {user.full_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || "US"}
                                             </AvatarFallback>
                                         </Avatar>

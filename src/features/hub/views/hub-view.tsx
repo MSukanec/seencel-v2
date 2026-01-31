@@ -18,7 +18,6 @@ import { getStorageUrl } from "@/lib/storage-utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { HeaderNotificationsButton } from "@/components/shared/header-notifications-button";
 import { HeroCarousel, type HeroSlide } from "@/components/shared/hero-carousel";
 import type { UserProfile } from "@/types/user";
 import type { HeroSection } from "@/features/hero-sections/queries";
@@ -156,24 +155,13 @@ export function HubView({
     };
 
     return (
-        <div className="h-full w-full bg-gradient-to-br from-background via-muted/10 to-background relative overflow-y-auto">
+        <div className="h-full w-full bg-gradient-to-br from-background via-muted/10 to-background relative overflow-y-auto overflow-x-hidden">
             {/* Ambient Background */}
             <div className="absolute top-0 right-0 -z-10 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl opacity-50 pointer-events-none translate-x-1/3 -translate-y-1/3" />
             <div className="absolute bottom-0 left-0 -z-10 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl opacity-50 pointer-events-none -translate-x-1/3 translate-y-1/3" />
 
             <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
-                {/* Hero Carousel (if slides exist) */}
-                {slides.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        <HeroCarousel slides={slides} autoPlay={true} interval={4000} />
-                    </motion.div>
-                )}
-
-                {/* Header */}
+                {/* Header (Greeting) - Now FIRST */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -192,17 +180,25 @@ export function HubView({
                             Bienvenido a tu centro de control Seencel.
                         </p>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <HeaderNotificationsButton />
-                    </div>
                 </motion.div>
+
+                {/* Hero Carousel - Now SECOND (after greeting) */}
+                {slides.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <HeroCarousel slides={slides} autoPlay={true} interval={4000} />
+                    </motion.div>
+                )}
 
                 {/* 3 Main Cards */}
                 <motion.div
                     variants={containerVariants}
                     initial="hidden"
-                    animate="visible"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.1 }}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
                     {/* Work Card - Conditionally rendered based on workspace flag */}
