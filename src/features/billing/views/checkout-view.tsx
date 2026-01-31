@@ -245,9 +245,18 @@ export function CheckoutView({
     // Transfer is now available for both courses and plans (one-time payments)
     const [selectedPlanId, setSelectedPlanId] = useState(initialPlan?.id || "");
     const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">(initialCycle);
-    const [paymentMethod, setPaymentMethod] = useState(
-        isArgentina ? "transfer" : "paypal"
-    );
+
+    // Default payment method: Argentina -> transfer, else -> paypal (if enabled)
+    const getDefaultPaymentMethod = () => {
+        if (isArgentina) return "transfer";
+        // For non-Argentina: use PayPal only if enabled, otherwise no default
+        if (paymentMethodFlags.paypalEnabled) return "paypal";
+        // If PayPal disabled, check MercadoPago (unlikely for non-AR but just in case)
+        if (paymentMethodFlags.mercadopagoEnabled && isArgentina) return "mercadopago";
+        // No valid payment method available - user must contact support
+        return "";
+    };
+    const [paymentMethod, setPaymentMethod] = useState(getDefaultPaymentMethod());
 
     // Payment methods ordered by country
     // Transfer is available for all products (one-time payments) for Argentina only
