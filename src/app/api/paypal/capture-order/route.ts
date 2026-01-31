@@ -14,8 +14,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Check if sandbox mode is enabled
-        const sandboxMode = await getFeatureFlag('paypal_sandbox_mode');
+        // When PayPal is disabled for users (paypal_enabled = false), use sandbox credentials
+        const paypalEnabled = await getFeatureFlag('paypal_enabled');
+        const sandboxMode = !paypalEnabled;
 
         // Get order ID from request
         const body = await request.json();

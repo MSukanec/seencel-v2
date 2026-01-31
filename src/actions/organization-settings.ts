@@ -96,7 +96,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         // Historial de suscripciones - usar organization_subscriptions con joins
         supabase
             .from('organization_subscriptions')
-            .select('id, created_at, amount, currency, status, billing_period, plan:plan_id(name), payment:payment_id(provider)')
+            .select('id, created_at, amount, currency, status, billing_period, payer_email, plan:plan_id(name), payment:payment_id(provider)')
             .eq('organization_id', organizationId)
             .order('created_at', { ascending: false })
             .limit(12),

@@ -18,8 +18,10 @@ export async function POST(request: NextRequest) {
 
         // Check if test mode is enabled via feature flag
         const isTestMode = await getFeatureFlag('paypal_modo_test');
-        // Sandbox uses different credentials (for PayPal sandbox environment)
-        const sandboxMode = await getFeatureFlag('paypal_sandbox_mode');
+        // When PayPal is disabled for users (paypal_enabled = false), use sandbox credentials
+        // This allows admins to test with sandbox while users can't access PayPal
+        const paypalEnabled = await getFeatureFlag('paypal_enabled');
+        const sandboxMode = !paypalEnabled; // Disabled for users = sandbox mode for testing
 
         // Get request body
         const body = await request.json();

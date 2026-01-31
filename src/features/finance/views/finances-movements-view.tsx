@@ -157,7 +157,7 @@ export function FinancesMovementsView({
 
         // Map movement types to their form actions
         switch (movementType) {
-            case 'general_cost_payment':
+            case 'general_cost':
                 openModal(
                     <GeneralCostsPaymentForm
                         initialData={movement}
@@ -179,13 +179,16 @@ export function FinancesMovementsView({
                 );
                 break;
             case 'client_payment':
-                toast.info("Para editar pagos de clientes, andá a la sección de Clientes");
+                toast.info("Para editar cobros de clientes, andá a la sección de Clientes");
                 break;
             case 'material_payment':
                 toast.info("Para editar pagos de materiales, andá a la sección de Materiales");
                 break;
-            case 'personnel_payment':
-                toast.info("Para editar pagos de personal, andá a la sección de Personal");
+            case 'labor_payment':
+                toast.info("Para editar pagos de mano de obra, andá a la sección de Mano de Obra");
+                break;
+            case 'subcontract_payment':
+                toast.info("Para editar pagos de subcontratos, andá a la sección de Subcontratos");
                 break;
             case 'partner_contribution':
             case 'partner_withdrawal':
@@ -253,21 +256,22 @@ export function FinancesMovementsView({
             cell: ({ row }) => {
                 // Map movement_type to friendly label
                 const typeLabels: Record<string, string> = {
-                    'client_payment': 'Pago de Cliente',
-                    'material_payment': 'Pago de Material',
-                    'personnel_payment': 'Pago de Personal',
-                    'partner_contribution': 'Aporte de Socio',
-                    'partner_withdrawal': 'Retiro de Socio',
-                    'general_cost_payment': 'Gastos Generales',
+                    'client_payment': 'Cobro Cliente',
+                    'material_payment': 'Materiales',
+                    'labor_payment': 'Mano de Obra',
+                    'subcontract_payment': 'Subcontrato',
+                    'general_cost': 'Gasto General',
+                    'partner_contribution': 'Aporte Socio',
+                    'partner_withdrawal': 'Retiro Socio',
                     'wallet_transfer': 'Transferencia',
-                    'currency_exchange': 'Cambio de Moneda',
+                    'currency_exchange': 'Cambio Moneda',
                 };
                 const typeLabel = typeLabels[row.original.movement_type] || row.original.movement_type;
 
                 return (
                     <div className="flex flex-col">
                         <span className="text-sm font-medium">{typeLabel}</span>
-                        <span className="text-xs text-muted-foreground">{row.original.entity_name || "-"}</span>
+                        <span className="text-xs text-muted-foreground">{row.original.concept_name || "-"}</span>
                     </div>
                 );
             },

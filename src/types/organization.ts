@@ -85,6 +85,7 @@ export interface OrganizationSubscription {
     currency: string;
     plan_id: string;
     plan?: Plan; // Joined
+    payer_email?: string | null;
 }
 
 export interface OrganizationBillingCycle {
@@ -96,6 +97,7 @@ export interface OrganizationBillingCycle {
     billing_period: string;
     plan?: { name: string }[] | { name: string } | null;
     payment?: { provider: string }[] | { provider: string } | null;
+    payer_email?: string | null;
 }
 
 export interface Currency {

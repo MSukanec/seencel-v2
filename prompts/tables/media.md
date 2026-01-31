@@ -49,7 +49,6 @@ create table public.media_links (
   contact_id uuid null,
   general_cost_payment_id uuid null,
   created_by uuid null,
-  updated_by uuid null,
   created_at timestamp with time zone not null default now(),
   visibility text null,
   description text null,
@@ -63,30 +62,32 @@ create table public.media_links (
   material_payment_id uuid null,
   material_purchase_id uuid null,
   testimonial_id uuid null,
-  hero_section_id uuid null,
-  personnel_payment_id uuid null,
+  labor_payment_id uuid null,
   forum_thread_id uuid null,
   partner_contribution_id uuid null,
   partner_withdrawal_id uuid null,
   pin_id uuid null,
+  updated_by uuid null,
+  subcontract_payment_id uuid null,
   constraint media_links_pkey primary key (id),
   constraint media_links_client_payment_fkey foreign KEY (client_payment_id) references client_payments (id) on delete CASCADE,
   constraint media_links_contact_fkey foreign KEY (contact_id) references contacts (id) on delete CASCADE,
   constraint media_links_course_fkey foreign KEY (course_id) references courses (id) on delete CASCADE,
   constraint media_links_forum_thread_fkey foreign KEY (forum_thread_id) references forum_threads (id) on delete CASCADE,
   constraint media_links_general_cost_payment_id_fkey foreign KEY (general_cost_payment_id) references general_costs_payments (id) on delete CASCADE,
-  constraint media_links_hero_section_id_fkey foreign KEY (hero_section_id) references hero_sections (id) on delete set null,
   constraint media_links_material_payment_id_fkey foreign KEY (material_payment_id) references material_payments (id) on delete set null,
-  constraint media_links_material_purchase_id_fkey foreign KEY (material_purchase_id) references material_purchases (id) on delete set null,
+  constraint media_links_material_purchase_id_fkey foreign KEY (material_purchase_id) references material_invoices (id) on delete set null,
   constraint media_links_media_fkey foreign KEY (media_file_id) references media_files (id) on delete CASCADE,
   constraint media_links_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
   constraint media_links_partner_contribution_fkey foreign KEY (partner_contribution_id) references partner_contributions (id) on delete CASCADE,
   constraint media_links_partner_withdrawal_fkey foreign KEY (partner_withdrawal_id) references partner_withdrawals (id) on delete CASCADE,
-  constraint media_links_personnel_payment_fkey foreign KEY (personnel_payment_id) references personnel_payments (id) on delete CASCADE,
+  constraint media_links_personnel_payment_fkey foreign KEY (labor_payment_id) references labor_payments (id) on delete CASCADE,
   constraint media_links_pin_fkey foreign KEY (pin_id) references pins (id) on delete CASCADE,
   constraint media_links_project_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
   constraint media_links_sitelog_fkey foreign KEY (site_log_id) references site_logs (id) on delete CASCADE,
+  constraint media_links_subcontract_payment_fkey foreign KEY (subcontract_payment_id) references subcontract_payments (id) on delete CASCADE,
   constraint media_links_testimonial_id_fkey foreign KEY (testimonial_id) references testimonials (id) on delete CASCADE,
+  constraint media_links_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
   constraint media_links_category_check check (
     (
       (category is null)
@@ -149,10 +150,10 @@ where
 
 create index IF not exists idx_media_links_media_file on public.media_links using btree (media_file_id, organization_id) TABLESPACE pg_default;
 
-create index IF not exists idx_media_links_personnel_payment on public.media_links using btree (personnel_payment_id) TABLESPACE pg_default
+create index IF not exists idx_media_links_personnel_payment on public.media_links using btree (labor_payment_id) TABLESPACE pg_default
 where
   (
-    (personnel_payment_id is not null)
+    (labor_payment_id is not null)
     and (organization_id is not null)
   );
 
@@ -186,3 +187,19 @@ where
 create index IF not exists idx_media_links_pin on public.media_links using btree (pin_id) TABLESPACE pg_default
 where
   (pin_id is not null);
+
+create index IF not exists idx_media_links_subcontract_payment on public.media_links using btree (subcontract_payment_id) TABLESPACE pg_default
+where
+  (subcontract_payment_id is not null);
+
+create trigger on_media_link_audit
+after INSERT
+or DELETE
+or
+update on media_links for EACH row
+execute FUNCTION log_media_link_activity ();
+
+create trigger set_updated_by_media_links BEFORE INSERT
+or
+update on media_links for EACH row
+execute FUNCTION handle_updated_by ();

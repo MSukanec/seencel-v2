@@ -5,7 +5,6 @@ import { DashboardKpiCard, CurrencyBreakdownItem } from "@/components/dashboard/
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
 import { BaseDonutChart } from "@/components/charts/pie/base-donut-chart";
-import { BaseWaffleChart } from "@/components/charts/waffle/base-waffle-chart";
 import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Wallet, ArrowUpCircle, ArrowDownCircle, Lightbulb } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -197,15 +196,11 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
     // CHART DATA: BALANCE BY WALLET (Saldo actual por billetera)
     // ========================================
     const distributionData = useMemo(() => {
-        const getWalletName = (walletId: string) => {
-            if (!walletId) return 'Sin billetera';
-            return wallets.find(w => w.id === walletId)?.wallet_name || 'Sin billetera';
-        };
-
         // Calculate balance per wallet (ingresos - egresos)
         // Use toFunctionalAmount to convert all values to same currency
         const walletBalances = movements.reduce((acc, m) => {
-            const walletName = getWalletName(m.wallet_id);
+            // Use wallet_name directly from the view, fallback to lookup
+            const walletName = m.wallet_name || 'Sin billetera';
             const baseAmount = money.toFunctionalAmount({
                 amount: Number(m.amount) || 0,
                 currency_code: m.currency_code,
@@ -231,24 +226,14 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                 value: value as number,
                 fill: colors[i % colors.length]
             }));
-    }, [movements, wallets, money.toFunctionalAmount, money.config.currentExchangeRate]);
+    }, [movements, money.toFunctionalAmount, money.config.currentExchangeRate]);
 
     const distributionChartConfig: ChartConfig = distributionData.reduce((acc, item) => {
         acc[item.name] = { label: item.name, color: item.fill };
         return acc;
     }, {} as ChartConfig);
 
-    // ========================================
-    // CHART DATA: WAFFLE CHART (Egresos por mes - últimos 6 meses)
-    // ========================================
-    const waffleData = useMemo(() => {
-        return evolutionData.slice(-6).map((item) => ({
-            label: item.month,
-            value: item.egresos,
-            // Use same red as Egresos line (amount-negative color)
-            color: 'oklch(54.392% 0.19137 24.073)' // --amount-negative
-        }));
-    }, [evolutionData]);
+
 
     // ========================================
     // RECENT ACTIVITY
@@ -338,8 +323,8 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                 />
             </div>
 
-            {/* ROW 2: Charts - 3 Column Grid */}
-            <div className="grid gap-6 lg:grid-cols-3 items-start [&>*]:min-w-0">
+            {/* ROW 2: Charts - 2 Column Grid */}
+            <div className="grid gap-6 lg:grid-cols-2 items-start [&>*]:min-w-0">
                 {/* 1. Evolución Financiera */}
                 <DashboardCard
                     title="Evolución Financiera"
@@ -383,30 +368,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                     ) : (
                         <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
                             Sin datos de movimientos
-                        </div>
-                    )}
-                </DashboardCard>
-
-                {/* 3. Egresos por Mes (Waffle Chart) */}
-                <DashboardCard
-                    title="Egresos por Mes"
-                    description="Comparativa de gastos mensuales"
-                    icon={<TrendingDown className="w-4 h-4" />}
-                    compact
-                >
-                    {waffleData.length > 0 ? (
-                        <BaseWaffleChart
-                            data={waffleData}
-                            height={220}
-                            columns={10}
-                            cellSize={14}
-                            cellGap={3}
-                            showLegend={false}
-                            valueFormatter={(v) => money.format(v)}
-                        />
-                    ) : (
-                        <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin datos suficientes
                         </div>
                     )}
                 </DashboardCard>

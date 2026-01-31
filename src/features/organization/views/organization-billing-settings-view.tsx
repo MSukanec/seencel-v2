@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContentLayout } from "@/components/layout";
-import { CreditCard, Download, Receipt } from "lucide-react";
+import { CreditCard, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -50,18 +50,12 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
 
     const planColors = getPlanColors(subscription?.plan?.slug, subscription?.plan?.name);
 
-    // Badge de método de pago
+    // Badge de método de pago - simple
     const getProviderBadge = (provider: string | undefined | null) => {
         const p = provider?.toLowerCase() || '';
-        if (p.includes('paypal')) {
-            return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300">PayPal</Badge>;
-        }
-        if (p.includes('mercadopago') || p.includes('mercado')) {
-            return <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950 dark:text-sky-300">MercadoPago</Badge>;
-        }
-        if (p.includes('bank') || p.includes('transfer')) {
-            return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300">Transferencia</Badge>;
-        }
+        if (p.includes('paypal')) return <Badge variant="outline">PayPal</Badge>;
+        if (p.includes('mercadopago') || p.includes('mercado')) return <Badge variant="outline">MercadoPago</Badge>;
+        if (p.includes('bank') || p.includes('transfer')) return <Badge variant="outline">Transferencia</Badge>;
         return <Badge variant="outline">{provider || '-'}</Badge>;
     };
 
@@ -106,12 +100,8 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                             </div>
 
                             <div className="mt-6 flex flex-wrap gap-3">
-                                <Button className="font-medium">
-                                    Cambiar Plan
-                                </Button>
-                                <Button variant="outline" className="font-medium">
-                                    <CreditCard className="w-4 h-4 mr-2" />
-                                    Método de Pago
+                                <Button className="font-medium" asChild>
+                                    <a href="/es/pricing">Cambiar Plan</a>
                                 </Button>
                             </div>
 
@@ -128,31 +118,76 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                         </CardContent>
                     </Card>
 
-                    {/* Stats Card (Optional / Placeholder) */}
-                    <div className="md:col-span-3 space-y-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium">Próxima Factura</CardTitle>
+                    {/* Payment Method Card - Styled like Untitled UI */}
+                    <div className="md:col-span-3">
+                        <Card className="h-full">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium">Método de Pago</CardTitle>
+                                <CardDescription>
+                                    Administra cómo pagas tu plan.
+                                </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {subscription ? formatCurrency(subscription.amount, subscription.currency) : '$0.00'}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {subscription ? format(new Date(subscription.expires_at), "d 'de' MMMM", { locale: es }) : '-'}
-                                </p>
-                            </CardContent>
-                        </Card>
+                            <CardContent className="space-y-4">
+                                {(() => {
+                                    const provider = getProvider(billingCycles[0]?.payment)?.toLowerCase() || '';
+                                    const payerEmail = subscription?.payer_email || billingCycles[0]?.payer_email;
+                                    const expiresAt = subscription?.expires_at;
 
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium">Ciclos Pagados</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{billingCycles.filter(c => c.status === 'completed').length}</div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Historial total
-                                </p>
+                                    if (provider.includes('paypal')) {
+                                        return (
+                                            <>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center justify-center w-16 h-12 bg-white border rounded-xl shadow-sm">
+                                                        <img src="/logos/paypal_logo.png" alt="PayPal" className="h-8 w-auto" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-medium">PayPal</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {expiresAt && `Expira ${format(new Date(expiresAt), "MM/yyyy")}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {payerEmail && (
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <CreditCard className="w-4 h-4" />
+                                                        <span>{payerEmail}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    }
+
+                                    if (provider.includes('mercadopago') || provider.includes('mercado')) {
+                                        return (
+                                            <>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center justify-center w-16 h-12 bg-white border rounded-xl shadow-sm">
+                                                        <img src="/logos/mp_logo.png" alt="MercadoPago" className="h-8 w-auto" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-medium">MercadoPago</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {expiresAt && `Expira ${format(new Date(expiresAt), "MM/yyyy")}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {payerEmail && (
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <CreditCard className="w-4 h-4" />
+                                                        <span>{payerEmail}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="text-center py-4">
+                                            <CreditCard className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                                            <p className="text-sm text-muted-foreground">No hay método de pago configurado</p>
+                                        </div>
+                                    );
+                                })()}
                             </CardContent>
                         </Card>
                     </div>
@@ -175,13 +210,12 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                                     <TableHead>Estado</TableHead>
                                     <TableHead>Monto</TableHead>
                                     <TableHead>Método</TableHead>
-                                    <TableHead className="text-right">Factura</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {billingCycles.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                                             <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                             No hay facturas disponibles
                                         </TableCell>
@@ -193,7 +227,7 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                                                 {format(new Date(cycle.created_at), "d MMM yyyy", { locale: es })}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant={cycle.status === 'active' ? "default" : "secondary"} className={cycle.status === 'active' ? "bg-green-100 text-green-700 hover:bg-green-200 border-none shadow-none" : ""}>
+                                                <Badge variant={cycle.status === 'active' ? "success" : "secondary"}>
                                                     {cycle.status === 'active' ? "Activo" : cycle.status === 'cancelled' ? "Cancelado" : cycle.status}
                                                 </Badge>
                                             </TableCell>
@@ -202,11 +236,6 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                                             </TableCell>
                                             <TableCell>
                                                 {getProviderBadge(getProvider(cycle.payment))}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto">
-                                                    <Download className="w-4 h-4 text-muted-foreground" />
-                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))

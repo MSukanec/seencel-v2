@@ -8,7 +8,7 @@ select
   'general_cost'::text as movement_type,
   gcp.organization_id,
   null::uuid as project_id,
-  gcp.payment_date as date,
+  gcp.payment_date,
   date_trunc(
     'month'::text,
     gcp.payment_date::timestamp with time zone
@@ -17,8 +17,9 @@ select
   gcp.currency_id,
   cur.code as currency_code,
   cur.symbol as currency_symbol,
-  gcp.exchange_rate,
+  COALESCE(gcp.exchange_rate, 1::numeric) as exchange_rate,
   gcp.amount * COALESCE(gcp.exchange_rate, 1::numeric) as functional_amount,
+  '-1'::integer as amount_sign,
   gcp.status,
   gcp.wallet_id,
   w.name as wallet_name,
@@ -58,7 +59,7 @@ select
   'material_payment'::text as movement_type,
   mp.organization_id,
   mp.project_id,
-  mp.payment_date as date,
+  mp.payment_date,
   date_trunc(
     'month'::text,
     mp.payment_date::timestamp with time zone
@@ -67,8 +68,9 @@ select
   mp.currency_id,
   cur.code as currency_code,
   cur.symbol as currency_symbol,
-  mp.exchange_rate,
+  COALESCE(mp.exchange_rate, 1::numeric) as exchange_rate,
   mp.amount * COALESCE(mp.exchange_rate, 1::numeric) as functional_amount,
+  '-1'::integer as amount_sign,
   mp.status,
   mp.wallet_id,
   w.name as wallet_name,
@@ -113,7 +115,7 @@ select
   'labor_payment'::text as movement_type,
   lp.organization_id,
   lp.project_id,
-  lp.payment_date as date,
+  lp.payment_date,
   date_trunc(
     'month'::text,
     lp.payment_date::timestamp with time zone
@@ -122,12 +124,13 @@ select
   lp.currency_id,
   cur.code as currency_code,
   cur.symbol as currency_symbol,
-  lp.exchange_rate,
+  COALESCE(lp.exchange_rate, 1::numeric) as exchange_rate,
   lp.amount * COALESCE(lp.exchange_rate, 1::numeric) as functional_amount,
+  '-1'::integer as amount_sign,
   lp.status,
   lp.wallet_id,
   w.name as wallet_name,
-  lt.name as concept_name,
+  lc.name as concept_name,
   null::text as category_name,
   COALESCE(
     ct.display_name_override,
@@ -157,9 +160,122 @@ from
   left join wallets w on w.id = ow.wallet_id
   left join project_labor pl on pl.id = lp.labor_id
   left join contacts ct on ct.id = pl.contact_id
-  left join labor_types lt on lt.id = pl.labor_type_id
+  left join labor_categories lc on lc.id = pl.labor_type_id
   left join organization_members om_created on om_created.id = lp.created_by
   left join users u_created on u_created.id = om_created.user_id
 where
   lp.is_deleted = false
-  or lp.is_deleted is null;
+  or lp.is_deleted is null
+union all
+select
+  sp.id,
+  'subcontract_payment'::text as movement_type,
+  sp.organization_id,
+  sp.project_id,
+  sp.payment_date,
+  date_trunc(
+    'month'::text,
+    sp.payment_date::timestamp with time zone
+  ) as payment_month,
+  sp.amount,
+  sp.currency_id,
+  cur.code as currency_code,
+  cur.symbol as currency_symbol,
+  COALESCE(sp.exchange_rate, 1::numeric) as exchange_rate,
+  sp.amount * COALESCE(sp.exchange_rate, 1::numeric) as functional_amount,
+  '-1'::integer as amount_sign,
+  sp.status,
+  sp.wallet_id,
+  w.name as wallet_name,
+  s.title as concept_name,
+  null::text as category_name,
+  COALESCE(
+    ct.full_name,
+    ct.company_name,
+    concat(ct.first_name, ' ', ct.last_name)
+  ) as contact_name,
+  sp.notes,
+  sp.reference,
+  sp.created_at,
+  sp.created_by,
+  u_created.full_name as creator_name,
+  u_created.avatar_url as creator_avatar_url,
+  (
+    exists (
+      select
+        1
+      from
+        media_links ml
+      where
+        ml.subcontract_payment_id = sp.id
+    )
+  ) as has_attachments
+from
+  subcontract_payments sp
+  left join currencies cur on cur.id = sp.currency_id
+  left join organization_wallets ow on ow.id = sp.wallet_id
+  left join wallets w on w.id = ow.wallet_id
+  left join subcontracts s on s.id = sp.subcontract_id
+  left join contacts ct on ct.id = s.contact_id
+  left join organization_members om_created on om_created.id = sp.created_by
+  left join users u_created on u_created.id = om_created.user_id
+where
+  sp.is_deleted = false
+  or sp.is_deleted is null
+union all
+select
+  cp.id,
+  'client_payment'::text as movement_type,
+  cp.organization_id,
+  cp.project_id,
+  cp.payment_date,
+  date_trunc(
+    'month'::text,
+    cp.payment_date::timestamp with time zone
+  ) as payment_month,
+  cp.amount,
+  cp.currency_id,
+  cur.code as currency_code,
+  cur.symbol as currency_symbol,
+  COALESCE(cp.exchange_rate, 1::numeric) as exchange_rate,
+  cp.amount * COALESCE(cp.exchange_rate, 1::numeric) as functional_amount,
+  1 as amount_sign,
+  cp.status,
+  cp.wallet_id,
+  w.name as wallet_name,
+  cc.concept as concept_name,
+  null::text as category_name,
+  COALESCE(
+    ct.full_name,
+    ct.company_name,
+    concat(ct.first_name, ' ', ct.last_name)
+  ) as contact_name,
+  cp.notes,
+  cp.reference,
+  cp.created_at,
+  cp.created_by,
+  u_created.full_name as creator_name,
+  u_created.avatar_url as creator_avatar_url,
+  (
+    exists (
+      select
+        1
+      from
+        media_links ml
+      where
+        ml.client_payment_id = cp.id
+    )
+  ) as has_attachments
+from
+  client_payments cp
+  left join currencies cur on cur.id = cp.currency_id
+  left join organization_wallets ow on ow.id = cp.wallet_id
+  left join wallets w on w.id = ow.wallet_id
+  left join project_clients pc on pc.id = cp.client_id
+  left join contacts ct on ct.id = pc.contact_id
+  left join client_commitments cc on cc.id = cp.commitment_id
+  left join organization_members om_created on om_created.id = cp.created_by
+  left join users u_created on u_created.id = om_created.user_id
+where
+  cp.is_deleted = false
+  or cp.is_deleted is null;
