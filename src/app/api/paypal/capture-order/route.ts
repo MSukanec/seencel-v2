@@ -31,17 +31,38 @@ export async function POST(request: NextRequest) {
 
         // Capture the payment
         let captureResult;
+        let alreadyCaptured = false;
+
         try {
             captureResult = await capturePayPalOrder(orderId, sandboxMode);
         } catch (captureError: any) {
-            console.error('[PayPal Capture] Failed:', captureError.message);
-            return NextResponse.json({
-                error: captureError.message || 'Failed to capture PayPal payment',
-                details: 'Check server logs for more information'
-            }, { status: 400 });
+            const errorMessage = captureError.message || '';
+            console.error('[PayPal Capture] Failed:', errorMessage);
+
+            // Check if the order was already captured (idempotency)
+            if (errorMessage.includes('ORDER_ALREADY_CAPTURED')) {
+                console.log('[PayPal Capture] Order already captured, treating as success');
+                alreadyCaptured = true;
+                // Get the order details to continue processing
+                try {
+                    captureResult = await getPayPalOrderDetails(orderId, sandboxMode);
+                    captureResult.status = 'COMPLETED'; // Force status for already captured
+                } catch (detailsError: any) {
+                    console.error('[PayPal Capture] Failed to get order details:', detailsError.message);
+                    return NextResponse.json({
+                        error: 'Order already captured but failed to retrieve details',
+                        details: detailsError.message
+                    }, { status: 400 });
+                }
+            } else {
+                return NextResponse.json({
+                    error: errorMessage || 'Failed to capture PayPal payment',
+                    details: 'Check server logs for more information'
+                }, { status: 400 });
+            }
         }
 
-        console.log(`[PayPal Capture] Result status: ${captureResult.status}`);
+        console.log(`[PayPal Capture] Result status: ${captureResult.status}, alreadyCaptured: ${alreadyCaptured}`);
 
         if (captureResult.status !== 'COMPLETED') {
             console.error('[PayPal Capture] Not completed:', captureResult);
@@ -169,10 +190,11 @@ export async function POST(request: NextRequest) {
             status: 'COMPLETED',
         });
 
-    } catch (error) {
-        console.error('PayPal capture error:', error);
+    } catch (error: any) {
+        console.error('[PayPal Capture] Unhandled error:', error);
+        console.error('[PayPal Capture] Error stack:', error?.stack);
         return NextResponse.json(
-            { error: 'Failed to capture payment' },
+            { error: error?.message || 'Failed to capture payment', stack: error?.stack },
             { status: 500 }
         );
     }
