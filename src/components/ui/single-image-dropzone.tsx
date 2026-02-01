@@ -120,7 +120,7 @@ const SingleImageDropzone = React.forwardRef<HTMLInputElement, InputProps>(
         }, [fileRejections, dropzoneOptions]);
 
         return (
-            <div className="relative">
+            <div className="relative group">
                 <div
                     {...getRootProps({
                         className: dropZoneClassName,
@@ -134,12 +134,35 @@ const SingleImageDropzone = React.forwardRef<HTMLInputElement, InputProps>(
                     <input ref={ref} {...getInputProps()} />
 
                     {imageUrl ? (
-                        // Image Preview
-                        <img
-                            className="h-full w-full rounded-md object-cover"
-                            src={imageUrl}
-                            alt={typeof value === "string" ? value : value?.name}
-                        />
+                        // Image Preview with hover overlay
+                        <>
+                            <img
+                                className="h-full w-full rounded-md object-cover"
+                                src={imageUrl}
+                                alt={typeof value === "string" ? value : value?.name}
+                            />
+                            {/* Hover overlay with actions */}
+                            {!disabled && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-md">
+                                    <div className="flex gap-3">
+                                        <div className="flex flex-col items-center gap-1 text-white/90 hover:text-white cursor-pointer">
+                                            <UploadCloud className="h-6 w-6" />
+                                            <span className="text-xs font-medium">Cambiar</span>
+                                        </div>
+                                        <div
+                                            className="flex flex-col items-center gap-1 text-white/90 hover:text-destructive cursor-pointer"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                void onChange?.(undefined);
+                                            }}
+                                        >
+                                            <X className="h-6 w-6" />
+                                            <span className="text-xs font-medium">Borrar</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         // Upload Prompt - styled like MultiFileUpload
                         <div className="flex flex-col items-center gap-1.5 text-center">
@@ -153,25 +176,6 @@ const SingleImageDropzone = React.forwardRef<HTMLInputElement, InputProps>(
                                 <p className="text-xs text-muted-foreground">
                                     {dropzoneLabel || "PNG, JPG, WEBP hasta 10MB"}
                                 </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Remove Image Icon */}
-                    {imageUrl && !disabled && (
-                        <div
-                            className="group absolute right-0 top-0 -translate-y-1/4 translate-x-1/4 transform"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                void onChange?.(undefined);
-                            }}
-                        >
-                            <div className="flex h-5 w-5 items-center justify-center rounded-md border border-solid border-gray-500 bg-white transition-all duration-300 hover:h-6 hover:w-6 dark:border-gray-400 dark:bg-black">
-                                <X
-                                    className="text-gray-500 dark:text-gray-400"
-                                    width={16}
-                                    height={16}
-                                />
                             </div>
                         </div>
                     )}

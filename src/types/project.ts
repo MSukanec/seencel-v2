@@ -14,6 +14,12 @@ export interface Project {
     image_url: string | null;
     image_bucket?: string | null;
     image_path?: string | null;
+    image_palette?: {
+        primary: string;
+        secondary: string;
+        background: string;
+        accent: string;
+    } | null;
 
     // Joined fields from View
     city: string | null;

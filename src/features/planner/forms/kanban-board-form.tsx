@@ -61,7 +61,7 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                         description: values.description,
                         color: values.color,
                     });
-                    toast.success("Tablero actualizado");
+                    toast.success("Panel actualizado");
                 } else {
                     resultBoard = await createBoard({
                         name: values.name,
@@ -70,13 +70,13 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                         project_id: projectId,
                         color: values.color,
                     });
-                    toast.success("Tablero creado");
+                    toast.success("Panel creado");
                 }
 
                 onSuccess?.(resultBoard);
             } catch (error) {
                 console.error(error);
-                toast.error(isEditing ? "Error al actualizar" : "Error al crear el tablero");
+                toast.error(isEditing ? "Error al actualizar" : "Error al crear el panel");
             }
         });
     }
@@ -91,7 +91,7 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                     name="name"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Nombre del Tablero</FormLabel>
+                            <FormLabel>Nombre del Panel</FormLabel>
                             <FormControl>
                                 <Input
                                     placeholder="Ej: Sprint 1, Roadmap Q1, Ideas..."
@@ -128,9 +128,9 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                     name="color"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Color del Tablero</FormLabel>
+                            <FormLabel>Color del Panel</FormLabel>
                             <FormDescription>
-                                Este color aparecerá en la lista de tableros
+                                Este color aparecerá en la lista de paneles
                             </FormDescription>
                             <div className="flex flex-wrap gap-3 p-1 mt-2">
                                 {DEFAULT_LIST_COLORS.map((color) => (
@@ -156,7 +156,7 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                     className="-mx-4 -mb-4 mt-6"
                     onCancel={closeModal}
                     isLoading={isPending}
-                    submitLabel={isEditing ? "Guardar Cambios" : "Crear Tablero"}
+                    submitLabel={isEditing ? "Guardar Cambios" : "Crear Panel"}
                 />
             </form>
         </Form>

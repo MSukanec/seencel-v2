@@ -156,22 +156,31 @@ export function ProjectsList({ projects, organizationId, lastActiveProjectId, ma
                 maxProjects={maxProjects}
                 globalFilter={searchQuery}
                 onGlobalFilterChange={setSearchQuery}
+                onDelete={handleDelete}
             />
 
             <DeleteConfirmationDialog
                 open={!!projectToDelete}
                 onOpenChange={(open) => !open && setProjectToDelete(null)}
                 onConfirm={handleConfirmDelete}
-                title="Eliminar Proyecto"
+                title="¿Eliminar proyecto permanentemente?"
                 description={
-                    <span>
-                        ¿Estás seguro de que deseas eliminar el proyecto <span className="font-medium text-foreground">"{projectToDelete?.name}"</span>?
-                        <br />
-                        Esta acción moverá el proyecto a la papelera.
-                    </span>
+                    <div className="space-y-3">
+                        <p>
+                            Estás a punto de eliminar el proyecto <span className="font-semibold text-foreground">"{projectToDelete?.name}"</span>.
+                        </p>
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm">
+                            <p className="font-medium text-destructive mb-2">⚠️ Esta acción es irreversible</p>
+                            <p className="text-muted-foreground">
+                                Se eliminarán permanentemente todos los datos asociados: tareas, archivos,
+                                registros de bitácora, finanzas, materiales y configuraciones del proyecto.
+                            </p>
+                        </div>
+                    </div>
                 }
                 validationText={projectToDelete?.name}
-                confirmLabel="Eliminar Proyecto"
+                validationPrompt="Para confirmar, escribí el nombre del proyecto:"
+                confirmLabel="Eliminar permanentemente"
                 deletingLabel="Eliminando..."
                 isDeleting={isDeleting}
             />

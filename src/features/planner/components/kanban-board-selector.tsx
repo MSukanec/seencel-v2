@@ -39,14 +39,14 @@ export function KanbanBoardSelector({ boards, onCreateBoard }: KanbanBoardSelect
                     <FolderKanban className="h-8 w-8 text-lime-600 dark:text-lime-400" />
                 </div>
                 <h3 className="text-lg font-semibold mb-1">
-                    No hay tableros aún
+                    No hay paneles aún
                 </h3>
                 <p className="text-muted-foreground text-sm mb-4 max-w-xs">
-                    Los tableros Kanban te ayudan a organizar y visualizar el progreso de tus tareas
+                    Los paneles de tareas te ayudan a organizar y visualizar el progreso de tus proyectos
                 </p>
                 <Button onClick={onCreateBoard} className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Crear primer tablero
+                    Crear primer panel
                 </Button>
             </div>
         );
@@ -67,7 +67,7 @@ export function KanbanBoardSelector({ boards, onCreateBoard }: KanbanBoardSelect
                         <Plus className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <p className="text-sm font-medium text-muted-foreground">
-                        Nuevo Tablero
+                        Nuevo Panel
                     </p>
                 </CardContent>
             </Card>

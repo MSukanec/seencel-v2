@@ -12,6 +12,7 @@ import { useModal } from "@/providers/modal-store";
 import { KanbanBoardForm } from "@/features/planner/forms/kanban-board-form";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import {
@@ -73,8 +74,8 @@ export function KanbanDashboard({
                 }}
             />,
             {
-                title: "Nuevo Tablero",
-                description: "Crea un nuevo tablero para organizar tus tareas",
+                title: "Nuevo Panel",
+                description: "Crea un nuevo panel para organizar tus tareas",
                 size: "md"
             }
         );
@@ -91,7 +92,7 @@ export function KanbanDashboard({
                 }}
             />,
             {
-                title: "Editar Tablero",
+                title: "Editar Panel",
                 description: `Modifica los detalles de ${board.name}`,
                 size: "md"
             }
@@ -111,7 +112,7 @@ export function KanbanDashboard({
                         onClick={async () => {
                             try {
                                 await deleteBoard(boardId);
-                                toast.success("Tablero eliminado");
+                                toast.success("Panel eliminado");
                                 closeModal();
 
                                 const remaining = initialBoards.filter(b => b.id !== boardId);
@@ -130,7 +131,7 @@ export function KanbanDashboard({
                 </div>
             </div>,
             {
-                title: "Eliminar Tablero",
+                title: "Eliminar Panel",
                 description: "Esta acción no se puede deshacer."
             }
         );
@@ -243,7 +244,7 @@ export function KanbanDashboard({
                     </div>
                 }
                 actions={[{
-                    label: "Nuevo Tablero",
+                    label: "Nuevo Panel",
                     icon: Plus,
                     onClick: handleCreateBoard
                 }]}
@@ -257,7 +258,16 @@ export function KanbanDashboard({
                     </div>
                 ) : null}
 
-                {activeBoardData ? (
+                {initialBoards.length === 0 ? (
+                    // Empty State - No boards exist
+                    <div className="h-full flex items-center justify-center p-8">
+                        <EmptyState
+                            icon={LayoutDashboard}
+                            title="Sin paneles"
+                            description="Creá tu primer panel para organizar tus tareas y proyectos de forma visual."
+                        />
+                    </div>
+                ) : activeBoardData ? (
                     <KanbanBoardComponent
                         board={activeBoardData.board}
                         lists={activeBoardData.lists}
@@ -268,7 +278,7 @@ export function KanbanDashboard({
                         selectedLabels={Array.from(selectedLabels)}
                     />
                 ) : (
-                    // ... Skeletons ...
+                    // Loading skeletons for board content
                     <div className="p-8 space-y-4">
                         <div className="flex gap-4">
                             <Skeleton className="h-[500px] w-80 rounded-xl" />

@@ -161,7 +161,7 @@ export function KanbanBoard({
             />,
             {
                 title: "Nueva Tarjeta",
-                description: "Crea una nueva tarjeta en este tablero",
+                description: "Crea una nueva tarjeta en este panel",
                 size: "md"
             }
         );
@@ -179,7 +179,7 @@ export function KanbanBoard({
             />,
             {
                 title: "Nueva Columna",
-                description: "Agrega una nueva columna al tablero",
+                description: "Agrega una nueva columna al panel",
                 size: "sm"
             }
         );
@@ -250,7 +250,7 @@ export function KanbanBoard({
             />,
             {
                 title: "Mover columna",
-                description: `Mover la columna "${list.name}" a otro tablero`,
+                description: `Mover la columna "${list.name}" a otro panel`,
                 size: "sm"
             }
         );
@@ -336,7 +336,7 @@ export function KanbanBoard({
                                             <LayoutGrid className="h-8 w-8 text-muted-foreground" />
                                         </div>
                                         <h3 className="text-lg font-semibold mb-1">
-                                            Tablero vacío
+                                            Panel vacío
                                         </h3>
                                         <p className="text-muted-foreground text-sm mb-4 max-w-xs">
                                             Comienza agregando columnas para organizar tus tarjetas

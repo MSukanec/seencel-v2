@@ -1575,7 +1575,7 @@
         "title": "Agenda",
         "tabs": {
             "calendar": "Calendario",
-            "kanban": "Tablero"
+            "kanban": "Panel de Tareas"
         }
     },
     "Files": {

@@ -27,6 +27,7 @@ import { ProjectType, ProjectModality } from "@/types/project";
 // Optimization & Upload
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/client-image-compression";
+import { extractColorsFromImage } from "@/features/customization/lib/color-extraction";
 import { toast } from "sonner";
 
 interface ProjectFormProps {
@@ -61,8 +62,44 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
     // States for new fields
     const [file, setFile] = useState<File | undefined>();
     const [color, setColor] = useState(initialData?.color || "#007AFF");
-    const [useCustomColor, setUseCustomColor] = useState(initialData?.use_custom_color || false);
-    const [customHue, setCustomHue] = useState(initialData?.custom_color_h || 258);
+    const [extractedPalette, setExtractedPalette] = useState<{
+        primary: string;
+        secondary: string;
+        background: string;
+        accent: string;
+    } | null>(initialData?.image_palette || null);
+    const [isExtractingColors, setIsExtractingColors] = useState(false);
+
+    // Handle file selection and extract colors immediately
+    const handleFileChange = async (newFile: File | undefined) => {
+        setFile(newFile);
+        if (!newFile) {
+            setExtractedPalette(null);
+            return;
+        }
+
+        // Extract colors immediately for preview
+        setIsExtractingColors(true);
+        try {
+            const colors = await extractColorsFromImage(newFile, 4);
+            if (colors.length >= 4) {
+                setExtractedPalette({
+                    primary: colors[0].hex,
+                    secondary: colors[1].hex,
+                    background: colors.reduce((lightest, c) =>
+                        c.oklch.l > lightest.oklch.l ? c : lightest
+                    ).hex,
+                    accent: colors.reduce((darkest, c) =>
+                        c.oklch.l < darkest.oklch.l ? c : darkest
+                    ).hex,
+                });
+            }
+        } catch (e) {
+            console.warn("Could not extract palette:", e);
+        } finally {
+            setIsExtractingColors(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -104,6 +141,11 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
 
                     formData.append('image_url', publicUrl);
 
+                    // Use already extracted palette if available
+                    if (extractedPalette) {
+                        formData.append('image_palette', JSON.stringify(extractedPalette));
+                    }
+
                     // We don't send the raw 'image' file to server action anymore
                     formData.delete('image');
 
@@ -118,8 +160,6 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
 
             // Append Color data
             formData.append('color', color);
-            if (useCustomColor !== undefined) formData.append('use_custom_color', useCustomColor.toString());
-            if (customHue !== undefined) formData.append('custom_color_h', customHue.toString());
 
             toast.loading(mode === 'create' ? "Creando proyecto..." : "Guardando cambios...", { id: toastId });
 
@@ -223,13 +263,35 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
                             <SingleImageDropzone
                                 height={200}
                                 value={file ?? initialData?.image_url}
-                                onChange={(file) => {
-                                    setFile(file);
-                                }}
+                                onChange={handleFileChange}
                                 className="w-full"
                                 dropzoneLabel={t('dropzoneText')}
                             />
                         </FormGroup>
+
+                        {/* Extracted Palette Preview */}
+                        {(extractedPalette || isExtractingColors) && (
+                            <div className="mt-3 p-3 rounded-lg bg-muted/30 border border-border">
+                                <p className="text-xs text-muted-foreground mb-2">Paleta extraída de la imagen:</p>
+                                {isExtractingColors ? (
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                        Extrayendo colores...
+                                    </div>
+                                ) : extractedPalette && (
+                                    <div className="flex gap-2">
+                                        {Object.entries(extractedPalette).map(([key, hex]) => (
+                                            <div
+                                                key={key}
+                                                className="w-8 h-8 rounded-lg shadow-sm ring-1 ring-white/10"
+                                                style={{ backgroundColor: hex }}
+                                                title={`${key}: ${hex}`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Color Picker: 100% width on desktop */}
@@ -237,13 +299,7 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
                         <FormGroup label={t('projectColor')}>
                             <ColorPicker
                                 color={color}
-                                useCustomColor={useCustomColor}
-                                customHue={customHue}
-                                onChange={(newColor, isCustom, hue) => {
-                                    setColor(newColor);
-                                    if (isCustom !== undefined) setUseCustomColor(isCustom);
-                                    if (hue !== undefined) setCustomHue(hue);
-                                }}
+                                onChange={(newColor) => setColor(newColor)}
                             />
                         </FormGroup>
                     </div>

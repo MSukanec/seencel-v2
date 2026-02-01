@@ -33,10 +33,70 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
     const t = useTranslations('Project.status');
     const { actions } = useLayoutStore();
 
-    // Get accent color for the card
-    const accentColor = project.use_custom_color && project.custom_color_hex
-        ? project.custom_color_hex
-        : project.color || "hsl(var(--primary))";
+    /**
+     * Adjusts color lightness to ensure good contrast on dark backgrounds.
+     * Converts hex to HSL, ensures minimum lightness, then converts back.
+     */
+    const ensureContrast = (hexColor: string, minLightness = 55): string => {
+        // Skip if not a hex color
+        if (!hexColor?.startsWith('#')) return hexColor;
+
+        // Convert hex to RGB
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+        // Convert RGB to HSL
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h = 0, s = 0;
+        const l = (max + min) / 2;
+
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+
+        // Adjust lightness if too dark (for dark mode contrast)
+        const currentL = l * 100;
+        if (currentL >= minLightness) return hexColor; // Already bright enough
+
+        const newL = minLightness / 100;
+
+        // Convert HSL back to RGB
+        const hue2rgb = (p: number, q: number, t: number) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+
+        const q = newL < 0.5 ? newL * (1 + s) : newL + s - newL * s;
+        const p = 2 * newL - q;
+        const newR = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+        const newG = Math.round(hue2rgb(p, q, h) * 255);
+        const newB = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+
+        return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+    };
+
+    // Get accent color for the card - prioritize extracted palette
+    const palette = project.image_palette;
+    const rawAccentColor = palette?.primary
+        || (project.use_custom_color && project.custom_color_hex)
+        || project.color
+        || "hsl(var(--primary))";
+
+    // Ensure the color has enough contrast for dark mode
+    const accentColor = ensureContrast(rawAccentColor, 50);
 
     const location = [project.city, project.country].filter(Boolean).join(", ");
 
@@ -73,8 +133,8 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                 "bg-card",
                 className
             )}>
-                {/* Hero Image Section - 1.5x taller (h-60 instead of h-40) */}
-                <div className="relative h-60 w-full overflow-hidden">
+                {/* Hero Image Section - 1.5x taller (h-80) */}
+                <div className="relative h-80 w-full overflow-hidden">
                     {imageUrl ? (
                         <Image
                             src={imageUrl}
@@ -94,18 +154,6 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
 
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-                    {/* Status Badge - Top Right - Uses project color */}
-                    <Badge
-                        className="absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 border-0 shadow-lg"
-                        style={{
-                            backgroundColor: `color-mix(in srgb, ${accentColor} 25%, transparent)`,
-                            color: accentColor,
-                            backdropFilter: "blur(8px)",
-                        }}
-                    >
-                        {statusLabel}
-                    </Badge>
 
                     {/* Project Name - Bottom of Image */}
                     <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -129,24 +177,40 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
 
                 {/* Footer Section */}
                 <div className="p-4 flex items-center justify-between">
-                    {/* Info Chips */}
+                    {/* Info Chips - Status badge first, then type/modality/date */}
                     <div className="flex flex-wrap gap-2 flex-1">
+                        {/* Status Badge - Uses accent color */}
+                        <div
+                            className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1"
+                            style={{
+                                backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+                                color: accentColor,
+                            }}
+                        >
+                            <span>{statusLabel}</span>
+                        </div>
                         {project.project_type_name && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-2.5 py-1">
+                            <div
+                                className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
+                                style={{
+                                    backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+                                    color: accentColor,
+                                }}
+                            >
                                 <Building2 className="h-3 w-3" />
                                 <span>{project.project_type_name}</span>
                             </div>
                         )}
                         {project.project_modality_name && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-2.5 py-1">
+                            <div
+                                className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
+                                style={{
+                                    backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+                                    color: accentColor,
+                                }}
+                            >
                                 <Hammer className="h-3 w-3" />
                                 <span>{project.project_modality_name}</span>
-                            </div>
-                        )}
-                        {project.start_date && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-2.5 py-1">
-                                <Calendar className="h-3 w-3" />
-                                <span>{new Date(project.start_date).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}</span>
                             </div>
                         )}
                     </div>

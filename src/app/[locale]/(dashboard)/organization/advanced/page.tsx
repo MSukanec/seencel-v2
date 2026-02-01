@@ -7,6 +7,7 @@ import { ContentLayout } from "@/components/layout/dashboard/shared/content-layo
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles } from "lucide-react";
 import { AdvancedIndicesView } from "@/features/advanced/views/advanced-indices-view";
+import { AdvancedAppearanceView } from "@/features/advanced/views/advanced-appearance-view";
 
 export async function generateMetadata(): Promise<Metadata> {
     return {
@@ -37,6 +38,7 @@ export default async function AdvancedPage() {
                             <TabsTrigger value="indices">Índices Económicos</TabsTrigger>
                             <TabsTrigger value="formulas">Fórmulas</TabsTrigger>
                             <TabsTrigger value="templates">Plantillas</TabsTrigger>
+                            <TabsTrigger value="apariencia">Apariencia</TabsTrigger>
                         </TabsList>
                     }
                 >
@@ -54,6 +56,10 @@ export default async function AdvancedPage() {
 
                         <TabsContent value="templates" className="mt-0 h-full flex items-center justify-center text-muted-foreground">
                             Próximamente: Plantillas globales para proyectos
+                        </TabsContent>
+
+                        <TabsContent value="apariencia" className="mt-0 h-full">
+                            <AdvancedAppearanceView />
                         </TabsContent>
                     </ContentLayout>
                 </PageWrapper>

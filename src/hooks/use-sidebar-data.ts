@@ -180,7 +180,57 @@ export function useSidebarData(): SidebarData {
         }
 
         fetchProjectsAndPreferences();
-    }, [orgId]);
+
+        // Realtime subscription for project changes (image, name, color updates)
+        const channel = supabase
+            .channel(`projects-sidebar-${orgId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'projects',
+                    filter: `organization_id=eq.${orgId}`,
+                },
+                (payload) => {
+                    const updatedProject = payload.new as any;
+
+                    // Update projects list with new data
+                    setProjects(prev => prev.map(p =>
+                        p.id === updatedProject.id
+                            ? {
+                                ...p,
+                                name: updatedProject.name,
+                                image_path: updatedProject.image_path || updatedProject.image_url,
+                                color: updatedProject.color,
+                                custom_color_hex: updatedProject.custom_color_hex,
+                                use_custom_color: updatedProject.use_custom_color,
+                            }
+                            : p
+                    ));
+
+                    // Also update current project if it's the one that changed
+                    setCurrentProject(prev => {
+                        if (prev && prev.id === updatedProject.id) {
+                            return {
+                                id: prev.id,
+                                name: updatedProject.name,
+                                image_path: updatedProject.image_path || updatedProject.image_url,
+                                color: updatedProject.color,
+                                custom_color_hex: updatedProject.custom_color_hex,
+                                use_custom_color: updatedProject.use_custom_color,
+                            };
+                        }
+                        return prev;
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [orgId, supabase]);
 
     // Handle project change - updates state, saves preference, and reorders list
     const handleProjectChange = React.useCallback((projectId: string) => {

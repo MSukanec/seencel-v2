@@ -1,0 +1,178 @@
+/*
+ * CUSTOMIZATION THEMES
+ * 
+ * Sistema de temas para personalización de UI.
+ * 
+ * Available themes:
+ *   - .theme-midnight (premium dark)
+ *   - .theme-cyber (neon cyberpunk)
+ *   - .theme-ocean (deep blues)
+ *   - .theme-sunset (warm oranges)
+ *   - .theme-forest (natural greens)
+ */
+
+/* ============================================
+   BASE: Midnight (Premium Dark)
+   ============================================ */
+.theme-midnight {
+    --background: oklch(0.12 0.02 270);
+    --foreground: oklch(0.95 0.01 270);
+    --card: oklch(0.16 0.02 270);
+    --card-foreground: oklch(0.95 0.01 270);
+    --popover: oklch(0.14 0.02 270);
+    --popover-foreground: oklch(0.95 0.01 270);
+    --primary: oklch(0.70 0.18 145);
+    --primary-foreground: oklch(0.12 0.02 270);
+    --secondary: oklch(0.22 0.02 270);
+    --secondary-foreground: oklch(0.90 0.01 270);
+    --muted: oklch(0.20 0.02 270);
+    --muted-foreground: oklch(0.65 0.02 270);
+    --accent: oklch(0.22 0.03 270);
+    --accent-foreground: oklch(0.95 0.01 270);
+    --border: oklch(0.25 0.02 270);
+    --input: oklch(0.20 0.02 270);
+    --ring: oklch(0.70 0.18 145);
+}
+
+/* ============================================
+   CYBER: Neon Cyberpunk
+   ============================================ */
+.theme-cyber {
+    --background: oklch(0.08 0.03 300);
+    --foreground: oklch(0.95 0.02 200);
+    --card: oklch(0.12 0.04 290);
+    --card-foreground: oklch(0.95 0.02 200);
+    --popover: oklch(0.10 0.03 295);
+    --popover-foreground: oklch(0.95 0.02 200);
+    --primary: oklch(0.75 0.25 330);
+    /* Hot pink */
+    --primary-foreground: oklch(0.10 0.03 300);
+    --secondary: oklch(0.20 0.05 290);
+    --secondary-foreground: oklch(0.90 0.02 200);
+    --muted: oklch(0.18 0.04 295);
+    --muted-foreground: oklch(0.60 0.08 200);
+    --accent: oklch(0.65 0.20 195);
+    /* Cyan accent */
+    --accent-foreground: oklch(0.10 0.03 300);
+    --border: oklch(0.30 0.08 310);
+    --input: oklch(0.15 0.04 295);
+    --ring: oklch(0.75 0.25 330);
+
+    /* Chart colors - neon palette */
+    --chart-1: oklch(0.75 0.25 330);
+    --chart-2: oklch(0.70 0.20 195);
+    --chart-3: oklch(0.80 0.22 85);
+    --chart-4: oklch(0.65 0.25 290);
+    --chart-5: oklch(0.70 0.20 145);
+}
+
+/* ============================================
+   OCEAN: Deep Blue
+   ============================================ */
+.theme-ocean {
+    --background: oklch(0.12 0.04 240);
+    --foreground: oklch(0.95 0.02 210);
+    --card: oklch(0.16 0.05 235);
+    --card-foreground: oklch(0.95 0.02 210);
+    --popover: oklch(0.14 0.04 238);
+    --popover-foreground: oklch(0.95 0.02 210);
+    --primary: oklch(0.70 0.15 200);
+    /* Aqua */
+    --primary-foreground: oklch(0.12 0.04 240);
+    --secondary: oklch(0.22 0.05 235);
+    --secondary-foreground: oklch(0.90 0.02 210);
+    --muted: oklch(0.20 0.04 238);
+    --muted-foreground: oklch(0.60 0.06 220);
+    --accent: oklch(0.55 0.12 260);
+    /* Deep blue accent */
+    --accent-foreground: oklch(0.95 0.02 210);
+    --border: oklch(0.28 0.06 235);
+    --input: oklch(0.18 0.04 238);
+    --ring: oklch(0.70 0.15 200);
+
+    /* Chart colors - ocean palette */
+    --chart-1: oklch(0.70 0.15 200);
+    --chart-2: oklch(0.55 0.12 260);
+    --chart-3: oklch(0.75 0.10 180);
+    --chart-4: oklch(0.60 0.18 290);
+    --chart-5: oklch(0.80 0.12 160);
+}
+
+/* ============================================
+   SUNSET: Warm Gradient
+   ============================================ */
+.theme-sunset {
+    --background: oklch(0.13 0.03 30);
+    --foreground: oklch(0.95 0.02 60);
+    --card: oklch(0.17 0.04 28);
+    --card-foreground: oklch(0.95 0.02 60);
+    --popover: oklch(0.15 0.03 29);
+    --popover-foreground: oklch(0.95 0.02 60);
+    --primary: oklch(0.72 0.18 45);
+    /* Orange */
+    --primary-foreground: oklch(0.13 0.03 30);
+    --secondary: oklch(0.23 0.04 32);
+    --secondary-foreground: oklch(0.90 0.02 60);
+    --muted: oklch(0.21 0.03 30);
+    --muted-foreground: oklch(0.62 0.05 50);
+    --accent: oklch(0.65 0.20 25);
+    /* Red-orange accent */
+    --accent-foreground: oklch(0.95 0.02 60);
+    --border: oklch(0.30 0.05 35);
+    --input: oklch(0.19 0.03 30);
+    --ring: oklch(0.72 0.18 45);
+
+    /* Chart colors - warm palette */
+    --chart-1: oklch(0.72 0.18 45);
+    --chart-2: oklch(0.65 0.20 25);
+    --chart-3: oklch(0.80 0.15 85);
+    --chart-4: oklch(0.60 0.15 350);
+    --chart-5: oklch(0.75 0.12 60);
+}
+
+/* ============================================
+   FOREST: Natural Greens
+   ============================================ */
+.theme-forest {
+    --background: oklch(0.12 0.03 150);
+    --foreground: oklch(0.95 0.02 140);
+    --card: oklch(0.16 0.04 148);
+    --card-foreground: oklch(0.95 0.02 140);
+    --popover: oklch(0.14 0.03 149);
+    --popover-foreground: oklch(0.95 0.02 140);
+    --primary: oklch(0.65 0.15 145);
+    /* Forest green */
+    --primary-foreground: oklch(0.12 0.03 150);
+    --secondary: oklch(0.22 0.04 148);
+    --secondary-foreground: oklch(0.90 0.02 140);
+    --muted: oklch(0.20 0.03 148);
+    --muted-foreground: oklch(0.60 0.05 145);
+    --accent: oklch(0.50 0.10 170);
+    /* Teal accent */
+    --accent-foreground: oklch(0.95 0.02 140);
+    --border: oklch(0.28 0.05 148);
+    --input: oklch(0.18 0.03 148);
+    --ring: oklch(0.65 0.15 145);
+
+    /* Chart colors - nature palette */
+    --chart-1: oklch(0.65 0.15 145);
+    --chart-2: oklch(0.50 0.10 170);
+    --chart-3: oklch(0.75 0.12 100);
+    --chart-4: oklch(0.55 0.12 190);
+    --chart-5: oklch(0.70 0.08 120);
+}
+
+/* ============================================
+   SPECIAL EFFECTS
+   ============================================ */
+[class*="theme-"] .bento-glow {
+    box-shadow:
+        0 0 40px -10px var(--primary),
+        0 0 80px -20px var(--accent);
+}
+
+[class*="theme-"] .glass-effect {
+    background: oklch(from var(--card) l c h / 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid oklch(from var(--border) l c h / 0.5);
+}

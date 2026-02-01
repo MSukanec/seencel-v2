@@ -126,6 +126,10 @@ export async function createProject(formData: FormData) {
     // Image URL (Handled by Client Upload)
     const imageUrl = formData.get("image_url")?.toString() || null;
 
+    // Image Palette (Extracted by Client)
+    const imagePaletteRaw = formData.get("image_palette")?.toString();
+    const imagePalette = imagePaletteRaw ? JSON.parse(imagePaletteRaw) : null;
+
     // Color Handling
     const color = formData.get("color")?.toString() || null;
     const useCustomColor = formData.get("use_custom_color") === 'true';
@@ -147,6 +151,7 @@ export async function createProject(formData: FormData) {
         custom_color_h: customColorH,
         custom_color_hex: color,
         image_url: imageUrl,
+        image_palette: imagePalette,
         created_by: memberData.id,
         last_active_at: new Date().toISOString() // Set initial activity
     };
@@ -219,6 +224,12 @@ export async function updateProject(formData: FormData) {
     const imageUrl = formData.get("image_url")?.toString();
     if (imageUrl) {
         projectFields.image_url = imageUrl;
+    }
+
+    // Image Palette (Extracted by Client)
+    const imagePaletteRaw = formData.get("image_palette")?.toString();
+    if (imagePaletteRaw) {
+        projectFields.image_palette = JSON.parse(imagePaletteRaw);
     }
 
 

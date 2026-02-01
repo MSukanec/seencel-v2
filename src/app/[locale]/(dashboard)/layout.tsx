@@ -3,6 +3,7 @@ import { getUserOrganizations, getOrganizationFinancialData } from "@/features/o
 import { LayoutSwitcher } from "@/components/layout";
 import { getFeatureFlags, getFeatureFlag } from "@/actions/feature-flags";
 import { FeatureFlagsProvider } from "@/providers/feature-flags-provider";
+import { ThemeCustomizationProvider } from "@/providers/theme-customization-provider";
 
 
 import { OrganizationProvider } from "@/context/organization-context";
@@ -76,9 +77,11 @@ export default async function DashboardLayout({
                 kpiCompactFormat={kpiCompactFormat}
             >
                 <FeatureFlagsProvider flags={flags} isAdmin={isAdmin}>
-                    <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
-                        {children}
-                    </LayoutSwitcher>
+                    <ThemeCustomizationProvider>
+                        <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
+                            {children}
+                        </LayoutSwitcher>
+                    </ThemeCustomizationProvider>
                 </FeatureFlagsProvider>
             </CurrencyProvider>
         </OrganizationProvider>

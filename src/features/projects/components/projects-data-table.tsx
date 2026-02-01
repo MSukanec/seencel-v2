@@ -32,6 +32,8 @@ interface ProjectsDataTableProps {
     globalFilter?: string;
     /** Callback when global filter changes */
     onGlobalFilterChange?: (value: string) => void;
+    /** Callback to delete a project */
+    onDelete?: (project: Project) => void;
 }
 
 export function ProjectsDataTable({
@@ -42,6 +44,7 @@ export function ProjectsDataTable({
     maxProjects = -1,
     globalFilter,
     onGlobalFilterChange,
+    onDelete,
 }: ProjectsDataTableProps) {
     const router = useRouter();
     const { actions } = useLayoutStore();
@@ -81,12 +84,6 @@ export function ProjectsDataTable({
                 key: `edit-project-${project.id}`
             }
         );
-    };
-
-    const handleDelete = (project: Project) => {
-        // Delegate to parent component via callback or handle inline
-        // For now, we'll let the parent (ProjectsList) handle the delete dialog
-        // This is handled by the ProjectCard's onDelete prop
     };
 
     const columns: ColumnDef<Project>[] = [
@@ -177,14 +174,15 @@ export function ProjectsDataTable({
             pageSize={50}
             viewMode={viewMode}
             enableRowActions={true}
-            onView={handleNavigateToProject}
             onEdit={handleEdit}
+            onDelete={onDelete}
             globalFilter={globalFilter}
             onGlobalFilterChange={onGlobalFilterChange}
             renderGridItem={(project: Project) => (
                 <ProjectCard
                     project={project}
                     onEdit={handleEdit}
+                    onDelete={onDelete}
                 />
             )}
             gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
