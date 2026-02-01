@@ -1,8 +1,9 @@
 import { getBoards, getBoardWithData, getCalendarEvents } from "@/features/planner/queries";
 import { getDashboardData } from "@/features/organization/queries";
 import { getOrganizationProjects } from "@/features/projects/queries";
+import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { redirect } from "next/navigation";
-import { PlannerPageView } from "@/features/planner/views";
+import { PlannerPageView } from "@/features/planner/views/planner-page";
 import { getTranslations } from "next-intl/server";
 import { Metadata } from "next";
 
@@ -21,11 +22,15 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
     const organizationId = organization.id;
 
     // Fetch data in parallel
-    const [boards, calendarEvents, projects] = await Promise.all([
+    const [boards, calendarEvents, projects, planFeatures] = await Promise.all([
         getBoards(organizationId, null),
         getCalendarEvents(organizationId, { projectId: null }),
-        getOrganizationProjects(organizationId)
+        getOrganizationProjects(organizationId),
+        getOrganizationPlanFeatures(organizationId)
     ]);
+
+    // Get max boards from plan (-1 = unlimited)
+    const maxBoards = planFeatures?.max_org_boards ?? -1;
 
     // Determine active board ID from URL params
     const resolvedParams = await searchParams;
@@ -56,6 +61,7 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
             baseUrl="/organization/planner"
             calendarEvents={calendarEvents}
             projects={projects}
+            maxBoards={maxBoards}
         />
     );
 }

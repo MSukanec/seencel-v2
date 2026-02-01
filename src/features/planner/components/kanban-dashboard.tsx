@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { KanbanBoard, PRIORITY_CONFIG } from "@/features/planner/types";
+import { Project } from "@/types/project";
 import { useLayoutStore } from "@/store/layout-store";
 import { KanbanBoard as KanbanBoardComponent } from "@/features/planner/components/kanban-board";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,11 @@ interface KanbanDashboardProps {
     activeBoardData: any | null; // Full board data with lists/cards
     organizationId: string;
     projectId?: string | null;
+    projects?: Project[];
     /** Base URL for navigation (e.g., "/organization/kanban" or "/project/123/kanban") */
     baseUrl: string;
+    /** Max boards allowed by plan (-1 = unlimited) */
+    maxBoards?: number;
 }
 
 export function KanbanDashboard({
@@ -40,13 +44,17 @@ export function KanbanDashboard({
     activeBoardData,
     organizationId,
     projectId,
-    baseUrl
+    projects = [],
+    baseUrl,
+    maxBoards = -1
 }: KanbanDashboardProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const { actions } = useLayoutStore();
     const [isSwitching, setIsSwitching] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    // Optimistic state for boards
+    const [optimisticBoards, setOptimisticBoards] = useState(initialBoards);
 
     // Set active context to organization
     useEffect(() => {
@@ -57,6 +65,15 @@ export function KanbanDashboard({
     useEffect(() => {
         setIsSwitching(false);
     }, [activeBoardId]);
+
+    // Sync optimistic boards when prop changes (navigation, etc)
+    useEffect(() => {
+        setOptimisticBoards(initialBoards);
+    }, [initialBoards]);
+
+    // Plan limits
+    const isUnlimited = maxBoards === -1;
+    const canCreateBoard = isUnlimited || optimisticBoards.length < maxBoards;
 
     const handleBoardSwitch = (boardId: string) => {
         if (boardId === activeBoardId) return;
@@ -86,9 +103,10 @@ export function KanbanDashboard({
             <KanbanBoardForm
                 organizationId={organizationId}
                 initialData={board}
-                onSuccess={() => {
+                onSuccess={(updatedBoard: KanbanBoard) => {
+                    // Optimistic update
+                    setOptimisticBoards(prev => prev.map(b => b.id === board.id ? { ...b, ...updatedBoard } : b));
                     closeModal();
-                    router.refresh();
                 }}
             />,
             {
@@ -110,18 +128,23 @@ export function KanbanDashboard({
                     <Button
                         variant="destructive"
                         onClick={async () => {
+                            // Optimistic delete
+                            const remaining = optimisticBoards.filter(b => b.id !== boardId);
+                            setOptimisticBoards(remaining);
+                            closeModal();
+
                             try {
                                 await deleteBoard(boardId);
                                 toast.success("Panel eliminado");
-                                closeModal();
 
-                                const remaining = initialBoards.filter(b => b.id !== boardId);
                                 if (remaining.length > 0) {
                                     router.push(`${baseUrl}?boardId=${remaining[0].id}`);
                                 } else {
                                     router.push(`${baseUrl}`);
                                 }
                             } catch (error) {
+                                // Rollback on error
+                                setOptimisticBoards(initialBoards);
                                 toast.error("Error al eliminar el tablero");
                             }
                         }}
@@ -184,7 +207,7 @@ export function KanbanDashboard({
                 searchPlaceholder="Buscar tarjetas..."
                 leftActions={
                     <div className="flex items-center gap-1">
-                        {initialBoards.map((board) => (
+                        {optimisticBoards.map((board) => (
                             <div key={board.id} className="group relative flex items-center">
                                 <button
                                     onClick={() => handleBoardSwitch(board.id)}
@@ -246,7 +269,13 @@ export function KanbanDashboard({
                 actions={[{
                     label: "Nuevo Panel",
                     icon: Plus,
-                    onClick: handleCreateBoard
+                    onClick: handleCreateBoard,
+                    featureGuard: {
+                        isEnabled: canCreateBoard,
+                        featureName: "Crear más paneles",
+                        requiredPlan: "PRO",
+                        customMessage: `Has alcanzado el límite de ${maxBoards} panel${maxBoards !== 1 ? 'es' : ''} de tu plan actual (${optimisticBoards.length}/${maxBoards}). Actualiza a PRO para crear paneles ilimitados.`
+                    }
                 }]}
             />
 
@@ -273,6 +302,7 @@ export function KanbanDashboard({
                         lists={activeBoardData.lists}
                         labels={activeBoardData.labels}
                         members={activeBoardData.members || []}
+                        projects={projects}
                         searchQuery={searchQuery}
                         selectedPriorities={Array.from(selectedPriorities)}
                         selectedLabels={Array.from(selectedLabels)}

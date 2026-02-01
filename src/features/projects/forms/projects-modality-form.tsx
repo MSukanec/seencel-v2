@@ -8,11 +8,11 @@ import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { useModal } from "@/providers/modal-store";
 import {
-    createProjectType,
-    updateProjectType,
-} from "@/features/projects/actions/project-settings-actions";
+    createProjectModality,
+    updateProjectModality,
+} from "@/features/projects/actions";
 
-interface ProjectTypeFormProps {
+interface ProjectsModalityFormProps {
     organizationId: string;
     initialData?: {
         id: string;
@@ -21,8 +21,8 @@ interface ProjectTypeFormProps {
     onSuccess: (data: { id: string; name: string; is_system: boolean; organization_id: string | null }) => void;
 }
 
-export function ProjectTypeForm({ organizationId, initialData, onSuccess }: ProjectTypeFormProps) {
-    const t = useTranslations("Project.settings.types.modal");
+export function ProjectsModalityForm({ organizationId, initialData, onSuccess }: ProjectsModalityFormProps) {
+    const t = useTranslations("Project.settings.modalities.modal");
     const { closeModal, setBeforeClose } = useModal();
     const [name, setName] = useState(initialData?.name || "");
     const [isSaving, setIsSaving] = useState(false);
@@ -32,8 +32,6 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
     const isDirty = name.trim() !== (initialData?.name || "");
 
     useEffect(() => {
-        /* 
-        Temporarily disabled for debugging
         if (isDirty) {
             setBeforeClose(async () => {
                 return window.confirm(t("unsavedChanges") || "Tienes cambios sin guardar. ¿Estás seguro de que quieres cerrar?");
@@ -41,7 +39,6 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
         } else {
             setBeforeClose(undefined);
         }
-        */
         return () => setBeforeClose(undefined);
     }, [isDirty, setBeforeClose, t]);
 
@@ -57,7 +54,7 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
         setIsSaving(true);
         try {
             if (isEditing && initialData) {
-                const result = await updateProjectType(initialData.id, organizationId, name.trim());
+                const result = await updateProjectModality(initialData.id, organizationId, name.trim());
                 if (result.error) {
                     toast.error(result.error);
                 } else if (result.data) {
@@ -65,7 +62,7 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
                     closeModal();
                 }
             } else {
-                const result = await createProjectType(organizationId, name.trim());
+                const result = await createProjectModality(organizationId, name.trim());
                 if (result.error) {
                     toast.error(result.error);
                 } else if (result.data) {
@@ -81,17 +78,16 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            <div className="flex-1 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            <div className="flex-1 overflow-y-auto">
                 <FormGroup
                     label={t("nameLabel")}
-                    // ... rest
-                    htmlFor="typeName"
+                    htmlFor="modalityName"
                     error={error || undefined}
                     required
                 >
                     <Input
-                        id="typeName"
+                        id="modalityName"
                         value={name}
                         onChange={(e) => {
                             setName(e.target.value);
@@ -114,4 +110,3 @@ export function ProjectTypeForm({ organizationId, initialData, onSuccess }: Proj
         </form>
     );
 }
-

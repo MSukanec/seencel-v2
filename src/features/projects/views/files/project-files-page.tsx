@@ -2,9 +2,9 @@
 
 import { HeaderPortal } from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProjectGalleryTab } from "./project-gallery-tab";
+import { ProjectGalleryView } from "./project-gallery-view";
 
-export function ProjectFilesClient({ files }: { files: any[] }) {
+export function ProjectFilesPage({ files }: { files: any[] }) {
     return (
         <Tabs defaultValue="gallery" className="w-full flex-1 flex flex-col">
             <HeaderPortal>
@@ -21,7 +21,7 @@ export function ProjectFilesClient({ files }: { files: any[] }) {
 
             <div className="flex-1 bg-muted/5 p-8">
                 <TabsContent value="gallery" className="m-0 h-full">
-                    <ProjectGalleryTab files={files} />
+                    <ProjectGalleryView files={files} />
                 </TabsContent>
             </div>
         </Tabs>

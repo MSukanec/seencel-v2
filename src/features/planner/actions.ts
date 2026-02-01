@@ -277,6 +277,7 @@ export async function createCard(input: CreateCardInput) {
             estimated_hours: input.estimated_hours || null,
             assigned_to: input.assigned_to || null,
             cover_image_url: input.cover_image_url || null,
+            project_id: input.project_id || null,
             position: maxPosition + 1,
         })
         .select()

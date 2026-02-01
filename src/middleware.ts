@@ -92,6 +92,12 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL(`/${locale}/organization`, request.url));
         }
 
+        // SCENARIO 4: Authenticated user on landing page → redirect to hub instantly
+        if (pathWithoutLocale === "/") {
+            const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";
+            return NextResponse.redirect(new URL(`/${locale}/hub`, request.url));
+        }
+
     } else {
         // User is NOT logged in
 

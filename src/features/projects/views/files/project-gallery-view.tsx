@@ -33,7 +33,7 @@ interface FileItem {
     };
 }
 
-export function ProjectGalleryTab({ files }: { files: any[] }) {
+export function ProjectGalleryView({ files }: { files: any[] }) {
     const [filter, setFilter] = useState("all");
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 

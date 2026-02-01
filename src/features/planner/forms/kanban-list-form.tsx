@@ -30,10 +30,14 @@ const formSchema = z.object({
 interface KanbanListFormProps {
     boardId: string;
     initialData?: KanbanList;
-    onSuccess?: () => void;
+    onSuccess?: (list: KanbanList) => void;
+    /** Called BEFORE server response for optimistic UI */
+    onOptimisticCreate?: (tempList: KanbanList) => void;
+    onOptimisticUpdate?: (list: KanbanList) => void;
+    onRollback?: (listId: string) => void;
 }
 
-export function KanbanListForm({ boardId, initialData, onSuccess }: KanbanListFormProps) {
+export function KanbanListForm({ boardId, initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanListFormProps) {
     const [isPending, startTransition] = useTransition();
     const { closeModal } = useModal();
 
@@ -49,23 +53,56 @@ export function KanbanListForm({ boardId, initialData, onSuccess }: KanbanListFo
         startTransition(async () => {
             try {
                 if (initialData) {
-                    await updateList(initialData.id, {
+                    // Optimistic update
+                    const optimisticItem: KanbanList = {
+                        ...initialData,
+                        name: values.name,
+                        color: values.color || null,
+                    };
+                    onOptimisticUpdate?.(optimisticItem);
+                    closeModal();
+
+                    const result = await updateList(initialData.id, {
                         board_id: boardId,
                         name: values.name,
                         color: values.color,
                     });
                     toast.success("Columna actualizada");
+                    onSuccess?.(result);
                 } else {
-                    await createList({
+                    // Create with temporary ID for optimistic UI
+                    const tempId = `temp-${Date.now()}`;
+                    const tempList: KanbanList = {
+                        id: tempId,
+                        board_id: boardId,
+                        name: values.name,
+                        color: values.color || null,
+                        position: 9999, // Will be at the end
+                        limit_wip: null,
+                        auto_complete: false,
+                        is_collapsed: false,
+                        cards: [],
+                        created_at: new Date().toISOString(),
+                    };
+                    onOptimisticCreate?.(tempList);
+                    closeModal();
+
+                    const result = await createList({
                         board_id: boardId,
                         name: values.name,
                         color: values.color,
                     });
                     toast.success("Columna creada");
+                    onSuccess?.(result);
                 }
-                onSuccess?.();
             } catch (error) {
                 console.error(error);
+                // Rollback optimistic update
+                if (initialData) {
+                    onRollback?.(initialData.id);
+                } else {
+                    // Remove temp item - parent handles via refresh
+                }
                 toast.error(initialData ? "Error al actualizar la columna" : "Error al crear la columna");
             }
         });

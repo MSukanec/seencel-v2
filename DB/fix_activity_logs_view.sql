@@ -1,6 +1,7 @@
 -- ============================================================================
 -- FIX: organization_activity_logs_view
--- Eliminamos el filtro que excluye organizaciones de admins
+-- Filtra registros donde member_id es NULL (acciones de sistema)
+-- Solo muestra actividad de miembros reales de la organización
 -- ============================================================================
 
 DROP VIEW IF EXISTS public.organization_activity_logs_view;
@@ -21,8 +22,10 @@ SELECT
   u.email
 FROM
   organization_activity_logs l
-  LEFT JOIN organization_members m ON l.member_id = m.id
-  LEFT JOIN users u ON m.user_id = u.id;
+  INNER JOIN organization_members m ON l.member_id = m.id
+  INNER JOIN users u ON m.user_id = u.id
+WHERE
+  l.member_id IS NOT NULL;
 
 -- Otorgar permisos a usuarios autenticados
 GRANT SELECT ON public.organization_activity_logs_view TO authenticated;

@@ -63,7 +63,7 @@ const lightMapStyle = [
     { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
 ];
 
-export function ProjectLocationTab({ project }: { project: any }) {
+export function ProjectLocationView({ project }: { project: any }) {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
     const { isLoaded, loadError } = useLoadScript({

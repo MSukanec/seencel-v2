@@ -1,4 +1,4 @@
-import { ProjectDetailsClient } from "@/features/projects/components/project-details-client";
+import { ProjectDetailPage } from "@/features/projects/views/details/project-detail-page";
 import { getProjectById } from "@/features/projects/queries";
 import { getProjectFiles } from "@/features/projects/file-queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
@@ -49,7 +49,7 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
                     </TabsList>
                 }
             >
-                <ProjectDetailsClient project={project} />
+                <ProjectDetailPage project={project} />
             </PageWrapper>
         </Tabs>
     );

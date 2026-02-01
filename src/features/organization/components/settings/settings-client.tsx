@@ -2,11 +2,9 @@
 
 import { OrganizationSettingsData } from "@/types/organization";
 import { TabsContent } from "@/components/ui/tabs";
-import {
-    MembersSettingsView,
-    PermissionsSettingsView,
-    BillingSettingsView
-} from "@/features/organization/views";
+import { MembersSettingsView } from "@/features/organization/views/organization-members-settings-view";
+import { PermissionsSettingsView } from "@/features/organization/views/organization-permissions-settings-view";
+import { BillingSettingsView } from "@/features/organization/views/organization-billing-settings-view";
 
 interface SettingsClientProps {
     data: OrganizationSettingsData;

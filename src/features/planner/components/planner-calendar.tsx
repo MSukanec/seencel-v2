@@ -53,6 +53,27 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
     const [viewMode, setViewMode] = React.useState<'month' | 'list'>('month');
     const { openModal, closeModal } = useModal();
 
+    // Optimistic state for events
+    const [optimisticEvents, setOptimisticEvents] = React.useState(events);
+
+    // Sync optimistic events when prop changes
+    React.useEffect(() => {
+        setOptimisticEvents(events);
+    }, [events]);
+
+    // Optimistic event management
+    const addOptimisticEvent = React.useCallback((tempEvent: CalendarEvent) => {
+        setOptimisticEvents(prev => [...prev, tempEvent]);
+    }, []);
+
+    const updateOptimisticEvent = React.useCallback((updatedEvent: CalendarEvent) => {
+        setOptimisticEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } : e));
+    }, []);
+
+    const rollbackOptimistic = React.useCallback(() => {
+        setOptimisticEvents(events);
+    }, [events]);
+
     // Navigation
     const goToPrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -67,10 +88,10 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                 initialData={event}
                 defaultDate={defaultDate}
                 projects={projects}
-                onSuccess={() => {
-                    closeModal();
-                    onRefresh?.();
-                }}
+                onOptimisticCreate={addOptimisticEvent}
+                onOptimisticUpdate={updateOptimisticEvent}
+                onRollback={rollbackOptimistic}
+                onCancel={closeModal}
             />,
             {
                 title: event ? "Editar evento" : "Nuevo evento",
@@ -108,7 +129,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
 
     // Filter Events
     const filteredEvents = React.useMemo(() => {
-        return events.filter(event => {
+        return optimisticEvents.filter(event => {
             // Text Search
             const searchLower = searchQuery.toLowerCase();
             const matchesSearch = !searchQuery ||
@@ -127,7 +148,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
 
             return true;
         });
-    }, [events, searchQuery, typeFilter]);
+    }, [optimisticEvents, searchQuery, typeFilter]);
 
     // Calendar Generation Logic - Dynamic rows based on month
     const monthStart = startOfMonth(currentDate);

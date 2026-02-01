@@ -28,7 +28,7 @@ const mapOptions = {
     mapTypeControl: false,
 };
 
-export function ProjectDashboardClient({ project, signedImageUrl }: ProjectDashboardClientProps) {
+export function ProjectDashboardView({ project, signedImageUrl }: ProjectDashboardClientProps) {
     const { actions } = useLayoutStore();
 
     useEffect(() => {

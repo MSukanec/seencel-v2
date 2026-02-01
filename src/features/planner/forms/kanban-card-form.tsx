@@ -32,6 +32,7 @@ import { FormFooter } from "@/components/shared/forms/form-footer";
 import { useModal } from "@/providers/modal-store";
 import { createCard, updateCard } from "@/features/planner/actions";
 import { PRIORITY_CONFIG, KanbanPriority, KanbanCard, KanbanMember } from "@/features/planner/types";
+import { Project } from "@/types/project";
 
 interface FormValues {
     title: string;
@@ -42,6 +43,7 @@ interface FormValues {
     estimated_hours: number | null | undefined;
     assigned_to?: string | null;
     cover_image_url?: string | null;
+    project_id?: string | null;
 }
 
 const formSchema = z.object({
@@ -57,17 +59,24 @@ const formSchema = z.object({
     }, z.number().min(0).optional().nullable()),
     assigned_to: z.string().optional().nullable(),
     cover_image_url: z.string().optional().nullable(),
+    project_id: z.string().optional().nullable(),
 });
 
 interface KanbanCardFormProps {
     boardId: string;
     listId: string;
+    projectId?: string | null;
+    projects?: Project[];
     members?: KanbanMember[];
     initialData?: KanbanCard;
-    onSuccess?: () => void;
+    onSuccess?: (card: KanbanCard) => void;
+    /** Called BEFORE server response for optimistic UI */
+    onOptimisticCreate?: (tempCard: KanbanCard) => void;
+    onOptimisticUpdate?: (card: KanbanCard) => void;
+    onRollback?: () => void;
 }
 
-export function KanbanCardForm({ boardId, listId, members = [], initialData, onSuccess }: KanbanCardFormProps) {
+export function KanbanCardForm({ boardId, listId, projectId, projects = [], members = [], initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanCardFormProps) {
     const [isPending, startTransition] = useTransition();
     const { closeModal } = useModal();
 
@@ -82,6 +91,7 @@ export function KanbanCardForm({ boardId, listId, members = [], initialData, onS
             estimated_hours: initialData?.estimated_hours ?? null,
             assigned_to: initialData?.assigned_to || "none",
             cover_image_url: initialData?.cover_image_url || null,
+            project_id: initialData?.project_id || projectId || "none",
         },
     });
 
@@ -125,6 +135,8 @@ export function KanbanCardForm({ boardId, listId, members = [], initialData, onS
     async function onSubmit(values: FormValues) {
         startTransition(async () => {
             try {
+                const selectedProjectId = values.project_id === "none" ? null : (values.project_id || null);
+
                 const cardData = {
                     title: values.title,
                     description: values.description || null,
@@ -137,19 +149,58 @@ export function KanbanCardForm({ boardId, listId, members = [], initialData, onS
                 };
 
                 if (initialData) {
-                    await updateCard(initialData.id, cardData);
+                    // Optimistic update
+                    const optimisticCard: KanbanCard = {
+                        ...initialData,
+                        ...cardData,
+                    };
+                    onOptimisticUpdate?.(optimisticCard);
+                    closeModal();
+
+                    const result = await updateCard(initialData.id, cardData);
                     toast.success("Tarjeta actualizada");
+                    onSuccess?.(result);
                 } else {
-                    await createCard({
+                    // Create with temporary ID for optimistic UI
+                    const tempId = `temp-${Date.now()}`;
+                    const tempCard: KanbanCard = {
+                        id: tempId,
+                        list_id: listId,
+                        board_id: boardId,
+                        title: cardData.title,
+                        description: cardData.description,
+                        position: 9999,
+                        priority: cardData.priority,
+                        due_date: cardData.due_date,
+                        start_date: cardData.start_date,
+                        is_completed: false,
+                        completed_at: null,
+                        is_archived: false,
+                        cover_color: null,
+                        cover_image_url: cardData.cover_image_url || null,
+                        estimated_hours: cardData.estimated_hours,
+                        actual_hours: null,
+                        assigned_to: cardData.assigned_to,
+                        created_at: new Date().toISOString(),
+                        updated_at: null,
+                        created_by: null,
+                        project_id: selectedProjectId,
+                    };
+                    onOptimisticCreate?.(tempCard);
+                    closeModal();
+
+                    const result = await createCard({
                         board_id: boardId,
                         list_id: listId,
+                        project_id: selectedProjectId,
                         ...cardData
                     });
                     toast.success("Tarjeta creada");
+                    onSuccess?.(result);
                 }
-                onSuccess?.();
             } catch (error) {
                 console.error(error);
+                onRollback?.();
                 toast.error(initialData ? "Error al actualizar la tarjeta" : "Error al crear la tarjeta");
             }
         });
@@ -203,6 +254,38 @@ export function KanbanCardForm({ boardId, listId, members = [], initialData, onS
                             )}
                         </div>
                     </div>
+
+                    {/* Project Selector - Only visible when accessing from organization (not project) */}
+                    {!projectId && (
+                        <FormField
+                            control={form.control as any}
+                            name="project_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Proyecto</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        value={field.value || "none"}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Sin proyecto" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="none">Sin proyecto</SelectItem>
+                                            {projects.map((project) => (
+                                                <SelectItem key={project.id} value={project.id}>
+                                                    {project.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField

@@ -1,11 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Activity, Palette } from "lucide-react";
+import { LayoutDashboard, Activity } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { getAdminDashboardData, getUserJourneys } from "@/features/admin/queries";
 import { getAllActivityLogs } from "@/actions/admin-actions";
 import { AdminDashboardView } from "@/features/admin/components/admin-dashboard-view";
 import { AdminActivityView } from "@/features/admin/components/admin-activity-view";
-import { DesignerPlayground } from "@/features/customization/components/designer-playground";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -29,22 +28,13 @@ export default async function AdminPage({ params }: PageProps) {
     ]);
 
     return (
-        <Tabs defaultValue="playground" className="w-full h-full flex flex-col">
+        <Tabs defaultValue="dashboard" className="w-full h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Visión General"
                 icon={<LayoutDashboard />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
-                        <TabsTrigger
-                            value="playground"
-                            className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Palette className="h-4 w-4" />
-                                <span>Designer Playground</span>
-                            </div>
-                        </TabsTrigger>
                         <TabsTrigger
                             value="dashboard"
                             className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
@@ -66,10 +56,6 @@ export default async function AdminPage({ params }: PageProps) {
                     </TabsList>
                 }
             >
-                <TabsContent value="playground" className="m-0 h-full focus-visible:outline-none">
-                    <DesignerPlayground />
-                </TabsContent>
-
                 <TabsContent value="dashboard" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
                         <AdminDashboardView data={dashboardData} />

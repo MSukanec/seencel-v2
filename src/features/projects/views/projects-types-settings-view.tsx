@@ -23,38 +23,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import dynamic from "next/dynamic";
 import { useModal } from "@/providers/modal-store";
-import { deleteProjectModality } from "@/features/projects/actions/project-settings-actions";
+import { deleteProjectType } from "@/features/projects/actions";
 
-const ProjectModalityForm = dynamic(() => import("./project-modality-form").then(mod => mod.ProjectModalityForm), {
+const ProjectsTypeForm = dynamic(() => import("../forms/projects-type-form").then(mod => mod.ProjectsTypeForm), {
     loading: () => <p className="p-4">Cargando formulario...</p>
 });
 
-interface ProjectModality {
+interface ProjectType {
     id: string;
     name: string;
     is_system: boolean;
     organization_id: string | null;
 }
 
-interface ProjectModalitiesManagerProps {
+interface ProjectTypesManagerProps {
     organizationId: string;
-    initialModalities: ProjectModality[];
+    initialTypes: ProjectType[];
 }
 
-export function ProjectModalitiesManager({ organizationId, initialModalities }: ProjectModalitiesManagerProps) {
-    const t = useTranslations("Project.settings.modalities");
+export function ProjectTypesSettingsView({ organizationId, initialTypes }: ProjectTypesManagerProps) {
+    const t = useTranslations("Project.settings.types");
     const { openModal } = useModal();
-    const [modalities, setModalities] = useState<ProjectModality[]>(initialModalities);
+    const [types, setTypes] = useState<ProjectType[]>(initialTypes);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [deletingModality, setDeletingModality] = useState<ProjectModality | null>(null);
+    const [deletingType, setDeletingType] = useState<ProjectType | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleOpenCreate = () => {
         openModal(
-            <ProjectModalityForm
+            <ProjectsTypeForm
                 organizationId={organizationId}
-                onSuccess={(newModality) => {
-                    setModalities(prev => [...prev, newModality].sort((a, b) => a.name.localeCompare(b.name)));
+                onSuccess={(newType) => {
+                    setTypes(prev => [...prev, newType].sort((a, b) => a.name.localeCompare(b.name)));
                 }}
             />,
             {
@@ -65,14 +65,14 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
         );
     };
 
-    const handleOpenEdit = (modality: ProjectModality) => {
+    const handleOpenEdit = (type: ProjectType) => {
         openModal(
-            <ProjectModalityForm
+            <ProjectsTypeForm
                 organizationId={organizationId}
-                initialData={modality}
-                onSuccess={(updatedModality) => {
-                    setModalities(prev => prev.map(m =>
-                        m.id === updatedModality.id ? updatedModality : m
+                initialData={type}
+                onSuccess={(updatedType) => {
+                    setTypes(prev => prev.map(t =>
+                        t.id === updatedType.id ? updatedType : t
                     ).sort((a, b) => a.name.localeCompare(b.name)));
                 }}
             />,
@@ -84,24 +84,26 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
         );
     };
 
-    const handleOpenDelete = (modality: ProjectModality) => {
-        setDeletingModality(modality);
+    const handleOpenDelete = (type: ProjectType) => {
+        setDeletingType(type);
         setIsDeleteDialogOpen(true);
     };
 
     const handleDelete = async (replacementId: string | null) => {
-        if (!deletingModality) return;
+        if (!deletingType) return;
         setIsDeleting(true);
 
         try {
-            const result = await deleteProjectModality(deletingModality.id, replacementId || undefined);
+            const result = await deleteProjectType(deletingType.id, replacementId || undefined);
             if (result.success) {
-                setModalities(prev => prev.filter(m => m.id !== deletingModality.id));
+                setTypes(prev => prev.filter(t => t.id !== deletingType.id));
+                // If replaced, we might want to refresh projects or show success message
             }
         } finally {
             setIsDeleting(false);
+            // Modal closes via onClose in component, but good to reset state
             setIsDeleteDialogOpen(false);
-            setDeletingModality(null);
+            setDeletingType(null);
         }
     };
 
@@ -118,7 +120,7 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                 </Button>
             </CardHeader>
             <CardContent>
-                {modalities.length === 0 ? (
+                {types.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">
                         {t("empty")}
                     </div>
@@ -132,11 +134,11 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {modalities.map((modality) => (
-                                <TableRow key={modality.id}>
-                                    <TableCell className="font-medium pl-4">{modality.name}</TableCell>
+                            {types.map((type) => (
+                                <TableRow key={type.id}>
+                                    <TableCell className="font-medium pl-4">{type.name}</TableCell>
                                     <TableCell>
-                                        {modality.is_system ? (
+                                        {type.is_system ? (
                                             <Badge variant="system" icon={<Monitor className="h-3 w-3" />}>
                                                 {t("system")}
                                             </Badge>
@@ -147,7 +149,7 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right pr-4">
-                                        {!modality.is_system && (
+                                        {!type.is_system && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" className="h-8 w-8 p-0">
@@ -156,12 +158,12 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleOpenEdit(modality)}>
+                                                    <DropdownMenuItem onClick={() => handleOpenEdit(type)}>
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         {t("edit")}
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() => handleOpenDelete(modality)}
+                                                        onClick={() => handleOpenDelete(type)}
                                                         className="text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -183,12 +185,12 @@ export function ProjectModalitiesManager({ organizationId, initialModalities }: 
                 isOpen={isDeleteDialogOpen}
                 onClose={() => {
                     setIsDeleteDialogOpen(false);
-                    setDeletingModality(null);
+                    setDeletingType(null);
                 }}
                 onConfirm={handleDelete}
-                itemToDelete={deletingModality}
-                replacementOptions={modalities.filter(m => m.id !== deletingModality?.id)}
-                entityLabel={t("modal.deleteConfirm.entityLabel") || "modalidad"}
+                itemToDelete={deletingType}
+                replacementOptions={types.filter(t => t.id !== deletingType?.id)}
+                entityLabel={t("modal.deleteConfirm.entityLabel") || "tipo de proyecto"}
                 title={t("modal.deleteConfirm.title")}
                 description={t("modal.deleteConfirm.description")}
             />

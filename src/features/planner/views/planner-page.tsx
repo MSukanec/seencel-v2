@@ -34,6 +34,8 @@ interface PlannerPageViewProps {
     /** Calendar events for the calendar view */
     calendarEvents: CalendarEvent[];
     projects?: Project[];
+    /** Max boards allowed by plan (-1 = unlimited) */
+    maxBoards?: number;
 }
 
 export function PlannerPageView({
@@ -44,7 +46,8 @@ export function PlannerPageView({
     projectId,
     baseUrl,
     calendarEvents,
-    projects
+    projects,
+    maxBoards = -1
 }: PlannerPageViewProps) {
     const t = useTranslations('Planner');
     const searchParams = useSearchParams();
@@ -94,7 +97,9 @@ export function PlannerPageView({
                             activeBoardData={activeBoardData}
                             organizationId={organizationId}
                             projectId={projectId}
+                            projects={projects}
                             baseUrl={baseUrl}
+                            maxBoards={maxBoards}
                         />
                     </ContentLayout>
                 </TabsContent>

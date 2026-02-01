@@ -12,7 +12,7 @@ interface Organization {
     logo_path?: string | null;
     isFounder?: boolean;
 }
-import { fetchProjectsAction } from "@/features/projects/actions/fetch-projects";
+import { fetchProjectsAction } from "@/features/projects/actions";
 import { saveLastActiveProject, fetchLastActiveProject } from "@/features/projects/actions";
 
 interface SidebarData {

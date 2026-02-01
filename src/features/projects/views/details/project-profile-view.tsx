@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/client-image-compression";
 import { toast } from "sonner";
 
-export function ProjectProfileTab({ project }: { project: any }) {
+export function ProjectProfileView({ project }: { project: any }) {
     const [isPending, startTransition] = useTransition();
     const [file, setFile] = useState<File | undefined>();
 

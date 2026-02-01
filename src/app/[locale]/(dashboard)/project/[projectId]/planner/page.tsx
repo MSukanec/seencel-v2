@@ -1,7 +1,7 @@
 import { getBoards, getBoardWithData, getCalendarEvents } from "@/features/planner/queries";
 import { getProjectById } from "@/features/projects/queries";
 import { notFound } from "next/navigation";
-import { PlannerPageView } from "@/features/planner/views";
+import { PlannerPageView } from "@/features/planner/views/planner-page";
 
 interface PlannerPageProps {
     params: Promise<{ projectId: string }>;
@@ -34,12 +34,12 @@ export default async function ProjectPlannerPage({ params, searchParams }: Plann
         activeBoardId = boards[0].id;
     }
 
-    // Fetch Active Board Data
+    // Fetch Active Board Data (filtered by project)
     let activeBoardData = null;
     if (activeBoardId) {
-        activeBoardData = await getBoardWithData(activeBoardId);
+        activeBoardData = await getBoardWithData(activeBoardId, projectId);
         if (!activeBoardData && boards.length > 0 && activeBoardId !== boards[0].id) {
-            activeBoardData = await getBoardWithData(boards[0].id);
+            activeBoardData = await getBoardWithData(boards[0].id, projectId);
             activeBoardId = boards[0].id;
         }
     }

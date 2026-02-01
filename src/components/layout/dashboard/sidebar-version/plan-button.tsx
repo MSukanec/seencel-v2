@@ -6,14 +6,14 @@ import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/context/organization-context";
 import { Crown, Sparkles, Users } from "lucide-react";
-import { getPlans, getCurrentOrganizationPlanId, Plan, isOrganizationFounder } from "@/actions/plans";
+import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ============================================================================
 // SIDEBAR PLAN BUTTON
 // ============================================================================
-// Shows current plan - icon glows when org is a founder
+// Shows current plan in sidebar
 // ============================================================================
 
 interface SidebarPlanButtonProps {
@@ -48,19 +48,15 @@ const getPlanStyle = (name: string) => {
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
     const { activeOrgId } = useOrganization();
     const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
-    const [isFounder, setIsFounder] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadPlanData() {
             try {
-                const [plans, currentPlanId, founderStatus] = await Promise.all([
+                const [plans, currentPlanId] = await Promise.all([
                     getPlans(),
                     getCurrentOrganizationPlanId(),
-                    isOrganizationFounder(),
                 ]);
-
-                setIsFounder(founderStatus);
 
                 if (currentPlanId && plans.length > 0) {
                     const found = plans.find((p) => p.id === currentPlanId);
@@ -108,15 +104,12 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
                 styles.hoverBg
             )}
         >
-            {/* Icon - with glow animation for founders */}
+            {/* Icon */}
             <div className={cn(
                 "w-8 h-8 flex items-center justify-center shrink-0",
                 styles.iconColor
             )}>
-                <Icon className={cn(
-                    "h-4 w-4 transition-all",
-                    isFounder && "animate-pulse drop-shadow-[0_0_6px_rgba(234,179,8,0.8)]"
-                )} />
+                <Icon className="h-4 w-4 transition-all" />
             </div>
 
             {/* Label */}

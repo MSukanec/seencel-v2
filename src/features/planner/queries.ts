@@ -57,7 +57,7 @@ export async function getBoard(boardId: string): Promise<KanbanBoard | null> {
 // LISTS & CARDS (Full board data)
 // ============================================
 
-export async function getBoardWithData(boardId: string): Promise<{
+export async function getBoardWithData(boardId: string, filterByProjectId?: string | null): Promise<{
     board: KanbanBoard;
     lists: KanbanList[];
     labels: KanbanLabel[];
@@ -130,11 +130,17 @@ export async function getBoardWithData(boardId: string): Promise<{
         avatar_url: m.user?.avatar_url || null,
     }));
 
-    // Process lists - sort cards by position
+    // Process lists - sort cards by position and optionally filter by project
     const processedLists: KanbanList[] = (lists || []).map(list => ({
         ...list,
         cards: (list.kanban_cards || [])
             .filter((c: any) => !c.is_deleted)
+            // Filter by project_id if specified (undefined = show all, null = only org-level, string = specific project)
+            .filter((c: any) => {
+                if (filterByProjectId === undefined) return true; // Show all cards
+                if (filterByProjectId === null) return c.project_id === null; // Only org-level
+                return c.project_id === filterByProjectId || c.project_id === null; // Project + org-level
+            })
             .sort((a: any, b: any) => a.position - b.position)
     }));
 

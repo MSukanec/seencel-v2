@@ -63,6 +63,7 @@ export interface KanbanCard {
     created_at: string;
     updated_at: string | null;
     created_by: string | null;
+    project_id: string | null;
     // Computed / Joined
     labels?: KanbanLabel[];
     assignees?: KanbanCardAssignee[];
@@ -169,6 +170,7 @@ export interface CreateCardInput {
     estimated_hours?: number | null;
     assigned_to?: string | null;
     cover_image_url?: string | null;
+    project_id?: string | null;
 }
 
 export interface UpdateCardInput {

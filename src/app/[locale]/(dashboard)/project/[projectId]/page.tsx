@@ -1,4 +1,4 @@
-import { ProjectDashboardClient } from "@/features/projects/components/project-dashboard-client";
+import { ProjectDashboardView } from "@/features/projects/views/project-dashboard-view";
 import { notFound } from "next/navigation";
 import { getProjectById } from "@/features/projects/queries";
 import { saveLastActiveProject } from "@/features/projects/actions";
@@ -32,7 +32,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
     return (
         <PageWrapper type="dashboard" icon={<LayoutDashboard />}>
             <ContentLayout variant="wide">
-                <ProjectDashboardClient project={project} signedImageUrl={imageUrl} />
+                <ProjectDashboardView project={project} signedImageUrl={imageUrl} />
             </ContentLayout>
         </PageWrapper>
     );

@@ -327,3 +327,4 @@ where created_at < now() - interval '7 days'
 and session_count < 3
 order by session_count asc, last_activity_at asc nulls first
 limit 10;
+

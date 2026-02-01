@@ -2,9 +2,9 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 
 // Lazy load heavy components
-const ProjectTypeForm = dynamic(() => import('@/features/projects/components/project-type-form').then(mod => mod.ProjectTypeForm));
-const ProjectModalityForm = dynamic(() => import('@/features/projects/components/project-modality-form').then(mod => mod.ProjectModalityForm));
-const ProjectForm = dynamic(() => import('@/features/projects/components/project-form').then(mod => mod.ProjectForm));
+const ProjectsTypeForm = dynamic(() => import('@/features/projects/forms/projects-type-form').then(mod => mod.ProjectsTypeForm));
+const ProjectsModalityForm = dynamic(() => import('@/features/projects/forms/projects-modality-form').then(mod => mod.ProjectsModalityForm));
+const ProjectsProjectForm = dynamic(() => import('@/features/projects/forms/projects-project-form').then(mod => mod.ProjectsProjectForm));
 
 export interface ModalRegistryItem {
     component: React.ComponentType<any>;
@@ -17,7 +17,7 @@ export interface ModalRegistryItem {
 
 export const MODAL_REGISTRY: Record<string, ModalRegistryItem> = {
     'create-project': {
-        component: ProjectForm,
+        component: ProjectsProjectForm,
         defaultOptions: {
             title: 'Nuevo Proyecto',
             description: 'Completa la información para crear un proyecto.',
@@ -25,14 +25,14 @@ export const MODAL_REGISTRY: Record<string, ModalRegistryItem> = {
         }
     },
     'create-project-type': {
-        component: ProjectTypeForm,
+        component: ProjectsTypeForm,
         defaultOptions: {
             title: 'Nuevo Tipo de Proyecto',
             size: 'sm'
         }
     },
     'create-project-modality': {
-        component: ProjectModalityForm,
+        component: ProjectsModalityForm,
         defaultOptions: {
             title: 'Nueva Modalidad',
             size: 'sm'

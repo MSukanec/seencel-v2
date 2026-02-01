@@ -18,10 +18,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
-import { ColorPicker } from "./ColorPicker";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { FormGroup } from "@/components/ui/form-group";
 
-import { getProjectTypes, getProjectModalities } from "@/features/projects/actions/project-settings-actions";
+import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
 import { ProjectType, ProjectModality } from "@/types/project";
 
 // Optimization & Upload
@@ -30,7 +30,7 @@ import { compressImage } from "@/lib/client-image-compression";
 import { extractColorsFromImage } from "@/features/customization/lib/color-extraction";
 import { toast } from "sonner";
 
-interface ProjectFormProps {
+interface ProjectsProjectFormProps {
     mode: 'create' | 'edit';
     initialData?: any;
     organizationId: string;
@@ -38,7 +38,7 @@ interface ProjectFormProps {
     onSuccess?: () => void;
 }
 
-export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuccess }: ProjectFormProps) {
+export function ProjectsProjectForm({ mode, initialData, organizationId, onCancel, onSuccess }: ProjectsProjectFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const t = useTranslations('Project.form');
 
@@ -319,4 +319,3 @@ export function ProjectForm({ mode, initialData, organizationId, onCancel, onSuc
         </form>
     );
 }
-

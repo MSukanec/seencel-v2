@@ -11,7 +11,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface DeleteConfirmationDialogProps {
     open: boolean;
@@ -52,6 +52,11 @@ export function DeleteConfirmationDialog({
     isDeleting = false
 }: DeleteConfirmationDialogProps) {
     const [inputValue, setInputValue] = useState("");
+
+    // Reset input when dialog opens/closes or when validation text changes (different item selected)
+    useEffect(() => {
+        setInputValue("");
+    }, [open, validationText]);
 
     const isConfirmDisabled = validationText
         ? inputValue.trim() !== validationText.trim()

@@ -63,7 +63,11 @@ interface CalendarEventFormProps {
     projectId?: string | null;
     initialData?: CalendarEvent | null;
     defaultDate?: Date;
-    onSuccess?: () => void;
+    onSuccess?: (event: CalendarEvent) => void;
+    onOptimisticCreate?: (tempEvent: CalendarEvent) => void;
+    onOptimisticUpdate?: (event: CalendarEvent) => void;
+    onRollback?: () => void;
+    onCancel?: () => void;
     projects?: Project[];
 }
 
@@ -73,6 +77,10 @@ export function CalendarEventForm({
     initialData,
     defaultDate,
     onSuccess,
+    onOptimisticCreate,
+    onOptimisticUpdate,
+    onRollback,
+    onCancel,
     projects
 }: CalendarEventFormProps) {
     const [isLoading, setIsLoading] = useState(false);
@@ -150,7 +158,21 @@ export function CalendarEventForm({
             }
 
             if (isEditing && initialData) {
-                await updateCalendarEvent(initialData.id, {
+                // Optimistic update
+                const optimisticEvent: CalendarEvent = {
+                    ...initialData,
+                    title: values.title,
+                    description: values.description || null,
+                    location: values.location || null,
+                    color: values.color,
+                    start_at: startAt,
+                    end_at: endAt,
+                    is_all_day: values.is_all_day,
+                };
+                onOptimisticUpdate?.(optimisticEvent);
+                onCancel?.(); // Close modal
+
+                const result = await updateCalendarEvent(initialData.id, {
                     title: values.title,
                     description: values.description || null,
                     location: values.location || null,
@@ -160,8 +182,38 @@ export function CalendarEventForm({
                     is_all_day: values.is_all_day,
                 });
                 toast.success("Evento actualizado");
+                onSuccess?.(result);
             } else {
-                await createCalendarEvent({
+                // Create optimistic event
+                const tempId = `temp-${Date.now()}`;
+                const tempEvent: CalendarEvent = {
+                    id: tempId,
+                    organization_id: organizationId,
+                    project_id: values.project_id || projectId || null,
+                    title: values.title,
+                    description: values.description || null,
+                    location: values.location || null,
+                    color: values.color,
+                    start_at: startAt,
+                    end_at: endAt,
+                    is_all_day: values.is_all_day,
+                    timezone: 'America/Argentina/Buenos_Aires',
+                    source_type: null,
+                    source_id: null,
+                    recurrence_rule: null,
+                    recurrence_end_at: null,
+                    parent_event_id: null,
+                    status: 'scheduled',
+                    created_by: null,
+                    updated_by: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    deleted_at: null,
+                };
+                onOptimisticCreate?.(tempEvent);
+                onCancel?.(); // Close modal
+
+                const result = await createCalendarEvent({
                     organization_id: organizationId,
                     project_id: values.project_id || projectId,
                     title: values.title,
@@ -173,11 +225,11 @@ export function CalendarEventForm({
                     is_all_day: values.is_all_day,
                 });
                 toast.success("Evento creado");
+                onSuccess?.(result);
             }
-
-            onSuccess?.();
         } catch (error) {
             console.error("Error saving event:", error);
+            onRollback?.();
             toast.error(error instanceof Error ? error.message : "Error al guardar el evento");
         } finally {
             setIsLoading(false);
@@ -388,7 +440,7 @@ export function CalendarEventForm({
             <FormFooter
                 submitLabel={isEditing ? "Guardar" : "Crear evento"}
                 isLoading={isLoading}
-                onCancel={onSuccess}
+                onCancel={onCancel}
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

@@ -2,6 +2,7 @@
 "use client";
 
 import { KanbanBoard as KanbanBoardType, KanbanCard, KanbanLabel, KanbanList, KanbanMember } from "@/features/planner/types";
+import { Project } from "@/types/project";
 import { KanbanColumn } from "./kanban-column";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid } from "lucide-react";
@@ -21,6 +22,7 @@ interface KanbanBoardProps {
     lists: KanbanList[];
     labels: KanbanLabel[];
     members: KanbanMember[];
+    projects?: Project[];
     searchQuery?: string;
     selectedPriorities?: string[];
     selectedLabels?: string[];
@@ -31,6 +33,7 @@ export function KanbanBoard({
     lists,
     labels,
     members,
+    projects = [],
     searchQuery = "",
     selectedPriorities = [],
     selectedLabels = []
@@ -150,14 +153,39 @@ export function KanbanBoard({
         });
     };
 
+    // Optimistic card management
+    const addOptimisticCard = useCallback((tempCard: KanbanCard) => {
+        setOrderedLists(prev => prev.map(list => {
+            if (list.id === tempCard.list_id) {
+                return { ...list, cards: [...(list.cards || []), tempCard] };
+            }
+            return list;
+        }));
+    }, []);
+
+    const updateOptimisticCard = useCallback((updatedCard: KanbanCard) => {
+        setOrderedLists(prev => prev.map(list => {
+            if (list.id === updatedCard.list_id) {
+                return {
+                    ...list,
+                    cards: (list.cards || []).map(c => c.id === updatedCard.id ? { ...c, ...updatedCard } : c)
+                };
+            }
+            return list;
+        }));
+    }, []);
+
     // Open card creation modal
     const handleAddCard = useCallback((listId: string) => {
         openModal(
             <KanbanCardForm
                 boardId={board.id}
                 listId={listId}
+                projectId={board.project_id}
+                projects={projects}
                 members={members}
-                onSuccess={closeModal}
+                onOptimisticCreate={addOptimisticCard}
+                onRollback={() => setOrderedLists(lists)}
             />,
             {
                 title: "Nueva Tarjeta",
@@ -165,16 +193,42 @@ export function KanbanBoard({
                 size: "md"
             }
         );
-    }, [board.id, openModal, closeModal, members]);
+    }, [board.id, openModal, members, addOptimisticCard, lists]);
+
+    // Optimistic list management
+    const addOptimisticList = useCallback((tempList: KanbanList) => {
+        setOrderedLists(prev => [...prev, tempList]);
+    }, []);
+
+    const updateOptimisticList = useCallback((updatedList: KanbanList) => {
+        setOrderedLists(prev => prev.map(l => l.id === updatedList.id ? { ...l, ...updatedList } : l));
+    }, []);
+
+    const removeOptimisticList = useCallback((listId: string) => {
+        setOrderedLists(prev => prev.filter(l => l.id !== listId));
+    }, []);
+
+    const replaceOptimisticList = useCallback((tempId: string, realList: KanbanList) => {
+        setOrderedLists(prev => prev.map(l => l.id === tempId ? { ...realList, cards: l.cards || [] } : l));
+    }, []);
 
     // Open list creation modal
     const handleAddList = useCallback(() => {
         openModal(
             <KanbanListForm
                 boardId={board.id}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
+                onOptimisticCreate={addOptimisticList}
+                onSuccess={(realList) => {
+                    // Replace temp list with real one
+                    setOrderedLists(prev => {
+                        const tempIdx = prev.findIndex(l => l.id.startsWith('temp-'));
+                        if (tempIdx >= 0) {
+                            const updated = [...prev];
+                            updated[tempIdx] = { ...realList, cards: [] };
+                            return updated;
+                        }
+                        return prev;
+                    });
                 }}
             />,
             {
@@ -183,7 +237,7 @@ export function KanbanBoard({
                 size: "sm"
             }
         );
-    }, [board.id, openModal, closeModal, router]);
+    }, [board.id, openModal, addOptimisticList]);
 
     // Open list edit modal
     const handleEditList = useCallback((list: KanbanList) => {
@@ -191,9 +245,10 @@ export function KanbanBoard({
             <KanbanListForm
                 boardId={board.id}
                 initialData={list}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
+                onOptimisticUpdate={updateOptimisticList}
+                onRollback={(listId) => {
+                    // Restore original list on error
+                    setOrderedLists(lists);
                 }}
             />,
             {
@@ -202,7 +257,7 @@ export function KanbanBoard({
                 size: "sm"
             }
         );
-    }, [board.id, openModal, closeModal, router]);
+    }, [board.id, openModal, lists, updateOptimisticList]);
 
     // Handle delete list
     const handleDeleteList = useCallback((list: KanbanList) => {
@@ -216,12 +271,16 @@ export function KanbanBoard({
                     <Button
                         variant="destructive"
                         onClick={async () => {
+                            // Optimistic delete
+                            removeOptimisticList(list.id);
+                            closeModal();
+
                             try {
                                 await deleteList(list.id);
                                 toast.success("Columna eliminada");
-                                closeModal();
-                                router.refresh();
                             } catch (error) {
+                                // Rollback on error
+                                setOrderedLists(lists);
                                 toast.error("Error al eliminar la columna");
                             }
                         }}
@@ -235,17 +294,18 @@ export function KanbanBoard({
                 description: "Confirmación de eliminación"
             }
         );
-    }, [openModal, closeModal, router]);
+    }, [openModal, closeModal, removeOptimisticList, lists]);
 
-    // Handle move list to another board
+    // Handle move list to another board (optimistic: remove from current view)
     const handleMoveList = useCallback((list: KanbanList) => {
         openModal(
             <MoveListModal
                 listId={list.id}
                 currentBoardId={board.id}
                 onSuccess={() => {
+                    // Optimistic: remove list from current board
+                    removeOptimisticList(list.id);
                     closeModal();
-                    router.refresh();
                 }}
             />,
             {
@@ -254,7 +314,7 @@ export function KanbanBoard({
                 size: "sm"
             }
         );
-    }, [board.id, openModal, closeModal, router]);
+    }, [board.id, openModal, closeModal, removeOptimisticList]);
 
     // Open card edit modal
     const handleCardClick = useCallback((card: KanbanCard) => {
@@ -262,12 +322,12 @@ export function KanbanBoard({
             <KanbanCardForm
                 boardId={board.id}
                 listId={card.list_id}
+                projectId={board.project_id}
+                projects={projects}
                 initialData={card}
                 members={members}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
+                onOptimisticUpdate={updateOptimisticCard}
+                onRollback={() => setOrderedLists(lists)}
             />,
             {
                 title: "Editar Tarjeta",
@@ -275,7 +335,7 @@ export function KanbanBoard({
                 size: "md"
             }
         );
-    }, [board.id, openModal, closeModal, router, members]);
+    }, [board.id, openModal, members, updateOptimisticCard, lists]);
 
     return (
         <div className="flex flex-col h-full">

@@ -16,7 +16,6 @@ const PRESETS: ColorPreset[] = [
     { name: "Purple", hex: "#AF52DE" },
     { name: "Indigo", hex: "#5856D6" },
     { name: "Teal", hex: "#00C7BE" },
-    { name: "Lime", hex: "#A4D01C" },
 ];
 
 interface ColorPickerProps {
