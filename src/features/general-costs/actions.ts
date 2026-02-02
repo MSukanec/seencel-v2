@@ -328,27 +328,14 @@ export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) 
 export async function deleteGeneralCost(id: string) {
     const supabase = await createClient();
 
-    // DEBUG: Verificar el usuario actual y el item
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log('[DEBUG deleteGeneralCost] auth.uid:', user?.id);
-
-    const { data: item } = await supabase
-        .from('general_costs')
-        .select('id, organization_id, name')
-        .eq('id', id)
-        .single();
-    console.log('[DEBUG deleteGeneralCost] item to delete:', item);
-
-    const { error, data, count } = await supabase
+    // Soft delete
+    const { error } = await supabase
         .from('general_costs')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
         })
-        .eq('id', id)
-        .select();
-
-    console.log('[DEBUG deleteGeneralCost] result:', { error, data, count });
+        .eq('id', id);
 
     if (error) throw new Error(error.message);
     revalidatePath('/organization/general-costs');
@@ -406,7 +393,7 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
     return newPayment;
 }
 
-export async function updateGeneralCostPayment(id: string, data: Partial<GeneralCostPaymentView>) {
+export async function updateGeneralCostPayment(id: string, data: Partial<GeneralCostPaymentView> & { media_files?: any[] }) {
     const supabase = await createClient();
     const { data: updatedPayment, error } = await supabase
         .from('general_costs_payments')
@@ -426,6 +413,29 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
         .single();
 
     if (error) throw new Error(error.message);
+
+    // Handle media files if provided (same pattern as create)
+    if (data.media_files && data.media_files.length > 0 && updatedPayment) {
+        const mediaLinks = data.media_files.map(file => ({
+            organization_id: updatedPayment.organization_id,
+            general_cost_payment_id: updatedPayment.id,
+            bucket: file.bucket || 'seencel',
+            file_path: file.path,
+            file_name: file.name,
+            file_type: file.type?.split('/')[0] || 'other',
+            file_size: file.size,
+            mime_type: file.type,
+        }));
+
+        const { error: mediaError } = await supabase
+            .from('media_links')
+            .insert(mediaLinks);
+
+        if (mediaError) {
+            console.error('Error inserting media links:', mediaError);
+        }
+    }
+
     revalidatePath('/organization/general-costs');
     return updatedPayment;
 }
