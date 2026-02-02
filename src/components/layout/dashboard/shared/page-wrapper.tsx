@@ -63,8 +63,8 @@ export function PageWrapper({
                 />
             )}
 
-            {/* Content area */}
-            <div className="flex-1 overflow-hidden">
+            {/* Content area - flex context for children to fill height */}
+            <div className="flex-1 overflow-hidden flex flex-col">
                 {children}
             </div>
         </div>

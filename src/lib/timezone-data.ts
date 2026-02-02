@@ -99,6 +99,37 @@ export function formatDateForDB(date: Date | null | undefined): string | null {
 }
 
 /**
+ * Parse a date string from database (DATE columns) back to a local Date object.
+ * 
+ * CRITICAL: This function prevents the timezone shift that occurs when using
+ * new Date("2026-02-02") which JavaScript interprets as UTC midnight.
+ * 
+ * Problem with new Date("YYYY-MM-DD"):
+ * - Database returns "2026-02-02"
+ * - new Date("2026-02-02") = Feb 2 at 00:00 UTC
+ * - In Argentina (UTC-3) this becomes Feb 1 at 21:00 ❌
+ * 
+ * Solution: Parse the date components and create a LOCAL date.
+ * 
+ * @param dateString - String in YYYY-MM-DD format from database
+ * @returns Date object representing the LOCAL date at noon (to avoid DST edge cases)
+ * 
+ * @example
+ * // Database returns "2026-02-02"
+ * parseDateFromDB("2026-02-02") // Returns Date for Feb 2, 2026 at local noon
+ */
+export function parseDateFromDB(dateString: string | null | undefined): Date | null {
+    if (!dateString) return null;
+
+    // Handle both "YYYY-MM-DD" and "YYYY-MM-DDTHH:MM:SS" formats
+    const datePart = dateString.split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+
+    // Create date at noon LOCAL time to avoid any DST edge cases
+    return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+/**
  * Format a Date object for database storage with time (TIMESTAMP columns).
  * Preserves local date/time - use when you specifically want local time stored.
  * 

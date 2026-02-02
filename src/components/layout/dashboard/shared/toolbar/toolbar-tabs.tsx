@@ -5,9 +5,15 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
+/**
+ * Opción para ToolbarTabs
+ * IMPORTANTE: label es OBLIGATORIO - siempre debe tener texto visible
+ */
 export interface ToolbarTabOption {
     value: string;
+    /** Texto visible - SIEMPRE requerido */
     label: string;
+    /** Ícono opcional que se muestra a la izquierda del label */
     icon?: React.ComponentType<{ className?: string }>;
 }
 

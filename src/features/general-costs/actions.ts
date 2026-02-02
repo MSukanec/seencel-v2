@@ -327,13 +327,28 @@ export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) 
 
 export async function deleteGeneralCost(id: string) {
     const supabase = await createClient();
-    const { error } = await supabase
+
+    // DEBUG: Verificar el usuario actual y el item
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('[DEBUG deleteGeneralCost] auth.uid:', user?.id);
+
+    const { data: item } = await supabase
+        .from('general_costs')
+        .select('id, organization_id, name')
+        .eq('id', id)
+        .single();
+    console.log('[DEBUG deleteGeneralCost] item to delete:', item);
+
+    const { error, data, count } = await supabase
         .from('general_costs')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
+
+    console.log('[DEBUG deleteGeneralCost] result:', { error, data, count });
 
     if (error) throw new Error(error.message);
     revalidatePath('/organization/general-costs');
@@ -402,6 +417,9 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
             wallet_id: data.wallet_id,
             payment_date: data.payment_date,
             status: data.status,
+            notes: data.notes,
+            reference: data.reference,
+            exchange_rate: data.exchange_rate,
         })
         .eq('id', id)
         .select()

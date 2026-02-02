@@ -10,11 +10,11 @@ import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashb
 import { moduleConfigs, actionConfigs, getActionVerb } from "@/config/audit-logs";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
-interface ActivitySettingsViewProps {
+interface OrganizationActivityViewProps {
     logs: OrganizationActivityLog[];
 }
 
-export function ActivitySettingsView({ logs = [] }: ActivitySettingsViewProps) {
+export function OrganizationActivityView({ logs = [] }: OrganizationActivityViewProps) {
     // Search state
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -158,7 +158,7 @@ export function ActivitySettingsView({ logs = [] }: ActivitySettingsViewProps) {
     );
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col overflow-hidden">
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
@@ -166,9 +166,11 @@ export function ActivitySettingsView({ logs = [] }: ActivitySettingsViewProps) {
                 searchPlaceholder="Buscar en actividad..."
                 filterContent={filterContent}
             />
-            <ContentLayout variant="wide">
-                <ActivityLogsDataTable data={filteredLogs} />
-            </ContentLayout>
+            <div className="flex-1 overflow-y-auto">
+                <ContentLayout variant="wide">
+                    <ActivityLogsDataTable data={filteredLogs} />
+                </ContentLayout>
+            </div>
         </div>
     );
 }

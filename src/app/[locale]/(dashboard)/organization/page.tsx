@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { getDashboardData } from "@/features/organization/queries";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
-import { OrganizationOverviewView } from "@/features/organization/views/organization-overview-view";
-import { ActivitySettingsView } from "@/features/organization/views/organization-activity-settings-view";
+import { OrganizationDashboardView } from "@/features/organization/views/organization-dashboard-view";
+import { OrganizationActivityView } from "@/features/organization/views/organization-activity-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -93,7 +93,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                     }
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <OrganizationOverviewView
+                        <OrganizationDashboardView
                             user={user}
                             organization={organization as unknown as import("@/features/organization/types").Organization}
                             stats={stats}
@@ -103,7 +103,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                     </TabsContent>
 
                     <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ActivitySettingsView logs={activityLogs} />
+                        <OrganizationActivityView logs={activityLogs} />
                     </TabsContent>
                 </PageWrapper>
             </Tabs>

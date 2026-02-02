@@ -27,8 +27,9 @@ import {
     Clock,
     CircleOff
 } from "lucide-react";
+import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 
-import { DataTableEmptyState } from "@/components/shared/data-table/data-table-empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { ProjectCard } from "@/features/projects/components/project-card";
@@ -235,25 +236,45 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
     // === VIEW TOGGLE ===
 
     const viewToggle = (
-        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setViewMode("grid")}
-            >
-                <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setViewMode("table")}
-            >
-                <List className="h-4 w-4" />
-            </Button>
-        </div>
+        <ToolbarTabs
+            value={viewMode}
+            onValueChange={(v) => setViewMode(v as "grid" | "table")}
+            options={[
+                { value: "grid", label: "Tarjetas", icon: LayoutGrid },
+                { value: "table", label: "Tabla", icon: List },
+            ]}
+        />
     );
+
+    // === EARLY RETURN: Empty State (alto completo) ===
+    if (projects.length === 0) {
+        return (
+            <>
+                <Toolbar
+                    portalToHeader
+                    leftActions={viewToggle}
+                    actions={[{
+                        label: "Nuevo Proyecto",
+                        icon: Plus,
+                        onClick: handleCreateProject,
+                        featureGuard: {
+                            isEnabled: canCreateProject,
+                            featureName: "Crear más proyectos",
+                            requiredPlan: "PRO",
+                            customMessage: `Has alcanzado el límite de ${maxProjects} proyecto${maxProjects !== 1 ? 's' : ''} de tu plan actual (${projects.length}/${maxProjects}). Actualiza a PRO para crear proyectos ilimitados.`
+                        }
+                    }]}
+                />
+                <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                        icon={Ban}
+                        title="No hay proyectos"
+                        description="Aún no has creado ningún proyecto en esta organización."
+                    />
+                </div>
+            </>
+        );
+    }
 
     // === RENDER ===
 
@@ -299,37 +320,6 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
                     />
                 )}
                 gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                emptyState={({ table }) => {
-                    const isFiltered = table.getState().columnFilters.length > 0 || !!table.getState().globalFilter;
-                    if (isFiltered) {
-                        return (
-                            <DataTableEmptyState
-                                title="No hay resultados"
-                                description="No se encontraron proyectos que coincidan con los filtros aplicados."
-                                icon={FolderSearch}
-                                action={
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                            table.resetColumnFilters();
-                                            table.setGlobalFilter("");
-                                            setSearchQuery("");
-                                        }}
-                                    >
-                                        Limpiar filtros
-                                    </Button>
-                                }
-                            />
-                        );
-                    }
-                    return (
-                        <DataTableEmptyState
-                            title="No hay proyectos"
-                            description="Aún no has creado ningún proyecto en esta organización."
-                            icon={Ban}
-                        />
-                    );
-                }}
             />
 
             {/* Delete Confirmation Dialog */}

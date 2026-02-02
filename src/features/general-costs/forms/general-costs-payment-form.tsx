@@ -28,7 +28,7 @@ import { AttachmentList, AttachmentItem } from "@/components/shared/attachments/
 import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
 
 import { cn } from "@/lib/utils";
-import { formatDateForDB } from "@/lib/timezone-data";
+import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
 import { createGeneralCostPayment, updateGeneralCostPayment } from "@/features/general-costs/actions";
 import { useMoney } from "@/hooks/use-money";
@@ -64,7 +64,7 @@ export function PaymentForm({
 
     // Form state
     const [paymentDate, setPaymentDate] = useState<Date>(
-        initialData?.payment_date ? new Date(initialData.payment_date) : new Date()
+        parseDateFromDB(initialData?.payment_date) || new Date()
     );
     const [generalCostId, setGeneralCostId] = useState<string>(initialData?.general_cost_id || "");
     const [amount, setAmount] = useState<string>(initialData?.amount?.toString() || "");
@@ -221,7 +221,7 @@ export function PaymentForm({
                                 value={
                                     <span className="flex items-center gap-2">
                                         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                        {format(new Date(initialData.payment_date), "dd 'de' MMMM, yyyy", { locale: es })}
+                                        {format(parseDateFromDB(initialData.payment_date) || new Date(), "dd 'de' MMMM, yyyy", { locale: es })}
                                     </span>
                                 }
                             />

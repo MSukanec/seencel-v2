@@ -71,7 +71,7 @@ export default async function ProjectsPage({
                 }
             >
                 {/* Projects Tab */}
-                <TabsContent value="projects" className="m-0 h-full focus-visible:outline-none">
+                <TabsContent value="projects" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                     <ContentLayout variant="wide">
                         <ProjectsListView
                             projects={projects}
@@ -83,7 +83,7 @@ export default async function ProjectsPage({
                 </TabsContent>
 
                 {/* Settings Tab */}
-                <TabsContent value="settings" className="m-0 h-full focus-visible:outline-none">
+                <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                     <ContentLayout variant="wide">
                         <div className="grid gap-6">
                             <ProjectTypesSettingsView

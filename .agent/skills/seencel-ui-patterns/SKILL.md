@@ -1,8 +1,9 @@
 ---
-description: Patrones de UI: EmptyState, Toolbar, DataTable, Toasts
+name: Seencel UI Patterns Standard
+description: Patrones de UI obligatorios para EmptyState, Toolbar, DataTable, Toasts y compresión de imágenes en Seencel V2.
 ---
 
-# Patrones de UI
+# Seencel UI Patterns Standard
 
 ## 1. Empty State
 
@@ -54,47 +55,44 @@ return (
 
 **OBLIGATORIO**: Todas las páginas de lista/tabla con búsqueda, filtros o acciones DEBEN usar `Toolbar`.
 
-**Ubicación:** `@/components/ui/toolbar`
+**Ubicación:** `@/components/layout/dashboard/shared/toolbar`
 
 ### Uso
 
 ```tsx
-import { Toolbar } from "@/components/ui/toolbar";
-import { Card } from "@/components/ui/card";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
-<Card className="p-4 border-dashed bg-card/50">
-    <Toolbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder="Buscar..."
-        leftActions={<Badge>{count} items</Badge>}
-        filterContent={<FacetedFilter ... />}
-    >
-        {/* Right side: Action buttons */}
-        <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" /> Nuevo
-        </Button>
-    </Toolbar>
-</Card>
+<Toolbar
+    portalToHeader
+    searchQuery={searchQuery}
+    onSearchChange={setSearchQuery}
+    searchPlaceholder="Buscar..."
+    leftActions={<Badge>{count} items</Badge>}
+    filterContent={<FacetedFilter ... />}
+    actions={[
+        { label: "Crear", icon: Plus, onClick: handleCreate }
+    ]}
+/>
 ```
 
 ### Props
 
 | Prop | Tipo | Descripción |
 |------|------|-------------|
+| `portalToHeader` | boolean | Teleporta toolbar al header |
 | `searchQuery` | string | Valor actual de búsqueda |
 | `onSearchChange` | function | Handler de cambio |
 | `searchPlaceholder` | string | Placeholder |
-| `leftActions` | ReactNode | Badges, stats (antes de búsqueda) |
+| `leftActions` | ReactNode | Badges, stats, currency selector |
 | `filterContent` | ReactNode | FacetedFilter components |
-| `children` | ReactNode | Botones de acción (derecha) |
+| `actions` | array | Botones de acción (derecha) |
 
 ### Reglas
 
-1. **Siempre wrap en Card**: `<Card className="p-4 border-dashed bg-card/50">`
+1. **Siempre usar `portalToHeader`**: Las acciones van en el header, no en el body
 2. **NUNCA crear search inputs custom**: Usar search built-in de Toolbar
 3. **Stats en leftActions**: Pasar badges/contadores a `leftActions`
-4. **Create button en children**: Acción primaria va en `children`
+4. **Create button en actions array**: Acción primaria va en `actions`
 
 ---
 
@@ -160,7 +158,7 @@ const file = await compressImage(rawFile, 'avatar'); // 'avatar' | 'cover' | 'do
 ## Checklist
 
 - [ ] ¿Lista vacía muestra `EmptyState`?
-- [ ] ¿Toolbar wrap en Card con estilos correctos?
+- [ ] ¿Toolbar usa `portalToHeader`?
 - [ ] ¿DataTable para listas > 20 items?
 - [ ] ¿Toasts para feedback, no mensajes inline?
 - [ ] ¿Imágenes comprimidas antes de upload?
