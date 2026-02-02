@@ -54,7 +54,7 @@ export async function getOnboardingProgress() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) return { checklist: DEFAULT_ONBOARDING_CHECKLIST, completed: 0, total: 4 };
+    if (!user) return { checklist: DEFAULT_ONBOARDING_CHECKLIST, completed: 0, total: 3 };
 
     const { data: prefs } = await supabase
         .from('user_preferences')
@@ -84,9 +84,8 @@ export async function dismissOnboardingChecklist() {
     // Mark all steps as completed
     const allCompleted: OnboardingChecklist = {
         create_project: true,
-        add_contact: true,
-        register_payment: true,
-        explore_kanban: true,
+        create_contact: true,
+        create_movement: true,
     };
 
     const { error } = await supabase
@@ -99,4 +98,5 @@ export async function dismissOnboardingChecklist() {
     revalidatePath('/organization');
     return { success: true };
 }
+
 

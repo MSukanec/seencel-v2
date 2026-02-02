@@ -1,10 +1,10 @@
 // Onboarding Checklist Types
+// IMPORTANTE: Estas keys deben coincidir con el default de user_preferences.home_checklist en la DB
 
 export type OnboardingStepKey =
     | 'create_project'
-    | 'add_contact'
-    | 'register_payment'
-    | 'explore_kanban';
+    | 'create_contact'
+    | 'create_movement';
 
 export interface OnboardingStep {
     key: OnboardingStepKey;
@@ -23,25 +23,18 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
         icon: 'Building',
     },
     {
-        key: 'add_contact',
+        key: 'create_contact',
         title: 'Agregar un contacto',
         description: 'Proveedores, clientes o empleados',
         href: '/organization/contacts',
         icon: 'Users',
     },
     {
-        key: 'register_payment',
+        key: 'create_movement',
         title: 'Registrar un movimiento',
         description: 'Cualquier pago o ingreso',
         href: '/organization/finance',
         icon: 'CreditCard',
-    },
-    {
-        key: 'explore_kanban',
-        title: 'Explorar el Planner',
-        description: 'Tu tablero de tareas visual',
-        href: '/organization/planner',
-        icon: 'LayoutDashboard',
     },
 ];
 
@@ -49,8 +42,8 @@ export type OnboardingChecklist = Record<OnboardingStepKey, boolean>;
 
 export const DEFAULT_ONBOARDING_CHECKLIST: OnboardingChecklist = {
     create_project: false,
-    add_contact: false,
-    register_payment: false,
-    explore_kanban: false,
+    create_contact: false,
+    create_movement: false,
 };
+
 

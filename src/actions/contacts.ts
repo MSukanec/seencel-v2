@@ -100,7 +100,7 @@ export async function createContact(organizationId: string, contact: Partial<Con
     revalidatePath(`/organization/contacts`);
 
     // Mark onboarding step as completed (fire and forget)
-    completeOnboardingStep('add_contact').catch(() => { });
+    completeOnboardingStep('create_contact').catch(() => { });
 
     return newContact;
 }
