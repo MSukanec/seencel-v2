@@ -328,14 +328,10 @@ export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) 
 export async function deleteGeneralCost(id: string) {
     const supabase = await createClient();
 
-    // Soft delete
+    // Use RPC function with SECURITY DEFINER to bypass RLS
+    // The function still verifies permissions internally
     const { error } = await supabase
-        .from('general_costs')
-        .update({
-            is_deleted: true,
-            deleted_at: new Date().toISOString()
-        })
-        .eq('id', id);
+        .rpc('soft_delete_general_cost', { p_cost_id: id });
 
     if (error) throw new Error(error.message);
     revalidatePath('/organization/general-costs');
@@ -367,25 +363,56 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
 
     if (error) throw new Error(error.message);
 
-    // Handle media files if provided
+    // Handle media files if provided (correct pattern: media_files -> media_links)
     if (data.media_files && data.media_files.length > 0 && newPayment) {
-        const mediaLinks = data.media_files.map(file => ({
-            organization_id: data.organization_id,
-            general_cost_payment_id: newPayment.id,
-            bucket: file.bucket || 'seencel',
-            file_path: file.path,
-            file_name: file.name,
-            file_type: file.type?.split('/')[0] || 'other',
-            file_size: file.size,
-            mime_type: file.type,
-        }));
+        for (const mediaData of data.media_files) {
+            // Skip existing files
+            if (mediaData.id === 'existing') continue;
+            if (!mediaData.path || !mediaData.bucket) continue;
 
-        const { error: mediaError } = await supabase
-            .from('media_links')
-            .insert(mediaLinks);
+            // Map MIME type to db file_type
+            const dbType = mediaData.type?.startsWith('image/')
+                ? 'image'
+                : mediaData.type === 'application/pdf'
+                    ? 'pdf'
+                    : 'other';
 
-        if (mediaError) {
-            console.error('Error inserting media links:', mediaError);
+            // 1. First create media_file record
+            const { data: fileData, error: fileError } = await supabase
+                .from('media_files')
+                .insert({
+                    organization_id: data.organization_id,
+                    bucket: mediaData.bucket,
+                    file_path: mediaData.path,
+                    file_name: mediaData.name,
+                    file_type: dbType,
+                    file_size: mediaData.size,
+                    is_public: false
+                })
+                .select()
+                .single();
+
+            if (fileError) {
+                console.error('Error creating media_file:', fileError);
+                continue;
+            }
+
+            // 2. Then create media_link with the media_file_id
+            if (fileData) {
+                const { error: linkError } = await supabase
+                    .from('media_links')
+                    .insert({
+                        media_file_id: fileData.id,
+                        organization_id: data.organization_id,
+                        general_cost_payment_id: newPayment.id,
+                        category: 'financial',
+                        visibility: 'private'
+                    });
+
+                if (linkError) {
+                    console.error('Error creating media_link:', linkError);
+                }
+            }
         }
     }
 
@@ -414,25 +441,56 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
 
     if (error) throw new Error(error.message);
 
-    // Handle media files if provided (same pattern as create)
+    // Handle media files if provided (correct pattern: media_files -> media_links)
     if (data.media_files && data.media_files.length > 0 && updatedPayment) {
-        const mediaLinks = data.media_files.map(file => ({
-            organization_id: updatedPayment.organization_id,
-            general_cost_payment_id: updatedPayment.id,
-            bucket: file.bucket || 'seencel',
-            file_path: file.path,
-            file_name: file.name,
-            file_type: file.type?.split('/')[0] || 'other',
-            file_size: file.size,
-            mime_type: file.type,
-        }));
+        for (const mediaData of data.media_files) {
+            // Skip existing files
+            if (mediaData.id === 'existing') continue;
+            if (!mediaData.path || !mediaData.bucket) continue;
 
-        const { error: mediaError } = await supabase
-            .from('media_links')
-            .insert(mediaLinks);
+            // Map MIME type to db file_type
+            const dbType = mediaData.type?.startsWith('image/')
+                ? 'image'
+                : mediaData.type === 'application/pdf'
+                    ? 'pdf'
+                    : 'other';
 
-        if (mediaError) {
-            console.error('Error inserting media links:', mediaError);
+            // 1. First create media_file record
+            const { data: fileData, error: fileError } = await supabase
+                .from('media_files')
+                .insert({
+                    organization_id: updatedPayment.organization_id,
+                    bucket: mediaData.bucket,
+                    file_path: mediaData.path,
+                    file_name: mediaData.name,
+                    file_type: dbType,
+                    file_size: mediaData.size,
+                    is_public: false
+                })
+                .select()
+                .single();
+
+            if (fileError) {
+                console.error('Error creating media_file:', fileError);
+                continue;
+            }
+
+            // 2. Then create media_link with the media_file_id
+            if (fileData) {
+                const { error: linkError } = await supabase
+                    .from('media_links')
+                    .insert({
+                        media_file_id: fileData.id,
+                        organization_id: updatedPayment.organization_id,
+                        general_cost_payment_id: updatedPayment.id,
+                        category: 'financial',
+                        visibility: 'private'
+                    });
+
+                if (linkError) {
+                    console.error('Error creating media_link:', linkError);
+                }
+            }
         }
     }
 
