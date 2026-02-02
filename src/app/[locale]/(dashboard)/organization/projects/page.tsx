@@ -12,7 +12,7 @@ import { redirect } from "@/i18n/routing";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
-import { Briefcase } from "lucide-react";
+import { Building } from "lucide-react";
 
 // ✅ OBLIGATORIO: Metadata para SEO y título de página
 export async function generateMetadata({
@@ -58,7 +58,7 @@ export default async function ProjectsPage({
             <PageWrapper
                 type="page"
                 title="Proyectos"
-                icon={<Briefcase />}
+                icon={<Building />}
                 tabs={
                     <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
                         <TabsTrigger value="projects">

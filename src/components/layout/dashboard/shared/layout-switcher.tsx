@@ -9,6 +9,7 @@ import { UserProvider } from "@/context/user-context";
 import { QueryProvider } from "@/providers/query-provider";
 import { ContextSidebarProvider } from "@/providers/context-sidebar-provider";
 import { PresenceProvider } from "@/providers/presence-provider";
+import { OnboardingFloatingWidget } from "@/features/onboarding/checklist";
 
 export function LayoutSwitcher({
     children,
@@ -45,6 +46,7 @@ export function LayoutSwitcher({
                             </SidebarLayout>
                         </ContextSidebarProvider>
                         <GlobalDrawer />
+                        <OnboardingFloatingWidget />
                     </PresenceProvider>
                 ) : (
                     <ContextSidebarProvider>
@@ -57,3 +59,4 @@ export function LayoutSwitcher({
         </QueryProvider>
     );
 }
+

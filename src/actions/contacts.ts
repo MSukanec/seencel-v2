@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Contact, ContactWithRelations, ContactType } from "@/types/contact";
 import { revalidatePath } from "next/cache";
+import { completeOnboardingStep } from "@/features/onboarding/actions";
 
 // --- CONTACTS ---
 
@@ -97,6 +98,10 @@ export async function createContact(organizationId: string, contact: Partial<Con
     }
 
     revalidatePath(`/organization/contacts`);
+
+    // Mark onboarding step as completed (fire and forget)
+    completeOnboardingStep('add_contact').catch(() => { });
+
     return newContact;
 }
 

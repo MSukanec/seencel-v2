@@ -21,7 +21,7 @@ import {
     List,
     Plus,
     FolderSearch,
-    Ban,
+    Building,
     Activity,
     CheckCircle,
     Clock,
@@ -267,7 +267,7 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
                 />
                 <div className="h-full flex items-center justify-center">
                     <EmptyState
-                        icon={Ban}
+                        icon={Building}
                         title="No hay proyectos"
                         description="Aún no has creado ningún proyecto en esta organización."
                     />

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { completeOnboardingStep } from "@/features/onboarding/actions";
 
 export async function saveLastActiveProject(projectId: string) {
     const supabase = await createClient();
@@ -183,6 +184,9 @@ export async function createProject(formData: FormData) {
 
     // Auto-activate the new project
     await saveLastActiveProject(newProject.id);
+
+    // Mark onboarding step as completed (fire and forget)
+    completeOnboardingStep('create_project').catch(() => { });
 
     revalidatePath(`/organization/projects`);
     return { success: true, data: newProject };

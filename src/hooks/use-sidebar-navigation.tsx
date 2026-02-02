@@ -5,7 +5,6 @@ import { useActiveProjectId } from "@/store/layout-store";
 import {
     LayoutDashboard,
     Building,
-    Briefcase,
     DollarSign,
     GraduationCap,
     Users,
@@ -58,7 +57,7 @@ export interface ContextItem {
 }
 
 const ALL_CONTEXTS: ContextItem[] = [
-    { id: 'organization', label: 'Organización', icon: Briefcase },
+    { id: 'organization', label: 'Organización', icon: Building },
     { id: 'portal', label: 'Portal de Clientes', icon: Building },
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
@@ -178,7 +177,7 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_org_files', { title: 'Archivos', href: '/organization/files', icon: FolderOpen }),
                     getItemStatus('sidebar_org_quotes', { title: 'Presupuestos', href: '/organization/quotes', icon: FileText }),
                     getItemStatus('sidebar_org_finance', { title: 'Finanzas', href: '/organization/finance', icon: DollarSign }),
-                    getItemStatus('sidebar_org_projects', { title: 'Proyectos', href: '/organization/projects', icon: Briefcase, sectionHeader: 'Mi Organización' }),
+                    getItemStatus('sidebar_org_projects', { title: 'Proyectos', href: '/organization/projects', icon: Building, sectionHeader: 'Mi Organización' }),
                     getItemStatus('sidebar_org_identity', { title: tMega('Organization.items.identity'), href: '/organization/identity', icon: Building }),
                     getItemStatus('sidebar_org_catalog', { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench }),
                     getItemStatus('sidebar_org_contacts', { title: 'Contactos', href: '/organization/contacts', icon: Users }),
