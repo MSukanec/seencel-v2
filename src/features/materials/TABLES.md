@@ -568,3 +568,35 @@ left join lateral (
     from material_invoice_items ii
     where ii.invoice_id = inv.id
 ) items on true;
+
+# Vista MATERIALS_VIEW:
+
+create view public.materials_view as
+select
+  m.id,
+  m.name,
+  m.category_id,
+  mc.name as category_name,
+  m.unit_id,
+  u.name as unit_of_computation,
+  u.symbol as unit_symbol,
+  m.default_unit_presentation_id,
+  up.name as default_unit_presentation,
+  up.equivalence as unit_equivalence,
+  m.is_system,
+  m.is_completed,
+  m.material_type,
+  m.created_at,
+  m.updated_at,
+  map.min_price,
+  map.max_price,
+  map.avg_price,
+  map.product_count,
+  map.provider_product_count,
+  map.price_count
+from
+  materials m
+  left join material_categories mc on mc.id = m.category_id
+  left join units u on u.id = m.unit_id
+  left join unit_presentations up on up.id = m.default_unit_presentation_id
+  left join material_avg_prices map on map.material_id = m.id;

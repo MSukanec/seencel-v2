@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Monitor, Building2 } from "lucide-react";
+import { Plus, Monitor, Building2, ClipboardList } from "lucide-react";
 
 import { TasksByDivision, Unit, TaskDivision, TaskKind } from "@/features/tasks/types";
-import { TaskCatalog } from "@/features/tasks/components/catalog/task-catalog";
-import { TaskForm } from "@/features/tasks/components/forms/task-form";
-import { TaskTypeSelector, TaskCreationType } from "@/features/tasks/components/forms/task-type-selector";
-import { ParametricTaskForm } from "@/features/tasks/components/forms/parametric-task-form";
+import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
+import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } from "@/features/tasks/forms";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useModal } from "@/providers/modal-store";
 
 // Filter type for origin
@@ -36,7 +35,46 @@ export function TasksCatalogView({
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
-    const [originFilter, setOriginFilter] = useState<OriginFilter>("all");
+    const [originFilter, setOriginFilter] = useState<Set<string>>(new Set());
+
+    // Flatten all tasks to count total
+    const allTasks = useMemo(() => {
+        return groupedTasks.flatMap(g => g.tasks);
+    }, [groupedTasks]);
+
+    // Calculate facet counts for origin filter
+    const originFacets = useMemo(() => {
+        const facets = new Map<string, number>();
+        facets.set("system", allTasks.filter(t => t.is_system).length);
+        facets.set("organization", allTasks.filter(t => !t.is_system).length);
+        return facets;
+    }, [allTasks]);
+
+    // Convert Set filter to the legacy filter format for TaskCatalog
+    const computedOriginFilter: OriginFilter = useMemo(() => {
+        if (originFilter.size === 0) return "all";
+        if (originFilter.size === 2) return "all"; // Both selected = all
+        if (originFilter.has("system")) return "system";
+        if (originFilter.has("organization")) return "organization";
+        return "all";
+    }, [originFilter]);
+
+    // ========================================================================
+    // Filter handlers
+    // ========================================================================
+    const handleOriginSelect = (value: string) => {
+        const newSet = new Set(originFilter);
+        if (newSet.has(value)) {
+            newSet.delete(value);
+        } else {
+            newSet.add(value);
+        }
+        setOriginFilter(newSet);
+    };
+
+    const handleOriginClear = () => {
+        setOriginFilter(new Set());
+    };
 
     // ========================================================================
     // Modal Handlers
@@ -44,7 +82,7 @@ export function TasksCatalogView({
 
     const handleOpenTypeSelector = () => {
         openModal(
-            <TaskTypeSelector
+            <TasksTypeSelector
                 onSelect={handleTypeSelected}
                 onCancel={closeModal}
             />,
@@ -62,7 +100,7 @@ export function TasksCatalogView({
         if (type === "own") {
             // Open regular task form
             openModal(
-                <TaskForm
+                <TasksForm
                     mode="create"
                     organizationId={orgId}
                     units={units}
@@ -83,7 +121,7 @@ export function TasksCatalogView({
         } else {
             // Open parametric task wizard
             openModal(
-                <ParametricTaskForm
+                <TasksParametricForm
                     divisions={divisions}
                     units={units}
                     kinds={kinds}
@@ -111,7 +149,7 @@ export function TasksCatalogView({
         } else if (isAdminMode) {
             // Admin mode but no kinds: use regular form
             openModal(
-                <TaskForm
+                <TasksForm
                     mode="create"
                     organizationId={orgId}
                     units={units}
@@ -135,6 +173,47 @@ export function TasksCatalogView({
         }
     };
 
+    // Origin filter options
+    const originOptions = [
+        { label: "Sistema", value: "system", icon: Monitor },
+        { label: "Propios", value: "organization", icon: Building2 },
+    ];
+
+    // ========================================================================
+    // EmptyState: early return pattern (SKILL compliance)
+    // ========================================================================
+    if (allTasks.length === 0) {
+        return (
+            <>
+                <Toolbar
+                    portalToHeader={true}
+                    leftActions={
+                        <FacetedFilter
+                            title="Origen"
+                            options={originOptions}
+                            selectedValues={originFilter}
+                            onSelect={handleOriginSelect}
+                            onClear={handleOriginClear}
+                            facets={originFacets}
+                        />
+                    }
+                    actions={[{
+                        label: "Nueva Tarea",
+                        icon: Plus,
+                        onClick: handleCreateTask,
+                    }]}
+                />
+                <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                        icon={ClipboardList}
+                        title="No hay tareas"
+                        description="Agregá tareas para comenzar a construir tu catálogo técnico."
+                    />
+                </div>
+            </>
+        );
+    }
+
     return (
         <>
             <Toolbar
@@ -143,14 +222,13 @@ export function TasksCatalogView({
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 leftActions={
-                    <ToolbarTabs
-                        value={originFilter}
-                        onValueChange={(v) => setOriginFilter(v as OriginFilter)}
-                        options={[
-                            { label: "Todos", value: "all" },
-                            { label: "Sistema", value: "system", icon: Monitor },
-                            { label: "Propios", value: "organization", icon: Building2 },
-                        ]}
+                    <FacetedFilter
+                        title="Origen"
+                        options={originOptions}
+                        selectedValues={originFilter}
+                        onSelect={handleOriginSelect}
+                        onClear={handleOriginClear}
+                        facets={originFacets}
                     />
                 }
                 actions={[{
@@ -166,7 +244,7 @@ export function TasksCatalogView({
                 divisions={divisions}
                 isAdminMode={isAdminMode}
                 searchQuery={searchQuery}
-                originFilter={originFilter}
+                originFilter={computedOriginFilter}
             />
         </>
     );

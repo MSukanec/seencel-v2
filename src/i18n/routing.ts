@@ -100,6 +100,102 @@ export const routing = defineRouting({
             es: '/organizacion/informes'
         },
 
+        // ===== Organization Catalog (Technical) =====
+        '/organization/catalog': {
+            en: '/organization/catalog',
+            es: '/organizacion/catalogo'
+        },
+        '/organization/catalog/task/[taskId]': {
+            en: '/organization/catalog/task/[taskId]',
+            es: '/organizacion/catalogo/tarea/[taskId]'
+        },
+
+        // ===== Organization Planner =====
+        '/organization/planner': {
+            en: '/organization/planner',
+            es: '/organizacion/planificador'
+        },
+
+        // ===== Organization Files =====
+        '/organization/files': {
+            en: '/organization/files',
+            es: '/organizacion/archivos'
+        },
+
+        // ===== Organization Quotes =====
+        '/organization/quotes': {
+            en: '/organization/quotes',
+            es: '/organizacion/cotizaciones'
+        },
+
+        // ===== Organization General Costs =====
+        '/organization/general-costs': {
+            en: '/organization/general-costs',
+            es: '/organizacion/gastos-generales'
+        },
+
+        // ===== Project Routes =====
+        '/project/[projectId]': {
+            en: '/project/[projectId]',
+            es: '/proyecto/[projectId]'
+        },
+        '/project/[projectId]/details': {
+            en: '/project/[projectId]/details',
+            es: '/proyecto/[projectId]/detalles'
+        },
+        '/project/[projectId]/construction-tasks': {
+            en: '/project/[projectId]/construction-tasks',
+            es: '/proyecto/[projectId]/tareas-obra'
+        },
+        '/project/[projectId]/materials': {
+            en: '/project/[projectId]/materials',
+            es: '/proyecto/[projectId]/materiales'
+        },
+        '/project/[projectId]/labor': {
+            en: '/project/[projectId]/labor',
+            es: '/proyecto/[projectId]/mano-de-obra'
+        },
+        '/project/[projectId]/subcontracts': {
+            en: '/project/[projectId]/subcontracts',
+            es: '/proyecto/[projectId]/subcontratos'
+        },
+        '/project/[projectId]/subcontracts/[subcontractId]': {
+            en: '/project/[projectId]/subcontracts/[subcontractId]',
+            es: '/proyecto/[projectId]/subcontratos/[subcontractId]'
+        },
+        '/project/[projectId]/finance': {
+            en: '/project/[projectId]/finance',
+            es: '/proyecto/[projectId]/finanzas'
+        },
+        '/project/[projectId]/planner': {
+            en: '/project/[projectId]/planner',
+            es: '/proyecto/[projectId]/planificador'
+        },
+        '/project/[projectId]/files': {
+            en: '/project/[projectId]/files',
+            es: '/proyecto/[projectId]/archivos'
+        },
+        '/project/[projectId]/health': {
+            en: '/project/[projectId]/health',
+            es: '/proyecto/[projectId]/salud'
+        },
+        '/project/[projectId]/sitelog': {
+            en: '/project/[projectId]/sitelog',
+            es: '/proyecto/[projectId]/bitacora'
+        },
+        '/project/[projectId]/quotes': {
+            en: '/project/[projectId]/quotes',
+            es: '/proyecto/[projectId]/cotizaciones'
+        },
+        '/project/[projectId]/clients': {
+            en: '/project/[projectId]/clients',
+            es: '/proyecto/[projectId]/clientes'
+        },
+        '/project/[projectId]/portal': {
+            en: '/project/[projectId]/portal',
+            es: '/proyecto/[projectId]/portal'
+        },
+
         '/contact': {
             en: '/contact',
             es: '/contacto'
@@ -148,7 +244,11 @@ export const routing = defineRouting({
         '/admin': '/admin',
         // Admin hub content
         '/admin/hub-content': '/admin/hub-content',
-        '/admin/emails': '/admin/emails'
+        '/admin/emails': '/admin/emails',
+        '/admin/catalog': '/admin/catalog',
+        '/admin/catalog/task/[taskId]': '/admin/catalog/task/[taskId]',
+        '/admin/catalog/division/[divisionId]': '/admin/catalog/division/[divisionId]',
+        '/admin/catalog/element/[elementId]': '/admin/catalog/element/[elementId]',
     }
 });
 

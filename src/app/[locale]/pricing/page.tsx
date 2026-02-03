@@ -8,10 +8,10 @@ import { getPlanPurchaseFlags } from "@/actions/feature-flags";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Planes y Precios | SEENCEL',
+    title: 'Planes y Precios | Seencel',
     description: 'Elegí el plan perfecto para tu empresa constructora. Desde emprendedores hasta grandes equipos, tenemos la solución ideal.',
     openGraph: {
-        title: 'Planes y Precios | SEENCEL',
+        title: 'Planes y Precios | Seencel',
         description: 'Elegí el plan perfecto para tu empresa constructora.',
         url: 'https://seencel.com/es/precios',
         images: [{ url: 'https://seencel.com/og-image.jpg', width: 1200, height: 630 }],

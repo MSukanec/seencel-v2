@@ -54,7 +54,7 @@ export default function DashboardNotFound() {
                 </div>
 
                 <div className="pt-12 text-xs text-muted-foreground font-mono">
-                    {t('errorCode')}
+                    Error <span className="text-primary">404</span> • {t('errorCode')}
                 </div>
             </div>
         </div>

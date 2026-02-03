@@ -175,3 +175,85 @@ Antes de marcar una página como completa:
 | Sin Metadata | Agregar `generateMetadata` |
 | Sin error handling | Agregar `try/catch` + `ErrorDisplay` |
 | Botones en body | Mover a `Toolbar portalToHeader` |
+
+---
+
+## 6. Internacionalización de URLs (🚨 OBLIGATORIO)
+
+**TODAS las páginas del dashboard DEBEN tener rutas traducidas** en `src/i18n/routing.ts`.
+
+### Regla Principal
+
+Cada nueva página del dashboard requiere:
+
+1. **Definición en routing.ts** con rutas en español e inglés
+2. **Uso de `Link` de `@/i18n/routing`** para navegación (NO de `next/link`)
+3. **Uso de `router` de `@/i18n/routing`** para navegación programática
+
+### Patrón Obligatorio
+
+```ts
+// En src/i18n/routing.ts
+pathnames: {
+    // ✅ CORRECTO: Ruta con traducciones
+    '/organization/catalog': {
+        en: '/organization/catalog',
+        es: '/organizacion/catalogo'
+    },
+    '/organization/catalog/task/[taskId]': {
+        en: '/organization/catalog/task/[taskId]',
+        es: '/organizacion/catalogo/tarea/[taskId]'
+    },
+}
+```
+
+### Navegación
+
+```tsx
+// ✅ CORRECTO: Usar Link/router de @/i18n/routing
+import { Link, useRouter } from "@/i18n/routing";
+
+<Link href="/organization/catalog">Catálogo</Link>
+
+// ❌ INCORRECTO: Usar next/link directo o rutas hardcodeadas
+import Link from "next/link";
+<Link href={`/${locale}/organization/catalog`}>Catálogo</Link>
+```
+
+### Convención de Nombres de Rutas
+
+| Inglés | Español |
+|--------|---------|
+| `organization` | `organizacion` |
+| `catalog` | `catalogo` |
+| `task` | `tarea` |
+| `tasks` | `tareas` |
+| `planner` | `planificador` |
+| `materials` | `materiales` |
+| `labor` | `mano-de-obra` |
+| `equipment` | `equipos` |
+| `subcontracts` | `subcontratos` |
+| `finance` | `finanzas` |
+| `settings` | `configuracion` |
+| `division` | `division` |
+| `element` | `elemento` |
+| `project` | `proyecto` |
+| `projects` | `proyectos` |
+| `team` | `equipo` |
+| `contacts` | `contactos` |
+| `billing` | `facturacion` |
+| `reports` | `informes` |
+
+### Checklist de Nueva Página
+
+- [ ] ¿Está definida la ruta en `routing.ts` con ambos idiomas?
+- [ ] ¿Las rutas con parámetros dinámicos (`[id]`) están definidas?
+- [ ] ¿Se usa `Link` y `useRouter` de `@/i18n/routing`?
+- [ ] ¿Las rutas hijas también están traducidas?
+
+> ⛔ **NUNCA** construir URLs manualmente con template strings y el locale.
+> 
+> ⛔ **NUNCA** crear una página sin agregarla a `routing.ts`.
+> 
+> ⛔ **NUNCA** usar `next/link` o `next/navigation` directamente para rutas del dashboard.
+

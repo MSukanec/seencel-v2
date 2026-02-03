@@ -11,7 +11,7 @@ import { ReportsBuilderView } from "@/features/reports/views/reports-builder-vie
 
 export async function generateMetadata(): Promise<Metadata> {
     return {
-        title: "Informes | SEENCEL",
+        title: "Informes | Seencel",
         description: "Generá informes personalizados con datos de tu organización",
         robots: "noindex, nofollow",
     };

@@ -103,9 +103,9 @@ export function FacetedFilter({
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0 bg-popover/95 backdrop-blur-xl border-primary/20 shadow-xl" align="start">
-                <Command>
-                    <CommandInput placeholder={title} autoFocus={false} className="border-none focus:ring-0 focus-visible:ring-0" />
+            <PopoverContent className="w-[200px] p-0 bg-popover/95 backdrop-blur-xl border-primary/20 shadow-xl focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none" align="start">
+                <Command className="focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none outline-none ring-0">
+                    <CommandInput placeholder={title} autoFocus={false} className="border-none ring-0 focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none" />
                     <CommandList>
                         <CommandEmpty>No results found.</CommandEmpty>
                         <CommandGroup>

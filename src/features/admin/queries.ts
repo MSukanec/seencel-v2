@@ -433,6 +433,235 @@ export async function getMaterialCategoriesHierarchy(): Promise<MaterialCategory
 }
 
 // ============================================================================
+// CATALOG: System Labor - Oficios (labor_categories)
+// ============================================================================
+
+export interface SystemLaborCategory {
+    id: string;
+    name: string;
+    description: string | null;
+    is_system: boolean;
+    is_deleted: boolean;
+    created_at: string | null;
+}
+
+/**
+ * Get all system labor categories (oficios) for admin catalog
+ */
+export async function getSystemLaborCategories(): Promise<SystemLaborCategory[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_categories')
+        .select(`
+            id,
+            name,
+            description,
+            is_system,
+            is_deleted,
+            created_at
+        `)
+        .eq('is_system', true)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching system labor categories:", error);
+        return [];
+    }
+
+    return (data || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        is_system: c.is_system,
+        is_deleted: c.is_deleted,
+        created_at: c.created_at,
+    }));
+}
+
+// ============================================================================
+// CATALOG: System Labor - Niveles (labor_levels)
+// ============================================================================
+
+export interface SystemLaborLevel {
+    id: string;
+    name: string;
+    description: string | null;
+    sort_order: number;
+    created_at: string | null;
+}
+
+/**
+ * Get all system labor levels (niveles) for admin catalog
+ * Note: labor_levels is a global system table (no is_system/is_deleted columns)
+ */
+export async function getSystemLaborLevels(): Promise<SystemLaborLevel[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_levels')
+        .select(`
+            id,
+            name,
+            description,
+            sort_order,
+            created_at
+        `)
+        .order('sort_order', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching system labor levels:", error);
+        return [];
+    }
+
+    return (data || []).map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        description: l.description,
+        sort_order: l.sort_order || 0,
+        created_at: l.created_at,
+    }));
+}
+
+// ============================================================================
+// CATALOG: System Labor - Roles (labor_roles)
+// ============================================================================
+
+export interface SystemLaborRole {
+    id: string;
+    name: string;
+    description: string | null;
+    is_system: boolean;
+    is_deleted: boolean;
+    created_at: string | null;
+}
+
+/**
+ * Get all system labor roles for admin catalog
+ */
+export async function getSystemLaborRoles(): Promise<SystemLaborRole[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_roles')
+        .select(`
+            id,
+            name,
+            description,
+            is_system,
+            is_deleted,
+            created_at
+        `)
+        .eq('is_system', true)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching system labor roles:", error);
+        return [];
+    }
+
+    return (data || []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        is_system: r.is_system,
+        is_deleted: r.is_deleted,
+        created_at: r.created_at,
+    }));
+}
+
+// ============================================================================
+// CATALOG: System Labor - Tipos Usables (labor_types)
+// ============================================================================
+
+export interface SystemLaborType {
+    id: string;
+    name: string;
+    description: string | null;
+    labor_category_id: string;
+    labor_level_id: string;
+    labor_role_id: string | null;
+    unit_id: string;
+    created_at: string | null;
+    // Joined fields
+    category_name: string | null;
+    level_name: string | null;
+    role_name: string | null;
+    unit_name: string | null;
+}
+
+/**
+ * Get all system labor types for admin catalog
+ * Note: labor_types is a global system table (no is_system/is_deleted columns)
+ */
+export async function getSystemLaborTypes(): Promise<SystemLaborType[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_types')
+        .select(`
+            id,
+            name,
+            description,
+            labor_category_id,
+            labor_level_id,
+            labor_role_id,
+            unit_id,
+            created_at,
+            labor_categories (name),
+            labor_levels (name),
+            labor_roles (name),
+            units (name)
+        `)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching system labor types:", error);
+        return [];
+    }
+
+    return (data || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        labor_category_id: t.labor_category_id,
+        labor_level_id: t.labor_level_id,
+        labor_role_id: t.labor_role_id,
+        unit_id: t.unit_id,
+        created_at: t.created_at,
+        category_name: t.labor_categories?.name || null,
+        level_name: t.labor_levels?.name || null,
+        role_name: t.labor_roles?.name || null,
+        unit_name: t.units?.name || null,
+    }));
+}
+
+/**
+ * Get units applicable for labor
+ */
+export async function getUnitsForLabor(): Promise<Unit[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('units')
+        .select('id, name, applicable_to')
+        .contains('applicable_to', ['labor'])
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching units for labor:", error);
+        return [];
+    }
+
+    return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name
+    }));
+}
+
+// ============================================================================
 // User Journeys (for Activity View)
 // ============================================================================
 

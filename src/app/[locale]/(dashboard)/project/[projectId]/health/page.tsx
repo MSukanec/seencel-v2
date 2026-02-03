@@ -19,7 +19,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const t = await getTranslations({ locale: (await params).locale, namespace: 'ProjectHealth' });
     return {
-        title: `${t('title')} | SEENCEL`,
+        title: `${t('title')} | Seencel`,
         description: t('subtitle'),
         robots: "noindex, nofollow",
     };

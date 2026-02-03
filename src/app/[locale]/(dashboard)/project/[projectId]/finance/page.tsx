@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: 'MegaMenu.Finance' });
     return {
-        title: `${t('title')} | SEENCEL`,
+        title: `${t('title')} | Seencel`,
         description: t('description'),
         robots: "noindex, nofollow",
     };

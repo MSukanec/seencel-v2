@@ -30,7 +30,7 @@ export async function generateMetadata({
     });
 
     return {
-        title: `${t('title')} | SEENCEL`,
+        title: `${t('title')} | Seencel`,
         description: t('subtitle'),
         robots: "noindex, nofollow",
     };

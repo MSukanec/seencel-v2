@@ -266,6 +266,97 @@ export async function getAvailableMaterials(isSystemTask: boolean, organizationI
     }));
 }
 
+// ============================================================================
+// TASK LABOR QUERIES
+// ============================================================================
+
+export interface TaskLabor {
+    id: string;
+    task_id: string;
+    labor_type_id: string;
+    labor_type_name: string;
+    unit_name: string | null;
+    quantity: number;
+    is_system: boolean;
+}
+
+/**
+ * Get all labor types linked to a task
+ */
+export async function getTaskLabor(taskId: string): Promise<TaskLabor[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('task_labor')
+        .select(`
+            id,
+            task_id,
+            labor_type_id,
+            quantity,
+            is_system,
+            labor_categories (
+                name,
+                units (name)
+            )
+        `)
+        .eq('task_id', taskId);
+
+    if (error) {
+        console.error("Error fetching task labor:", error);
+        return [];
+    }
+
+    return (data || []).map((tl: any) => ({
+        id: tl.id,
+        task_id: tl.task_id,
+        labor_type_id: tl.labor_type_id,
+        labor_type_name: tl.labor_categories?.name || 'Tipo desconocido',
+        unit_name: tl.labor_categories?.units?.name || null,
+        quantity: tl.quantity || 1,
+        is_system: tl.is_system || false,
+    }));
+}
+
+/**
+ * Get all available labor types for adding to a task
+ * For system tasks: only system labor types
+ * For org tasks: system + org labor types
+ */
+export async function getAvailableLaborTypes(isSystemTask: boolean, organizationId?: string | null) {
+    const supabase = await createClient();
+
+    let query = supabase
+        .from('labor_categories')
+        .select(`
+            id,
+            name,
+            units (name)
+        `)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (isSystemTask) {
+        // System tasks can only use system labor types
+        query = query.eq('is_system', true);
+    } else if (organizationId) {
+        // Org tasks can use system + org labor types
+        query = query.or(`is_system.eq.true,organization_id.eq.${organizationId}`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching available labor types:", error);
+        return [];
+    }
+
+    return (data || []).map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        unit_name: l.units?.name || null,
+    }));
+}
+
 /**
  * Get all task parameters with their options (system table - visible to all)
  */

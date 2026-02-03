@@ -31,7 +31,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const t = await getTranslations({ locale: (await params).locale, namespace: 'Subcontracts' });
     return {
-        title: `${t('title', { default: 'Subcontratos' })} | SEENCEL`,
+        title: `${t('title', { default: 'Subcontratos' })} | Seencel`,
         description: t('subtitle', { default: 'Gestión de Subcontratos' }),
         robots: "noindex, nofollow", // Private dashboard
     };

@@ -25,7 +25,7 @@ export async function generateMetadata({
     });
 
     return {
-        title: "Dashboard | SEENCEL",
+        title: "Dashboard | Seencel",
         description: t('header.subtitle'),
         robots: "noindex, nofollow", // Private dashboard
     };

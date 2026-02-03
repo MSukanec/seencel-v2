@@ -12,13 +12,16 @@ import { MaterialsOrdersView } from "./materials-orders-view";
 import { MaterialsPaymentsView } from "./materials-payments-view";
 import { MaterialsSettingsView } from "./materials-settings-view";
 import { MaterialsRequirementsView } from "./materials-requirements-view";
+import { MaterialsCatalogView, MaterialWithDetails, MaterialCategoryNode } from "./materials-catalog-view";
+import { Unit } from "@/features/materials/forms/material-form";
 import {
     MaterialPaymentView,
     OrganizationFinancialData,
     MaterialPurchase,
     MaterialRequirement,
     PurchaseOrderView,
-    MaterialType
+    MaterialType,
+    MaterialCategory
 } from "../types";
 
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -37,6 +40,11 @@ interface MaterialsPageViewProps {
     orders: PurchaseOrderView[];
     providers: { id: string; name: string }[];
     materialTypes: MaterialType[];
+    // Catalog data (optional - only passed when catalog tab is needed)
+    catalogMaterials?: MaterialWithDetails[];
+    catalogUnits?: Unit[];
+    catalogCategories?: MaterialCategory[];
+    catalogCategoryHierarchy?: MaterialCategoryNode[];
 }
 
 export function MaterialsPageView({
@@ -49,7 +57,11 @@ export function MaterialsPageView({
     requirements,
     orders,
     providers,
-    materialTypes
+    materialTypes,
+    catalogMaterials = [],
+    catalogUnits = [],
+    catalogCategories = [],
+    catalogCategoryHierarchy = [],
 }: MaterialsPageViewProps) {
     const searchParams = useSearchParams();
     const pathname = usePathname();
@@ -65,12 +77,18 @@ export function MaterialsPageView({
         window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
     };
 
+    // Check if catalog data is available
+    const hasCatalogData = catalogMaterials.length > 0 || catalogCategories.length > 0;
+
     const tabs = (
         <TabsList className="bg-transparent p-0 gap-4 flex items-start justify-start">
             <TabsTrigger value="overview" className={tabTriggerClass}>Visión General</TabsTrigger>
             <TabsTrigger value="requirements" className={tabTriggerClass}>Necesidades</TabsTrigger>
             <TabsTrigger value="orders" className={tabTriggerClass}>Órdenes de Compra</TabsTrigger>
             <TabsTrigger value="payments" className={tabTriggerClass}>Pagos</TabsTrigger>
+            {hasCatalogData && (
+                <TabsTrigger value="catalog" className={tabTriggerClass}>Catálogo</TabsTrigger>
+            )}
             <TabsTrigger value="settings" className={tabTriggerClass}>Ajustes</TabsTrigger>
         </TabsList>
     );
@@ -109,6 +127,18 @@ export function MaterialsPageView({
                         materialTypes={materialTypes}
                     />
                 </TabsContent>
+                {hasCatalogData && (
+                    <TabsContent value="catalog" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none overflow-hidden">
+                        <MaterialsCatalogView
+                            materials={catalogMaterials}
+                            units={catalogUnits}
+                            categories={catalogCategories}
+                            categoryHierarchy={catalogCategoryHierarchy}
+                            orgId={orgId}
+                            isAdminMode={false}
+                        />
+                    </TabsContent>
+                )}
                 <TabsContent value="settings" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
                     <MaterialsSettingsView materialTypes={materialTypes} organizationId={orgId} />
                 </TabsContent>
@@ -116,5 +146,6 @@ export function MaterialsPageView({
         </Tabs>
     );
 }
+
 
 

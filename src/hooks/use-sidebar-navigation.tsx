@@ -80,12 +80,15 @@ export function useSidebarNavigation() {
     const activeProjectId = useActiveProjectId();
     const tMega = useTranslations('MegaMenu');
     const tSidebar = useTranslations('Sidebar');
-    const { statuses, isAdmin } = useFeatureFlags();
+    const { statuses, isAdmin, isBetaTester } = useFeatureFlags();
     const { isFounder } = useOrganization();
+
+    // Combined flag for users who can bypass restrictions (but not see admin panel)
+    const canBypassRestrictions = isAdmin || isBetaTester;
 
     const contexts = useMemo(() => {
         return ALL_CONTEXTS.map(ctx => {
-            // Admin context: Only visible to admins
+            // Admin context: Only visible to admins (NOT beta testers)
             if (ctx.id === 'admin') {
                 return isAdmin ? ctx : null;
             }
@@ -105,7 +108,7 @@ export function useSidebarNavigation() {
             // Logic:
             // 1. Hidden
             if (status === 'hidden') {
-                if (isAdmin) {
+                if (canBypassRestrictions) {
                     return { ...ctx, hidden: true };
                 }
                 return null;
@@ -113,11 +116,11 @@ export function useSidebarNavigation() {
 
             // 2. Maintenance
             if (status === 'maintenance') {
-                // Visually maintenance for everyone (admin sees it too)
+                // Visually maintenance for everyone (admin/beta sees it too)
                 const maintenanceItem: ContextItem = { ...ctx, status: 'maintenance' };
 
-                if (isAdmin) {
-                    // Admin: Clickable (not disabled)
+                if (canBypassRestrictions) {
+                    // Admin/Beta: Clickable (not disabled)
                     return maintenanceItem;
                 } else {
                     // User: Blocked
@@ -129,8 +132,8 @@ export function useSidebarNavigation() {
             if (status === 'founders') {
                 const foundersItem: ContextItem = { ...ctx, status: 'founders' };
 
-                // Allow if Admin OR Founder
-                if (isAdmin || isFounder) {
+                // Allow if Admin OR Beta Tester OR Founder
+                if (canBypassRestrictions || isFounder) {
                     return foundersItem; // Returns item with status badge, but NOT disabled
                 } else {
                     return { ...foundersItem, disabled: true };
@@ -140,25 +143,25 @@ export function useSidebarNavigation() {
             // 4. Active
             return ctx;
         }).filter((ctx): ctx is ContextItem => ctx !== null);
-    }, [statuses, isAdmin, isFounder]);
+    }, [statuses, isAdmin, isBetaTester, isFounder, canBypassRestrictions]);
 
     // Helper to compute item status
     const getItemStatus = (flagKey: string, baseItem: NavItem): NavItem | null => {
         const flag = statuses[flagKey] || 'active';
 
         if (flag === 'hidden') {
-            return isAdmin ? { ...baseItem, hidden: true } : null;
+            return canBypassRestrictions ? { ...baseItem, hidden: true } : null;
         }
 
         if (flag === 'maintenance') {
             const updated = { ...baseItem, status: 'maintenance' as 'maintenance' };
-            return isAdmin ? updated : { ...updated, disabled: true };
+            return canBypassRestrictions ? updated : { ...updated, disabled: true };
         }
 
         if (flag === 'founders') {
             const updated = { ...baseItem, status: 'founders' as 'founders' };
-            // Allow Admin OR Founder
-            if (isAdmin || isFounder) {
+            // Allow Admin OR Beta Tester OR Founder
+            if (canBypassRestrictions || isFounder) {
                 return updated;
             } else {
                 return { ...updated, disabled: true };
@@ -167,6 +170,7 @@ export function useSidebarNavigation() {
 
         return baseItem;
     };
+
 
     const getNavItems = (ctx: NavigationContext): NavItem[] => {
         switch (ctx) {

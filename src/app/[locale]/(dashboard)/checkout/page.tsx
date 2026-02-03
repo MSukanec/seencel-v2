@@ -20,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const t = await getTranslations({ locale: (await params).locale, namespace: 'Founders.checkout' });
     return {
-        title: `${t('title')} | SEENCEL`,
+        title: `${t('title')} | Seencel`,
         robots: "noindex, nofollow",
     };
 }

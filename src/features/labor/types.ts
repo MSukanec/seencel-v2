@@ -33,7 +33,7 @@ export const LABOR_STATUS_LABELS: Record<LaborStatus, string> = {
 };
 
 // ==========================================
-// Labor Category (Category of worker)
+// Labor Category (OFICIO - Albañilería, Electricidad, etc.)
 // ==========================================
 
 export interface LaborCategory {
@@ -41,7 +41,6 @@ export interface LaborCategory {
     organization_id: string | null;
     name: string;
     description: string | null;
-    unit_id: string | null;
     is_system: boolean;
     is_deleted: boolean;
     created_at: string;
@@ -50,8 +49,69 @@ export interface LaborCategory {
     updated_by: string | null;
 }
 
-// Alias for backwards compatibility
-export type LaborType = LaborCategory;
+// ==========================================
+// Labor Level (NIVEL - Ayudante, Oficial, Capataz, etc.)
+// ==========================================
+
+export interface LaborLevel {
+    id: string;
+    name: string;
+    description: string | null;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
+// ==========================================
+// Labor Role (ROL - Producción, Supervisión, Dirección)
+// ==========================================
+
+export interface LaborRole {
+    id: string;
+    name: string;
+    description: string | null;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
+// ==========================================
+// Labor Type (TIPO USABLE - Combinación concreta para recetas)
+// ==========================================
+
+export interface LaborType {
+    id: string;
+    labor_category_id: string;
+    labor_level_id: string;
+    labor_role_id: string | null;
+    name: string;
+    description: string | null;
+    unit_id: string;
+    created_at: string;
+    updated_at: string;
+    // Optional joined fields (populated when fetching with joins)
+    category_name?: string | null;
+    level_name?: string | null;
+    role_name?: string | null;
+    unit_name?: string | null;
+    unit_symbol?: string | null;
+}
+
+// Extended type with price for organization catalog
+export interface LaborTypeWithPrice extends LaborType {
+    current_price: number | null;
+    currency_id: string | null;
+    currency_code: string | null;
+    currency_symbol: string | null;
+}
+
+// Extended type with joined data for views
+export interface LaborTypeView extends LaborType {
+    category_name: string | null;
+    level_name: string | null;
+    role_name: string | null;
+    unit_name: string | null;
+}
 
 // ==========================================
 // Project Labor (Worker assigned to project)
@@ -209,7 +269,7 @@ export type LaborPayment = LaborPaymentView;
 // Mock Data (to be removed when real data is ready)
 // ==========================================
 
-export const MOCK_LABOR_CATEGORIES: LaborType[] = [];
+export const MOCK_LABOR_CATEGORIES: LaborCategory[] = [];
 export const MOCK_WORKERS: Worker[] = [];
 export const MOCK_LABOR_PAYMENTS: LaborPaymentView[] = [];
 export const MOCK_DASHBOARD_DATA: LaborDashboardData = {

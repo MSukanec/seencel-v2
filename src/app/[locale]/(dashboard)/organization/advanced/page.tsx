@@ -11,7 +11,7 @@ import { AdvancedAppearanceView } from "@/features/advanced/views/advanced-appea
 
 export async function generateMetadata(): Promise<Metadata> {
     return {
-        title: "Avanzado | SEENCEL",
+        title: "Avanzado | Seencel",
         description: "Configuración avanzada y datos globales de la organización",
         robots: "noindex, nofollow",
     };

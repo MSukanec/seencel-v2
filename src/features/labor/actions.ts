@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { LaborPaymentView, LaborCategory, LaborType, ProjectLabor, ProjectLaborView } from "./types";
+import { LaborPaymentView, LaborCategory, LaborType, LaborTypeWithPrice, ProjectLabor, ProjectLaborView } from "./types";
 
 // ==========================================
 // Labor Categories (Types of workers)
@@ -29,8 +29,149 @@ export async function getLaborCategories(organizationId: string): Promise<LaborC
     return data as LaborCategory[];
 }
 
-// Alias for backwards compatibility
-export const getLaborTypes = getLaborCategories;
+/**
+ * Get labor types for an organization (includes system types + org-specific)
+ * These are the usable types with category + level + role + unit
+ */
+/**
+ * Get all labor types from the system catalog
+ * Labor types are now global (no organization_id)
+ */
+export async function getLaborTypes(): Promise<LaborType[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('labor_types')
+        .select(`
+            id,
+            labor_category_id,
+            labor_level_id,
+            labor_role_id,
+            name,
+            description,
+            unit_id,
+            created_at,
+            updated_at,
+            labor_categories (name),
+            labor_levels (name),
+            labor_roles (name),
+            units (name, symbol)
+        `)
+        .order('name');
+
+    if (error) {
+        console.error('Error fetching labor types:', error);
+        return [];
+    }
+
+    return (data || []).map((t: any) => ({
+        id: t.id,
+        labor_category_id: t.labor_category_id,
+        labor_level_id: t.labor_level_id,
+        labor_role_id: t.labor_role_id,
+        name: t.name,
+        description: t.description,
+        unit_id: t.unit_id,
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+        category_name: t.labor_categories?.name || null,
+        level_name: t.labor_levels?.name || null,
+        role_name: t.labor_roles?.name || null,
+        unit_name: t.units?.name || null,
+        unit_symbol: t.units?.symbol || null,
+    })) as LaborType[];
+}
+
+/**
+ * Get labor types with prices for a specific organization
+ * Uses labor_view which joins labor_types with labor_prices
+ */
+export async function getLaborTypesWithPrices(organizationId: string): Promise<LaborTypeWithPrice[]> {
+    const supabase = await createClient();
+
+    // First get all labor types
+    const laborTypes = await getLaborTypes();
+
+    // Then get prices for this organization
+    const { data: prices, error } = await supabase
+        .from('labor_prices')
+        .select(`
+            id,
+            labor_type_id,
+            unit_price,
+            currency_id,
+            currencies (code, symbol)
+        `)
+        .eq('organization_id', organizationId)
+        .or('valid_to.is.null,valid_to.gte.' + new Date().toISOString().split('T')[0]);
+
+    if (error) {
+        console.error('Error fetching labor prices:', error);
+    }
+
+    // Map prices by labor_type_id for quick lookup
+    const priceMap = new Map<string, { unit_price: number; currency_id: string; code: string; symbol: string }>();
+    (prices || []).forEach((p: any) => {
+        priceMap.set(p.labor_type_id, {
+            unit_price: p.unit_price,
+            currency_id: p.currency_id,
+            code: p.currencies?.code || '',
+            symbol: p.currencies?.symbol || '',
+        });
+    });
+
+    // Merge types with prices
+    return laborTypes.map(lt => {
+        const price = priceMap.get(lt.id);
+        return {
+            ...lt,
+            current_price: price?.unit_price ?? null,
+            currency_id: price?.currency_id ?? null,
+            currency_code: price?.code ?? null,
+            currency_symbol: price?.symbol ?? null,
+        };
+    });
+}
+
+/**
+ * Upsert a labor price for an organization
+ */
+export async function upsertLaborPrice(input: {
+    organization_id: string;
+    labor_type_id: string;
+    unit_price: number;
+    currency_id: string;
+}): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // First, invalidate any existing price by setting valid_to
+    await supabase
+        .from('labor_prices')
+        .update({ valid_to: new Date().toISOString().split('T')[0] })
+        .eq('organization_id', input.organization_id)
+        .eq('labor_type_id', input.labor_type_id)
+        .is('valid_to', null);
+
+    // Insert new price
+    const { error } = await supabase
+        .from('labor_prices')
+        .insert({
+            organization_id: input.organization_id,
+            labor_type_id: input.labor_type_id,
+            unit_price: input.unit_price,
+            currency_id: input.currency_id,
+            valid_from: new Date().toISOString().split('T')[0],
+            valid_to: null,
+        });
+
+    if (error) {
+        console.error('Error upserting labor price:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/organization/catalog', 'page');
+    return { success: true };
+}
+
 
 interface CreateLaborCategoryInput {
     organization_id: string;
@@ -107,6 +248,364 @@ export async function deleteLaborCategory(id: string): Promise<{ success: boolea
     }
 
     revalidatePath('/project/[projectId]/labor', 'page');
+    return { success: true };
+}
+
+// ==========================================
+// ADMIN: System Labor Categories (Oficios)
+// ==========================================
+
+interface CreateSystemLaborCategoryInput {
+    name: string;
+    description?: string | null;
+}
+
+/**
+ * Create a system labor category (oficio) - admin only
+ */
+export async function createSystemLaborCategory(input: CreateSystemLaborCategoryInput): Promise<{ success: boolean; data?: LaborCategory; error?: string }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_categories')
+        .insert({
+            name: input.name,
+            description: input.description || null,
+            is_system: true,
+            organization_id: null,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating system labor category:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data: data as LaborCategory };
+}
+
+interface UpdateSystemLaborCategoryInput extends Partial<CreateSystemLaborCategoryInput> {
+    id: string;
+}
+
+/**
+ * Update a system labor category (oficio) - admin only
+ */
+export async function updateSystemLaborCategory(input: UpdateSystemLaborCategoryInput): Promise<{ success: boolean; data?: LaborCategory; error?: string }> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {};
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.description !== undefined) updateData.description = input.description;
+
+    const { data, error } = await supabase
+        .from('labor_categories')
+        .update(updateData)
+        .eq('id', input.id)
+        .eq('is_system', true)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating system labor category:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data: data as LaborCategory };
+}
+
+/**
+ * Delete a system labor category (oficio) - admin only
+ */
+export async function deleteSystemLaborCategory(id: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('labor_categories')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('is_system', true);
+
+    if (error) {
+        console.error('Error deleting system labor category:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true };
+}
+
+// ==========================================
+// ADMIN: System Labor Levels (Niveles)
+// ==========================================
+
+interface CreateSystemLaborLevelInput {
+    name: string;
+    description?: string | null;
+}
+
+/**
+ * Create a system labor level - admin only
+ */
+export async function createSystemLaborLevel(input: CreateSystemLaborLevelInput): Promise<{ success: boolean; data?: { id: string; name: string; description: string | null }; error?: string }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_levels')
+        .insert({
+            name: input.name,
+            description: input.description || null,
+            is_system: true,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating system labor level:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data };
+}
+
+interface UpdateSystemLaborLevelInput extends Partial<CreateSystemLaborLevelInput> {
+    id: string;
+}
+
+/**
+ * Update a system labor level - admin only
+ */
+export async function updateSystemLaborLevel(input: UpdateSystemLaborLevelInput): Promise<{ success: boolean; data?: { id: string; name: string; description: string | null }; error?: string }> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {};
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.description !== undefined) updateData.description = input.description;
+
+    const { data, error } = await supabase
+        .from('labor_levels')
+        .update(updateData)
+        .eq('id', input.id)
+        .eq('is_system', true)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating system labor level:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data };
+}
+
+/**
+ * Delete a system labor level - admin only
+ */
+export async function deleteSystemLaborLevel(id: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('labor_levels')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('is_system', true);
+
+    if (error) {
+        console.error('Error deleting system labor level:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true };
+}
+
+// ==========================================
+// ADMIN: System Labor Roles (Roles)
+// ==========================================
+
+interface CreateSystemLaborRoleInput {
+    name: string;
+    description?: string | null;
+}
+
+/**
+ * Create a system labor role - admin only
+ */
+export async function createSystemLaborRole(input: CreateSystemLaborRoleInput): Promise<{ success: boolean; data?: { id: string; name: string; description: string | null }; error?: string }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_roles')
+        .insert({
+            name: input.name,
+            description: input.description || null,
+            is_system: true,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating system labor role:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data };
+}
+
+interface UpdateSystemLaborRoleInput extends Partial<CreateSystemLaborRoleInput> {
+    id: string;
+}
+
+/**
+ * Update a system labor role - admin only
+ */
+export async function updateSystemLaborRole(input: UpdateSystemLaborRoleInput): Promise<{ success: boolean; data?: { id: string; name: string; description: string | null }; error?: string }> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {};
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.description !== undefined) updateData.description = input.description;
+
+    const { data, error } = await supabase
+        .from('labor_roles')
+        .update(updateData)
+        .eq('id', input.id)
+        .eq('is_system', true)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating system labor role:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data };
+}
+
+/**
+ * Delete a system labor role - admin only
+ */
+export async function deleteSystemLaborRole(id: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('labor_roles')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('is_system', true);
+
+    if (error) {
+        console.error('Error deleting system labor role:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true };
+}
+
+// ==========================================
+// ADMIN: System Labor Types (Tipos Usables)
+// ==========================================
+
+interface CreateSystemLaborTypeInput {
+    name: string;
+    description?: string | null;
+    labor_category_id: string;
+    labor_level_id: string;
+    labor_role_id?: string | null;
+    unit_id: string;
+}
+
+/**
+ * Create a system labor type - admin only
+ */
+export async function createSystemLaborType(input: CreateSystemLaborTypeInput): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('labor_types')
+        .insert({
+            name: input.name,
+            description: input.description || null,
+            labor_category_id: input.labor_category_id,
+            labor_level_id: input.labor_level_id,
+            labor_role_id: input.labor_role_id || null,
+            unit_id: input.unit_id,
+            is_system: true,
+            organization_id: null,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating system labor type:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data };
+}
+
+interface UpdateSystemLaborTypeInput extends Partial<CreateSystemLaborTypeInput> {
+    id: string;
+}
+
+/**
+ * Update a system labor type - admin only
+ */
+export async function updateSystemLaborType(input: UpdateSystemLaborTypeInput): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {};
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.description !== undefined) updateData.description = input.description;
+    if (input.labor_category_id !== undefined) updateData.labor_category_id = input.labor_category_id;
+    if (input.labor_level_id !== undefined) updateData.labor_level_id = input.labor_level_id;
+    if (input.labor_role_id !== undefined) updateData.labor_role_id = input.labor_role_id;
+    if (input.unit_id !== undefined) updateData.unit_id = input.unit_id;
+
+    const { data, error } = await supabase
+        .from('labor_types')
+        .update(updateData)
+        .eq('id', input.id)
+        .eq('is_system', true)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating system labor type:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
+    return { success: true, data };
+}
+
+/**
+ * Delete a system labor type - admin only
+ */
+export async function deleteSystemLaborType(id: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('labor_types')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('is_system', true);
+
+    if (error) {
+        console.error('Error deleting system labor type:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/catalog', 'page');
     return { success: true };
 }
 

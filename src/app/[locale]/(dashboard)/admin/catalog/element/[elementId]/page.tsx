@@ -4,8 +4,8 @@ import { Box, Settings, Sliders, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { ElementGeneralView } from "@/features/tasks/views/element-general-view";
-import { ElementParametersView } from "@/features/tasks/views/element-parameters-view";
+import { TasksElementGeneralView } from "@/features/tasks/views/tasks-element-general-view";
+import { TasksElementParametersView } from "@/features/tasks/views/tasks-element-parameters-view";
 import { Badge } from "@/components/ui/badge";
 import {
     getElementById,
@@ -78,14 +78,14 @@ export default async function ElementDetailPage({ params, searchParams }: Elemen
                 {/* General Tab */}
                 <TabsContent value="general" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <ElementGeneralView element={element} />
+                        <TasksElementGeneralView element={element} />
                     </ContentLayout>
                 </TabsContent>
 
                 {/* Parameters Tab */}
                 <TabsContent value="parameters" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <ElementParametersView
+                        <TasksElementParametersView
                             element={element}
                             allParameters={allParameters}
                             linkedParameterIds={linkedParameterIds}

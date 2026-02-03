@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ListItem } from "@/components/ui/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ContextSidebar } from "@/providers/context-sidebar-provider";
 import {
     Plus,
     Package,
     MoreHorizontal,
     Pencil,
     Trash2,
-    FolderTree,
-    Monitor,
-    Building2
+    Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,8 @@ import { createMaterialCategory, updateMaterialCategory, deleteMaterialCategory 
 import { toast } from "sonner";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { CategoryTree, CategoryItem } from "@/components/shared/category-tree";
+import { CategoriesSidebar } from "../components/categories-sidebar";
+import { MaterialCategory as MaterialCategoryType } from "../types";
 
 // Extended material type with joined data from query
 export interface MaterialWithDetails extends Material {
@@ -65,8 +68,9 @@ export function MaterialsCatalogView({
 }: MaterialsCatalogViewProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
-    const [activeTab, setActiveTab] = useState<"materials" | "categories">("materials");
+    const [activeTab, setActiveTab] = useState<"material" | "consumable">("material");
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
     // Material delete modal state
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -76,16 +80,62 @@ export function MaterialsCatalogView({
     const [categoryDeleteModalOpen, setCategoryDeleteModalOpen] = useState(false);
     const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
 
+    // Convert categories for sidebar
+    const sidebarCategories: MaterialCategoryType[] = useMemo(() =>
+        categories.map(c => ({
+            id: c.id,
+            name: c.name,
+            parent_id: c.parent_id ?? null,
+            created_at: new Date().toISOString(),
+            updated_at: null,
+        })),
+        [categories]
+    );
 
-    // Filter materials by search
-    const filteredMaterials = materials.filter(material => {
-        const query = searchQuery.toLowerCase();
-        return (
-            material.name?.toLowerCase().includes(query) ||
-            material.category_name?.toLowerCase().includes(query) ||
-            material.unit_name?.toLowerCase().includes(query)
-        );
-    });
+    // Calculate material counts per category (filtered by current tab)
+    const materialCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        const filteredByType = materials.filter(m => m.material_type === activeTab);
+        filteredByType.forEach(m => {
+            const catId = m.category_id || "sin-categoria";
+            counts[catId] = (counts[catId] || 0) + 1;
+        });
+        return counts;
+    }, [materials, activeTab]);
+
+    // Total for current type
+    const totalForCurrentType = useMemo(() =>
+        materials.filter(m => m.material_type === activeTab).length,
+        [materials, activeTab]
+    );
+
+
+    // Filter materials by type, search and category
+    const filteredMaterials = useMemo(() => {
+        let filtered = materials;
+
+        // Filter by material type (tab)
+        filtered = filtered.filter(m => m.material_type === activeTab);
+
+        // Filter by category
+        if (selectedCategoryId === "sin-categoria") {
+            filtered = filtered.filter(m => !m.category_id);
+        } else if (selectedCategoryId !== null) {
+            filtered = filtered.filter(m => m.category_id === selectedCategoryId);
+        }
+
+        // Filter by search
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(material =>
+                material.name?.toLowerCase().includes(query) ||
+                material.category_name?.toLowerCase().includes(query) ||
+                material.unit_name?.toLowerCase().includes(query)
+            );
+        }
+
+        return filtered;
+    }, [materials, searchQuery, selectedCategoryId, activeTab]);
 
     // Filter by editability: in org mode, only show editable (org) materials in admin actions
     const canEdit = (material: MaterialWithDetails) => {
@@ -268,97 +318,69 @@ export function MaterialsCatalogView({
 
     return (
         <>
-            {/* Toolbar with portal to header - uses ToolbarTabs for view toggle */}
+            {/* Categories Sidebar - always visible */}
+            <ContextSidebar title="Categorías">
+                <CategoriesSidebar
+                    categories={sidebarCategories}
+                    materialCounts={materialCounts}
+                    selectedCategoryId={selectedCategoryId}
+                    onSelectCategory={setSelectedCategoryId}
+                    totalMaterials={totalForCurrentType}
+                />
+            </ContextSidebar>
+
+            {/* Toolbar with portal to header - uses ToolbarTabs for type toggle */}
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder={activeTab === 'materials'
+                searchPlaceholder={activeTab === 'material'
                     ? "Buscar materiales por nombre, categoría o unidad..."
-                    : "Buscar categorías..."}
+                    : "Buscar insumos por nombre, categoría o unidad..."}
                 leftActions={
                     <ToolbarTabs
                         value={activeTab}
-                        onValueChange={(v) => setActiveTab(v as 'materials' | 'categories')}
+                        onValueChange={(v) => setActiveTab(v as 'material' | 'consumable')}
                         options={[
-                            { label: "Materiales", value: "materials", icon: Package },
-                            { label: "Categorías", value: "categories", icon: FolderTree },
+                            { label: "Materiales", value: "material", icon: Package },
+                            { label: "Insumos", value: "consumable", icon: Wrench },
                         ]}
                     />
                 }
-                actions={activeTab === 'materials'
-                    ? [{
-                        label: "Nuevo Material",
-                        icon: Plus,
-                        onClick: handleCreateMaterial,
-                    }]
-                    : isAdminMode
-                        ? [{
-                            label: "Nueva Categoría",
-                            icon: Plus,
-                            onClick: () => handleCreateCategory(null),
-                        }]
-                        : []
-                }
+                actions={[{
+                    label: activeTab === 'material' ? "Nuevo Material" : "Nuevo Insumo",
+                    icon: Plus,
+                    onClick: handleCreateMaterial,
+                }]}
             />
 
-            {/* Materials View */}
-            {activeTab === 'materials' && (
-                <div className="space-y-4">
-                    {filteredMaterials.length === 0 ? (
-                        <Card>
-                            <CardContent className="py-12">
-                                <div className="text-center text-muted-foreground">
-                                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p className="text-lg font-medium">No se encontraron materiales</p>
-                                    <p className="text-sm">
-                                        {searchQuery ? "Probá con otro término de búsqueda" : "Agregá materiales para comenzar"}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 gap-3">
-                            {filteredMaterials.map((material) => (
-                                <MaterialCard
-                                    key={material.id}
-                                    material={material}
-                                    canEdit={canEdit(material)}
-                                    onEdit={handleEditMaterial}
-                                    onDelete={handleDeleteMaterialClick}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Categories View */}
-            {activeTab === 'categories' && (
-                <div className="space-y-4">
-                    {isAdminMode ? (
-                        <CategoryTree
-                            items={categoryItems}
-                            onAddClick={handleCreateCategory}
-                            onEditClick={handleEditCategory}
-                            onDeleteClick={handleDeleteCategoryClick}
-                            emptyMessage="No hay categorías de materiales"
+            {/* Materials/Consumables View */}
+            <div className="space-y-2">
+                {filteredMaterials.length === 0 ? (
+                    <div className="flex items-center justify-center py-12">
+                        <EmptyState
+                            icon={activeTab === 'material' ? Package : Wrench}
+                            title="Sin resultados"
+                            description={searchQuery
+                                ? `No se encontraron ${activeTab === 'material' ? 'materiales' : 'insumos'} con ese criterio de búsqueda.`
+                                : selectedCategoryId
+                                    ? `No hay ${activeTab === 'material' ? 'materiales' : 'insumos'} en esta categoría.`
+                                    : `Agregá ${activeTab === 'material' ? 'materiales' : 'insumos'} para comenzar.`
+                            }
                         />
-                    ) : (
-                        <Card>
-                            <CardContent className="py-12">
-                                <div className="text-center text-muted-foreground">
-                                    <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p className="text-lg font-medium">Categorías del Sistema</p>
-                                    <p className="text-sm">
-                                        Las categorías son gestionadas por el administrador del sistema
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            )}
+                    </div>
+                ) : (
+                    filteredMaterials.map((material) => (
+                        <MaterialCard
+                            key={material.id}
+                            material={material}
+                            canEdit={canEdit(material)}
+                            onEdit={handleEditMaterial}
+                            onDelete={handleDeleteMaterialClick}
+                        />
+                    ))
+                )}
+            </div>
 
             {/* Material Delete Modal */}
             <DeleteReplacementModal
@@ -406,72 +428,51 @@ interface MaterialCardProps {
 
 function MaterialCard({ material, canEdit, onEdit, onDelete }: MaterialCardProps) {
     return (
-        <Card className="group hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 space-y-2">
-                        {/* Name (with unit) */}
-                        <h3 className="font-medium text-sm leading-tight">
-                            {material.name}
-                            {material.unit_name && (
-                                <span className="text-muted-foreground font-normal ml-1">({material.unit_name})</span>
-                            )}
-                        </h3>
-
-                        {/* Badges Row: Type + Category + System/Org indicator */}
-                        <div className="flex flex-wrap gap-1.5">
-                            <Badge className="text-xs bg-primary text-primary-foreground">
-                                {material.material_type === 'material' ? 'Material' : 'Insumo'}
-                            </Badge>
-                            {material.category_name && (
-                                <Badge className="text-xs bg-primary text-primary-foreground">
-                                    {material.category_name}
-                                </Badge>
-                            )}
-                            {material.is_system ? (
-                                <Badge variant="system" className="text-xs gap-1">
-                                    <Monitor className="h-3 w-3" />
-                                    Sistema
-                                </Badge>
-                            ) : (
-                                <Badge variant="organization" className="text-xs gap-1">
-                                    <Building2 className="h-3 w-3" />
-                                    Propio
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Actions - only show if can edit */}
-                    {canEdit && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                >
-                                    <span className="sr-only">Acciones</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => onEdit(material)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => onDelete(material)}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+        <ListItem variant="card">
+            <ListItem.Content>
+                <ListItem.Title suffix={material.unit_name ? `(${material.unit_name})` : undefined}>
+                    {material.name}
+                </ListItem.Title>
+                <ListItem.Badges>
+                    <Badge variant="secondary" className="text-xs">
+                        {material.material_type === 'material' ? 'Material' : 'Insumo'}
+                    </Badge>
+                    {material.category_name && (
+                        <Badge variant="secondary" className="text-xs">
+                            {material.category_name}
+                        </Badge>
                     )}
-                </div>
-            </CardContent>
-        </Card>
+                    <Badge variant="secondary" className="text-xs">
+                        {material.is_system ? 'Sistema' : 'Propio'}
+                    </Badge>
+                </ListItem.Badges>
+            </ListItem.Content>
+
+            {canEdit && (
+                <ListItem.Actions>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Acciones</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEdit(material)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => onDelete(material)}
+                                className="text-destructive focus:text-destructive"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </ListItem.Actions>
+            )}
+        </ListItem>
     );
 }

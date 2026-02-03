@@ -24,13 +24,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SEENCEL",
+  title: "Seencel",
   description: "Advanced Construction Management Platform",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SEENCEL",
+    title: "Seencel",
   },
   formatDetection: {
     telephone: false,

@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
     const { locale } = await params;
     return {
-        title: `Capital | SEENCEL`,
+        title: `Capital | Seencel`,
         description: "Gestión de aportes y retiros de capital de socios",
         robots: "noindex, nofollow",
     };

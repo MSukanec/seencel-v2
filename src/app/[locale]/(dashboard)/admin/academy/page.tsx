@@ -22,7 +22,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const t = await getTranslations({ locale: (await params).locale, namespace: 'Admin.academy' });
     return {
-        title: `Academia | SEENCEL Admin`,
+        title: `Academia | Seencel Admin`,
         description: "Gestión de cursos, alumnos e instructores",
         robots: "noindex, nofollow",
     };

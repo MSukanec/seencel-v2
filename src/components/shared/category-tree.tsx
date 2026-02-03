@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
     ChevronDown,
     ChevronRight,
@@ -12,6 +13,7 @@ import {
     FolderOpen,
     Folder,
     ExternalLink,
+    GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -21,6 +23,14 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import {
+    DragDropContext,
+    Droppable,
+    Draggable,
+    DropResult,
+    DraggableProvided,
+    DraggableStateSnapshot,
+} from "@hello-pangea/dnd";
 
 // ============================================================================
 // Types
@@ -44,9 +54,11 @@ interface CategoryTreeProps {
     onDeleteClick?: (category: CategoryItem) => void;
     /** Called when user clicks the item or "Ver detalles" - for navigation */
     onItemClick?: (category: CategoryItem) => void;
+    /** Called when items are reordered via drag & drop */
+    onReorder?: (orderedIds: string[]) => void;
     emptyMessage?: string;
-    /** Show drag handles (for future drag & drop support) */
-    showDragHandle?: boolean;
+    /** Enable drag & drop reordering */
+    enableDragDrop?: boolean;
     /** Show hierarchical numbering (1, 1.1, 1.2) instead of folder icons */
     showNumbering?: boolean;
     /** Optional content to render at the end of the row (before actions) */
@@ -104,6 +116,11 @@ function assignNumbers(nodes: TreeNode[], prefix: string = ""): void {
     });
 }
 
+// Flatten tree back to ordered list of root IDs (for reorder callback)
+function getRootOrder(nodes: TreeNode[]): string[] {
+    return nodes.map(node => node.id);
+}
+
 // ============================================================================
 // CategoryTree Component
 // ============================================================================
@@ -114,8 +131,9 @@ export function CategoryTree({
     onEditClick,
     onDeleteClick,
     onItemClick,
+    onReorder,
     emptyMessage = "No hay categorías",
-    showDragHandle = false,
+    enableDragDrop = false,
     showNumbering = false,
     renderEndContent
 }: CategoryTreeProps) {
@@ -123,13 +141,21 @@ export function CategoryTree({
     // Key = depth level, Value = expanded node id at that level
     const [expandedByLevel, setExpandedByLevel] = useState<Map<number, string>>(new Map());
 
+    // Local state for drag & drop ordering
+    const [localItems, setLocalItems] = useState<CategoryItem[]>(items);
+
+    // Update local items when props change
+    useMemo(() => {
+        setLocalItems(items);
+    }, [items]);
+
     const tree = useMemo(() => {
-        const builtTree = buildTree(items);
+        const builtTree = buildTree(localItems);
         if (showNumbering) {
             assignNumbers(builtTree);
         }
         return builtTree;
-    }, [items, showNumbering]);
+    }, [localItems, showNumbering]);
 
     const toggleExpanded = (id: string, depth: number) => {
         setExpandedByLevel(prev => {
@@ -161,17 +187,62 @@ export function CategoryTree({
         });
     };
 
-    const renderNode = (node: TreeNode, depth: number = 0) => {
+    // Handle drag end
+    const handleDragEnd = (result: DropResult) => {
+        const { destination, source } = result;
+
+        // Dropped outside or same position
+        if (!destination || destination.index === source.index) {
+            return;
+        }
+
+        // Only handle root-level reordering for now
+        const rootItems = localItems.filter(item => !item.parent_id);
+        const childItems = localItems.filter(item => item.parent_id);
+
+        // Reorder root items
+        const reorderedRoots = Array.from(rootItems);
+        const [movedItem] = reorderedRoots.splice(source.index, 1);
+        reorderedRoots.splice(destination.index, 0, movedItem);
+
+        // Update order field for optimistic UI
+        const updatedRoots = reorderedRoots.map((item, index) => ({
+            ...item,
+            order: index + 1
+        }));
+
+        // Combine with child items
+        setLocalItems([...updatedRoots, ...childItems]);
+
+        // Call parent's onReorder with new order
+        if (onReorder) {
+            onReorder(updatedRoots.map(item => item.id));
+        }
+    };
+
+    const renderNode = (
+        node: TreeNode,
+        depth: number = 0,
+        provided?: DraggableProvided,
+        snapshot?: DraggableStateSnapshot
+    ) => {
         const isExpanded = expandedByLevel.get(depth) === node.id;
         const hasChildren = node.children.length > 0;
+        const isDragging = snapshot?.isDragging ?? false;
 
         return (
-            <div key={node.id} className={cn(depth > 0 && "ml-6")}>
+            <div
+                key={node.id}
+                className={cn(depth > 0 && "ml-6")}
+                ref={provided?.innerRef}
+                {...provided?.draggableProps}
+            >
                 {/* Category Card */}
                 <Card
                     className={cn(
                         "group cursor-pointer hover:shadow-md transition-all mb-2",
-                        isExpanded && "border-primary/50 shadow-md"
+                        isExpanded && "border-primary/50 shadow-md",
+                        isDragging && "shadow-lg border-primary"
                     )}
                     onClick={() => {
                         if (hasChildren) {
@@ -183,6 +254,17 @@ export function CategoryTree({
                 >
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
+                            {/* Drag Handle (only for root items with drag enabled) */}
+                            {enableDragDrop && depth === 0 && provided?.dragHandleProps && (
+                                <div
+                                    {...provided.dragHandleProps}
+                                    className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <GripVertical className="h-5 w-5" />
+                                </div>
+                            )}
+
                             {/* Expand/Collapse Icon */}
                             <div className="w-5 h-5 flex items-center justify-center text-muted-foreground cursor-pointer"
                                 onClick={(e) => {
@@ -213,15 +295,29 @@ export function CategoryTree({
                                 )
                             )}
 
-                            {/* Name with count inline */}
-                            <span className="flex-1 font-medium">
-                                {node.name || "Sin nombre"}
-                                {hasChildren && (
-                                    <span className="text-muted-foreground font-normal ml-1">
-                                        ({node.children.length})
+                            {/* Name and Description */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium">
+                                        {node.name || "Sin nombre"}
+                                        {hasChildren && (
+                                            <span className="text-muted-foreground font-normal ml-1">
+                                                ({node.children.length})
+                                            </span>
+                                        )}
                                     </span>
+                                    {node.code && (
+                                        <Badge variant="outline" className="text-xs font-mono">
+                                            {node.code}
+                                        </Badge>
+                                    )}
+                                </div>
+                                {node.description && (
+                                    <p className="text-sm text-muted-foreground truncate">
+                                        {node.description}
+                                    </p>
                                 )}
-                            </span>
+                            </div>
 
                             {/* Render Custom End Content */}
                             {renderEndContent && (
@@ -236,7 +332,7 @@ export function CategoryTree({
                                     <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
                                         <Button
                                             variant="ghost"
-                                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="h-8 w-8 p-0"
                                         >
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>
@@ -307,6 +403,31 @@ export function CategoryTree({
         );
     }
 
+    // If drag & drop is enabled, wrap with DragDropContext
+    if (enableDragDrop && onReorder) {
+        return (
+            <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="category-tree" type="category">
+                    {(provided) => (
+                        <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className="space-y-0"
+                        >
+                            {tree.map((node, index) => (
+                                <Draggable key={node.id} draggableId={node.id} index={index}>
+                                    {(provided, snapshot) => renderNode(node, 0, provided, snapshot)}
+                                </Draggable>
+                            ))}
+                            {provided.placeholder}
+                        </div>
+                    )}
+                </Droppable>
+            </DragDropContext>
+        );
+    }
+
+    // Standard rendering without drag & drop
     return (
         <div className="space-y-0">
             {tree.map(node => renderNode(node))}

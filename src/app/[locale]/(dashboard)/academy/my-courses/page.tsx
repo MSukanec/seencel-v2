@@ -15,7 +15,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const t = await getTranslations({ locale: (await params).locale, namespace: 'Learning' });
     return {
-        title: `${t('myCourses')} | SEENCEL`,
+        title: `${t('myCourses')} | Seencel`,
         description: t('description'),
         robots: "noindex, nofollow", // 🔒 Dashboard siempre privado
     };

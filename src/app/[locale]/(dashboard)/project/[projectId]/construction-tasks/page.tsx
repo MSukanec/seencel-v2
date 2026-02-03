@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { ConstructionTasksView } from "@/features/construction-tasks/views";
+import { ConstructionTasksPageView } from "@/features/construction-tasks/views";
 import { getProjectConstructionTasks } from "@/features/construction-tasks/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
+import { getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskKinds } from "@/features/tasks/queries";
 import { notFound, redirect } from "next/navigation";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
-import { ClipboardList } from "lucide-react";
 
 // ============================================
 // METADATA (SEO)
@@ -21,8 +19,8 @@ export async function generateMetadata({
 
     return {
         title: project
-            ? `Tareas - ${project.name} | SEENCEL`
-            : "Tareas | SEENCEL",
+            ? `Tareas - ${project.name} | Seencel`
+            : "Tareas | Seencel",
         description: "Gestión de tareas de construcción del proyecto",
         robots: "noindex, nofollow",
     };
@@ -35,13 +33,17 @@ interface PageProps {
     params: Promise<{
         projectId: string;
     }>;
+    searchParams: Promise<{ view?: string }>;
 }
 
 // ============================================
 // PAGE COMPONENT
 // ============================================
-export default async function ConstructionTasksPage({ params }: PageProps) {
+export default async function ConstructionTasksPage({ params, searchParams }: PageProps) {
     const { projectId } = await params;
+    const resolvedSearchParams = await searchParams;
+    const defaultTab = resolvedSearchParams.view || "tasks";
+
     const { activeOrgId } = await getUserOrganizations();
 
     if (!activeOrgId) {
@@ -59,22 +61,32 @@ export default async function ConstructionTasksPage({ params }: PageProps) {
         notFound();
     }
 
-    // Fetch construction tasks
-    const tasks = await getProjectConstructionTasks(projectId);
+    // Fetch construction tasks and catalog data in parallel
+    const [
+        tasks,
+        catalogGroupedTasks,
+        divisionsResult,
+        unitsResult,
+        kindsResult
+    ] = await Promise.all([
+        getProjectConstructionTasks(projectId),
+        getTasksGroupedByDivision(activeOrgId),
+        getTaskDivisions(),
+        getUnits(),
+        getTaskKinds()
+    ]);
 
     return (
-        <PageWrapper
-            type="page"
-            title="Tareas"
-            icon={<ClipboardList />}
-        >
-            <ContentLayout variant="wide">
-                <ConstructionTasksView
-                    projectId={projectId}
-                    organizationId={activeOrgId}
-                    tasks={tasks}
-                />
-            </ContentLayout>
-        </PageWrapper>
+        <ConstructionTasksPageView
+            projectId={projectId}
+            organizationId={activeOrgId}
+            tasks={tasks}
+            defaultTab={defaultTab}
+            catalogGroupedTasks={catalogGroupedTasks}
+            catalogUnits={unitsResult.data}
+            catalogDivisions={divisionsResult.data}
+            catalogKinds={kindsResult.data}
+        />
     );
 }
+

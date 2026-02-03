@@ -7,7 +7,6 @@ create table public.labor_categories (
   organization_id uuid null,
   name text not null,
   description text null,
-  unit_id uuid null,
   is_system boolean not null default false,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
@@ -16,13 +15,15 @@ create table public.labor_categories (
   created_by uuid null,
   updated_by uuid null,
   constraint labor_categories_pkey primary key (id),
-  constraint labor_categories_name_key unique (name),
   constraint labor_categories_id_key unique (id),
-  constraint labor_categories_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
-  constraint labor_categories_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
   constraint labor_categories_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
-  constraint labor_categories_unit_id_fkey foreign KEY (unit_id) references units (id)
+  constraint labor_categories_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint labor_categories_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null
 ) TABLESPACE pg_default;
+
+create unique INDEX IF not exists labor_categories_system_name_unique on public.labor_categories using btree (name) TABLESPACE pg_default
+where
+  (is_system = true);
 
 create trigger on_labor_category_audit
 after INSERT
@@ -35,6 +36,22 @@ create trigger set_updated_by_labor_categories BEFORE INSERT
 or
 update on labor_categories for EACH row
 execute FUNCTION handle_updated_by ();
+
+# Tabla LABOR_LEVELS:
+
+create table public.labor_levels (
+  id uuid not null default gen_random_uuid (),
+  name text not null,
+  description text null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  sort_order integer not null default 0,
+  constraint labor_levels_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create trigger set_updated_at_labor_levels BEFORE
+update on labor_levels for EACH row
+execute FUNCTION update_updated_at_column ();
 
 # Tabla LABOR_PAYMENTS:
 
@@ -184,6 +201,137 @@ from
 where
   lp.is_deleted = false
   or lp.is_deleted is null;
+
+# Tabla LABOR_PRICES:
+
+create table public.labor_prices (
+  id uuid not null default gen_random_uuid (),
+  labor_type_id uuid not null,
+  organization_id uuid not null,
+  currency_id uuid not null,
+  unit_price numeric(12, 2) not null,
+  valid_from date not null default CURRENT_DATE,
+  valid_to date null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone null default now(),
+  created_by uuid null,
+  updated_by uuid null,
+  constraint labor_prices_pkey primary key (id),
+  constraint labor_prices_currency_id_fkey foreign KEY (currency_id) references currencies (id) on delete RESTRICT,
+  constraint labor_prices_labor_type_id_fkey foreign KEY (labor_type_id) references labor_types (id) on delete CASCADE,
+  constraint labor_prices_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint labor_prices_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint labor_prices_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint labor_prices_unit_price_check check ((unit_price >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists labor_prices_type_org_idx on public.labor_prices using btree (labor_type_id, organization_id) TABLESPACE pg_default;
+
+create trigger on_labor_price_audit
+after INSERT
+or DELETE
+or
+update on labor_prices for EACH row
+execute FUNCTION log_labor_price_activity ();
+
+create trigger set_updated_at_labor_prices BEFORE
+update on labor_prices for EACH row
+execute FUNCTION update_updated_at_column ();
+
+create trigger set_updated_by_labor_prices BEFORE INSERT
+or
+update on labor_prices for EACH row
+execute FUNCTION handle_updated_by ();
+
+# Tabla LABOR_ROLES:
+
+create table public.labor_roles (
+  id uuid not null default gen_random_uuid (),
+  name text not null,
+  description text null,
+  is_system boolean not null default false,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  created_by uuid null,
+  updated_by uuid null,
+  constraint labor_roles_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create trigger set_updated_at_labor_roles BEFORE
+update on labor_roles for EACH row
+execute FUNCTION update_updated_at_column ();
+
+# Tabla LABOR_TYPES:
+
+create table public.labor_types (
+  id uuid not null default gen_random_uuid (),
+  labor_category_id uuid not null,
+  labor_level_id uuid not null,
+  labor_role_id uuid null,
+  name text not null,
+  description text null,
+  unit_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint labor_types_pkey primary key (id),
+  constraint labor_types_category_fkey foreign KEY (labor_category_id) references labor_categories (id),
+  constraint labor_types_level_fkey foreign KEY (labor_level_id) references labor_levels (id),
+  constraint labor_types_role_fkey foreign KEY (labor_role_id) references labor_roles (id),
+  constraint labor_types_unit_fkey foreign KEY (unit_id) references units (id)
+) TABLESPACE pg_default;
+
+create trigger set_updated_at_labor_types BEFORE
+update on labor_types for EACH row
+execute FUNCTION update_updated_at_column ();
+
+# Vista LABOR_VIEW:
+
+create view public.labor_view as
+select
+  lt.id as labor_id,
+  lt.name as labor_name,
+  lt.description as labor_description,
+  lt.unit_id,
+  u.name as unit_name,
+  u.symbol as unit_symbol,
+  lpc.organization_id,
+  lpc.unit_price as current_price,
+  lpc.currency_id as current_currency_id,
+  c.code as current_currency_code,
+  c.symbol as current_currency_symbol,
+  lpc.valid_from,
+  lpc.valid_to,
+  lpc.updated_at,
+  lap.avg_price,
+  lap.price_count,
+  lap.min_price,
+  lap.max_price
+from
+  labor_types lt
+  left join units u on u.id = lt.unit_id
+  left join (
+    select distinct
+      on (lp.labor_type_id, lp.organization_id) lp.labor_type_id as labor_id,
+      lp.organization_id,
+      lp.currency_id,
+      lp.unit_price,
+      lp.valid_from,
+      lp.valid_to,
+      lp.updated_at
+    from
+      labor_prices lp
+    where
+      lp.valid_to is null
+      or lp.valid_to >= CURRENT_DATE
+    order by
+      lp.labor_type_id,
+      lp.organization_id,
+      lp.valid_from desc
+  ) lpc on lpc.labor_id = lt.id
+  left join currencies c on c.id = lpc.currency_id
+  left join labor_avg_prices lap on lap.labor_id = lt.id;
 
 # Tabla PROJECT_LABOR:
 

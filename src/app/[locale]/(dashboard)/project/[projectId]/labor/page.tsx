@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { LaborPageView } from "@/features/labor/views/labor-page";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
-import { getLaborPayments, getLaborTypes, getProjectLaborView } from "@/features/labor/actions";
+import { getLaborPayments, getLaborTypes, getProjectLaborView, getLaborCategories } from "@/features/labor/actions";
 import { getOrganizationContacts } from "@/features/clients/queries";
+import { getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor } from "@/features/admin/queries";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { notFound } from "next/navigation";
 
@@ -19,7 +20,7 @@ export async function generateMetadata({
     const project = await getProjectById(projectId);
 
     return {
-        title: project ? `Mano de Obra - ${project.name} | SEENCEL` : "Mano de Obra | SEENCEL",
+        title: project ? `Mano de Obra - ${project.name} | Seencel` : "Mano de Obra | Seencel",
         description: "Gestión de mano de obra, pagos y equipo del proyecto",
         robots: "noindex, nofollow", // Private dashboard
     };
@@ -71,12 +72,30 @@ export default async function LaborPage({ params, searchParams }: PageProps) {
     }
 
     // Fetch real data from the database
-    const [payments, laborTypes, projectLabor, financialData, contactsResult] = await Promise.all([
+    const [
+        payments,
+        laborTypes,
+        projectLabor,
+        financialData,
+        contactsResult,
+        // Catalog data
+        catalogCategories,
+        catalogLevels,
+        catalogRoles,
+        catalogTypes,
+        catalogUnits
+    ] = await Promise.all([
         getLaborPayments(projectId),
-        getLaborTypes(activeOrgId),
+        getLaborTypes(),
         getProjectLaborView(projectId),
         getOrganizationFinancialData(activeOrgId),
         getOrganizationContacts(activeOrgId),
+        // Catalog queries
+        getLaborCategories(activeOrgId),
+        getSystemLaborLevels(),
+        getSystemLaborRoles(),
+        getSystemLaborTypes(),
+        getUnitsForLabor(),
     ]);
 
     // Format contacts for the form combobox
@@ -98,6 +117,15 @@ export default async function LaborPage({ params, searchParams }: PageProps) {
             wallets={financialData.wallets}
             currencies={financialData.currencies}
             contacts={contacts}
+            // Catalog props
+            catalogCategories={catalogCategories as any}
+            catalogLevels={catalogLevels as any}
+            catalogRoles={catalogRoles as any}
+            catalogTypes={catalogTypes as any}
+            catalogUnits={catalogUnits as any}
+            // Settings props - using full LaborCategory[] from org query
+            laborCategories={catalogCategories as any}
         />
     );
 }
+

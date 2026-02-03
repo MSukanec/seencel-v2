@@ -23,7 +23,7 @@ export async function generateMetadata({
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: 'Project' });
     return {
-        title: `Proyectos | SEENCEL`,
+        title: `Proyectos | Seencel`,
         description: t('subtitle'),
         robots: "noindex, nofollow", // Dashboard siempre privado
     };

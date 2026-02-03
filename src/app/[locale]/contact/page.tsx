@@ -5,7 +5,7 @@ import { Footer } from "@/components/layout";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Contacto | SEENCEL',
+    title: 'Contacto | Seencel',
     description: 'Ponete en contacto con el equipo de Seencel. Estamos para ayudarte con cualquier consulta.',
     robots: { index: true, follow: true },
 };

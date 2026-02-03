@@ -9,6 +9,7 @@ import {
     getProvidersForProject
 } from "@/features/materials/queries";
 import { getMaterialPurchasesAction, getMaterialTypes } from "@/features/materials/actions";
+import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { notFound } from "next/navigation";
 
@@ -24,7 +25,7 @@ export async function generateMetadata({
     const project = await getProjectById(projectId);
 
     return {
-        title: project ? `Materiales - ${project.name} | SEENCEL` : "Materiales | SEENCEL",
+        title: project ? `Materiales - ${project.name} | Seencel` : "Materiales | Seencel",
         description: "Gestión de materiales, órdenes y pagos del proyecto",
         robots: "noindex, nofollow", // Private dashboard
     };
@@ -76,14 +77,32 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
     }
 
     // Fetch data for all tabs - payments are used for dashboard KPIs via useMoney().sum()
-    const [payments, purchases, financialData, requirements, orders, providers, materialTypes] = await Promise.all([
+    const [
+        payments,
+        purchases,
+        financialData,
+        requirements,
+        orders,
+        providers,
+        materialTypes,
+        // Catalog data
+        catalogMaterials,
+        catalogUnits,
+        catalogCategories,
+        catalogCategoryHierarchy
+    ] = await Promise.all([
         getMaterialPayments(projectId),
         getMaterialPurchasesAction(projectId),
         getOrganizationFinancialData(activeOrgId),
         getProjectMaterialRequirements(projectId),
         getPurchaseOrders(projectId),
         getProvidersForProject(activeOrgId),
-        getMaterialTypes(activeOrgId)
+        getMaterialTypes(activeOrgId),
+        // Catalog queries
+        getSystemMaterials(),
+        getUnitsForMaterials(),
+        getMaterialCategories(),
+        getMaterialCategoriesHierarchy()
     ]);
 
     return (
@@ -98,6 +117,12 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
             orders={orders}
             providers={providers}
             materialTypes={materialTypes}
+            // Catalog props - using type assertions since admin queries return compatible structures
+            catalogMaterials={catalogMaterials as any}
+            catalogUnits={catalogUnits as any}
+            catalogCategories={catalogCategories as any}
+            catalogCategoryHierarchy={catalogCategoryHierarchy as any}
         />
     );
 }
+

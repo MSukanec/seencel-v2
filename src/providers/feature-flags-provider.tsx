@@ -7,6 +7,7 @@ interface FeatureFlagsContextType {
     flags: Record<string, boolean>; // boolean is derived from status (active=true)
     statuses: Record<string, 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon'>;
     isAdmin: boolean;
+    isBetaTester: boolean;
 }
 
 const FeatureFlagsContext = React.createContext<FeatureFlagsContextType | undefined>(undefined);
@@ -14,11 +15,13 @@ const FeatureFlagsContext = React.createContext<FeatureFlagsContextType | undefi
 export function FeatureFlagsProvider({
     children,
     flags,
-    isAdmin
+    isAdmin,
+    isBetaTester
 }: {
     children: React.ReactNode;
     flags: FeatureFlag[];
     isAdmin: boolean;
+    isBetaTester: boolean;
 }) {
     // Convert array to record for O(1) lookup
     const { flagsRecord, statusesRecord } = React.useMemo(() => {
@@ -36,7 +39,8 @@ export function FeatureFlagsProvider({
         <FeatureFlagsContext.Provider value={{
             flags: flagsRecord,
             statuses: statusesRecord,
-            isAdmin
+            isAdmin,
+            isBetaTester
         }}>
             {children}
         </FeatureFlagsContext.Provider>
@@ -50,3 +54,4 @@ export function useFeatureFlags() {
     }
     return context;
 }
+

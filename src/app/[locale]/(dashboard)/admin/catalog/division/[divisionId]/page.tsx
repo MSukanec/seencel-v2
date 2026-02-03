@@ -5,9 +5,9 @@ import { FolderTree, Layers, Settings, Zap, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { DivisionGeneralView } from "@/features/tasks/views/division-general-view";
-import { DivisionElementsView } from "@/features/tasks/views/division-elements-view";
-import { DivisionKindsView } from "@/features/tasks/views/division-kinds-view";
+import { TasksDivisionGeneralView } from "@/features/tasks/views/tasks-division-general-view";
+import { TasksDivisionElementsView } from "@/features/tasks/views/tasks-division-elements-view";
+import { TasksDivisionKindsView } from "@/features/tasks/views/tasks-division-kinds-view";
 import { Badge } from "@/components/ui/badge";
 import {
     getDivisionById,
@@ -96,14 +96,14 @@ export default async function DivisionDetailPage({ params, searchParams }: Divis
                 {/* General Tab */}
                 <TabsContent value="general" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <DivisionGeneralView division={division} />
+                        <TasksDivisionGeneralView division={division} />
                     </ContentLayout>
                 </TabsContent>
 
                 {/* Elements Tab */}
                 <TabsContent value="elements" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <DivisionElementsView
+                        <TasksDivisionElementsView
                             division={division}
                             allElements={allElements}
                             linkedElementIds={linkedElementIds}
@@ -115,7 +115,7 @@ export default async function DivisionDetailPage({ params, searchParams }: Divis
                 {/* Kinds Tab */}
                 <TabsContent value="kinds" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
-                        <DivisionKindsView
+                        <TasksDivisionKindsView
                             division={division}
                             allKinds={allKinds}
                             linkedKindIds={linkedKindIds}

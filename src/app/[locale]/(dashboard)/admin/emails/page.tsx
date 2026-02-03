@@ -7,7 +7,7 @@ import { EmailsPreviewView } from "@/features/admin/views/emails-preview-view";
 import { CheckoutPagesPreviewView } from "@/features/admin/views/checkout-pages-preview-view";
 
 export const metadata: Metadata = {
-    title: "Plantillas | Admin | SEENCEL",
+    title: "Plantillas | Admin | Seencel",
     description: "Preview y gestión de templates de email y páginas de checkout",
     robots: "noindex, nofollow",
 };

@@ -728,6 +728,15 @@
             "retry": "Reintentar"
         }
     },
+    "Catalog": {
+        "title": "Catálogo Técnico",
+        "subtitle": "Gestiona tareas, materiales y rubros de tu catálogo técnico.",
+        "tabs": {
+            "divisions": "Rubros",
+            "tasks": "Tareas",
+            "materials": "Materiales"
+        }
+    },
     "OrganizationDashboard": {
         "greeting": {
             "morning": "Buenos días",

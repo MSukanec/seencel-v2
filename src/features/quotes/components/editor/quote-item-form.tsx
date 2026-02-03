@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TaskView } from "@/features/tasks/types";
-import { TaskCatalogCombobox } from "@/features/tasks/components/catalog/task-catalog-combobox";
+import { TaskCatalogCombobox } from "@/features/tasks/components/tasks-catalog-combobox";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";

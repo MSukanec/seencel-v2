@@ -104,6 +104,65 @@ export async function checkIsAdmin(): Promise<boolean> {
 }
 
 // ============================================================================
+// Beta Tester Check
+// ============================================================================
+
+export async function checkIsBetaTester(): Promise<boolean> {
+    const supabase = await createClient();
+
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !authUser) return false;
+
+    const { data: userWithRole, error } = await supabase
+        .from('users')
+        .select(`
+            role_id,
+            roles:role_id (
+                name
+            )
+        `)
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (error || !userWithRole) return false;
+
+    const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
+    // Check for "beta tester", "beta_tester", or "betatester" variations
+    return roleName === 'beta tester' || roleName === 'beta_tester' || roleName === 'betatester';
+}
+
+// ============================================================================
+// Combined Role Check (optimized - single query)
+// ============================================================================
+
+export async function checkUserRoles(): Promise<{ isAdmin: boolean; isBetaTester: boolean }> {
+    const supabase = await createClient();
+
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !authUser) return { isAdmin: false, isBetaTester: false };
+
+    const { data: userWithRole, error } = await supabase
+        .from('users')
+        .select(`
+            role_id,
+            roles:role_id (
+                name
+            )
+        `)
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (error || !userWithRole) return { isAdmin: false, isBetaTester: false };
+
+    const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
+
+    return {
+        isAdmin: roleName === 'admin',
+        isBetaTester: roleName === 'beta tester' || roleName === 'beta_tester' || roleName === 'betatester'
+    };
+}
+
+// ============================================================================
 // User Timezone Query
 // ============================================================================
 

@@ -16,7 +16,7 @@ import { getCoupons } from "@/features/admin/coupon-actions";
 
 // ✅ METADATA OBLIGATORIA
 export const metadata: Metadata = {
-    title: "Finanzas | SEENCEL Admin",
+    title: "Finanzas | Seencel Admin",
     description: "Gestión de pagos, suscripciones, facturas y cupones",
     robots: "noindex, nofollow",
 };

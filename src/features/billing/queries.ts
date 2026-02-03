@@ -63,8 +63,7 @@ export async function getCurrencies() {
     const { data, error } = await supabase
         .from('currencies')
         .select('*')
-        .eq('is_active', true)
-        .order('order', { ascending: true });
+        .order('code', { ascending: true });
 
     if (error) {
         console.error("Error fetching currencies:", error);

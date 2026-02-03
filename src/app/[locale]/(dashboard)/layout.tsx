@@ -1,4 +1,4 @@
-import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
+import { getUserProfile, checkUserRoles } from "@/features/users/queries";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
 import { LayoutSwitcher } from "@/components/layout";
 import { getFeatureFlags, getFeatureFlag } from "@/actions/feature-flags";
@@ -22,12 +22,12 @@ export default async function DashboardLayout({
 }) {
     // Get all feature flags once
     const flags = await getFeatureFlags();
-    const isAdmin = await checkIsAdmin();
+    const { isAdmin, isBetaTester } = await checkUserRoles();
     const isMaintenanceMode = flags.find(f => f.key === "dashboard_maintenance_mode")?.value ?? false;
 
-    // If maintenance mode is on, check if user is admin (admins can still access)
-    // Non-admins see maintenance page
-    if (isMaintenanceMode && !isAdmin) {
+    // If maintenance mode is on, check if user is admin or beta tester (they can still access)
+    // Regular users see maintenance page
+    if (isMaintenanceMode && !isAdmin && !isBetaTester) {
         return <MaintenancePage />;
     }
 
@@ -76,7 +76,7 @@ export default async function DashboardLayout({
                 decimalPlaces={decimalPlaces}
                 kpiCompactFormat={kpiCompactFormat}
             >
-                <FeatureFlagsProvider flags={flags} isAdmin={isAdmin}>
+                <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>
                     <ThemeCustomizationProvider>
                         <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
                             {children}
@@ -87,3 +87,4 @@ export default async function DashboardLayout({
         </OrganizationProvider>
     );
 }
+

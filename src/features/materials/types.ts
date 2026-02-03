@@ -19,6 +19,18 @@ export interface MaterialType {
 }
 
 // ==========================================
+// Material Category (for sidebar filtering)
+// ==========================================
+
+export interface MaterialCategory {
+    id: string;
+    name: string;
+    parent_id: string | null;
+    created_at: string;
+    updated_at: string | null;
+}
+
+// ==========================================
 // Material Payment Schema
 // ==========================================
 

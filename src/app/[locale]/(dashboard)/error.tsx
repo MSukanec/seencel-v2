@@ -120,9 +120,9 @@ export default function DashboardError({ error, reset }: ErrorPageProps) {
                 )}
 
                 {/* Fun footer */}
-                <div className="pt-8 text-xs text-muted-foreground/50 font-mono flex items-center justify-center gap-2">
+                <div className="pt-8 text-xs text-muted-foreground font-mono flex items-center justify-center gap-2">
                     <Construction className="h-3 w-3" />
-                    <span>Error 500 • Obra detenida temporalmente</span>
+                    <span>Error <span className="text-orange-500">500</span> • Obra detenida temporalmente</span>
                     <Hammer className="h-3 w-3" />
                 </div>
             </div>
