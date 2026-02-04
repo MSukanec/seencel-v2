@@ -5,13 +5,16 @@ import {
     ColumnFiltersState,
     SortingState,
     VisibilityState,
+    ExpandedState,
     flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
+    getExpandedRowModel,
     useReactTable,
     type Table,
+    type Row,
 } from "@tanstack/react-table";
 import * as React from "react";
 
@@ -31,7 +34,7 @@ import { DataTableRowActions } from "./data-table-row-actions";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Paperclip, X, Trash2 } from "lucide-react";
+import { Paperclip, X, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -67,6 +70,40 @@ interface DataTableProps<TData, TValue> {
     onGlobalFilterChange?: (value: string) => void;
     /** Callback when filters should be cleared */
     onClearFilters?: () => void;
+
+    // =========================================================================
+    // ROW GROUPING PROPS
+    // =========================================================================
+    /** Column ID to group rows by. When set, rows are grouped and group headers are shown */
+    groupBy?: string;
+    /** Custom render function for group header row. Receives group value and all rows in the group */
+    renderGroupHeader?: (groupValue: string, rows: TData[], isExpanded: boolean) => React.ReactNode;
+    /** Whether groups start expanded. Default: true */
+    defaultGroupsExpanded?: boolean;
+    /** Accessor function to get the grouping value from a row (useful for nested objects) */
+    getGroupValue?: (row: TData) => string;
+    /** Accessor function to calculate a summary value for the group (e.g., subtotal). Displayed in penultimate column */
+    groupSummaryAccessor?: (rows: TData[]) => string | number;
+    /** Column ID where the group summary should be displayed. If not set, defaults to the last data column before actions */
+    groupSummaryColumnId?: string;
+    /** Accessor function to calculate incidencia % for the group (% of total) */
+    groupIncidenciaAccessor?: (rows: TData[]) => string | number;
+    /** Column ID where the group incidencia should be displayed */
+    groupIncidenciaColumnId?: string;
+    /** Accessor function to get the formatted number prefix for this group (e.g., "01", "02") */
+    groupNumberAccessor?: (groupValue: string, groupIndex: number) => string;
+    /** Hide the column used for grouping (since it's redundant when grouped). Default: true */
+    hideGroupColumn?: boolean;
+    /** Label for item count in group header. Default: 'ítem' / 'ítems' */
+    groupItemLabel?: { singular: string; plural: string };
+
+    // =========================================================================
+    // COLUMN VISIBILITY PROPS
+    // =========================================================================
+    /** Automatically hide columns where all values are empty/null/undefined. Default: false */
+    autoHideEmptyColumns?: boolean;
+    /** Column IDs to exclude from auto-hide check (e.g., always show even if empty) */
+    autoHideExcludeColumns?: string[];
 
     // =========================================================================
     // DEPRECATED PROPS - Accepted for backward compatibility but NOT rendered
@@ -117,16 +154,113 @@ export function DataTable<TData, TValue>({
     globalFilter: externalGlobalFilter,
     onGlobalFilterChange,
     onClearFilters,
+    // Row Grouping props
+    groupBy,
+    renderGroupHeader,
+    defaultGroupsExpanded = true,
+    getGroupValue,
+    groupSummaryAccessor,
+    groupSummaryColumnId,
+    groupIncidenciaAccessor,
+    groupIncidenciaColumnId,
+    groupNumberAccessor,
+    hideGroupColumn = true,
+    groupItemLabel = { singular: 'ítem', plural: 'ítems' },
+    // Column visibility props
+    autoHideEmptyColumns = false,
+    autoHideExcludeColumns = [],
 }: DataTableProps<TData, TValue> & { meta?: any }) {
     const [sorting, setSorting] = React.useState<SortingState>(initialSorting || []);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
+    // Stable reference for column count to avoid infinite loops
+    const columnsLength = columns.length;
+
+    // Auto-hide the groupBy column and empty columns
+    React.useEffect(() => {
+        const newVisibility: VisibilityState = {};
+
+        // Hide groupBy column
+        if (groupBy && hideGroupColumn) {
+            newVisibility[groupBy] = false;
+        }
+
+        // Auto-hide empty columns
+        if (autoHideEmptyColumns && data.length > 0) {
+            columns.forEach(col => {
+                const columnId = (col as any).accessorKey || (col as any).id;
+                if (!columnId) return;
+
+                // Skip excluded columns
+                if (autoHideExcludeColumns.includes(columnId)) return;
+
+                // Skip system columns
+                if (['select', 'actions'].includes(columnId)) return;
+
+                // Check if all values in this column are empty
+                const hasAnyValue = data.some(row => {
+                    const value = (row as any)[columnId];
+                    // Consider empty: null, undefined, empty string, 0, "-"
+                    return value !== null &&
+                        value !== undefined &&
+                        value !== '' &&
+                        value !== 0 &&
+                        value !== '-';
+                });
+
+                if (!hasAnyValue) {
+                    newVisibility[columnId] = false;
+                }
+            });
+        }
+
+        if (Object.keys(newVisibility).length > 0) {
+            setColumnVisibility(newVisibility);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [groupBy, hideGroupColumn, autoHideEmptyColumns, columnsLength, data.length]);
 
     // Use internal state if not controlled externally
     const [internalGlobalFilter, setInternalGlobalFilter] = React.useState("");
     const globalFilter = externalGlobalFilter ?? internalGlobalFilter;
     const setGlobalFilter = onGlobalFilterChange ?? setInternalGlobalFilter;
+
+    // Row grouping state - tracks which groups are expanded
+    const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>(() => {
+        if (!groupBy) return {};
+        // Initialize all groups as expanded or collapsed based on defaultGroupsExpanded
+        const groups: Record<string, boolean> = {};
+        data.forEach((row) => {
+            const groupValue = getGroupValue ? getGroupValue(row) : String((row as any)[groupBy] ?? "Sin categoría");
+            groups[groupValue] = defaultGroupsExpanded;
+        });
+        return groups;
+    });
+
+    // Toggle group expansion
+    const toggleGroup = (groupValue: string) => {
+        setExpandedGroups(prev => ({
+            ...prev,
+            [groupValue]: !prev[groupValue]
+        }));
+    };
+
+    // Group data if groupBy is provided
+    const groupedData = React.useMemo(() => {
+        if (!groupBy) return null;
+
+        const groups: Record<string, TData[]> = {};
+        data.forEach((row) => {
+            const groupValue = getGroupValue ? getGroupValue(row) : String((row as any)[groupBy] ?? "Sin categoría");
+            if (!groups[groupValue]) {
+                groups[groupValue] = [];
+            }
+            groups[groupValue].push(row);
+        });
+        return groups;
+    }, [data, groupBy, getGroupValue]);
+
 
     const tableColumns = React.useMemo(() => {
         const baseColumns = [...columns];
@@ -373,8 +507,126 @@ export function DataTable<TData, TValue>({
                                 <TableBody>
                                     {isLoading ? (
                                         <DataTableSkeleton columnCount={columns.length} rowCount={pageSize} />
+                                    ) : groupBy && groupedData ? (
+                                        // GROUPED MODE: Render group headers + rows
+                                        Object.entries(groupedData).map(([groupValue, groupRows]) => {
+                                            const isExpanded = expandedGroups[groupValue] ?? defaultGroupsExpanded;
+                                            const colSpan = tableColumns.length;
+
+                                            return (
+                                                <React.Fragment key={groupValue}>
+                                                    {/* Group Header Row - styled with primary background */}
+                                                    <TableRow
+                                                        className="bg-primary/10 hover:bg-primary/15 cursor-pointer border-b"
+                                                        onClick={() => toggleGroup(groupValue)}
+                                                    >
+                                                        {renderGroupHeader ? (
+                                                            // Custom render - uses colSpan for full control
+                                                            <TableCell colSpan={colSpan} className="px-4 py-3 bg-primary/10">
+                                                                {renderGroupHeader(groupValue, groupRows, isExpanded)}
+                                                            </TableCell>
+                                                        ) : (
+                                                            // Default render - celdas individuales alineadas con columnas visibles
+                                                            <>
+                                                                {table.getVisibleLeafColumns().map((column, colIdx, allColumns) => {
+                                                                    const columnId = column.id;
+                                                                    const isFirstColumn = colIdx === 0;
+                                                                    const isLastColumn = colIdx === allColumns.length - 1;
+                                                                    const isSummaryColumn = groupSummaryColumnId
+                                                                        ? columnId === groupSummaryColumnId
+                                                                        : false;
+                                                                    const isIncidenciaColumn = groupIncidenciaColumnId
+                                                                        ? columnId === groupIncidenciaColumnId
+                                                                        : false;
+
+                                                                    return (
+                                                                        <TableCell key={columnId} className="px-4 py-3 bg-primary/10">
+                                                                            {isFirstColumn && groupNumberAccessor ? (
+                                                                                // First cell: only the group number
+                                                                                <span className="font-mono font-semibold text-foreground">
+                                                                                    {groupNumberAccessor(groupValue, Object.keys(groupedData).indexOf(groupValue) + 1)}
+                                                                                </span>
+                                                                            ) : colIdx === 1 ? (
+                                                                                // Second cell: group name + count (this is typically the "Tarea" column)
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="font-semibold text-base text-foreground">{groupValue}</span>
+                                                                                    <span className="text-muted-foreground text-sm">
+                                                                                        ({groupRows.length} {groupRows.length === 1 ? groupItemLabel.singular : groupItemLabel.plural})
+                                                                                    </span>
+                                                                                </div>
+                                                                            ) : isSummaryColumn && groupSummaryAccessor ? (
+                                                                                // Summary column: show group subtotal (aligned right like items)
+                                                                                <div className="flex justify-end">
+                                                                                    <span className="font-semibold font-mono text-foreground">
+                                                                                        {groupSummaryAccessor(groupRows)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ) : isIncidenciaColumn && groupIncidenciaAccessor ? (
+                                                                                // Incidencia column: show group % of total (aligned right like items)
+                                                                                <div className="flex justify-end">
+                                                                                    <span className="font-semibold font-mono text-foreground">
+                                                                                        {groupIncidenciaAccessor(groupRows)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ) : isLastColumn ? (
+                                                                                // Last cell: chevron (aligned with actions column)
+                                                                                <div className="flex justify-end">
+                                                                                    {isExpanded ? (
+                                                                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                                                    ) : (
+                                                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : null}
+                                                                        </TableCell>
+                                                                    );
+                                                                })}
+                                                            </>
+                                                        )}
+                                                    </TableRow>
+
+                                                    {/* Group Rows (only if expanded) */}
+                                                    {isExpanded && table.getRowModel().rows
+                                                        .filter(row => {
+                                                            const rowGroupValue = getGroupValue
+                                                                ? getGroupValue(row.original)
+                                                                : String((row.original as any)[groupBy] ?? "Sin categoría");
+                                                            return rowGroupValue === groupValue;
+                                                        })
+                                                        .map((row) => {
+                                                            const isSelected = row.getIsSelected();
+                                                            return (
+                                                                <TableRow
+                                                                    key={row.id}
+                                                                    data-state={isSelected && "selected"}
+                                                                    className={cn(
+                                                                        "transition-colors hover:bg-transparent",
+                                                                        onRowClick && "cursor-pointer",
+                                                                        isSelected && "bg-primary/5 border-l-2 border-l-primary"
+                                                                    )}
+                                                                    onClick={(e) => {
+                                                                        const target = e.target as HTMLElement;
+                                                                        const isInteractive = target.closest('button, input, [role="checkbox"], [role="menuitem"], [data-radix-collection-item]');
+                                                                        if (!isInteractive) {
+                                                                            onRowClick?.(row.original);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    {row.getVisibleCells().map((cell) => (
+                                                                        <TableCell key={cell.id} className="px-4 py-3">
+                                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                        </TableCell>
+                                                                    ))}
+                                                                </TableRow>
+                                                            );
+                                                        })
+                                                    }
+                                                </React.Fragment>
+                                            );
+                                        })
                                     ) : table.getRowModel().rows?.length ? (
-                                        table.getRowModel().rows.map((row, rowIndex) => {
+                                        // NORMAL MODE: Render rows without grouping
+                                        table.getRowModel().rows.map((row) => {
                                             const isSelected = row.getIsSelected();
 
                                             return (

@@ -16,8 +16,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createQuote, updateQuote, createChangeOrder } from "../../actions";
-import { QuoteView, QuoteType, QuoteStatus, QUOTE_TYPE_LABELS, QUOTE_STATUS_LABELS } from "../../types";
+import { createQuote, updateQuote, createChangeOrder } from "../actions";
+import { QuoteView, QuoteType, QuoteStatus, QUOTE_TYPE_LABELS, QUOTE_STATUS_LABELS } from "../types";
 import { OrganizationFinancialData } from "@/features/clients/types";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";

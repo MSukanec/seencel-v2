@@ -1,16 +1,22 @@
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
-import { getProjectQuotes } from "@/features/quotes/queries";
+import { getOrganizationQuotes } from "@/features/quotes/queries";
 import { QuotesListView } from "@/features/quotes/views/quotes-list-view";
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-interface PageProps {
-    params: Promise<{ projectId: string }>;
+interface QuotesListPageProps {
+    searchParams: Promise<{ view?: string }>;
 }
 
-export default async function ProjectQuotesPage({ params }: PageProps) {
-    const { projectId } = await params;
+/**
+ * Server Component: Quotes List Page
+ * 
+ * Fetches data and renders the client-side QuotesPage component.
+ * Located at: /organization/quotes
+ */
+export async function QuotesListPage({ searchParams }: QuotesListPageProps) {
     const { activeOrgId } = await getUserOrganizations();
+    const params = await searchParams;
 
     if (!activeOrgId) {
         redirect("/");
@@ -18,20 +24,9 @@ export default async function ProjectQuotesPage({ params }: PageProps) {
 
     const supabase = await createClient();
 
-    // Verify project belongs to org
-    const { data: project } = await supabase
-        .from("projects")
-        .select("id, name, organization_id")
-        .eq("id", projectId)
-        .single();
-
-    if (!project || project.organization_id !== activeOrgId) {
-        notFound();
-    }
-
-    // Fetch quotes, financialData, clients, and projects in parallel
+    // Fetch quotes, financialData, clients (contacts), and projects in parallel
     const [quotes, financialData, contactsResult, projectsResult] = await Promise.all([
-        getProjectQuotes(projectId),
+        getOrganizationQuotes(activeOrgId),
         getOrganizationFinancialData(activeOrgId),
         supabase.from("contacts").select("id, first_name, last_name").eq("organization_id", activeOrgId).eq("is_deleted", false).order("first_name"),
         supabase.from("projects").select("id, name").eq("organization_id", activeOrgId).eq("is_deleted", false).order("name"),
@@ -48,11 +43,12 @@ export default async function ProjectQuotesPage({ params }: PageProps) {
     return (
         <QuotesListView
             organizationId={activeOrgId}
-            projectId={projectId}
+            projectId={null}
             quotes={quotes}
             financialData={financialData}
             clients={clients}
             projects={projects}
+            defaultTab={params.view || "quotes"}
         />
     );
 }

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ConstructionTaskView, ConstructionTaskStatus, STATUS_CONFIG } from "../types";
 import { ConstructionTaskCard } from "../components/construction-task-card";
-import { ConstructionTaskForm } from "../components/forms/construction-task-form";
+import { ConstructionTaskForm } from "../forms/construction-task-form";
 import { deleteConstructionTask, updateConstructionTaskStatus } from "../actions";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { EmptyState } from "@/components/ui/empty-state";

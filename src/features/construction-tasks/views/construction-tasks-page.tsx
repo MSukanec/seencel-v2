@@ -14,7 +14,7 @@ import { TasksByDivision, Unit, TaskDivision, TaskKind } from "@/features/tasks/
 
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
 
-interface ConstructionTasksPageViewProps {
+interface ConstructionTasksPageProps {
     projectId: string;
     organizationId: string;
     tasks: ConstructionTaskView[];
@@ -26,7 +26,7 @@ interface ConstructionTasksPageViewProps {
     catalogKinds?: TaskKind[];
 }
 
-export function ConstructionTasksPageView({
+export function ConstructionTasksPage({
     projectId,
     organizationId,
     tasks,
@@ -35,7 +35,7 @@ export function ConstructionTasksPageView({
     catalogUnits = [],
     catalogDivisions = [],
     catalogKinds = [],
-}: ConstructionTasksPageViewProps) {
+}: ConstructionTasksPageProps) {
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
@@ -70,7 +70,7 @@ export function ConstructionTasksPageView({
                 tabs={tabs}
                 icon={<ClipboardList />}
             >
-                <TabsContent value="tasks" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none">
+                <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                     <ContentLayout variant="wide">
                         <ConstructionTasksView
                             projectId={projectId}
@@ -80,15 +80,17 @@ export function ConstructionTasksPageView({
                     </ContentLayout>
                 </TabsContent>
                 {hasCatalogData && (
-                    <TabsContent value="catalog" className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none overflow-hidden">
-                        <TasksCatalogView
-                            groupedTasks={catalogGroupedTasks}
-                            orgId={organizationId}
-                            units={catalogUnits}
-                            divisions={catalogDivisions}
-                            kinds={catalogKinds}
-                            isAdminMode={false}
-                        />
+                    <TabsContent value="catalog" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <TasksCatalogView
+                                groupedTasks={catalogGroupedTasks}
+                                orgId={organizationId}
+                                units={catalogUnits}
+                                divisions={catalogDivisions}
+                                kinds={catalogKinds}
+                                isAdminMode={false}
+                            />
+                        </ContentLayout>
                     </TabsContent>
                 )}
             </PageWrapper>

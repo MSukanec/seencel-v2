@@ -10,58 +10,67 @@ description: Estándar OBLIGATORIO para crear nuevas páginas (Page + Views) en 
 > [!CAUTION]
 > Esta convención es **OBLIGATORIA**. No hay excepciones. Si no la seguís, el código se rechaza.
 
-### Estructura en `views/`
+### Estructura en Feature
 
 ```
-src/features/[feature]/views/
-├── [feature]-page.tsx           # 🎛️ ORQUESTADOR de tabs (Client Component)
-├── [feature]-dashboard-view.tsx # 👁️ VISTA del tab "Dashboard"
-├── [feature]-payments-view.tsx  # 👁️ VISTA del tab "Pagos"
-├── [feature]-concepts-view.tsx  # 👁️ VISTA del tab "Conceptos"
-└── [feature]-settings-view.tsx  # 👁️ VISTA del tab "Ajustes"
+src/features/[feature]/
+├── pages/                               # 🖥️ SERVER COMPONENTS
+│   ├── index.ts
+│   ├── [feature]-list-page.tsx          # Server: fetch + render lista
+│   └── [feature]-detail-page.tsx        # Server: fetch + render detalle
+└── views/                               # 👁️ CLIENT COMPONENTS  
+    ├── [feature]-list-view.tsx          # Client: UI de lista
+    ├── [feature]-overview-view.tsx      # Client: Tab resumen
+    ├── [feature]-items-view.tsx         # Client: Tab ítems
+    └── [feature]-settings-view.tsx      # Client: Tab settings
 ```
 
 ### Naming Pattern
 
-| Tipo de Archivo | Sufijo | Propósito | Ejemplo |
-|-----------------|--------|-----------|---------|
-| **Orquestador de Tabs** | `-page.tsx` | Contiene `TabsContent`, renderiza las views | `general-costs-page.tsx` |
-| **Vista de Tab** | `-view.tsx` | Contenido de UN tab específico | `general-costs-payments-view.tsx` |
+| Carpeta | Sufijo | Propósito | Ejemplo |
+|---------|--------|-----------|---------| 
+| **`pages/`** | `-page.tsx` | **Server Component** - Data fetching | `quotes-list-page.tsx` |
+| **`views/`** | `-view.tsx` | **Client Component** - UI interactiva | `quotes-list-view.tsx` |
 
-### Ejemplo Real: `general-costs`
+> [!WARNING]
+> **⛔ PROHIBIDO:** Usar `-page.tsx` en `views/` - esto causa CONFUSIÓN
+> 
+> El sufijo `-page` está **RESERVADO** para Server Components en `pages/`
+
+### Ejemplo Real: `quotes`
 
 ```
-src/features/general-costs/
-├── actions.ts
-├── types.ts
-├── forms/
-│   ├── general-costs-payment-form.tsx
-│   ├── general-costs-concept-form.tsx
-│   └── general-costs-category-form.tsx
-└── views/
-    ├── general-costs-page.tsx           # Orquesta: DashboardView, PaymentsView, etc.
-    ├── general-costs-dashboard-view.tsx # Tab "Visión General"
-    ├── general-costs-payments-view.tsx  # Tab "Pagos"
-    ├── general-costs-concepts-view.tsx  # Tab "Conceptos"
-    └── general-costs-settings-view.tsx  # Tab "Ajustes"
+src/features/quotes/
+├── pages/
+│   ├── index.ts
+│   ├── quotes-list-page.tsx       # Server: fetch lista de quotes
+│   └── quote-detail-page.tsx      # Server: fetch detalle de quote
+├── views/
+│   ├── quotes-list-view.tsx       # Client: UI de la lista
+│   ├── quote-overview-view.tsx    # Client: Tab resumen
+│   ├── quote-base-view.tsx        # Client: Tab ítems
+│   └── quote-change-orders-view.tsx # Client: Tab adicionales
+└── forms/
+    ├── quote-form.tsx
+    └── quote-item-form.tsx
 ```
 
 ### Flujo de Imports
 
 ```
-app/[locale]/.../page.tsx (Server)
-    └── imports → GeneralCostsPageClient from views/general-costs-page.tsx
-                      └── imports → GeneralCostsDashboardView from views/general-costs-dashboard-view.tsx
-                      └── imports → GeneralCostsPaymentsView from views/general-costs-payments-view.tsx
-                      └── imports → GeneralCostsSettingsView from views/general-costs-settings-view.tsx
+app/[locale]/.../page.tsx
+    └── importa → QuotesListPage from pages/quotes-list-page.tsx (Server)
+                       └── importa → QuotesListView from views/quotes-list-view.tsx (Client)
 ```
 
-> [!WARNING]
-> **NO confundir:**
-> - `-page.tsx` en `views/` → Client Component que orquesta tabs
-> - `page.tsx` en `app/` → Server Component que hace fetch de datos
+> [!IMPORTANT]
+> **La separación es clara:**
+> - `pages/` = Server Components que hacen fetch y pasan datos
+> - `views/` = Client Components con "use client" que manejan interacción
 
 ---
+
+
 
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
@@ -100,17 +109,21 @@ Toda la lógica específica de features vive aquí:
 src/features/[feature]/
 ├── TABLES.md                            # 📋 SOLO LECTURA - Esquema de tablas DB
 ├── actions.ts                           # Server actions
+├── queries.ts                           # Server queries (lectura)
 ├── types.ts                             # TypeScript types
 ├── forms/                               # 📝 Formularios (ver skill seencel-forms-modals)
 │   ├── [feature]-[entity]-form.tsx
 │   └── [feature]-[other]-form.tsx
-├── components/                          # 🧩 (OPCIONAL) Componentes UI auxiliares
-└── views/                               # 👁️ TODAS las vistas
-    ├── [feature]-page.tsx               # 🎛️ ORQUESTADOR (contiene TabsContent)
-    ├── [feature]-dashboard-view.tsx     # Vista tab Dashboard
-    ├── [feature]-[tab1]-view.tsx        # Vista tab 1
-    ├── [feature]-[tab2]-view.tsx        # Vista tab 2
-    └── [feature]-settings-view.tsx      # Vista tab Settings
+├── pages/                               # 🖥️ SERVER COMPONENTS (data fetching)
+│   ├── index.ts                         # Exporta todas las pages
+│   ├── [feature]-list-page.tsx          # Server Component: lista
+│   └── [feature]-detail-page.tsx        # Server Component: detalle
+└── views/                               # 👁️ CLIENT COMPONENTS (UI interactiva)
+    ├── [feature]-list-view.tsx          # Client: UI de la lista
+    ├── [feature]-overview-view.tsx      # Client: Tab resumen/overview
+    ├── [feature]-[tab1]-view.tsx        # Client: Tab específico 1
+    ├── [feature]-[tab2]-view.tsx        # Client: Tab específico 2
+    └── [feature]-settings-view.tsx      # Client: Tab settings
 ```
 
 > [!CAUTION]
@@ -119,14 +132,21 @@ src/features/[feature]/
 > - ⛔ **PROHIBIDO**: Modificarlo. Solo el usuario puede editarlo.
 
 > [!IMPORTANT]
-> **Forms:** SIEMPRE van en `src/features/[feature]/forms/`, NO en `components/forms/`.
-> Ver skill `seencel-forms-modals` para naming convention de forms.
+> **Pages vs Views - DIFERENCIA CRÍTICA:**
+> - `pages/` → **Server Components** que hacen data fetching y pasan props a views
+> - `views/` → **Client Components** con "use client" que manejan UI interactiva
+>
+> **El flujo es:** `app/page.tsx` → importa → `pages/[feature]-*-page.tsx` → importa → `views/[feature]-*-view.tsx`
+
+> [!WARNING]
+> **Naming Convention OBLIGATORIA:**
+> - `-page.tsx` SOLO en carpeta `pages/` (Server Components)
+> - `-view.tsx` SOLO en carpeta `views/` (Client Components)
+> - ⛔ **PROHIBIDO**: Usar `-page.tsx` en `views/` - esto causa confusión
 
 > [!IMPORTANT]
-> **Views:** TODO contenido visual de tabs va en `views/`. El orquestador termina en `-page.tsx`, las vistas individuales en `-view.tsx`.
-
-> [!NOTE]
-> **Components:** OPCIONAL. Solo se crea si hay componentes UI reutilizables que las views usan.
+> **Forms:** SIEMPRE van en `src/features/[feature]/forms/`, NO en `components/forms/`.
+> Ver skill `seencel-forms-modals` para naming convention de forms.
 
 **Regla**: Si un componente importa lógica de negocio (actions, queries) → pertenece a Features.
 

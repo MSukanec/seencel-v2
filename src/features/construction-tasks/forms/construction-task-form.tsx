@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ConstructionTaskView } from "../../types";
-import { createConstructionTask, updateConstructionTask } from "../../actions";
+import { ConstructionTaskView } from "../types";
+import { createConstructionTask, updateConstructionTask } from "../actions";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";

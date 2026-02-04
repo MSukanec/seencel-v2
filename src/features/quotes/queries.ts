@@ -85,7 +85,7 @@ export async function getQuoteItems(quoteId: string) {
                 name,
                 custom_name,
                 task_divisions:task_division_id (name),
-                units:unit_id (name)
+                units:unit_id (symbol)
             )
         `)
         .eq("quote_id", quoteId)
@@ -102,7 +102,7 @@ export async function getQuoteItems(quoteId: string) {
         task_name: item.tasks?.name || null,
         custom_name: item.tasks?.custom_name || null,
         division_name: item.tasks?.task_divisions?.name || null,
-        unit: item.tasks?.units?.name || null,
+        unit: item.tasks?.units?.symbol || null,
         position: item.sort_key,
         subtotal: item.quantity * item.unit_price,
         subtotal_with_markup: item.quantity * item.unit_price * (1 + (item.markup_pct || 0) / 100),

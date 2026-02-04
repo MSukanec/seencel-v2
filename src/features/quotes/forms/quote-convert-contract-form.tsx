@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FileSignature, AlertTriangle } from "lucide-react";
 
-interface ConvertToContractModalProps {
+interface QuoteConvertContractFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => void;
@@ -21,14 +21,14 @@ interface ConvertToContractModalProps {
     isConverting: boolean;
 }
 
-export function ConvertToContractModal({
+export function QuoteConvertContractForm({
     open,
     onOpenChange,
     onConfirm,
     contractValue,
     currencySymbol,
     isConverting
-}: ConvertToContractModalProps) {
+}: QuoteConvertContractFormProps) {
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>

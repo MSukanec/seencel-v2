@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ConstructionTasksPageView } from "@/features/construction-tasks/views";
+import { ConstructionTasksPage as ConstructionTasksPageClient } from "@/features/construction-tasks/views/construction-tasks-page";
 import { getProjectConstructionTasks } from "@/features/construction-tasks/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
@@ -77,7 +77,7 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
     ]);
 
     return (
-        <ConstructionTasksPageView
+        <ConstructionTasksPageClient
             projectId={projectId}
             organizationId={activeOrgId}
             tasks={tasks}

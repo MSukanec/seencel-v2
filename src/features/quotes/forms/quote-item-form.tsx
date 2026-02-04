@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { createQuoteItem, updateQuoteItem } from "../../actions";
+import { createQuoteItem, updateQuoteItem } from "../actions";
 
 interface QuoteItemFormProps {
     mode: "create" | "edit";
