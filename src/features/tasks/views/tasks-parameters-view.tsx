@@ -5,8 +5,8 @@ import { TaskParameter, TaskParameterOption, ParameterType, TaskElement } from "
 import { TasksParameterForm, TasksOptionForm } from "../forms";
 import { ElementsSidebar } from "../components/elements-sidebar";
 import { deleteTaskParameter, deleteParameterOption } from "../actions";
-import { useModal } from "@/providers/modal-store";
-import { ContextSidebar } from "@/providers/context-sidebar-provider";
+import { useModal } from "@/stores/modal-store";
+import { ContextSidebar } from "@/stores/sidebar-store";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Hash, Type, ToggleLeft, List, Package, ChevronDown, ChevronRight, Settings } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";

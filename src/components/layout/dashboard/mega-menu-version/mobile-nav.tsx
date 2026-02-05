@@ -22,13 +22,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ArrowLeft, Hammer, Sparkles, Mail } from "lucide-react";
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
-import { useLayoutStore, useActiveProjectId } from "@/store/layout-store";
+import { useLayoutStore, useActiveProjectId } from "@/stores/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/routing";
 import { useTheme } from "next-themes";
-import { useUser } from "@/context/user-context";
-import { useOrganization } from "@/context/organization-context";
+import { useUser } from "@/stores/user-store";
+import { useOrganization } from "@/stores/organization-store";
 
 // Types for drill-down navigation
 type NavigationLevel = 'main' | 'context';
@@ -40,7 +40,7 @@ export function MobileNav() {
     const [activeContextId, setActiveContextId] = React.useState<ContextId>(null);
     const [isAnimating, setIsAnimating] = React.useState(false);
 
-    const { user } = useUser();
+    const user = useUser();
     const { activeOrgId } = useOrganization();
     const pathname = usePathname();
     const router = useRouter();

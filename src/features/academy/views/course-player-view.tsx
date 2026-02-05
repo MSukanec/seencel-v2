@@ -7,8 +7,8 @@ import { CourseContentList } from "@/features/academy/components/course-content-
 import { LessonMarkersList } from "@/features/academy/components/lesson-markers-list";
 import { MarkerForm } from "@/features/academy/components/forms/marker-form";
 import { toggleLessonCompleted, saveLessonSummary } from "@/actions/courses";
-import { useModal } from "@/providers/modal-store";
-import { ContextSidebar } from "@/providers/context-sidebar-provider";
+import { useModal } from "@/stores/modal-store";
+import { ContextSidebar } from "@/stores/sidebar-store";
 import { List, Bookmark, CheckCircle2, Circle, Loader2, Save, FileText, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

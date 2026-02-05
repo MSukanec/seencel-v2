@@ -28,7 +28,7 @@ import {
 
 import { createPayment, updatePayment } from "../actions";
 import type { AdminPayment } from "../queries";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 const formSchema = z.object({
     provider: z.string().min(1, "Proveedor requerido"),

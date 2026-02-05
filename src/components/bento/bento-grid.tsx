@@ -56,7 +56,8 @@ export function BentoGrid({
     return (
         <div
             className={cn(
-                "grid grid-cols-1 auto-rows-[minmax(180px,auto)]",
+                "grid grid-cols-1 auto-rows-fr",
+                "[&>*]:min-h-[180px]", // Minimum height per item
                 columnStyles[columns],
                 gapStyles[gap],
                 className

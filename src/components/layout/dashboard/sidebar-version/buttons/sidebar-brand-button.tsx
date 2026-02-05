@@ -9,7 +9,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Link, useRouter } from "@/i18n/routing";
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { ChevronsUpDown, Briefcase, Check, Plus, Building, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";

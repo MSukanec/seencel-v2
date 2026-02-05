@@ -24,7 +24,7 @@ import {
     Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 
 // ============================================================================

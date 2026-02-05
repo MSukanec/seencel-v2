@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { TabsContent } from "@/components/ui/tabs";
 import { ProjectProfileView } from "./project-profile-view";
 import { ProjectLocationView } from "./project-location-view";

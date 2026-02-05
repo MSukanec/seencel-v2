@@ -1,6 +1,6 @@
 "use client";
 
-import { useDrawer } from "@/providers/drawer-store";
+import { useDrawer } from "@/stores/drawer-store";
 import {
     Sheet,
     SheetContent,

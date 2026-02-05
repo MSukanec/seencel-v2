@@ -6,7 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createLessonMarker, updateLessonMarker } from "@/actions/courses";
 import { LessonMarker } from "@/types/courses";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Textarea } from "@/components/ui/textarea";

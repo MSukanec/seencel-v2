@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { deleteSiteLogType } from "@/actions/sitelog";
 import { SiteLogType } from "@/types/sitelog";
 import { SiteLogTypeForm } from "./sitelog-type-form";

@@ -426,16 +426,19 @@ export async function getFinancialMovements() {
     }));
 
     // Fetch Wallets for mapping - organization_wallets.id is what payments reference
+    // Filter by is_active to only show enabled wallets (Standard 10.3)
     const { data: wallets } = await supabase
         .from('organization_wallets_view')
         .select('id, wallet_name')
-        .eq('organization_id', orgId);
+        .eq('organization_id', orgId)
+        .eq('is_active', true);
 
-    // Fetch Projects for mapping
+    // Fetch Projects for mapping (exclude deleted projects)
     const { data: projects } = await supabase
         .from('projects')
         .select('id, name')
-        .eq('organization_id', orgId);
+        .eq('organization_id', orgId)
+        .eq('is_deleted', false);
 
     if (error) {
         console.error("Error fetching financial movements:", error);

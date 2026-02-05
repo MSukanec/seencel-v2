@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import {
     HardHat, Plus, Pencil, Trash2, Users, Shield,
     Layers, UserCog, Briefcase, ChevronDown, ChevronUp

@@ -137,6 +137,7 @@ export async function QuoteDetailPage({ params, searchParams }: QuoteDetailPageP
                         <QuoteOverviewView
                             quote={quote}
                             contractSummary={contractSummary}
+                            items={items}
                         />
                     </ContentLayout>
                 </TabsContent>

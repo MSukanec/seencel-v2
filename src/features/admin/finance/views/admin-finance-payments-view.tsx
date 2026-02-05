@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 import { PaymentForm } from "../components/payment-form";

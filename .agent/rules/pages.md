@@ -13,6 +13,82 @@ Esta regla define los elementos **OBLIGATORIOS** que toda página debe cumplir a
 
 ---
 
+## 0. Arquitectura de Páginas (🚨 OBLIGATORIO)
+
+### Pattern A: Server Page + Views Directas (✅ ESTÁNDAR)
+
+Las páginas DEBEN seguir esta arquitectura:
+
+```
+page.tsx (Server Component)
+├── Fetches data on server
+├── Renderiza PageWrapper + Tabs
+└── Importa y renderiza Views directamente dentro de TabsContent
+    ├── <MovementsView data={data} />
+    └── <AnalyticsView data={otherData} />
+```
+
+```tsx
+// page.tsx (Server Component)
+import { PageWrapper } from "@/components/shared/page-wrapper";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MovementsView } from "@/features/finance/views/finances-movements-view";
+import { AnalyticsView } from "@/features/finance/views/finances-analytics-view";
+
+export default async function FinancePage() {
+    // Data fetching en el server
+    const [movements, analytics] = await Promise.all([
+        getMovements(orgId),
+        getAnalytics(orgId),
+    ]);
+    
+    return (
+        <PageWrapper icon={DollarSign} title="Finanzas">
+            <Tabs defaultValue="movements">
+                <TabsList className="portal-to-header">
+                    <TabsTrigger value="movements">Movimientos</TabsTrigger>
+                    <TabsTrigger value="analytics">Analíticas</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="movements" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <MovementsView movements={movements} currencies={currencies} />
+                </TabsContent>
+                
+                <TabsContent value="analytics" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <AnalyticsView data={analytics} />
+                </TabsContent>
+            </Tabs>
+        </PageWrapper>
+    );
+}
+```
+
+### Pattern B: Con Orchestrador Client (❌ DEPRECADO)
+
+```
+page.tsx (Server) → finances-page.tsx (Client) → Views
+                    ↑ ELIMINAR ESTE PASO
+```
+
+> ⛔ **NUNCA** crear un componente `*-page.tsx` client que solo pase props a las Views.
+> 
+> ⛔ **NUNCA** tener un archivo intermediario solo para orquestar tabs si no agrega lógica client significativa.
+
+### Cuándo SÍ usar un Client Orchestrator
+
+Solo si hay lógica client significativa compartida entre tabs:
+- Estado complejo compartido entre todas las Views
+- WebSockets o subscripciones realtime
+- Animaciones complejas entre tabs
+
+### Checklist de Arquitectura
+
+- [ ] ¿`page.tsx` es Server Component?
+- [ ] ¿Las Views se importan directamente en `page.tsx`?
+- [ ] ¿No hay `*-page.tsx` client intermediario innecesario?
+- [ ] ¿Los tabs se renderizan en el Server Component?
+
+
 ## 1. EmptyState Estándar (🚨 OBLIGATORIO)
 
 **TODA página con listados DEBE usar el EmptyState estándar** de `@/components/ui/empty-state` con el patrón de **early return**.

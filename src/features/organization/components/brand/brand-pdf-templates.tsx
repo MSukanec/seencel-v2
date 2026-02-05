@@ -61,7 +61,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { FeatureGuard } from "@/components/ui/feature-guard";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { PdfTemplateForm } from "../forms/pdf-template-form";
 
 // --- Constants ---

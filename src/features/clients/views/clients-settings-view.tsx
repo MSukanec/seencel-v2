@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { createClientRoleAction, updateClientRoleAction, deleteClientRoleAction } from "../actions";
 import { toast } from "sonner";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { Plus, Monitor, Building2, MoreHorizontal, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { toast } from "sonner";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { createContactType, updateContactType } from "@/actions/contacts";
 import { ContactType } from "@/types/contact";
 

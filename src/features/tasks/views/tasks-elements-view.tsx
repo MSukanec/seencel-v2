@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { TaskElement, TaskParameter, Unit } from "@/features/tasks/types";
 import { TasksElementForm } from "../forms";
 import { deleteTaskElement, toggleElementParameter } from "../actions";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Boxes, ChevronDown, ChevronRight, Settings2 } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";

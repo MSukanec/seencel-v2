@@ -1,22 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
-import { DashboardKpiCard, CurrencyBreakdownItem } from "@/components/dashboard/dashboard-kpi-card";
+import { useState, useMemo } from "react";
+import { FinanceDashboardProvider, useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
+import { DashboardWidgetGrid } from "@/features/finance/components/widgets/dashboard-widget-grid";
+import { DEFAULT_FINANCE_LAYOUT } from "@/features/finance/components/widgets/registry";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
 import { BaseDonutChart } from "@/components/charts/pie/base-donut-chart";
-import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Wallet, ArrowUpCircle, ArrowDownCircle, Lightbulb } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, PieChart, Activity, Wallet, Lightbulb, Banknote } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
-import { useFormatCurrency } from "@/hooks/use-format-currency";
-import { useCurrency } from "@/providers/currency-context";
-import { useFinancialFeatures } from "@/hooks/use-financial-features";
-import { FinancialValueDisplay } from "@/components/ui/financial-value-display";
-import { cn } from "@/lib/utils";
-import { generateFinanceInsights } from "@/features/insights/logic/finance";
-import { InsightCard } from "@/features/insights/components/insight-card";
 import { useMoney } from "@/hooks/use-money";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InsightCard } from "@/features/insights/components/insight-card";
+import { generateFinanceInsights } from "@/features/insights/logic/finance";
+import { cn } from "@/lib/utils";
+import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { LayoutDashboard, Check } from "lucide-react";
 
 interface FinancesOverviewViewProps {
     movements: any[];
@@ -24,117 +27,42 @@ interface FinancesOverviewViewProps {
 }
 
 export function FinancesOverviewView({ movements, wallets = [] }: FinancesOverviewViewProps) {
-    // === Centralized money operations ===
-    const money = useMoney();
+    const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
 
-    // Derived values from money hook - displayMode now comes directly from global context
-    const isMixView = money.displayMode === 'mix';
-    const isSecondaryDisplay = money.displayMode === 'secondary';
-
-    const {
-        allCurrencies,
-        primaryCurrency: primaryCurrencyObj,
-        secondaryCurrency: secondaryCurrencyObj,
-    } = useCurrency();
-
-    const { formatNumber, decimalPlaces } = useFormatCurrency();
-    const { functionalCurrencyId } = useFinancialFeatures();
-
-    // Resolve Reference Currency
-    const referenceCurrency = useMemo(() => {
-        if (functionalCurrencyId) {
-            return allCurrencies.find(c => c.id === functionalCurrencyId);
-        }
-        return allCurrencies.find(c => !c.is_default);
-    }, [allCurrencies, functionalCurrencyId]);
-
-    // Helper to render financial value based on view mode
-    const renderFinancialValue = (
-        primaryValue: number,
-        breakdown: CurrencyBreakdownItem[],
-    ) => {
-        if (isMixView && breakdown && breakdown.length > 0) {
-            if (breakdown.length === 1) {
-                const item = breakdown[0];
-                const formattedValue = `${item.symbol} ${formatNumber(item.nativeTotal)}`;
-                return (
-                    <div className="flex flex-col">
-                        <FinancialValueDisplay value={formattedValue} size="large" compact />
-                    </div>
-                );
-            }
-
-            return (
-                <div className="flex flex-col gap-0.5">
-                    {breakdown.map((item: CurrencyBreakdownItem, index: number) => {
-                        const isNegative = item.nativeTotal < 0;
-                        const val = Math.abs(item.nativeTotal);
-                        const isMain = index === 0;
-                        const prefix = index > 0 ? (isNegative ? "- " : "+ ") : (isNegative ? "-" : "");
-                        const formattedValue = `${prefix}${item.symbol} ${formatNumber(val)}`;
-
-                        return (
-                            <FinancialValueDisplay
-                                key={item.currencyCode}
-                                value={formattedValue}
-                                size={isMain ? "large" : "secondary"}
-                                compact
-                            />
-                        );
-                    })}
-                </div>
-            );
-        }
-
-        const formattedValue = money.format(primaryValue);
+    // Empty state check
+    if (movements.length === 0) {
         return (
-            <div className="flex flex-col">
-                <FinancialValueDisplay value={formattedValue} size="large" compact />
+            <div className="h-full flex flex-col">
+                <div className="flex-1 flex items-center justify-center">
+                    <EmptyState
+                        icon={Banknote}
+                        title="Sin movimientos financieros"
+                        description="Registrá tu primer movimiento en la pestaña Movimientos para ver estadísticas y gráficos aquí."
+                    />
+                </div>
             </div>
         );
-    };
+    }
 
-    // ========================================
-    // KPI CALCULATIONS (using centralized MoneyService)
-    // Standard: All financial calculations go through lib/money
-    // ========================================
-    const kpis = useMemo(() => {
-        // Transform movements to the format expected by the centralized KPI calculator
-        const kpiMovements = movements.map(m => ({
-            amount: m.amount,
-            currency_code: m.currency_code,
-            exchange_rate: m.exchange_rate,
-            amount_sign: m.amount_sign,
-            payment_date: m.payment_date,
-            wallet_id: m.wallet_id,
-        }));
+    return (
+        <FinanceDashboardProvider
+            movements={movements}
+            wallets={wallets}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+        >
+            <FinancesDashboardContent />
+        </FinanceDashboardProvider>
+    );
+}
 
-        // Use centralized KPI calculator
-        const result = money.calculateKPIs(kpiMovements);
+// Inner component to consume the context
+function FinancesDashboardContent() {
+    const { kpis, filteredMovements, isMixView, wallets } = useFinanceDashboard();
+    const [isEditing, setIsEditing] = useState(false);
 
-        // Map breakdown to CurrencyBreakdownItem format expected by DashboardKpiCard
-        const mapBreakdown = (breakdown: typeof result.ingresosBreakdown): CurrencyBreakdownItem[] => {
-            return breakdown.map(b => ({
-                currencyCode: b.currencyCode,
-                symbol: b.symbol,
-                nativeTotal: b.nativeTotal,
-                functionalTotal: b.nativeTotal * (b.isPrimary ? 1 : money.config.currentExchangeRate),
-                isPrimary: b.isPrimary,
-            }));
-        };
-
-        return {
-            totalIngresos: result.totalIngresos,
-            totalEgresos: result.totalEgresos,
-            balance: result.balance,
-            monthlyAverage: result.monthlyAverage,
-            trendPercent: result.trendPercent,
-            trendDirection: result.trendDirection,
-            ingresosBreakdown: mapBreakdown(result.ingresosBreakdown),
-            egresosBreakdown: mapBreakdown(result.egresosBreakdown),
-            totalMovements: result.totalMovements,
-        };
-    }, [movements, money.displayMode, money.config.currentExchangeRate, money.calculateKPIs]);
+    // Legacy Chart Logic (kept for comparison/legacy support)
+    const money = useMoney();
 
     // ========================================
     // CHART DATA: EVOLUTION (Ingresos vs Egresos)
@@ -143,7 +71,7 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
     // in 'mix' mode, which is invalid for chart visualization.
     // ========================================
     const evolutionData = useMemo(() => {
-        const grouped = movements.reduce((acc, m) => {
+        const grouped = filteredMovements.reduce((acc, m) => {
             const monthKey = m.payment_date ? m.payment_date.substring(0, 7) : '';
             if (!monthKey) return acc;
 
@@ -185,7 +113,7 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                 egresos: data.egresos
             };
         });
-    }, [movements, money.toFunctionalAmount, money.config.currentExchangeRate]);
+    }, [filteredMovements, money.toFunctionalAmount]);
 
     const evolutionChartConfig: ChartConfig = {
         ingresos: { label: "Ingresos", color: "var(--amount-positive)" },
@@ -197,8 +125,7 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
     // ========================================
     const distributionData = useMemo(() => {
         // Calculate balance per wallet (ingresos - egresos)
-        // Use toFunctionalAmount to convert all values to same currency
-        const walletBalances = movements.reduce((acc, m) => {
+        const walletBalances = filteredMovements.reduce((acc, m) => {
             // Use wallet_name directly from the view, fallback to lookup
             const walletName = m.wallet_name || 'Sin billetera';
             const baseAmount = money.toFunctionalAmount({
@@ -206,7 +133,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                 currency_code: m.currency_code,
                 exchange_rate: Number(m.exchange_rate) || undefined
             });
-            // amount_sign: 1 for income, -1 for expense
             const signedAmount = baseAmount * (Number(m.amount_sign) || 1);
 
             acc[walletName] = (acc[walletName] || 0) + signedAmount;
@@ -215,8 +141,6 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
 
         const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
-        // Filter out negative balances for the donut chart (can't show negative in pie)
-        // Sort by balance descending
         return Object.entries(walletBalances)
             .filter(([_, value]) => (value as number) > 0)
             .sort((a, b) => (b[1] as number) - (a[1] as number))
@@ -226,19 +150,17 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
                 value: value as number,
                 fill: colors[i % colors.length]
             }));
-    }, [movements, money.toFunctionalAmount, money.config.currentExchangeRate]);
+    }, [filteredMovements, money.toFunctionalAmount]);
 
     const distributionChartConfig: ChartConfig = distributionData.reduce((acc, item) => {
         acc[item.name] = { label: item.name, color: item.fill };
         return acc;
     }, {} as ChartConfig);
 
-
-
     // ========================================
     // RECENT ACTIVITY
     // ========================================
-    const recentActivity = movements.slice(0, 5);
+    const recentActivity = filteredMovements.slice(0, 5);
 
     // ========================================
     // INSIGHTS
@@ -247,10 +169,9 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
         const formatForInsights = (amount: number) => money.format(amount);
 
         return generateFinanceInsights({
-            movements: movements.map(m => ({
+            movements: filteredMovements.map(m => ({
                 id: m.id,
                 payment_date: m.payment_date,
-                // Use toFunctionalAmount for insights to ensure consistent currency
                 amount: money.toFunctionalAmount({
                     amount: Number(m.amount) || 0,
                     currency_code: m.currency_code,
@@ -263,185 +184,195 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
             wallets,
             formatCurrency: formatForInsights
         });
-    }, [movements, wallets, money.format, money.toFunctionalAmount, money.config.currentExchangeRate]);
+    }, [filteredMovements, wallets, money.format, money.toFunctionalAmount]);
 
-    // ========================================
-    // RENDER
-    // ========================================
+
     return (
-        <div className="space-y-6">
-            {/* KPI Grid: 2x2 on mobile, 1x4 on desktop */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. Ingresos Totales */}
-                <DashboardKpiCard
-                    title="Ingresos Totales"
-                    amount={kpis.totalIngresos}
-                    icon={<TrendingUp className="h-5 w-5" />}
-                    iconClassName="bg-amount-positive/10 text-amount-positive"
-                    description="Cobros y aportes"
-                    trend={kpis.trendPercent !== 0 ? {
-                        value: `${Math.abs(kpis.trendPercent).toFixed(0)}%`,
-                        direction: kpis.trendDirection as "up" | "down" | "neutral"
-                    } : undefined}
-                    currencyBreakdown={isMixView && kpis.ingresosBreakdown.length > 1 ? kpis.ingresosBreakdown : undefined}
-                    size="hero"
-                />
+        <div className="space-y-8">
+            {/* Toolbar - Portal to Header */}
+            <Toolbar
+                portalToHeader
+                actions={[{
+                    label: isEditing ? "Guardar" : "Personalizar",
+                    onClick: () => setIsEditing(!isEditing),
+                    icon: isEditing ? Check : LayoutDashboard,
+                    variant: isEditing ? "default" : "outline"
+                }]}
+            />
 
-                {/* 2. Egresos Totales */}
-                <DashboardKpiCard
-                    title="Egresos Totales"
-                    amount={kpis.totalEgresos}
-                    icon={<TrendingDown className="h-5 w-5" />}
-                    iconClassName="bg-amount-negative/10 text-amount-negative"
-                    description="Pagos y retiros"
-                    currencyBreakdown={isMixView && kpis.egresosBreakdown.length > 1 ? kpis.egresosBreakdown : undefined}
-                    size="hero"
-                />
 
-                {/* 3. Balance Neto */}
-                <DashboardKpiCard
-                    title="Balance Neto"
-                    amount={kpis.balance}
-                    icon={<Wallet className="h-5 w-5" />}
-                    iconClassName={kpis.balance >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
-                    description="Ingresos - Egresos"
-                    size="hero"
-                    className={kpis.balance >= 0 ? "[&_h2]:text-amount-positive" : "[&_h2]:text-amount-negative"}
-                />
+            {/* Enterprise Widget Grid */}
+            <DashboardWidgetGrid layout={DEFAULT_FINANCE_LAYOUT} isEditing={isEditing} />
 
-                {/* 4. Promedio Mensual */}
-                <DashboardKpiCard
-                    title="Promedio Mensual"
-                    amount={kpis.monthlyAverage}
-                    icon={<Activity className="h-5 w-5" />}
-                    description="Ingreso promedio / mes"
-                    size="hero"
-                />
-            </div>
+            <div className="border-t border-border/50 my-6" />
 
-            {/* ROW 2: Charts - 2 Column Grid */}
-            <div className="grid gap-6 lg:grid-cols-2 items-start [&>*]:min-w-0">
-                {/* 1. Evolución Financiera */}
-                <DashboardCard
-                    title="Evolución Financiera"
-                    description="Ingresos vs Egresos por mes"
-                    icon={<BarChart3 className="w-4 h-4" />}
-                >
-                    {evolutionData.length > 0 ? (
-                        <BaseDualAreaChart
-                            data={evolutionData}
-                            xKey="month"
-                            primaryKey="ingresos"
-                            secondaryKey="egresos"
-                            primaryLabel="Ingresos"
-                            secondaryLabel="Egresos"
-                            height={220}
-                            config={evolutionChartConfig}
-                            gradient
-                            showLegend
-                        />
-                    ) : (
-                        <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin datos de movimientos
-                        </div>
-                    )}
-                </DashboardCard>
+            {/* 2. LEGACY: Comparison Section */}
+            <div className="space-y-4 opacity-75">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight">Legacy View (Comparación)</h2>
+                </div>
 
-                {/* 2. Saldo por Billetera */}
-                <DashboardCard
-                    title="Saldo por Billetera"
-                    description="Balance actual por cuenta"
-                    icon={<PieChart className="w-4 h-4" />}
-                >
-                    {distributionData.length > 0 ? (
-                        <BaseDonutChart
-                            data={distributionData}
-                            nameKey="name"
-                            valueKey="value"
-                            height={200}
-                            config={distributionChartConfig}
-                        />
-                    ) : (
-                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin datos de movimientos
-                        </div>
-                    )}
-                </DashboardCard>
-            </div>
+                {/* Legacy KPI Cards using Context Data */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <DashboardKpiCard
+                        title="Ingresos Totales"
+                        amount={kpis.ingresos}
+                        icon={<TrendingUp className="h-5 w-5" />}
+                        iconClassName="bg-amount-positive/10 text-amount-positive"
+                        description="Cobros y aportes"
+                        currencyBreakdown={isMixView && kpis.ingresosBreakdown.length > 1 ? kpis.ingresosBreakdown : undefined}
+                        size="hero"
+                    />
+                    <DashboardKpiCard
+                        title="Egresos Totales"
+                        amount={kpis.egresos}
+                        icon={<TrendingDown className="h-5 w-5" />}
+                        iconClassName="bg-amount-negative/10 text-amount-negative"
+                        description="Pagos y retiros"
+                        currencyBreakdown={isMixView && kpis.egresosBreakdown.length > 1 ? kpis.egresosBreakdown : undefined}
+                        size="hero"
+                    />
+                    <DashboardKpiCard
+                        title="Balance Neto"
+                        amount={kpis.balance}
+                        icon={<Wallet className="h-5 w-5" />}
+                        iconClassName={kpis.balance >= 0 ? "bg-amount-positive/10 text-amount-positive" : "bg-amount-negative/10 text-amount-negative"}
+                        description="Ingresos - Egresos"
+                        size="hero"
+                    />
+                    <DashboardKpiCard
+                        title="Promedio Mensual"
+                        amount={kpis.monthlyAverage}
+                        icon={<Activity className="h-5 w-5" />}
+                        description="Ingreso promedio / mes"
+                        size="hero"
+                    />
+                </div>
 
-            {/* ROW 3: Insights + Activity (2 Column Grid) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* LEFT: Insights */}
-                <DashboardCard
-                    title="Insights Financieros"
-                    description="Análisis automático de tu situación"
-                    icon={<Lightbulb className="w-4 h-4" />}
-                >
-                    {insights.length > 0 ? (
-                        <div className="space-y-2">
-                            {insights.map((insight) => (
-                                <InsightCard key={insight.id} insight={insight} />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                            No hay insights en este momento
-                        </div>
-                    )}
-                </DashboardCard>
+                {/* ROW 2: Charts - 2 Column Grid */}
+                <div className="grid gap-6 lg:grid-cols-2 items-start [&>*]:min-w-0">
+                    {/* 1. Evolución Financiera */}
+                    <DashboardCard
+                        title="Evolución Financiera"
+                        description="Ingresos vs Egresos por mes"
+                        icon={<BarChart3 className="w-4 h-4" />}
+                    >
+                        {evolutionData.length > 0 ? (
+                            <BaseDualAreaChart
+                                data={evolutionData}
+                                xKey="month"
+                                primaryKey="ingresos"
+                                secondaryKey="egresos"
+                                primaryLabel="Ingresos"
+                                secondaryLabel="Egresos"
+                                height={220}
+                                config={evolutionChartConfig}
+                                gradient
+                                showLegend
+                            />
+                        ) : (
+                            <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                                Sin datos de movimientos
+                            </div>
+                        )}
+                    </DashboardCard>
 
-                {/* RIGHT: Recent Activity with Creator Avatars */}
-                <DashboardCard
-                    title="Actividad Reciente"
-                    description="Últimos movimientos registrados"
-                    icon={<Activity className="w-4 h-4" />}
-                >
-                    {recentActivity.length > 0 ? (
-                        <div className="space-y-4">
-                            {recentActivity.map((movement, i) => {
-                                const isPositive = Number(movement.amount_sign ?? 1) > 0;
-                                const hasAvatar = movement.creator_avatar_url;
-                                const creatorInitial = movement.creator_full_name?.charAt(0)?.toUpperCase() || '?';
+                    {/* 2. Saldo por Billetera */}
+                    <DashboardCard
+                        title="Saldo por Billetera"
+                        description="Balance actual por cuenta"
+                        icon={<PieChart className="w-4 h-4" />}
+                    >
+                        {distributionData.length > 0 ? (
+                            <BaseDonutChart
+                                data={distributionData}
+                                nameKey="name"
+                                valueKey="value"
+                                height={200}
+                                config={distributionChartConfig}
+                            />
+                        ) : (
+                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                                Sin datos de movimientos
+                            </div>
+                        )}
+                    </DashboardCard>
+                </div>
 
-                                return (
-                                    <div key={i} className="flex items-center gap-3">
-                                        {/* Creator Avatar */}
-                                        {hasAvatar ? (
-                                            <img
-                                                src={movement.creator_avatar_url}
-                                                alt={movement.creator_full_name || 'Usuario'}
-                                                className="h-9 w-9 rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
-                                                {creatorInitial}
+                {/* ROW 3: Insights + Activity (2 Column Grid) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* LEFT: Insights */}
+                    <DashboardCard
+                        title="Insights Financieros"
+                        description="Análisis automático de tu situación"
+                        icon={<Lightbulb className="w-4 h-4" />}
+                    >
+                        {insights.length > 0 ? (
+                            <div className="space-y-2">
+                                {insights.map((insight) => (
+                                    <InsightCard key={insight.id} insight={insight} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                                No hay insights en este momento
+                            </div>
+                        )}
+                    </DashboardCard>
+
+                    {/* RIGHT: Recent Activity with Creator Avatars */}
+                    <DashboardCard
+                        title="Actividad Reciente"
+                        description="Últimos movimientos registrados"
+                        icon={<Activity className="w-4 h-4" />}
+                    >
+                        {recentActivity.length > 0 ? (
+                            <div className="space-y-4">
+                                {recentActivity.map((movement, i) => {
+                                    const isPositive = Number(movement.amount_sign ?? 1) > 0;
+                                    const hasAvatar = movement.creator_avatar_url;
+                                    const creatorInitial = movement.creator_full_name?.charAt(0)?.toUpperCase() || '?';
+
+                                    return (
+                                        <div key={i} className="flex items-center gap-3">
+                                            {/* Creator Avatar */}
+                                            {hasAvatar ? (
+                                                <img
+                                                    src={movement.creator_avatar_url}
+                                                    alt={movement.creator_full_name || 'Usuario'}
+                                                    className="h-9 w-9 rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                                                    {creatorInitial}
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">
+                                                    {movement.entity_name || movement.description || "Movimiento"}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {movement.creator_full_name && <span>{movement.creator_full_name} · </span>}
+                                                    {formatDistanceToNow(new Date(movement.payment_date), { addSuffix: true, locale: es })}
+                                                </p>
                                             </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">
-                                                {movement.entity_name || movement.description || "Movimiento"}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {movement.creator_full_name && <span>{movement.creator_full_name} · </span>}
-                                                {formatDistanceToNow(new Date(movement.payment_date), { addSuffix: true, locale: es })}
-                                            </p>
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                isPositive ? "text-amount-positive" : "text-amount-negative"
+                                            )}>
+                                                {isPositive ? "+" : "-"}{movement.currency_symbol || "$"} {Math.abs(Number(movement.amount)).toLocaleString('es-AR')}
+                                            </span>
                                         </div>
-                                        <span className={cn(
-                                            "text-sm font-semibold",
-                                            isPositive ? "text-amount-positive" : "text-amount-negative"
-                                        )}>
-                                            {isPositive ? "+" : "-"}{movement.currency_symbol || "$"} {Math.abs(Number(movement.amount)).toLocaleString('es-AR')}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin actividad reciente
-                        </div>
-                    )}
-                </DashboardCard>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                                Sin actividad reciente
+                            </div>
+                        )}
+                    </DashboardCard>
+                </div>
             </div>
         </div>
     );

@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import {
     Plus,
     Users,

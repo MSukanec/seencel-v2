@@ -4,7 +4,7 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
-import { useOrganization } from "@/context/organization-context";
+import { useOrganization } from "@/stores/organization-store";
 import { Crown, Sparkles, Users } from "lucide-react";
 import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
 import { getPlanDisplayName } from "@/lib/plan-utils";

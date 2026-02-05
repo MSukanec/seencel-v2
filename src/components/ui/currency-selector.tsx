@@ -1,6 +1,6 @@
 "use client";
 
-import { useCurrency } from '@/providers/currency-context';
+import { useCurrency } from '@/stores/organization-store';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,

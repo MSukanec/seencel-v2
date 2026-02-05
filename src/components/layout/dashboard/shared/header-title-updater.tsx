@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore } from "@/stores/layout-store";
 
 interface HeaderTitleUpdaterProps {
     title: React.ReactNode;

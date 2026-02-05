@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 import { createCourse } from "@/features/academy/course-actions";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";

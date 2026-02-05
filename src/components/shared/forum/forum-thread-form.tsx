@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 interface ForumThreadFormProps {
     courseId: string;

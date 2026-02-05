@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Plus, CreditCard, Trash2 } from "lucide-react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { EnrollmentForm } from "./enrollment-form";

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { createEnrollment, updateEnrollment, getEnrollableUsers, getEnrollableCourses, getExistingEnrollments } from "@/actions/enrollment-actions";

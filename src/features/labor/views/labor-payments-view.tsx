@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 import {
     AlertDialog,

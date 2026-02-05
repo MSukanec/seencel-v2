@@ -8,7 +8,7 @@ import { ListItem } from "@/components/ui/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ContextSidebar } from "@/providers/context-sidebar-provider";
+import { ContextSidebar } from "@/stores/sidebar-store";
 import {
     Plus,
     Package,
@@ -24,7 +24,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { MaterialForm, type MaterialCategory, type Unit, type Material } from "@/features/materials/forms/material-form";
 import { CategoryForm } from "@/features/admin/components/forms/category-form";
 import { deleteMaterial } from "@/features/materials/actions";

@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname } from "next/navigation";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
@@ -140,7 +140,7 @@ export function PageHeader({
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
                         {/* Only show currency selector and feedback in org/project routes */}
-                        {(pathname.includes('/organization/') || pathname.includes('/organizacion/') || pathname.includes('/project/')) && (
+                        {(pathname.includes('/organization/') || pathname.includes('/organizacion/') || pathname.includes('/project/') || pathname.includes('/proyecto/')) && (
                             <>
                                 <CurrencyModeSelector />
                                 {!hideFeedback && (

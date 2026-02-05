@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Plus, Banknote, Wallet, CircleDollarSign, Upload, Download } from "lucide-react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { SubcontractPaymentForm } from "@/features/subcontracts/forms/subcontract-payment-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -261,12 +261,24 @@ export function SubcontractPaymentsView({
     // ========================================
     if (payments.length === 0) {
         return (
-            <div className="h-full flex items-center justify-center">
-                <EmptyState
-                    icon={Banknote}
-                    title="Sin pagos registrados"
-                    description="Registra el primer pago de este subcontrato."
+            <div className="h-full flex flex-col">
+                <Toolbar
+                    portalToHeader
+                    actions={[
+                        {
+                            label: "Nuevo Pago",
+                            icon: Plus,
+                            onClick: handleNewPayment
+                        }
+                    ]}
                 />
+                <div className="flex-1 flex items-center justify-center">
+                    <EmptyState
+                        icon={Banknote}
+                        title="Sin pagos registrados"
+                        description="Registra el primer pago de este subcontrato."
+                    />
+                </div>
             </div>
         );
     }

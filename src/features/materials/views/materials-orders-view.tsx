@@ -21,7 +21,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 import { PurchaseOrderForm } from "../forms/purchase-order-form";
 import {

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Sidebar } from "./sidebar";
 import { UserProfile } from "@/types/user";
-import { useContextSidebar } from "@/providers/context-sidebar-provider";
+import { useContextSidebar } from "@/stores/sidebar-store";
 import { cn } from "@/lib/utils";
 
 interface SidebarLayoutProps {

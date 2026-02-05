@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createMaterial, updateMaterial } from "@/features/materials/actions";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 // Re-use types from admin queries for now
 export interface MaterialCategory {

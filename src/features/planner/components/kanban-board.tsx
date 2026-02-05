@@ -7,7 +7,7 @@ import { KanbanColumn } from "./kanban-column";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { KanbanCardForm } from "../forms/kanban-card-form";
 import { KanbanListForm } from "../forms/kanban-list-form";
 import { MoveListModal } from "./move-list-modal";

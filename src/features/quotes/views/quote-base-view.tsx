@@ -13,7 +13,11 @@ import {
     FileSignature,
     Edit,
     Trash2,
-    Loader2
+    Loader2,
+    Hash,
+    Calculator,
+    Receipt,
+    DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +27,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -34,7 +39,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { QuoteItemForm } from "../forms/quote-item-form";
 import { QuoteConvertContractForm } from "../forms/quote-convert-contract-form";
 import { convertQuoteToProject, approveQuote, convertQuoteToContract, deleteQuoteItem } from "../actions";
@@ -90,6 +95,15 @@ export function QuoteBaseView({
     const totalAmount = useMemo(() => {
         return items.reduce((sum, item) => sum + (item.subtotal_with_markup || item.subtotal || 0), 0);
     }, [items]);
+
+    // KPI calculations
+    const taxAmount = useMemo(() => {
+        return totalAmount * (quote.tax_pct / 100);
+    }, [totalAmount, quote.tax_pct]);
+
+    const totalWithTax = useMemo(() => {
+        return totalAmount + taxAmount;
+    }, [totalAmount, taxAmount]);
 
     // Get division name from item's task
     const getDivisionName = (item: QuoteItemView): string | null => {
@@ -212,7 +226,7 @@ export function QuoteBaseView({
         if (!itemToDelete) return;
 
         startDeleteTransition(async () => {
-            const result = await deleteQuoteItem(itemToDelete.id);
+            const result = await deleteQuoteItem(itemToDelete.id, quote.id);
             if (result.error) {
                 toast.error(result.error);
             } else {
@@ -431,7 +445,7 @@ export function QuoteBaseView({
     }
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="space-y-4">
             <Toolbar
                 portalToHeader
                 actions={[
@@ -471,43 +485,69 @@ export function QuoteBaseView({
                 ]}
             />
 
-            <div className="flex-1">
-                <DataTable
-                    columns={columns}
-                    data={items}
-                    showPagination={false}
-                    pageSize={100}
-                    enableRowActions={quote.status !== 'approved'}
-                    onEdit={handleEditItem}
-                    onDelete={handleDeleteClick}
-                    // Row Grouping by Division/Rubro
-                    groupBy="division"
-                    getGroupValue={(item) => item.division_name || "Sin rubro"}
-                    groupSummaryColumnId="subtotal"
-                    groupSummaryAccessor={(groupRows) => {
-                        const groupSubtotal = groupRows.reduce((sum, item) => {
-                            return sum + (item.subtotal_with_markup || item.subtotal || 0);
-                        }, 0);
-                        return formatCurrency(groupSubtotal);
-                    }}
-                    // Incidencia del rubro (% del total del presupuesto)
-                    groupIncidenciaColumnId="incidencia"
-                    groupIncidenciaAccessor={(groupRows) => {
-                        const groupSubtotal = groupRows.reduce((sum, item) => {
-                            return sum + (item.subtotal_with_markup || item.subtotal || 0);
-                        }, 0);
-                        const incidencia = totalAmount > 0 ? (groupSubtotal / totalAmount) * 100 : 0;
-                        return `${incidencia.toFixed(1)}%`;
-                    }}
-                    // Numeración de rubros (01, 02, etc.)
-                    groupNumberAccessor={(groupValue, groupIndex) =>
-                        String(rubroIndices.get(groupValue) || groupIndex).padStart(2, '0')
-                    }
-                    // Auto-hide columns with no data (e.g., Markup when not used)
-                    autoHideEmptyColumns
-                    autoHideExcludeColumns={["incidencia", "subtotal", "item_number"]}
+            {/* KPIs Summary Row */}
+            <div className="grid grid-cols-4 gap-3">
+                <DashboardKpiCard
+                    title="Ítems"
+                    value={items.length}
+                    icon={<Hash className="h-4 w-4" />}
+                    description={`${new Set(items.map(i => getDivisionName(i))).size} rubros`}
+                />
+                <DashboardKpiCard
+                    title="Subtotal"
+                    amount={totalAmount}
+                    icon={<Calculator className="h-4 w-4" />}
+                    description="Sin impuestos"
+                />
+                <DashboardKpiCard
+                    title={quote.tax_label || 'IVA'}
+                    amount={taxAmount}
+                    icon={<Receipt className="h-4 w-4" />}
+                    description={`${quote.tax_pct}%`}
+                />
+                <DashboardKpiCard
+                    title="Total"
+                    amount={totalWithTax}
+                    icon={<DollarSign className="h-4 w-4" />}
+                    description="Con impuestos"
                 />
             </div>
+
+            <DataTable
+                columns={columns}
+                data={items}
+                showPagination={false}
+                pageSize={100}
+                enableRowActions={quote.status !== 'approved'}
+                onEdit={handleEditItem}
+                onDelete={handleDeleteClick}
+                // Row Grouping by Division/Rubro
+                groupBy="division"
+                getGroupValue={(item) => item.division_name || "Sin rubro"}
+                groupSummaryColumnId="subtotal"
+                groupSummaryAccessor={(groupRows) => {
+                    const groupSubtotal = groupRows.reduce((sum, item) => {
+                        return sum + (item.subtotal_with_markup || item.subtotal || 0);
+                    }, 0);
+                    return formatCurrency(groupSubtotal);
+                }}
+                // Incidencia del rubro (% del total del presupuesto)
+                groupIncidenciaColumnId="incidencia"
+                groupIncidenciaAccessor={(groupRows) => {
+                    const groupSubtotal = groupRows.reduce((sum, item) => {
+                        return sum + (item.subtotal_with_markup || item.subtotal || 0);
+                    }, 0);
+                    const incidencia = totalAmount > 0 ? (groupSubtotal / totalAmount) * 100 : 0;
+                    return `${incidencia.toFixed(1)}%`;
+                }}
+                // Numeración de rubros (01, 02, etc.)
+                groupNumberAccessor={(groupValue, groupIndex) =>
+                    String(rubroIndices.get(groupValue) || groupIndex).padStart(2, '0')
+                }
+                // Auto-hide columns with no data (e.g., Markup when not used)
+                autoHideEmptyColumns
+                autoHideExcludeColumns={["incidencia", "subtotal", "item_number"]}
+            />
 
             {/* Delete Confirmation Dialog */}
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -544,6 +584,6 @@ export function QuoteBaseView({
                 currencySymbol={quote.currency_symbol || '$'}
                 isConverting={isConverting}
             />
-        </div>
+        </div >
     );
 }

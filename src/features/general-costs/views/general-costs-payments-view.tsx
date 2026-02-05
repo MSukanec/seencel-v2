@@ -16,7 +16,7 @@ import { createDateColumn, createTextColumn, createMoneyColumn } from "@/compone
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 import { useMoney } from "@/hooks/use-money";
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, Plus, FileText, MoreHorizontal, Pencil, Trash2, Eye, Calendar, Hash } from "lucide-react";
+import { FilePlus2, Plus, FileText, MoreHorizontal, Pencil, Trash2, Calendar, Hash, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
@@ -29,9 +29,9 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { QuoteForm } from "../forms/quote-form";
-import { deleteQuote } from "../actions";
+import { deleteQuote, duplicateQuote } from "../actions";
 import { QuoteView, QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS } from "../types";
 import { cn } from "@/lib/utils";
 
@@ -127,10 +127,6 @@ export function QuoteChangeOrdersView({
                 size: "lg"
             }
         );
-    };
-
-    const handleView = (co: QuoteView) => {
-        router.push(`/organization/quotes/${co.id}`);
     };
 
     const handleEdit = (co: QuoteView) => {
@@ -272,7 +268,7 @@ export function QuoteChangeOrdersView({
                     <Card
                         key={co.id}
                         className="hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => handleView(co)}
+                        onClick={() => router.push(`/organization/quotes/${co.id}`)}
                     >
                         <CardContent className="p-4">
                             <div className="flex items-center gap-4">
@@ -323,13 +319,22 @@ export function QuoteChangeOrdersView({
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleView(co); }}>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        Ver detalle
-                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(co); }}>
                                                         <Pencil className="h-4 w-4 mr-2" />
                                                         Editar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        const result = await duplicateQuote(co.id);
+                                                        if (result.error) {
+                                                            toast.error(result.error);
+                                                        } else {
+                                                            toast.success("Orden de cambio duplicada");
+                                                            router.refresh();
+                                                        }
+                                                    }}>
+                                                        <Copy className="h-4 w-4 mr-2" />
+                                                        Duplicar
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem

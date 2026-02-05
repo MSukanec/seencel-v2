@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Plan } from "@/actions/plans";
 import { Link } from "@/i18n/routing";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { BankTransferForm } from "@/features/billing/components/forms/billing-bank-transfer-form";
 import { validateCoupon, type CouponValidationSuccess } from "@/features/billing/actions";
 import {

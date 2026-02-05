@@ -15,9 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
-import { useFormatCurrency } from "@/hooks/use-format-currency";
-import { useCurrency } from "@/providers/currency-context";
-import { useCurrencyOptional } from "@/providers/currency-context";
+import { useCurrency } from "@/stores/organization-store";
+import { useCurrencyOptional } from "@/stores/organization-store";
 import { useFinancialFeatures } from "@/hooks/use-financial-features";
 import { useMoney } from "@/hooks/use-money";
 import { sumMoney, calculateDisplayAmount as calcDisplayAmount } from "@/lib/money/money-service";
@@ -54,8 +53,8 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
         currentExchangeRate: marketRate,
     } = useCurrency();
 
-    // Decimal-aware formatting
-    const { formatNumber, decimalPlaces } = useFormatCurrency();
+    // Decimal-aware formatting (from useMoney)
+    const formatNumber = money.formatNumber;
 
     // Feature Flags for Financial Logic
     const { showCurrencySelector, showExchangeRate, functionalCurrencyId, showFunctionalColumns } = useFinancialFeatures();

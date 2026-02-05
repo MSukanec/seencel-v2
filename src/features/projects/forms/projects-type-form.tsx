@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import {
     createProjectType,
     updateProjectType,

@@ -16,7 +16,7 @@ import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table
 import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { useMoney } from "@/hooks/use-money";

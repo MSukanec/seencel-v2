@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Circle, FileCheck, Send as SendIcon, XCircle as XCircleIcon, FileSpreadsheet, FileSignature, FilePlus2 } from "lucide-react";
 
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useMoney } from "@/hooks/use-money";
 import { QuoteForm } from "../forms/quote-form";
 import { deleteQuote } from "../actions";

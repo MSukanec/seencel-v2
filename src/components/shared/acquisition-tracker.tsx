@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { captureAcquisitionParams } from "@/hooks/use-acquisition-params";
+import { captureAcquisitionParams } from "@/lib/acquisition-params";
 
 /**
  * Component that captures UTM acquisition parameters on mount

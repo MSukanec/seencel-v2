@@ -10,7 +10,7 @@ import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } f
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 // Filter type for origin
 type OriginFilter = "all" | "system" | "organization";

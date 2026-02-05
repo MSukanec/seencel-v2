@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Receipt, Users } from "lucide-react";
+import { CalendarIcon, Receipt, Users, RefreshCcw, ArrowRightLeft } from "lucide-react";
+import { useRouter } from "@/i18n/routing";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,50 +28,67 @@ import { cn } from "@/lib/utils";
 import { formatDateForDB } from "@/lib/timezone-data";
 import { createGeneralCostPayment } from "@/features/general-costs/actions";
 
-// Import ClientPaymentForm
-import { PaymentForm as ClientPaymentForm } from "@/features/clients/components/forms/payment-form";
+// Modal hook for autonomous lifecycle
+import { useModal } from "@/stores/modal-store";
+
+// Import other forms
+import { PaymentForm as ClientPaymentForm } from "@/features/clients/components/forms/clients-payment-form";
+import { CurrencyExchangeForm } from "@/features/finance/forms/finance-currency-exchange-form";
+import { WalletTransferForm } from "@/features/finance/forms/finance-wallet-transfer-form";
 
 // === Movement Types ===
-type MovementTypeId = "general_cost" | "client_payment";
+type MovementTypeId = "general_cost" | "client_payment" | "currency_exchange" | "wallet_transfer";
 
 const MOVEMENT_TYPE_OPTIONS = [
     { id: "general_cost" as const, label: "Gasto General", icon: Receipt },
     { id: "client_payment" as const, label: "Cobro de Cliente", icon: Users },
+    { id: "currency_exchange" as const, label: "Cambio de Moneda", icon: RefreshCcw },
+    { id: "wallet_transfer" as const, label: "Transferencia entre Billeteras", icon: ArrowRightLeft },
 ];
 
 // === Props ===
 interface FinanceMovementFormProps {
-    // General Costs context
+    // Required data (still passed as props from pages/views)
+    organizationId: string;
     concepts?: { id: string; name: string }[];
     wallets?: { id: string; wallet_name: string }[];
     currencies?: { id: string; name: string; code: string; symbol: string }[];
-    organizationId: string;
-    // Client Payment context
     projects?: { id: string; name: string }[];
     clients?: any[];
     financialData?: any;
-    // Callbacks
-    onSuccess?: () => void;
-    onCancel?: () => void;
+    // Optional: pre-select a movement type
+    initialMovementType?: MovementTypeId;
 }
 
 // === Main Component ===
 export function FinanceMovementForm({
+    organizationId,
     concepts = [],
     wallets = [],
     currencies = [],
-    organizationId,
     projects = [],
     clients = [],
     financialData,
-    onSuccess,
-    onCancel,
+    initialMovementType,
 }: FinanceMovementFormProps) {
+    const router = useRouter();
+    const { closeModal } = useModal();
+
+    // Internal callbacks - form manages its own lifecycle
+    const handleSuccess = () => {
+        closeModal();
+        router.refresh();
+    };
+
+    const handleCancel = () => {
+        closeModal();
+    };
+
     const [isLoading, setIsLoading] = useState(false);
     const uploadRef = useRef<MultiFileUploadRef>(null);
 
-    // Movement type selector - starts empty so user must select
-    const [movementType, setMovementType] = useState<MovementTypeId | "">("");
+    // Movement type selector - starts empty or with initial value
+    const [movementType, setMovementType] = useState<MovementTypeId | "">(initialMovementType || "");
 
     // Form state (Gasto General)
     const [paymentDate, setPaymentDate] = useState<Date>(new Date());
@@ -147,7 +165,8 @@ export function FinanceMovementForm({
 
             await createGeneralCostPayment(payload);
             toast.success("Pago registrado correctamente");
-            onSuccess?.();
+            closeModal();
+            router.refresh();
         } catch (error) {
             console.error("Error creating payment:", error);
             toast.error("Error al registrar el pago");
@@ -156,35 +175,73 @@ export function FinanceMovementForm({
         }
     };
 
+    // Helper component for rendering type selector
+    const TypeSelector = () => (
+        <div className="shrink-0 mb-4">
+            <FormGroup label="Tipo de Movimiento" required>
+                <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {MOVEMENT_TYPE_OPTIONS.map((option) => {
+                            const Icon = option.icon;
+                            return (
+                                <SelectItem key={option.id} value={option.id}>
+                                    <div className="flex items-center gap-2">
+                                        <Icon className="h-4 w-4 text-muted-foreground" />
+                                        <span>{option.label}</span>
+                                    </div>
+                                </SelectItem>
+                            );
+                        })}
+                    </SelectContent>
+                </Select>
+            </FormGroup>
+        </div>
+    );
+
+    // Currency Exchange form
+    if (movementType === "currency_exchange") {
+        return (
+            <div className="flex flex-col h-full min-h-0">
+                <TypeSelector />
+                <div className="flex-1 min-h-0 flex flex-col">
+                    <CurrencyExchangeForm
+                        organizationId={organizationId}
+                        wallets={wallets}
+                        currencies={currencies}
+                        onSuccess={handleSuccess}
+                        onCancel={handleCancel}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // Wallet Transfer form
+    if (movementType === "wallet_transfer") {
+        return (
+            <div className="flex flex-col h-full min-h-0">
+                <TypeSelector />
+                <div className="flex-1 min-h-0 flex flex-col">
+                    <WalletTransferForm
+                        organizationId={organizationId}
+                        wallets={wallets}
+                        currencies={currencies}
+                        onSuccess={handleSuccess}
+                        onCancel={handleCancel}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     // If client_payment is selected and we have the necessary data, render the client payment form
     if (movementType === "client_payment" && financialData) {
         return (
             <div className="flex flex-col h-full min-h-0">
-                {/* Type selector at top */}
-                <div className="shrink-0 mb-4">
-                    <FormGroup label="Tipo de Movimiento" required>
-                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {MOVEMENT_TYPE_OPTIONS.map((option) => {
-                                    const Icon = option.icon;
-                                    return (
-                                        <SelectItem key={option.id} value={option.id}>
-                                            <div className="flex items-center gap-2">
-                                                <Icon className="h-4 w-4 text-muted-foreground" />
-                                                <span>{option.label}</span>
-                                            </div>
-                                        </SelectItem>
-                                    );
-                                })}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-                </div>
-
-                {/* Client Payment Form with project selector - flex-1 flex flex-col to propagate height */}
+                <TypeSelector />
                 <div className="flex-1 min-h-0 flex flex-col">
                     <ClientPaymentForm
                         organizationId={organizationId}
@@ -192,7 +249,7 @@ export function FinanceMovementForm({
                         financialData={financialData}
                         projects={projects}
                         showProjectSelector={true}
-                        onSuccess={onSuccess}
+                        onSuccess={handleSuccess}
                     />
                 </div>
             </div>
@@ -203,30 +260,7 @@ export function FinanceMovementForm({
     if (movementType === "client_payment" && !financialData) {
         return (
             <div className="flex flex-col h-full min-h-0">
-                {/* Type selector at top */}
-                <div className="mb-4">
-                    <FormGroup label="Tipo de Movimiento" required>
-                        <Select value={movementType} onValueChange={(v) => setMovementType(v as MovementTypeId | "")}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {MOVEMENT_TYPE_OPTIONS.map((option) => {
-                                    const Icon = option.icon;
-                                    return (
-                                        <SelectItem key={option.id} value={option.id}>
-                                            <div className="flex items-center gap-2">
-                                                <Icon className="h-4 w-4 text-muted-foreground" />
-                                                <span>{option.label}</span>
-                                            </div>
-                                        </SelectItem>
-                                    );
-                                })}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
-                </div>
-
+                <TypeSelector />
                 <div className="flex-1 flex items-center justify-center">
                     <p className="text-sm text-muted-foreground">
                         No hay datos financieros disponibles para registrar cobros.
@@ -420,7 +454,7 @@ export function FinanceMovementForm({
                     className="-mx-4 -mb-4 mt-6"
                     isLoading={isLoading}
                     submitLabel="Registrar Pago"
-                    onCancel={onCancel}
+                    onCancel={handleCancel}
                 />
             )}
         </form>

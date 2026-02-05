@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, Calendar, MoreHorizontal, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { IndexTypeForm } from "../components/forms/index-type-form";

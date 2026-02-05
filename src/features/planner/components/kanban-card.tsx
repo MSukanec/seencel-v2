@@ -26,7 +26,7 @@ import { MoreHorizontal, Archive, Trash2, RotateCcw, Pencil } from "lucide-react
 import { updateCard, deleteCard } from "@/features/planner/actions";
 import { useTransition, useOptimistic } from "react";
 import { toast } from "sonner";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 interface KanbanCardItemProps {
     card: KanbanCard;

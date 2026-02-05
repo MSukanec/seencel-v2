@@ -31,7 +31,7 @@ import { deleteCourse } from "@/features/academy/course-actions";
 import { useRouter } from "next/navigation";
 
 // Modals
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { CreateCourseForm } from "./create-course-form";
 import { GeneralForm, type EditableCourseData } from "@/features/academy/components/admin/course-details/general-form";
 

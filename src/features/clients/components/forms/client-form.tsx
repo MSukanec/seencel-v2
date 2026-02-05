@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createClientAction, updateClientAction } from "@/features/clients/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { ClientRole, ProjectClientView } from "../../types";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 

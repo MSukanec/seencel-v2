@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 /** Size variants controlling grid span */
 type BentoSize =
@@ -27,13 +27,15 @@ interface BentoCardProps extends React.HTMLAttributes<HTMLDivElement> {
     variant?: BentoVariant;
     /** Glow accent color (CSS color value) */
     glowColor?: string;
-    /** Content */
+    /** Main content (goes in Body) */
     children: React.ReactNode;
-    /** Hide header (for custom layouts) */
+    /** Footer content (optional) */
+    footer?: React.ReactNode;
+    /** Hide header completely */
     headerless?: boolean;
 }
 
-const sizeStyles: Record<BentoSize, string> = {
+export const sizeStyles: Record<BentoSize, string> = {
     sm: 'col-span-1 row-span-1',
     md: 'col-span-1 md:col-span-2 row-span-1',
     lg: 'col-span-1 md:col-span-2 row-span-2',
@@ -51,9 +53,19 @@ const variantStyles: Record<BentoVariant, string> = {
 /**
  * BentoCard - Flexible card component for Bento layouts
  * 
+ * Structure:
+ * - Header: Icon + Title + Subtitle (fixed height)
+ * - Body: Main content area (flex-1, expands)
+ * - Footer: Optional insights/actions (fixed height)
+ * 
  * @example
  * ```tsx
- * <BentoCard size="lg" variant="glass" title="Revenue">
+ * <BentoCard 
+ *   size="lg" 
+ *   title="Revenue" 
+ *   icon={<DollarSign />}
+ *   footer={<InsightBadge text="Up 12%" />}
+ * >
  *   <ChartComponent />
  * </BentoCard>
  * ```
@@ -66,6 +78,7 @@ export function BentoCard({
     variant = 'default',
     glowColor,
     headerless = false,
+    footer,
     className,
     children,
     style,
@@ -79,8 +92,8 @@ export function BentoCard({
     return (
         <Card
             className={cn(
-                "overflow-hidden transition-all duration-300",
-                "hover:scale-[1.02] hover:shadow-lg hover:border-primary/30",
+                "h-full flex flex-col overflow-hidden transition-all duration-300",
+                "hover:shadow-lg hover:border-primary/30",
                 sizeStyles[size],
                 variantStyles[variant],
                 className
@@ -88,26 +101,37 @@ export function BentoCard({
             style={{ ...style, ...glowStyle }}
             {...props}
         >
+            {/* === HEADER === */}
             {!headerless && title && (
-                <CardHeader className="pb-2 space-y-0">
-                    <div className="flex items-center gap-2">
-                        {icon && (
-                            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                                {icon}
-                            </div>
-                        )}
-                        <div>
-                            <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                            {subtitle && (
-                                <CardDescription className="text-xs">{subtitle}</CardDescription>
-                            )}
+                <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+                    {icon && (
+                        <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 text-primary">
+                            {icon}
                         </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-medium leading-tight truncate">{title}</h3>
+                        {subtitle && (
+                            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                        )}
                     </div>
-                </CardHeader>
+                </div>
             )}
-            <CardContent className={cn("h-full", !headerless && title && "pt-0")}>
+
+            {/* === BODY === */}
+            <div className={cn(
+                "flex-1 min-h-0 px-4",
+                !headerless && title ? "pb-3" : "py-3"
+            )}>
                 {children}
-            </CardContent>
+            </div>
+
+            {/* === FOOTER (Optional) === */}
+            {footer && (
+                <div className="px-4 py-2 border-t border-border/50 bg-muted/30">
+                    {footer}
+                </div>
+            )}
         </Card>
     );
 }

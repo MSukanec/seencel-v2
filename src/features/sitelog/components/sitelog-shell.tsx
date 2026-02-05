@@ -17,7 +17,7 @@ import { Star, Circle, Activity, AlertTriangle, HelpCircle } from "lucide-react"
 import { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { SitelogForm } from "./sitelog-form";
 import { deleteSiteLog } from "@/actions/sitelog";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";

@@ -7,7 +7,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { CheckboxGrid } from "../components/checkbox-grid";
 import { TasksParameterForm } from "../forms";
 import { toggleElementParameter } from "../actions";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { TaskElement, TaskParameter } from "../types";
 
 // ============================================================================

@@ -5,7 +5,7 @@ import { ContactWithRelations, ContactType } from "@/types/contact";
 import { Plus, LayoutGrid, List, Upload } from "lucide-react";
 import { ContactForm } from "@/features/contact/forms/contact-form";
 import { ContactsDataTable } from "./contacts-data-table";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { deleteContact } from "@/actions/contacts";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";

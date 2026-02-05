@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HeroSectionForm } from "./forms/hero-section-form";

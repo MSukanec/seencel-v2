@@ -601,8 +601,7 @@ export function DataTable<TData, TValue>({
                                                                     data-state={isSelected && "selected"}
                                                                     className={cn(
                                                                         "transition-colors hover:bg-transparent",
-                                                                        onRowClick && "cursor-pointer",
-                                                                        isSelected && "bg-primary/5 border-l-2 border-l-primary"
+                                                                        onRowClick && "cursor-pointer"
                                                                     )}
                                                                     onClick={(e) => {
                                                                         const target = e.target as HTMLElement;
@@ -635,8 +634,7 @@ export function DataTable<TData, TValue>({
                                                     data-state={isSelected && "selected"}
                                                     className={cn(
                                                         "transition-colors",
-                                                        onRowClick && "cursor-pointer",
-                                                        isSelected && "bg-primary/5 border-l-2 border-l-primary"
+                                                        onRowClick && "cursor-pointer"
                                                     )}
                                                     onClick={(e) => {
                                                         const target = e.target as HTMLElement;

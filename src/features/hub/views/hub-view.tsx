@@ -22,7 +22,7 @@ import { HeroCarousel, type HeroSlide } from "@/components/shared/hero-carousel"
 import type { UserProfile } from "@/types/user";
 import type { HeroSection } from "@/features/hero-sections/queries";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
-import { useOrganization } from "@/context/organization-context";
+import { useOrganization } from "@/stores/organization-store";
 
 interface HubViewProps {
     user: UserProfile | null;

@@ -1,5 +1,5 @@
-import { useOrganization } from "@/context/organization-context";
-import { useCurrency } from "@/providers/currency-context";
+import { useOrganization } from "@/stores/organization-store";
+import { useCurrency } from "@/stores/organization-store";
 import { useMemo } from "react";
 
 export function useFinancialFeatures() {

@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { UserNotification } from "@/features/notifications/queries";
 import { fetchUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/features/notifications/actions";
 import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/context/user-context";
+import { useUser } from "@/stores/user-store";
 
 // ============================================================================
 // SIDEBAR NOTIFICATIONS BUTTON
@@ -43,7 +43,7 @@ export function SidebarNotificationsButton({
     const t = useTranslations('Settings.Notifications');
     const locale = useLocale();
     const router = useRouter();
-    const { user } = useUser();
+    const user = useUser();
 
     // State
     const [open, setOpen] = React.useState(false);

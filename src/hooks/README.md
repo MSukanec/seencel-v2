@@ -1,119 +1,109 @@
-# 🎣 Hooks
+# Seencel Hooks
 
-## useMoney - Single Source of Truth para Dinero
+> **Auditado:** Febrero 2025 - Nivel Enterprise ✅
 
-> **CRÍTICO**: Este es el ÚNICO hook que debe usarse para operaciones monetarias.
-> Nunca implementes formateo o conversiones de moneda manualmente.
+## ¿Qué son los Hooks?
 
-### Importación
+Los hooks son **funciones reutilizables** que encapsulan lógica con estado de React.
+Todos los hooks deben usar hooks de React internamente (useState, useEffect, etc).
 
+---
+
+## Hooks Disponibles
+
+| Archivo | Propósito | Líneas |
+|---------|-----------|--------|
+| `use-money.ts` | Operaciones de dinero, formateo, display mode | 268 |
+| `use-optimistic-action.ts` | Updates optimistas con rollback (React 19) | 195 |
+| `use-sidebar-navigation.ts` | Items de navegación del sidebar | 312 |
+| `use-sidebar-data.ts` | Datos de org/proyectos para sidebar | 270 |
+| `use-financial-features.ts` | Flags de features financieros | 47 |
+
+---
+
+## Re-exports
+
+| Archivo | Propósito |
+|---------|-----------|
+| `use-query-patterns.ts` | Re-exporta `queryKeys` de `/lib/query-keys.ts` |
+
+---
+
+## Convenciones
+
+### Naming
+- **SIEMPRE** empezar con `use-`
+- Usar kebab-case: `use-my-hook.ts`
+- Extensión `.ts` (no `.tsx` a menos que retorne JSX)
+
+### Estructura
 ```tsx
-import { useMoney } from '@/hooks/use-money';
-```
+"use client";
 
-### Uso Básico
+import { useState, useCallback } from "react";
 
-```tsx
-function MyComponent() {
-  const money = useMoney();
-  
-  // Formatear un monto
-  const formatted = money.format(1500000); // "$ 1.500.000"
-  
-  // Calcular KPIs
-  const kpis = money.calculateKPIs(movements);
-  
-  return <div>{formatted}</div>;
+/**
+ * Descripción del hook
+ */
+export function useMyHook() {
+    // State
+    const [value, setValue] = useState(0);
+    
+    // Callbacks
+    const increment = useCallback(() => {
+        setValue(v => v + 1);
+    }, []);
+    
+    // Return
+    return { value, increment };
 }
 ```
 
-### API Completa
+### Reglas
+1. **Máximo ~150 líneas** - Si es más grande, considerar split
+2. **Single responsibility** - Un hook, una cosa
+3. **Memoización** - `useCallback` para funciones, `useMemo` para cálculos
+4. **Tipos explícitos** - Return type documentado
 
-```tsx
-const {
-  // ═══ CONFIGURACIÓN ═══
-  config,                 // MoneyConfig: currencies, rates, decimals
-  displayMode,            // 'mix' | 'functional' | 'secondary'
-  setDisplayMode,         // Cambiar modo de visualización
-  displayCurrencyCode,    // Código de moneda actual ('ARS' o 'USD')
-  primaryCurrencyCode,    // Siempre la moneda funcional
-  
-  // ═══ FORMATEO ═══
-  format,                 // (amount, currencyCode?) => "$ 1.500.000"
-  formatWithSign,         // (amount) => "+$ 1.500.000" 
-  formatCompact,          // (amount) => "$ 1.5M"
-  
-  // ═══ CONVERSIÓN ═══
-  calculateDisplayAmount, // Convierte MoneyInput según displayMode
-  createMoney,            // Crea Money object desde MoneyInput
-  
-  // ═══ AGREGACIÓN ═══
-  sum,                    // Suma con breakdown por moneda
-  sumWithSign,            // Separa ingresos (amount_sign=1) / egresos (amount_sign=-1)
-  
-  // ═══ KPIs ═══
-  calculateKPIs,          // { balance, income, expenses, ...trends }
-  calculateCashFlow,      // Data para gráficos de evolución mensual
-  calculateWalletBalances,// Saldos por wallet/cuenta
-  
-} = useMoney();
-```
+---
 
-### DisplayMode
+## ¿Qué NO va en /hooks/?
 
-| Modo | Descripción |
-|------|-------------|
-| `'mix'` | Muestra cada monto en su moneda original. Para sumas, agrupa por moneda. |
-| `'functional'` | Todo convertido a moneda primaria (típicamente ARS). USD × rate = ARS |
-| `'secondary'` | Todo convertido a moneda secundaria (típicamente USD). ARS ÷ rate = USD |
+| NO | Dónde va |
+|----|----------|
+| Funciones sin hooks | `/lib/` |
+| Constantes/configs | `/lib/` |
+| Types/interfaces | `/types/` |
+| Server actions | `/actions/` |
+| Hooks específicos de feature | `/features/[feature]/hooks/` |
 
-### Ejemplo: Sumar con Breakdown
+---
 
-```tsx
-const { sum, displayMode } = useMoney();
+## Hooks por Feature
 
-const payments = [
-  { amount: 1000, currency_code: 'USD', exchange_rate: 1200 },
-  { amount: 50000, currency_code: 'ARS' },
-];
+Algunos hooks viven en sus features porque son específicos:
 
-const result = sum(payments);
-// En displayMode='functional':
-// result.total = 1,250,000 (1000*1200 + 50000)
-// result.breakdown = [
-//   { currencyCode: 'ARS', nativeTotal: 50000, isPrimary: true },
-//   { currencyCode: 'USD', nativeTotal: 1000, isPrimary: false },
-// ]
-```
+| Hook | Ubicación | Razón |
+|------|-----------|-------|
+| `useInsightPersistence` | `features/insights/hooks/` | Solo para Insights |
+| `useOnboardingProgress` | `features/onboarding/checklist/` | Solo para Onboarding |
+| `useProjectHealth` | `features/project-health/hooks/` | Solo para Project Health |
 
-### Ejemplo: KPIs
+---
 
-```tsx
-const { calculateKPIs, format } = useMoney();
+## Hooks por Categoría
 
-const kpis = calculateKPIs(movements);
-// kpis = {
-//   balance: 1500000,
-//   income: 2000000,
-//   expenses: 500000,
-//   incomeVsExpensesRatio: 4.0,
-//   ...
-// }
+### 💰 Finanzas
+- `use-money.ts` - Operaciones de dinero completas
+- `use-financial-features.ts` - Feature flags financieros
 
-<DashboardKpiCard amount={kpis.balance} />
-```
+### 🔄 Data/Cache
+- `use-optimistic-action.ts` - Updates optimistas
 
-### ⚠️ Reglas
+### 🎨 UI/Layout
+- `use-sidebar-data.ts` - Datos del sidebar
+- `use-sidebar-navigation.ts` - Items de navegación
 
-1. **Nunca usar `toLocaleString()` para dinero** - Usar `money.format()`
-2. **Nunca sumar amounts manualmente** - Usar `money.sum()`
-3. **Nunca hardcodear exchange rates** - Vienen del config
-4. **Nunca asumir 2 decimales** - Usar `config.decimalPlaces`
+---
 
-### Otros Hooks (No Monetarios)
-
-| Hook | Uso |
-|------|-----|
-| `useModal` | Gestión de modales |
-| `useCurrency` | Contexto de moneda (interno, preferir useMoney) |
-| `useDisplayMode` | Modo de display (interno, preferir useMoney) |
+**Última actualización:** Febrero 2025

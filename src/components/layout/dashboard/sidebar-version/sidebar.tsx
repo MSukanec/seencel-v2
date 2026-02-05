@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils";
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { SidebarContent } from "./sidebar-content";
 import { UserProfile } from "@/types/user";
 

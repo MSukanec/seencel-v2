@@ -4,7 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 import { CalendarEvent } from "@/features/planner/types";
 import { CalendarEventForm } from "../forms/calendar-event-form";

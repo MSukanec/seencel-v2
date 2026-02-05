@@ -89,6 +89,7 @@ export async function getQuoteItems(quoteId: string) {
             )
         `)
         .eq("quote_id", quoteId)
+        .eq("is_deleted", false)
         .order("sort_key", { ascending: true });
 
     if (error) {

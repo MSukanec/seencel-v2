@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, ChevronLeft, ChevronRight, MessageSquare, Layers, ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { cn } from "@/lib/utils";
 
 interface ForumContainerProps {

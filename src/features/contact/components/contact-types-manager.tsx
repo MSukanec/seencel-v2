@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { deleteContactType } from "@/actions/contacts"; // Need to update this action
 import { ContactType } from "@/types/contact";
 import { ContactTypeForm } from "./contact-type-form";

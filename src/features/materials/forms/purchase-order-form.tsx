@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Plus, Trash2, ClipboardList } from "lucide-react";
 import { FormFooter } from "@/components/shared/forms/form-footer";

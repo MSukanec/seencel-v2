@@ -1,6 +1,6 @@
 "use client";
 
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { ImportConfig } from "@/lib/import-utils";

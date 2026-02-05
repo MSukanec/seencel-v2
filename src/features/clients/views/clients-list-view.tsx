@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Users } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { ClientForm } from "../components/forms/client-form";
 import { deleteClientAction } from "../actions";
 import { toast } from "sonner";

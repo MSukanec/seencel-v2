@@ -14,7 +14,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { LaborTypeWithPrice } from "../types";
 import { LaborPriceForm } from "../forms/labor-price-form";
 import { toast } from "sonner";

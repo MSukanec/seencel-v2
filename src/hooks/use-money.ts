@@ -19,7 +19,7 @@
 "use client";
 
 import { useCallback, useMemo } from 'react';
-import { useCurrencyOptional } from '@/providers/currency-context';
+import { useCurrencyOptional } from '@/stores/organization-store';
 import {
     MoneyConfig,
     MoneyInput,
@@ -106,6 +106,9 @@ export interface UseMoneyReturn {
 
     /** Format compact (e.g., 1.5M) */
     formatCompact: (amount: number, currencyCode?: string) => string;
+
+    /** Format number only (no currency symbol) */
+    formatNumber: (amount: number) => string;
 
     // === Aggregation ===
     /** Sum an array of monetary items */
@@ -200,6 +203,13 @@ export function useMoney(options: UseMoneyOptions = {}): UseMoneyReturn {
         return formatAmount(amount, currencyCode || displayCurrencyCode, config, { compact: true });
     }, [config, displayCurrencyCode]);
 
+    const formatNumberFn = useCallback((amount: number): string => {
+        return amount.toLocaleString(config.locale, {
+            minimumFractionDigits: config.decimalPlaces,
+            maximumFractionDigits: config.decimalPlaces
+        });
+    }, [config.locale, config.decimalPlaces]);
+
     // === Aggregation functions ===
     const sum = useCallback((items: MoneyInput[]) => {
         const result = sumMoney(items, displayMode, config);
@@ -243,6 +253,7 @@ export function useMoney(options: UseMoneyOptions = {}): UseMoneyReturn {
         format,
         formatWithSign,
         formatCompact,
+        formatNumber: formatNumberFn,
 
         // Aggregation
         sum,

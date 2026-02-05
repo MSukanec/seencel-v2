@@ -4,7 +4,7 @@ import { FormFooter } from "@/components/shared/forms/form-footer";
 
 import { createProject, updateProject } from "@/features/projects/actions";
 
-import { useDrawer } from "@/providers/drawer-store";
+import { useDrawer } from "@/stores/drawer-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

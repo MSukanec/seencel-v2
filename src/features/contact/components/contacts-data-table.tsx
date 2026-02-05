@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { ContactForm } from "@/features/contact/forms/contact-form";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { Trash2, Plus } from "lucide-react";
 import { ContactCard } from "./contact-card";

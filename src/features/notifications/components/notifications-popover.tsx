@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { UserNotification } from "@/features/notifications/queries";
 import { fetchUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/features/notifications/actions";
 import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/context/user-context";
+import { useUser } from "@/stores/user-store";
 
 interface NotificationsPopoverProps {
     initialNotifications?: UserNotification[];
@@ -31,7 +31,7 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
     const t = useTranslations('Settings.Notifications'); // Reuse existing translations
     const locale = useLocale();
     const router = useRouter();
-    const { user } = useUser();
+    const user = useUser();
 
     // State
     const [open, setOpen] = React.useState(false);

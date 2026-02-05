@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { ContextSidebar } from "@/providers/context-sidebar-provider";
+import { ContextSidebar } from "@/stores/sidebar-store";
 import { BlockCatalog } from "../components/block-catalog";
 import { ReportCanvas } from "../components/report-canvas";
 import { BlockConfigPanel } from "../components/block-config-panel";

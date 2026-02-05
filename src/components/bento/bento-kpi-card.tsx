@@ -1,10 +1,22 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TrendingUp, TrendingDown, Minus, Maximize2 } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    Tooltip,
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    CartesianGrid,
+    YAxis,
+} from "recharts";
 
 /** Chart type for embedded visualization */
 type ChartType = 'sparkline' | 'area' | 'bar' | 'none';
@@ -15,9 +27,17 @@ type ChartPosition = 'background' | 'bottom' | 'right';
 /** Size variants */
 type BentoSize = 'sm' | 'md' | 'lg' | 'wide' | 'tall';
 
+/** Chart data point with label */
+export interface ChartDataPoint {
+    label: string;
+    value: number;
+}
+
 interface BentoKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     /** KPI title */
     title: string;
+    /** Description/subtitle */
+    subtitle?: string;
     /** Display value (pre-formatted) */
     value?: string | number;
     /** Raw monetary amount (uses useMoney for formatting) */
@@ -32,8 +52,8 @@ interface BentoKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     icon?: React.ReactNode;
     /** Embedded chart type */
     chartType?: ChartType;
-    /** Chart data points */
-    chartData?: number[];
+    /** Chart data points (legacy number[] or new ChartDataPoint[]) */
+    chartData?: number[] | ChartDataPoint[];
     /** Chart color (CSS color) */
     chartColor?: string;
     /** Chart position */
@@ -42,6 +62,10 @@ interface BentoKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     size?: BentoSize;
     /** Accent color for glow effect */
     accentColor?: string;
+    /** Footer content */
+    footer?: React.ReactNode;
+    /** Enable expand to fullscreen */
+    expandable?: boolean;
 }
 
 const sizeStyles: Record<BentoSize, string> = {
@@ -53,140 +77,253 @@ const sizeStyles: Record<BentoSize, string> = {
 };
 
 /**
- * Sparkline SVG component
+ * Normalize chart data to ChartDataPoint[] format
  */
-function Sparkline({
-    data,
-    color = '#a3e635',
-    height = 60,
-    fill = false
+function normalizeChartData(data: number[] | ChartDataPoint[] | undefined): ChartDataPoint[] {
+    if (!data || data.length === 0) return [];
+
+    // Check if already in ChartDataPoint format
+    if (typeof data[0] === 'object' && 'label' in data[0]) {
+        return data as ChartDataPoint[];
+    }
+
+    // Convert number[] to ChartDataPoint[] with index labels
+    return (data as number[]).map((value, index) => ({
+        label: String(index + 1),
+        value
+    }));
+}
+
+/**
+ * Custom tooltip for Recharts
+ */
+function CustomTooltip({
+    active,
+    payload,
+    color,
+    formatValue
 }: {
-    data: number[];
-    color?: string;
-    height?: number;
-    fill?: boolean;
+    active?: boolean;
+    payload?: Array<{ value: number; payload: ChartDataPoint }>;
+    color: string;
+    formatValue?: (value: number) => string;
 }) {
-    const points = useMemo(() => {
-        if (!data || data.length < 2) return '';
-        const max = Math.max(...data);
-        const min = Math.min(...data);
-        const range = max - min || 1;
-        const width = 100;
-        const stepX = width / (data.length - 1);
+    if (!active || !payload || !payload.length) return null;
 
-        return data.map((d, i) => {
-            const x = i * stepX;
-            const y = height - ((d - min) / range) * (height - 10) - 5;
-            return `${x},${y}`;
-        }).join(' ');
-    }, [data, height]);
-
-    if (!data || data.length < 2) return null;
-
-    const fillPath = fill ? `M0,${height} L${points} L100,${height} Z` : '';
+    const data = payload[0];
+    const formattedValue = formatValue ? formatValue(data.value) : data.value.toLocaleString('es-AR');
 
     return (
-        <svg
-            viewBox={`0 0 100 ${height}`}
-            preserveAspectRatio="none"
-            className="w-full h-full"
-        >
-            {fill && (
-                <defs>
-                    <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={color} stopOpacity={0} />
-                    </linearGradient>
-                </defs>
-            )}
-            {fill && (
-                <path
-                    d={`M0,${height} L${points} L100,${height} Z`}
-                    fill="url(#sparkFill)"
-                />
-            )}
-            <polyline
-                points={points}
-                fill="none"
-                stroke={color}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
+        <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-xl">
+            <p className="text-xs text-muted-foreground">{data.payload.label}</p>
+            <p className="text-sm font-semibold" style={{ color }}>{formattedValue}</p>
+        </div>
     );
 }
 
 /**
- * Bar chart SVG component
+ * Mini sparkline chart (for inline display)
+ */
+function MiniSparkline({
+    data,
+    color,
+    fill = false,
+    showLabels = false
+}: {
+    data: ChartDataPoint[];
+    color: string;
+    fill?: boolean;
+    showLabels?: boolean;
+}) {
+    if (data.length < 2) return null;
+
+    return (
+        <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <defs>
+                    <linearGradient id={`gradient-${color.replace(/[^a-z0-9]/gi, '')}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity={fill ? 0.4 : 0} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.05} />
+                    </linearGradient>
+                </defs>
+                <YAxis hide domain={[0, 'auto']} />
+                {showLabels && (
+                    <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+                        interval="preserveStartEnd"
+                    />
+                )}
+                <Tooltip
+                    content={<CustomTooltip color={color} />}
+                    cursor={{ stroke: color, strokeOpacity: 0.3, strokeDasharray: '3 3' }}
+                />
+                <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={2.5}
+                    fill={`url(#gradient-${color.replace(/[^a-z0-9]/gi, '')})`}
+                    dot={false}
+                    activeDot={{ r: 4, fill: color, stroke: 'var(--background)', strokeWidth: 2 }}
+                    isAnimationActive={false}
+                />
+            </AreaChart>
+        </ResponsiveContainer>
+    );
+}
+
+/**
+ * Mini bar chart
  */
 function MiniBarChart({
     data,
-    color = '#a3e635',
-    height = 60
+    color,
+    showLabels = false
 }: {
-    data: number[];
-    color?: string;
-    height?: number;
+    data: ChartDataPoint[];
+    color: string;
+    showLabels?: boolean;
 }) {
-    if (!data || data.length < 1) return null;
-
-    const max = Math.max(...data);
-    const barWidth = 100 / data.length - 2;
+    if (data.length < 1) return null;
 
     return (
-        <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="w-full h-full">
-            {data.map((value, i) => {
-                const barHeight = (value / max) * (height - 10);
-                const x = (100 / data.length) * i + 1;
-                return (
-                    <rect
-                        key={i}
-                        x={x}
-                        y={height - barHeight}
-                        width={barWidth}
-                        height={barHeight}
-                        rx={2}
-                        fill={color}
-                        opacity={0.8 + (i / data.length) * 0.2}
+        <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <YAxis hide domain={[0, 'auto']} />
+                {showLabels && (
+                    <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
                     />
-                );
-            })}
-        </svg>
+                )}
+                <Tooltip
+                    content={<CustomTooltip color={color} />}
+                    cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                />
+                <Bar
+                    dataKey="value"
+                    fill={color}
+                    radius={[4, 4, 0, 0]}
+                    opacity={0.85}
+                    isAnimationActive={false}
+                />
+            </BarChart>
+        </ResponsiveContainer>
+    );
+}
+
+/**
+ * Full chart for expanded view
+ */
+function FullChart({
+    data,
+    color,
+    chartType,
+    formatValue
+}: {
+    data: ChartDataPoint[];
+    color: string;
+    chartType: ChartType;
+    formatValue?: (value: number) => string;
+}) {
+    if (chartType === 'bar') {
+        return (
+            <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={data} margin={{ top: 20, right: 30, bottom: 60, left: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                    <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                    />
+                    <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                        tickFormatter={(value) => formatValue ? formatValue(value) : value.toLocaleString('es-AR')}
+                    />
+                    <Tooltip content={<CustomTooltip color={color} formatValue={formatValue} />} />
+                    <Bar
+                        dataKey="value"
+                        fill={color}
+                        radius={[6, 6, 0, 0]}
+                    />
+                </BarChart>
+            </ResponsiveContainer>
+        );
+    }
+
+    return (
+        <ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={data} margin={{ top: 20, right: 30, bottom: 60, left: 60 }}>
+                <defs>
+                    <linearGradient id="fullGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.05} />
+                    </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                <XAxis
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                />
+                <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                    tickFormatter={(value) => formatValue ? formatValue(value) : value.toLocaleString('es-AR')}
+                />
+                <Tooltip content={<CustomTooltip color={color} formatValue={formatValue} />} />
+                <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={3}
+                    fill="url(#fullGradient)"
+                    dot={{ r: 4, fill: color, stroke: 'var(--background)', strokeWidth: 2 }}
+                    activeDot={{ r: 6, fill: color, stroke: 'var(--background)', strokeWidth: 2 }}
+                />
+            </AreaChart>
+        </ResponsiveContainer>
     );
 }
 
 /**
  * BentoKpiCard - KPI card with integrated chart visualization
  * 
- * @example
- * ```tsx
- * <BentoKpiCard
- *   title="Revenue"
- *   amount={94127}
- *   trend={{ value: "+13%", direction: "up" }}
- *   chartType="area"
- *   chartData={[10, 25, 15, 30, 45, 35, 50]}
- *   chartPosition="background"
- * />
- * ```
+ * Structure: Header (title + icon) → Body (value + chart) → Footer (optional)
  */
 export function BentoKpiCard({
     title,
+    subtitle,
     value,
     amount,
     trend,
     icon,
     chartType = 'none',
     chartData,
-    chartColor = '#a3e635',
+    chartColor = 'oklch(69.766% 0.16285 126.686)',
     chartPosition = 'bottom',
     size = 'sm',
     accentColor,
+    footer,
+    expandable = false,
     className,
     ...props
 }: BentoKpiCardProps) {
     const money = useMoney();
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Normalize chart data
+    const normalizedData = useMemo(() => normalizeChartData(chartData), [chartData]);
 
     // Format display value
     const displayValue = useMemo(() => {
@@ -197,88 +334,161 @@ export function BentoKpiCard({
     }, [amount, value, money]);
 
     // Render chart based on type and position
-    const renderChart = () => {
-        if (chartType === 'none' || !chartData) return null;
+    // Render chart based on type and position
+    const renderChart = (showLabels = false) => {
+        if (chartType === 'none' || normalizedData.length === 0) return null;
 
-        const chartHeight = chartPosition === 'background' ? 80 : 50;
+        const hasEnoughDataForLabels = normalizedData.length <= 12;
 
         return (
             <div className={cn(
-                "pointer-events-none",
+                "w-full min-h-0",
                 chartPosition === 'background' && "absolute inset-0 flex items-end opacity-50",
-                chartPosition === 'bottom' && "mt-auto h-12",
-                chartPosition === 'right' && "absolute right-4 top-1/2 -translate-y-1/2 w-24 h-16"
+                chartPosition === 'bottom' && "flex-1",
+                chartPosition === 'right' && "absolute right-3 top-1/2 -translate-y-1/2 w-24 h-14"
             )}>
                 {chartType === 'sparkline' || chartType === 'area' ? (
-                    <Sparkline
-                        data={chartData}
+                    <MiniSparkline
+                        data={normalizedData}
                         color={chartColor}
-                        height={chartHeight}
                         fill={chartType === 'area'}
+                        showLabels={showLabels && hasEnoughDataForLabels}
                     />
                 ) : chartType === 'bar' ? (
-                    <MiniBarChart data={chartData} color={chartColor} height={chartHeight} />
+                    <MiniBarChart
+                        data={normalizedData}
+                        color={chartColor}
+                        showLabels={showLabels && hasEnoughDataForLabels}
+                    />
                 ) : null}
             </div>
         );
     };
 
     return (
-        <Card
-            className={cn(
-                "relative overflow-hidden transition-all duration-300",
-                "bg-card/60 backdrop-blur-sm border-border/50",
-                "hover:scale-[1.02] hover:shadow-lg hover:border-primary/30",
-                sizeStyles[size],
-                className
-            )}
-            style={accentColor ? {
-                boxShadow: `0 0 40px -10px ${accentColor}40`
-            } : undefined}
-            {...props}
-        >
-            <CardContent className="p-5 h-full flex flex-col relative z-10">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">{title}</span>
+        <>
+            <Card
+                className={cn(
+                    "h-full flex flex-col relative overflow-hidden transition-all duration-300",
+                    "bg-card/60 backdrop-blur-sm border-border/50",
+                    "hover:shadow-lg hover:border-primary/30",
+                    sizeStyles[size],
+                    className
+                )}
+                style={accentColor ? {
+                    boxShadow: `0 0 40px -10px ${accentColor}40`
+                } : undefined}
+                {...props}
+            >
+                {/* === HEADER === */}
+                <div className="flex items-center gap-2 px-4 pt-3 pb-1">
                     {icon && (
-                        <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 text-primary">
                             {icon}
                         </div>
                     )}
-                </div>
-
-                {/* Value */}
-                <div className="flex items-baseline gap-2 my-1">
-                    <span className="text-3xl font-bold tracking-tight">{displayValue}</span>
-                </div>
-
-                {/* Trend */}
-                {trend && (
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className={cn(
-                            "flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full",
-                            trend.direction === 'up' && "bg-emerald-500/10 text-emerald-500",
-                            trend.direction === 'down' && "bg-red-500/10 text-red-500",
-                            trend.direction === 'neutral' && "bg-muted text-muted-foreground"
-                        )}>
-                            {trend.direction === 'up' && <TrendingUp className="w-3 h-3" />}
-                            {trend.direction === 'down' && <TrendingDown className="w-3 h-3" />}
-                            {trend.direction === 'neutral' && <Minus className="w-3 h-3" />}
-                            {trend.value}
-                        </span>
-                        {trend.label && (
-                            <span className="text-xs text-muted-foreground">{trend.label}</span>
+                    <div className="min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate block">{title}</span>
+                        {subtitle && (
+                            <span className="text-xs text-muted-foreground truncate block">{subtitle}</span>
                         )}
                     </div>
+                    {expandable && chartType !== 'none' && normalizedData.length > 0 && (
+                        <button
+                            onClick={() => setIsExpanded(true)}
+                            className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                            title="Expandir gráfico"
+                        >
+                            <Maximize2 className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
+                {/* === BODY === */}
+                <div className="flex-1 min-h-0 px-4 pb-0 flex flex-col relative z-10">
+                    {/* Value + Trend */}
+                    <div className="shrink-0 py-1 mb-3">
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-bold tracking-tight">{displayValue}</span>
+                        </div>
+
+                        {/* Trend */}
+                        {trend && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={cn(
+                                    "flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full",
+                                    trend.direction === 'up' && "bg-amount-positive/10 text-amount-positive",
+                                    trend.direction === 'down' && "bg-amount-negative/10 text-amount-negative",
+                                    trend.direction === 'neutral' && "bg-muted text-muted-foreground"
+                                )}>
+                                    {trend.direction === 'up' && <TrendingUp className="w-3 h-3" />}
+                                    {trend.direction === 'down' && <TrendingDown className="w-3 h-3" />}
+                                    {trend.direction === 'neutral' && <Minus className="w-3 h-3" />}
+                                    {trend.value}
+                                </span>
+                                {trend.label && (
+                                    <span className="text-xs text-muted-foreground">{trend.label}</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Chart (bottom position) - takes remaining space */}
+                    {chartPosition === 'bottom' && renderChart(true)}
+                </div>
+
+                {/* Background Chart */}
+                {chartPosition === 'background' && renderChart(false)}
+
+                {/* Right Chart */}
+                {chartPosition === 'right' && renderChart(false)}
+
+                {/* === FOOTER (Optional) === */}
+                {footer && (
+                    <div className="px-4 py-2 border-t border-border/50 bg-muted/30">
+                        {footer}
+                    </div>
                 )}
+            </Card>
 
-                {/* Chart */}
-                {chartPosition !== 'background' && renderChart()}
-            </CardContent>
-
-            {/* Background Chart */}
-            {chartPosition === 'background' && renderChart()}
-        </Card>
+            {/* Expanded Chart Dialog */}
+            <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            {icon}
+                            <span>{title}</span>
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <div className="text-3xl font-bold mb-2">{displayValue}</div>
+                        {trend && (
+                            <div className="flex items-center gap-2 mb-6">
+                                <span className={cn(
+                                    "flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-full",
+                                    trend.direction === 'up' && "bg-amount-positive/10 text-amount-positive",
+                                    trend.direction === 'down' && "bg-amount-negative/10 text-amount-negative",
+                                    trend.direction === 'neutral' && "bg-muted text-muted-foreground"
+                                )}>
+                                    {trend.direction === 'up' && <TrendingUp className="w-4 h-4" />}
+                                    {trend.direction === 'down' && <TrendingDown className="w-4 h-4" />}
+                                    {trend.direction === 'neutral' && <Minus className="w-4 h-4" />}
+                                    {trend.value}
+                                </span>
+                                {trend.label && (
+                                    <span className="text-sm text-muted-foreground">{trend.label}</span>
+                                )}
+                            </div>
+                        )}
+                        <FullChart
+                            data={normalizedData}
+                            color={chartColor}
+                            chartType={chartType}
+                            formatValue={(v) => money.format(v)}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

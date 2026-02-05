@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Home, ArrowLeft, Zap, Hammer, HardHat, Construction, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 
 interface ErrorPageProps {

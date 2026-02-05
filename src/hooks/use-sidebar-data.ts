@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useOrganization } from "@/context/organization-context";
+import { useOrganization } from "@/stores/organization-store";
 import { Project } from "@/components/layout/dashboard/sidebar-version/buttons";
 
 // Extended Organization type with founder info

@@ -7,7 +7,7 @@ import { DeleteReplacementModal } from "@/components/shared/forms/general/delete
 import { TasksDivisionForm } from "../forms";
 import { deleteTaskDivision, reorderTaskDivisions } from "../actions";
 import { TaskDivision } from "@/features/tasks/types";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";

@@ -7,7 +7,7 @@ import { ConstructionTaskForm } from "../forms/construction-task-form";
 import { deleteConstructionTask, updateConstructionTaskStatus } from "../actions";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import {
     AlertDialog,
     AlertDialogAction,

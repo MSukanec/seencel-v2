@@ -15,7 +15,7 @@ import { MapPin, Calendar, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHori
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore } from "@/stores/layout-store";
 
 interface ProjectCardProps {
     project: Project;

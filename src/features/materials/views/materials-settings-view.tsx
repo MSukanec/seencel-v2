@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ContentLayout } from "@/components/layout";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import {
     Table,
     TableBody,

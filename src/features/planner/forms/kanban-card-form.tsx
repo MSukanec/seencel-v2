@@ -29,7 +29,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { createCard, updateCard } from "@/features/planner/actions";
 import { PRIORITY_CONFIG, KanbanPriority, KanbanCard, KanbanMember } from "@/features/planner/types";
 import { Project } from "@/types/project";

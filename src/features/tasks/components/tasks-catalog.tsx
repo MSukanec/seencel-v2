@@ -15,8 +15,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useModal } from "@/providers/modal-store";
-import { ContextSidebar } from "@/providers/context-sidebar-provider";
+import { useModal } from "@/stores/modal-store";
+import { ContextSidebar } from "@/stores/sidebar-store";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 
 import { DivisionsSidebar } from "./divisions-sidebar";

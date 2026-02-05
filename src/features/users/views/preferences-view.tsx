@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Monitor, PanelLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLayoutStore } from "@/store/layout-store";
+import { useLayoutStore } from "@/stores/layout-store";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { useTransition } from "react";
 import { updateUserPreferences } from "@/features/users/actions";

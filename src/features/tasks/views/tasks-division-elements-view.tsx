@@ -7,7 +7,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { CheckboxGrid } from "../components/checkbox-grid";
 import { TasksElementForm } from "../forms";
 import { toggleDivisionElement } from "../actions";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { TaskDivision, TaskElement, Unit } from "../types";
 
 // ============================================================================

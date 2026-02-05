@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Video } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CoursesTable } from "@/features/academy/components/admin/courses-table";

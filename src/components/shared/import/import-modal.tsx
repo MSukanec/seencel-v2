@@ -10,7 +10,7 @@ import { ImportStepConflicts } from "./steps/step-conflicts";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { updateMappingPatterns } from "@/actions/import-mapping";
 import { getAllValuePatternsForEntity, updateValuePatterns } from "@/actions/import-values";
 import { FormFooter } from "@/components/shared/forms/form-footer";

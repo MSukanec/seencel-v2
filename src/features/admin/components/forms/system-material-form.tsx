@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { createSystemMaterial, updateSystemMaterial } from "../../material-actions";
 import type { SystemMaterial, MaterialCategory, Unit } from "../../queries";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 interface SystemMaterialFormProps {
     initialData?: SystemMaterial | null;

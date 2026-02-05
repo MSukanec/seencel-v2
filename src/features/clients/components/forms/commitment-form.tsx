@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useState, useEffect } from "react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";

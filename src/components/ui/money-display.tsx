@@ -1,6 +1,6 @@
 "use client";
 
-import { useCurrencyOptional } from '@/providers/currency-context';
+import { useCurrencyOptional } from '@/stores/organization-store';
 import { Currency } from '@/types/currency';
 import { formatCurrency } from '@/lib/currency-utils';
 import { cn } from '@/lib/utils';

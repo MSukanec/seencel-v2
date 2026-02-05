@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
@@ -46,14 +46,19 @@ export function SubcontractPaymentForm({
     const [date, setDate] = useState<Date | undefined>(
         initialData?.payment_date ? new Date(initialData.payment_date) : new Date()
     );
-    const [subcontractId, setSubcontractId] = useState(initialData?.subcontract_id || "");
+    const [subcontractId, setSubcontractId] = useState(
+        initialData?.subcontract_id || (subcontracts.length === 1 ? subcontracts[0].id : "")
+    );
     const [walletId, setWalletId] = useState(initialData?.wallet_id || defaultWalletId || "");
     const [amount, setAmount] = useState(initialData?.amount || "");
     const [currencyId, setCurrencyId] = useState(initialData?.currency_id || defaultCurrencyId || "");
-    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate || "1.0000");
+    const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate || "");
     const [status, setStatus] = useState(initialData?.status || "confirmed");
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [reference, setReference] = useState(initialData?.reference || "");
+
+    // Determine if we should show subcontract selector
+    const showSubcontractSelector = subcontracts.length > 1;
 
     // File Upload State
     const [files, setFiles] = useState<UploadedFile[]>(
@@ -182,27 +187,29 @@ export function SubcontractPaymentForm({
                         </FormGroup>
                     </div>
 
-                    {/* Row 2: Subcontract (full width) */}
-                    <FormGroup label="Subcontrato" required>
-                        <Select value={subcontractId} onValueChange={setSubcontractId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar subcontrato" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {subcontracts.map((sub: any) => {
-                                    // Use title field (from subcontracts-subcontract-form.tsx)
-                                    const subTitle = sub.title || `Subcontrato #${sub.id.slice(0, 8)}`;
-                                    const contactName = sub.contact?.full_name || sub.contact?.company_name;
-                                    const displayLabel = contactName ? `${subTitle} - ${contactName}` : subTitle;
-                                    return (
-                                        <SelectItem key={sub.id} value={sub.id}>
-                                            {displayLabel}
-                                        </SelectItem>
-                                    );
-                                })}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    {/* Row 2: Subcontract (only show if multiple subcontracts) */}
+                    {showSubcontractSelector && (
+                        <FormGroup label="Subcontrato" required>
+                            <Select value={subcontractId} onValueChange={setSubcontractId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar subcontrato" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {subcontracts.map((sub: any) => {
+                                        // Use title field (from subcontracts-subcontract-form.tsx)
+                                        const subTitle = sub.title || `Subcontrato #${sub.id.slice(0, 8)}`;
+                                        const contactName = sub.contact?.full_name || sub.contact?.company_name;
+                                        const displayLabel = contactName ? `${subTitle} - ${contactName}` : subTitle;
+                                        return (
+                                            <SelectItem key={sub.id} value={sub.id}>
+                                                {displayLabel}
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+                    )}
 
                     {/* Row 3: Wallet & Amount */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

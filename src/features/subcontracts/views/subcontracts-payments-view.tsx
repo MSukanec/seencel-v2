@@ -8,8 +8,9 @@ import { createDateColumn, createTextColumn, createMoneyColumn } from "@/compone
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Plus, Banknote, Upload, FileSpreadsheet, Trash2 } from "lucide-react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { SubcontractPaymentForm } from "../forms/subcontract-payment-form";
 import { deleteSubcontractPaymentAction, bulkDeleteSubcontractPaymentsAction } from "@/features/subcontracts/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
@@ -303,8 +304,55 @@ export function SubcontractsPaymentsView({
         }
     };
 
+    // Early return for empty state with Toolbar always visible
+    if (data.length === 0) {
+        return (
+            <div className="h-full flex flex-col">
+                <Toolbar
+                    portalToHeader
+                    actions={[
+                        {
+                            label: "Nuevo Pago",
+                            icon: Plus,
+                            onClick: handleNewPayment
+                        },
+                        {
+                            label: "Importar",
+                            icon: FileSpreadsheet,
+                            onClick: handleOpenImport,
+                            variant: "secondary"
+                        }
+                    ]}
+                />
+                <div className="flex-1 flex items-center justify-center">
+                    <EmptyState
+                        icon={Banknote}
+                        title="Sin pagos registrados"
+                        description="Registra el primer pago de subcontratos."
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-full flex flex-col">
+            <Toolbar
+                portalToHeader
+                actions={[
+                    {
+                        label: "Nuevo Pago",
+                        icon: Plus,
+                        onClick: handleNewPayment
+                    },
+                    {
+                        label: "Importar",
+                        icon: FileSpreadsheet,
+                        onClick: handleOpenImport,
+                        variant: "secondary"
+                    }
+                ]}
+            />
             <DataTable
                 columns={columns}
                 data={optimisticPayments}
@@ -331,13 +379,6 @@ export function SubcontractsPaymentsView({
                         </Button>
                     );
                 }}
-                emptyState={
-                    <EmptyState
-                        icon={Banknote}
-                        title="Sin pagos registrados"
-                        description="Registra el primer pago de subcontratos."
-                    />
-                }
                 initialSorting={[{ id: "payment_date", desc: true }]}
             />
 

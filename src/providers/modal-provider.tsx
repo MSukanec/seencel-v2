@@ -1,11 +1,11 @@
 "use client";
 
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { cn } from "@/lib/utils";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 import { CopyPlus, X } from "lucide-react";
-import { ModalUrlSynchronizer } from "./modal-url-sync";
+import { ModalUrlSynchronizer } from "@/stores/modal-url-sync";
 import { motion } from "framer-motion";
 
 // Independent Overlay for Global System

@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCurrency } from "@/providers/currency-context";
+import { useCurrency } from "@/stores/organization-store";
 import { useFinancialFeatures } from "@/hooks/use-financial-features";
 import type { DisplayCurrency } from "@/types/currency";
 

@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { createBoard, updateBoard } from "@/features/planner/actions";
 import { DEFAULT_LIST_COLORS, KanbanBoard } from "@/features/planner/types";
 import { cn } from "@/lib/utils";

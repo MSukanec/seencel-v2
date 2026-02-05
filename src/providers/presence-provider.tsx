@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useOrganization } from "@/context/organization-context";
+import { useOrganization } from "@/stores/organization-store";
 
 // ============================================================================
 // Types

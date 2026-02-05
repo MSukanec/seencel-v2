@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useLayoutStore, NavigationContext } from "@/store/layout-store";
+import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Users, FileText, Calendar, Clock, AlertCircle, MapPin, Loader2, Pencil } from "lucide-react";

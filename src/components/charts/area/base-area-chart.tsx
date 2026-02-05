@@ -81,10 +81,16 @@ export function BaseAreaChart({
     const ChartContent = (
         <ChartContainer
             config={config}
-            className={cn("w-full min-w-0 max-w-full overflow-hidden", !height && "h-full", chartClassName)}
+            className={cn(
+                "w-full min-w-0 max-w-full overflow-hidden",
+                !height && "h-full",
+                // Remover aspect-video cuando se usa h-full para evitar conflictos de dimensión
+                !chartClassName?.includes("h-") && !height && "aspect-video",
+                chartClassName
+            )}
             style={height ? { height } : undefined}
         >
-            <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 4 }}>
+            <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
                 <defs>
                     {gradient && (
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

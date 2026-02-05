@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createContact, updateContact } from "@/actions/contacts";
 import { ContactWithRelations, ContactType } from "@/types/contact";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { FormFooter } from "@/components/shared/forms/form-footer";

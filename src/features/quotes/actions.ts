@@ -390,6 +390,7 @@ export async function approveQuote(quoteId: string) {
 
 // ============================================
 // DUPLICATE QUOTE
+// Also duplicates all quote_items
 // ============================================
 export async function duplicateQuote(id: string) {
     const supabase = await createClient();
@@ -411,19 +412,17 @@ export async function duplicateQuote(id: string) {
         return { error: "No se encontró el presupuesto", data: null };
     }
 
-    // Create copy with incremented version
+    // Create copy with unique name (add timestamp to avoid constraint violations)
+    const timestamp = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const { id: _originalId, created_at: _createdAt, updated_at: _updatedAt, approved_at: _approvedAt, approved_by: _approvedBy, ...quoteData } = original;
+
     const { data: newQuote, error: createError } = await supabase
         .from("quotes")
         .insert({
-            ...original,
-            id: undefined, // Let DB generate new ID
-            name: `${original.name} (copia)`,
+            ...quoteData,
+            name: `${original.name} (copia ${timestamp})`,
             version: original.version + 1,
             status: 'draft',
-            approved_at: null,
-            approved_by: null,
-            created_at: undefined,
-            updated_at: undefined,
         })
         .select()
         .single();
@@ -433,7 +432,36 @@ export async function duplicateQuote(id: string) {
         return { error: createError.message, data: null };
     }
 
-    // TODO: Also duplicate quote_items
+    // Duplicate quote_items
+    const { data: originalItems, error: itemsFetchError } = await supabase
+        .from("quote_items")
+        .select("*")
+        .eq("quote_id", id)
+        .is("deleted_at", null);
+
+    if (itemsFetchError) {
+        console.error("Error fetching quote items:", itemsFetchError);
+        // Quote was created but items couldn't be copied - partial success
+    } else if (originalItems && originalItems.length > 0) {
+        // Map items to new quote ID, excluding id and timestamps using destructuring
+        const newItems = originalItems.map(item => {
+            // Destructure to exclude id, created_at, updated_at, deleted_at
+            const { id: _id, created_at, updated_at, deleted_at, ...rest } = item;
+            return {
+                ...rest,
+                quote_id: newQuote.id,
+            };
+        });
+
+        const { error: itemsInsertError } = await supabase
+            .from("quote_items")
+            .insert(newItems);
+
+        if (itemsInsertError) {
+            console.error("Error duplicating quote items:", itemsInsertError);
+            // Quote was created but items couldn't be copied - partial success
+        }
+    }
 
     revalidatePath("/organization/quotes");
     return { data: newQuote, error: null };
@@ -537,14 +565,19 @@ export async function updateQuoteItem(id: string, formData: FormData) {
         return { error: error.message, data: null };
     }
 
+    // Revalidate both list and detail pages (org and project level)
     revalidatePath("/organization/quotes");
+    revalidatePath("/project", "layout"); // Revalidate all project routes
+    if (data?.quote_id) {
+        revalidatePath(`/organization/quotes/${data.quote_id}`);
+    }
     return { data, error: null };
 }
 
 // ============================================
 // DELETE QUOTE ITEM (Soft Delete)
 // ============================================
-export async function deleteQuoteItem(id: string) {
+export async function deleteQuoteItem(id: string, quoteId?: string) {
     const supabase = await createClient();
     const { activeOrgId } = await getUserOrganizations();
 
@@ -567,6 +600,10 @@ export async function deleteQuoteItem(id: string) {
     }
 
     revalidatePath("/organization/quotes");
+    revalidatePath("/project", "layout");
+    if (quoteId) {
+        revalidatePath(`/organization/quotes/${quoteId}`);
+    }
     return { success: true, error: null };
 }
 

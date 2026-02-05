@@ -5,7 +5,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, LayoutGrid, List, Building2, FileText } from "lucide-react";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";

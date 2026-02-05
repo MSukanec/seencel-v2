@@ -6,7 +6,7 @@ import { Plus, Users, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { SubcontractsSubcontractForm } from "../forms/subcontracts-subcontract-form";
 import { SubcontractCard } from "../components/subcontract-card";
 import { useRouter } from "next/navigation";

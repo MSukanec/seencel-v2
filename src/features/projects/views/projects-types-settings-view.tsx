@@ -22,7 +22,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import dynamic from "next/dynamic";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { deleteProjectType } from "@/features/projects/actions";
 
 const ProjectsTypeForm = dynamic(() => import("../forms/projects-type-form").then(mod => mod.ProjectsTypeForm), {

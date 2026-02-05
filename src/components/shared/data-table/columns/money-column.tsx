@@ -81,34 +81,44 @@ function MoneyCell<TData>({
     const currencySymbol = (row.original as any)[currencyKey] || money.config.functionalCurrencySymbol;
     const exchangeRate = Number((row.original as any)[exchangeRateKey]) || 1;
 
-    // Determine if this is a positive value
+    // Determine if this is a positive value or neutral (0 = neutral, no color/prefix)
     let isPositive = amount >= 0;
+    let isNeutral = false;
     if (signKey) {
         const signValue = (row.original as any)[signKey];
         if (signPositiveValue !== undefined) {
             // Explicit positive value provided
             isPositive = signValue === signPositiveValue;
         } else if (typeof signValue === 'number') {
-            // Numeric sign key (e.g., amount_sign: 1 or -1)
-            isPositive = signValue > 0;
+            // Numeric sign key (e.g., amount_sign: 1, -1, or 0 for neutral)
+            if (signValue === 0) {
+                isNeutral = true;
+                isPositive = true; // doesn't matter, neutral overrides
+            } else {
+                isPositive = signValue > 0;
+            }
         } else if (typeof signValue === 'string') {
             // String but no positive value specified - default to false
             isPositive = false;
         }
     }
 
-    // Determine prefix
+    // Determine prefix (neutral = no prefix)
     let displayPrefix = "";
-    if (prefix === "+") displayPrefix = "+";
-    else if (prefix === "-") displayPrefix = "-";
-    else if (prefix === "auto") displayPrefix = isPositive ? "+" : "-";
+    if (!isNeutral) {
+        if (prefix === "+") displayPrefix = "+";
+        else if (prefix === "-") displayPrefix = "-";
+        else if (prefix === "auto") displayPrefix = isPositive ? "+" : "-";
+    }
 
-    // Determine color class
+    // Determine color class (neutral = no color)
     let colorClass = "";
-    if (colorMode === "positive") colorClass = "text-amount-positive";
-    else if (colorMode === "negative") colorClass = "text-amount-negative";
-    else if (colorMode === "auto") {
-        colorClass = isPositive ? "text-amount-positive" : "text-amount-negative";
+    if (!isNeutral) {
+        if (colorMode === "positive") colorClass = "text-amount-positive";
+        else if (colorMode === "negative") colorClass = "text-amount-negative";
+        else if (colorMode === "auto") {
+            colorClass = isPositive ? "text-amount-positive" : "text-amount-negative";
+        }
     }
 
     // Format amount (uses org's decimal preferences automatically)

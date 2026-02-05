@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useLayoutStore, NavigationContext } from "@/store/layout-store";
+import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";

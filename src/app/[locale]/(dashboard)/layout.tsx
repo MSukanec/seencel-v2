@@ -1,13 +1,13 @@
 import { getUserProfile, checkUserRoles } from "@/features/users/queries";
 import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
+import { getOrganizationProjects } from "@/features/projects/queries";
+import { getClientsByOrganization } from "@/features/clients/queries";
 import { LayoutSwitcher } from "@/components/layout";
-import { getFeatureFlags, getFeatureFlag } from "@/actions/feature-flags";
+import { getFeatureFlags } from "@/actions/feature-flags";
 import { FeatureFlagsProvider } from "@/providers/feature-flags-provider";
-import { ThemeCustomizationProvider } from "@/providers/theme-customization-provider";
+import { ThemeCustomizationHydrator } from "@/stores/theme-store";
 
-
-import { OrganizationProvider } from "@/context/organization-context";
-import { CurrencyProvider } from "@/providers/currency-context";
+import { OrganizationStoreHydrator } from "@/stores/organization-store";
 import { Currency } from "@/types/currency";
 import MaintenancePage from "./maintenance/page";
 
@@ -34,13 +34,25 @@ export default async function DashboardLayout({
     const { profile } = await getUserProfile();
     const { activeOrgId } = await getUserOrganizations();
 
-    // Fetch currencies for bi-currency context
+    // Initialize data arrays
     let currencies: Currency[] = [];
     let financialData: Awaited<ReturnType<typeof getOrganizationFinancialData>> | null = null;
+    let wallets: { id: string; name: string; wallet_id?: string; is_default?: boolean; currency_symbol?: string }[] = [];
+    let projects: { id: string; name: string }[] = [];
+    let clients: { id: string; name: string; project_id?: string }[] = [];
 
     if (activeOrgId) {
         try {
-            financialData = await getOrganizationFinancialData(activeOrgId);
+            // Fetch all organization data in parallel
+            const [financialResult, projectsResult, clientsResult] = await Promise.all([
+                getOrganizationFinancialData(activeOrgId),
+                getOrganizationProjects(activeOrgId),
+                getClientsByOrganization(activeOrgId),
+            ]);
+
+            financialData = financialResult;
+
+            // Format currencies
             currencies = (financialData?.currencies || []).map((c: any) => ({
                 id: c.id,
                 code: c.code,
@@ -49,8 +61,30 @@ export default async function DashboardLayout({
                 is_default: c.is_default,
                 exchange_rate: c.exchange_rate,
             }));
+
+            // Format wallets
+            wallets = (financialData?.wallets || []).map((w: any) => ({
+                id: w.id,
+                wallet_id: w.wallet_id,
+                name: w.name,
+                is_default: w.is_default,
+                currency_symbol: w.currency_symbol,
+            }));
+
+            // Format projects
+            projects = (projectsResult || []).map((p: any) => ({
+                id: p.id,
+                name: p.name,
+            }));
+
+            // Format clients
+            clients = (clientsResult.data || []).map((c: any) => ({
+                id: c.id,
+                name: c.contact_name || c.company_name || 'Sin nombre',
+                project_id: c.project_id,
+            }));
         } catch {
-            // Fallback: empty currencies (MoneyDisplay will use defaults)
+            // Fallback: empty data (forms will handle gracefully)
         }
     }
 
@@ -65,26 +99,26 @@ export default async function DashboardLayout({
     const kpiCompactFormat = financialData?.preferences?.kpi_compact_format ?? false;
 
     return (
-        <OrganizationProvider
-            activeOrgId={activeOrgId || null}
-            preferences={activeOrgId && financialData?.preferences ? financialData.preferences as any : null}
-            isFounder={activeOrgId ? financialData?.isFounder : false}
-        >
-            <CurrencyProvider
+        <>
+            {/* Zustand Store Hydrators */}
+            <OrganizationStoreHydrator
+                activeOrgId={activeOrgId || null}
+                preferences={activeOrgId && financialData?.preferences ? financialData.preferences as any : null}
+                isFounder={activeOrgId ? financialData?.isFounder ?? false : false}
+                wallets={wallets}
+                projects={projects}
+                clients={clients}
                 currencies={currencies}
-                defaultExchangeRate={defaultExchangeRate}
                 decimalPlaces={decimalPlaces}
                 kpiCompactFormat={kpiCompactFormat}
-            >
-                <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>
-                    <ThemeCustomizationProvider>
-                        <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
-                            {children}
-                        </LayoutSwitcher>
-                    </ThemeCustomizationProvider>
-                </FeatureFlagsProvider>
-            </CurrencyProvider>
-        </OrganizationProvider>
+            />
+            <ThemeCustomizationHydrator />
+            <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>
+                <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
+                    {children}
+                </LayoutSwitcher>
+            </FeatureFlagsProvider>
+        </>
     );
 }
 

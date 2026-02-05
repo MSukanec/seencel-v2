@@ -7,7 +7,7 @@ import { Upload, Image as ImageIcon, Loader2, Sparkles, RotateCcw, Check, Palett
 import { extractColorsFromImage } from "@/features/customization/lib/color-extraction";
 import { generateRefinedPalette } from "@/features/customization/lib/palette-analysis";
 import { detectPaletteMood, MOOD_TYPOGRAPHY, type TypographyMood } from "@/features/customization/lib/typography-mood";
-import { useThemeCustomization } from "@/providers/theme-customization-provider";
+import { useThemeCustomization } from "@/stores/theme-store";
 import { BentoKpiCard } from "@/components/bento/bento-kpi-card";
 import type { ExtractedColor, CuratedPalette } from "@/features/customization/types/palette";
 import { DollarSign, Users, TrendingUp, Folder } from "lucide-react";
