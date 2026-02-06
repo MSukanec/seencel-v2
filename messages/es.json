@@ -1029,6 +1029,7 @@
         },
         "checkout": {
             "title": "Finalizar Compra",
+            "summary": "Resumen del Pedido",
             "orderSummary": "Resumen del Pedido",
             "selectPlan": "Selecciona tu Plan",
             "billingCycle": "Ciclo de Facturación",

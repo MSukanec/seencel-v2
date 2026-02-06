@@ -95,7 +95,10 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
     const handleGoToCheckout = () => {
         // Navigate to checkout with seat purchase params
         closeModal();
-        window.location.href = `/checkout?type=seats&org=${organizationId}&quantity=${seatsToBuy}`;
+        // Extract locale from current URL
+        const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+        const locale = localeMatch ? localeMatch[1] : 'es';
+        window.location.href = `/${locale}/checkout?type=seats&org=${organizationId}&quantity=${seatsToBuy}`;
     };
 
     // Filter out system owner role
@@ -244,6 +247,7 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                 <FormFooter
                     className="-mx-4 -mb-4 mt-6"
                     isLoading={false}
+                    isForm={false}
                     submitLabel="Ir a Checkout"
                     onCancel={handleCancel}
                     onSubmit={handleGoToCheckout}
