@@ -48,6 +48,14 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     // Import progress state
     const [importProgress, setImportProgress] = useState<{ total: number; current: number; phase: string }>({ total: 0, current: 0, phase: '' });
 
+    // Header selection state (from step-upload)
+    const [headerSelectionState, setHeaderSelectionState] = useState<{
+        isInHeaderSelection: boolean;
+        selectedRowIndex: number;
+        onConfirm: () => void;
+        onCancel: () => void;
+    } | null>(null);
+
     const handleBack = () => {
         if (step === 'mapping') setStep('upload');
         if (step === 'validation') setStep('mapping');
@@ -224,14 +232,14 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
         <div className="flex flex-col h-full sm:h-[80vh] min-h-0">
             {/* Dynamic Step Header */}
             <div className="flex flex-col border-b shrink-0 -mx-4 -mt-4 mb-0 bg-muted/10">
-                <div className="flex items-center justify-between px-6 py-3">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between px-6 py-3 gap-6">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
                         {step !== 'upload' && step !== 'result' && step !== 'importing' && (
-                            <Button variant="ghost" size="icon" className="-ml-2 h-8 w-8" onClick={handleBack}>
+                            <Button variant="ghost" size="icon" className="-ml-2 h-8 w-8 shrink-0 mt-0.5" onClick={handleBack}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                         )}
-                        <div>
+                        <div className="min-w-0">
                             <h2 className="text-base font-semibold leading-none">
                                 {step === 'upload' && t('headers.upload', { entity: config.entityLabel })}
                                 {step === 'mapping' && t('headers.mapping')}
@@ -240,7 +248,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                                 {step === 'importing' && t('headers.importing')}
                                 {step === 'result' && t('headers.result')}
                             </h2>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground mt-1 max-w-md">
                                 {step === 'upload' && t('descriptions.upload')}
                                 {step === 'mapping' && t('descriptions.mapping')}
                                 {step === 'validation' && t('descriptions.validation')}
@@ -276,6 +284,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                             }}
                             initialFile={file}
                             initialResult={parsedData}
+                            onHeaderSelectionStateChange={setHeaderSelectionState}
                         />
                     )}
                     {step === 'mapping' && parsedData && (
@@ -408,23 +417,35 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                 <FormFooter
                     className="-mx-4 -mb-4 mt-4 border-t pt-4 px-4 bg-background z-10"
                     isForm={false}
-                    onCancel={step === 'upload' ? closeModal : handleBack}
-                    cancelLabel={step === 'upload' ? tActions('cancel') : tActions('back')}
+                    onCancel={
+                        headerSelectionState?.isInHeaderSelection
+                            ? headerSelectionState.onCancel
+                            : (step === 'upload' ? closeModal : handleBack)
+                    }
+                    cancelLabel={
+                        headerSelectionState?.isInHeaderSelection
+                            ? tActions('cancel')
+                            : (step === 'upload' ? tActions('cancel') : tActions('back'))
+                    }
                     onSubmit={() => {
-                        if (step === 'upload') setStep('mapping');
+                        if (headerSelectionState?.isInHeaderSelection) {
+                            headerSelectionState.onConfirm();
+                        } else if (step === 'upload') setStep('mapping');
                         else if (step === 'mapping') transformDataAndProceed();
                         else if (step === 'validation') handleValidationContinue();
                         else if (step === 'conflicts') handleImport();
                     }}
                     submitLabel={
-                        step === 'conflicts'
-                            ? (isDetectingConflicts ? 'Analizando...' : tActions('import'))
-                            : step === 'validation'
-                                ? (config.columns.some(col => col.foreignKey) ? tActions('continue') : tActions('import'))
-                                : (step === 'mapping' && !isMappingValid) ? 'Faltan campos requeridos' : tActions('continue')
+                        headerSelectionState?.isInHeaderSelection
+                            ? `Usar Fila ${headerSelectionState.selectedRowIndex + 1}`
+                            : step === 'conflicts'
+                                ? (isDetectingConflicts ? 'Analizando...' : tActions('import'))
+                                : step === 'validation'
+                                    ? (config.columns.some(col => col.foreignKey) ? tActions('continue') : tActions('import'))
+                                    : (step === 'mapping' && !isMappingValid) ? 'Faltan campos requeridos' : tActions('continue')
                     }
                     submitDisabled={
-                        (step === 'upload' && !file) ||
+                        (step === 'upload' && !file && !headerSelectionState?.isInHeaderSelection) ||
                         (step === 'mapping' && !isMappingValid) ||
                         (step === 'conflicts' && !conflictsResolved) ||
                         isDetectingConflicts

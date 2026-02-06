@@ -110,10 +110,14 @@ export interface CatalogMaterial {
     is_system: boolean;
     organization_id: string | null;
     default_provider_id?: string | null;
-    default_unit_presentation_id?: string | null;
+    default_sale_unit_id?: string | null;
+    default_sale_unit_quantity?: number | null;
+    sale_unit_name?: string | null;
+    sale_unit_symbol?: string | null;
     // Price fields from view
     org_unit_price?: number | null;
     org_price_currency_id?: string | null;
+    org_price_valid_from?: string | null;
 }
 
 export interface MaterialCategory {
@@ -126,6 +130,8 @@ export interface MaterialUnit {
     id: string;
     name: string;
     abbreviation: string;
+    symbol: string | null;
+    applicable_to: string[];
 }
 
 export interface MaterialCategoryNode {
@@ -148,7 +154,12 @@ export async function getMaterialsForOrganization(organizationId: string): Promi
         .order('name', { ascending: true });
 
     if (error) {
-        console.error("Error fetching organization materials:", error);
+        // View may have issues after database migrations - return empty gracefully
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("materials_view does not exist, returning empty array");
+            return [];
+        }
+        console.error("Error fetching organization materials:", JSON.stringify(error, null, 2));
         return [];
     }
 
@@ -166,9 +177,13 @@ export async function getMaterialsForOrganization(organizationId: string): Promi
         is_system: m.is_system,
         organization_id: m.organization_id,
         default_provider_id: m.default_provider_id || null,
-        default_unit_presentation_id: m.default_unit_presentation_id || null,
+        default_sale_unit_id: m.default_sale_unit_id || null,
+        default_sale_unit_quantity: m.default_sale_unit_quantity || null,
+        sale_unit_name: m.sale_unit_name || null,
+        sale_unit_symbol: m.sale_unit_symbol || null,
         org_unit_price: m.org_unit_price,
         org_price_currency_id: m.org_price_currency_id,
+        org_price_valid_from: m.org_price_valid_from || null,
     }));
 }
 
@@ -203,7 +218,8 @@ export async function getUnitsForMaterialCatalog(): Promise<MaterialUnit[]> {
 
     const { data, error } = await supabase
         .from('units')
-        .select('id, name')
+        .select('id, name, symbol, applicable_to')
+        .eq('is_deleted', false)
         .order('name', { ascending: true });
 
     if (error) {
@@ -214,7 +230,9 @@ export async function getUnitsForMaterialCatalog(): Promise<MaterialUnit[]> {
     return (data || []).map((u: any) => ({
         id: u.id,
         name: u.name,
-        abbreviation: u.name // Use name as abbreviation since column doesn't exist
+        abbreviation: u.symbol || u.name,
+        symbol: u.symbol,
+        applicable_to: u.applicable_to || ['task', 'material', 'labor'],
     }));
 }
 
@@ -450,6 +468,7 @@ export async function getProvidersForProject(organizationId: string): Promise<{
 
 /**
  * Get unit presentations for material form
+ * @deprecated This function will be removed once unit_presentations table is dropped
  */
 export async function getUnitPresentations(): Promise<{
     id: string;
@@ -465,6 +484,11 @@ export async function getUnitPresentations(): Promise<{
         .order('name', { ascending: true });
 
     if (error) {
+        // Table may not exist after migration - return empty gracefully
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("unit_presentations table does not exist, returning empty array");
+            return [];
+        }
         console.error("Error fetching unit presentations:", error);
         return [];
     }

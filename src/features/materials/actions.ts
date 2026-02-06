@@ -302,7 +302,9 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
     const code = formData.get("code") as string || null;
     const description = formData.get("description") as string || null;
     const default_provider_id = formData.get("default_provider_id") as string || null;
-    const default_unit_presentation_id = formData.get("default_unit_presentation_id") as string || null;
+    const default_sale_unit_id = formData.get("default_sale_unit_id") as string || null;
+    const default_sale_unit_quantity_raw = formData.get("default_sale_unit_quantity") as string || null;
+    const default_sale_unit_quantity = default_sale_unit_quantity_raw ? parseFloat(default_sale_unit_quantity_raw) : null;
     const unit_id = formData.get("unit_id") as string || null;
     const category_id = formData.get("category_id") as string || null;
     const material_type = (formData.get("material_type") as string) || "material";
@@ -324,7 +326,8 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
             code: code?.trim() || null,
             description: description?.trim() || null,
             default_provider_id: default_provider_id || null,
-            default_unit_presentation_id: default_unit_presentation_id || null,
+            default_sale_unit_id: default_sale_unit_id || null,
+            default_sale_unit_quantity: default_sale_unit_quantity,
             unit_id: unit_id || null,
             category_id: category_id || null,
             material_type,
@@ -342,9 +345,16 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
         return { error: error.message };
     }
 
+    // Fetch full material data from view for optimistic update
+    const { data: fullMaterial } = await supabase
+        .from("materials_view")
+        .select("*")
+        .eq("id", data.id)
+        .single();
+
     revalidatePath("/organization/catalog");
     revalidatePath("/admin/catalog");
-    return { data };
+    return { data: fullMaterial || data };
 }
 
 /**
@@ -359,7 +369,9 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
     const code = formData.get("code") as string || null;
     const description = formData.get("description") as string || null;
     const default_provider_id = formData.get("default_provider_id") as string || null;
-    const default_unit_presentation_id = formData.get("default_unit_presentation_id") as string || null;
+    const default_sale_unit_id = formData.get("default_sale_unit_id") as string || null;
+    const default_sale_unit_quantity_raw = formData.get("default_sale_unit_quantity") as string || null;
+    const default_sale_unit_quantity = default_sale_unit_quantity_raw ? parseFloat(default_sale_unit_quantity_raw) : null;
     const unit_id = formData.get("unit_id") as string || null;
     const category_id = formData.get("category_id") as string || null;
     const material_type = (formData.get("material_type") as string) || "material";
@@ -379,7 +391,8 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
             code: code?.trim() || null,
             description: description?.trim() || null,
             default_provider_id: default_provider_id || null,
-            default_unit_presentation_id: default_unit_presentation_id || null,
+            default_sale_unit_id: default_sale_unit_id || null,
+            default_sale_unit_quantity: default_sale_unit_quantity,
             unit_id: unit_id || null,
             category_id: category_id || null,
             material_type,
@@ -403,9 +416,16 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
         return { error: error.message };
     }
 
+    // Fetch full material data from view for optimistic update
+    const { data: fullMaterial } = await supabase
+        .from("materials_view")
+        .select("*")
+        .eq("id", id)
+        .single();
+
     revalidatePath("/organization/catalog");
     revalidatePath("/admin/catalog");
-    return { data };
+    return { data: fullMaterial || data };
 }
 
 /**

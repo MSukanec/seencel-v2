@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,8 @@ export interface Unit {
     id: string;
     name: string;
     abbreviation: string;
+    symbol?: string | null;
+    applicable_to?: string[];
 }
 
 export interface Provider {
@@ -41,12 +43,6 @@ export interface Provider {
     avatar_url?: string | null;
 }
 
-export interface UnitPresentation {
-    id: string;
-    unit_id: string;
-    name: string;
-    equivalence: number;
-}
 
 export interface Material {
     id: string;
@@ -54,6 +50,8 @@ export interface Material {
     code?: string | null;
     description?: string | null;
     default_provider_id?: string | null;
+    default_sale_unit_id?: string | null;
+    default_sale_unit_quantity?: number | null;
     unit_id: string | null;
     category_id: string | null;
     material_type: string;
@@ -75,7 +73,6 @@ interface MaterialFormProps {
     units: Unit[];
     categories: MaterialCategory[];
     providers?: Provider[];
-    presentations?: UnitPresentation[];
     isAdminMode?: boolean;
     initialData?: Material | null;
     onSuccess?: (material?: Material) => void;
@@ -92,7 +89,6 @@ export function MaterialForm({
     units,
     categories,
     providers = [],
-    presentations = [],
     isAdminMode = false,
     initialData,
     onSuccess,
@@ -101,6 +97,12 @@ export function MaterialForm({
     const { closeModal } = useModal();
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = mode === "edit";
+
+    // Filter units for material dropdowns (only those applicable to materials)
+    const materialUnits = useMemo(() =>
+        units.filter(u => u.applicable_to?.includes('material')),
+        [units]
+    );
 
     // Get currencies from organization store (already hydrated in layout)
     const { currencies, getPrimaryCurrency } = useFormData();
@@ -119,10 +121,15 @@ export function MaterialForm({
         initialData?.default_provider_id || ""
     );
 
-    // Presentation state
-    const [defaultUnitPresentationId, setDefaultUnitPresentationId] = useState<string>(
-        (initialData as any)?.default_unit_presentation_id || ""
+    // Sale unit state
+    const [saleUnitId, setSaleUnitId] = useState<string>(
+        initialData?.default_sale_unit_id || ""
     );
+    const [saleUnitQuantity, setSaleUnitQuantity] = useState<string>(
+        initialData?.default_sale_unit_quantity?.toString() || ""
+    );
+
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
@@ -141,10 +148,15 @@ export function MaterialForm({
                 formData.append("default_provider_id", providerId);
             }
 
-            // Add presentation
-            if (defaultUnitPresentationId) {
-                formData.append("default_unit_presentation_id", defaultUnitPresentationId);
+            // Add sale unit info
+            if (saleUnitId) {
+                formData.append("default_sale_unit_id", saleUnitId);
             }
+            if (saleUnitQuantity) {
+                formData.append("default_sale_unit_quantity", saleUnitQuantity);
+            }
+
+
 
             if (isEditing && initialData?.id) {
                 formData.append("id", initialData.id);
@@ -248,13 +260,22 @@ export function MaterialForm({
                         </Select>
                     </FormGroup>
 
-                    <FormGroup label="Unidad de Medida" htmlFor="unit_id">
+                    <FormGroup
+                        label="Unidad de Medida"
+                        htmlFor="unit_id"
+                        tooltip={
+                            <span>
+                                Unidad base para medir este material (ej: kg, m³, litro).{" "}
+                                <a href="?tab=units">Gestionar unidades</a>
+                            </span>
+                        }
+                    >
                         <Select name="unit_id" defaultValue={initialData?.unit_id || undefined}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar unidad..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {units.map((unit) => (
+                                {materialUnits.map((unit) => (
                                     <SelectItem key={unit.id} value={unit.id}>
                                         {unit.name}
                                     </SelectItem>
@@ -290,6 +311,12 @@ export function MaterialForm({
                                     onChange={setProviderId}
                                     contacts={providers}
                                     label="Proveedor por defecto"
+                                    tooltip={
+                                        <span>
+                                            Proveedor habitual de este material. Los proveedores se crean desde la sección de Contactos.{" "}
+                                            <a href="../contacts" target="_blank">Gestionar contactos</a>
+                                        </span>
+                                    }
                                     placeholder="Seleccionar proveedor (opcional)"
                                     noneLabel="Sin proveedor asignado"
                                     searchPlaceholder="Buscar proveedor..."
@@ -297,29 +324,47 @@ export function MaterialForm({
                                 />
                             </div>
 
-                            {/* Row 6: Unidad de Presentación (full width) */}
-                            <div className="md:col-span-2">
-                                <FormGroup label="Unidad de Presentación" htmlFor="default_unit_presentation_id">
-                                    <Select
-                                        value={defaultUnitPresentationId || "none"}
-                                        onValueChange={(val) => setDefaultUnitPresentationId(val === "none" ? "" : val)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar presentación (opcional)" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="none">Sin presentación</SelectItem>
-                                            {presentations
-                                                .filter((p) => !units.find((u) => u.id === p.unit_id) || true)
-                                                .map((presentation) => (
-                                                    <SelectItem key={presentation.id} value={presentation.id}>
-                                                        {presentation.name} ({presentation.equivalence} unidades)
-                                                    </SelectItem>
-                                                ))}
-                                        </SelectContent>
-                                    </Select>
-                                </FormGroup>
-                            </div>
+                            {/* Row 6: Unidad de Venta + Cantidad por Unidad */}
+                            <FormGroup
+                                label="Unidad de Venta"
+                                htmlFor="sale_unit_id"
+                                tooltip={
+                                    <span>
+                                        Formato de empaque o presentación comercial (ej: bolsa, bidón, camión).{" "}
+                                        <a href="?tab=units">Gestionar unidades</a>
+                                    </span>
+                                }
+                            >
+                                <Select value={saleUnitId} onValueChange={setSaleUnitId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Ej: Bolsa, Camión..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {materialUnits.map((unit) => (
+                                            <SelectItem key={unit.id} value={unit.id}>
+                                                {unit.name} {unit.symbol ? `(${unit.symbol})` : ""}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FormGroup>
+
+                            <FormGroup
+                                label="Cantidad por Unidad"
+                                htmlFor="sale_unit_quantity"
+                                tooltip="Cantidad de la unidad de medida que contiene cada unidad de venta. Ej: si el material es en kg y se vende en bolsas de 25kg, poné 25."
+                            >
+                                <Input
+                                    id="sale_unit_quantity"
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                    value={saleUnitQuantity}
+                                    onChange={(e) => setSaleUnitQuantity(e.target.value)}
+                                    placeholder="Ej: 25"
+                                />
+                            </FormGroup>
+
 
                             {/* Row 7: Moneda + Precio */}
                             <CurrencyField

@@ -1,0 +1,26 @@
+{
+    "order": [
+        "getting-started",
+        "materials",
+        "finance",
+        "projects"
+    ],
+    "items": {
+        "getting-started": {
+            "title": "Getting Started",
+            "icon": "rocket"
+        },
+        "materials": {
+            "title": "Materials",
+            "icon": "package"
+        },
+        "finance": {
+            "title": "Finance",
+            "icon": "dollar-sign"
+        },
+        "projects": {
+            "title": "Projects",
+            "icon": "building"
+        }
+    }
+}

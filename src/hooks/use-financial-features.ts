@@ -13,7 +13,10 @@ export function useFinancialFeatures() {
         [allCurrencies]
     );
 
-    const showCurrencySelector = secondaryCurrencies.length > 0;
+    // TEMP: Currency selector disabled from header
+    // Will be moved to dashboard cards in the future
+    // Original: const showCurrencySelector = secondaryCurrencies.length > 0;
+    const showCurrencySelector = false;
 
     // 2. Use Exchange Rate?
     const showExchangeRate = preferences?.use_currency_exchange === true;

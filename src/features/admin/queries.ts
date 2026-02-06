@@ -342,7 +342,7 @@ export async function getSystemMaterials(): Promise<SystemMaterial[]> {
             is_system,
             is_deleted,
             created_at,
-            units (name),
+            units!materials_unit_id_fkey (name),
             material_categories (name)
         `)
         .eq('is_system', true)
@@ -658,6 +658,84 @@ export async function getUnitsForLabor(): Promise<Unit[]> {
     return (data || []).map((u: any) => ({
         id: u.id,
         name: u.name
+    }));
+}
+
+// ============================================================================
+// CATALOG: System Units (for Admin Units Tab)
+// ============================================================================
+
+export interface SystemUnit {
+    id: string;
+    name: string;
+    symbol: string | null;
+    applicable_to: string[];
+    unit_category_id: string | null;
+    organization_id: string | null;
+    is_system: boolean;
+}
+
+export interface SystemUnitCategory {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+}
+
+/**
+ * Get all system units for admin catalog (where organization_id IS NULL)
+ */
+export async function getSystemUnits(): Promise<SystemUnit[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('units')
+        .select('id, name, symbol, applicable_to, unit_category_id, organization_id')
+        .is('organization_id', null)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching system units:", error);
+        return [];
+    }
+
+    return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        symbol: u.symbol || null,
+        applicable_to: u.applicable_to || [],
+        unit_category_id: u.unit_category_id || null,
+        organization_id: null,
+        is_system: true,
+    }));
+}
+
+/**
+ * Get all unit categories for admin catalog
+ */
+export async function getSystemUnitCategories(): Promise<SystemUnitCategory[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('unit_categories')
+        .select('id, code, name, description')
+        .order('name', { ascending: true });
+
+    if (error) {
+        // Table may not exist yet
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("unit_categories table does not exist yet");
+            return [];
+        }
+        console.error("Error fetching unit categories:", error);
+        return [];
+    }
+
+    return (data || []).map((c: any) => ({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        description: c.description || null,
     }));
 }
 

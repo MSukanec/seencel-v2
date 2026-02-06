@@ -2,12 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ContentLayout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
 import { ListItem } from "@/components/ui/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ContextSidebar } from "@/stores/sidebar-store";
 import {
     Plus,
     Ruler,
@@ -15,6 +15,8 @@ import {
     Pencil,
     Trash2,
     Package,
+    Clock,
+    LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,21 +26,37 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useModal } from "@/stores/modal-store";
-import { UnitForm, type Unit } from "../forms/unit-form";
-import { UnitPresentationForm, type UnitPresentation } from "../forms/unit-presentation-form";
-import { deleteUnit, deleteUnitPresentation } from "../actions";
+import { UnitForm, type ApplicableTo } from "../forms/unit-form";
+import { deleteUnit } from "../actions";
 import { toast } from "sonner";
 import { DeleteDialog } from "@/components/shared/forms/general/delete-dialog";
+import { CategoriesSidebar, type UnitCategory } from "../components/categories-sidebar";
+import type { CatalogUnit } from "../queries";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
 // ============================================================================
 // Types
 // ============================================================================
 
+type TabValue = "all" | "task" | "material" | "labor";
+
 export interface UnitsCatalogViewProps {
-    units: Unit[];
-    presentations: UnitPresentation[];
+    units: CatalogUnit[];
+    categories: UnitCategory[];
     orgId: string;
+    isAdminMode?: boolean;
 }
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const TAB_OPTIONS = [
+    { label: "Todos", value: "all" as TabValue, icon: LayoutGrid },
+    { label: "Tareas", value: "task" as TabValue, icon: Ruler },
+    { label: "Materiales", value: "material" as TabValue, icon: Package },
+    { label: "Mano de Obra", value: "labor" as TabValue, icon: Clock },
+];
 
 // ============================================================================
 // Main Component
@@ -46,64 +64,121 @@ export interface UnitsCatalogViewProps {
 
 export function UnitsCatalogView({
     units,
-    presentations,
+    categories,
     orgId,
+    isAdminMode = false,
 }: UnitsCatalogViewProps) {
     const router = useRouter();
     const { openModal } = useModal();
-    const [activeTab, setActiveTab] = useState<"units" | "presentations">("units");
+    const [activeTab, setActiveTab] = useState<TabValue>("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
     // Delete modal state
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<{ type: "unit" | "presentation"; item: Unit | UnitPresentation } | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<CatalogUnit | null>(null);
+
+    // Optimistic list for instant UI updates
+    const { optimisticItems, removeItem } = useOptimisticList({
+        items: units,
+        getItemId: (u) => u.id,
+    });
+
+    // Create category lookup map
+    const categoryMap = useMemo(() => {
+        const map = new Map<string, UnitCategory>();
+        categories.forEach(c => map.set(c.id, c));
+        return map;
+    }, [categories]);
+
+    // Calculate unit counts per category (considering tab filter)
+    const unitCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+
+        let unitsToCount = optimisticItems;
+        if (activeTab !== "all") {
+            unitsToCount = unitsToCount.filter(u => u.applicable_to?.includes(activeTab));
+        }
+
+        unitsToCount.forEach(u => {
+            const catId = u.unit_category_id || "sin-categoria";
+            counts[catId] = (counts[catId] || 0) + 1;
+        });
+
+        return counts;
+    }, [optimisticItems, activeTab]);
+
+    // Filter units by applicable_to based on active tab
+    const filteredByTab = useMemo(() => {
+        if (activeTab === "all") return optimisticItems;
+        return optimisticItems.filter((u) => u.applicable_to?.includes(activeTab));
+    }, [optimisticItems, activeTab]);
+
+    // Filter by selected category
+    const filteredByCategory = useMemo(() => {
+        if (selectedCategoryId === null) return filteredByTab;
+        if (selectedCategoryId === "sin-categoria") {
+            return filteredByTab.filter(u => !u.unit_category_id);
+        }
+        return filteredByTab.filter(u => u.unit_category_id === selectedCategoryId);
+    }, [filteredByTab, selectedCategoryId]);
 
     // Filter data based on search
     const filteredUnits = useMemo(() => {
-        if (!searchQuery.trim()) return units;
+        if (!searchQuery.trim()) return filteredByCategory;
         const query = searchQuery.toLowerCase();
-        return units.filter(
+        return filteredByCategory.filter(
             (u) =>
                 u.name.toLowerCase().includes(query) ||
                 u.symbol?.toLowerCase().includes(query)
         );
-    }, [units, searchQuery]);
+    }, [filteredByCategory, searchQuery]);
 
-    const filteredPresentations = useMemo(() => {
-        if (!searchQuery.trim()) return presentations;
-        const query = searchQuery.toLowerCase();
-        return presentations.filter(
-            (p) =>
-                p.name.toLowerCase().includes(query) ||
-                p.unit_name?.toLowerCase().includes(query)
-        );
-    }, [presentations, searchQuery]);
+    // Check if item can be edited
+    // - Admins can edit system units (in admin mode)
+    // - Org members can edit their org's units
+    const canEditItem = (item: CatalogUnit) => {
+        if (isAdminMode) return item.is_system;
+        return !item.is_system; // Org can only edit their own units
+    };
 
-    // Check if item can be edited (only org items, not system)
-    const canEditItem = (item: Unit | UnitPresentation) => !item.is_system;
+    // Total for sidebar
+    const totalFilteredUnits = activeTab === "all"
+        ? optimisticItems.length
+        : optimisticItems.filter(u => u.applicable_to?.includes(activeTab)).length;
 
     // ========================================================================
     // Unit Handlers
     // ========================================================================
 
     const handleCreateUnit = () => {
+        // Default type based on current tab
+        const defaultType: ApplicableTo = activeTab === "all" ? "task" : activeTab;
         openModal(
-            <UnitForm organizationId={orgId} />,
+            <UnitForm
+                organizationId={orgId}
+                categories={categories}
+                defaultApplicableTo={defaultType}
+            />,
             {
                 title: "Nueva Unidad",
-                description: "Crear una nueva unidad de medida",
+                description: "Crear una nueva unidad",
                 size: "md"
             }
         );
     };
 
-    const handleEditUnit = (unit: Unit) => {
+    const handleEditUnit = (unit: CatalogUnit) => {
         if (!canEditItem(unit)) {
             toast.error("No podés editar unidades del sistema");
             return;
         }
         openModal(
-            <UnitForm organizationId={orgId} initialData={unit} />,
+            <UnitForm
+                organizationId={orgId}
+                categories={categories}
+                initialData={unit}
+            />,
             {
                 title: "Editar Unidad",
                 description: "Modificar los datos de esta unidad",
@@ -112,170 +187,116 @@ export function UnitsCatalogView({
         );
     };
 
-    const handleDeleteUnitClick = (unit: Unit) => {
+    const handleDeleteUnitClick = (unit: CatalogUnit) => {
         if (!canEditItem(unit)) {
             toast.error("No podés eliminar unidades del sistema");
             return;
         }
-        setItemToDelete({ type: "unit", item: unit });
+        setItemToDelete(unit);
         setDeleteModalOpen(true);
     };
 
     // ========================================================================
-    // Presentation Handlers
-    // ========================================================================
-
-    const handleCreatePresentation = () => {
-        openModal(
-            <UnitPresentationForm organizationId={orgId} units={units} />,
-            {
-                title: "Nueva Presentación",
-                description: "Crear una nueva presentación de unidad",
-                size: "md"
-            }
-        );
-    };
-
-    const handleEditPresentation = (presentation: UnitPresentation) => {
-        if (!canEditItem(presentation)) {
-            toast.error("No podés editar presentaciones del sistema");
-            return;
-        }
-        openModal(
-            <UnitPresentationForm
-                organizationId={orgId}
-                units={units}
-                initialData={presentation}
-            />,
-            {
-                title: "Editar Presentación",
-                description: "Modificar los datos de esta presentación",
-                size: "md"
-            }
-        );
-    };
-
-    const handleDeletePresentationClick = (presentation: UnitPresentation) => {
-        if (!canEditItem(presentation)) {
-            toast.error("No podés eliminar presentaciones del sistema");
-            return;
-        }
-        setItemToDelete({ type: "presentation", item: presentation });
-        setDeleteModalOpen(true);
-    };
-
-    // ========================================================================
-    // Delete Confirmation
+    // Delete Confirmation - OPTIMISTIC
     // ========================================================================
 
     const handleConfirmDelete = async () => {
         if (!itemToDelete) return;
 
-        try {
-            if (itemToDelete.type === "unit") {
-                const result = await deleteUnit(itemToDelete.item.id);
+        const unitId = itemToDelete.id;
+        const unitName = itemToDelete.name;
+
+        // 1. Close modal and clear state IMMEDIATELY
+        setDeleteModalOpen(false);
+        setItemToDelete(null);
+
+        // 2. Optimistically remove from UI
+        removeItem(unitId, async () => {
+            try {
+                const result = await deleteUnit(unitId);
                 if (!result.success) {
                     toast.error(result.error || "Error al eliminar");
+                    router.refresh(); // Rollback by refreshing
                     return;
                 }
-                toast.success("Unidad eliminada correctamente");
-            } else {
-                const result = await deleteUnitPresentation(itemToDelete.item.id);
-                if (!result.success) {
-                    toast.error(result.error || "Error al eliminar");
-                    return;
-                }
-                toast.success("Presentación eliminada correctamente");
+                toast.success(`"${unitName}" eliminada correctamente`);
+            } catch (error) {
+                toast.error("Error inesperado al eliminar");
+                router.refresh(); // Rollback by refreshing
             }
-            router.refresh();
-        } catch (error) {
-            toast.error("Error inesperado al eliminar");
-        } finally {
-            setDeleteModalOpen(false);
-            setItemToDelete(null);
-        }
+        });
     };
+
+    // Sidebar content
+    const sidebarContent = (
+        <CategoriesSidebar
+            categories={categories}
+            unitCounts={unitCounts}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
+            totalUnits={totalFilteredUnits}
+        />
+    );
 
     // ========================================================================
     // Render
     // ========================================================================
 
-    const isUnitsTab = activeTab === "units";
-    const currentItems = isUnitsTab ? filteredUnits : filteredPresentations;
-
     return (
         <>
-            <ContentLayout variant="wide">
-                {/* Toolbar with tabs in leftActions (like materials) */}
-                <Toolbar
-                    portalToHeader
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    searchPlaceholder={isUnitsTab
-                        ? "Buscar unidades por nombre o símbolo..."
-                        : "Buscar presentaciones por nombre o unidad..."
-                    }
-                    leftActions={
-                        <ToolbarTabs
-                            value={activeTab}
-                            onValueChange={(v) => setActiveTab(v as "units" | "presentations")}
-                            options={[
-                                { label: "Unidades", value: "units", icon: Ruler },
-                                { label: "Presentaciones", value: "presentations", icon: Package },
-                            ]}
-                        />
-                    }
-                    actions={[
-                        {
-                            label: isUnitsTab ? "Nueva Unidad" : "Nueva Presentación",
-                            icon: Plus,
-                            onClick: isUnitsTab ? handleCreateUnit : handleCreatePresentation,
-                        },
-                    ]}
-                />
+            {/* Inject sidebar content into the layout's context sidebar slot */}
+            <ContextSidebar title="Categorías">
+                {sidebarContent}
+            </ContextSidebar>
 
-                {/* Items View */}
-                <div className="h-full">
-                    {currentItems.length === 0 ? (
-                        <div className="h-full flex items-center justify-center">
-                            <EmptyState
-                                icon={isUnitsTab ? Ruler : Package}
-                                title="Sin resultados"
-                                description={searchQuery
-                                    ? `No se encontraron ${isUnitsTab ? 'unidades' : 'presentaciones'} con ese criterio de búsqueda.`
-                                    : `Agregá ${isUnitsTab ? 'unidades' : 'presentaciones'} para comenzar.`
-                                }
-                            />
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {isUnitsTab ? (
-                                // Units List
-                                filteredUnits.map((unit) => (
-                                    <UnitCard
-                                        key={unit.id}
-                                        unit={unit}
-                                        canEdit={canEditItem(unit)}
-                                        onEdit={handleEditUnit}
-                                        onDelete={handleDeleteUnitClick}
-                                    />
-                                ))
-                            ) : (
-                                // Presentations List
-                                filteredPresentations.map((presentation) => (
-                                    <PresentationCard
-                                        key={presentation.id}
-                                        presentation={presentation}
-                                        canEdit={canEditItem(presentation)}
-                                        onEdit={handleEditPresentation}
-                                        onDelete={handleDeletePresentationClick}
-                                    />
-                                ))
-                            )}
-                        </div>
-                    )}
-                </div>
-            </ContentLayout>
+            {/* Toolbar with tabs */}
+            <Toolbar
+                portalToHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Buscar unidades por nombre o símbolo..."
+                leftActions={
+                    <ToolbarTabs
+                        value={activeTab}
+                        onValueChange={(v) => setActiveTab(v as TabValue)}
+                        options={TAB_OPTIONS}
+                    />
+                }
+                actions={[
+                    {
+                        label: "Nueva Unidad",
+                        icon: Plus,
+                        onClick: handleCreateUnit,
+                    },
+                ]}
+            />
+
+            {/* Items View */}
+            <div className="space-y-2">
+                {filteredUnits.length === 0 ? (
+                    <div className="flex items-center justify-center py-12">
+                        <EmptyState
+                            icon={Ruler}
+                            title="Sin resultados"
+                            description={searchQuery
+                                ? "No se encontraron unidades con ese criterio de búsqueda."
+                                : "No hay unidades en esta categoría."
+                            }
+                        />
+                    </div>
+                ) : (
+                    filteredUnits.map((unit) => (
+                        <UnitCard
+                            key={unit.id}
+                            unit={unit}
+                            category={unit.unit_category_id ? categoryMap.get(unit.unit_category_id) : null}
+                            canEdit={canEditItem(unit)}
+                            onEdit={handleEditUnit}
+                            onDelete={handleDeleteUnitClick}
+                        />
+                    ))
+                )}
+            </div>
 
             {/* Delete Confirmation Dialog */}
             <DeleteDialog
@@ -287,35 +308,48 @@ export function UnitsCatalogView({
                     }
                 }}
                 onConfirm={handleConfirmDelete}
-                title={itemToDelete?.type === "unit" ? "Eliminar Unidad" : "Eliminar Presentación"}
-                description={`¿Estás seguro de que querés eliminar "${itemToDelete?.type === "unit" ? (itemToDelete.item as Unit).name : (itemToDelete?.item as UnitPresentation)?.name}"? Esta acción no se puede deshacer.`}
+                title="Eliminar Unidad"
+                description={`¿Estás seguro de que querés eliminar "${itemToDelete?.name}"? Esta acción no se puede deshacer.`}
             />
         </>
     );
 }
 
 // ============================================================================
-// Unit Card Component (same pattern as MaterialCard)
+// Unit Card Component
 // ============================================================================
 
 interface UnitCardProps {
-    unit: Unit;
+    unit: CatalogUnit;
+    category: UnitCategory | null | undefined;
     canEdit: boolean;
-    onEdit: (unit: Unit) => void;
-    onDelete: (unit: Unit) => void;
+    onEdit: (unit: CatalogUnit) => void;
+    onDelete: (unit: CatalogUnit) => void;
 }
 
-function UnitCard({ unit, canEdit, onEdit, onDelete }: UnitCardProps) {
+function UnitCard({ unit, category, canEdit, onEdit, onDelete }: UnitCardProps) {
     return (
         <ListItem variant="card">
+            {/* Color strip: gray for system, green for org */}
+            <ListItem.ColorStrip color={unit.is_system ? "system" : "green"} />
+
             <ListItem.Content>
                 <ListItem.Title suffix={unit.symbol ? `(${unit.symbol})` : undefined}>
                     {unit.name}
                 </ListItem.Title>
                 <ListItem.Badges>
-                    <Badge variant="secondary" className="text-xs">
-                        {unit.is_system ? 'Sistema' : 'Propio'}
-                    </Badge>
+                    {/* Aplicación badges */}
+                    {unit.applicable_to?.map((app) => (
+                        <Badge key={app} variant="outline" className="text-xs">
+                            {app === 'task' ? 'Tarea' : app === 'material' ? 'Material' : 'Mano de Obra'}
+                        </Badge>
+                    ))}
+                    {/* Categoría badge */}
+                    {category && (
+                        <Badge variant="secondary" className="text-xs">
+                            {category.name}
+                        </Badge>
+                    )}
                 </ListItem.Badges>
             </ListItem.Content>
 
@@ -335,63 +369,6 @@ function UnitCard({ unit, canEdit, onEdit, onDelete }: UnitCardProps) {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => onDelete(unit)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </ListItem.Actions>
-            )}
-        </ListItem>
-    );
-}
-
-// ============================================================================
-// Presentation Card Component (same pattern as MaterialCard)
-// ============================================================================
-
-interface PresentationCardProps {
-    presentation: UnitPresentation;
-    canEdit: boolean;
-    onEdit: (p: UnitPresentation) => void;
-    onDelete: (p: UnitPresentation) => void;
-}
-
-function PresentationCard({ presentation, canEdit, onEdit, onDelete }: PresentationCardProps) {
-    return (
-        <ListItem variant="card">
-            <ListItem.Content>
-                <ListItem.Title>
-                    {presentation.name}
-                </ListItem.Title>
-                <ListItem.Badges>
-                    <Badge variant="outline" className="text-xs font-medium">
-                        {presentation.unit_name} × {presentation.equivalence}
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                        {presentation.is_system ? 'Sistema' : 'Propio'}
-                    </Badge>
-                </ListItem.Badges>
-            </ListItem.Content>
-
-            {canEdit && (
-                <ListItem.Actions>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Acciones</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(presentation)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => onDelete(presentation)}
                                 className="text-destructive focus:text-destructive"
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />

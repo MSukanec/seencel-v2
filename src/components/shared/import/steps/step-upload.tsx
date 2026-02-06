@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { ImportConfig, parseFile, ParseResult } from "@/lib/import";
-import { Upload, FileType, AlertCircle, FileSpreadsheet, ArrowRight, X } from "lucide-react";
+import { Upload, FileType, AlertCircle, FileSpreadsheet, ArrowRight, X, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,16 @@ interface ImportStepUploadProps {
     onReset?: () => void;
     initialFile?: File | null;
     initialResult?: ParseResult | null;
+    // Expose header selection state to parent for footer actions
+    onHeaderSelectionStateChange?: (state: {
+        isInHeaderSelection: boolean;
+        selectedRowIndex: number;
+        onConfirm: () => void;
+        onCancel: () => void;
+    }) => void;
 }
 
-export function ImportStepUpload({ config, onFileSelected, onReset, initialFile, initialResult }: ImportStepUploadProps) {
+export function ImportStepUpload({ config, onFileSelected, onReset, initialFile, initialResult, onHeaderSelectionStateChange }: ImportStepUploadProps) {
     const t = useTranslations('ImportSystem.Upload');
     const [isParsing, setIsParsing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -114,6 +121,18 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
         if (onReset) onReset();
     };
 
+    // Notify parent about header selection state for footer integration
+    useEffect(() => {
+        if (onHeaderSelectionStateChange) {
+            onHeaderSelectionStateChange({
+                isInHeaderSelection: stage === 'header-selection',
+                selectedRowIndex: selectedHeaderIndex,
+                onConfirm: confirmHeaderSelection,
+                onCancel: handleReset
+            });
+        }
+    }, [stage, selectedHeaderIndex, onHeaderSelectionStateChange]);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -123,7 +142,28 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
         >
             {stage === 'upload' && (
                 // Upload State
-                <div className="flex flex-col items-center justify-center p-8 h-full min-h-0">
+                <div className="flex flex-col items-center justify-center p-8 h-full min-h-0 gap-6">
+                    {/* Introduction Section */}
+                    {config.description && (
+                        <div className="w-full max-w-2xl text-center space-y-3">
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                {config.description}
+                            </p>
+                            {config.docsPath && (
+                                <a
+                                    href={config.docsPath}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                                >
+                                    <BookOpen className="h-4 w-4" />
+                                    Ver documentación completa
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Dropzone */}
                     <div
                         {...getRootProps()}
                         className={cn(
@@ -158,7 +198,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
                     {error && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center gap-2 text-destructive bg-destructive/10 px-4 py-3 rounded-md mt-6"
+                            className="flex items-center gap-2 text-destructive bg-destructive/10 px-4 py-3 rounded-md"
                         >
                             <AlertCircle className="h-4 w-4" />
                             <span className="text-sm font-medium">{error}</span>
@@ -172,22 +212,14 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
                 <div className="flex flex-col h-full min-h-0 overflow-hidden">
                     {/* Header card with selected row preview */}
                     <div className="px-6 py-4 border-b shrink-0 bg-yellow-50/50 dark:bg-yellow-900/10 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <h3 className="font-medium flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                    {t('headerSelection.title')}
-                                </h3>
-                                <p className="text-xs text-muted-foreground">
-                                    {t('headerSelection.description')}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={handleReset}>Cancelar</Button>
-                                <Button size="sm" onClick={confirmHeaderSelection}>
-                                    {t('headerSelection.useRow', { index: selectedHeaderIndex + 1 })} <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
-                            </div>
+                        <div className="space-y-1">
+                            <h3 className="font-medium flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                {t('headerSelection.title')}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                                {t('headerSelection.description')}
+                            </p>
                         </div>
 
                         {/* Selected row preview */}

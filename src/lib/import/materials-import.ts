@@ -394,7 +394,44 @@ export async function importMaterialsCatalogBatch(
             }
         }
 
-        console.log(`[Import] Parsed "${name}": unit_price="${material.unit_price}" -> ${unit_price}, currency="${material.currency_code}" -> ${currency_code}`);
+        // Parse price date (optional - uses current date if not provided)
+        let price_date: string | null = null;
+        if (material.price_date) {
+            const parsedDate = parseFlexibleDate(material.price_date);
+            if (parsedDate) {
+                price_date = parsedDate.toISOString().split('T')[0];
+            }
+        }
+
+        // Resolve or mark sale unit for creation
+        let sale_unit_id = null;
+        let saleUnitToCreate: string | null = null;
+        if (material.sale_unit_name) {
+            const rawValue = String(material.sale_unit_name).trim();
+            const directMatch = units?.find(u => u.id === rawValue);
+            if (directMatch) {
+                sale_unit_id = directMatch.id;
+            } else {
+                sale_unit_id = unitMap.get(rawValue.toLowerCase()) || null;
+                if (!sale_unit_id && rawValue) {
+                    // Mark for creation (reuse unitsToCreate)
+                    saleUnitToCreate = rawValue;
+                    if (!unitsToCreate.has(rawValue.toLowerCase())) {
+                        unitsToCreate.set(rawValue.toLowerCase(), rawValue);
+                    }
+                }
+            }
+        }
+
+        // Parse sale unit quantity
+        let sale_unit_quantity: number | null = null;
+        if (material.sale_unit_quantity !== undefined && material.sale_unit_quantity !== null && material.sale_unit_quantity !== '') {
+            const rawQty = String(material.sale_unit_quantity).replace(/[^\d.,]/g, '').replace(',', '.');
+            sale_unit_quantity = parseFloat(rawQty);
+            if (isNaN(sale_unit_quantity) || sale_unit_quantity <= 0) sale_unit_quantity = null;
+        }
+
+        console.log(`[Import] Parsed "${name}": unit_price="${material.unit_price}" -> ${unit_price}, currency="${material.currency_code}" -> ${currency_code}, price_date="${material.price_date}" -> ${price_date}`);
 
         return {
             name,
@@ -409,6 +446,10 @@ export async function importMaterialsCatalogBatch(
             material_type,
             unit_price,
             currency_code,
+            price_date,
+            sale_unit_id,
+            saleUnitToCreate,
+            sale_unit_quantity,
             index,
         };
     }).filter(Boolean) as any[];
@@ -516,6 +557,12 @@ export async function importMaterialsCatalogBatch(
             console.log(`[Import] Resolving provider "${material.providerToCreate}" -> key "${providerKey}" -> id: ${provider_id}`);
         }
 
+        // Resolve sale_unit_id if it was marked for creation
+        let sale_unit_id = material.sale_unit_id;
+        if (!sale_unit_id && material.saleUnitToCreate) {
+            sale_unit_id = unitMap.get(material.saleUnitToCreate.toLowerCase()) || null;
+        }
+
         return {
             name: material.name,
             code: material.code,
@@ -524,6 +571,8 @@ export async function importMaterialsCatalogBatch(
             category_id,
             unit_id,
             default_provider_id: provider_id,
+            default_sale_unit_id: sale_unit_id,
+            default_sale_unit_quantity: material.sale_unit_quantity,
             material_type: material.material_type,
             is_system: false,
             is_deleted: false,
@@ -535,6 +584,7 @@ export async function importMaterialsCatalogBatch(
             // Keep price info for second pass
             _unit_price: material.unit_price,
             _currency_code: material.currency_code,
+            _price_date: material.price_date,
         };
     });
 
@@ -546,7 +596,7 @@ export async function importMaterialsCatalogBatch(
     const insertedMaterials: any[] = [];
     if (records.length > 0) {
         // Remove temporary fields before insert
-        const cleanRecords = records.map(({ _unit_price, _currency_code, ...rest }) => rest);
+        const cleanRecords = records.map(({ _unit_price, _currency_code, _price_date, ...rest }) => rest);
 
         const { data: inserted, error } = await supabase
             .from('materials')
@@ -592,7 +642,8 @@ export async function importMaterialsCatalogBatch(
                         organization_id: organizationId,
                         unit_price: priceValue,
                         currency_id,
-                        valid_from: new Date().toISOString().split('T')[0],
+                        // Use user-provided date if available, otherwise current date
+                        valid_from: record._price_date || new Date().toISOString().split('T')[0],
                         created_by: memberId,
                         updated_by: memberId,
                     });

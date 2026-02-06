@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ListItem, MaterialListItem } from "@/components/shared/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import {
     Plus,
@@ -19,9 +19,12 @@ import {
     Trash2,
     Wrench,
     Upload,
+    LayoutGrid,
+    History,
 } from "lucide-react";
 import { ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
+import { ImportHistoryModal } from "@/components/shared/import/import-history-modal";
 import { createImportBatch, importMaterialsCatalogBatch, revertImportBatch } from "@/lib/import";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,7 +82,6 @@ export interface MaterialsCatalogViewProps {
     orgId: string;
     isAdminMode?: boolean;
     providers?: { id: string; name: string }[];
-    presentations?: { id: string; unit_id: string; name: string; equivalence: number }[];
 }
 
 export function MaterialsCatalogView({
@@ -89,12 +91,11 @@ export function MaterialsCatalogView({
     categoryHierarchy,
     orgId,
     isAdminMode = false,
-    providers = [],
-    presentations = []
+    providers = []
 }: MaterialsCatalogViewProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
-    const [activeTab, setActiveTab] = useState<"material" | "consumable">("material");
+    const [activeTab, setActiveTab] = useState<"all" | "material" | "consumable">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
@@ -127,7 +128,9 @@ export function MaterialsCatalogView({
     // Calculate material counts per category (filtered by current tab)
     const materialCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        const filteredByType = optimisticItems.filter(m => m.material_type === activeTab);
+        const filteredByType = activeTab === 'all'
+            ? optimisticItems
+            : optimisticItems.filter(m => m.material_type === activeTab);
         filteredByType.forEach(m => {
             const catId = m.category_id || "sin-categoria";
             counts[catId] = (counts[catId] || 0) + 1;
@@ -137,7 +140,9 @@ export function MaterialsCatalogView({
 
     // Total for current type
     const totalForCurrentType = useMemo(() =>
-        optimisticItems.filter(m => m.material_type === activeTab).length,
+        activeTab === 'all'
+            ? optimisticItems.length
+            : optimisticItems.filter(m => m.material_type === activeTab).length,
         [optimisticItems, activeTab]
     );
 
@@ -146,8 +151,10 @@ export function MaterialsCatalogView({
     const filteredMaterials = useMemo(() => {
         let filtered = optimisticItems;
 
-        // Filter by material type (tab)
-        filtered = filtered.filter(m => m.material_type === activeTab);
+        // Filter by material type (tab) - 'all' shows everything
+        if (activeTab !== 'all') {
+            filtered = filtered.filter(m => m.material_type === activeTab);
+        }
 
         // Filter by category
         if (selectedCategoryId === "sin-categoria") {
@@ -226,24 +233,28 @@ export function MaterialsCatalogView({
     const materialsImportConfig: ImportConfig<any> = {
         entityLabel: "Materiales",
         entityId: "materials_catalog",
+        description: "Importá tu catálogo de materiales e insumos desde un archivo Excel o CSV. El sistema detectará automáticamente las columnas y te permitirá mapearlas a los campos correspondientes. Los materiales duplicados se identificarán por nombre para evitar registros repetidos.",
+        docsPath: "/es/docs/materiales/importar",
         columns: [
             {
                 id: "name",
                 label: "Nombre",
                 required: true,
+                description: "Nombre del material o insumo",
                 example: "Cemento Portland"
             },
             {
                 id: "code",
                 label: "Código",
                 required: false,
-                example: "MAT-001",
-                description: "Código interno o SKU"
+                description: "Código interno o SKU de tu sistema",
+                example: "MAT-001"
             },
             {
                 id: "description",
                 label: "Descripción",
                 required: false,
+                description: "Detalle o especificación técnica",
                 example: "Cemento tipo I para construcción general"
             },
             {
@@ -330,6 +341,37 @@ export function MaterialsCatalogView({
                     }
                 }
             },
+            {
+                id: "price_date",
+                label: "Fecha del Precio",
+                required: false,
+                example: "2024-01-15",
+                description: "Fecha del precio. Si no se indica, usa la fecha actual"
+            },
+            {
+                id: "sale_unit_name",
+                label: "Unidad de Venta",
+                required: false,
+                example: "Bolsa",
+                description: "Envase o presentación (Bolsa, Lata, Caja...)",
+                foreignKey: {
+                    table: 'units',
+                    labelField: 'name',
+                    valueField: 'id',
+                    fetchOptions: async () => units.map(u => ({
+                        id: u.id,
+                        label: `${u.name} (${u.abbreviation})`
+                    })),
+                    allowCreate: true,
+                }
+            },
+            {
+                id: "sale_unit_quantity",
+                label: "Cantidad por Unidad de Venta",
+                required: false,
+                example: "25",
+                description: "Cantidad de material por unidad de venta (ej: 25 kg por bolsa)"
+            },
         ],
         onImport: async (records) => {
             try {
@@ -367,6 +409,25 @@ export function MaterialsCatalogView({
         );
     };
 
+    const handleImportHistory = () => {
+        openModal(
+            <ImportHistoryModal
+                organizationId={orgId}
+                entityType="materials"
+                entityTable="materials"
+                onRevert={() => {
+                    // Refresh the page data after revert
+                    router.refresh();
+                }}
+            />,
+            {
+                title: "Historial de Importaciones",
+                description: "Últimas 20 importaciones de materiales",
+                size: "lg"
+            }
+        );
+    };
+
     // ========================================================================
     // Material Handlers
     // ========================================================================
@@ -379,7 +440,6 @@ export function MaterialsCatalogView({
                 units={units}
                 categories={categories}
                 providers={providers}
-                presentations={presentations}
                 isAdminMode={isAdminMode}
                 onSuccess={(newMaterial) => {
                     closeModal();
@@ -413,7 +473,6 @@ export function MaterialsCatalogView({
                 units={units}
                 categories={categories}
                 providers={providers}
-                presentations={presentations}
                 isAdminMode={isAdminMode}
                 onSuccess={(updatedMaterial) => {
                     closeModal();
@@ -575,14 +634,18 @@ export function MaterialsCatalogView({
                     portalToHeader
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
-                    searchPlaceholder={activeTab === 'material'
-                        ? "Buscar materiales por nombre, categoría o unidad..."
-                        : "Buscar insumos por nombre, categoría o unidad..."}
+                    searchPlaceholder={
+                        activeTab === 'all'
+                            ? "Buscar materiales e insumos por nombre, categoría o unidad..."
+                            : activeTab === 'material'
+                                ? "Buscar materiales por nombre, categoría o unidad..."
+                                : "Buscar insumos por nombre, categoría o unidad..."}
                     leftActions={
                         <ToolbarTabs
                             value={activeTab}
-                            onValueChange={(v) => setActiveTab(v as 'material' | 'consumable')}
+                            onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
                             options={[
+                                { label: "Todos", value: "all", icon: LayoutGrid },
                                 { label: "Materiales", value: "material", icon: Package },
                                 { label: "Insumos", value: "consumable", icon: Wrench },
                             ]}
@@ -590,7 +653,7 @@ export function MaterialsCatalogView({
                     }
                     actions={[
                         {
-                            label: activeTab === 'material' ? "Nuevo Material" : "Nuevo Insumo",
+                            label: activeTab === 'consumable' ? "Nuevo Insumo" : "Nuevo Material",
                             icon: Plus,
                             onClick: handleCreateMaterial,
                         },
@@ -599,6 +662,11 @@ export function MaterialsCatalogView({
                             icon: Upload,
                             onClick: handleImport,
                         },
+                        {
+                            label: "Ver historial",
+                            icon: History,
+                            onClick: handleImportHistory,
+                        },
                     ]}
                     selectedCount={multiSelect.selectedCount}
                     onClearSelection={multiSelect.clearSelection}
@@ -606,36 +674,47 @@ export function MaterialsCatalogView({
                 />
 
                 {/* Materials/Consumables View */}
-                <div className="h-full">
-                    {filteredMaterials.length === 0 ? (
-                        <div className="h-full flex items-center justify-center">
-                            <EmptyState
-                                icon={activeTab === 'material' ? Package : Wrench}
-                                title="Sin resultados"
-                                description={searchQuery
-                                    ? `No se encontraron ${activeTab === 'material' ? 'materiales' : 'insumos'} con ese criterio de búsqueda.`
-                                    : selectedCategoryId
-                                        ? `No hay ${activeTab === 'material' ? 'materiales' : 'insumos'} en esta categoría.`
-                                        : `Agregá ${activeTab === 'material' ? 'materiales' : 'insumos'} para comenzar.`
-                                }
+                {filteredMaterials.length === 0 ? (
+                    // Empty state wrapper - min-h-full ensures it takes available height
+                    <div className="min-h-full flex flex-col">
+                        {searchQuery || selectedCategoryId ? (
+                            <ViewEmptyState
+                                mode="no-results"
+                                icon={Package}
+                                viewName="materiales e insumos"
+                                filterContext={searchQuery ? 'con esa búsqueda' : 'en esta categoría'}
+                                onResetFilters={() => {
+                                    setSearchQuery("");
+                                    setSelectedCategoryId(null);
+                                }}
                             />
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {filteredMaterials.map((material) => (
-                                <MaterialListItem
-                                    key={material.id}
-                                    material={material}
-                                    canEdit={canEdit(material)}
-                                    selected={multiSelect.isSelected(material.id)}
-                                    onToggleSelect={multiSelect.toggle}
-                                    onEdit={handleEditMaterial}
-                                    onDelete={handleDeleteMaterialClick}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
+                        ) : (
+                            <ViewEmptyState
+                                mode="empty"
+                                icon={Package}
+                                viewName="Materiales e Insumos"
+                                featureDescription="Los materiales e insumos son los productos físicos y consumibles que utilizás en tus proyectos de construcción. Desde aquí podés gestionar el catálogo, definir precios, asociar proveedores y organizar por categorías."
+                                onAction={handleCreateMaterial}
+                                actionLabel="Nuevo Material"
+                                docsPath="/docs/materiales/introduccion"
+                            />
+                        )}
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {filteredMaterials.map((material) => (
+                            <MaterialListItem
+                                key={material.id}
+                                material={material}
+                                canEdit={canEdit(material)}
+                                selected={multiSelect.isSelected(material.id)}
+                                onToggleSelect={multiSelect.toggle}
+                                onEdit={handleEditMaterial}
+                                onDelete={handleDeleteMaterialClick}
+                            />
+                        ))}
+                    </div>
+                )}
             </ContentLayout>
 
             {/* Material Delete Modal */}

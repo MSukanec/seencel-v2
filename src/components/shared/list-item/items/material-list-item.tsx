@@ -28,8 +28,15 @@ export interface MaterialListItemData {
     category_name?: string | null;
     organization_id?: string | null;
     is_system?: boolean;
+    // Sale unit info
+    default_sale_unit_id?: string | null;
+    default_sale_unit_quantity?: number | null;
+    sale_unit_name?: string | null;
+    sale_unit_symbol?: string | null;
+    // Price info
     org_unit_price?: number | null;
     org_price_currency_id?: string | null;
+    org_price_valid_from?: string | null;
 }
 
 export interface MaterialListItemProps {
@@ -67,6 +74,22 @@ export const MaterialListItem = memo(function MaterialListItem({
         }).format(material.org_unit_price)
         : null;
 
+    // Format price date if available
+    const formattedPriceDate = material.org_price_valid_from
+        ? new Intl.DateTimeFormat('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
+        }).format(new Date(material.org_price_valid_from))
+        : null;
+
+    // Currency symbol based on currency_id
+    // Using a simple heuristic: if currency contains "usd" or "dolar" in common currency IDs, use USD
+    // For ARS or default, use $
+    const currencySymbol = material.org_price_currency_id
+        ? (material.org_price_currency_id.toLowerCase().includes('usd') ? 'USD ' : '$')
+        : '$';
+
     // Memoize the toggle handler to avoid creating new function on each render
     const handleToggle = useCallback(() => {
         onToggleSelect?.(material.id);
@@ -81,6 +104,9 @@ export const MaterialListItem = memo(function MaterialListItem({
                     onChange={handleToggle}
                 />
             )}
+
+            {/* Color indicator for system vs custom */}
+            <ListItem.ColorStrip color={material.is_system ? "system" : "indigo"} />
 
             <ListItem.Content>
                 <ListItem.Title className="text-base">
@@ -102,16 +128,32 @@ export const MaterialListItem = memo(function MaterialListItem({
                             {material.category_name}
                         </Badge>
                     )}
-                    {formattedPrice && (
-                        <Badge variant="outline" className="text-xs font-medium">
-                            ${formattedPrice}
-                        </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                        {material.is_system ? 'Sistema' : 'Propio'}
-                    </Badge>
                 </ListItem.Badges>
             </ListItem.Content>
+
+            {/* Sale unit and price display - before actions */}
+            <div className="flex flex-col items-end text-sm mr-2 min-w-[100px]">
+                {/* Sale unit info: "Lata 1 KG" */}
+                {(material.sale_unit_name || material.sale_unit_symbol) && (
+                    <span className="text-xs text-muted-foreground">
+                        {material.sale_unit_name || material.sale_unit_symbol}
+                        {material.default_sale_unit_quantity && (
+                            <> {material.default_sale_unit_quantity} {material.unit_symbol || ''}</>
+                        )}
+                    </span>
+                )}
+                {/* Price with currency symbol */}
+                {formattedPrice && (
+                    <>
+                        <span className="font-medium">
+                            {currencySymbol}{formattedPrice}
+                        </span>
+                        {formattedPriceDate && (
+                            <span className="text-xs text-muted-foreground">{formattedPriceDate}</span>
+                        )}
+                    </>
+                )}
+            </div>
 
             {canEdit && (onEdit || onDelete) && (
                 <ListItem.Actions>

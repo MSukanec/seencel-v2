@@ -17,11 +17,19 @@ export async function createImportBatch(
 
     if (!user) throw new Error("Unauthorized");
 
+    // Get member_id for this user in this organization
+    const { data: member } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('user_id', user.id)
+        .single();
+
     const { data, error } = await supabase
         .from('import_batches')
         .insert({
             organization_id: organizationId,
-            user_id: user.id,
+            member_id: member?.id || null,
             entity_type: entityType,
             record_count: count,
             status: 'completed'

@@ -157,8 +157,8 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-medium truncate text-sm" title={header}>{header}</span>
                                                         {formattedValue && (
-                                                            <span className="text-xs text-muted-foreground/80 truncate font-mono flex items-center gap-1" title={formattedValue}>
-                                                                <span className="opacity-50 font-sans">Tu valor:</span>
+                                                            <span className="text-xs text-muted-foreground truncate font-mono flex items-center gap-1" title={formattedValue}>
+                                                                <span className="font-sans">Tu valor:</span>
                                                                 <span className="font-medium text-foreground/80">
                                                                     {formattedValue.length > 30 ? formattedValue.substring(0, 30) + "..." : formattedValue}
                                                                 </span>
@@ -177,7 +177,7 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
                                                         onValueChange={(val) => handleMapChange(header, val === "ignore" ? "" : val)}
                                                     >
                                                         <SelectTrigger className={cn(
-                                                            "h-9 w-full",
+                                                            "h-auto min-h-9 py-2 w-full",
                                                             !mappedColId && "text-muted-foreground border-dashed bg-transparent"
                                                         )}>
                                                             <SelectValue placeholder={t('ignoreColumn')} />
@@ -190,20 +190,39 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
                                                                 const isMappedElsewhere = Object.entries(mapping).some(
                                                                     ([h, id]) => id === col.id.toString() && h !== header
                                                                 );
+                                                                const hasHelp = col.description || col.example;
+                                                                // textValue controls what shows in the trigger when selected
+                                                                const displayLabel = col.required
+                                                                    ? `${col.label} * (${t('required')})`
+                                                                    : col.label;
                                                                 return (
                                                                     <SelectItem
                                                                         key={col.id.toString()}
                                                                         value={col.id.toString()}
                                                                         disabled={isMappedElsewhere}
+                                                                        textValue={displayLabel}
+                                                                        className={hasHelp ? "py-2" : ""}
                                                                     >
-                                                                        <span>
-                                                                            {col.label}
-                                                                            {col.required && (
-                                                                                <span className="ml-2 text-primary font-medium text-xs">
-                                                                                    * ({t('required')})
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <span className="flex items-center gap-2">
+                                                                                {col.label}
+                                                                                {col.required && (
+                                                                                    <span className="text-primary font-medium text-xs">
+                                                                                        * ({t('required')})
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
+                                                                            {hasHelp && (
+                                                                                <span className="text-xs text-muted-foreground font-normal">
+                                                                                    {col.description}
+                                                                                    {col.example && (
+                                                                                        <span className="opacity-70">
+                                                                                            {col.description ? " — " : ""}ej: {col.example}
+                                                                                        </span>
+                                                                                    )}
                                                                                 </span>
                                                                             )}
-                                                                        </span>
+                                                                        </div>
                                                                     </SelectItem>
                                                                 );
                                                             })}

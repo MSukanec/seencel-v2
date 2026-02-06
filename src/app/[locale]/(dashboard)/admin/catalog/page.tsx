@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskKinds, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
-import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor } from "@/features/admin/queries";
+import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor, getSystemUnits, getSystemUnitCategories } from "@/features/admin/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
 import { TasksParametersView } from "@/features/tasks/views/tasks-parameters-view";
 import { TasksElementsView } from "@/features/tasks/views/tasks-elements-view";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { LaborCatalogView } from "@/features/labor/views/labor-catalog-view";
+import { UnitsCatalogView } from "@/features/units/views/units-catalog-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { Wrench, ClipboardList, Package, Shield, FolderTree, Settings2, Boxes, HardHat } from "lucide-react";
+import { Wrench, ClipboardList, Package, Shield, FolderTree, Settings2, Boxes, HardHat, Ruler } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -69,7 +70,9 @@ export default async function AdminCatalogPage() {
             systemLaborLevels,
             systemLaborRoles,
             systemLaborTypes,
-            laborUnits
+            laborUnits,
+            systemUnits,
+            systemUnitCategories
         ] = await Promise.all([
             getTasksGroupedByDivision("__SYSTEM__"), // Special flag for system-only tasks
             getUnits(),
@@ -86,7 +89,9 @@ export default async function AdminCatalogPage() {
             getSystemLaborLevels(),
             getSystemLaborRoles(),
             getSystemLaborTypes(),
-            getUnitsForLabor()
+            getUnitsForLabor(),
+            getSystemUnits(),
+            getSystemUnitCategories()
         ]);
 
         // Transform system materials to match MaterialsCatalogView expected type
@@ -162,6 +167,10 @@ export default async function AdminCatalogPage() {
                                 <HardHat className="h-4 w-4 mr-2" />
                                 Mano de Obra
                             </TabsTrigger>
+                            <TabsTrigger value="units" className={tabTriggerClass}>
+                                <Ruler className="h-4 w-4 mr-2" />
+                                Unidades
+                            </TabsTrigger>
                         </TabsList>
                     }
                 >
@@ -233,6 +242,17 @@ export default async function AdminCatalogPage() {
                                 laborRoles={systemLaborRoles}
                                 laborTypes={systemLaborTypes}
                                 units={laborUnits}
+                                isAdminMode={true}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    <TabsContent value="units" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <UnitsCatalogView
+                                units={systemUnits}
+                                categories={systemUnitCategories}
+                                orgId=""
                                 isAdminMode={true}
                             />
                         </ContentLayout>

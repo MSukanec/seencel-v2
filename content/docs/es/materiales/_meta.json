@@ -1,0 +1,18 @@
+{
+    "order": [
+        "introduccion",
+        "importar",
+        "categorias"
+    ],
+    "items": {
+        "introduccion": {
+            "title": "Introducción"
+        },
+        "importar": {
+            "title": "Importar Materiales"
+        },
+        "categorias": {
+            "title": "Categorías"
+        }
+    }
+}

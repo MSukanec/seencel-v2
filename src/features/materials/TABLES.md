@@ -240,7 +240,7 @@ create table public.materials (
   updated_at timestamp with time zone null default now(),
   is_system boolean null default false,
   organization_id uuid null,
-  default_unit_presentation_id uuid null,
+  default_sale_unit_id uuid null,
   is_completed boolean null default false,
   material_type text null default 'material'::text,
   is_deleted boolean not null default false,
@@ -251,10 +251,11 @@ create table public.materials (
   description text null,
   default_provider_id uuid null,
   import_batch_id uuid null,
+  default_sale_unit_quantity numeric(12, 4) null,
   constraint materials_pkey primary key (id),
   constraint materials_id_key unique (id),
   constraint materials_default_provider_id_fkey foreign KEY (default_provider_id) references contacts (id) on delete set null,
-  constraint materials_default_unit_presentation_id_fkey foreign KEY (default_unit_presentation_id) references unit_presentations (id) on delete set null,
+  constraint materials_default_sale_unit_id_fkey foreign KEY (default_sale_unit_id) references units (id) on delete set null,
   constraint materials_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete set null,
   constraint materials_category_id_fkey foreign KEY (category_id) references material_categories (id) on delete set null,
   constraint materials_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
@@ -316,301 +317,105 @@ or
 update on materials for EACH row
 execute FUNCTION handle_updated_by ();
 
-# Tabla CONSTRUCTION_TASK_MATERIAL_SNAPSHOTS:
-# Snapshot de materiales congelado al crear construction_task.
-# Cambios en task_materials NO afectan esta tabla.
 
-create table public.construction_task_material_snapshots (
-    id uuid not null default gen_random_uuid(),
-    construction_task_id uuid not null,
-    material_id uuid not null,
-    quantity_planned numeric(20, 4) not null,
-    amount_per_unit numeric(20, 4) not null,
-    unit_id uuid null,
-    source_task_id uuid null,
-    snapshot_at timestamp with time zone not null default now(),
-    organization_id uuid not null,
-    project_id uuid not null,
-    created_at timestamp with time zone not null default now(),
-    constraint construction_task_material_snapshots_pkey primary key (id),
-    constraint ctms_construction_task_fkey foreign key (construction_task_id) 
-        references construction_tasks(id) on delete cascade,
-    constraint ctms_material_fkey foreign key (material_id) 
-        references materials(id) on delete restrict,
-    constraint ctms_unit_fkey foreign key (unit_id) 
-        references units(id) on delete set null,
-    constraint ctms_organization_fkey foreign key (organization_id) 
-        references organizations(id) on delete cascade,
-    constraint ctms_project_fkey foreign key (project_id) 
-        references projects(id) on delete cascade,
-    constraint ctms_unique_material unique (construction_task_id, material_id)
-) tablespace pg_default;
 
-create index idx_ctms_construction_task on construction_task_material_snapshots(construction_task_id);
-create index idx_ctms_project on construction_task_material_snapshots(project_id);
-create index idx_ctms_material on construction_task_material_snapshots(material_id);
-create index idx_ctms_organization on construction_task_material_snapshots(organization_id);
 
-# Triggers asociados:
-# - trg_construction_task_material_snapshot: Auto-crea snapshot al INSERT en construction_tasks
-# - trg_prevent_task_id_change: Bloquea cambios en task_id para preservar integridad
 
-# Vista PROJECT_MATERIAL_REQUIREMENTS_VIEW:
-# Lee desde snapshots, NO desde recetas vivas (task_materials)
 
-create view public.project_material_requirements_view as
-select
-    ctms.project_id,
-    ctms.organization_id,
-    ctms.material_id,
-    m.name as material_name,
-    u.name as unit_name,
-    m.category_id,
-    mc.name as category_name,
-    sum(ctms.quantity_planned)::numeric(20, 4) as total_required,
-    count(distinct ctms.construction_task_id) as task_count,
-    array_agg(distinct ctms.construction_task_id) as construction_task_ids
-from construction_task_material_snapshots ctms
-inner join construction_tasks ct on ct.id = ctms.construction_task_id
-inner join materials m on m.id = ctms.material_id
-left join units u on u.id = m.unit_id
-left join material_categories mc on mc.id = m.category_id
-where ct.is_deleted = false
-  and ct.status in ('pending', 'in_progress', 'paused')
-group by
-    ctms.project_id,
-    ctms.organization_id,
-    ctms.material_id,
-    m.name,
-    u.name,
-    m.category_id,
-    mc.name;
 
-# ============================================
-# SISTEMA DE COMPRAS (POs + Invoices)
-# ============================================
 
-# Tabla MATERIAL_PURCHASE_ORDERS:
-# Órdenes de compra (lo que PIDO al proveedor)
+# Tabla UNIT_CATEGORIES:
 
-create table public.material_purchase_orders (
-  id uuid not null default gen_random_uuid(),
-  organization_id uuid not null,
-  project_id uuid not null,
-  order_number text null,
-  order_date date not null default now(),
-  expected_delivery_date date null,
-  status text not null default 'draft'::text,
-  notes text null,
-  currency_id uuid null,
-  subtotal numeric(12, 2) not null default 0,
-  tax_amount numeric(12, 2) not null default 0,
-  requested_by uuid null,
-  approved_by uuid null,
-  provider_id uuid null,
-  is_deleted boolean not null default false,
-  deleted_at timestamptz null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint material_purchase_orders_pkey primary key (id),
-  constraint mpo_org_fkey foreign key (organization_id) references organizations(id) on delete cascade,
-  constraint mpo_project_fkey foreign key (project_id) references projects(id) on delete cascade,
-  constraint mpo_currency_fkey foreign key (currency_id) references currencies(id) on delete restrict,
-  constraint mpo_provider_fkey foreign key (provider_id) references contacts(id) on delete set null,
-  constraint mpo_requested_by_fkey foreign key (requested_by) references organization_members(id) on delete set null,
-  constraint mpo_approved_by_fkey foreign key (approved_by) references organization_members(id) on delete set null,
-  constraint mpo_status_check check (
-    status = any (array[
-      'draft'::text,
-      'sent'::text,
-      'quoted'::text,
-      'approved'::text,
-      'rejected'::text,
-      'converted'::text
-    ])
-  )
-) tablespace pg_default;
+create table public.unit_categories (
+  id uuid not null default gen_random_uuid (),
+  code text not null,
+  name text not null,
+  description text null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint unit_categories_pkey primary key (id),
+  constraint unit_categories_code_unique unique (code),
+  constraint unit_categories_code_not_blank check ((btrim(code) <> ''::text))
+) TABLESPACE pg_default;
 
-# Triggers:
-# - trg_generate_po_number: Auto-genera número de orden (PO-2026-0001)
-# - trg_recalculate_po_totals: Recalcula subtotal al modificar items
+create index IF not exists idx_unit_categories_name on public.unit_categories using btree (name) TABLESPACE pg_default;
 
-# Tabla MATERIAL_PURCHASE_ORDER_ITEMS:
-# Items de la orden de compra
+create trigger trg_set_updated_at_unit_categories BEFORE
+update on unit_categories for EACH row
+execute FUNCTION set_updated_at ();
 
-create table public.material_purchase_order_items (
-  id uuid not null default gen_random_uuid(),
-  purchase_order_id uuid not null,
-  material_id uuid null,
-  description text not null,
-  quantity numeric(12, 4) not null default 1,
-  unit_id uuid null,
-  unit_price numeric(12, 2) null,
-  notes text null,
+# Tabla UNITS:
+
+create table public.units (
+  name text not null,
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  symbol text null,
+  applicable_to text[] not null default array['task'::text, 'material'::text, 'labor'::text],
   organization_id uuid null,
-  project_id uuid null,
-  created_at timestamptz not null default now(),
+  unit_category_id uuid null,
+  is_system boolean not null default false,
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
   created_by uuid null,
-  constraint mpo_items_pkey primary key (id),
-  constraint mpo_items_order_fkey foreign key (purchase_order_id) references material_purchase_orders(id) on delete cascade,
-  constraint mpo_items_material_fkey foreign key (material_id) references materials(id) on delete set null,
-  constraint mpo_items_unit_fkey foreign key (unit_id) references units(id) on delete set null,
-  constraint mpo_items_org_fkey foreign key (organization_id) references organizations(id) on delete cascade,
-  constraint mpo_items_project_fkey foreign key (project_id) references projects(id) on delete cascade,
-  constraint mpo_items_created_by_fkey foreign key (created_by) references organization_members(id) on delete set null
-) tablespace pg_default;
-
-create index idx_mpo_items_material on material_purchase_order_items(material_id);
-
-# Tabla MATERIAL_INVOICES:
-# Facturas/recibos (lo que RECIBO del proveedor)
-# Antes se llamaba material_purchases
-
-create table public.material_invoices (
-  id uuid not null default gen_random_uuid(),
-  organization_id uuid not null,
-  project_id uuid not null,
-  purchase_order_id uuid null,
-  provider_id uuid null,
-  invoice_number text null,
-  document_type text not null default 'invoice'::text,
-  purchase_date date not null default now(),
-  subtotal numeric(12, 2) not null default 0,
-  tax_amount numeric(12, 2) not null default 0,
-  total_amount numeric(12, 2) generated always as (subtotal + tax_amount) stored,
-  currency_id uuid not null,
-  exchange_rate numeric(18, 6) null,
-  status text not null default 'pending'::text,
-  notes text null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  created_by uuid null,
-  constraint material_invoices_pkey primary key (id),
-  constraint material_invoices_org_fkey foreign key (organization_id) references organizations(id) on delete cascade,
-  constraint material_invoices_project_fkey foreign key (project_id) references projects(id) on delete cascade,
-  constraint material_invoices_po_fkey foreign key (purchase_order_id) references material_purchase_orders(id) on delete set null,
-  constraint material_invoices_provider_fkey foreign key (provider_id) references contacts(id) on delete set null,
-  constraint material_invoices_currency_fkey foreign key (currency_id) references currencies(id) on delete restrict,
-  constraint material_invoices_created_by_fkey foreign key (created_by) references organization_members(id) on delete set null,
-  constraint material_invoices_status_check check (
-    status = any (array[
-      'pending'::text,
-      'partially_paid'::text,
-      'paid'::text,
-      'cancelled'::text
-    ])
+  updated_by uuid null,
+  constraint units_pkey primary key (id),
+  constraint units_id_key1 unique (id),
+  constraint units_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint units_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete set null,
+  constraint units_unit_category_id_fkey foreign KEY (unit_category_id) references unit_categories (id) on delete set null,
+  constraint units_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint units_name_not_blank_chk check ((btrim(name) <> ''::text)),
+  constraint units_system_org_check check (
+    (
+      (
+        (is_system = true)
+        and (organization_id is null)
+      )
+      or (
+        (is_system = false)
+        and (organization_id is not null)
+      )
+    )
   )
-) tablespace pg_default;
+) TABLESPACE pg_default;
 
-create index idx_material_invoices_po on material_invoices(purchase_order_id);
+create index IF not exists idx_units_organization on public.units using btree (organization_id) TABLESPACE pg_default;
 
-# Tabla MATERIAL_INVOICE_ITEMS:
-# Items de la factura
-# Antes se llamaba material_purchase_items
+create index IF not exists idx_units_category on public.units using btree (unit_category_id) TABLESPACE pg_default;
 
-create table public.material_invoice_items (
-  id uuid not null default gen_random_uuid(),
-  invoice_id uuid not null,
-  material_id uuid null,
-  product_id uuid null,
-  description text not null,
-  quantity numeric(12, 4) not null default 1,
-  unit_price numeric(12, 2) not null,
-  total_price numeric(12, 2) generated always as (quantity * unit_price) stored,
-  unit_id uuid null,
-  organization_id uuid not null,
-  project_id uuid not null,
-  created_at timestamptz not null default now(),
-  created_by uuid null,
-  constraint material_invoice_items_pkey primary key (id),
-  constraint material_invoice_items_invoice_fkey foreign key (invoice_id) references material_invoices(id) on delete cascade,
-  constraint material_invoice_items_material_fkey foreign key (material_id) references materials(id) on delete set null,
-  constraint material_invoice_items_product_fkey foreign key (product_id) references products(id) on delete set null,
-  constraint material_invoice_items_unit_fkey foreign key (unit_id) references units(id) on delete set null,
-  constraint material_invoice_items_org_fkey foreign key (organization_id) references organizations(id) on delete cascade,
-  constraint material_invoice_items_project_fkey foreign key (project_id) references projects(id) on delete cascade
-) tablespace pg_default;
+create unique INDEX IF not exists uq_units_system_name on public.units using btree (lower(name)) TABLESPACE pg_default
+where
+  (
+    (is_system = true)
+    and (is_deleted = false)
+  );
 
-create index idx_material_invoice_items_material on material_invoice_items(material_id);
+create unique INDEX IF not exists uq_units_org_name on public.units using btree (organization_id, lower(name)) TABLESPACE pg_default
+where
+  (
+    (is_system = false)
+    and (is_deleted = false)
+  );
 
-# ============================================
-# VISTAS DE COMPRAS
-# ============================================
+create index IF not exists idx_units_list on public.units using btree (is_system, organization_id, is_deleted, name) TABLESPACE pg_default;
 
-# Vista MATERIAL_PURCHASE_ORDERS_VIEW:
+create trigger on_unit_audit
+after INSERT
+or DELETE
+or
+update on units for EACH row
+execute FUNCTION log_unit_activity ();
 
-create view public.material_purchase_orders_view as
-select 
-    po.id,
-    po.organization_id,
-    po.project_id,
-    po.order_number,
-    po.order_date,
-    po.expected_delivery_date,
-    po.status,
-    po.notes,
-    po.subtotal,
-    po.tax_amount,
-    (po.subtotal + po.tax_amount) as total,
-    po.currency_id,
-    c.symbol as currency_symbol,
-    c.code as currency_code,
-    po.provider_id,
-    coalesce(prov.company_name, prov.first_name || ' ' || prov.last_name) as provider_name,
-    p.name as project_name,
-    po.created_at,
-    po.updated_at,
-    po.is_deleted,
-    coalesce(items.item_count, 0) as item_count
-from material_purchase_orders po
-left join currencies c on c.id = po.currency_id
-left join contacts prov on prov.id = po.provider_id
-left join projects p on p.id = po.project_id
-left join lateral (
-    select count(*) as item_count
-    from material_purchase_order_items poi
-    where poi.purchase_order_id = po.id
-) items on true
-where po.is_deleted = false;
+create trigger set_updated_by_units BEFORE INSERT
+or
+update on units for EACH row
+execute FUNCTION handle_updated_by ();
 
-# Vista MATERIAL_INVOICES_VIEW:
-
-create view public.material_invoices_view as
-select 
-    inv.id,
-    inv.organization_id,
-    inv.project_id,
-    inv.purchase_order_id,
-    inv.invoice_number,
-    inv.document_type,
-    inv.purchase_date,
-    inv.subtotal,
-    inv.tax_amount,
-    inv.total_amount,
-    inv.currency_id,
-    c.symbol as currency_symbol,
-    c.code as currency_code,
-    inv.exchange_rate,
-    inv.status,
-    inv.notes,
-    inv.provider_id,
-    coalesce(prov.company_name, prov.first_name || ' ' || prov.last_name) as provider_name,
-    p.name as project_name,
-    po.order_number as po_number,
-    inv.created_at,
-    inv.updated_at,
-    inv.created_by,
-    coalesce(items.item_count, 0) as item_count
-from material_invoices inv
-left join currencies c on c.id = inv.currency_id
-left join contacts prov on prov.id = inv.provider_id
-left join projects p on p.id = inv.project_id
-left join material_purchase_orders po on po.id = inv.purchase_order_id
-left join lateral (
-    select count(*) as item_count
-    from material_invoice_items ii
-    where ii.invoice_id = inv.id
-) items on true;
+create trigger trg_set_updated_at_units BEFORE
+update on units for EACH row
+execute FUNCTION set_updated_at ();
 
 # Vista MATERIALS_VIEW:
 
@@ -620,56 +425,47 @@ select
   m.name,
   m.code,
   m.description,
-  m.category_id,
-  mc.name as category_name,
+  m.material_type,
+  m.is_system,
+  m.organization_id,
+  m.is_deleted,
+  m.created_at,
+  m.updated_at,
   m.unit_id,
   u.name as unit_of_computation,
   u.symbol as unit_symbol,
-  m.default_unit_presentation_id,
-  up.name as default_unit_presentation,
-  up.equivalence as unit_equivalence,
+  m.category_id,
+  mc.name as category_name,
   m.default_provider_id,
-  c.full_name as default_provider_name,
-  m.is_system,
-  m.is_completed,
-  m.material_type,
-  m.organization_id,
-  m.created_at,
-  m.updated_at,
-  m.import_batch_id,
-  map.min_price,
-  map.max_price,
-  map.avg_price,
-  map.product_count,
-  map.provider_product_count,
-  map.price_count,
+  m.default_sale_unit_id,
+  m.default_sale_unit_quantity,
+  su.name as sale_unit_name,
+  su.symbol as sale_unit_symbol,
   mp.unit_price as org_unit_price,
   mp.currency_id as org_price_currency_id,
   mp.valid_from as org_price_valid_from
 from
   materials m
-  left join material_categories mc on mc.id = m.category_id
-  left join units u on u.id = m.unit_id
-  left join unit_presentations up on up.id = m.default_unit_presentation_id
-  left join contacts c on c.id = m.default_provider_id
-  left join material_avg_prices map on map.material_id = m.id
+  left join units u on m.unit_id = u.id
+  left join material_categories mc on m.category_id = mc.id
+  left join units su on m.default_sale_unit_id = su.id
   left join lateral (
     select
-      material_prices.unit_price,
-      material_prices.currency_id,
-      material_prices.valid_from
+      mp_inner.unit_price,
+      mp_inner.currency_id,
+      mp_inner.valid_from
     from
-      material_prices
+      material_prices mp_inner
     where
-      material_prices.material_id = m.id
-      and material_prices.organization_id = m.organization_id
+      mp_inner.material_id = m.id
+      and mp_inner.organization_id = m.organization_id
+      and mp_inner.valid_from <= CURRENT_DATE
       and (
-        material_prices.valid_to is null
-        or material_prices.valid_to >= CURRENT_DATE
+        mp_inner.valid_to is null
+        or mp_inner.valid_to >= CURRENT_DATE
       )
-      and material_prices.valid_from <= CURRENT_DATE
     order by
-      material_prices.valid_from desc
+      mp_inner.valid_from desc
     limit
       1
   ) mp on true

@@ -6,6 +6,13 @@
 // Core batch management
 export { createImportBatch, revertImportBatch } from "./core";
 
+// History
+export { getImportHistory } from "./history";
+
+// Types and constants (from non-"use server" file)
+export { ENTITY_TYPE_LABELS } from "./types";
+export type { ImportBatch } from "./types";
+
 // Date utilities
 export { parseFlexibleDate } from "./date-utils";
 
@@ -19,3 +26,4 @@ export { importMaterialPaymentsBatch, importMaterialsCatalogBatch } from "./mate
 export * from "./utils";
 export * from "./conflict-utils";
 export * from "./normalizers";
+

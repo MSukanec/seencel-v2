@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskKinds } from "@/features/tasks/queries";
-import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject, getUnitPresentations } from "@/features/materials/queries";
-import { getUnitsForOrganization, getUnitPresentationsForOrganization } from "@/features/units/queries";
+import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
+import { getUnitsForOrganization, getUnitCategories } from "@/features/units/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
 import { getCurrencies } from "@/features/billing/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
@@ -73,9 +73,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             laborTypesWithPrices,
             currencies,
             providers,
-            presentations,
             catalogUnits,
-            catalogPresentations
+            unitCategories
         ] = await Promise.all([
             getTasksGroupedByDivision(activeOrgId),
             getUnits(),
@@ -88,9 +87,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             getLaborTypesWithPrices(activeOrgId),
             getCurrencies(),
             getProvidersForProject(activeOrgId),
-            getUnitPresentations(),
             getUnitsForOrganization(activeOrgId),
-            getUnitPresentationsForOrganization(activeOrgId)
+            getUnitCategories()
         ]);
 
         // Get default currency (first one or USD)
@@ -145,7 +143,6 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                             orgId={activeOrgId}
                             isAdminMode={false}
                             providers={providers}
-                            presentations={presentations}
                         />
                     </TabsContent>
                     <TabsContent value="labor" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
@@ -159,11 +156,13 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                         </ContentLayout>
                     </TabsContent>
                     <TabsContent value="units" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <UnitsCatalogView
-                            units={catalogUnits}
-                            presentations={catalogPresentations}
-                            orgId={activeOrgId}
-                        />
+                        <ContentLayout variant="wide">
+                            <UnitsCatalogView
+                                units={catalogUnits}
+                                categories={unitCategories}
+                                orgId={activeOrgId}
+                            />
+                        </ContentLayout>
                     </TabsContent>
                 </PageWrapper>
             </Tabs>

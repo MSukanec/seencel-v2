@@ -89,60 +89,77 @@ Solo si hay lógica client significativa compartida entre tabs:
 - [ ] ¿Los tabs se renderizan en el Server Component?
 
 
-## 1. EmptyState Estándar (🚨 OBLIGATORIO)
+## 1. ViewEmptyState Global (🚨 OBLIGATORIO)
 
-**TODA página con listados DEBE usar el EmptyState estándar** de `@/components/ui/empty-state` con el patrón de **early return**.
+**TODA vista DEBE usar `ViewEmptyState`** de `@/components/shared/empty-state` con dos variantes:
 
-### Patrón Obligatorio
+### Variante A: Vista Vacía (`mode="empty"`)
+
+Cuando **no hay datos** en la página (onboarding state).
 
 ```tsx
-import { EmptyState } from "@/components/ui/empty-state";
-import { Briefcase, Plus } from "lucide-react";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { Package } from "lucide-react";
 
-// ✅ CORRECTO: Early return ANTES del render principal
-if (items.length === 0) {
-    return (
-        <div className="h-full flex flex-col">
-            <Toolbar
-                portalToHeader
-                actions={[{ label: "Crear", icon: Plus, onClick: handleCreate }]}
-            />
-            <div className="flex-1 flex items-center justify-center">
-                <EmptyState
-                    icon={Briefcase}
-                    title="No hay proyectos"
-                    description="Creá tu primer proyecto para comenzar."
-                />
-            </div>
-        </div>
-    );
-}
+<ViewEmptyState
+    mode="empty"
+    icon={Package}
+    viewName="Materiales e Insumos"
+    featureDescription="Los materiales e insumos son los productos físicos y consumibles que utilizás en tus proyectos de construcción."
+    onAction={handleCreateMaterial}
+    actionLabel="Nuevo Material"
+    docsPath="/docs/materiales"  // Solo si existe documentación
+/>
+```
 
-// Render principal con DataTable...
+### Variante B: Sin Resultados (`mode="no-results"`)
+
+Cuando **filtros aplicados** no encuentran coincidencias.
+
+```tsx
+<ViewEmptyState
+    mode="no-results"
+    icon={Package}
+    viewName="materiales e insumos"
+    filterContext="con esa búsqueda"
+    onResetFilters={() => {
+        setSearchQuery("");
+        setSelectedCategoryId(null);
+    }}
+/>
 ```
 
 ### Reglas Clave
 
 | Regla | Descripción |
 |-------|-------------|
-| **Early Return** | Usar `if (items.length === 0) return` ANTES del render principal |
-| **Contenedor Flex-1** | `<div className="flex-1 flex items-center justify-center">` |
-| **Sin Botón en EmptyState** | El botón va en el `Toolbar`, NO en el EmptyState |
-| **Toolbar Siempre Visible** | Renderizar Toolbar incluso en estado vacío |
+| **Título (empty)** | Nombre de la vista, NO "Sin resultados" |
+| **Título (no-results)** | "Sin resultados" (automático) |
+| **Descripción (empty)** | Explicación extensa del feature |
+| **Botón Acción** | Mismo ícono (+) y label que el header |
+| **Botón Documentación** | Solo si existe docs, abre en nueva pestaña |
+| **Empty Unificado** | Para tabs (ej: Materiales/Insumos), usar UN empty para todos |
 
-### Props del EmptyState
+### Props del ViewEmptyState
 
-| Prop | Tipo | Requerido | Descripción |
-|------|------|-----------|-------------|
-| `icon` | LucideIcon | ✅ | Ícono relevante a la entidad |
-| `title` | string | ✅ | Título claro del estado vacío |
-| `description` | React.ReactNode | ✅ | Explicación breve |
-| `action` | React.ReactNode | ⛔ NO USAR | El botón va en Toolbar |
-| `comingSoon` | boolean | Opcional | Badge "Próximamente" |
+| Prop | Tipo | Modo | Descripción |
+|------|------|------|-------------|
+| `mode` | `"empty"` \| `"no-results"` | Ambos | Variante a mostrar |
+| `icon` | LucideIcon | Ambos | Ícono de la página |
+| `viewName` | string | Ambos | Nombre de la vista |
+| `featureDescription` | string | empty | Descripción extensa |
+| `onAction` | () => void | empty | Callback de acción |
+| `actionLabel` | string | empty | Label del botón |
+| `actionIcon` | LucideIcon | empty | Ícono (default: Plus) |
+| `docsPath` | string | empty | Ruta i18n a docs |
+| `onResetFilters` | () => void | no-results | Limpiar filtros |
+| `filterContext` | string | no-results | Contexto adicional |
 
-> ⛔ **NUNCA** usar `action` prop del EmptyState. El botón de crear debe estar en el Toolbar.
-
-> ⛔ **NUNCA** usar `emptyState` prop del DataTable para el estado inicial vacío.
+> ⛔ **NUNCA** usar el EmptyState viejo de `@/components/ui/empty-state`.
+>
+> ⛔ **NUNCA** crear un empty diferente por cada tab de la misma vista.
+>
+> ⛔ **NUNCA** incluir `docsPath` si no existe documentación para ese feature.
 
 ---
 
@@ -233,7 +250,7 @@ try {
 
 Antes de marcar una página como completa:
 
-- [ ] ¿Usa `EmptyState` de `@/components/ui/empty-state`?
+- [ ] ¿Usa `ViewEmptyState` de `@/components/shared/empty-state`?
 - [ ] ¿TabsContent tiene clases `flex-1 m-0 overflow-hidden data-[state=inactive]:hidden`?
 - [ ] ¿Exporta `generateMetadata` con robots noindex?
 - [ ] ¿Tiene `try/catch` con `ErrorDisplay`?
@@ -246,7 +263,7 @@ Antes de marcar una página como completa:
 
 | ❌ Violación | ✅ Solución |
 |-------------|------------|
-| EmptyState custom | Usar `@/components/ui/empty-state` |
+| EmptyState custom | Usar `ViewEmptyState` de `@/components/shared/empty-state` |
 | TabsContent sin clases | Agregar `flex-1 m-0 overflow-hidden data-[state=inactive]:hidden` |
 | Sin Metadata | Agregar `generateMetadata` |
 | Sin error handling | Agregar `try/catch` + `ErrorDisplay` |

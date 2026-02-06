@@ -1,0 +1,145 @@
+---
+title: ¿Qué es un Material?
+description: Guía completa sobre materiales de construcción en SEENCEL
+---
+
+# ¿Qué es un Material?
+
+Un **Material** en SEENCEL representa cualquier recurso físico que se utiliza en la construcción. Desde cemento y ladrillos hasta tornillos y pintura. Es la unidad fundamental para gestionar costos, compras e inventario de tu organización.
+
+## Tipos de Materiales
+
+SEENCEL distingue dos tipos principales:
+
+| Tipo | Descripción | Ejemplos |
+|------|-------------|----------|
+| **Material** | Materiales de construcción tradicionales, materias primas, productos terminados | Cemento, Arena, Ladrillos, Cerámica, Hierro |
+| **Insumo** | Consumibles, herramientas menores, productos auxiliares | Clavos, Tornillos, Cinta de papel, Lijas, Pinturas |
+
+Esta distinción permite filtrar y organizar el catálogo según el uso: los **materiales** suelen ser los componentes principales de una obra, mientras que los **insumos** son complementarios.
+
+---
+
+## Campos de un Material
+
+Cada material tiene los siguientes campos:
+
+### Información Principal
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Nombre** | Identificador único del material. Ej: "Cemento Portland CPF40" | ✅ |
+| **Código** | Código interno o SKU para identificación rápida. Ej: "CEM-001" | No |
+| **Descripción** | Detalles adicionales, especificaciones técnicas, marcas | No |
+| **Tipo** | Material o Insumo | ✅ |
+
+### Clasificación
+
+| Campo | Descripción | Para qué sirve |
+|-------|-------------|----------------|
+| **Categoría** | Grupo al que pertenece (ej: "Hidráulicos", "Metales") | Organizar el catálogo y filtrar materiales |
+| **Unidad de Medida** | Cómo se mide este material (ej: "kg", "m²", "unidad") | Calcular cantidades en recetas y presupuestos |
+
+### Información Comercial
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| **Proveedor por defecto** | Contacto principal para compras | "Corralón San Martín" |
+| **Unidad de Venta** | Cómo lo vende el proveedor (puede diferir de la unidad de medida) | Bolsa de 50kg |
+| **Cantidad por Unidad de Venta** | Cuántas unidades de medida contiene cada unidad de venta | 50 (kg por bolsa) |
+
+### Precio
+
+| Campo | Descripción |
+|-------|-------------|
+| **Precio Unitario** | Precio por unidad de medida |
+| **Moneda** | ARS, USD, etc. |
+| **Fecha de Vigencia** | Desde cuándo aplica este precio |
+
+<Callout type="info" title="Historial de Precios">
+SEENCEL guarda un **historial de precios** por material. Cuando actualizás un precio, el anterior queda registrado con su fecha de vigencia. Esto te permite ver la evolución de costos y calcular presupuestos con precios históricos.
+</Callout>
+
+---
+
+## Unidad de Medida vs Unidad de Venta
+
+Es importante entender la diferencia:
+
+- **Unidad de Medida**: Cómo se calcula el material en recetas y presupuestos. Ej: `kg`
+- **Unidad de Venta**: Cómo te lo vende el proveedor. Ej: `Bolsa de 50kg`
+
+**Ejemplo práctico:**
+- El cemento se mide en **kilogramos** (unidad de medida)
+- El proveedor lo vende en **bolsas de 50kg** (unidad de venta)
+- Si una receta necesita 150kg de cemento, SEENCEL sabe que necesitás **3 bolsas**
+
+---
+
+## Categorías de Materiales
+
+Las categorías te permiten organizar tu catálogo. Podés crear una jerarquía con subcategorías:
+
+```
+📁 Hidráulicos
+   ├── 📁 Cementos
+   ├── 📁 Cales
+   └── 📁 Morteros
+📁 Metales
+   ├── 📁 Hierros
+   └── 📁 Alambres
+📁 Terminaciones
+   ├── 📁 Pinturas
+   └── 📁 Cerámicas
+```
+
+En la vista de catálogo, el sidebar derecho muestra las categorías con contadores. Haciendo click, filtrás los materiales.
+
+<Callout type="tip" title="Sin Categoría">
+Los materiales sin categoría asignada aparecen en el grupo "Sin categoría" al final del listado.
+</Callout>
+
+---
+
+## ¿Qué puedo hacer con los Materiales?
+
+### En el Catálogo Técnico
+
+- **Crear** materiales nuevos con todos sus datos
+- **Editar** información, precios y categorías
+- **Eliminar** materiales que ya no uses
+- **Importar masivamente** desde Excel o CSV
+- **Filtrar** por categoría, tipo, o búsqueda libre
+
+### En Proyectos
+
+- **Crear Pedidos** de materiales para una obra
+- **Registrar Compras** con factura y proveedor
+- **Registrar Pagos** de materiales
+- **Ver Dashboard** de gastos de materiales por proyecto
+
+### En Recetas y Tareas
+
+- **Agregar materiales** a recetas de construcción
+- **Calcular costos** automáticamente basado en precios del catálogo
+- **Copiar recetas** entre proyectos manteniendo los materiales
+
+---
+
+## Flujo de Trabajo Típico
+
+1. **Crear el Catálogo** - Agregá todos los materiales que usa tu organización
+2. **Asignar Categorías** - Organizá el catálogo para encontrar todo rápido
+3. **Definir Precios** - Cargá los precios actuales de cada proveedor
+4. **Usar en Recetas** - Agregá materiales a las tareas de construcción
+5. **Generar Pedidos** - Cuando inicies un proyecto, creá los pedidos
+6. **Registrar Compras** - Cuando lleguen las facturas, registralas
+7. **Registrar Pagos** - Cerrá el ciclo con los pagos efectuados
+
+---
+
+## Próximos Pasos
+
+- [Importar Materiales desde Excel](/docs/materiales/importar) - Carga masiva de tu catálogo
+- [Gestionar Categorías](/docs/materiales/categorias) - Organizar tu catálogo
+- [Pedidos de Materiales](/docs/materiales/pedidos) - Solicitar materiales para proyectos

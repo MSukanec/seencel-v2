@@ -150,6 +150,13 @@
   /* Terracotta/brick - Egresos, Deuda, Saldo pendiente */
   --amount-neutral: oklch(60.209% 0.12049 235.006);
   /* Zinc-500 gray - Balance neutral, cero, N/A */
+  /* ============================================
+     SYSTEM INDICATOR COLOR
+     Used for "system" items (catalog entries, units, etc.)
+     Neutral gray that looks the same in dark/light mode
+     ============================================ */
+  --system: oklch(50% 0 0);
+  /* Pure gray 50% - Sistema, no editable por org */
   /* Sidebar */
   --sidebar: oklch(0.97 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -265,6 +272,15 @@
 
 .border-amount-negative\/20 {
   border-color: color-mix(in srgb, var(--amount-negative) 20%, transparent);
+}
+
+/* System indicator utility classes */
+.bg-system {
+  background-color: var(--system);
+}
+
+.text-system {
+  color: var(--system);
 }
 
 /* ============================================

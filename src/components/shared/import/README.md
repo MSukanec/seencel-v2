@@ -1,6 +1,6 @@
 # 📦 Sistema de Importación Masiva - Seencel V2
 
-Este documento unifica la documentación del sistema de importación masiva de datos. El sistema permite importar Excel/CSV con mapeo inteligente, validación y capacidad de deshacer.
+Este documento unifica la documentación del sistema de importación masiva de datos. El sistema permite importar Excel/CSV con mapeo inteligente, validación, resolución de conflictos y capacidad de deshacer.
 
 ---
 
@@ -8,12 +8,19 @@ Este documento unifica la documentación del sistema de importación masiva de d
 
 ```
 src/components/shared/import/
-├── import-modal.tsx          # Modal wizard (Upload -> Map -> Validate -> Conflicts -> Import)
+├── import-modal.tsx          # Modal wizard principal
+├── steps/
+│   ├── step-upload.tsx       # Paso 1: Upload + selección de encabezado
+│   ├── step-mapping.tsx      # Paso 2: Mapeo de columnas
+│   └── step-validation.tsx   # Paso 3: Validación y vista previa
 ├── README.md                 # Este archivo
 └── IMPORT_SYSTEM_AUDIT.md    # Roadmap histórico (legacy reference)
 
-src/lib/
-└── import-utils.ts           # Tipos (ImportConfig, ImportColumn) + utilidades de parseo
+src/lib/import/
+├── utils.ts                  # Tipos (ImportConfig, ImportColumn) + utilidades
+├── history.ts                # Funciones para historial de importaciones
+├── patterns.ts               # Smart mapping con ML
+└── conflict-utils.ts         # Resolución de conflictos
 
 src/actions/
 └── import-actions.ts         # Server actions para batch import/revert
@@ -21,178 +28,197 @@ src/actions/
 
 ---
 
-## 🔧 Configuración para Nuevas Entidades
+## 🎯 Flujo del Wizard (5 Pasos)
 
-### 1. Requisitos de Base de Datos
+### Paso 1: Subir Archivo (`step-upload.tsx`)
 
-Toda tabla que soporte importación **DEBE** tener estas columnas:
+El usuario sube un archivo Excel o CSV. El sistema:
+1. Parsea el archivo con `xlsx` library
+2. Detecta si hay filas extra antes del encabezado
+3. Si detecta contenido "basura", muestra selector de encabezado
+4. Permite preview de las primeras filas
 
-```sql
--- Columnas OBLIGATORIAS para importación
-import_batch_id UUID NULL,    -- Referencia al batch de importación (para undo)
-is_deleted BOOLEAN DEFAULT FALSE,  -- Soft delete (requerido para revert)
-```
+**Selección de encabezado**: Si el archivo tiene títulos, logos o filas vacías antes de los datos, el modal muestra las primeras filas y permite al usuario hacer click en la fila que contiene los encabezados.
 
-### 2. SQL para Agregar Soporte de Importación
+### Paso 2: Mapeo de Columnas (`step-mapping.tsx`)
 
-#### Material Payments (Ejemplo):
+Muestra cada columna del archivo a la izquierda y un selector a la derecha para asociarla con un campo del sistema.
 
-```sql
--- Paso 1: Agregar columna import_batch_id
-ALTER TABLE material_payments 
-ADD COLUMN IF NOT EXISTS import_batch_id UUID NULL 
-REFERENCES import_batches(id) ON DELETE SET NULL;
+**Características del selector**:
+- Muestra `label` del campo
+- Muestra `description` si existe (explica para qué sirve)
+- Muestra `example` si existe (ej: "Cemento Portland")
+- Campos obligatorios marcados con `(obligatorio)`
+- Campos ya mapeados aparecen deshabilitados
+- El trigger usa `textValue` para mostrar solo el label limpio
 
--- Paso 2: Agregar material_type_id si no existe
-ALTER TABLE material_payments 
-ADD COLUMN IF NOT EXISTS material_type_id UUID NULL 
-REFERENCES material_types(id) ON DELETE SET NULL;
+### Paso 3: Vista Previa y Validación (`step-validation.tsx`)
 
--- Paso 3: Crear índice para búsquedas por batch
-CREATE INDEX IF NOT EXISTS idx_material_payments_import_batch 
-ON material_payments(import_batch_id) 
-WHERE import_batch_id IS NOT NULL;
-```
+Muestra resumen de registros válidos vs errores, con preview de los primeros registros transformados.
 
-#### Tablas que YA tienen soporte:
-- ✅ `contacts` (import_batch_id)
-- ✅ `client_payments` (import_batch_id)
-- ✅ `subcontract_payments` (import_batch_id)
-- 🔴 `material_payments` - **FALTA agregar import_batch_id**
+### Paso 4: Resolución de Conflictos
+
+Aparece solo si hay valores que no existen en el sistema (categorías, unidades, proveedores nuevos). Por cada valor conflictivo, el usuario puede:
+- **Crear nuevo**: Sistema crea la entidad automáticamente
+- **Usar existente**: Mapear a un valor existente
+- **Ignorar**: Dejar el campo vacío
+
+### Paso 5: Confirmación y Resultado
+
+Ejecuta la importación y muestra resumen con cantidad de registros importados, errores omitidos y opción de deshacer.
 
 ---
 
-## 📝 Cómo Implementar Importación
+## 📝 Configurar ImportConfig
 
-### Paso 1: Agregar columna SQL (si no existe)
-Ejecutar el SQL de la sección anterior.
-
-### Paso 2: Crear función de batch import en `import-actions.ts`
+### Interface `ImportConfig`
 
 ```typescript
-export async function importEntityBatch(
-    organizationId: string,
-    projectId: string,
-    records: any[],
-    batchId: string
-) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // 1. Fetch lookup tables (currencies, wallets, etc.)
-    // 2. Transform & validate records
-    // 3. Insert with import_batch_id
-    
-    const preparedRecords = records.map(record => ({
-        // ... mapped fields ...
-        import_batch_id: batchId,  // <-- CRÍTICO
-        created_by: user?.id,
-        is_deleted: false,
-    }));
-    
-    await supabase.from('your_table').insert(preparedRecords);
-    
-    revalidatePath('/your-path');
-    return { success: preparedRecords.length, errors: [] };
+export interface ImportConfig<T = any> {
+    entityLabel: string;           // "Materiales", "Pagos", etc.
+    entityId: string;              // ID único para ML patterns (ej: 'materials')
+    columns: ImportColumn<T>[];    // Definición de campos mapeables
+    onImport: (data: T[]) => Promise<ImportResult>;
+    onRevert?: (batchId: string) => Promise<void>;
+    sampleFileUrl?: string;        // URL a archivo de ejemplo
+    description?: string;          // Explicación del importador (paso 1)
+    docsPath?: string;             // Link a documentación (ej: '/docs/materiales/importar')
 }
 ```
 
-### Paso 3: Agregar tabla a `revertImportBatch`
-
-En `import-actions.ts`, asegurarse que la tabla está en el array permitido:
+### Interface `ImportColumn`
 
 ```typescript
-const allowedTables = ['contacts', 'client_payments', 'subcontract_payments', 'material_payments'];
+export interface ImportColumn<T = any> {
+    id: keyof T | string;          // ID del campo (ej: 'name', 'price')
+    label: string;                 // Label visible (ej: 'Nombre')
+    required?: boolean;            // Si es obligatorio
+    description?: string;          // Explicación del campo
+    example?: string;              // Ejemplo (ej: 'Cemento Portland CPF40')
+    type?: 'string' | 'number' | 'date' | 'boolean';
+    foreignKey?: ForeignKeyConfig; // Si requiere resolución de conflictos
+    transform?: (value: any) => any;
+}
 ```
 
-### Paso 4: Definir `ImportConfig` en la vista
+### Ejemplo Completo (Materiales)
 
 ```typescript
-const paymentImportConfig: ImportConfig<any> = {
-    entityLabel: "Pagos de X",
-    entityId: "pagos_x",  // ID único para patrones ML
+const materialsImportConfig: ImportConfig<MaterialImportData> = {
+    entityLabel: "Materiales",
+    entityId: "materials",
+    description: "Importá tu catálogo de materiales e insumos desde un archivo Excel o CSV. El sistema detectará automáticamente las columnas y te permitirá mapearlas.",
+    docsPath: "/docs/materiales/importar",
     columns: [
-        { id: "date", label: "Fecha", required: true, example: "2024-01-20" },
-        { 
-            id: "category_name", 
-            label: "Categoría", 
-            foreignKey: {
-                table: 'categories',
-                labelField: 'name',
-                valueField: 'id',
-                fetchOptions: async () => categories.map(c => ({ id: c.id, label: c.name }))
-            }
-        },
-        { id: "amount", label: "Monto", required: true, type: "number" },
-        // ... más columnas
-    ],
-    onImport: async (data) => {
-        const batch = await createImportBatch(orgId, "entity_name", data.length);
-        const result = await importEntityBatch(orgId, projectId, data, batch.id);
-        return { success: result.success, errors: result.errors, batchId: batch.id };
-    },
-    onRevert: async (batchId) => {
-        await revertImportBatch(batchId, 'entity_table_name');
-    }
-};
-```
-
-### Paso 5: Conectar botón al modal
-
-```typescript
-const handleImport = () => {
-    openModal(
-        <BulkImportModal config={paymentImportConfig} organizationId={orgId} />,
         {
-            size: "2xl",
-            title: "Importar Registros",
-            description: "Importa desde Excel o CSV."
-        }
-    );
+            id: "name",
+            label: "Nombre",
+            required: true,
+            description: "Nombre del material o insumo",
+            example: "Cemento Portland"
+        },
+        {
+            id: "code",
+            label: "Código",
+            description: "Código interno o SKU de tu sistema",
+            example: "MAT-001"
+        },
+        {
+            id: "unit_symbol",
+            label: "Unidad",
+            description: "Si no existe, se crea automáticamente",
+            example: "kg"
+        },
+        {
+            id: "price",
+            label: "Precio Unitario",
+            type: "number",
+            description: "Precio por unidad",
+            example: "150.00"
+        },
+        {
+            id: "currency_code",
+            label: "Moneda",
+            description: "ARS, USD, etc. Por defecto: ARS",
+            example: "ARS"
+        },
+        {
+            id: "price_date",
+            label: "Fecha del Precio",
+            type: "date",
+            description: "Fecha desde cuándo aplica el precio. Si no se indica, usa la fecha actual",
+            example: "2024-01-15"
+        },
+        {
+            id: "provider_name",
+            label: "Proveedor",
+            description: "Si no existe, se crea automáticamente",
+            example: "Loma Negra"
+        },
+        {
+            id: "category_name",
+            label: "Categoría",
+            description: "Para organizar materiales",
+            example: "Materiales de Construcción"
+        },
+        {
+            id: "description",
+            label: "Descripción",
+            description: "Detalle o especificación técnica",
+            example: "Cemento tipo I para construcción general"
+        },
+    ],
+    onImport: async (data) => { /* ... */ },
+    onRevert: async (batchId) => { /* ... */ }
 };
 ```
 
 ---
 
-## ⚡ Características del Sistema
+## 🔧 Requisitos de Base de Datos
 
-### ✅ Ya Implementado
+### Columnas Obligatorias
 
-| Feature | Descripción |
-|---------|-------------|
-| **Wizard Multi-paso** | Upload → Mapeo → Validación → Conflictos → Resultado |
-| **Parseo Excel/CSV** | Soporte nativo `.xlsx` y `.csv` |
-| **Fechas Flexibles** | Reconoce DD-MM-YY, MM/DD/YYYY, ISO, Excel serial |
-| **Smart Mapping** | Sugiere columnas basado en uso histórico (ML) |
-| **Fuzzy Matching** | Similitud de texto para sugerencias iniciales |
-| **Resolución Conflictos** | Crear valores nuevos, mapear a existentes, ignorar |
-| **Auditoría** | Log de quién importó qué, cuándo, cuántos |
-| **Undo/Revert** | Deshacer lote completo con soft-delete |
+Toda tabla que soporte importación **DEBE** tener:
 
-### 📊 Tabla `import_batches`
+```sql
+import_batch_id UUID NULL REFERENCES import_batches(id) ON DELETE SET NULL,
+is_deleted BOOLEAN DEFAULT FALSE,
+```
 
-Registra cada importación para auditoría y undo:
+### Tabla `import_batches`
 
 ```sql
 CREATE TABLE import_batches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id),
-    entity_type TEXT NOT NULL,           -- 'contacts', 'material_payments', etc.
+    member_id UUID NOT NULL REFERENCES organization_members(id),  -- Quién importó
+    entity_type TEXT NOT NULL,           -- 'materials', 'contacts', etc.
     total_records INT NOT NULL,
-    status TEXT DEFAULT 'pending',        -- 'pending', 'completed', 'reverted'
-    created_by UUID,
+    status TEXT DEFAULT 'pending',       -- 'pending', 'completed', 'reverted'
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
-### 📊 Tabla `ia_import_mapping_patterns`
+> **Nota**: Usamos `member_id` (no `user_id`) para asociar correctamente la importación al miembro de la organización, respetando el modelo de datos multi-tenant.
 
-Almacena patrones de mapeo aprendidos por organización:
+---
 
-```sql
--- Usado para Smart Mapping automático
--- Guarda: "Para entity X, la columna 'Monto Total' mapeó a 'amount'"
-```
+## ⚡ Características del Sistema
+
+| Feature | Descripción |
+|---------|-------------|
+| **Wizard 5 pasos** | Upload → Mapeo → Validación → Conflictos → Resultado |
+| **Parseo Excel/CSV** | Soporte `.xlsx` y `.csv` hasta 5MB |
+| **Selección de encabezado** | Si hay filas extra, permite elegir cuál contiene los headers |
+| **Fechas flexibles** | Reconoce DD-MM-YY, MM/DD/YYYY, ISO, Excel serial |
+| **Smart Mapping (ML)** | Sugiere columnas basado en uso histórico |
+| **Fuzzy Matching** | Similitud de texto para sugerencias iniciales |
+| **Descripciones en campos** | Cada campo muestra descripción y ejemplo en el selector |
+| **Resolución de conflictos** | Crear valores nuevos, mapear a existentes, o ignorar |
+| **Historial** | Ver últimas 20 importaciones con fecha, usuario y cantidad |
+| **Undo/Revert** | Deshacer lote completo con soft-delete |
+| **Documentación integrada** | Link a docs desde el modal si está configurado |
 
 ---
 
@@ -203,90 +229,56 @@ Almacena patrones de mapeo aprendidos por organización:
 - [ ] Índice en `import_batch_id`
 - [ ] Función `import{Entity}Batch()` en `import-actions.ts`
 - [ ] Tabla agregada a `allowedTables` en `revertImportBatch()`
-- [ ] `ImportConfig` definido en la vista
-- [ ] Botón "Importar" conectado a `BulkImportModal`
+- [ ] `ImportConfig` definido con:
+  - [ ] `entityLabel` y `entityId`
+  - [ ] `description` explicando qué hace el importador
+  - [ ] `docsPath` si existe documentación
+  - [ ] Columnas con `label`, `description` y `example`
+- [ ] Botón "Importar" en toolbar (SplitButton con historial)
+- [ ] Documentación en `/content/docs/{locale}/{feature}/importar.mdx`
 
 ---
 
-## 📋 SQL Pendiente: Material Payments
+## 📋 Tablas con Soporte de Importación
 
-```sql
--- =============================================
--- EJECUTAR EN SUPABASE SQL EDITOR
--- =============================================
+| Tabla | `import_batch_id` | Documentación |
+|-------|-------------------|---------------|
+| `contacts` | ✅ | Pendiente |
+| `materials` | ✅ | ✅ `/docs/materiales/importar` |
+| `client_payments` | ✅ | Pendiente |
+| `subcontract_payments` | ✅ | Pendiente |
+| `material_payments` | 🔴 Falta | Pendiente |
 
--- 1. Agregar columna import_batch_id para soporte de importación masiva
-ALTER TABLE material_payments 
-ADD COLUMN IF NOT EXISTS import_batch_id UUID NULL 
-REFERENCES import_batches(id) ON DELETE SET NULL;
+---
 
--- 2. Agregar material_type_id para clasificación de pagos
-ALTER TABLE material_payments 
-ADD COLUMN IF NOT EXISTS material_type_id UUID NULL 
-REFERENCES material_types(id) ON DELETE SET NULL;
+## 🎨 UI/UX Guidelines
 
--- 3. Índice para optimizar consultas por batch (útil para undo)
-CREATE INDEX IF NOT EXISTS idx_material_payments_import_batch 
-ON material_payments(import_batch_id) 
-WHERE import_batch_id IS NOT NULL;
+### Header del Modal
 
--- 4. Índice para consultas por tipo de material
-CREATE INDEX IF NOT EXISTS idx_material_payments_material_type 
-ON material_payments(material_type_id) 
-WHERE material_type_id IS NOT NULL;
+El header muestra:
+- **Título**: "Importar {entityLabel}" o nombre del paso actual
+- **Descripción**: Texto breve del paso actual (traducido)
+- **Stepper visual**: Indicadores 1, 2, 3 + "Verificación" final
 
--- 5. Actualizar la vista para incluir material_type_name
-DROP VIEW IF EXISTS material_payments_view;
-CREATE VIEW public.material_payments_view AS
-SELECT
-    mp.id,
-    mp.organization_id,
-    mp.project_id,
-    mp.payment_date,
-    date_trunc('month', mp.payment_date::timestamp with time zone) AS payment_month,
-    mp.amount,
-    mp.currency_id,
-    cur.code AS currency_code,
-    cur.symbol AS currency_symbol,
-    COALESCE(mp.exchange_rate, 1::numeric) AS exchange_rate,
-    mp.status,
-    mp.wallet_id,
-    w.name AS wallet_name,
-    mp.notes,
-    mp.reference,
-    mp.purchase_id,
-    mi.invoice_number,
-    mi.provider_id,
-    COALESCE(prov.company_name, prov.first_name || ' ' || prov.last_name) AS provider_name,
-    mp.material_type_id,
-    mt.name AS material_type_name,
-    p.name AS project_name,
-    mp.created_by,
-    u.full_name AS creator_full_name,
-    u.avatar_url AS creator_avatar_url,
-    mp.created_at,
-    mp.updated_at,
-    mp.import_batch_id,
-    EXISTS (
-        SELECT 1 FROM media_links ml WHERE ml.material_payment_id = mp.id
-    ) AS has_attachments
-FROM material_payments mp
-LEFT JOIN material_invoices mi ON mi.id = mp.purchase_id
-LEFT JOIN contacts prov ON prov.id = mi.provider_id
-LEFT JOIN projects p ON p.id = mp.project_id
-LEFT JOIN organization_members om ON om.id = mp.created_by
-LEFT JOIN users u ON u.id = om.user_id
-LEFT JOIN wallets w ON w.id = mp.wallet_id
-LEFT JOIN currencies cur ON cur.id = mp.currency_id
-LEFT JOIN material_types mt ON mt.id = mp.material_type_id
-WHERE mp.is_deleted = false OR mp.is_deleted IS NULL;
-```
+### Step Mapping
+
+- Trigger del select: altura automática (`h-auto min-h-9 py-2`)
+- Si no hay mapeo: borde punteado + texto muted
+- SelectItem muestra descripción y ejemplo si existen
+- `textValue` controla qué se muestra en el trigger (solo label limpio)
+
+### Resolución de Conflictos
+
+- Cada valor nuevo en sección separada por tipo (Categorías, Unidades, Proveedores)
+- Opciones claras: "Crear nuevo" o "Usar existente" con selector
 
 ---
 
 ## 📚 Referencias
 
-- [IMPORT_SYSTEM_AUDIT.md](./IMPORT_SYSTEM_AUDIT.md) - Roadmap histórico y features legacy
-- [import-modal.tsx](./import-modal.tsx) - Componente principal del wizard
-- [import-utils.ts](../../lib/import-utils.ts) - Tipos y utilidades
-- [import-actions.ts](../../actions/import-actions.ts) - Server actions
+- [Documentación de usuario](/content/docs/es/materiales/importar.mdx) - Guía paso a paso
+- [import-modal.tsx](./import-modal.tsx) - Componente principal
+- [step-upload.tsx](./steps/step-upload.tsx) - Lógica de upload y header selection
+- [step-mapping.tsx](./steps/step-mapping.tsx) - UI de mapeo con descripciones
+- [utils.ts](../../lib/import/utils.ts) - Tipos y utilidades
+- [history.ts](../../lib/import/history.ts) - Historial de importaciones

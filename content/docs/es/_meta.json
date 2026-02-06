@@ -1,0 +1,26 @@
+{
+    "order": [
+        "primeros-pasos",
+        "materiales",
+        "finanzas",
+        "proyectos"
+    ],
+    "items": {
+        "primeros-pasos": {
+            "title": "Primeros Pasos",
+            "icon": "rocket"
+        },
+        "materiales": {
+            "title": "Materiales",
+            "icon": "package"
+        },
+        "finanzas": {
+            "title": "Finanzas",
+            "icon": "dollar-sign"
+        },
+        "proyectos": {
+            "title": "Proyectos",
+            "icon": "building"
+        }
+    }
+}

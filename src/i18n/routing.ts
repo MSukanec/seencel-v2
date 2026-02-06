@@ -249,6 +249,12 @@ export const routing = defineRouting({
         '/admin/catalog/task/[taskId]': '/admin/catalog/task/[taskId]',
         '/admin/catalog/division/[divisionId]': '/admin/catalog/division/[divisionId]',
         '/admin/catalog/element/[elementId]': '/admin/catalog/element/[elementId]',
+
+        // ===== Documentation =====
+        '/docs': {
+            en: '/docs',
+            es: '/docs'
+        },
     }
 });
 

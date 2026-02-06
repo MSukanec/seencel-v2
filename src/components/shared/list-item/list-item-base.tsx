@@ -338,7 +338,7 @@ ListItemActions.displayName = "ListItem.Actions";
 // ============================================================================
 
 interface ListItemColorStripProps extends React.HTMLAttributes<HTMLDivElement> {
-    color?: "slate" | "indigo" | "green" | "amber" | "red" | "blue";
+    color?: "slate" | "indigo" | "green" | "amber" | "red" | "blue" | "system";
 }
 
 const colorClasses = {
@@ -348,6 +348,7 @@ const colorClasses = {
     amber: "bg-amber-500",
     red: "bg-red-500",
     blue: "bg-blue-500",
+    system: "bg-system", // Uses CSS variable --system
 };
 
 const ListItemColorStrip = React.forwardRef<HTMLDivElement, ListItemColorStripProps>(

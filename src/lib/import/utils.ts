@@ -36,6 +36,10 @@ export interface ImportConfig<T = any> {
     onImport: (data: T[]) => Promise<{ success: number; errors: any[]; batchId?: string }>;
     onRevert?: (batchId: string) => Promise<void>;
     sampleFileUrl?: string;
+    /** Description shown in the first step explaining what this import does */
+    description?: string;
+    /** Path to documentation for this import (e.g. '/docs/materiales/importar') */
+    docsPath?: string;
 }
 
 export interface ParsedRow {

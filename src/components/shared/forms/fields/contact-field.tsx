@@ -32,6 +32,8 @@ export interface ContactFieldProps {
     contacts: Contact[];
     /** Field label (default: "Contacto") */
     label?: string;
+    /** Tooltip help content */
+    tooltip?: React.ReactNode;
     /** Is field required? (default: false) */
     required?: boolean;
     /** Is field disabled? */
@@ -66,6 +68,7 @@ export function ContactField({
     onChange,
     contacts,
     label = "Contacto",
+    tooltip,
     required = false,
     disabled = false,
     className,
@@ -102,7 +105,7 @@ export function ContactField({
     }, [contacts, allowNone, noneLabel]);
 
     return (
-        <FormGroup label={<FactoryLabel label={label} />} required={required} className={className}>
+        <FormGroup label={<FactoryLabel label={label} />} required={required} tooltip={tooltip} className={className}>
             <Combobox
                 value={value || "none"}
                 onValueChange={(val) => onChange(val === "none" ? "" : val)}
