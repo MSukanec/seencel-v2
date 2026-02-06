@@ -14,7 +14,6 @@ import { deletePaymentAction } from "@/features/clients/actions";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { EmptyState } from "@/components/ui/empty-state";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { ImportConfig } from "@/lib/import";
 import { createImportBatch, importPaymentsBatch, revertImportBatch } from "@/lib/import";

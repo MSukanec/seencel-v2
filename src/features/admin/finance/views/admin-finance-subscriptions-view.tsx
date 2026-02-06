@@ -1,7 +1,7 @@
 "use client";
 
 import { Wallet } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 /**
  * Admin Finance Subscriptions View
@@ -10,10 +10,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 export function AdminFinanceSubscriptionsView() {
     return (
         <div className="h-full flex items-center justify-center">
-            <EmptyState
+            <ViewEmptyState
+                mode="empty"
                 icon={Wallet}
-                title="Suscripciones Activas"
-                description="Monitor de MRR/ARR y estado de suscripciones. Próximamente."
+                viewName="Suscripciones Activas"
+                featureDescription="Monitor de MRR/ARR y estado de suscripciones."
+                comingSoon
             />
         </div>
     );

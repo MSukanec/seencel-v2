@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Plus, Users } from "lucide-react";
 
@@ -32,10 +32,14 @@ export function CapitalParticipantsView({
                 ]}
             />
             <div className="h-full flex items-center justify-center">
-                <EmptyState
+                <ViewEmptyState
+                    mode="empty"
                     icon={Users}
-                    title="Participantes"
-                    description="Esta sección permitirá gestionar los socios y participantes del capital. Próximamente."
+                    viewName="Participantes"
+                    featureDescription="Esta sección permitirá gestionar los socios y participantes del capital."
+                    comingSoon
+                    onAction={handleCreate}
+                    actionLabel="Nuevo Participante"
                 />
             </div>
         </>

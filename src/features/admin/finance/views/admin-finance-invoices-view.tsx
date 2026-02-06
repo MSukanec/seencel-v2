@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 /**
  * Admin Finance Invoices View
@@ -10,10 +10,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 export function AdminFinanceInvoicesView() {
     return (
         <div className="h-full flex items-center justify-center">
-            <EmptyState
+            <ViewEmptyState
+                mode="empty"
                 icon={FileText}
-                title="Historial de Facturas"
-                description="Registro de todas las transacciones generadas. Próximamente."
+                viewName="Historial de Facturas"
+                featureDescription="Registro de todas las transacciones generadas."
+                comingSoon
             />
         </div>
     );

@@ -10,7 +10,7 @@ import { es } from "date-fns/locale";
 
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
@@ -316,10 +316,13 @@ export function MaterialsOrdersView({
             <ContentLayout variant="wide" className="pb-6">
                 {/* Empty State - sin botón, la acción está en la toolbar del header */}
                 {(!orders || orders.length === 0) ? (
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={ClipboardList}
-                        title="Sin órdenes de compra"
-                        description="Creá tu primera orden de compra usando el botón en la barra superior."
+                        viewName="Órdenes de Compra"
+                        featureDescription="Creá tu primera orden de compra usando el botón en la barra superior."
+                        onAction={handleNewOrder}
+                        actionLabel="Nueva Orden"
                     />
                 ) : (
                     <DataTable

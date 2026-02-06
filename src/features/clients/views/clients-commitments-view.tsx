@@ -17,7 +17,7 @@ import { CommitmentForm } from "../components/forms/commitment-form";
 import { CommitmentCard } from "../components/commitments/commitment-card";
 import { ProjectClientView, OrganizationFinancialData } from "../types";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 // ========================================
 // TYPES
@@ -297,10 +297,13 @@ export function CommitmentsView({
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={FileText}
-                        title="Sin compromisos"
-                        description="Creá el primer compromiso de pago para comenzar."
+                        viewName="Compromisos"
+                        featureDescription="Creá el primer compromiso de pago para comenzar."
+                        onAction={handleCreate}
+                        actionLabel="Nuevo Compromiso"
                     />
                 </div>
             </>

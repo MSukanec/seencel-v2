@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { BarChart3, Building2, Calendar, Wallet, TrendingUp, Target, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -233,10 +233,12 @@ export function SubcontractOverviewView({ subcontract, payments, financialData, 
 
             {/* Placeholder for charts */}
             <div className="min-h-[200px] border-2 border-dashed rounded-lg flex items-center justify-center">
-                <EmptyState
+                <ViewEmptyState
+                    mode="empty"
                     icon={BarChart3}
-                    title="Métricas en desarrollo"
-                    description="Próximamente verás gráficos de avance financiero y de obra."
+                    viewName="Métricas de Subcontrato"
+                    featureDescription="Próximamente verás gráficos de avance financiero y de obra."
+                    comingSoon
                     className="border-none"
                 />
             </div>

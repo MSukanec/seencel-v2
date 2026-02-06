@@ -8,7 +8,7 @@ import { ClientCommitment, ProjectClientView, OrganizationFinancialData } from "
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -225,18 +225,15 @@ export function ClientCommitmentsTable({
         }
     ];
 
-    // Empty State when no commitments
     if (data.length === 0) {
         return (
-            <EmptyState
+            <ViewEmptyState
+                mode="empty"
                 icon={FileText}
-                title="Sin compromisos"
-                description="Creá el primer compromiso de pago para comenzar a gestionar los cobros de tus clientes."
-                action={
-                    <Button onClick={handleCreate} size="lg">
-                        <Plus className="mr-2 h-4 w-4" /> Nuevo Compromiso
-                    </Button>
-                }
+                viewName="Compromisos"
+                featureDescription="Creá el primer compromiso de pago para comenzar a gestionar los cobros de tus clientes."
+                onAction={handleCreate}
+                actionLabel="Nuevo Compromiso"
             />
         );
     }

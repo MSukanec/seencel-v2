@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 // ============================================================================
 // Types
@@ -258,20 +258,27 @@ export function TasksParametersView({
 
             {/* Parameters List */}
             {sortedParameters.length === 0 ? (
-                <EmptyState
-                    icon={Settings}
-                    title={searchQuery || selectedElementId ? "No se encontraron parámetros" : "No hay parámetros definidos"}
-                    description={searchQuery || selectedElementId
-                        ? "Probá con otros filtros o términos de búsqueda"
-                        : "Los parámetros permiten configurar valores variables en tareas"
-                    }
-                    action={isAdminMode && !searchQuery && !selectedElementId ? (
-                        <Button onClick={handleCreateParameter}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Crear primer parámetro
-                        </Button>
-                    ) : undefined}
-                />
+                (searchQuery || selectedElementId) ? (
+                    <ViewEmptyState
+                        mode="no-results"
+                        icon={Settings}
+                        viewName="parámetros"
+                        filterContext={searchQuery ? "con ese criterio de búsqueda" : "para este elemento"}
+                        onResetFilters={() => {
+                            setSearchQuery("");
+                            setSelectedElementId(null);
+                        }}
+                    />
+                ) : (
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={Settings}
+                        viewName="Parámetros"
+                        featureDescription="Los parámetros permiten configurar valores variables en tareas."
+                        onAction={isAdminMode ? handleCreateParameter : undefined}
+                        actionLabel={isAdminMode ? "Crear primer parámetro" : undefined}
+                    />
+                )
             ) : (
                 <div className="space-y-3">
                     {sortedParameters.map((param) => {

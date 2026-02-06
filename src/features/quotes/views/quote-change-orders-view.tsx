@@ -9,7 +9,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import {
     DropdownMenu,
@@ -216,10 +216,13 @@ export function QuoteChangeOrdersView({
                     actions={[{ label: "Nueva Orden de Cambio", icon: Plus, onClick: handleCreateChangeOrder }]}
                 />
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={FilePlus2}
-                        title="Sin órdenes de cambio"
-                        description="No hay órdenes de cambio registradas para este contrato."
+                        viewName="Órdenes de Cambio"
+                        featureDescription="No hay órdenes de cambio registradas para este contrato."
+                        onAction={handleCreateChangeOrder}
+                        actionLabel="Nueva Orden de Cambio"
                     />
                 </div>
             </div>

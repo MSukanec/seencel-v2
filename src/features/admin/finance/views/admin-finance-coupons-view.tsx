@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Ticket, Plus } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -220,10 +220,13 @@ export function AdminFinanceCouponsView({ coupons }: AdminFinanceCouponsViewProp
                     actions={[{ label: "Nuevo Cupón", icon: Plus, onClick: handleCreate }]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Ticket}
-                        title="Sin Cupones"
-                        description="Creá tu primer cupón de descuento."
+                        viewName="Cupones de Descuento"
+                        featureDescription="Creá tu primer cupón de descuento."
+                        onAction={handleCreate}
+                        actionLabel="Nuevo Cupón"
                     />
                 </div>
             </>

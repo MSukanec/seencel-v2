@@ -8,7 +8,7 @@ import { FileText, BarChart2, Settings } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SiteLog, SiteLogType } from "@/types/sitelog";
 import { SiteLogTypesManager } from "./sitelog-types-manager";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { SitelogFeed } from "./sitelog-feed";
 import { Button } from "@/components/ui/button";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";

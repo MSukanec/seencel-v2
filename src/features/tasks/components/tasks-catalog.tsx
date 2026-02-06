@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ListItem } from "@/components/ui/list-item";
 import {
     DropdownMenu,
@@ -211,13 +211,12 @@ export function TaskCatalog({
             <div className="space-y-2">
                 {filteredTasks.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
-                        <EmptyState
+                        <ViewEmptyState
+                            mode="no-results"
                             icon={ClipboardList}
-                            title="Sin resultados"
-                            description={externalSearchQuery
-                                ? "No se encontraron tareas con ese criterio de búsqueda."
-                                : "No hay tareas en esta categoría."
-                            }
+                            viewName="tareas"
+                            filterContext={externalSearchQuery ? "con ese criterio de búsqueda" : "en esta categoría"}
+                            onResetFilters={() => setSelectedDivisionId(null)}
                         />
                     </div>
                 ) : (

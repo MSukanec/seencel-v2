@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
 
@@ -251,10 +251,13 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Receipt}
-                        title="Sin pagos registrados"
-                        description="No hay pagos de gastos generales registrados."
+                        viewName="Pagos de Gastos Generales"
+                        featureDescription="No hay pagos de gastos generales registrados."
+                        onAction={() => handleOpenForm()}
+                        actionLabel="Nuevo Pago"
                     />
                 </div>
             </>

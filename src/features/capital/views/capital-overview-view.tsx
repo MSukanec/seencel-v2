@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { LazyAreaChart } from "@/components/charts/lazy-charts";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useMoney } from "@/hooks/use-money";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -87,10 +87,11 @@ export function CapitalOverviewView({
     if (movements.length === 0 && participants.length === 0) {
         return (
             <div className="h-full flex items-center justify-center min-h-[400px]">
-                <EmptyState
+                <ViewEmptyState
+                    mode="empty"
                     icon={Landmark}
-                    title="Comenzá a gestionar el capital"
-                    description="Agregá participantes y registrá aportes o retiros para ver el dashboard de capital."
+                    viewName="Capital"
+                    featureDescription="Agregá participantes y registrá aportes o retiros para ver el dashboard de capital."
                 />
             </div>
         );

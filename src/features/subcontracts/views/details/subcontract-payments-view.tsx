@@ -7,7 +7,7 @@ import { useModal } from "@/stores/modal-store";
 import { SubcontractPaymentForm } from "@/features/subcontracts/forms/subcontract-payment-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { useMoney } from "@/hooks/use-money";
@@ -273,10 +273,13 @@ export function SubcontractPaymentsView({
                     ]}
                 />
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Banknote}
-                        title="Sin pagos registrados"
-                        description="Registra el primer pago de este subcontrato."
+                        viewName="Pagos del Subcontrato"
+                        featureDescription="Registra el primer pago de este subcontrato."
+                        onAction={handleNewPayment}
+                        actionLabel="Nuevo Pago"
                     />
                 </div>
             </div>

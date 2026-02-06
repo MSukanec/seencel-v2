@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { CheckSquare } from "lucide-react";
 
 interface SubcontractTasksViewProps {
@@ -11,10 +11,12 @@ interface SubcontractTasksViewProps {
 export function SubcontractTasksView({ subcontract, projectId }: SubcontractTasksViewProps) {
     return (
         <div className="h-full flex items-center justify-center">
-            <EmptyState
+            <ViewEmptyState
+                mode="empty"
                 icon={CheckSquare}
-                title="Tareas del Subcontrato"
-                description="Próximamente podrás asignar y gestionar tareas vinculadas a este subcontrato."
+                viewName="Tareas del Subcontrato"
+                featureDescription="Próximamente podrás asignar y gestionar tareas vinculadas a este subcontrato."
+                comingSoon
             />
         </div>
     );

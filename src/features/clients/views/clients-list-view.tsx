@@ -9,7 +9,7 @@ import { ProjectClientView, ClientRole } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Users } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 import { ClientForm } from "../components/forms/client-form";
 import { deleteClientAction } from "../actions";
@@ -222,10 +222,13 @@ export function ClientsListView({
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Users}
-                        title="Sin clientes"
-                        description="Agregá el primer cliente a este proyecto para comenzar a gestionar compromisos y pagos."
+                        viewName="Clientes"
+                        featureDescription="Agregá el primer cliente a este proyecto para comenzar a gestionar compromisos y pagos."
+                        onAction={handleCreate}
+                        actionLabel="Agregar Cliente"
                     />
                 </div>
             </>

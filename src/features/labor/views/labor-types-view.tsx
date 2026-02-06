@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ListItem } from "@/components/ui/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { HardHat, MoreHorizontal, Pencil, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,10 +95,11 @@ export function LaborTypesView({
                     searchPlaceholder="Buscar tipos de mano de obra..."
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={HardHat}
-                        title="Sin tipos de mano de obra"
-                        description="No hay tipos de mano de obra disponibles en el sistema."
+                        viewName="Tipos de Mano de Obra"
+                        featureDescription="No hay tipos de mano de obra disponibles en el sistema."
                     />
                 </div>
             </>
@@ -117,10 +118,12 @@ export function LaborTypesView({
             <div className="space-y-2">
                 {filteredTypes.length === 0 ? (
                     <div className="py-12 flex items-center justify-center">
-                        <EmptyState
+                        <ViewEmptyState
+                            mode="no-results"
                             icon={HardHat}
-                            title="Sin resultados"
-                            description="Probá con otro término de búsqueda"
+                            viewName="tipos de mano de obra"
+                            filterContext="con esa búsqueda"
+                            onResetFilters={() => setSearchQuery("")}
                         />
                     </div>
                 ) : (

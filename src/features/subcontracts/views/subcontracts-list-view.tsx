@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
@@ -280,10 +280,15 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
                             ))}
                         </div>
                     ) : (
-                        <EmptyState
+                        <ViewEmptyState
+                            mode={searchQuery ? "no-results" : "empty"}
                             icon={Users}
-                            title={searchQuery ? "Sin resultados" : "No tienes subcontratos"}
-                            description={searchQuery ? `No se encontraron subcontratos para "${searchQuery}"` : "Aquí aparecerán los contratos con proveedores y subcontratistas."}
+                            viewName="Subcontratos"
+                            featureDescription="Aquí aparecerán los contratos con proveedores y subcontratistas."
+                            filterContext={searchQuery ? `para "${searchQuery}"` : undefined}
+                            onResetFilters={searchQuery ? () => setSearchQuery("") : undefined}
+                            onAction={handleCreate}
+                            actionLabel="Nuevo Subcontrato"
                         />
                     )}
                 </div>

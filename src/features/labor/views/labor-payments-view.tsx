@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
@@ -286,10 +286,13 @@ export function LaborPaymentsView({
             <ContentLayout variant="wide" className="pb-6">
                 {toolbar}
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={HardHat}
-                        title="Sin pagos registrados"
-                        description="No hay pagos de mano de obra registrados."
+                        viewName="Pagos de Mano de Obra"
+                        featureDescription="No hay pagos de mano de obra registrados."
+                        onAction={() => handleOpenForm()}
+                        actionLabel="Registrar Pago"
                     />
                 </div>
             </ContentLayout>

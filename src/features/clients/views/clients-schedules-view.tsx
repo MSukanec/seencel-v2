@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Calendar, Plus } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ClientSchedulesTable } from "../components/tables/client-schedules-table";
 
@@ -41,10 +41,11 @@ export function ClientsSchedulesView({ data }: ClientsSchedulesViewProps) {
     if (data.length === 0) {
         return (
             <div className="h-full flex items-center justify-center">
-                <EmptyState
+                <ViewEmptyState
+                    mode="empty"
                     icon={Calendar}
-                    title="Cronogramas de Cuotas"
-                    description="Visualiza y gestiona los vencimientos de cuotas de tus clientes. Esta funcionalidad está en desarrollo."
+                    viewName="Cronogramas de Cuotas"
+                    featureDescription="Visualiza y gestiona los vencimientos de cuotas de tus clientes."
                     comingSoon
                 />
             </div>

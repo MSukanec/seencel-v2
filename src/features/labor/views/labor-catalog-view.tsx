@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 import {
     HardHat, Plus, Pencil, Trash2, Users, Shield,
@@ -324,10 +324,13 @@ export function LaborCatalogView({
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={HardHat}
-                        title="Sin datos de mano de obra"
-                        description="Comenzá creando oficios, niveles, roles y tipos."
+                        viewName="Catálogo de Mano de Obra"
+                        featureDescription="Comenzá creando oficios, niveles, roles y tipos."
+                        onAction={handleCreateType}
+                        actionLabel="Nuevo Tipo"
                     />
                 </div>
             </>

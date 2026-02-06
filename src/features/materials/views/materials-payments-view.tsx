@@ -14,7 +14,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
@@ -393,10 +393,13 @@ export function MaterialsPaymentsView({
             <ContentLayout variant="wide" className="pb-6">
                 {/* Empty State - sin botón, la acción está en la toolbar del header */}
                 {payments.length === 0 ? (
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Banknote}
-                        title="Sin pagos de materiales"
-                        description="Registrá el primer pago de materiales usando el botón en la barra superior."
+                        viewName="Pagos de Materiales"
+                        featureDescription="Registrá el primer pago de materiales usando el botón en la barra superior."
+                        onAction={handleNewPayment}
+                        actionLabel="Nuevo Pago"
                     />
                 ) : (
                     <div className="space-y-6">

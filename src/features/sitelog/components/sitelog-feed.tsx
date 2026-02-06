@@ -1,7 +1,7 @@
 "use client";
 
 import { SiteLog } from "@/types/sitelog";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,9 +50,10 @@ export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite }: Sitelo
         // ... empty state logic
         return (
             <div className="h-[60vh]">
-                <EmptyState
-                    title="Bitácora vacía"
-                    description="Aún no hay registros en la bitácora de este proyecto. Comienza creando el primero."
+                <ViewEmptyState
+                    mode="empty"
+                    viewName="Bitácora"
+                    featureDescription="Aún no hay registros en la bitácora de este proyecto. Comienza creando el primero."
                     icon={Quote}
                 />
             </div>

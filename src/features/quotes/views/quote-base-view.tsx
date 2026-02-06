@@ -26,7 +26,7 @@ import { createMoneyColumn } from "@/components/shared/data-table/columns";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import {
     AlertDialog,
@@ -434,10 +434,13 @@ export function QuoteBaseView({
                     ]}
                 />
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={FileText}
-                        title="Sin ítems"
-                        description="Agregá tareas del catálogo para armar el presupuesto."
+                        viewName="Ítems del Presupuesto"
+                        featureDescription="Agregá tareas del catálogo para armar el presupuesto."
+                        onAction={handleAddItem}
+                        actionLabel="Agregar Ítem"
                     />
                 </div>
             </div>

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -170,16 +170,13 @@ export function LaborSettingsView({
                         </CardHeader>
                         <CardContent>
                             {orgCategories.length === 0 ? (
-                                <EmptyState
+                                <ViewEmptyState
+                                    mode="empty"
                                     icon={Tags}
-                                    title="Sin Categorías Personalizadas"
-                                    description="Creá categorías específicas para tu empresa (ej: Capataz, Electricista, Plomero)."
-                                    action={
-                                        <Button onClick={() => handleOpenForm()}>
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Crear Categoría
-                                        </Button>
-                                    }
+                                    viewName="Categorías Personalizadas"
+                                    featureDescription="Creá categorías específicas para tu empresa (ej: Capataz, Electricista, Plomero)."
+                                    onAction={() => handleOpenForm()}
+                                    actionLabel="Crear Categoría"
                                 />
                             ) : (
                                 <div className="flex flex-col gap-2">

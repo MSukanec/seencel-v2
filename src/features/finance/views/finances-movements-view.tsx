@@ -12,7 +12,7 @@ import { Plus, Banknote, Wallet } from "lucide-react";
 import { format, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useMoney } from "@/hooks/use-money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { useModal } from "@/stores/modal-store";
@@ -584,10 +584,13 @@ export function FinancesMovementsView({
                     }] : undefined}
                 />
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Banknote}
-                        title="Sin movimientos"
-                        description="No hay movimientos registrados. Creá tu primer movimiento para comenzar."
+                        viewName="Movimientos Financieros"
+                        featureDescription="No hay movimientos registrados. Creá tu primer movimiento para comenzar."
+                        onAction={organizationId ? openNewMovementModal : undefined}
+                        actionLabel="Nuevo Movimiento"
                     />
                 </div>
             </div>

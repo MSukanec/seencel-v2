@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { ProjectCard } from "@/features/projects/components/project-card";
@@ -266,10 +266,13 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
                     }]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Building}
-                        title="No hay proyectos"
-                        description="Aún no has creado ningún proyecto en esta organización."
+                        viewName="Proyectos"
+                        featureDescription="Aún no has creado ningún proyecto en esta organización."
+                        onAction={handleCreateProject}
+                        actionLabel="Nuevo Proyecto"
                     />
                 </div>
             </>

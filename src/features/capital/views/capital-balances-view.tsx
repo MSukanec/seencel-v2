@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Scale } from "lucide-react";
 
 interface CapitalBalancesViewProps {
@@ -14,10 +14,12 @@ export function CapitalBalancesView({
 }: CapitalBalancesViewProps) {
     return (
         <div className="h-full flex items-center justify-center">
-            <EmptyState
+            <ViewEmptyState
+                mode="empty"
                 icon={Scale}
-                title="Balances"
-                description="Esta sección mostrará el balance de capital de cada participante. Próximamente."
+                viewName="Balances"
+                featureDescription="Esta sección mostrará el balance de capital de cada participante."
+                comingSoon
             />
         </div>
     );

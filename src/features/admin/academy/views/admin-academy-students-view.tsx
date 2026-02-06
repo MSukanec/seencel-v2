@@ -10,7 +10,7 @@ import { deleteEnrollment } from "@/actions/enrollment-actions";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { EnrollmentForm } from "@/features/academy/components/admin/enrollment-form";
 import { StudentsTable } from "./students-table";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import type { AdminCourseEnrollment, AdminCourse } from "@/features/admin/academy-queries";
 
 interface AdminAcademyStudentsViewProps {
@@ -130,10 +130,13 @@ export function AdminAcademyStudentsView({ enrollments, courses }: AdminAcademyS
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Users}
-                        title="No hay alumnos inscritos"
-                        description="Inscribe tu primer alumno a un curso."
+                        viewName="Alumnos Inscritos"
+                        featureDescription="Inscribe tu primer alumno a un curso."
+                        onAction={handleCreate}
+                        actionLabel="Inscribir Alumno"
                     />
                 </div>
             </>

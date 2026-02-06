@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { TrendingUp, Info, Calendar, Percent, DollarSign, Download } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useMoney } from "@/hooks/use-money";
 import { cn } from "@/lib/utils";
 import { MONTH_NAMES } from "@/features/advanced/types";
@@ -61,10 +61,11 @@ export function SubcontractAdjustmentView({
     if (!subcontract.adjustment_index_type_id || !subcontract.base_index_value) {
         return (
             <div className="h-full flex items-center justify-center">
-                <EmptyState
+                <ViewEmptyState
+                    mode="empty"
                     icon={TrendingUp}
-                    title="Sin Ajuste Configurado"
-                    description="Este subcontrato no tiene un índice de ajuste configurado. Editá el subcontrato para agregar un índice de redeterminación."
+                    viewName="Ajuste de Precios"
+                    featureDescription="Este subcontrato no tiene un índice de ajuste configurado. Editá el subcontrato para agregar un índice de redeterminación."
                 />
             </div>
         );
@@ -564,10 +565,11 @@ export function SubcontractAdjustmentView({
                         title="Evolución del Ajuste"
                         icon={<TrendingUp className="h-4 w-4" />}
                     >
-                        <EmptyState
+                        <ViewEmptyState
+                            mode="empty"
                             icon={TrendingUp}
-                            title="Sin Historial Suficiente"
-                            description="Se necesitan al menos 2 períodos de índice para mostrar el gráfico de evolución."
+                            viewName="Historial de Ajuste"
+                            featureDescription="Se necesitan al menos 2 períodos de índice para mostrar el gráfico de evolución."
                         />
                     </DashboardCard>
                 )}

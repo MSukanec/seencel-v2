@@ -16,7 +16,7 @@ import { deleteSubcontractPaymentAction, bulkDeleteSubcontractPaymentsAction } f
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { createImportBatch, revertImportBatch, importSubcontractPaymentsBatch, ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
@@ -324,10 +324,13 @@ export function SubcontractsPaymentsView({
                     ]}
                 />
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Banknote}
-                        title="Sin pagos registrados"
-                        description="Registra el primer pago de subcontratos."
+                        viewName="Pagos de Subcontratos"
+                        featureDescription="Registra el primer pago de subcontratos."
+                        onAction={handleNewPayment}
+                        actionLabel="Nuevo Pago"
                     />
                 </div>
             </div>

@@ -23,8 +23,9 @@ interface ViewEmptyStateProps {
     /** 
      * Only for mode="empty": Extensive description of the feature
      * Should explain what this section is for and guide the user
+     * Can be a string or JSX for more complex descriptions with links
      */
-    featureDescription?: string;
+    featureDescription?: React.ReactNode;
 
     /**
      * Only for mode="empty": Primary action callback

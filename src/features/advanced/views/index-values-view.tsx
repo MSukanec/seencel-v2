@@ -20,7 +20,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 interface IndexValuesViewProps {
     organizationId: string;
@@ -181,10 +181,13 @@ export function IndexValuesView({
 
             {values.length === 0 ? (
                 <div className="h-full flex items-center justify-center min-h-[300px]">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Calendar}
-                        title="Sin valores registrados"
-                        description={`Agregá el primer valor para ${indexType.name}`}
+                        viewName="Valores del Índice"
+                        featureDescription={`Agregá el primer valor para ${indexType.name}`}
+                        onAction={handleAddValue}
+                        actionLabel="Agregar Valor"
                     />
                 </div>
             ) : (

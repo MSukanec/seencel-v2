@@ -12,7 +12,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -281,10 +281,13 @@ export function QuotesListView({
                     actions={[{ label: "Nuevo Presupuesto", icon: Plus, onClick: handleCreateQuote }]}
                 />
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={FileText}
-                        title="Sin presupuestos"
-                        description="Creá tu primer presupuesto para comenzar a gestionar cotizaciones y contratos."
+                        viewName="Presupuestos"
+                        featureDescription="Creá tu primer presupuesto para comenzar a gestionar cotizaciones y contratos."
+                        onAction={handleCreateQuote}
+                        actionLabel="Nuevo Presupuesto"
                     />
                 </div>
             </PageWrapper>

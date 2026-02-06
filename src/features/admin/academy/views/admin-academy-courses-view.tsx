@@ -6,7 +6,7 @@ import { Plus, Video } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { CoursesTable } from "@/features/academy/components/admin/courses-table";
 import type { AdminCourse } from "@/features/admin/academy-queries";
 
@@ -47,10 +47,11 @@ export function AdminAcademyCoursesView({ courses, instructors }: AdminAcademyCo
                     portalToHeader
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Video}
-                        title="No hay cursos"
-                        description="Crea tu primer curso para empezar."
+                        viewName="Cursos"
+                        featureDescription="Crea tu primer curso para empezar."
                     />
                 </div>
             </>

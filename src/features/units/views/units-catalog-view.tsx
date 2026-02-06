@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListItem } from "@/components/ui/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import {
     Plus,
@@ -275,13 +275,15 @@ export function UnitsCatalogView({
             <div className="space-y-2">
                 {filteredUnits.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
-                        <EmptyState
+                        <ViewEmptyState
+                            mode="no-results"
                             icon={Ruler}
-                            title="Sin resultados"
-                            description={searchQuery
-                                ? "No se encontraron unidades con ese criterio de búsqueda."
-                                : "No hay unidades en esta categoría."
-                            }
+                            viewName="unidades"
+                            filterContext={searchQuery ? "con ese criterio de búsqueda" : "en esta categoría"}
+                            onResetFilters={() => {
+                                setSearchQuery("");
+                                setSelectedCategoryId(null);
+                            }}
                         />
                     </div>
                 ) : (

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useModal } from "@/stores/modal-store";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { HeroSectionForm } from "./forms/hero-section-form";
 import { deleteHeroSection, toggleHeroSectionActive } from "@/features/hero-sections/actions";
 import type { HeroSection } from "@/features/hero-sections/queries";
@@ -130,10 +130,13 @@ export function CarouselManagementView({ slides }: CarouselManagementViewProps) 
                 />
 
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Sparkles}
-                        title="Sin slides en el carousel"
-                        description="Creá tu primer slide para mostrar contenido destacado en el HUB."
+                        viewName="Carousel del HUB"
+                        featureDescription="Creá tu primer slide para mostrar contenido destacado en el HUB."
+                        onAction={handleCreate}
+                        actionLabel="Crear Slide"
                     />
                 </div>
             </>

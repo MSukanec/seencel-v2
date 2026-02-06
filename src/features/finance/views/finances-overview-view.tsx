@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChartConfig } from "@/components/ui/chart";
 import { useMoney } from "@/hooks/use-money";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { InsightCard } from "@/features/insights/components/insight-card";
 import { generateFinanceInsights } from "@/features/insights/logic/finance";
 import { cn } from "@/lib/utils";
@@ -34,10 +34,11 @@ export function FinancesOverviewView({ movements, wallets = [] }: FinancesOvervi
         return (
             <div className="h-full flex flex-col">
                 <div className="flex-1 flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Banknote}
-                        title="Sin movimientos financieros"
-                        description="Registrá tu primer movimiento en la pestaña Movimientos para ver estadísticas y gráficos aquí."
+                        viewName="Resumen Financiero"
+                        featureDescription="Registrá tu primer movimiento en la pestaña Movimientos para ver estadísticas y gráficos aquí."
                     />
                 </div>
             </div>

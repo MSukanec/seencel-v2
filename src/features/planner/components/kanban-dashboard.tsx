@@ -13,7 +13,7 @@ import { useModal } from "@/stores/modal-store";
 import { KanbanBoardForm } from "@/features/planner/forms/kanban-board-form";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import {
@@ -290,10 +290,13 @@ export function KanbanDashboard({
                 {initialBoards.length === 0 ? (
                     // Empty State - No boards exist
                     <div className="h-full flex items-center justify-center p-8">
-                        <EmptyState
+                        <ViewEmptyState
+                            mode="empty"
                             icon={LayoutDashboard}
-                            title="Sin paneles"
-                            description="Creá tu primer panel para organizar tus tareas y proyectos de forma visual."
+                            viewName="Paneles Kanban"
+                            featureDescription="Creá tu primer panel para organizar tus tareas y proyectos de forma visual."
+                            onAction={handleCreateBoard}
+                            actionLabel="Nuevo Panel"
                         />
                     </div>
                 ) : activeBoardData ? (

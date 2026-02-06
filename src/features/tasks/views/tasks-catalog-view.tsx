@@ -9,7 +9,7 @@ import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
 import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } from "@/features/tasks/forms";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 
 // Filter type for origin
@@ -204,10 +204,13 @@ export function TasksCatalogView({
                     }]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={ClipboardList}
-                        title="No hay tareas"
-                        description="Agregá tareas para comenzar a construir tu catálogo técnico."
+                        viewName="Tareas"
+                        featureDescription="Agregá tareas para comenzar a construir tu catálogo técnico."
+                        onAction={handleCreateTask}
+                        actionLabel="Nueva Tarea"
                     />
                 </div>
             </>

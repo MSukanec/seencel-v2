@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Banknote, Plus, Upload, Download } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { useModal } from "@/stores/modal-store";
@@ -226,10 +226,13 @@ export function ClientsPaymentsView({
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Banknote}
-                        title="Sin pagos registrados"
-                        description="Registrá el primer pago de tus clientes o importalos desde un archivo Excel."
+                        viewName="Pagos de Clientes"
+                        featureDescription="Registrá el primer pago de tus clientes o importalos desde un archivo Excel."
+                        onAction={handleNewPayment}
+                        actionLabel="Nuevo Pago"
                     />
                 </div>
             </>

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { Package, ClipboardList, Layers, AlertCircle, Boxes } from "lucide-react";
 import { MaterialRequirement } from "../types";
@@ -72,10 +72,11 @@ export function MaterialsRequirementsView({
             <ContentLayout variant="wide" className="pb-6">
                 {/* Empty State - sin botón, esta vista es read-only */}
                 {(!requirements || requirements.length === 0) ? (
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Package}
-                        title="Sin Necesidades de Materiales"
-                        description={
+                        viewName="Necesidades de Materiales"
+                        featureDescription={
                             <>
                                 Las necesidades de materiales aparecerán cuando tengas{' '}
                                 <a

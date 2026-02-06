@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, Calendar, MoreHorizontal, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
@@ -240,10 +240,13 @@ export function AdvancedIndicesView({
                     ]}
                 />
                 <div className="h-full flex items-center justify-center min-h-[400px]">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={TrendingUp}
-                        title="Creá tu primer índice"
-                        description="Los índices económicos (CAC, ICC, IPC) te permiten ajustar presupuestos y contratos según la inflación."
+                        viewName="Índices Económicos"
+                        featureDescription="Los índices económicos (CAC, ICC, IPC) te permiten ajustar presupuestos y contratos según la inflación."
+                        onAction={handleCreate}
+                        actionLabel="Crear Índice"
                     />
                 </div>
             </>

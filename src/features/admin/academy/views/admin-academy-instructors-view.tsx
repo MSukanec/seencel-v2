@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Users } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useRouter } from "next/navigation";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { InstructorsTable } from "@/features/academy/components/admin/instructors-table";
 import { InstructorForm } from "@/features/academy/components/admin/instructor-form";
 
@@ -65,10 +65,13 @@ export function AdminAcademyInstructorsView({ instructors }: AdminAcademyInstruc
                 />
                 <InstructorForm open={formOpen} onOpenChange={setFormOpen} />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Users}
-                        title="No hay instructores"
-                        description="Agrega tu primer instructor."
+                        viewName="Instructores"
+                        featureDescription="Agrega tu primer instructor."
+                        onAction={handleCreate}
+                        actionLabel="Nuevo Instructor"
                     />
                 </div>
             </>

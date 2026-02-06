@@ -6,7 +6,7 @@ import { ConstructionTaskCard } from "../components/construction-task-card";
 import { ConstructionTaskForm } from "../forms/construction-task-form";
 import { deleteConstructionTask, updateConstructionTaskStatus } from "../actions";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 import {
     AlertDialog,
@@ -183,24 +183,27 @@ export function ConstructionTasksView({
 
             {/* Content */}
             {filteredTasks.length === 0 ? (
-                <EmptyState
-                    icon={ClipboardList}
-                    title="Sin tareas de construcción"
-                    description={
-                        tasks.length === 0
-                            ? "Las tareas aparecerán aquí cuando se apruebe un presupuesto o las agregues manualmente."
-                            : "No hay tareas que coincidan con los filtros aplicados."
-                    }
-                    action={tasks.length === 0 ? (
-                        <button
-                            onClick={handleCreate}
-                            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Agregar tarea
-                        </button>
-                    ) : undefined}
-                />
+                tasks.length === 0 ? (
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={ClipboardList}
+                        viewName="Tareas de Construcción"
+                        featureDescription="Las tareas aparecerán aquí cuando se apruebe un presupuesto o las agregues manualmente."
+                        onAction={handleCreate}
+                        actionLabel="Agregar tarea"
+                    />
+                ) : (
+                    <ViewEmptyState
+                        mode="no-results"
+                        icon={ClipboardList}
+                        viewName="tareas de construcción"
+                        filterContext="con los filtros aplicados"
+                        onResetFilters={() => {
+                            setSearchQuery("");
+                            setStatusFilter("all");
+                        }}
+                    />
+                )
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredTasks.map((task) => (

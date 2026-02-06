@@ -1,7 +1,7 @@
 "use client";
 
 import { PieChart } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 /**
  * Admin Finance Plans View
@@ -10,10 +10,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 export function AdminFinancePlansView() {
     return (
         <div className="h-full flex items-center justify-center">
-            <EmptyState
+            <ViewEmptyState
+                mode="empty"
                 icon={PieChart}
-                title="Planes de Precios"
-                description="Configuración de Tiers (Free, Pro, Enterprise). Próximamente."
+                viewName="Planes de Precios"
+                featureDescription="Configuración de Tiers (Free, Pro, Enterprise)."
+                comingSoon
             />
         </div>
     );

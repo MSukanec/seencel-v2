@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 // ============================================================================
 // Types
@@ -188,14 +188,24 @@ export function TasksElementsView({
 
             {/* Elements List */}
             {sortedElements.length === 0 ? (
-                <EmptyState
-                    icon={Boxes}
-                    title={searchQuery ? "No se encontraron elementos" : "No hay elementos definidos"}
-                    description={searchQuery
-                        ? "Probá con otros términos de búsqueda"
-                        : "Los elementos representan componentes constructivos como Contrapiso, Muro, Losa"
-                    }
-                />
+                searchQuery ? (
+                    <ViewEmptyState
+                        mode="no-results"
+                        icon={Boxes}
+                        viewName="elementos"
+                        filterContext="con ese criterio de búsqueda"
+                        onResetFilters={() => setSearchQuery("")}
+                    />
+                ) : (
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={Boxes}
+                        viewName="Elementos"
+                        featureDescription="Los elementos representan componentes constructivos como Contrapiso, Muro, Losa."
+                        onAction={isAdminMode ? handleCreateElement : undefined}
+                        actionLabel={isAdminMode ? "Nuevo Elemento" : undefined}
+                    />
+                )
             ) : (
                 <div className="space-y-3">
                     {sortedElements.map((element) => {

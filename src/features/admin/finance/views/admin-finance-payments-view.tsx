@@ -13,7 +13,7 @@ import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
@@ -433,7 +433,12 @@ export function AdminFinancePaymentsView({ payments, bankTransfers, users = [] }
         if (optimisticPayments.length === 0) {
             return (
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState icon={CreditCard} title="No hay pagos registrados" description="Los pagos aparecerán cuando los usuarios compren cursos." />
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={CreditCard}
+                        viewName="Pagos Registrados"
+                        featureDescription="Los pagos aparecerán cuando los usuarios compren cursos."
+                    />
                 </div>
             );
         }
@@ -458,7 +463,12 @@ export function AdminFinancePaymentsView({ payments, bankTransfers, users = [] }
         if (optimisticTransfers.length === 0) {
             return (
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState icon={Landmark} title="No hay transferencias" description="Las transferencias bancarias aparecerán aquí." />
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={Landmark}
+                        viewName="Transferencias Bancarias"
+                        featureDescription="Las transferencias bancarias aparecerán aquí."
+                    />
                 </div>
             );
         }

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Landmark, Wallet, TrendingUp, TrendingDown, Download, Upload, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useMoney } from "@/hooks/use-money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { useModal } from "@/stores/modal-store";
@@ -241,10 +241,13 @@ export function CapitalMovementsView({
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Landmark}
-                        title="Sin movimientos de capital"
-                        description="Registrá el primer aporte o retiro de capital para comenzar."
+                        viewName="Movimientos de Capital"
+                        featureDescription="Registrá el primer aporte o retiro de capital para comenzar."
+                        onAction={handleCreate}
+                        actionLabel="Nuevo Movimiento"
                     />
                 </div>
             </>

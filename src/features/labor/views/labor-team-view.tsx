@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -156,10 +156,13 @@ export function LaborTeamView({
 
             <ContentLayout variant="wide" className="pb-6">
                 {workers.length === 0 ? (
-                    <EmptyState
+                    <ViewEmptyState
+                        mode="empty"
                         icon={Users}
-                        title="Sin Trabajadores Registrados"
-                        description="Agregá trabajadores para gestionar la mano de obra del proyecto."
+                        viewName="Equipo de Trabajo"
+                        featureDescription="Agregá trabajadores para gestionar la mano de obra del proyecto."
+                        onAction={() => handleOpenForm()}
+                        actionLabel="Agregar Trabajador"
                     />
                 ) : (
                     <div className="space-y-6">
