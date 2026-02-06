@@ -10,14 +10,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Mail, MoreVertical, ShieldCheck, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useModal } from "@/stores/modal-store";
+import { InviteMemberForm } from "@/features/organization/forms/organization-invite-member-form";
 
 interface MembersSettingsViewProps {
+    organizationId: string;
+    planId: string;
     members: OrganizationMemberDetail[];
     invitations: OrganizationInvitation[];
     roles: Role[];
 }
 
-export function MembersSettingsView({ members, invitations, roles }: MembersSettingsViewProps) {
+export function MembersSettingsView({ organizationId, planId, members, invitations, roles }: MembersSettingsViewProps) {
+    const { openModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
 
     // Filter members by search query
@@ -39,8 +44,18 @@ export function MembersSettingsView({ members, invitations, roles }: MembersSett
     }, [invitations, searchQuery]);
 
     const handleInvite = () => {
-        // TODO: Open invite modal
-        console.log("Open invite modal");
+        openModal(
+            <InviteMemberForm
+                organizationId={organizationId}
+                planId={planId}
+                roles={roles}
+            />,
+            {
+                title: "Invitar Miembro",
+                description: "Invita a nuevos miembros a tu organización para colaborar en proyectos.",
+                size: "md"
+            }
+        );
     };
 
     return (

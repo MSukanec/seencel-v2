@@ -61,7 +61,12 @@ export async function getUserNotifications(): Promise<{ notifications: UserNotif
         return { notifications: [] };
     }
 
-    return { notifications: (userNotifications || []) as unknown as UserNotification[] };
+    // Filter out notifications where the JOIN failed (orphaned references)
+    const validNotifications = (userNotifications || []).filter(
+        (n: any) => n.notification !== null && n.notification !== undefined
+    );
+
+    return { notifications: validNotifications as unknown as UserNotification[] };
 }
 
 export async function getUnreadNotificationsCount(): Promise<number> {

@@ -2,6 +2,7 @@
     "order": [
         "primeros-pasos",
         "materiales",
+        "tareas",
         "finanzas",
         "proyectos"
     ],
@@ -13,6 +14,10 @@
         "materiales": {
             "title": "Materiales",
             "icon": "package"
+        },
+        "tareas": {
+            "title": "Tareas",
+            "icon": "clipboard-list"
         },
         "finanzas": {
             "title": "Finanzas",

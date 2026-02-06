@@ -10,7 +10,8 @@ import {
     DollarSign,
     Building,
     ChevronDown,
-    FileText
+    FileText,
+    ClipboardList
 } from "lucide-react";
 import { useState } from "react";
 import type { DocTreeItem } from "../types";
@@ -24,6 +25,7 @@ const iconMap: Record<string, React.ElementType> = {
     package: Package,
     "dollar-sign": DollarSign,
     building: Building,
+    "clipboard-list": ClipboardList,
 };
 
 export function DocsSidebar({ tree }: DocsSidebarProps) {

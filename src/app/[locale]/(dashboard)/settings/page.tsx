@@ -21,7 +21,7 @@ import { AvatarManager } from "@/features/users/components/avatar-manager";
 import { HeaderTitleUpdater } from "@/components/layout";
 import { getCountries } from "@/features/countries/queries";
 import { getBillingProfile } from "@/features/billing/queries";
-import { BillingForm } from "@/features/billing/components/BillingForm";
+import { BillingForm } from "@/features/billing/forms/billing-form";
 import { getUserNotifications } from "@/features/notifications/queries";
 import { NotificationsSettings } from "@/features/notifications/components/NotificationsSettings";
 import { PageWrapper } from "@/components/layout";

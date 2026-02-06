@@ -12,10 +12,15 @@ interface SettingsClientProps {
 }
 
 export function SettingsClient({ data, organizationId }: SettingsClientProps) {
+    // Get planId from subscription or fallback
+    const planId = data.subscription?.plan_id ?? "";
+
     return (
         <>
             <TabsContent value="members" className="m-0 h-full focus-visible:outline-none">
                 <MembersSettingsView
+                    organizationId={organizationId}
+                    planId={planId}
                     members={data.members}
                     invitations={data.invitations}
                     roles={data.roles}

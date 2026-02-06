@@ -153,4 +153,93 @@ export async function validateCoupon(input: CouponValidationInput): Promise<Coup
     };
 }
 
+// ============================================================
+// FREE SUBSCRIPTION ACTIVATION (100% COUPON)
+// ============================================================
+
+export interface FreeSubscriptionInput {
+    organizationId: string;
+    planId: string;
+    billingPeriod: "monthly" | "annual";
+    couponId: string;
+    couponCode: string;
+}
+
+/**
+ * Activate a subscription for free when a 100% discount coupon is applied.
+ * This bypasses payment gateways and directly calls handle_payment_subscription_success
+ * with amount=0 and provider='coupon'.
+ */
+export async function activateFreeSubscription(input: FreeSubscriptionInput): Promise<{
+    success: boolean;
+    error?: string;
+    paymentId?: string;
+}> {
+    const supabase = await createClient();
+
+    // Get current user
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+        return { success: false, error: "Not authenticated" };
+    }
+
+    // Get internal user ID
+    const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (!userData) {
+        return { success: false, error: "User not found" };
+    }
+
+    // First, redeem the coupon to mark it as used
+    const { error: redeemError } = await supabase.rpc("redeem_coupon_universal", {
+        p_code: input.couponCode,
+        p_product_type: "subscription",
+        p_product_id: input.planId,
+        p_price: 0,
+        p_currency: "USD",
+        p_subscription_id: null,
+        p_order_id: null
+    });
+
+    if (redeemError) {
+        console.error("Error redeeming coupon:", redeemError);
+        return { success: false, error: "Error al canjear el cupón" };
+    }
+
+    // Activate subscription via handle_payment_subscription_success
+    const { data: handleResult, error: handleError } = await supabase.rpc(
+        "handle_payment_subscription_success",
+        {
+            p_provider: "coupon",
+            p_provider_payment_id: `coupon-${input.couponId}-${Date.now()}`,
+            p_user_id: userData.id,
+            p_organization_id: input.organizationId,
+            p_plan_id: input.planId,
+            p_billing_period: input.billingPeriod,
+            p_amount: 0,
+            p_currency: "USD",
+            p_metadata: JSON.stringify({
+                coupon_id: input.couponId,
+                coupon_code: input.couponCode,
+                is_gift: true,
+                activated_via: "free_coupon"
+            })
+        }
+    );
+
+    if (handleError) {
+        console.error("Error activating free subscription:", handleError);
+        return { success: false, error: "Error al activar la suscripción" };
+    }
+
+    revalidatePath('/[locale]/organization', 'layout');
+    revalidatePath('/[locale]/checkout', 'page');
+
+    const paymentId = (handleResult as { payment_id?: string })?.payment_id;
+    return { success: true, paymentId };
+}
 

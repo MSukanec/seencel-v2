@@ -10,7 +10,7 @@ import { checkIsAdmin } from "@/features/users/queries";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ShoppingCart } from "lucide-react";
-import { CheckoutView } from "@/features/billing/views/checkout-view";
+import { BillingCheckoutView } from "@/features/billing/views/billing-checkout-view";
 
 // Metadata
 export async function generateMetadata({
@@ -75,7 +75,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
             icon={<ShoppingCart className="h-5 w-5" />}
         >
             <ContentLayout variant="wide">
-                <CheckoutView
+                <BillingCheckoutView
                     productType={isCourse ? "course" : "plan"}
                     plans={plans}
                     course={course}

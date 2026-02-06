@@ -229,19 +229,56 @@ try {
 
 ---
 
-## 5. Toolbar con portalToHeader (🚨 OBLIGATORIO)
+## 5. Toolbar con portalToHeader y actions[] (🚨 OBLIGATORIO)
 
-**TODA página con acciones/filtros DEBE usar Toolbar con `portalToHeader`:**
+**TODA página con acciones/filtros DEBE usar Toolbar con `portalToHeader` y `actions={[...]}`:**
+
+### Patrón Obligatorio
 
 ```tsx
 <Toolbar
-    portalToHeader
+    portalToHeader={true}
     searchQuery={searchQuery}
     onSearchChange={setSearchQuery}
-    actions={[{ label: "Crear", icon: Plus, onClick: handleCreate }]}
+    actions={[
+        {
+            label: "Nuevo Material",
+            icon: Plus,
+            onClick: handleCreate,
+        },
+        {
+            label: "Importar",
+            icon: Upload,
+            onClick: handleImport,
+        },
+        {
+            label: "Ver historial",
+            icon: History,
+            onClick: handleImportHistory,
+        },
+    ]}
 />
 ```
 
+### Cómo Funciona
+
+El Toolbar genera automáticamente un **ToolbarSplitButton** cuando hay múltiples acciones:
+- **Primera acción**: Botón principal visible
+- **Acciones adicionales**: Menú desplegable con ícono "..." al costado
+
+### Reglas Clave
+
+| Regla | Descripción |
+|-------|-------------|
+| **Usar `actions={[...]}`** | Array de objetos con `label`, `icon`, `onClick` |
+| **Primera acción = principal** | La primera es el botón visible, el resto van al dropdown |
+| **NO hardcodear dropdowns** | El Toolbar maneja el dropdown automáticamente |
+| **portalToHeader siempre** | Renderiza en el header del dashboard |
+
+> ⛔ **NUNCA** crear un `<DropdownMenu>` custom para acciones del toolbar.
+>
+> ⛔ **NUNCA** usar `children` del Toolbar para renderizar botones custom.
+>
 > ⛔ **NUNCA** colocar botones de acción directamente en el body de la página.
 
 ---
@@ -255,6 +292,7 @@ Antes de marcar una página como completa:
 - [ ] ¿Exporta `generateMetadata` con robots noindex?
 - [ ] ¿Tiene `try/catch` con `ErrorDisplay`?
 - [ ] ¿Toolbar usa `portalToHeader`?
+- [ ] ¿Toolbar usa `actions={[...]}` (NO dropdowns custom)?
 - [ ] ¿Usa `PageWrapper` con icon y title?
 
 ---
@@ -268,6 +306,8 @@ Antes de marcar una página como completa:
 | Sin Metadata | Agregar `generateMetadata` |
 | Sin error handling | Agregar `try/catch` + `ErrorDisplay` |
 | Botones en body | Mover a `Toolbar portalToHeader` |
+| Dropdown hardcodeado en Toolbar | Usar `actions={[...]}` con múltiples items |
+| `children` custom en Toolbar | Usar `actions={[...]}` que genera ToolbarSplitButton |
 
 ---
 

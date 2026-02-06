@@ -21,6 +21,7 @@ export { importContactsBatch } from "./contacts-import";
 export { importPaymentsBatch } from "./clients-import";
 export { importSubcontractPaymentsBatch } from "./subcontracts-import";
 export { importMaterialPaymentsBatch, importMaterialsCatalogBatch } from "./materials-import";
+export { importTasksCatalogBatch } from "./tasks-import";
 
 // Re-export utilities from related files
 export * from "./utils";

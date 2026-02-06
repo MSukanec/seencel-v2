@@ -1051,7 +1051,14 @@
             "terms": "Al completar la compra, aceptas nuestros Términos de Servicio y Política de Privacidad.",
             "complete": "Completar Compra",
             "secure": "Pago 100% seguro",
-            "guarantee": "Garantía de satisfacción de 14 días"
+            "guarantee": "Garantía de satisfacción de 14 días",
+            "guaranteed": "Garantía 14 días",
+            "support": "Soporte 24/7",
+            "included": "Incluido en tu plan",
+            "benefit1": "Acceso a todos los módulos",
+            "benefit2": "Proyectos ilimitados",
+            "benefit3": "Soporte prioritario",
+            "benefit4": "Actualizaciones gratuitas"
         }
     },
     "Course": {

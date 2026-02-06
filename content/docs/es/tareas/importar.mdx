@@ -1,0 +1,80 @@
+---
+title: "Importar Tareas"
+description: "Guía para importar tareas masivamente desde Excel o CSV"
+---
+
+# Importar Tareas
+
+SEENCEL te permite importar tu catálogo de tareas desde archivos **Excel (.xlsx)** o **CSV** de forma masiva.
+
+## Antes de Empezar
+
+Asegurate de tener tu archivo con al menos la columna de **Nombre** de la tarea. Opcionalmente podés incluir:
+
+| Campo | Requerido | Descripción | Ejemplo |
+|-------|-----------|-------------|---------|
+| Nombre | ✅ Sí | Nombre de la tarea | Construcción de muro de ladrillo hueco |
+| Código | ❌ No | Código interno o identificador | MUR-001 |
+| Descripción | ❌ No | Detalle técnico | Muro de ladrillo hueco de 18cm con mezcla 1:3 |
+| Unidad | ❌ No | Unidad de medida | m² |
+| Rubro | ❌ No | División o categoría | Albañilería |
+
+## Pasos para Importar
+
+### 1. Acceder al Importador
+
+1. Andá a **Catálogo Técnico** → **Tareas**
+2. Hacé clic en el botón **Nueva Tarea** (con la flechita)
+3. Seleccioná **Importar desde Excel/CSV**
+
+### 2. Subir el Archivo
+
+Arrastrá tu archivo Excel o CSV al área de carga, o hacé clic para seleccionarlo desde tu computadora.
+
+### 3. Mapear Columnas
+
+El sistema detectará automáticamente las columnas de tu archivo. Revisá que cada columna esté correctamente asignada:
+
+- **Nombre** → Columna con el nombre de la tarea
+- **Código** → Columna con el código (opcional)
+- **Descripción** → Columna con la descripción técnica (opcional)
+- **Unidad** → Columna con la unidad de medida (opcional)
+- **Rubro** → Columna con el rubro o división (opcional)
+
+### 4. Resolver Conflictos
+
+Si hay unidades o rubros que no existen en el sistema, podés elegir:
+
+- **Crear** una nueva unidad/rubro con ese nombre
+- **Asignar** a una unidad/rubro existente
+- **Ignorar** esa columna
+
+### 5. Confirmar Importación
+
+Revisá el resumen y confirmá la importación. Las tareas se agregarán a tu catálogo inmediatamente.
+
+## Manejo de Duplicados
+
+El sistema detecta duplicados por:
+
+- **Nombre exacto** de la tarea
+- **Código** si está presente
+
+Las tareas duplicadas se marcarán como error y no se importarán.
+
+## Historial de Importaciones
+
+Podés ver el historial de todas tus importaciones y revertirlas si es necesario:
+
+1. Hacé clic en **Nueva Tarea** → **Ver historial de importaciones**
+2. Verás las últimas 20 importaciones con fecha, cantidad y estado
+3. Podés **revertir** una importación para eliminar todas las tareas de ese lote
+
+> **Nota:** Revertir una importación solo elimina las tareas que no fueron modificadas manualmente después de la importación.
+
+## Consejos
+
+- Usá nombres descriptivos y consistentes
+- Asegurate de que los códigos sean únicos
+- Revisá que las unidades coincidan con las del sistema (m², ml, u, kg, etc.)
+- Organizá tus tareas por rubros para facilitar la búsqueda

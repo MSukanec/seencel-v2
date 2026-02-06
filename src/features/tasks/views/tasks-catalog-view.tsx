@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Monitor, Building2, ClipboardList } from "lucide-react";
+import { Plus, Monitor, Building2, ClipboardList, Upload, History } from "lucide-react";
 
 import { TasksByDivision, Unit, TaskDivision, TaskKind } from "@/features/tasks/types";
 import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
@@ -11,6 +11,9 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
+import { ImportConfig, createImportBatch, importTasksCatalogBatch, revertImportBatch } from "@/lib/import";
+import { BulkImportModal } from "@/components/shared/import/import-modal";
+import { ImportHistoryModal } from "@/components/shared/import/import-history-modal";
 
 // Filter type for origin
 type OriginFilter = "all" | "system" | "organization";
@@ -74,6 +77,130 @@ export function TasksCatalogView({
 
     const handleOriginClear = () => {
         setOriginFilter(new Set());
+    };
+
+    // ========================================================================
+    // Import Configuration
+    // ========================================================================
+
+    const tasksImportConfig: ImportConfig<any> = {
+        entityLabel: "Tareas",
+        entityId: "tasks_catalog",
+        description: "Importá tu catálogo de tareas desde un archivo Excel o CSV. El sistema detectará automáticamente las columnas y te permitirá mapearlas a los campos correspondientes. Las tareas duplicadas se identificarán por nombre o código para evitar registros repetidos.",
+        docsPath: "/es/docs/tareas/importar",
+        columns: [
+            {
+                id: "name",
+                label: "Nombre",
+                required: true,
+                description: "Nombre de la tarea de construcción",
+                example: "Construcción de muro de ladrillo hueco"
+            },
+            {
+                id: "code",
+                label: "Código",
+                required: false,
+                description: "Código interno o identificador",
+                example: "MUR-001"
+            },
+            {
+                id: "description",
+                label: "Descripción",
+                required: false,
+                description: "Detalle o especificación técnica de la tarea",
+                example: "Muro de ladrillo hueco de 18cm con mezcla 1:3"
+            },
+            {
+                id: "unit_name",
+                label: "Unidad de Medida",
+                required: false,
+                description: "Unidad para medir esta tarea (m², ml, u, etc.)",
+                example: "m²",
+                foreignKey: {
+                    table: 'units',
+                    labelField: 'name',
+                    valueField: 'id',
+                    fetchOptions: async () => units.map(u => ({
+                        id: u.id,
+                        label: `${u.name} (${u.symbol})`
+                    })),
+                    allowCreate: true,
+                }
+            },
+            {
+                id: "division_name",
+                label: "Rubro",
+                required: false,
+                description: "Rubro o categoría de la tarea (Albañilería, Electricidad, etc.)",
+                example: "Albañilería",
+                foreignKey: {
+                    table: 'task_divisions',
+                    labelField: 'name',
+                    valueField: 'id',
+                    fetchOptions: async () => divisions.map(d => ({
+                        id: d.id,
+                        label: d.name
+                    })),
+                    allowCreate: true,
+                }
+            },
+        ],
+        onImport: async (records) => {
+            try {
+                const batch = await createImportBatch(orgId, "tasks_catalog", records.length);
+                const result = await importTasksCatalogBatch(orgId, records, batch.id);
+                router.refresh();
+                return {
+                    success: result.success,
+                    errors: result.errors,
+                    batchId: batch.id,
+                    created: result.created,
+                };
+            } catch (error: any) {
+                console.error("Import error:", error);
+                throw error;
+            }
+        },
+        onRevert: async (batchId) => {
+            await revertImportBatch(batchId, 'tasks');
+            router.refresh();
+        }
+    };
+
+    // ========================================================================
+    // Import Handlers
+    // ========================================================================
+
+    const handleImport = () => {
+        openModal(
+            <BulkImportModal
+                config={tasksImportConfig}
+                organizationId={orgId}
+            />,
+            {
+                title: "Importar Tareas",
+                description: "Importa tareas desde un archivo Excel o CSV",
+                size: "xl"
+            }
+        );
+    };
+
+    const handleImportHistory = () => {
+        openModal(
+            <ImportHistoryModal
+                organizationId={orgId}
+                entityType="tasks_catalog"
+                entityTable="tasks"
+                onRevert={() => {
+                    router.refresh();
+                }}
+            />,
+            {
+                title: "Historial de Importaciones",
+                description: "Últimas 20 importaciones de tareas",
+                size: "lg"
+            }
+        );
     };
 
     // ========================================================================
@@ -197,20 +324,33 @@ export function TasksCatalogView({
                             facets={originFacets}
                         />
                     }
-                    actions={[{
-                        label: "Nueva Tarea",
-                        icon: Plus,
-                        onClick: handleCreateTask,
-                    }]}
+                    actions={[
+                        {
+                            label: "Nueva Tarea",
+                            icon: Plus,
+                            onClick: handleCreateTask,
+                        },
+                        {
+                            label: "Importar",
+                            icon: Upload,
+                            onClick: handleImport,
+                        },
+                        {
+                            label: "Ver historial",
+                            icon: History,
+                            onClick: handleImportHistory,
+                        },
+                    ]}
                 />
                 <div className="h-full flex items-center justify-center">
                     <ViewEmptyState
                         mode="empty"
                         icon={ClipboardList}
                         viewName="Tareas"
-                        featureDescription="Agregá tareas para comenzar a construir tu catálogo técnico."
+                        featureDescription="Las tareas son los trabajos unitarios que componen tus proyectos de construcción. Definí tareas como 'Construcción de muro de ladrillo', 'Instalación de cañería', etc. Cada tarea puede tener materiales, mano de obra y rendimientos asociados."
                         onAction={handleCreateTask}
                         actionLabel="Nueva Tarea"
+                        docsPath="/docs/tareas"
                     />
                 </div>
             </>
@@ -234,11 +374,23 @@ export function TasksCatalogView({
                         facets={originFacets}
                     />
                 }
-                actions={[{
-                    label: "Nueva Tarea",
-                    icon: Plus,
-                    onClick: handleCreateTask,
-                }]}
+                actions={[
+                    {
+                        label: "Nueva Tarea",
+                        icon: Plus,
+                        onClick: handleCreateTask,
+                    },
+                    {
+                        label: "Importar",
+                        icon: Upload,
+                        onClick: handleImport,
+                    },
+                    {
+                        label: "Ver historial",
+                        icon: History,
+                        onClick: handleImportHistory,
+                    },
+                ]}
             />
             <TaskCatalog
                 groupedTasks={groupedTasks}
