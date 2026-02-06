@@ -21,6 +21,7 @@ export interface ImportBatch {
  */
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
     'materials': 'Materiales',
+    'materials_catalog': 'Catálogo de Materiales',
     'material_payments': 'Pagos de Materiales',
     'contacts': 'Contactos',
     'client_payments': 'Pagos de Clientes',

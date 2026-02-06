@@ -208,7 +208,7 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
                 <div className="flex-1 overflow-y-auto space-y-4">
                     {/* Cover Image Section */}
                     <div className="space-y-2">

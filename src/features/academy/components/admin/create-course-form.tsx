@@ -100,7 +100,7 @@ export function CreateCourseForm({ instructors }: CreateCourseFormProps) {
     }));
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
                 <FormGroup
                     label="Título del Curso"

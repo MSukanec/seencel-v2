@@ -95,7 +95,6 @@ export function MaterialForm({
     onCancel
 }: MaterialFormProps) {
     const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
     const isEditing = mode === "edit";
 
     // Filter units for material dropdowns (only those applicable to materials)
@@ -132,12 +131,37 @@ export function MaterialForm({
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setIsLoading(true);
-        const toastId = toast.loading(isEditing ? "Guardando cambios..." : "Creando material...");
 
+        const formData = new FormData(e.currentTarget);
+
+        // Build optimistic data object from form
+        const optimisticData: Partial<Material> = {
+            id: isEditing && initialData?.id ? initialData.id : `temp-${Date.now()}`,
+            name: formData.get("name") as string,
+            code: formData.get("code") as string || null,
+            description: formData.get("description") as string || null,
+            material_type: formData.get("material_type") as string || "material",
+            category_id: formData.get("category_id") as string || null,
+            unit_id: formData.get("unit_id") as string || null,
+            default_provider_id: providerId || null,
+            default_sale_unit_id: saleUnitId || null,
+            default_sale_unit_quantity: saleUnitQuantity ? parseFloat(saleUnitQuantity) : null,
+            organization_id: isAdminMode ? null : organizationId,
+            is_system: isAdminMode,
+            // Include display fields for immediate UI update
+            unit_name: units.find(u => u.id === formData.get("unit_id"))?.name || null,
+            category_name: categories.find(c => c.id === formData.get("category_id"))?.name || null,
+            org_unit_price: unitPrice ? parseFloat(unitPrice) : null,
+            org_price_currency_id: currencyId || null,
+        } as Material;
+
+        // ✅ OPTIMISTIC: Close modal and show success immediately
+        onSuccess?.(optimisticData as Material);
+        closeModal();
+        toast.success(isEditing ? "¡Material actualizado!" : "¡Material creado!");
+
+        // 🔄 BACKGROUND: Submit to server
         try {
-            const formData = new FormData(e.currentTarget);
-
             // Add organization_id for non-admin mode
             if (!isAdminMode) {
                 formData.append("organization_id", organizationId);
@@ -156,8 +180,6 @@ export function MaterialForm({
                 formData.append("default_sale_unit_quantity", saleUnitQuantity);
             }
 
-
-
             if (isEditing && initialData?.id) {
                 formData.append("id", initialData.id);
             }
@@ -167,8 +189,8 @@ export function MaterialForm({
                 : await createMaterial(formData, isAdminMode);
 
             if (result.error) {
-                toast.error(result.error, { id: toastId });
-                setIsLoading(false);
+                // ❌ ERROR: Notify user (view will rollback via router.refresh)
+                toast.error(result.error);
                 return;
             }
 
@@ -183,17 +205,11 @@ export function MaterialForm({
                     });
                 } catch (priceError) {
                     console.error("Error saving price:", priceError);
-                    // Don't fail the whole operation for price errors
                 }
             }
-
-            toast.success(isEditing ? "¡Material actualizado!" : "¡Material creado!", { id: toastId });
-            onSuccess?.(result.data);
         } catch (error: any) {
             console.error("Material form error:", error);
-            toast.error("Error inesperado: " + error.message, { id: toastId });
-        } finally {
-            setIsLoading(false);
+            toast.error("Error al guardar: " + error.message);
         }
     };
 
@@ -205,7 +221,7 @@ export function MaterialForm({
     const showPriceSection = !isAdminMode;
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -390,11 +406,7 @@ export function MaterialForm({
             <FormFooter
                 onCancel={handleCancel}
                 cancelLabel="Cancelar"
-                submitLabel={isLoading
-                    ? (isEditing ? "Guardando..." : "Creando...")
-                    : (isEditing ? "Guardar Cambios" : "Crear Material")
-                }
-                isLoading={isLoading}
+                submitLabel={isEditing ? "Guardar Cambios" : "Crear Material"}
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

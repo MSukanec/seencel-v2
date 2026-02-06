@@ -9,7 +9,8 @@ import {
     getProvidersForProject
 } from "@/features/materials/queries";
 import { getMaterialPurchasesAction, getMaterialTypes } from "@/features/materials/actions";
-import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
+import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy } from "@/features/materials/queries";
+import { getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy } from "@/features/admin/queries";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { notFound } from "next/navigation";
 
@@ -98,11 +99,11 @@ export default async function MaterialsPage({ params, searchParams }: PageProps)
         getPurchaseOrders(projectId),
         getProvidersForProject(activeOrgId),
         getMaterialTypes(activeOrgId),
-        // Catalog queries
-        getSystemMaterials(),
-        getUnitsForMaterials(),
-        getMaterialCategories(),
-        getMaterialCategoriesHierarchy()
+        // Catalog queries - use organization materials, not just system ones
+        getMaterialsForOrganization(activeOrgId),
+        getUnitsForMaterialCatalog(),
+        getMaterialCategoriesForCatalog(),
+        getMaterialCategoryHierarchy()
     ]);
 
     return (

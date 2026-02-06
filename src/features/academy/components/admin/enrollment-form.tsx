@@ -142,7 +142,7 @@ export function EnrollmentForm({ initialData, onSuccess }: EnrollmentFormProps) 
     }
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
                 {/* Course Selector - FIRST */}
                 <div className="space-y-2">

@@ -50,8 +50,6 @@ export function QuoteForm({
     parentQuoteId,
     parentQuoteName
 }: QuoteFormProps) {
-    const [isLoading, setIsLoading] = useState(false);
-
     // Is this a Change Order?
     const isChangeOrder = !!parentQuoteId || initialData?.quote_type === 'change_order';
 
@@ -96,70 +94,69 @@ export function QuoteForm({
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setIsLoading(true);
-        const toastId = toast.loading(mode === "create" ? "Creando..." : "Guardando cambios...");
 
-        try {
-            const formData = new FormData(e.currentTarget);
+        const formData = new FormData(e.currentTarget);
 
-            // SPECIAL HANDLING FOR CHANGE ORDERS
-            if (parentQuoteId && mode === "create") {
-                const name = formData.get("name") as string;
-                const description = formData.get("description") as string;
+        // SPECIAL HANDLING FOR CHANGE ORDERS - use optimistic pattern
+        if (parentQuoteId && mode === "create") {
+            const name = formData.get("name") as string;
+            const description = formData.get("description") as string;
 
+            // ✅ OPTIMISTIC: Close and show success immediately
+            onSuccess?.();
+            toast.success("¡Adicional creado!");
+
+            // 🔄 BACKGROUND: Submit to server
+            try {
                 const result = await createChangeOrder(parentQuoteId, { name, description });
-
                 if (result.error) {
-                    toast.error(result.error, { id: toastId });
-                } else {
-                    toast.success("¡Adicional creado!", { id: toastId });
-                    onSuccess?.(result.data?.id);
+                    toast.error(result.error);
                 }
-
-                setIsLoading(false);
-                return;
+            } catch (error: any) {
+                toast.error("Error al crear adicional: " + error.message);
             }
+            return;
+        }
 
-            // Dates are already in hidden input via DatePicker component
-            // Currency/exchange needs manual set
-            formData.set("currency_id", currencyId);
-            formData.set("exchange_rate", exchangeRate);
+        // Currency/exchange needs manual set
+        formData.set("currency_id", currencyId);
+        formData.set("exchange_rate", exchangeRate);
 
-            // If project context, set the project_id explicitly
-            if (isProjectContext && projectId) {
-                formData.set("project_id", projectId);
-            } else {
-                // Handle "none" value - convert to empty string for backend
-                const projectIdValue = formData.get("project_id");
-                if (projectIdValue === "none") {
-                    formData.delete("project_id");
-                }
+        // If project context, set the project_id explicitly
+        if (isProjectContext && projectId) {
+            formData.set("project_id", projectId);
+        } else {
+            const projectIdValue = formData.get("project_id");
+            if (projectIdValue === "none") {
+                formData.delete("project_id");
             }
+        }
 
-            if (mode === "edit" && initialData?.id) {
-                formData.append("id", initialData.id);
-            }
+        if (mode === "edit" && initialData?.id) {
+            formData.append("id", initialData.id);
+        }
 
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess?.();
+        toast.success(mode === "create" ? "¡Presupuesto creado!" : "¡Cambios guardados!");
+
+        // 🔄 BACKGROUND: Submit to server
+        try {
             const result = mode === "create"
                 ? await createQuote(formData)
                 : await updateQuote(formData);
 
             if (result.error) {
-                toast.error(result.error, { id: toastId });
-            } else {
-                toast.success(mode === "create" ? "¡Presupuesto creado!" : "¡Cambios guardados!", { id: toastId });
-                onSuccess?.(result.data?.id);
+                toast.error(result.error);
             }
         } catch (error: any) {
             console.error("Quote form error:", error);
-            toast.error("Error inesperado: " + error.message, { id: toastId });
-        } finally {
-            setIsLoading(false);
+            toast.error("Error al guardar: " + error.message);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <input type="hidden" name="organization_id" value={organizationId} />
 
             {/* Context Badge for Change Orders */}
@@ -448,11 +445,7 @@ export function QuoteForm({
             <FormFooter
                 onCancel={onCancel}
                 cancelLabel="Cancelar"
-                submitLabel={isLoading
-                    ? (mode === "create" ? "Creando..." : "Guardando...")
-                    : (mode === "create" ? "Crear Presupuesto" : "Guardar Cambios")
-                }
-                isLoading={isLoading}
+                submitLabel={mode === "create" ? "Crear Presupuesto" : "Guardar Cambios"}
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

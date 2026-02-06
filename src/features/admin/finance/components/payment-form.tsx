@@ -109,7 +109,7 @@ export function PaymentForm({ initialData, users = [], onSuccess }: PaymentFormP
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto min-h-0 space-y-4 p-1">
                     {/* Provider */}

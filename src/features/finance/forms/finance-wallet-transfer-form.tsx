@@ -45,7 +45,6 @@ export function WalletTransferForm({
     onCancel,
 }: WalletTransferFormProps) {
     const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
 
     // Get data from Zustand store (works in portals/modals)
     const storeData = useFormData();
@@ -99,8 +98,12 @@ export function WalletTransferForm({
             return;
         }
 
-        setIsLoading(true);
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess?.();
+        closeModal();
+        toast.success("Transferencia registrada");
 
+        // 🔄 BACKGROUND: Submit to server
         try {
             const result = await createWalletTransfer({
                 organization_id: organizationId,
@@ -114,17 +117,11 @@ export function WalletTransferForm({
             });
 
             if (!result.success) {
-                throw new Error(result.error || "Error al registrar transferencia");
+                toast.error(result.error || "Error al registrar transferencia");
             }
-
-            toast.success("Transferencia registrada");
-            onSuccess?.();
-            closeModal();
         } catch (error: any) {
             console.error("Error creating wallet transfer:", error);
             toast.error(error.message || "Error al registrar transferencia");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -256,7 +253,6 @@ export function WalletTransferForm({
 
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
                 submitLabel="Registrar Transferencia"
                 onCancel={onCancel || closeModal}
             />

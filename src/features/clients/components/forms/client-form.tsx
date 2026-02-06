@@ -95,17 +95,19 @@ export function ClientForm({ onSuccess, orgId, roles, projectId, initialData }: 
     }, [orgId, projectId]);
 
     const onSubmit = (values: ClientFormValues) => {
+        // ✅ OPTIMISTIC: Close and show success immediately
+        if (onSuccess) onSuccess();
+        closeModal();
+        toast.success(isEditMode ? "Cliente actualizado correctamente" : "Cliente agregado correctamente");
+
+        // 🔄 BACKGROUND: Submit to server
         startTransition(async () => {
             try {
                 if (isEditMode && initialData) {
                     await updateClientAction({ ...values, id: initialData.id });
-                    toast.success("Cliente actualizado correctamente");
                 } else {
                     await createClientAction(values);
-                    toast.success("Cliente agregado correctamente");
                 }
-                if (onSuccess) onSuccess();
-                closeModal();
             } catch (error: any) {
                 toast.error(error.message || "Error al guardar el cliente");
             }
@@ -114,7 +116,7 @@ export function ClientForm({ onSuccess, orgId, roles, projectId, initialData }: 
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
                 <div className="flex-1 overflow-y-auto space-y-4 p-1 px-2">
 
                     {/* Project Selection - Conditional */}

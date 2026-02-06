@@ -33,7 +33,7 @@ const GlobalDialogContent = ({ className, children, ...props }: React.ComponentP
                 "data-[state=open]:slide-in-from-bottom-full data-[state=closed]:slide-out-to-bottom-full",
                 // Desktop centered styles
                 "sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:pb-0",
-                "sm:w-full sm:h-auto sm:max-h-[85vh] sm:rounded-lg sm:border sm:shadow-lg",
+                "sm:w-full sm:h-auto sm:max-h-[80vh] sm:rounded-lg sm:border sm:shadow-lg",
                 "sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=open]:zoom-in-95",
                 "sm:data-[state=closed]:zoom-out-95 sm:data-[state=closed]:slide-out-to-bottom-0",
                 className
@@ -111,7 +111,7 @@ export const ModalProvider = () => {
                                         </div>
                                     )}
 
-                                    {/* Body - No overflow here, let forms handle their own scroll */}
+                                    {/* Body - Forms manejan su propio scroll con sticky footer */}
                                     <div className="flex-1 flex flex-col relative min-h-0 p-4">
                                         {modal.view}
                                     </div>
@@ -148,7 +148,7 @@ export const ModalProvider = () => {
                                 </div>
                             )}
 
-                            {/* Body - No overflow here, let forms handle their own scroll */}
+                            {/* Body - Forms manejan su propio scroll con sticky footer */}
                             <div className="flex-1 flex flex-col relative w-full min-h-0 p-4">
                                 {modal.view}
                             </div>

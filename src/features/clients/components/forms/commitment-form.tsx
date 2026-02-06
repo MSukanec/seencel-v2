@@ -83,6 +83,12 @@ export function CommitmentForm({ clients, financialData, onSuccess, projectId, o
             values.exchange_rate = 1;
         }
 
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess();
+        closeModal();
+        toast.success(initialData?.id ? "Compromiso actualizado correctamente" : "Compromiso creado correctamente");
+
+        // 🔄 BACKGROUND: Submit to server
         startTransition(async () => {
             try {
                 // Manually construct FormData to inject currency_code and handle ID
@@ -100,18 +106,11 @@ export function CommitmentForm({ clients, financialData, onSuccess, projectId, o
                 }
 
                 if (initialData?.id) {
-                    // Updating
                     formData.append('id', initialData.id);
                     await updateCommitmentAction(formData as any);
-                    toast.success("Compromiso actualizado correctamente");
                 } else {
-                    // Creating
                     await createCommitmentAction(formData as any);
-                    toast.success("Compromiso creado correctamente");
                 }
-
-                onSuccess();
-                closeModal();
             } catch (error: any) {
                 console.error("Error saving commitment:", error);
                 toast.error(error.message || "Error al guardar compromiso");
@@ -121,7 +120,7 @@ export function CommitmentForm({ clients, financialData, onSuccess, projectId, o
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
                 <div className="flex-1 overflow-y-auto space-y-4 p-1 px-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* 1. Cliente */}

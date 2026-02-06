@@ -56,21 +56,24 @@ export async function revertImportBatch(batchId: string, entityTable: string = '
 
     if (batchError) throw new Error("Failed to update batch status");
 
-    // 2. Soft delete records associated with this batch
+    // 2. Soft delete ONLY active records associated with this batch
+    // (Records already deleted manually by user are skipped)
     const allowedTables = ['contacts', 'client_payments', 'subcontract_payments', 'material_payments', 'materials'];
     if (!allowedTables.includes(entityTable)) throw new Error("Invalid entity table for revert");
 
-    const { error: recordsError } = await supabase
+    const { data: deletedRecords, error: recordsError } = await supabase
         .from(entityTable)
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
         })
-        .eq('import_batch_id', batchId);
+        .eq('import_batch_id', batchId)
+        .eq('is_deleted', false) // Only revert records that are still active
+        .select('id');
 
     if (recordsError) throw new Error("Failed to revert records");
 
     revalidatePath('/organization/contacts');
     revalidatePath('/project');
-    return { success: true };
+    return { success: true, deletedCount: deletedRecords?.length || 0 };
 }

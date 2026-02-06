@@ -30,37 +30,34 @@ interface TasksFormProps {
 }
 
 export function TasksForm({ mode, initialData, organizationId, units, divisions, isAdminMode = false, defaultDivisionId, onCancel, onSuccess }: TasksFormProps) {
-    const [isLoading, setIsLoading] = useState(false);
     const [isPublished, setIsPublished] = useState(initialData?.is_published ?? false);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setIsLoading(true);
-        const toastId = toast.loading(mode === "create" ? "Creando tarea..." : "Guardando cambios...");
 
+        const formData = new FormData(e.currentTarget);
+        formData.set("is_published", isPublished.toString());
+
+        if (mode === "edit" && initialData?.id) {
+            formData.append("id", initialData.id);
+        }
+
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess?.();
+        toast.success(mode === "create" ? "¡Tarea creada!" : "¡Cambios guardados!");
+
+        // 🔄 BACKGROUND: Submit to server
         try {
-            const formData = new FormData(e.currentTarget);
-            formData.set("is_published", isPublished.toString());
-
-            if (mode === "edit" && initialData?.id) {
-                formData.append("id", initialData.id);
-            }
-
             const result = mode === "create"
                 ? await createTask(formData)
                 : await updateTask(formData);
 
             if (result.error) {
-                toast.error(result.error, { id: toastId });
-            } else {
-                toast.success(mode === "create" ? "¡Tarea creada!" : "¡Cambios guardados!", { id: toastId });
-                onSuccess?.();
+                toast.error(result.error);
             }
         } catch (error: any) {
             console.error("Task form error:", error);
-            toast.error("Error inesperado: " + error.message, { id: toastId });
-        } finally {
-            setIsLoading(false);
+            toast.error("Error al guardar: " + error.message);
         }
     };
 
@@ -68,7 +65,7 @@ export function TasksForm({ mode, initialData, organizationId, units, divisions,
     const defaultDivisionValue = initialData?.task_division_id || defaultDivisionId || undefined;
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             {/* Hidden fields for admin mode */}
             {isAdminMode && (
                 <>
@@ -155,11 +152,7 @@ export function TasksForm({ mode, initialData, organizationId, units, divisions,
             <FormFooter
                 onCancel={onCancel}
                 cancelLabel="Cancelar"
-                submitLabel={isLoading
-                    ? (mode === "create" ? "Creando..." : "Guardando...")
-                    : (mode === "create" ? "Crear Tarea" : "Guardar Cambios")
-                }
-                isLoading={isLoading}
+                submitLabel={mode === "create" ? "Crear Tarea" : "Guardar Cambios"}
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

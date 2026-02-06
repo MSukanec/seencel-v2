@@ -136,6 +136,7 @@ export function MaterialsPageView({
                             categoryHierarchy={catalogCategoryHierarchy}
                             orgId={orgId}
                             isAdminMode={false}
+                            providers={providers}
                         />
                     </TabsContent>
                 )}

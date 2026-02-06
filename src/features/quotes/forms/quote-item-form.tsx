@@ -40,7 +40,6 @@ export function QuoteItemForm({
     onCancel,
     onSuccess
 }: QuoteItemFormProps) {
-    const [isLoading, setIsLoading] = useState(false);
     const [selectedTaskId, setSelectedTaskId] = useState<string>(initialData?.task_id || "");
 
     // Find selected task to get default unit price if available
@@ -48,24 +47,21 @@ export function QuoteItemForm({
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setIsLoading(true);
-        const toastId = toast.loading(mode === "edit" ? "Actualizando ítem..." : "Agregando ítem...");
 
+        const formData = new FormData(e.currentTarget);
+
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess?.();
+        toast.success(mode === "edit" ? "¡Ítem actualizado!" : "¡Ítem agregado!");
+
+        // 🔄 BACKGROUND: Submit to server
         try {
-            const formData = new FormData(e.currentTarget);
-
             if (mode === "edit" && initialData?.id) {
-                // Update existing item
                 const result = await updateQuoteItem(initialData.id, formData);
-
                 if (result.error) {
-                    toast.error(result.error, { id: toastId });
-                } else {
-                    toast.success("¡Ítem actualizado!", { id: toastId });
-                    onSuccess?.();
+                    toast.error(result.error);
                 }
             } else {
-                // Create new item
                 formData.append("quote_id", quoteId);
                 formData.append("organization_id", organizationId);
                 if (projectId) {
@@ -74,24 +70,18 @@ export function QuoteItemForm({
                 formData.append("currency_id", currencyId);
 
                 const result = await createQuoteItem(formData);
-
                 if (result.error) {
-                    toast.error(result.error, { id: toastId });
-                } else {
-                    toast.success("¡Ítem agregado!", { id: toastId });
-                    onSuccess?.();
+                    toast.error(result.error);
                 }
             }
         } catch (error: any) {
             console.error("Quote item form error:", error);
-            toast.error("Error inesperado: " + error.message, { id: toastId });
-        } finally {
-            setIsLoading(false);
+            toast.error("Error al guardar: " + error.message);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
@@ -209,8 +199,7 @@ export function QuoteItemForm({
             <FormFooter
                 onCancel={onCancel}
                 cancelLabel="Cancelar"
-                submitLabel={isLoading ? "Agregando..." : "Agregar Ítem"}
-                isLoading={isLoading}
+                submitLabel="Agregar Ítem"
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

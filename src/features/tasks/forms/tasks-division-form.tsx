@@ -29,7 +29,6 @@ export function TasksDivisionForm({
     onCancel,
     onSuccess
 }: TasksDivisionFormProps) {
-    const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!initialData;
 
     // Filter out current division and its children from parent options
@@ -44,36 +43,34 @@ export function TasksDivisionForm({
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setIsLoading(true);
-        const toastId = toast.loading(isEditing ? "Guardando cambios..." : "Creando rubro...");
 
+        const formData = new FormData(e.currentTarget);
+
+        // Handle "_none" value for parent_id
+        if (formData.get("parent_id") === "_none") {
+            formData.set("parent_id", "");
+        }
+
+        if (isEditing && initialData?.id) {
+            formData.append("id", initialData.id);
+        }
+
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess?.();
+        toast.success(isEditing ? "¡Rubro actualizado!" : "¡Rubro creado!");
+
+        // 🔄 BACKGROUND: Submit to server
         try {
-            const formData = new FormData(e.currentTarget);
-
-            // Handle "_none" value for parent_id (Radix Select doesn't allow empty string)
-            if (formData.get("parent_id") === "_none") {
-                formData.set("parent_id", "");
-            }
-
-            if (isEditing && initialData?.id) {
-                formData.append("id", initialData.id);
-            }
-
             const result = isEditing
                 ? await updateTaskDivision(formData)
                 : await createTaskDivision(formData);
 
             if (result.error) {
-                toast.error(result.error, { id: toastId });
-            } else {
-                toast.success(isEditing ? "¡Rubro actualizado!" : "¡Rubro creado!", { id: toastId });
-                onSuccess?.();
+                toast.error(result.error);
             }
         } catch (error: any) {
             console.error("Division form error:", error);
-            toast.error("Error inesperado: " + error.message, { id: toastId });
-        } finally {
-            setIsLoading(false);
+            toast.error("Error al guardar: " + error.message);
         }
     };
 
@@ -159,11 +156,7 @@ export function TasksDivisionForm({
             <FormFooter
                 onCancel={onCancel}
                 cancelLabel="Cancelar"
-                submitLabel={isLoading
-                    ? (isEditing ? "Guardando..." : "Creando...")
-                    : (isEditing ? "Guardar Cambios" : "Crear Rubro")
-                }
-                isLoading={isLoading}
+                submitLabel={isEditing ? "Guardar Cambios" : "Crear Rubro"}
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

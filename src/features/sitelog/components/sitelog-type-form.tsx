@@ -19,35 +19,33 @@ export function SiteLogTypeForm({ organizationId, initialData, onSuccess }: Site
     const { closeModal } = useModal();
     const [name, setName] = useState(initialData?.name || "");
     const [description, setDescription] = useState(initialData?.description || "");
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
 
+        // ✅ OPTIMISTIC: Close and show success immediately
+        if (onSuccess && initialData) onSuccess({ ...initialData, name, description });
+        closeModal();
+        toast.success(initialData ? "Tipo actualizado correctamente" : "Tipo creado correctamente");
+
+        // 🔄 BACKGROUND: Submit to server
         try {
             if (initialData) {
                 await updateSiteLogType(initialData.id, name, description);
-                toast.success("Tipo actualizado correctamente");
-                if (onSuccess) onSuccess({ ...initialData, name, description });
             } else {
                 const newType = await createSiteLogType(organizationId, name, description);
-                toast.success("Tipo creado correctamente");
                 if (onSuccess && newType) {
                     onSuccess(newType);
                 }
             }
-            closeModal();
         } catch (error) {
             console.error("Error saving site log type:", error);
             toast.error("Error al guardar tipo (Revisa la consola)");
-        } finally {
-            setIsLoading(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Nombre</Label>
@@ -71,7 +69,6 @@ export function SiteLogTypeForm({ organizationId, initialData, onSuccess }: Site
             </div>
             <FormFooter
                 onCancel={closeModal}
-                isLoading={isLoading}
                 submitLabel={initialData ? "Guardar" : "Crear"}
                 className="-mx-4 -mb-4 mt-6"
             />

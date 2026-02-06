@@ -36,7 +36,6 @@ export function CurrencyExchangeForm({
     onCancel,
 }: CurrencyExchangeFormProps) {
     const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
 
     // Get data from Zustand store (works in portals/modals)
     const storeData = useFormData();
@@ -106,8 +105,12 @@ export function CurrencyExchangeForm({
             return;
         }
 
-        setIsLoading(true);
+        // ✅ OPTIMISTIC: Close and show success immediately
+        onSuccess?.();
+        closeModal();
+        toast.success("Cambio de moneda registrado");
 
+        // 🔄 BACKGROUND: Submit to server
         try {
             const result = await createCurrencyExchange({
                 organization_id: organizationId,
@@ -123,17 +126,11 @@ export function CurrencyExchangeForm({
             });
 
             if (!result.success) {
-                throw new Error(result.error || "Error al registrar cambio");
+                toast.error(result.error || "Error al registrar cambio");
             }
-
-            toast.success("Cambio de moneda registrado");
-            onSuccess?.();
-            closeModal();
         } catch (error: any) {
             console.error("Error creating currency exchange:", error);
             toast.error(error.message || "Error al registrar cambio");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -226,7 +223,6 @@ export function CurrencyExchangeForm({
 
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
                 submitLabel="Registrar Cambio"
                 onCancel={onCancel || closeModal}
             />

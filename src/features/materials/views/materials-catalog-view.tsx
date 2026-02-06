@@ -413,7 +413,7 @@ export function MaterialsCatalogView({
         openModal(
             <ImportHistoryModal
                 organizationId={orgId}
-                entityType="materials"
+                entityType="materials_catalog"
                 entityTable="materials"
                 onRevert={() => {
                     // Refresh the page data after revert
