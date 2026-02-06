@@ -10,8 +10,8 @@ import { useRouter } from "next/navigation";
 import { PaymentsDataTable } from "../components/tables/payments-data-table";
 import { PaymentForm } from "../components/forms/clients-payment-form";
 import { ClientPaymentView, OrganizationFinancialData } from "../types";
-import { ImportConfig } from "@/lib/import-utils";
-import { createImportBatch, importPaymentsBatch, revertImportBatch } from "@/actions/import-actions";
+import { ImportConfig } from "@/lib/import";
+import { createImportBatch, importPaymentsBatch, revertImportBatch } from "@/lib/import";
 
 interface ClientsPaymentsViewProps {
     data: ClientPaymentView[];

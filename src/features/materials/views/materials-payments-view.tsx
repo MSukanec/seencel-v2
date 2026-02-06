@@ -23,9 +23,9 @@ import { useMoney } from "@/hooks/use-money";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 
 // Import System
-import { ImportConfig } from "@/lib/import-utils";
+import { ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
-import { createImportBatch, revertImportBatch, importMaterialPaymentsBatch } from "@/actions/import-actions";
+import { createImportBatch, revertImportBatch, importMaterialPaymentsBatch } from "@/lib/import";
 
 interface MaterialsPaymentsViewProps {
     projectId: string;

@@ -11,10 +11,10 @@ import { deleteContact } from "@/actions/contacts";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
-import { createImportBatch, importContactsBatch, revertImportBatch } from "@/actions/import-actions";
+import { createImportBatch, importContactsBatch, revertImportBatch } from "@/lib/import";
 import { getContactTypes, createContactType } from "@/actions/contacts";
-import { normalizeEmail, normalizePhone } from "@/lib/import-normalizers";
-import { ImportConfig } from "@/lib/import-utils";
+import { normalizeEmail, normalizePhone } from "@/lib/import";
+import { ImportConfig } from "@/lib/import";
 
 interface ContactsListProps {
     organizationId: string;

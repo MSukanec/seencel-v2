@@ -99,13 +99,21 @@ export async function getOrganizationFinancialData(organizationId: string): Prom
 export interface CatalogMaterial {
     id: string;
     name: string;
+    code?: string | null;
+    description?: string | null;
     unit_id: string | null;
     unit_name: string | null;
+    unit_symbol: string | null;
     category_id: string | null;
     category_name: string | null;
     material_type: 'material' | 'consumable';
     is_system: boolean;
     organization_id: string | null;
+    default_provider_id?: string | null;
+    default_unit_presentation_id?: string | null;
+    // Price fields from view
+    org_unit_price?: number | null;
+    org_price_currency_id?: string | null;
 }
 
 export interface MaterialCategory {
@@ -134,20 +142,9 @@ export async function getMaterialsForOrganization(organizationId: string): Promi
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('materials')
-        .select(`
-            id,
-            name,
-            unit_id,
-            category_id,
-            material_type,
-            is_system,
-            organization_id,
-            units (name),
-            material_categories (name)
-        `)
-        .eq('is_deleted', false)
-        .or(`is_system.eq.true,organization_id.eq.${organizationId}`)
+        .from('materials_view')
+        .select('*')
+        .eq('organization_id', organizationId)
         .order('name', { ascending: true });
 
     if (error) {
@@ -158,13 +155,20 @@ export async function getMaterialsForOrganization(organizationId: string): Promi
     return (data || []).map((m: any) => ({
         id: m.id,
         name: m.name,
+        code: m.code || null,
+        description: m.description || null,
         unit_id: m.unit_id,
-        unit_name: m.units?.name || null,
+        unit_name: m.unit_of_computation || null,
+        unit_symbol: m.unit_symbol || m.unit_of_computation || null,
         category_id: m.category_id,
-        category_name: m.material_categories?.name || null,
+        category_name: m.category_name || null,
         material_type: m.material_type || 'material',
         is_system: m.is_system,
         organization_id: m.organization_id,
+        default_provider_id: m.default_provider_id || null,
+        default_unit_presentation_id: m.default_unit_presentation_id || null,
+        org_unit_price: m.org_unit_price,
+        org_price_currency_id: m.org_price_currency_id,
     }));
 }
 
@@ -416,19 +420,21 @@ export async function getPurchaseOrderById(orderId: string): Promise<{
 
 /**
  * Get providers (contacts of type supplier) for dropdown
+ * Returns: id, name, avatar_url for ContactField component
  */
 export async function getProvidersForProject(organizationId: string): Promise<{
     id: string;
     name: string;
+    avatar_url: string | null;
 }[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
         .from('contacts')
-        .select('id, first_name, last_name, company_name')
+        .select('id, first_name, last_name, company_name, image_url, full_name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
-        .order('company_name', { ascending: true });
+        .order('full_name', { ascending: true });
 
     if (error) {
         console.error("Error fetching providers:", error);
@@ -437,7 +443,36 @@ export async function getProvidersForProject(organizationId: string): Promise<{
 
     return (data || []).map((c: any) => ({
         id: c.id,
-        name: c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Sin nombre',
+        name: c.full_name || c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Sin nombre',
+        avatar_url: c.image_url || null,
     }));
 }
 
+/**
+ * Get unit presentations for material form
+ */
+export async function getUnitPresentations(): Promise<{
+    id: string;
+    unit_id: string;
+    name: string;
+    equivalence: number;
+}[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('unit_presentations')
+        .select('id, unit_id, name, equivalence')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching unit presentations:", error);
+        return [];
+    }
+
+    return (data || []).map((p: any) => ({
+        id: p.id,
+        unit_id: p.unit_id,
+        name: p.name,
+        equivalence: parseFloat(p.equivalence) || 1,
+    }));
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { ImportConfig, parseFile, ParseResult } from "@/lib/import-utils";
+import { ImportConfig, parseFile, ParseResult } from "@/lib/import";
 import { Upload, FileType, AlertCircle, FileSpreadsheet, ArrowRight, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";

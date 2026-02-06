@@ -299,6 +299,10 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
     const supabase = await createClient();
 
     const name = formData.get("name") as string;
+    const code = formData.get("code") as string || null;
+    const description = formData.get("description") as string || null;
+    const default_provider_id = formData.get("default_provider_id") as string || null;
+    const default_unit_presentation_id = formData.get("default_unit_presentation_id") as string || null;
     const unit_id = formData.get("unit_id") as string || null;
     const category_id = formData.get("category_id") as string || null;
     const material_type = (formData.get("material_type") as string) || "material";
@@ -317,6 +321,10 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
         .from("materials")
         .insert({
             name: name.trim(),
+            code: code?.trim() || null,
+            description: description?.trim() || null,
+            default_provider_id: default_provider_id || null,
+            default_unit_presentation_id: default_unit_presentation_id || null,
             unit_id: unit_id || null,
             category_id: category_id || null,
             material_type,
@@ -348,6 +356,10 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
 
     const id = formData.get("id") as string;
     const name = formData.get("name") as string;
+    const code = formData.get("code") as string || null;
+    const description = formData.get("description") as string || null;
+    const default_provider_id = formData.get("default_provider_id") as string || null;
+    const default_unit_presentation_id = formData.get("default_unit_presentation_id") as string || null;
     const unit_id = formData.get("unit_id") as string || null;
     const category_id = formData.get("category_id") as string || null;
     const material_type = (formData.get("material_type") as string) || "material";
@@ -364,6 +376,10 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
         .from("materials")
         .update({
             name: name.trim(),
+            code: code?.trim() || null,
+            description: description?.trim() || null,
+            default_provider_id: default_provider_id || null,
+            default_unit_presentation_id: default_unit_presentation_id || null,
             unit_id: unit_id || null,
             category_id: category_id || null,
             material_type,
@@ -445,6 +461,42 @@ export async function deleteMaterial(id: string, replacementId: string | null, i
     revalidatePath("/organization/catalog");
     revalidatePath("/admin/catalog");
     return { success: true };
+}
+
+/**
+ * Bulk delete materials (soft delete multiple at once)
+ * More efficient than calling deleteMaterial in a loop
+ */
+export async function deleteMaterialsBulk(ids: string[], isAdminMode: boolean = false) {
+    if (ids.length === 0) return { success: true, deletedCount: 0 };
+
+    const supabase = await createClient();
+
+    let query = supabase
+        .from("materials")
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
+        .in("id", ids);
+
+    // Safety: only delete the correct type of material
+    if (isAdminMode) {
+        query = query.eq("is_system", true);
+    } else {
+        query = query.eq("is_system", false);
+    }
+
+    const { error, count } = await query.select();
+
+    if (error) {
+        console.error("Error bulk deleting materials:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { success: true, deletedCount: count ?? ids.length };
 }
 
 // ===============================================
@@ -762,4 +814,90 @@ export async function deleteMaterialType(id: string) {
     if (error) throw new Error(error.message);
     revalidatePath('/project');
     return true;
+}
+
+
+// ===============================================
+// Material Prices (Catalog Pricing)
+// ===============================================
+
+/**
+ * Upsert a material price
+ * Creates a new price record for historical tracking
+ */
+export async function upsertMaterialPrice(input: {
+    material_id: string;
+    organization_id: string;
+    currency_id: string;
+    unit_price: number;
+    valid_from?: string; // YYYY-MM-DD, defaults to today
+    notes?: string;
+}) {
+    const supabase = await createClient();
+
+    // Close any existing open price (set valid_to to yesterday)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Find and close current active price
+    await supabase
+        .from('material_prices')
+        .update({ valid_to: yesterdayStr })
+        .eq('material_id', input.material_id)
+        .eq('organization_id', input.organization_id)
+        .eq('currency_id', input.currency_id)
+        .is('valid_to', null);
+
+    // Insert new price
+    const validFrom = input.valid_from || new Date().toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+        .from('material_prices')
+        .insert({
+            material_id: input.material_id,
+            organization_id: input.organization_id,
+            currency_id: input.currency_id,
+            unit_price: input.unit_price,
+            valid_from: validFrom,
+            valid_to: null, // Open-ended
+            notes: input.notes || null,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error upserting material price:", error);
+        throw new Error("Error al guardar el precio: " + error.message);
+    }
+
+    revalidatePath('/organization/catalog');
+    return { data };
+}
+
+/**
+ * Get current price for a material in an organization
+ */
+export async function getMaterialCurrentPrice(materialId: string, organizationId: string) {
+    const supabase = await createClient();
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+        .from('material_prices')
+        .select('*, currencies(code, symbol)')
+        .eq('material_id', materialId)
+        .eq('organization_id', organizationId)
+        .lte('valid_from', today)
+        .or(`valid_to.is.null,valid_to.gte.${today}`)
+        .order('valid_from', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error fetching material price:", error);
+        return null;
+    }
+
+    return data;
 }

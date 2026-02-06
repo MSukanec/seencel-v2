@@ -4,7 +4,7 @@
  * Detects foreign key conflicts in imported data and provides resolution options.
  */
 
-import { ImportConfig, ImportColumn, ForeignKeyOption } from './import-utils';
+import { ImportConfig, ImportColumn, ForeignKeyOption } from './utils';
 
 // Conflict detection result for a single FK field
 export interface FKConflict {

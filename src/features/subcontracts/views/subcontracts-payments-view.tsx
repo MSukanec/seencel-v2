@@ -18,8 +18,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { createImportBatch, revertImportBatch, importSubcontractPaymentsBatch } from "@/actions/import-actions";
-import { ImportConfig } from "@/lib/import-utils";
+import { createImportBatch, revertImportBatch, importSubcontractPaymentsBatch, ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 
 interface SubcontractsPaymentsViewProps {

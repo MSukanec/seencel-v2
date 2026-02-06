@@ -61,6 +61,10 @@ export interface ToolbarProps<TData> {
     children?: React.ReactNode;
     leftActions?: React.ReactNode; // Left side actions (before search)
     bulkActions?: React.ReactNode;
+    /** For generic bulk selection (without TanStack Table) */
+    selectedCount?: number;
+    /** Callback to clear selection (for generic bulk mode) */
+    onClearSelection?: () => void;
     className?: string;
 
     // Mobile-specific
@@ -85,6 +89,8 @@ export function Toolbar<TData>({
     leftActions,
     facetedFilters,
     bulkActions,
+    selectedCount,
+    onClearSelection,
     filterContent,
     className,
     mobileShowSearch = true,
@@ -108,8 +114,10 @@ export function Toolbar<TData>({
 
     const isFiltered = searchValue.length > 0;
 
-    // Selection mode only applies if table is present
-    const isSelectionMode = table ? table.getFilteredSelectedRowModel().rows.length > 0 : false;
+    // Selection mode: table-based OR generic count-based
+    const tableSelectedCount = table ? table.getFilteredSelectedRowModel().rows.length : 0;
+    const totalSelectedCount = selectedCount ?? tableSelectedCount;
+    const isSelectionMode = totalSelectedCount > 0;
 
     // Check if we have filters to show
     const hasFilters = filterContent || (facetedFilters && facetedFilters.length > 0);
@@ -119,77 +127,105 @@ export function Toolbar<TData>({
     const primaryAction = actions && actions.length > 0 ? actions[0] : null;
     const hasMultipleActions = actions && actions.length > 1;
 
-    if (isSelectionMode && bulkActions && table) {
-        return (
+    // Bulk actions content (for both table and generic modes)
+    const bulkActionsContent = isSelectionMode && bulkActions ? (
+        table ? (
             <DataTableBulkActions table={table}>
                 {bulkActions}
             </DataTableBulkActions>
-        );
-    }
+        ) : (
+            <div className="flex items-center justify-between gap-4 w-full min-h-[2.25rem]">
+                <div className="flex items-center gap-2">
+                    <ToolbarButton
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={onClearSelection}
+                    >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Cancelar selección</span>
+                    </ToolbarButton>
+                    <div className="text-sm font-medium">
+                        {totalSelectedCount} seleccionad{totalSelectedCount === 1 ? "o" : "os"}
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {bulkActions}
+                </div>
+            </div>
+        )
+    ) : null;
 
     // Desktop Toolbar Content
     const desktopToolbar = (
         <div className={cn("hidden md:flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4", className)}>
-            {/* Left side: Actions + Filters + Search */}
-            <div className="flex flex-1 items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade max-w-full">
-                {leftActions}
+            {/* If in selection mode, show bulk actions instead of normal toolbar */}
+            {bulkActionsContent ? (
+                bulkActionsContent
+            ) : (
+                <>
+                    {/* Left side: Actions + Filters + Search */}
+                    <div className="flex flex-1 items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade max-w-full">
+                        {leftActions}
 
-                {/* Table Faceted Filters */}
-                {table && facetedFilters?.map((filter) => (
-                    table.getColumn(filter.columnId) && (
-                        <DataTableFacetedFilter
-                            key={filter.columnId}
-                            column={table.getColumn(filter.columnId)}
-                            title={filter.title}
-                            options={filter.options}
+                        {/* Table Faceted Filters */}
+                        {table && facetedFilters?.map((filter) => (
+                            table.getColumn(filter.columnId) && (
+                                <DataTableFacetedFilter
+                                    key={filter.columnId}
+                                    column={table.getColumn(filter.columnId)}
+                                    title={filter.title}
+                                    options={filter.options}
+                                />
+                            )
+                        ))}
+
+                        {/* Generic Filter Content */}
+                        {filterContent}
+
+                        {/* Global Search - Moved to Right as requested */}
+                        <ToolbarSearch
+                            placeholder={searchPlaceholder}
+                            value={searchValue}
+                            onChange={onSearch}
+                            className="shrink-0"
                         />
-                    )
-                ))}
 
-                {/* Generic Filter Content */}
-                {filterContent}
+                        {/* Filter indicator */}
+                        {isFiltered && (
+                            <ToolbarButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    onSearch("");
+                                    table?.resetColumnFilters();
+                                }}
+                                className="h-8 px-2 lg:px-3"
+                            >
+                                Limpiar filtros
+                                <X className="ml-2 h-4 w-4" />
+                            </ToolbarButton>
+                        )}
+                    </div>
 
-                {/* Global Search - Moved to Right as requested */}
-                <ToolbarSearch
-                    placeholder={searchPlaceholder}
-                    value={searchValue}
-                    onChange={onSearch}
-                    className="shrink-0"
-                />
-
-                {/* Filter indicator */}
-                {isFiltered && (
-                    <ToolbarButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                            onSearch("");
-                            table?.resetColumnFilters();
-                        }}
-                        className="h-8 px-2 lg:px-3"
-                    >
-                        Limpiar filtros
-                        <X className="ml-2 h-4 w-4" />
-                    </ToolbarButton>
-                )}
-            </div>
-
-            {/* Right side: Actions */}
-            <div className="flex items-center gap-2 shrink-0">
-                {/* 
+                    {/* Right side: Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* 
                    Strategy:
                    1. Render children first (e.g., custom toolbar buttons like CreateProjectButton)
                    2. Then render ToolbarSplitButton if 'actions' are provided
                    Both can coexist.
                 */}
-                {children}
-                {actions && actions.length > 0 && (
-                    <ToolbarSplitButton
-                        mainAction={actions[0]}
-                        secondaryActions={actions.slice(1)}
-                    />
-                )}
-            </div>
+                        {children}
+                        {actions && actions.length > 0 && (
+                            <ToolbarSplitButton
+                                mainAction={actions[0]}
+                                secondaryActions={actions.slice(1)}
+                            />
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 

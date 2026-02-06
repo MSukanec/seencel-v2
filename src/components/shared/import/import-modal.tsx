@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { FKConflict, ResolutionMap, detectConflicts, applyResolutions, filterIgnoredRows } from "@/lib/import-conflict-utils";
+import { FKConflict, ResolutionMap, detectConflicts, applyResolutions, filterIgnoredRows } from "@/lib/import";
 import { ImportStepUpload } from "./steps/step-upload";
 import { ImportStepMapping } from "./steps/step-mapping";
 import { ImportStepValidation } from "./steps/step-validation";
@@ -16,7 +16,7 @@ import { getAllValuePatternsForEntity, updateValuePatterns } from "@/actions/imp
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslations } from "next-intl";
-import { ImportConfig, ParseResult } from "@/lib/import-utils";
+import { ImportConfig, ParseResult } from "@/lib/import";
 
 interface BulkImportModalProps<T> {
     config: ImportConfig<T>;

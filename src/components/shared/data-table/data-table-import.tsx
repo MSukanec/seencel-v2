@@ -3,7 +3,7 @@
 import { useModal } from "@/stores/modal-store";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-import { ImportConfig } from "@/lib/import-utils";
+import { ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "../import/import-modal";
 
 interface DataTableImportProps<T> {

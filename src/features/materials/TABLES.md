@@ -147,6 +147,32 @@ where
   mp.is_deleted = false
   or mp.is_deleted is null;
 
+# Tabla MATERIAL_PRICES:
+
+create table public.material_prices (
+  id uuid not null default gen_random_uuid (),
+  material_id uuid not null,
+  organization_id uuid not null,
+  currency_id uuid not null,
+  unit_price numeric(12, 2) not null,
+  valid_from date not null default CURRENT_DATE,
+  valid_to date null,
+  notes text null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone null default now(),
+  created_by uuid null,
+  updated_by uuid null,
+  constraint material_prices_pkey primary key (id),
+  constraint material_prices_currency_id_fkey foreign KEY (currency_id) references currencies (id) on delete RESTRICT,
+  constraint material_prices_material_id_fkey foreign KEY (material_id) references materials (id) on delete CASCADE,
+  constraint material_prices_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint material_prices_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint material_prices_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint material_prices_unit_price_check check ((unit_price >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists material_prices_material_org_idx on public.material_prices using btree (material_id, organization_id) TABLESPACE pg_default;
+
 # Tabla MATERIAL_TYPES:
 
 create table public.material_types (
@@ -221,8 +247,13 @@ create table public.materials (
   deleted_at timestamp with time zone null,
   created_by uuid null,
   updated_by uuid null,
+  code text null,
+  description text null,
+  default_provider_id uuid null,
+  import_batch_id uuid null,
   constraint materials_pkey primary key (id),
   constraint materials_id_key unique (id),
+  constraint materials_default_provider_id_fkey foreign KEY (default_provider_id) references contacts (id) on delete set null,
   constraint materials_default_unit_presentation_id_fkey foreign KEY (default_unit_presentation_id) references unit_presentations (id) on delete set null,
   constraint materials_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete set null,
   constraint materials_category_id_fkey foreign KEY (category_id) references material_categories (id) on delete set null,
@@ -256,6 +287,18 @@ where
   (is_deleted = false);
 
 create index IF not exists idx_materials_org_deleted on public.materials using btree (organization_id, is_deleted) TABLESPACE pg_default;
+
+create index IF not exists idx_materials_code_org on public.materials using btree (code, organization_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_materials_default_provider on public.materials using btree (default_provider_id) TABLESPACE pg_default
+where
+  (default_provider_id is not null);
+
+create index IF not exists idx_materials_import_batch on public.materials using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
 
 create trigger on_material_audit
 after INSERT
@@ -575,6 +618,8 @@ create view public.materials_view as
 select
   m.id,
   m.name,
+  m.code,
+  m.description,
   m.category_id,
   mc.name as category_name,
   m.unit_id,
@@ -583,20 +628,50 @@ select
   m.default_unit_presentation_id,
   up.name as default_unit_presentation,
   up.equivalence as unit_equivalence,
+  m.default_provider_id,
+  c.full_name as default_provider_name,
   m.is_system,
   m.is_completed,
   m.material_type,
+  m.organization_id,
   m.created_at,
   m.updated_at,
+  m.import_batch_id,
   map.min_price,
   map.max_price,
   map.avg_price,
   map.product_count,
   map.provider_product_count,
-  map.price_count
+  map.price_count,
+  mp.unit_price as org_unit_price,
+  mp.currency_id as org_price_currency_id,
+  mp.valid_from as org_price_valid_from
 from
   materials m
   left join material_categories mc on mc.id = m.category_id
   left join units u on u.id = m.unit_id
   left join unit_presentations up on up.id = m.default_unit_presentation_id
-  left join material_avg_prices map on map.material_id = m.id;
+  left join contacts c on c.id = m.default_provider_id
+  left join material_avg_prices map on map.material_id = m.id
+  left join lateral (
+    select
+      material_prices.unit_price,
+      material_prices.currency_id,
+      material_prices.valid_from
+    from
+      material_prices
+    where
+      material_prices.material_id = m.id
+      and material_prices.organization_id = m.organization_id
+      and (
+        material_prices.valid_to is null
+        or material_prices.valid_to >= CURRENT_DATE
+      )
+      and material_prices.valid_from <= CURRENT_DATE
+    order by
+      material_prices.valid_from desc
+    limit
+      1
+  ) mp on true
+where
+  m.is_deleted = false;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ImportConfig, findBestMatch } from "@/lib/import-utils";
+import { ImportConfig, findBestMatch } from "@/lib/import";
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -144,73 +144,75 @@ export function ImportStepMapping({ config, headers, initialMapping, onChange, o
                     <div className="flex-1 overflow-hidden relative">
                         <ScrollArea className="h-full">
                             <div className="divide-y relative">
-                                {headers.map((header) => {
-                                    const mappedColId = mapping[header];
-                                    const rawValue = previewData ? previewData[header] : "";
-                                    const formattedValue = formatPreviewValue(rawValue);
+                                {headers
+                                    .filter(header => header && header.trim() !== '') // Filter out empty headers
+                                    .map((header, index) => {
+                                        const mappedColId = mapping[header];
+                                        const rawValue = previewData ? previewData[header] : "";
+                                        const formattedValue = formatPreviewValue(rawValue);
 
-                                    return (
-                                        <div key={header} className="flex items-center px-4 py-3 group hover:bg-muted/30 transition-colors">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="font-medium truncate text-sm" title={header}>{header}</span>
-                                                    {formattedValue && (
-                                                        <span className="text-xs text-muted-foreground/80 truncate font-mono flex items-center gap-1" title={formattedValue}>
-                                                            <span className="opacity-50 font-sans">Tu valor:</span>
-                                                            <span className="font-medium text-foreground/80">
-                                                                {formattedValue.length > 30 ? formattedValue.substring(0, 30) + "..." : formattedValue}
+                                        return (
+                                            <div key={`${index}-${header}`} className="flex items-center px-4 py-3 group hover:bg-muted/30 transition-colors">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-medium truncate text-sm" title={header}>{header}</span>
+                                                        {formattedValue && (
+                                                            <span className="text-xs text-muted-foreground/80 truncate font-mono flex items-center gap-1" title={formattedValue}>
+                                                                <span className="opacity-50 font-sans">Tu valor:</span>
+                                                                <span className="font-medium text-foreground/80">
+                                                                    {formattedValue.length > 30 ? formattedValue.substring(0, 30) + "..." : formattedValue}
+                                                                </span>
                                                             </span>
-                                                        </span>
-                                                    )}
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex-none px-4 text-muted-foreground">
+                                                    <ArrowRightLeft className="h-4 w-4" />
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <Select
+                                                        value={mappedColId || "ignore"}
+                                                        onValueChange={(val) => handleMapChange(header, val === "ignore" ? "" : val)}
+                                                    >
+                                                        <SelectTrigger className={cn(
+                                                            "h-9 w-full",
+                                                            !mappedColId && "text-muted-foreground border-dashed bg-transparent"
+                                                        )}>
+                                                            <SelectValue placeholder={t('ignoreColumn')} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="ignore" className="text-muted-foreground italic">
+                                                                {t('ignoreColumn')}
+                                                            </SelectItem>
+                                                            {config.columns.map((col) => {
+                                                                const isMappedElsewhere = Object.entries(mapping).some(
+                                                                    ([h, id]) => id === col.id.toString() && h !== header
+                                                                );
+                                                                return (
+                                                                    <SelectItem
+                                                                        key={col.id.toString()}
+                                                                        value={col.id.toString()}
+                                                                        disabled={isMappedElsewhere}
+                                                                    >
+                                                                        <span>
+                                                                            {col.label}
+                                                                            {col.required && (
+                                                                                <span className="ml-2 text-primary font-medium text-xs">
+                                                                                    * ({t('required')})
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
+                                                                    </SelectItem>
+                                                                );
+                                                            })}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                             </div>
-
-                                            <div className="flex-none px-4 text-muted-foreground">
-                                                <ArrowRightLeft className="h-4 w-4" />
-                                            </div>
-
-                                            <div className="flex-1 min-w-0">
-                                                <Select
-                                                    value={mappedColId || "ignore"}
-                                                    onValueChange={(val) => handleMapChange(header, val === "ignore" ? "" : val)}
-                                                >
-                                                    <SelectTrigger className={cn(
-                                                        "h-9 w-full",
-                                                        !mappedColId && "text-muted-foreground border-dashed bg-transparent"
-                                                    )}>
-                                                        <SelectValue placeholder={t('ignoreColumn')} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="ignore" className="text-muted-foreground italic">
-                                                            {t('ignoreColumn')}
-                                                        </SelectItem>
-                                                        {config.columns.map((col) => {
-                                                            const isMappedElsewhere = Object.entries(mapping).some(
-                                                                ([h, id]) => id === col.id.toString() && h !== header
-                                                            );
-                                                            return (
-                                                                <SelectItem
-                                                                    key={col.id.toString()}
-                                                                    value={col.id.toString()}
-                                                                    disabled={isMappedElsewhere}
-                                                                >
-                                                                    <span>
-                                                                        {col.label}
-                                                                        {col.required && (
-                                                                            <span className="ml-2 text-primary font-medium text-xs">
-                                                                                * ({t('required')})
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                </SelectItem>
-                                                            );
-                                                        })}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
                             </div>
                         </ScrollArea>
                     </div>

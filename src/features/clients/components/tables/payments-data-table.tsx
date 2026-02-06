@@ -16,8 +16,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { ImportConfig } from "@/lib/import-utils";
-import { createImportBatch, importPaymentsBatch, revertImportBatch } from "@/actions/import-actions";
+import { ImportConfig } from "@/lib/import";
+import { createImportBatch, importPaymentsBatch, revertImportBatch } from "@/lib/import";
 
 interface PaymentsDataTableProps {
     data: ClientPaymentView[];

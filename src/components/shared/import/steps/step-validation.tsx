@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { ImportConfig } from "@/lib/import-utils";
+import { ImportConfig } from "@/lib/import";
 import { checkDuplicates } from "@/actions/validation-actions"; // Import the server action
 
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
     const t = useTranslations('ImportSystem.Validation');
     const [dbDuplicates, setDbDuplicates] = useState<Record<string, Set<string>>>({}); // colId -> Set of lowercase duplicate values
     const [isValidating, setIsValidating] = useState(false);
+    const [showOnlyErrors, setShowOnlyErrors] = useState(false);
 
     // 1. Async Database Duplicate Check
     useEffect(() => {
@@ -132,6 +133,14 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
     const { validCount, invalidCount, processedRows } = validationResults;
     const hasErrors = invalidCount > 0;
 
+    // Filtered rows based on showOnlyErrors toggle
+    const displayedRows = useMemo(() => {
+        if (showOnlyErrors) {
+            return processedRows.filter(row => row.__errors.length > 0);
+        }
+        return processedRows;
+    }, [processedRows, showOnlyErrors]);
+
     const formatCell = (value: any) => {
         if (value === null || value === undefined || value === "") {
             return <span className="text-muted-foreground italic">-</span>;
@@ -173,7 +182,16 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
         >
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4 p-6 pb-2">
-                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => setShowOnlyErrors(false)}
+                    className={cn(
+                        "border rounded-lg p-4 flex items-center gap-3 transition-all text-left",
+                        !showOnlyErrors
+                            ? "bg-green-500/20 border-green-500/50 ring-2 ring-green-500/30"
+                            : "bg-green-500/10 border-green-500/20 hover:bg-green-500/15"
+                    )}
+                >
                     <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-600">
                         <CheckCircle2 className="h-6 w-6" />
                     </div>
@@ -181,11 +199,20 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
                         <div className="text-2xl font-bold text-green-700">{validCount}</div>
                         <div className="text-xs font-medium text-green-600/80 uppercase">{t('summary.validRecords')}</div>
                     </div>
-                </div>
-                <div className={cn(
-                    "border rounded-lg p-4 flex items-center gap-3",
-                    hasErrors ? "bg-red-500/10 border-red-500/20" : "bg-muted/10 border-border"
-                )}>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => hasErrors && setShowOnlyErrors(true)}
+                    className={cn(
+                        "border rounded-lg p-4 flex items-center gap-3 transition-all text-left",
+                        hasErrors
+                            ? showOnlyErrors
+                                ? "bg-red-500/20 border-red-500/50 ring-2 ring-red-500/30"
+                                : "bg-red-500/10 border-red-500/20 hover:bg-red-500/15 cursor-pointer"
+                            : "bg-muted/10 border-border cursor-default"
+                    )}
+                    disabled={!hasErrors}
+                >
                     <div className={cn(
                         "h-10 w-10 rounded-full flex items-center justify-center",
                         hasErrors ? "bg-red-500/20 text-red-600" : "bg-muted text-muted-foreground"
@@ -203,7 +230,7 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
                             {isValidating && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                         </div>
                     </div>
-                </div>
+                </button>
             </div>
 
             {/* Table */}
@@ -211,10 +238,11 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-sm flex items-center gap-2">
                         {t('preview')}
+                        {showOnlyErrors && <Badge variant="destructive" className="text-xs">Solo errores</Badge>}
                         {isValidating && <span className="text-xs text-muted-foreground italic font-normal">(Verificando duplicados...)</span>}
                     </h3>
                     <div className="text-xs text-muted-foreground">
-                        {t('showingRows', { count: Math.min(processedRows.length, 50) })}
+                        {t('showingRows', { count: Math.min(displayedRows.length, 50) })}
                     </div>
                 </div>
 
@@ -231,7 +259,7 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {processedRows.slice(0, 50).map((row) => (
+                                {displayedRows.slice(0, 50).map((row) => (
                                     <TableRow key={row.__index} className={row.__errors.length > 0 ? "bg-red-50 dark:bg-red-950/10" : ""}>
                                         <TableCell className="text-center text-xs text-muted-foreground">
                                             {row.__index + 1}
@@ -263,8 +291,8 @@ export function ImportStepValidation({ config, data, organizationId }: ImportSte
                         </Table>
                     </ScrollArea>
                 </div>
-            </div>
-        </motion.div>
+            </div >
+        </motion.div >
     );
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { FKConflict, ResolutionMap } from "@/lib/import-conflict-utils";
-import { ImportConfig, ForeignKeyOption } from "@/lib/import-utils";
+import { FKConflict, ResolutionMap } from "@/lib/import";
+import { ImportConfig, ForeignKeyOption } from "@/lib/import";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -2,15 +2,17 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskKinds } from "@/features/tasks/queries";
-import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy } from "@/features/materials/queries";
+import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject, getUnitPresentations } from "@/features/materials/queries";
+import { getUnitsForOrganization, getUnitPresentationsForOrganization } from "@/features/units/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
 import { getCurrencies } from "@/features/billing/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { LaborTypesView } from "@/features/labor/views/labor-types-view";
+import { UnitsCatalogView } from "@/features/units/views/units-catalog-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { Wrench, ClipboardList, Package, HardHat } from "lucide-react";
+import { Wrench, ClipboardList, Package, HardHat, Ruler } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -69,7 +71,11 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             materialUnits,
             categoryHierarchy,
             laborTypesWithPrices,
-            currencies
+            currencies,
+            providers,
+            presentations,
+            catalogUnits,
+            catalogPresentations
         ] = await Promise.all([
             getTasksGroupedByDivision(activeOrgId),
             getUnits(),
@@ -80,7 +86,11 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             getUnitsForMaterialCatalog(),
             getMaterialCategoryHierarchy(),
             getLaborTypesWithPrices(activeOrgId),
-            getCurrencies()
+            getCurrencies(),
+            getProvidersForProject(activeOrgId),
+            getUnitPresentations(),
+            getUnitsForOrganization(activeOrgId),
+            getUnitPresentationsForOrganization(activeOrgId)
         ]);
 
         // Get default currency (first one or USD)
@@ -108,6 +118,10 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                                 <HardHat className="h-4 w-4 mr-2" />
                                 Mano de Obra
                             </TabsTrigger>
+                            <TabsTrigger value="units" className={tabTriggerClass}>
+                                <Ruler className="h-4 w-4 mr-2" />
+                                Unidades
+                            </TabsTrigger>
                         </TabsList>
                     }
                 >
@@ -123,16 +137,16 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                         </ContentLayout>
                     </TabsContent>
                     <TabsContent value="materials" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <MaterialsCatalogView
-                                materials={materials}
-                                units={materialUnits}
-                                categories={materialCategories}
-                                categoryHierarchy={categoryHierarchy}
-                                orgId={activeOrgId}
-                                isAdminMode={false}
-                            />
-                        </ContentLayout>
+                        <MaterialsCatalogView
+                            materials={materials}
+                            units={materialUnits}
+                            categories={materialCategories}
+                            categoryHierarchy={categoryHierarchy}
+                            orgId={activeOrgId}
+                            isAdminMode={false}
+                            providers={providers}
+                            presentations={presentations}
+                        />
                     </TabsContent>
                     <TabsContent value="labor" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
@@ -143,6 +157,13 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                                 defaultCurrencyId={defaultCurrencyId}
                             />
                         </ContentLayout>
+                    </TabsContent>
+                    <TabsContent value="units" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <UnitsCatalogView
+                            units={catalogUnits}
+                            presentations={catalogPresentations}
+                            orgId={activeOrgId}
+                        />
                     </TabsContent>
                 </PageWrapper>
             </Tabs>

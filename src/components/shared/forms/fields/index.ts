@@ -21,3 +21,4 @@ export { DateField, type DateFieldProps } from "./date-field";
 export { NotesField, type NotesFieldProps } from "./notes-field";
 export { ReferenceField, type ReferenceFieldProps } from "./reference-field";
 export { ExchangeRateField, type ExchangeRateFieldProps } from "./exchange-rate-field";
+export { ContactField, type ContactFieldProps, type Contact } from "./contact-field";
