@@ -116,6 +116,7 @@ export function BillingCheckoutActions({
                     planId={!isCourse && !isSeats ? state.selectedPlanId : undefined}
                     organizationId={!isCourse ? organizationId : undefined}
                     billingPeriod={!isCourse && !isSeats ? state.billingCycle as "monthly" | "annual" : undefined}
+                    seatsQuantity={isSeats ? state.seatsQuantity : undefined}
                     originalAmount={isArsPayment ? Math.round(originalAmountUsd * exchangeRate) : originalAmountUsd}
                     annualSavings={!isCourse && !isSeats && isAnnual ? (isArsPayment ? Math.round(savingsAmount * exchangeRate) : savingsAmount) : undefined}
                     couponCode={state.appliedCoupon?.code}

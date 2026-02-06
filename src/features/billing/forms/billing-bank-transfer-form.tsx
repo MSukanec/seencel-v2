@@ -38,6 +38,8 @@ interface BankTransferFormProps {
     planId?: string;
     organizationId?: string;
     billingPeriod?: "monthly" | "annual";
+    // For seat purchases
+    seatsQuantity?: number;
     // Styling
     planColor?: string;
     // Price breakdown
@@ -70,6 +72,7 @@ export function BankTransferForm({
     planId,
     organizationId,
     billingPeriod,
+    seatsQuantity,
     planColor,
     originalAmount,
     annualSavings,
@@ -143,6 +146,7 @@ export function BankTransferForm({
                     planId,
                     organizationId,
                     billingPeriod,
+                    seatsQuantity,
                     amount,
                     currency,
                     payerName: payerName.trim(),
@@ -167,14 +171,18 @@ export function BankTransferForm({
     // Step 3: Success - show confirmation with access info
     if (step === 3) {
         const isCourse = !!courseId;
+        const isSeats = !courseId && !planId && !!organizationId;
         // Get locale from current URL (e.g. /es/checkout -> es)
         const currentLocale = typeof window !== 'undefined'
             ? window.location.pathname.split('/')[1] || 'es'
             : 'es';
-        // Redirect to the course (with slug) or Hub for subscriptions
+        // Redirect based on product type
         const successUrl = isCourse && courseSlug
             ? `/${currentLocale}/academia/mis-cursos/${courseSlug}`
-            : `/${currentLocale}/hub`;
+            : isSeats
+                ? `/${currentLocale}/organizacion/configuracion?tab=members`
+                : `/${currentLocale}/organizacion/configuracion?tab=billing`;
+        const successLabel = isCourse ? "Ir al Curso" : isSeats ? "Ir a Miembros" : "Ir a Facturación";
 
         return (
             <div className="flex flex-col h-full min-h-0">
@@ -193,7 +201,7 @@ export function BankTransferForm({
                             <CheckCircle2 className="h-4 w-4 text-green-600" />
                             <AlertDescription className="text-green-700 dark:text-green-300 text-sm">
                                 <strong>¡Ya tenés acceso!</strong> Mientras verificamos tu pago, podés comenzar a usar
-                                {isCourse ? " el curso" : " tu suscripción"} inmediatamente.
+                                {isCourse ? " el curso" : isSeats ? " los nuevos asientos" : " tu suscripción"} inmediatamente.
                             </AlertDescription>
                         </Alert>
 
@@ -231,7 +239,7 @@ export function BankTransferForm({
                                 window.location.href = successUrl;
                             }}
                         >
-                            {isCourse ? "Ir al Curso" : "Ir al Hub"}
+                            {successLabel}
                             <ExternalLink className="ml-2 h-4 w-4" />
                         </Button>
                     </div>

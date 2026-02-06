@@ -10,6 +10,8 @@ interface CreateBankTransferPaymentInput {
     planId?: string;
     organizationId?: string;
     billingPeriod?: "monthly" | "annual";
+    // For seat purchases
+    seatsQuantity?: number;
     // Common fields
     amount: number;
     currency: string;
@@ -132,6 +134,38 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
                     p_organization_id: input.organizationId
                 });
             }
+        } else if (input.seatsQuantity && input.organizationId && !input.planId) {
+            // Seat purchase → register additional seats
+            // Get the current plan_id of the org
+            const { data: orgData } = await supabase
+                .from("organizations")
+                .select("plan_id")
+                .eq("id", input.organizationId)
+                .single();
+
+            if (orgData?.plan_id) {
+                const { error: seatError } = await supabase.rpc('handle_member_seat_purchase', {
+                    p_provider: 'bank_transfer',
+                    p_provider_payment_id: orderId,
+                    p_user_id: userData.id,
+                    p_organization_id: input.organizationId,
+                    p_plan_id: orgData.plan_id,
+                    p_seats_purchased: input.seatsQuantity,
+                    p_amount: input.amount,
+                    p_currency: input.currency,
+                    p_metadata: JSON.stringify({
+                        billing_period: input.billingPeriod || 'annual',
+                        seats_count: input.seatsQuantity,
+                        payment_method: 'bank_transfer'
+                    })
+                });
+
+                if (seatError) {
+                    console.error("Error purchasing seats:", seatError);
+                }
+            } else {
+                console.error("No active plan found for seat purchase");
+            }
         }
     } catch (activationError) {
         console.error("Error in optimistic activation:", activationError);
@@ -140,6 +174,8 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     revalidatePath("/checkout");
     revalidatePath("/");
+    revalidatePath("/[locale]/organization/settings", "page");
+    revalidatePath("/[locale]/(dashboard)/organization/settings", "page");
     return { success: true, data };
 }
 

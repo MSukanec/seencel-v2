@@ -55,8 +55,10 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
         const p = provider?.toLowerCase() || '';
         if (p.includes('paypal')) return <Badge variant="outline">PayPal</Badge>;
         if (p.includes('mercadopago') || p.includes('mercado')) return <Badge variant="outline">MercadoPago</Badge>;
-        if (p.includes('bank') || p.includes('transfer')) return <Badge variant="outline">Transferencia</Badge>;
-        return <Badge variant="outline">{provider || '-'}</Badge>;
+        // Si hay provider explícito O si es null (caso transferencia optimista), mostramos Transferencia
+        // (Asumimos que si está en el historial y no tiene provider, es una transferencia pendiente de linkeo)
+        if (p.includes('bank') || p.includes('transfer') || !provider) return <Badge variant="outline">Transferencia</Badge>;
+        return <Badge variant="outline">{provider}</Badge>;
     };
 
     // Helper para obtener provider del payment (puede venir como array o objeto)
@@ -65,6 +67,19 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
         if (Array.isArray(payment)) return payment[0]?.provider;
         return payment.provider;
     };
+
+    // Traducción de nombres de planes
+    const getPlanDisplayName = (name?: string | null) => {
+        const n = name?.toLowerCase() || '';
+        if (n.includes('free')) return 'Gratis';
+        if (n.includes('pro')) return 'Profesional';
+        if (n.includes('team')) return 'Equipos';
+        if (n.includes('enterprise')) return 'Empresarial';
+        return name || 'Plan';
+    };
+
+    const displayName = getPlanDisplayName(subscription?.plan?.name);
+    const isFree = displayName === 'Gratis' || subscription?.amount === 0;
 
     return (
         <ContentLayout variant="wide">
@@ -78,10 +93,14 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                             <div className="flex justify-between items-start">
                                 <div>
                                     <CardTitle className={`text-2xl ${planColors.text}`}>
-                                        {subscription?.plan?.name || "Plan Gratuito"}
+                                        {displayName}
                                     </CardTitle>
                                     <CardDescription className="mt-1">
-                                        {subscription?.plan?.description || "Estás usando la versión básica de Seencel."}
+                                        {subscription?.plan?.description || (
+                                            subscription?.plan?.name
+                                                ? `Estás suscrito al plan ${displayName} de Seencel.`
+                                                : "Estás usando la versión básica de Seencel."
+                                        )}
                                     </CardDescription>
                                 </div>
                                 <Badge variant="outline" className={planColors.badge}>
@@ -105,12 +124,12 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                                 </Button>
                             </div>
 
-                            {subscription && subscription.billing_period !== 'one-time' && (
+                            {subscription && !isFree && subscription.billing_period !== 'one-time' && (
                                 <p className="text-xs text-muted-foreground mt-4">
-                                    Tu plan se renovará automáticamente el {format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: es })}.
+                                    Tu plan finalizará el {format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: es })}.
                                 </p>
                             )}
-                            {subscription && subscription.billing_period === 'one-time' && (
+                            {subscription && !isFree && subscription.billing_period === 'one-time' && (
                                 <p className="text-xs text-muted-foreground mt-4">
                                     Tu plan está activo hasta el {format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: es })}.
                                 </p>

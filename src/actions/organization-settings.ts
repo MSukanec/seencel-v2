@@ -92,11 +92,11 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .select('*, plan:plans(*)')
             .eq('organization_id', organizationId)
             .eq('status', 'active')
-            .single(),
+            .maybeSingle(),
         // Historial de suscripciones - usar organization_subscriptions con joins
         supabase
             .from('organization_subscriptions')
-            .select('id, created_at, amount, currency, status, billing_period, payer_email, plan:plan_id(name), payment:payment_id(provider)')
+            .select('id, created_at, started_at, expires_at, amount, currency, status, billing_period, payer_email, plan:plan_id(name), payment:payment_id(provider)')
             .eq('organization_id', organizationId)
             .order('created_at', { ascending: false })
             .limit(12),
@@ -134,6 +134,26 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
 
     // Build subscription data - use actual subscription or create virtual one from org.plan
     let subscription = subscriptionRes.data as OrganizationSubscription | null;
+
+    // Logs removed for clean execution
+
+    // FALLBACK: If subscription is null (RLS/Single issue) but we have history, use the latest active one
+    if (!subscription && billingCyclesRes.data && billingCyclesRes.data.length > 0) {
+        const latestInfo = billingCyclesRes.data[0];
+        if (latestInfo.status === 'active') {
+            // Cast to any to access newly added fields that might not be in the strict type yet
+            const fullInfo = latestInfo as any;
+            subscription = {
+                ...latestInfo,
+                id: latestInfo.id,
+                plan_id: latestInfo.plan ? (latestInfo.plan as any).id : '',
+                plan: latestInfo.plan as any,
+                started_at: fullInfo.started_at || latestInfo.created_at,
+                expires_at: fullInfo.expires_at || latestInfo.created_at,
+            } as OrganizationSubscription;
+            console.log("⚠️ Recovered subscription from history:", subscription.id);
+        }
+    }
 
     // If no active subscription but org has a plan, create a virtual subscription for display
     if (!subscription && organizationRes.data?.plan) {
