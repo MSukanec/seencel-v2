@@ -46,12 +46,13 @@ const getPlanStyle = (name: string) => {
 };
 
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
-    const { activeOrgId } = useOrganization();
+    const { activeOrgId, isFounder } = useOrganization();
     const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadPlanData() {
+            setLoading(true);
             try {
                 const [plans, currentPlanId] = await Promise.all([
                     getPlans(),
@@ -75,7 +76,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
         }
 
         loadPlanData();
-    }, [activeOrgId]);
+    }, [activeOrgId, isFounder]); // Re-fetch when founder status changes (after payment)
 
     // Loading skeleton
     if (loading) {

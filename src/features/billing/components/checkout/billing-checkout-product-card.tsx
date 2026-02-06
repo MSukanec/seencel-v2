@@ -409,36 +409,63 @@ export function BillingCheckoutProductCard({
                     })}
                 </RadioGroup>
 
-                {/* Billing Cycle Toggle */}
-                <div className="flex items-center justify-center gap-4 p-4 rounded-xl bg-muted/50">
-                    <button
-                        onClick={() => onBillingCycleChange?.("monthly")}
-                        className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                            !isAnnual
-                                ? "bg-background shadow-sm"
-                                : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <CalendarDays className="h-4 w-4 inline mr-2" />
-                        Mensual
-                    </button>
-                    <button
-                        onClick={() => onBillingCycleChange?.("annual")}
-                        className={cn(
-                            "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                            isAnnual
-                                ? "bg-background shadow-sm"
-                                : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <CalendarDays className="h-4 w-4 inline mr-2" />
-                        Anual
-                        <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
-                            Ahorrá 20%
-                        </Badge>
-                    </button>
-                </div>
+                {/* Billing Cycle Cards - Use selected plan colors */}
+                {(() => {
+                    // Get selected plan colors
+                    const selectedPlan = purchasablePlans.find(p => p.id === selectedPlanId);
+                    const cycleColors = planColors[selectedPlan?.slug || ""] || planColors.pro;
+
+                    return (
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Mensual Card */}
+                            <button
+                                onClick={() => onBillingCycleChange?.("monthly")}
+                                className={cn(
+                                    "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all",
+                                    !isAnnual
+                                        ? `${cycleColors.border} ${cycleColors.bg}`
+                                        : "border-border hover:border-muted-foreground/50"
+                                )}
+                            >
+                                <CalendarDays className={cn(
+                                    "h-5 w-5 mb-2",
+                                    !isAnnual ? cycleColors.text : "text-muted-foreground"
+                                )} />
+                                <span className={cn(
+                                    "font-medium",
+                                    !isAnnual ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                    Mensual
+                                </span>
+                            </button>
+
+                            {/* Anual Card */}
+                            <button
+                                onClick={() => onBillingCycleChange?.("annual")}
+                                className={cn(
+                                    "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all",
+                                    isAnnual
+                                        ? `${cycleColors.border} ${cycleColors.bg}`
+                                        : "border-border hover:border-muted-foreground/50"
+                                )}
+                            >
+                                <Badge className={cn("absolute -top-2.5 right-2 text-white text-[10px]", cycleColors.solid)}>
+                                    Ahorrá 20%
+                                </Badge>
+                                <CalendarDays className={cn(
+                                    "h-5 w-5 mb-2",
+                                    isAnnual ? cycleColors.text : "text-muted-foreground"
+                                )} />
+                                <span className={cn(
+                                    "font-medium",
+                                    isAnnual ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                    Anual
+                                </span>
+                            </button>
+                        </div>
+                    );
+                })()}
             </CardContent>
         </Card>
     );

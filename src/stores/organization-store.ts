@@ -211,24 +211,37 @@ export function OrganizationStoreHydrator({
     decimalPlaces,
     kpiCompactFormat,
 }: OrganizationStoreHydratorProps) {
+    // Track previous critical values to detect changes that require re-hydration
+    const prevActiveOrgId = useRef(activeOrgId);
+    const prevIsFounder = useRef(isFounder);
     const hydrated = useRef(false);
 
     useEffect(() => {
-        // Only hydrate once per mount
-        if (hydrated.current) return;
-        hydrated.current = true;
+        // Detect if critical values changed (org switch or plan upgrade)
+        const orgChanged = prevActiveOrgId.current !== activeOrgId;
+        const founderStatusChanged = prevIsFounder.current !== isFounder;
+        const shouldRehydrate = orgChanged || founderStatusChanged;
 
-        useOrganizationStore.getState().hydrate({
-            activeOrgId,
-            preferences,
-            isFounder,
-            wallets,
-            projects,
-            clients,
-            currencies,
-            decimalPlaces,
-            kpiCompactFormat,
-        });
+        // Update refs for next comparison
+        prevActiveOrgId.current = activeOrgId;
+        prevIsFounder.current = isFounder;
+
+        // Hydrate on first mount OR when critical data changes
+        if (!hydrated.current || shouldRehydrate) {
+            hydrated.current = true;
+
+            useOrganizationStore.getState().hydrate({
+                activeOrgId,
+                preferences,
+                isFounder,
+                wallets,
+                projects,
+                clients,
+                currencies,
+                decimalPlaces,
+                kpiCompactFormat,
+            });
+        }
     }, [activeOrgId, preferences, isFounder, wallets, projects, clients, currencies, decimalPlaces, kpiCompactFormat]);
 
     return null;

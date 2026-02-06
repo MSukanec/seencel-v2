@@ -135,25 +135,7 @@ export function BillingCheckoutView(props: CheckoutViewProps) {
                             ))}
                         </div>
 
-                        {/* Benefits List (for plans only) */}
-                        {!isCourse && !isSeats && (
-                            <div className="p-4 rounded-xl bg-muted/30">
-                                <h4 className="font-medium mb-3 text-sm">{t("included")}</h4>
-                                <ul className="space-y-2">
-                                    {[
-                                        t("benefit1"),
-                                        t("benefit2"),
-                                        t("benefit3"),
-                                        t("benefit4"),
-                                    ].map((benefit, i) => (
-                                        <li key={i} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                                            <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                                            {benefit}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
+
                     </div>
                 </div>
             </div>
