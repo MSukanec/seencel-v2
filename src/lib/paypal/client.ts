@@ -91,8 +91,9 @@ export async function createPayPalOrder({
                 brand_name: 'SEENCEL',
                 landing_page: 'NO_PREFERENCE',
                 user_action: 'PAY_NOW',
-                return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/checkout/success?source=paypal`,
-                cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/checkout/failure?source=paypal`,
+                // Use NEXT_PUBLIC_APP_URL for production, fallback to VERCEL_URL for previews, localhost for dev
+                return_url: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/checkout/success?source=paypal`,
+                cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/checkout/failure?source=paypal`,
             },
         }),
     });
