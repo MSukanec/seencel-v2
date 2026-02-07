@@ -48,15 +48,7 @@ export default async function DashboardLayout({
         const supabase = await createClient();
         const { data: invitations } = await supabase
             .from('organization_invitations')
-            .select(`
-                id,
-                token,
-                status,
-                expires_at,
-                role_id,
-                organization:organization_id (name, logo_path),
-                inviter:invited_by (user_id)
-            `)
+            .select('id, token, role_id, organization_id, invited_by')
             .eq('email', profile.email.toLowerCase())
             .eq('status', 'pending')
             .gte('expires_at', new Date().toISOString())
@@ -64,12 +56,26 @@ export default async function DashboardLayout({
             .limit(1);
 
         if (invitations && invitations.length > 0) {
-            const inv = invitations[0] as any;
-            // Handle Supabase join results (can be array or object)
-            const org = Array.isArray(inv.organization) ? inv.organization[0] : inv.organization;
-            const inviter = Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter;
+            const inv = invitations[0];
 
-            // Fetch role name directly (join may fail due to RLS)
+            // Fetch organization name & logo (separate query avoids RLS join issues)
+            let orgName = 'Organización';
+            let logoUrl: string | null = null;
+            if (inv.organization_id) {
+                const { data: orgData } = await supabase
+                    .from('organizations')
+                    .select('name, logo_path')
+                    .eq('id', inv.organization_id)
+                    .single();
+                if (orgData) {
+                    orgName = orgData.name || orgName;
+                    logoUrl = orgData.logo_path
+                        ? getStorageUrl(orgData.logo_path, 'public-assets')
+                        : null;
+                }
+            }
+
+            // Fetch role name (separate query - RLS may block via join)
             let roleName = 'Miembro';
             if (inv.role_id) {
                 const { data: roleData } = await supabase
@@ -82,27 +88,28 @@ export default async function DashboardLayout({
                 }
             }
 
-            // Get inviter name
+            // Get inviter name (invited_by → organization_members.id → user_id → users.full_name)
             let inviterName: string | null = null;
-            if (inviter?.user_id) {
-                const { data: inviterUser } = await supabase
-                    .from('users')
-                    .select('full_name')
-                    .eq('id', inviter.user_id)
+            if (inv.invited_by) {
+                const { data: memberData } = await supabase
+                    .from('organization_members')
+                    .select('user_id')
+                    .eq('id', inv.invited_by)
                     .single();
-                inviterName = inviterUser?.full_name || null;
+                if (memberData?.user_id) {
+                    const { data: inviterUser } = await supabase
+                        .from('users')
+                        .select('full_name')
+                        .eq('id', memberData.user_id)
+                        .single();
+                    inviterName = inviterUser?.full_name || null;
+                }
             }
-
-            // Build logo URL from storage path
-            const logoPath = org?.logo_path || null;
-            const logoUrl = logoPath
-                ? getStorageUrl(logoPath, 'public-assets')
-                : null;
 
             pendingInvitation = {
                 id: inv.id,
                 token: inv.token,
-                organization_name: org?.name || 'Organización',
+                organization_name: orgName,
                 organization_logo: logoUrl,
                 role_name: roleName,
                 inviter_name: inviterName,

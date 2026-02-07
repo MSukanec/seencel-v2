@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { acceptInvitationAction } from "@/features/team/actions";
+import { switchOrganization } from "@/features/organization/actions";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -38,6 +39,8 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
         startTransition(async () => {
             const result = await acceptInvitationAction(invitation.token);
             if (result.success && result.organizationId) {
+                // Switch to the inviting org, then navigate
+                await switchOrganization(result.organizationId);
                 router.push("/organization" as any);
                 router.refresh();
             }

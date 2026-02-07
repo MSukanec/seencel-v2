@@ -29,7 +29,7 @@ const nextConfig = {
     serverExternalPackages: ['sharp'],
     experimental: {
         serverActions: {
-            bodySizeLimit: 10485760, // 10MB in bytes
+            bodySizeLimit: 10485760, // 10MB
         },
     },
 };
