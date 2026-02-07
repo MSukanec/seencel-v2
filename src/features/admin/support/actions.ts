@@ -321,7 +321,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
             .from("course_enrollments")
             .select(`
                 id,
-                enrolled_at,
+                started_at,
                 status,
                 courses:course_id (title, slug)
             `)
@@ -389,7 +389,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
                     id: e.id,
                     courseName: e.courses?.title || "Curso desconocido",
                     courseSlug: e.courses?.slug || "",
-                    enrolledAt: e.enrolled_at,
+                    enrolledAt: e.started_at,
                     status: e.status
                 })),
                 payments: (payments || []).map((p: any) => ({
