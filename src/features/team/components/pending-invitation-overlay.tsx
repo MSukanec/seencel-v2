@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { acceptInvitationAction } from "@/features/team/actions";
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -12,8 +11,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, Shield, User } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface PendingInvitation {
     id: string;
@@ -31,20 +32,33 @@ interface PendingInvitationOverlayProps {
 export function PendingInvitationOverlay({ invitation }: PendingInvitationOverlayProps) {
     const [isPending, startTransition] = useTransition();
     const [dismissed, setDismissed] = useState(false);
+    const [accepted, setAccepted] = useState(false);
 
     const handleAccept = () => {
+        if (isPending || accepted) return;
+
         startTransition(async () => {
-            const result = await acceptInvitationAction(invitation.token);
-            if (result.success) {
-                // The action already switched the active org.
-                // Use hard redirect because revalidatePath may unmount this component
-                // before client-side router.push can execute.
-                window.location.href = "/organization";
+            try {
+                const result = await acceptInvitationAction(invitation.token);
+                if (result.success) {
+                    setAccepted(true);
+                    // Hard redirect — guaranteed to execute
+                    window.location.href = "/organization";
+                } else {
+                    console.error("Accept invitation error:", result.error);
+                    toast.error(result.error || "Error al aceptar la invitación");
+                }
+            } catch (error) {
+                console.error("Accept invitation exception:", error);
+                toast.error("Error inesperado al aceptar la invitación");
             }
         });
     };
 
     if (dismissed) return null;
+
+    // Keep overlay visible while accepted + redirecting
+    const isOpen = !dismissed;
 
     // Get initials for fallback
     const initials = invitation.organization_name
@@ -55,7 +69,7 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
         .slice(0, 2);
 
     return (
-        <AlertDialog open={true}>
+        <AlertDialog open={isOpen}>
             <AlertDialogContent
                 className="max-w-md"
                 onEscapeKeyDown={(e: KeyboardEvent) => e.preventDefault()}
@@ -111,16 +125,16 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
                 <AlertDialogFooter className="sm:justify-center gap-2">
                     <AlertDialogCancel
                         onClick={() => setDismissed(true)}
-                        disabled={isPending}
+                        disabled={isPending || accepted}
                     >
                         Ahora no
                     </AlertDialogCancel>
-                    <AlertDialogAction
+                    <Button
                         onClick={handleAccept}
-                        disabled={isPending}
+                        disabled={isPending || accepted}
                         className="gap-2"
                     >
-                        {isPending ? (
+                        {isPending || accepted ? (
                             "Aceptando..."
                         ) : (
                             <>
@@ -128,7 +142,7 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
                                 <ArrowRight className="h-4 w-4" />
                             </>
                         )}
-                    </AlertDialogAction>
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
