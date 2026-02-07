@@ -3,6 +3,286 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { SeatStatus, PurchaseSeatsInput } from "./types";
+import { sendEmail } from "@/features/emails/lib/send-email";
+import { TeamInvitationEmail } from "@/features/emails/templates/team-invitation-email";
+import { t } from "@/features/emails/lib/email-translations";
+import { randomUUID } from "crypto";
+
+// ============================================================
+// INVITATIONS
+// ============================================================
+
+/**
+ * Send an invitation to join the organization.
+ * Validates seats, duplicates, and sends email via Resend.
+ */
+export async function sendInvitationAction(
+    organizationId: string,
+    email: string,
+    roleId: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // 1. Auth
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+        return { success: false, error: "No autenticado" };
+    }
+
+    const { data: currentUser } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (!currentUser) {
+        return { success: false, error: "Usuario no encontrado" };
+    }
+
+    // 2. Verify caller is admin member
+    const { data: callerMember } = await supabase
+        .from('organization_members')
+        .select('id, role_id, roles(type)')
+        .eq('organization_id', organizationId)
+        .eq('user_id', currentUser.id)
+        .eq('is_active', true)
+        .single();
+
+    if (!callerMember || (callerMember.roles as any)?.type !== 'admin') {
+        return { success: false, error: "Solo los administradores pueden invitar miembros" };
+    }
+
+    // 3. Check available seats
+    const { data: seatData, error: seatError } = await supabase.rpc('get_organization_seat_status', {
+        p_organization_id: organizationId
+    });
+
+    if (seatError) {
+        return { success: false, error: "Error al verificar asientos disponibles" };
+    }
+
+    const seats = seatData as SeatStatus;
+    if (!seats.can_invite) {
+        return { success: false, error: "No hay asientos disponibles. Comprá más asientos para invitar miembros." };
+    }
+
+    // 4. Check if email is already an active member
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const { data: existingMember } = await supabase
+        .from('organization_members')
+        .select('id, users!inner(email)')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .eq('users.email', normalizedEmail)
+        .maybeSingle();
+
+    if (existingMember) {
+        return { success: false, error: "Este email ya es miembro de la organización" };
+    }
+
+    // 5. Check for pending invitation
+    const { data: existingInvitation } = await supabase
+        .from('organization_invitations')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('email', normalizedEmail)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+    if (existingInvitation) {
+        return { success: false, error: "Ya existe una invitación pendiente para este email" };
+    }
+
+    // 6. Get organization name for the email
+    const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .single();
+
+    // 7. Get role name for the email
+    const { data: role } = await supabase
+        .from('roles')
+        .select('name')
+        .eq('id', roleId)
+        .single();
+
+    // 8. Generate token and insert invitation
+    const token = randomUUID();
+
+    const { error: insertError } = await supabase
+        .from('organization_invitations')
+        .insert({
+            organization_id: organizationId,
+            email: normalizedEmail,
+            role_id: roleId,
+            invited_by: callerMember.id,
+            token,
+            status: 'pending',
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+
+    if (insertError) {
+        console.error('Error inserting invitation:', insertError);
+        return { success: false, error: "Error al crear la invitación" };
+    }
+
+    // 9. Send invitation email
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://seencel.com';
+    const acceptUrl = `${baseUrl}/invite/accept?token=${token}`;
+    const orgName = org?.name || 'la organización';
+    const inviterName = currentUser.full_name || currentUser.email || 'Un administrador';
+    const roleName = role?.name || 'Miembro';
+
+    const emailSubject = t('teamInvitation', 'emailSubject', 'es').replace('{orgName}', orgName);
+
+    await sendEmail({
+        to: normalizedEmail,
+        subject: emailSubject,
+        react: TeamInvitationEmail({
+            organizationName: orgName,
+            inviterName,
+            roleName,
+            acceptUrl,
+            locale: 'es',
+        }),
+    });
+
+    // 10. Revalidate
+    revalidatePath('/organization/settings', 'page');
+
+    return { success: true };
+}
+
+/**
+ * Get invitation details by token (for the accept page).
+ * Uses RPC (SECURITY DEFINER) to bypass RLS — works for unauthenticated users.
+ */
+export async function getInvitationByToken(
+    token: string
+): Promise<{
+    success: boolean;
+    data?: {
+        id: string;
+        email: string;
+        status: string;
+        expires_at: string | null;
+        organization_name: string;
+        role_name: string;
+        inviter_name: string | null;
+    };
+    error?: string;
+}> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.rpc('get_invitation_by_token', {
+        p_token: token
+    });
+
+    if (error) {
+        console.error('Error getting invitation:', error);
+        return { success: false, error: 'Error al buscar la invitación' };
+    }
+
+    const result = data as {
+        success: boolean;
+        error?: string;
+        id?: string;
+        email?: string;
+        status?: string;
+        expires_at?: string;
+        organization_name?: string;
+        role_name?: string;
+        inviter_name?: string;
+    };
+
+    if (!result.success) {
+        return { success: false, error: 'Invitación no encontrada' };
+    }
+
+    return {
+        success: true,
+        data: {
+            id: result.id!,
+            email: result.email!,
+            status: result.status!,
+            expires_at: result.expires_at || null,
+            organization_name: result.organization_name || 'Organización',
+            role_name: result.role_name || 'Miembro',
+            inviter_name: result.inviter_name || null,
+        },
+    };
+}
+
+/**
+ * Accept an organization invitation.
+ * Requires the user to be authenticated.
+ */
+export async function acceptInvitationAction(
+    token: string
+): Promise<{
+    success: boolean;
+    organizationId?: string;
+    orgName?: string;
+    alreadyMember?: boolean;
+    error?: string;
+}> {
+    const supabase = await createClient();
+
+    // 1. Auth
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+        return { success: false, error: 'No autenticado' };
+    }
+
+    // 2. Get public user_id
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (!publicUser) {
+        return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    // 3. Call RPC
+    const { data: result, error } = await supabase.rpc('accept_organization_invitation', {
+        p_token: token,
+        p_user_id: publicUser.id,
+    });
+
+    if (error) {
+        console.error('Error accepting invitation:', error);
+        return { success: false, error: error.message };
+    }
+
+    const res = result as {
+        success: boolean;
+        organization_id?: string;
+        org_name?: string;
+        already_member?: boolean;
+        error?: string;
+        message?: string;
+    };
+
+    if (!res.success) {
+        return {
+            success: false,
+            error: res.message || 'Error al aceptar la invitación',
+        };
+    }
+
+    revalidatePath('/[locale]/organization', 'layout');
+
+    return {
+        success: true,
+        organizationId: res.organization_id,
+        orgName: res.org_name,
+        alreadyMember: res.already_member || false,
+    };
+}
 
 // ============================================================
 // PERMISSIONS

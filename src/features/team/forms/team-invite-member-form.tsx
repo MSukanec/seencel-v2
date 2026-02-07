@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Minus, Users, ShoppingCart, AlertTriangle, CheckCircle } from "lucide-react";
 import { Role, SeatStatus } from "@/features/team/types";
-import { getOrganizationSeatStatus } from "@/features/team/actions";
+import { getOrganizationSeatStatus, sendInvitationAction } from "@/features/team/actions";
 import { Link } from "@/i18n/routing";
 
 interface InviteMemberFormProps {
@@ -74,19 +74,23 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
         }
 
         if (!roleId) {
-            toast.error("Selecciona un rol");
+            toast.error("Seleccioná un rol");
             return;
         }
 
         setIsLoading(true);
         try {
-            // TODO: Call sendInvitation action
-            // await sendInvitation({ organizationId, email, roleId });
+            const result = await sendInvitationAction(organizationId, email.trim(), roleId);
+
+            if (!result.success) {
+                toast.error(result.error || "Error al enviar la invitación");
+                return;
+            }
 
             toast.success("Invitación enviada correctamente");
             handleSuccess();
         } catch (error) {
-            toast.error("Error al enviar la invitación");
+            toast.error("Error inesperado al enviar la invitación");
         } finally {
             setIsLoading(false);
         }
@@ -262,9 +266,9 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                             <CheckCircle className="h-4 w-4 text-green-500" />
                             <span>Asientos disponibles</span>
                         </div>
-                        <Badge variant="secondary" className="text-base px-3 py-1">
-                            {seatStatus.available} / {seatStatus.total_capacity}
-                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-foreground">{seatStatus.available}</span> libres de <span className="font-semibold text-foreground">{seatStatus.total_capacity}</span>
+                        </span>
                     </div>
                 )}
 

@@ -330,6 +330,50 @@ const translations = {
             en: "You've lost access to your plan's premium features.",
         },
     },
+
+    // Team Invitation
+    teamInvitation: {
+        title: {
+            es: 'Invitación a un equipo',
+            en: 'Team Invitation',
+        },
+        body: {
+            es: '{inviterName} te ha invitado a unirte a {orgName} en SEENCEL.',
+            en: '{inviterName} has invited you to join {orgName} on SEENCEL.',
+        },
+        detailsLabel: {
+            es: 'Detalles de la invitación',
+            en: 'Invitation Details',
+        },
+        organizationLabel: {
+            es: 'Organización',
+            en: 'Organization',
+        },
+        roleLabel: {
+            es: 'Rol asignado',
+            en: 'Assigned Role',
+        },
+        invitedByLabel: {
+            es: 'Invitado por',
+            en: 'Invited by',
+        },
+        acceptButton: {
+            es: 'Aceptar Invitación',
+            en: 'Accept Invitation',
+        },
+        expiresNotice: {
+            es: 'Esta invitación expira en 7 días. Si no aceptás antes, deberán enviar una nueva.',
+            en: 'This invitation expires in 7 days. If you don\'t accept before then, a new one will need to be sent.',
+        },
+        ignoreNotice: {
+            es: 'Si no esperabas esta invitación, podés ignorar este email.',
+            en: 'If you were not expecting this invitation, you can ignore this email.',
+        },
+        emailSubject: {
+            es: 'Te invitaron a unirte a {orgName} en SEENCEL',
+            en: 'You\'ve been invited to join {orgName} on SEENCEL',
+        },
+    },
 } as const;
 
 /**

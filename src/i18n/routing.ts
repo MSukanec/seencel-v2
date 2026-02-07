@@ -250,6 +250,12 @@ export const routing = defineRouting({
             en: '/docs',
             es: '/docs'
         },
+
+        // ===== Invitations =====
+        '/invite/accept': {
+            en: '/invite/accept',
+            es: '/invitacion/aceptar'
+        },
     }
 });
 

@@ -5,3 +5,4 @@ export { SubscriptionExpiringEmail } from './subscription-expiring-email';
 export { SubscriptionExpiredEmail } from './subscription-expired-email';
 export { BankTransferPendingEmail } from './bank-transfer-pending-email';
 export { BankTransferVerifiedEmail } from './bank-transfer-verified-email';
+export { TeamInvitationEmail } from './team-invitation-email';
