@@ -92,7 +92,13 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL(`/${locale}/organization`, request.url));
         }
 
-        // SCENARIO 4: Authenticated user on landing page → redirect to hub instantly
+        // SCENARIO 4: Allow invitation acceptance for logged-in users
+        const isInvitePath = pathWithoutLocale.startsWith("/invite") || pathWithoutLocale.startsWith("/invitacion");
+        if (isInvitePath) {
+            return response; // Let them through to accept invitation
+        }
+
+        // SCENARIO 5: Authenticated user on landing page → redirect to hub instantly
         // Skip redirect if user explicitly requested the landing page (?landing=true)
         if (pathWithoutLocale === "/" && !request.nextUrl.searchParams.has('landing')) {
             const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";
@@ -107,9 +113,9 @@ export async function middleware(request: NextRequest) {
         // Spanish paths: /privacidad, /terminos, /contacto, /fundadores, /precios, /caracteristicas, /cursos, /academia, /sobre, /portal, /comunidad
         const publicPrefixes = [
             // English
-            "/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/academy", "/about", "/portal", "/community", "/offline",
+            "/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/academy", "/about", "/portal", "/community", "/offline", "/invite",
             // Spanish translations
-            "/privacidad", "/terminos", "/contacto", "/fundadores", "/precios", "/caracteristicas", "/cursos", "/academia", "/sobre", "/comunidad"
+            "/privacidad", "/terminos", "/contacto", "/fundadores", "/precios", "/caracteristicas", "/cursos", "/academia", "/sobre", "/comunidad", "/invitacion"
         ];
         const isPublicPage = pathWithoutLocale === "/" || isAuthPath || publicPrefixes.some(p => pathWithoutLocale.startsWith(p));
 

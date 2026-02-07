@@ -11,6 +11,8 @@ import { OrganizationStoreHydrator } from "@/stores/organization-store";
 import { Currency } from "@/types/currency";
 import MaintenancePage from "./maintenance/page";
 import { MemberRemovedOverlay } from "@/features/organization/components/member-removed-overlay";
+import { PendingInvitationOverlay } from "@/features/team/components/pending-invitation-overlay";
+import { createClient } from "@/lib/supabase/server";
 
 // Force dynamic to ensure fresh organization data on every request
 // This is critical for organization switching to work correctly
@@ -38,6 +40,49 @@ export default async function DashboardLayout({
     // Detect stale membership: user was removed from their active org
     const wasRemoved = activeOrgId && organizations.length > 0 && !organizations.some((o: any) => o.id === activeOrgId);
     const fallbackOrg = wasRemoved ? organizations[0] : null;
+
+    // Check for pending invitations for this user
+    let pendingInvitation: { id: string; token: string; organization_name: string; role_name: string; inviter_name: string | null } | null = null;
+    if (profile?.email) {
+        const supabase = await createClient();
+        const { data: invitations } = await supabase
+            .from('organization_invitations')
+            .select(`
+                id,
+                token,
+                status,
+                expires_at,
+                organization:organization_id (name),
+                role:role_id (name),
+                inviter:invited_by (user_id)
+            `)
+            .eq('email', profile.email.toLowerCase())
+            .eq('status', 'pending')
+            .gte('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (invitations && invitations.length > 0) {
+            const inv = invitations[0] as any;
+            // Get inviter name
+            let inviterName: string | null = null;
+            if (inv.inviter?.user_id) {
+                const { data: inviterUser } = await supabase
+                    .from('users')
+                    .select('full_name')
+                    .eq('id', inv.inviter.user_id)
+                    .single();
+                inviterName = inviterUser?.full_name || null;
+            }
+            pendingInvitation = {
+                id: inv.id,
+                token: inv.token,
+                organization_name: inv.organization?.name || 'Organización',
+                role_name: inv.role?.name || 'Miembro',
+                inviter_name: inviterName,
+            };
+        }
+    }
 
     // Initialize data arrays
     let currencies: Currency[] = [];
@@ -125,6 +170,11 @@ export default async function DashboardLayout({
                         <MemberRemovedOverlay
                             fallbackOrgId={fallbackOrg.id}
                             fallbackOrgName={fallbackOrg.name}
+                        />
+                    )}
+                    {!wasRemoved && pendingInvitation && (
+                        <PendingInvitationOverlay
+                            invitation={pendingInvitation}
                         />
                     )}
                 </LayoutSwitcher>
