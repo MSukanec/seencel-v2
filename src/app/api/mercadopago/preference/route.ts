@@ -22,20 +22,28 @@ export async function POST(request: NextRequest) {
         // Get request body
         const body = await request.json();
         const {
-            productType,     // 'subscription' | 'course'
-            productId,       // plan_id or course_id
-            organizationId,  // required for subscriptions
+            productType,     // 'subscription' | 'course' | 'seats'
+            productId,       // plan_id or course_id (not required for seats)
+            organizationId,  // required for subscriptions and seats
             billingPeriod,   // 'monthly' | 'annual'
             amount,          // in ARS
             title,           // product title
             couponCode,      // optional
             couponDiscount,  // optional discount amount
+            seatsQuantity,   // required for seats
         } = body;
 
         // Validate required fields
-        if (!productType || !productId || !amount || !title) {
+        // productId is required for subscription and course, not for seats
+        if (!productType || !amount || !title) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
+        if (productType !== 'seats' && !productId) {
+            return NextResponse.json(
+                { error: 'Missing productId for non-seats order' },
                 { status: 400 }
             );
         }
@@ -48,16 +56,17 @@ export async function POST(request: NextRequest) {
             .single();
 
         // Build external_reference with compact format (MP limit: 256 chars)
-        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test
+        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test|seats_qty
         // Use 'x' for null values to keep parsing simple
         const externalReference = [
-            productType, // subscription | course
+            productType, // subscription | course | seats
             user.id.slice(0, 36), // auth user UUID
             organizationId || 'x',
-            productId.slice(0, 36), // plan_id or course_id
+            productId ? productId.slice(0, 36) : 'x', // plan_id or course_id (x for seats)
             billingPeriod || 'x',
             couponCode || 'x',
             isTestMode ? '1' : '0',
+            productType === 'seats' ? String(seatsQuantity || 1) : 'x',
         ].join('|');
 
         // Validate length (MP max 256)
@@ -84,9 +93,14 @@ export async function POST(request: NextRequest) {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || '';
 
         // Add product type and ID to success URL for proper routing
-        const productParams = productType === 'course'
-            ? `product_type=course&course_id=${productId}`
-            : `product_type=subscription&org_id=${organizationId || ''}`;
+        let productParams: string;
+        if (productType === 'course') {
+            productParams = `product_type=course&course_id=${productId}`;
+        } else if (productType === 'seats') {
+            productParams = `product_type=seats&org_id=${organizationId || ''}&seats=${seatsQuantity || 1}`;
+        } else {
+            productParams = `product_type=subscription&org_id=${organizationId || ''}`;
+        }
 
         const successUrl = `${baseUrl}/checkout/success?source=mercadopago&${productParams}`;
         const pendingUrl = `${baseUrl}/checkout/pending?source=mercadopago&${productParams}`;
@@ -97,10 +111,10 @@ export async function POST(request: NextRequest) {
             body: {
                 items: [
                     {
-                        id: productId,
+                        id: productId || `seats-${organizationId}`,
                         title: title,
-                        quantity: 1,
-                        unit_price: finalAmount,
+                        quantity: productType === 'seats' ? (seatsQuantity || 1) : 1,
+                        unit_price: productType === 'seats' ? Math.round(finalAmount / (seatsQuantity || 1)) : finalAmount,
                         currency_id: 'ARS',
                     }
                 ],
@@ -146,6 +160,7 @@ export async function POST(request: NextRequest) {
                 status: 'pending',
                 product_type: productType,
                 payer_email: userData?.email || user.email || '',
+                seats_quantity: productType === 'seats' ? (seatsQuantity || 1) : null,
             });
         }
 

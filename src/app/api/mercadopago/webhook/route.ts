@@ -89,19 +89,21 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
         }
 
         const [
-            product_type,      // 'subscription' | 'course'
+            product_type,      // 'subscription' | 'course' | 'seats'
             user_id,           // auth user UUID
             organization_id,   // org UUID or 'x'
-            product_id,        // plan_id or course_id
+            product_id,        // plan_id or course_id or 'x' for seats
             billing_period,    // 'monthly' | 'annual' | 'x'
             coupon_code,       // coupon code or 'x'
             // is_test         // '1' | '0' - not used in webhook processing
+            // seats_qty       // number of seats (only for seats type)
         ] = parts;
 
         // Convert 'x' placeholders to null/undefined
         const orgId = organization_id === 'x' ? null : organization_id;
         const period = billing_period === 'x' ? 'monthly' : billing_period;
         const coupon = coupon_code === 'x' ? null : coupon_code;
+        const seatsQty = parts[7] && parts[7] !== 'x' ? parseInt(parts[7], 10) : 1;
 
         // Get internal user_id from auth_id
         const { data: userData } = await supabase
@@ -195,6 +197,33 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
                         severity: 'warning'
                     });
                 }
+            }
+
+        } else if (product_type === 'seats') {
+            // Handle seat purchase - same RPC as PayPal
+            const { data: seatResult, error } = await supabase.rpc('handle_member_seat_purchase', {
+                p_provider: 'mercadopago',
+                p_provider_payment_id: payment.id?.toString(),
+                p_user_id: internalUserId,
+                p_organization_id: orgId,
+                p_amount: payment.transaction_amount,
+                p_currency: payment.currency_id || 'ARS',
+                p_seats_purchased: seatsQty,
+                p_metadata: { mp_payment_id: payment.id, payer_email: payment.payer?.email },
+            });
+
+            if (error) {
+                console.error('handle_member_seat_purchase RPC error:', error);
+                await supabase.from('system_error_logs').insert({
+                    domain: 'payment',
+                    entity: 'webhook',
+                    function_name: 'handle_member_seat_purchase',
+                    error_message: error.message,
+                    context: { payment_id: payment.id, user_id: internalUserId, org_id: orgId, seats: seatsQty },
+                    severity: 'critical'
+                });
+            } else {
+                console.log('[MP Webhook] Seat purchase result:', seatResult);
             }
         }
 

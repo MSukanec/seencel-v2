@@ -13,6 +13,7 @@ import MaintenancePage from "./maintenance/page";
 import { MemberRemovedOverlay } from "@/features/organization/components/member-removed-overlay";
 import { PendingInvitationOverlay } from "@/features/team/components/pending-invitation-overlay";
 import { createClient } from "@/lib/supabase/server";
+import { getStorageUrl } from "@/lib/storage-utils";
 
 // Force dynamic to ensure fresh organization data on every request
 // This is critical for organization switching to work correctly
@@ -52,8 +53,8 @@ export default async function DashboardLayout({
                 token,
                 status,
                 expires_at,
+                role_id,
                 organization:organization_id (name, logo_path),
-                role:role_id (name),
                 inviter:invited_by (user_id)
             `)
             .eq('email', profile.email.toLowerCase())
@@ -66,8 +67,20 @@ export default async function DashboardLayout({
             const inv = invitations[0] as any;
             // Handle Supabase join results (can be array or object)
             const org = Array.isArray(inv.organization) ? inv.organization[0] : inv.organization;
-            const role = Array.isArray(inv.role) ? inv.role[0] : inv.role;
             const inviter = Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter;
+
+            // Fetch role name directly (join may fail due to RLS)
+            let roleName = 'Miembro';
+            if (inv.role_id) {
+                const { data: roleData } = await supabase
+                    .from('roles')
+                    .select('name')
+                    .eq('id', inv.role_id)
+                    .single();
+                if (roleData?.name) {
+                    roleName = roleData.name;
+                }
+            }
 
             // Get inviter name
             let inviterName: string | null = null;
@@ -79,12 +92,19 @@ export default async function DashboardLayout({
                     .single();
                 inviterName = inviterUser?.full_name || null;
             }
+
+            // Build logo URL from storage path
+            const logoPath = org?.logo_path || null;
+            const logoUrl = logoPath
+                ? getStorageUrl(logoPath, 'public-assets')
+                : null;
+
             pendingInvitation = {
                 id: inv.id,
                 token: inv.token,
                 organization_name: org?.name || 'Organización',
-                organization_logo: org?.logo_path || null,
-                role_name: role?.name || 'Miembro',
+                organization_logo: logoUrl,
+                role_name: roleName,
                 inviter_name: inviterName,
             };
         }

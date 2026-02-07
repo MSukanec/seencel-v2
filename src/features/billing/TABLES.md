@@ -251,6 +251,7 @@ create table public.mp_preferences (
   status text null default 'pending'::text,
   expires_at timestamp with time zone null,
   completed_at timestamp with time zone null,
+  seats_quantity integer null,
   constraint mp_subscription_preferences_pkey primary key (id),
   constraint mp_preferences_course_id_fkey foreign KEY (course_id) references courses (id) on delete set null,
   constraint mp_preferences_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
@@ -449,60 +450,81 @@ or
 update on payments for EACH row
 execute FUNCTION trigger_notify_user_payment_completed ();
 
-# Tabla PAYPAL_SEAT_PREFERENCES:
+# Tabla PAYPAL_PREFERENCES:
 
-create table public.paypal_seat_preferences (
+create table public.paypal_preferences (
   id character varying(50) not null,
-  user_id uuid not null,
-  organization_id uuid not null,
-  invitee_email character varying(255) not null,
-  role_id uuid not null,
-  subscription_id uuid null,
-  prorated_amount_usd numeric(10, 2) not null,
-  billing_period character varying(20) not null,
   order_id character varying(100) null,
-  status character varying(20) null default 'pending'::character varying,
+  user_id uuid not null,
+  organization_id uuid null,
+  plan_id uuid null,
+  plan_slug text null,
+  billing_period text null,
+  amount numeric(12, 2) null,
+  currency text null default 'USD'::text,
+  product_type text null,
+  course_id uuid null,
+  coupon_id uuid null,
+  coupon_code text null,
+  discount_amount numeric(12, 2) null default 0,
+  is_test boolean null default false,
+  is_sandbox boolean null default false,
+  status text null default 'pending'::text,
   created_at timestamp with time zone null default now(),
   captured_at timestamp with time zone null,
-  constraint paypal_seat_preferences_pkey primary key (id),
-  constraint paypal_seat_preferences_organization_id_fkey foreign KEY (organization_id) references organizations (id),
-  constraint paypal_seat_preferences_role_id_fkey foreign KEY (role_id) references roles (id),
-  constraint paypal_seat_preferences_subscription_id_fkey foreign KEY (subscription_id) references organization_subscriptions (id),
-  constraint paypal_seat_preferences_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
+  expires_at timestamp with time zone null,
+  seats_quantity integer null,
+  constraint paypal_preferences_pkey primary key (id),
+  constraint paypal_preferences_coupon_id_fkey foreign KEY (coupon_id) references coupons (id) on delete set null,
+  constraint paypal_preferences_course_id_fkey foreign KEY (course_id) references courses (id) on delete set null,
+  constraint paypal_preferences_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint paypal_preferences_plan_id_fkey foreign KEY (plan_id) references plans (id) on delete set null,
+  constraint paypal_preferences_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE,
+  constraint paypal_preferences_product_type_check check (
+    (
+      (
+        product_type = any (
+          array[
+            'subscription'::text,
+            'course'::text,
+            'seats'::text
+          ]
+        )
+      )
+      or (product_type is null)
+    )
+  ),
+  constraint paypal_preferences_status_check check (
+    (
+      status = any (
+        array[
+          'pending'::text,
+          'completed'::text,
+          'cancelled'::text,
+          'expired'::text
+        ]
+      )
+    )
+  ),
+  constraint paypal_preferences_billing_period_check check (
+    (
+      (
+        billing_period = any (array['monthly'::text, 'annual'::text])
+      )
+      or (billing_period is null)
+    )
+  )
 ) TABLESPACE pg_default;
 
-create index IF not exists idx_paypal_seat_pref_org on public.paypal_seat_preferences using btree (organization_id) TABLESPACE pg_default;
+create index IF not exists idx_paypal_preferences_user on public.paypal_preferences using btree (user_id) TABLESPACE pg_default;
 
-create index IF not exists idx_paypal_seat_pref_order on public.paypal_seat_preferences using btree (order_id) TABLESPACE pg_default;
+create index IF not exists idx_paypal_preferences_org on public.paypal_preferences using btree (organization_id) TABLESPACE pg_default;
 
-# Tabla PAYPAL_UPGRADE_PREFERENCES:
+create index IF not exists idx_paypal_preferences_order on public.paypal_preferences using btree (order_id) TABLESPACE pg_default;
 
-create table public.paypal_upgrade_preferences (
-  id character varying(50) not null,
-  user_id uuid not null,
-  organization_id uuid not null,
-  plan_id uuid not null,
-  plan_slug character varying(50) not null,
-  billing_period character varying(20) not null,
-  amount_usd numeric(10, 2) not null,
-  order_id character varying(100) null,
-  previous_subscription_id uuid null,
-  proration_credit numeric(10, 2) null,
-  full_price_usd numeric(10, 2) null,
-  target_paypal_plan_id character varying(100) null,
-  status character varying(20) null default 'pending'::character varying,
-  created_at timestamp with time zone null default now(),
-  captured_at timestamp with time zone null,
-  constraint paypal_upgrade_preferences_pkey primary key (id),
-  constraint paypal_upgrade_preferences_organization_id_fkey foreign KEY (organization_id) references organizations (id),
-  constraint paypal_upgrade_preferences_plan_id_fkey foreign KEY (plan_id) references plans (id),
-  constraint paypal_upgrade_preferences_previous_subscription_id_fkey foreign KEY (previous_subscription_id) references organization_subscriptions (id),
-  constraint paypal_upgrade_preferences_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-create index IF not exists idx_paypal_upgrade_pref_org on public.paypal_upgrade_preferences using btree (organization_id) TABLESPACE pg_default;
-
-create index IF not exists idx_paypal_upgrade_pref_order on public.paypal_upgrade_preferences using btree (order_id) TABLESPACE pg_default;
+create index IF not exists idx_paypal_preferences_status on public.paypal_preferences using btree (status) TABLESPACE pg_default
+where
+  (status = 'pending'::text);
 
 # Tabla PLANS:
 
