@@ -84,11 +84,31 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
     const supabase = await createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
+    // Get organization logo from invitation
+    let organizationLogo: string | null = null;
+    const { data: invitationWithOrg } = await supabase
+        .from('organization_invitations')
+        .select('organization_id, organizations!inner(logo_path)')
+        .eq('token', token)
+        .single();
+
+    if (invitationWithOrg?.organizations) {
+        const org = invitationWithOrg.organizations as unknown as { logo_path: string | null };
+        if (org.logo_path) {
+            // Build full storage URL
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            organizationLogo = org.logo_path.startsWith('http')
+                ? org.logo_path
+                : `${supabaseUrl}/storage/v1/object/public/public-assets/${org.logo_path}`;
+        }
+    }
+
     return (
         <InvitationLayout>
             <AcceptInvitationClient
                 token={token}
                 organizationName={inv.organization_name}
+                organizationLogo={organizationLogo}
                 roleName={inv.role_name}
                 inviterName={inv.inviter_name}
                 email={inv.email}

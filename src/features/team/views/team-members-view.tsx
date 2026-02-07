@@ -9,7 +9,7 @@ import { Mail, Users, UserPlus, CreditCard, Wrench, BookOpen } from "lucide-reac
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useModal } from "@/stores/modal-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
-import { removeMemberAction, updateMemberRoleAction } from "@/features/team/actions";
+import { removeMemberAction, updateMemberRoleAction, revokeInvitationAction, resendInvitationAction } from "@/features/team/actions";
 import { SeatStatus } from "@/features/team/types";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { MemberListItem } from "@/components/shared/list-item";
@@ -283,10 +283,40 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="sm" className="h-8 text-xs">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 text-xs"
+                                                disabled={isPending}
+                                                onClick={() => {
+                                                    startTransition(async () => {
+                                                        const result = await resendInvitationAction(organizationId, invite.id);
+                                                        if (result.success) {
+                                                            toast.success("Invitación reenviada correctamente");
+                                                        } else {
+                                                            toast.error(result.error || "Error al reenviar");
+                                                        }
+                                                    });
+                                                }}
+                                            >
                                                 Reenviar
                                             </Button>
-                                            <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                disabled={isPending}
+                                                onClick={() => {
+                                                    startTransition(async () => {
+                                                        const result = await revokeInvitationAction(organizationId, invite.id);
+                                                        if (result.success) {
+                                                            toast.success("Invitación revocada");
+                                                        } else {
+                                                            toast.error(result.error || "Error al revocar");
+                                                        }
+                                                    });
+                                                }}
+                                            >
                                                 Revocar
                                             </Button>
                                         </div>

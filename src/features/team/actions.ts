@@ -225,6 +225,150 @@ export async function getInvitationByToken(
 }
 
 /**
+ * Revoke (cancel) a pending invitation.
+ */
+export async function revokeInvitationAction(
+    organizationId: string,
+    invitationId: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return { success: false, error: "No autenticado" };
+
+    const { data: currentUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .single();
+    if (!currentUser) return { success: false, error: "Usuario no encontrado" };
+
+    // Verify caller is admin
+    const { data: callerMember } = await supabase
+        .from('organization_members_full_view')
+        .select('id, role_type, role_name')
+        .eq('organization_id', organizationId)
+        .eq('user_id', currentUser.id)
+        .eq('is_active', true)
+        .single();
+
+    const isAdmin = callerMember?.role_type === 'admin' || callerMember?.role_name === 'Administrador';
+    if (!callerMember || !isAdmin) {
+        return { success: false, error: "Solo los administradores pueden revocar invitaciones" };
+    }
+
+    // Delete the invitation
+    const { error } = await supabase
+        .from('organization_invitations')
+        .delete()
+        .eq('id', invitationId)
+        .eq('organization_id', organizationId);
+
+    if (error) {
+        console.error('Error revoking invitation:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/[locale]/organization', 'layout');
+    return { success: true };
+}
+
+/**
+ * Resend an existing invitation with a fresh token and expiration.
+ */
+export async function resendInvitationAction(
+    organizationId: string,
+    invitationId: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return { success: false, error: "No autenticado" };
+
+    const { data: currentUser } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .eq('auth_id', authUser.id)
+        .single();
+    if (!currentUser) return { success: false, error: "Usuario no encontrado" };
+
+    // Verify caller is admin
+    const { data: callerMember } = await supabase
+        .from('organization_members_full_view')
+        .select('id, role_type, role_name')
+        .eq('organization_id', organizationId)
+        .eq('user_id', currentUser.id)
+        .eq('is_active', true)
+        .single();
+
+    const isAdmin = callerMember?.role_type === 'admin' || callerMember?.role_name === 'Administrador';
+    if (!callerMember || !isAdmin) {
+        return { success: false, error: "Solo los administradores pueden reenviar invitaciones" };
+    }
+
+    // Get invitation details
+    const { data: invitation } = await supabase
+        .from('organization_invitations')
+        .select('id, email, role_id, organization_id')
+        .eq('id', invitationId)
+        .eq('organization_id', organizationId)
+        .in('status', ['pending', 'registered'])
+        .single();
+
+    if (!invitation) {
+        return { success: false, error: "Invitación no encontrada o ya fue aceptada" };
+    }
+
+    // Get org name for email
+    const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .single();
+
+    // Generate new token and reset expiration
+    const newToken = randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const { error: updateError } = await supabase
+        .from('organization_invitations')
+        .update({
+            token: newToken,
+            expires_at: expiresAt.toISOString(),
+            status: 'pending',
+        })
+        .eq('id', invitationId);
+
+    if (updateError) {
+        console.error('Error resending invitation:', updateError);
+        return { success: false, error: updateError.message };
+    }
+
+    // Re-send email
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.seencel.com'}/invite?token=${newToken}`;
+
+    try {
+        await sendEmail({
+            to: invitation.email,
+            subject: `${currentUser.full_name || 'Un administrador'} te invitó a unirte a ${org?.name || 'una organización'} en Seencel`,
+            react: TeamInvitationEmail({
+                acceptUrl: inviteUrl,
+                organizationName: org?.name || 'Organización',
+                inviterName: currentUser.full_name || 'Un administrador',
+                roleName: 'Miembro',
+            }),
+        });
+    } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Don't fail the action if email fails - the token was already updated
+    }
+
+    revalidatePath('/[locale]/organization', 'layout');
+    return { success: true };
+}
+
+/**
  * Accept an organization invitation.
  * Requires the user to be authenticated.
  */

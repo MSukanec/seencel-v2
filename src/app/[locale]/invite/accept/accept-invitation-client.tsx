@@ -10,6 +10,7 @@ import { acceptInvitationAction } from "@/features/team/actions";
 interface Props {
     token: string;
     organizationName: string;
+    organizationLogo: string | null;
     roleName: string;
     inviterName: string | null;
     email: string;
@@ -19,6 +20,7 @@ interface Props {
 export function AcceptInvitationClient({
     token,
     organizationName,
+    organizationLogo,
     roleName,
     inviterName,
     email,
@@ -78,8 +80,18 @@ export function AcceptInvitationClient({
         <div className="rounded-xl border bg-card p-8 space-y-6">
             {/* Header */}
             <div className="text-center space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary" />
+                <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-xl overflow-hidden border bg-muted">
+                    {organizationLogo ? (
+                        <img
+                            src={organizationLogo}
+                            alt={organizationName}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <span className="text-xl font-bold text-muted-foreground">
+                            {organizationName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+                        </span>
+                    )}
                 </div>
                 <h1 className="text-xl font-semibold">Invitación a un equipo</h1>
                 <p className="text-muted-foreground text-sm">
