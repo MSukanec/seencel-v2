@@ -93,6 +93,84 @@ export async function toggleRolePermission(
 // ============================================================
 
 /**
+ * Update a member's role in the organization.
+ * Only admins can change roles. Cannot change your own role or another admin's role.
+ */
+export async function updateMemberRoleAction(
+    organizationId: string,
+    memberId: string,
+    newRoleId: string
+) {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No autenticado");
+
+    // Resolve public user ID from auth ID
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!publicUser) throw new Error("Usuario no encontrado");
+
+    // Check current user is admin
+    const { data: currentMember } = await supabase
+        .from('organization_members_full_view')
+        .select('id, role_type, role_name, user_id')
+        .eq('organization_id', organizationId)
+        .eq('user_id', publicUser.id)
+        .eq('is_active', true)
+        .single();
+
+    const isAdmin = currentMember?.role_type === 'admin' || currentMember?.role_name === 'Administrador';
+    if (!currentMember || !isAdmin) {
+        return { success: false, error: "Solo los administradores pueden cambiar roles" };
+    }
+
+    // Get target member
+    const { data: targetMember } = await supabase
+        .from('organization_members_full_view')
+        .select('id, role_type, role_name, user_id, user_full_name')
+        .eq('id', memberId)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .single();
+
+    if (!targetMember) {
+        return { success: false, error: "Miembro no encontrado" };
+    }
+
+    // Cannot change your own role
+    if (targetMember.user_id === publicUser.id) {
+        return { success: false, error: "No podés cambiar tu propio rol" };
+    }
+
+    // Cannot change another admin's role
+    const targetIsAdmin = targetMember.role_type === 'admin' || targetMember.role_name === 'Administrador';
+    if (targetIsAdmin) {
+        return { success: false, error: "No se puede cambiar el rol de un administrador" };
+    }
+
+    // Update the role
+    const { error } = await supabase
+        .from('organization_members')
+        .update({ role_id: newRoleId })
+        .eq('id', memberId)
+        .eq('organization_id', organizationId);
+
+    if (error) {
+        console.error('Error updating member role:', error);
+        return { success: false, error: "Error al actualizar el rol" };
+    }
+
+    revalidatePath('/organization/settings', 'page');
+
+    return { success: true, memberName: targetMember.user_full_name };
+}
+
+/**
  * Remove a member from the organization (soft delete: is_active = false).
  * Only admins can remove members. Cannot remove yourself or other admins.
  */
@@ -105,21 +183,32 @@ export async function removeMemberAction(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado");
 
+    // Resolve public user ID from auth ID
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!publicUser) throw new Error("Usuario no encontrado");
+
     const { data: currentMember } = await supabase
         .from('organization_members_full_view')
-        .select('id, role_type, user_id')
+        .select('id, role_type, role_name, user_id')
         .eq('organization_id', organizationId)
-        .eq('user_id', user.id)
+        .eq('user_id', publicUser.id)
         .eq('is_active', true)
         .single();
 
-    if (!currentMember || currentMember.role_type !== 'admin') {
+
+    const isAdmin = currentMember?.role_type === 'admin' || currentMember?.role_name === 'Administrador';
+    if (!currentMember || !isAdmin) {
         return { success: false, error: "Solo los administradores pueden eliminar miembros" };
     }
 
     const { data: targetMember } = await supabase
         .from('organization_members_full_view')
-        .select('id, role_type, user_id, user_full_name')
+        .select('id, role_type, role_name, user_id, user_full_name')
         .eq('id', memberId)
         .eq('organization_id', organizationId)
         .eq('is_active', true)
@@ -129,11 +218,12 @@ export async function removeMemberAction(
         return { success: false, error: "Miembro no encontrado" };
     }
 
-    if (targetMember.user_id === user.id) {
+    if (targetMember.user_id === publicUser.id) {
         return { success: false, error: "No podés eliminarte a vos mismo" };
     }
 
-    if (targetMember.role_type === 'admin') {
+    const targetIsAdmin = targetMember.role_type === 'admin' || targetMember.role_name === 'Administrador';
+    if (targetIsAdmin) {
         return { success: false, error: "No se puede eliminar a un administrador" };
     }
 
@@ -144,7 +234,7 @@ export async function removeMemberAction(
         .eq('organization_id', organizationId);
 
     if (error) {
-        console.error('Error removing member:', error);
+        console.error('Error removing member:', JSON.stringify(error, null, 2));
         return { success: false, error: "Error al eliminar miembro" };
     }
 

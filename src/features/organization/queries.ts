@@ -44,7 +44,7 @@ export async function getDashboardData() {
         const { data: directMember } = await supabase
             .from('organization_members')
             .select(`
-                role,
+                role_id,
                 organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
@@ -73,7 +73,7 @@ export async function getDashboardData() {
 
         if (directMember?.organizations) {
             organization = directMember.organizations;
-            computedRole = directMember.role;
+            computedRole = directMember.role_id;
         } else {
             // FALLBACK: Check if user is the Creator (Legacy Support)
             const { data: ownedOrg } = await supabase
@@ -115,7 +115,7 @@ export async function getDashboardData() {
         const { data: fallbackMember } = await supabase
             .from('organization_members')
             .select(`
-                role,
+                role_id,
                 organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
@@ -147,7 +147,7 @@ export async function getDashboardData() {
                 ? fallbackMember.organizations[0]
                 : fallbackMember.organizations;
             organization = orgData;
-            computedRole = fallbackMember.role;
+            computedRole = fallbackMember.role_id;
             orgId = orgData.id;
         } else {
             // 2. Try generic ownership (Legacy Support)

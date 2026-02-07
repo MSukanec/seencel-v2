@@ -8,11 +8,12 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail, MoreVertical, ShieldCheck, User, UserX, Pencil } from "lucide-react";
+import { Plus, Mail, MoreVertical, ShieldCheck, User, UserX, Pencil, Crown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useModal } from "@/stores/modal-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
-import { removeMemberAction } from "@/features/team/actions";
+import { removeMemberAction, updateMemberRoleAction } from "@/features/team/actions";
 import { toast } from "sonner";
 import {
     AlertDialog,
@@ -32,14 +33,22 @@ interface MembersSettingsViewProps {
     invitations: OrganizationInvitation[];
     roles: Role[];
     currentUserId: string;
+    ownerId: string | null;
 }
 
-export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId }: MembersSettingsViewProps) {
+export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId }: MembersSettingsViewProps) {
     const { openModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
     const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
     const [memberToRemove, setMemberToRemove] = useState<OrganizationMemberDetail | null>(null);
+    const [memberToEditRole, setMemberToEditRole] = useState<OrganizationMemberDetail | null>(null);
+    const [selectedRoleId, setSelectedRoleId] = useState<string>("");
     const [isPending, startTransition] = useTransition();
+
+    // Roles that can be assigned (exclude admin/system roles that shouldn't be manually assigned)
+    const assignableRoles = useMemo(() => {
+        return roles.filter(r => r.type !== 'admin');
+    }, [roles]);
 
     // Filter members by search query AND exclude optimistically removed members
     const filteredMembers = useMemo(() => {
@@ -75,6 +84,34 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         );
     };
 
+    const handleEditRole = (member: OrganizationMemberDetail) => {
+        setMemberToEditRole(member);
+        setSelectedRoleId(member.role_id || "");
+    };
+
+    const handleConfirmRoleChange = () => {
+        if (!memberToEditRole || !selectedRoleId) return;
+
+        const member = memberToEditRole;
+        const newRoleName = roles.find(r => r.id === selectedRoleId)?.name || "Rol";
+
+        // Close dialog
+        setMemberToEditRole(null);
+
+        startTransition(async () => {
+            try {
+                const result = await updateMemberRoleAction(organizationId, member.id, selectedRoleId);
+                if (!result.success) {
+                    toast.error(result.error || "Error al cambiar el rol");
+                } else {
+                    toast.success(`El rol de ${member.user_full_name || "miembro"} fue cambiado a ${newRoleName}`);
+                }
+            } catch {
+                toast.error("Error inesperado al cambiar el rol");
+            }
+        });
+    };
+
     const handleRemoveMember = (member: OrganizationMemberDetail) => {
         // Optimistic: remove from UI immediately
         setRemovedMemberIds(prev => [...prev, member.id]);
@@ -101,10 +138,24 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     const canRemoveMember = (member: OrganizationMemberDetail) => {
         // Cannot remove yourself
         if (member.user_id === currentUserId) return false;
+        // Cannot remove the owner
+        if (member.user_id === ownerId) return false;
         // Cannot remove admins
         if (member.role_type === 'admin') return false;
         return true;
     };
+
+    const canEditRole = (member: OrganizationMemberDetail) => {
+        // Cannot edit your own role
+        if (member.user_id === currentUserId) return false;
+        // Cannot edit the owner's role
+        if (member.user_id === ownerId) return false;
+        // Cannot edit admin roles
+        if (member.role_type === 'admin' || member.role_name === 'Administrador') return false;
+        return true;
+    };
+
+    const isOwner = (member: OrganizationMemberDetail) => member.user_id === ownerId;
 
     const isCurrentUser = (member: OrganizationMemberDetail) => member.user_id === currentUserId;
 
@@ -162,20 +213,28 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
 
                                             <div className="flex items-center gap-4">
                                                 <div className="hidden sm:flex flex-col items-end gap-1 mr-2">
-                                                    <Badge variant="outline" className="font-normal capitalize gap-1">
-                                                        {member.role_name === 'owner' || member.role_type === 'admin'
-                                                            ? <ShieldCheck className="w-3 h-3 text-primary" />
-                                                            : <User className="w-3 h-3" />
-                                                        }
-                                                        {member.role_name || "Miembro"}
-                                                    </Badge>
+                                                    <div className="flex items-center gap-1.5">
+                                                        {isOwner(member) && (
+                                                            <Badge variant="outline" className="font-normal gap-1 border-amber-500/50 text-amber-500 bg-amber-500/10">
+                                                                <Crown className="w-3 h-3" />
+                                                                Dueño
+                                                            </Badge>
+                                                        )}
+                                                        <Badge variant="outline" className="font-normal capitalize gap-1">
+                                                            {member.role_name === 'owner' || member.role_type === 'admin'
+                                                                ? <ShieldCheck className="w-3 h-3 text-primary" />
+                                                                : <User className="w-3 h-3" />
+                                                            }
+                                                            {member.role_name || "Miembro"}
+                                                        </Badge>
+                                                    </div>
                                                     <span className="text-xs text-muted-foreground">
                                                         Unido el {new Date(member.joined_at).toLocaleDateString()}
                                                     </span>
                                                 </div>
 
                                                 {/* Only show menu for non-self, non-admin members */}
-                                                {canRemoveMember(member) && (
+                                                {(canEditRole(member) || canRemoveMember(member)) && (
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group-hover:text-foreground">
@@ -183,18 +242,24 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem>
-                                                                <Pencil className="w-4 h-4 mr-2" />
-                                                                Editar Rol
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive"
-                                                                onClick={() => setMemberToRemove(member)}
-                                                            >
-                                                                <UserX className="w-4 h-4 mr-2" />
-                                                                Eliminar Miembro
-                                                            </DropdownMenuItem>
+                                                            {canEditRole(member) && (
+                                                                <DropdownMenuItem onClick={() => handleEditRole(member)}>
+                                                                    <Pencil className="w-4 h-4 mr-2" />
+                                                                    Editar Rol
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {canEditRole(member) && canRemoveMember(member) && (
+                                                                <DropdownMenuSeparator />
+                                                            )}
+                                                            {canRemoveMember(member) && (
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    onClick={() => setMemberToRemove(member)}
+                                                                >
+                                                                    <UserX className="w-4 h-4 mr-2" />
+                                                                    Eliminar Miembro
+                                                                </DropdownMenuItem>
+                                                            )}
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 )}
@@ -258,6 +323,52 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                 </div>
             </ContentLayout>
 
+            {/* Edit Role Dialog */}
+            <AlertDialog open={!!memberToEditRole} onOpenChange={(open) => !open && setMemberToEditRole(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Cambiar rol de {memberToEditRole?.user_full_name || "miembro"}</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-4">
+                                <p>
+                                    Seleccioná el nuevo rol para <strong className="text-foreground">{memberToEditRole?.user_full_name}</strong>.
+                                    Los permisos se actualizarán inmediatamente.
+                                </p>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Rol</label>
+                                    <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar rol" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {assignableRoles.map((role) => (
+                                                <SelectItem key={role.id} value={role.id}>
+                                                    <div className="flex flex-col">
+                                                        <span>{role.name}</span>
+                                                        {role.description && (
+                                                            <span className="text-xs text-muted-foreground">{role.description}</span>
+                                                        )}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmRoleChange}
+                            disabled={isPending || !selectedRoleId || selectedRoleId === memberToEditRole?.role_id}
+                        >
+                            {isPending ? "Guardando..." : "Cambiar rol"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Remove Member Confirmation Dialog */}
             <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
                 <AlertDialogContent>
@@ -301,3 +412,4 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         </>
     );
 }
+

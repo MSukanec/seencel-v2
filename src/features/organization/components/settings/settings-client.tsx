@@ -10,9 +10,10 @@ interface SettingsClientProps {
     data: OrganizationSettingsData;
     organizationId: string;
     currentUserId: string;
+    ownerId: string | null;
 }
 
-export function SettingsClient({ data, organizationId, currentUserId }: SettingsClientProps) {
+export function SettingsClient({ data, organizationId, currentUserId, ownerId }: SettingsClientProps) {
     // Get planId from subscription or fallback
     const planId = data.subscription?.plan_id ?? "";
 
@@ -26,6 +27,7 @@ export function SettingsClient({ data, organizationId, currentUserId }: Settings
                     invitations={data.invitations}
                     roles={data.roles}
                     currentUserId={currentUserId}
+                    ownerId={ownerId}
                 />
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">

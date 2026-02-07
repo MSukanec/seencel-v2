@@ -33,6 +33,15 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
 
     const data = await getOrganizationSettingsData(orgId);
 
+    // Fetch owner_id for the organization
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('owner_id')
+        .eq('id', orgId)
+        .single();
+
+    const ownerId = orgData?.owner_id || null;
+
     return (
         <Tabs defaultValue={initialTab} className="h-full flex flex-col">
             <PageWrapper
@@ -54,7 +63,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                 }
             >
                 <ContentLayout variant="wide">
-                    <SettingsClient data={data} organizationId={orgId} currentUserId={user.id} />
+                    <SettingsClient data={data} organizationId={orgId} currentUserId={user.id} ownerId={ownerId} />
                 </ContentLayout>
             </PageWrapper>
         </Tabs>
