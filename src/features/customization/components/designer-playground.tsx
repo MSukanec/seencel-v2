@@ -10,8 +10,8 @@ import { detectPaletteMood, applyMoodTypography, MOOD_TYPOGRAPHY, type Typograph
 import { AmbientAnimations } from "./ambient-animations";
 import { PhotoZoneSelector } from "./photo-zone-selector";
 import { DraggableBentoGrid, type DraggableItem } from "./draggable-bento-grid";
-import { BentoKpiCard } from "@/components/bento/bento-kpi-card";
-import { BentoListCard, type BentoListItem } from "@/components/bento/bento-list-card";
+import { BentoKpiCard } from "@/components/bento/presets/bento-kpi-card";
+import { BentoListCard, type BentoListItem } from "@/components/bento/presets/bento-list-card";
 import type { CuratedPalette, ExtractedColor } from "../types/palette";
 import "../styles/refined-mode.css";
 import "../styles/typography-moods.css";

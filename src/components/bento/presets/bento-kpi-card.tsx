@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
+import { BentoCard } from "../bento-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrendingUp, TrendingDown, Minus, Maximize2 } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
@@ -60,21 +60,13 @@ interface BentoKpiCardProps extends React.HTMLAttributes<HTMLDivElement> {
     chartPosition?: ChartPosition;
     /** Card size */
     size?: BentoSize;
-    /** Accent color for glow effect */
+    /** Accent color (kept for API compat, no visual effect) */
     accentColor?: string;
     /** Footer content */
     footer?: React.ReactNode;
     /** Enable expand to fullscreen */
     expandable?: boolean;
 }
-
-const sizeStyles: Record<BentoSize, string> = {
-    sm: 'col-span-1 row-span-1',
-    md: 'col-span-1 md:col-span-2 row-span-1',
-    lg: 'col-span-1 md:col-span-2 row-span-2',
-    wide: 'col-span-full row-span-1',
-    tall: 'col-span-1 row-span-2'
-};
 
 /**
  * Normalize chart data to ChartDataPoint[] format
@@ -299,7 +291,8 @@ function FullChart({
 /**
  * BentoKpiCard - KPI card with integrated chart visualization
  * 
- * Structure: Header (title + icon) → Body (value + chart) → Footer (optional)
+ * Composes BentoCard (parent shell) with KPI-specific content:
+ * value display, trend indicator, and embedded charts.
  */
 export function BentoKpiCard({
     title,
@@ -334,7 +327,6 @@ export function BentoKpiCard({
     }, [amount, value, money]);
 
     // Render chart based on type and position
-    // Render chart based on type and position
     const renderChart = (showLabels = false) => {
         if (chartType === 'none' || normalizedData.length === 0) return null;
 
@@ -367,21 +359,14 @@ export function BentoKpiCard({
 
     return (
         <>
-            <Card
-                className={cn(
-                    "h-full flex flex-col relative overflow-hidden transition-all duration-300",
-                    "bg-card/60 backdrop-blur-sm border-border/50",
-                    "hover:shadow-lg hover:border-primary/30",
-                    sizeStyles[size],
-                    className
-                )}
-                style={accentColor ? {
-                    boxShadow: `0 0 40px -10px ${accentColor}40`
-                } : undefined}
+            <BentoCard
+                size={size}
+                headerless
+                className={cn("relative", className)}
                 {...props}
             >
-                {/* === HEADER === */}
-                <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                {/* === CUSTOM HEADER (with expand button) === */}
+                <div className="flex items-center gap-2 -mt-1 mb-1">
                     {icon && (
                         <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 text-primary">
                             {icon}
@@ -404,52 +389,42 @@ export function BentoKpiCard({
                     )}
                 </div>
 
-                {/* === BODY === */}
-                <div className="flex-1 min-h-0 px-4 pb-0 flex flex-col relative z-10">
-                    {/* Value + Trend */}
-                    <div className="shrink-0 py-1 mb-3">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold tracking-tight">{displayValue}</span>
-                        </div>
-
-                        {/* Trend */}
-                        {trend && (
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className={cn(
-                                    "flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full",
-                                    trend.direction === 'up' && "bg-amount-positive/10 text-amount-positive",
-                                    trend.direction === 'down' && "bg-amount-negative/10 text-amount-negative",
-                                    trend.direction === 'neutral' && "bg-muted text-muted-foreground"
-                                )}>
-                                    {trend.direction === 'up' && <TrendingUp className="w-3 h-3" />}
-                                    {trend.direction === 'down' && <TrendingDown className="w-3 h-3" />}
-                                    {trend.direction === 'neutral' && <Minus className="w-3 h-3" />}
-                                    {trend.value}
-                                </span>
-                                {trend.label && (
-                                    <span className="text-xs text-muted-foreground">{trend.label}</span>
-                                )}
-                            </div>
-                        )}
+                {/* === VALUE + TREND === */}
+                <div className="shrink-0 py-1 mb-3">
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tracking-tight">{displayValue}</span>
                     </div>
 
-                    {/* Chart (bottom position) - takes remaining space */}
-                    {chartPosition === 'bottom' && renderChart(true)}
+                    {/* Trend */}
+                    {trend && (
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className={cn(
+                                "flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full",
+                                trend.direction === 'up' && "bg-amount-positive/10 text-amount-positive",
+                                trend.direction === 'down' && "bg-amount-negative/10 text-amount-negative",
+                                trend.direction === 'neutral' && "bg-muted text-muted-foreground"
+                            )}>
+                                {trend.direction === 'up' && <TrendingUp className="w-3 h-3" />}
+                                {trend.direction === 'down' && <TrendingDown className="w-3 h-3" />}
+                                {trend.direction === 'neutral' && <Minus className="w-3 h-3" />}
+                                {trend.value}
+                            </span>
+                            {trend.label && (
+                                <span className="text-xs text-muted-foreground">{trend.label}</span>
+                            )}
+                        </div>
+                    )}
                 </div>
+
+                {/* Chart (bottom position) */}
+                {chartPosition === 'bottom' && renderChart(true)}
 
                 {/* Background Chart */}
                 {chartPosition === 'background' && renderChart(false)}
 
                 {/* Right Chart */}
                 {chartPosition === 'right' && renderChart(false)}
-
-                {/* === FOOTER (Optional) === */}
-                {footer && (
-                    <div className="px-4 py-2 border-t border-border/50 bg-muted/30">
-                        {footer}
-                    </div>
-                )}
-            </Card>
+            </BentoCard>
 
             {/* Expanded Chart Dialog */}
             <Dialog open={isExpanded} onOpenChange={setIsExpanded}>

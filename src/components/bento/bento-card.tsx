@@ -25,8 +25,7 @@ interface BentoCardProps extends React.HTMLAttributes<HTMLDivElement> {
     icon?: React.ReactNode;
     /** Visual variant */
     variant?: BentoVariant;
-    /** Glow accent color (CSS color value) */
-    glowColor?: string;
+
     /** Main content (goes in Body) */
     children: React.ReactNode;
     /** Footer content (optional) */
@@ -44,9 +43,9 @@ export const sizeStyles: Record<BentoSize, string> = {
 };
 
 const variantStyles: Record<BentoVariant, string> = {
-    default: 'bg-card/60 backdrop-blur-sm border-border/50',
-    glass: 'bg-card/30 backdrop-blur-md border-white/10 shadow-xl',
-    gradient: 'bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm border-border/30',
+    default: 'bg-card border-border/50',
+    glass: 'bg-card border-border/50',
+    gradient: 'bg-card border-border/50',
     outline: 'bg-transparent border-2 border-border'
 };
 
@@ -76,7 +75,6 @@ export function BentoCard({
     subtitle,
     icon,
     variant = 'default',
-    glowColor,
     headerless = false,
     footer,
     className,
@@ -84,21 +82,15 @@ export function BentoCard({
     style,
     ...props
 }: BentoCardProps) {
-    const glowStyle = glowColor ? {
-        '--glow-color': glowColor,
-        boxShadow: `0 0 40px -10px ${glowColor}20`
-    } as React.CSSProperties : {};
-
     return (
         <Card
             className={cn(
-                "h-full flex flex-col overflow-hidden transition-all duration-300",
-                "hover:shadow-lg hover:border-primary/30",
+                "h-full flex flex-col overflow-hidden",
                 sizeStyles[size],
                 variantStyles[variant],
                 className
             )}
-            style={{ ...style, ...glowStyle }}
+            style={style}
             {...props}
         >
             {/* === HEADER === */}

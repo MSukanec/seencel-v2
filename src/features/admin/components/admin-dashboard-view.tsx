@@ -92,7 +92,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
             <BentoGrid columns={4} gap="md">
                 {/* Featured KPI with chart */}
                 <BentoKpiCard
-                    size="md"
+                    size="sm"
                     title="Usuarios Totales"
                     value={kpis.totalUsers}
                     icon={<Users className="w-5 h-5" />}

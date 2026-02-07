@@ -8,7 +8,7 @@ import { extractColorsFromImage } from "@/features/customization/lib/color-extra
 import { generateRefinedPalette } from "@/features/customization/lib/palette-analysis";
 import { detectPaletteMood, MOOD_TYPOGRAPHY, type TypographyMood } from "@/features/customization/lib/typography-mood";
 import { useThemeCustomization } from "@/stores/theme-store";
-import { BentoKpiCard } from "@/components/bento/bento-kpi-card";
+import { BentoKpiCard } from "@/components/bento/presets/bento-kpi-card";
 import type { ExtractedColor, CuratedPalette } from "@/features/customization/types/palette";
 import { DollarSign, Users, TrendingUp, Folder } from "lucide-react";
 import { toast } from "sonner";

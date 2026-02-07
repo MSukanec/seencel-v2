@@ -1,4 +1,12 @@
-CREATE OR REPLACE FUNCTION public.admin_cleanup_user_purchases(
+-- ============================================
+-- PATCH: Fix admin_cleanup_user_purchases
+-- Elimina referencias a tablas legacy que no existen:
+--   - paypal_seat_preferences
+--   - paypal_upgrade_preferences
+-- Estas tablas nunca se crearon; la tabla unificada es paypal_preferences.
+-- ============================================
+
+CREATE OR REPLACE FUNCTION public.admin_cleanup_test_purchase(
     p_user_email TEXT,
     p_org_id UUID
 )
@@ -115,7 +123,6 @@ BEGIN
     END IF;
     
     -- 8. Borrar payment_events vinculados a paypal_preferences del usuario
-    -- (ANTES de borrar paypal_preferences para que el subquery funcione)
     DELETE FROM payment_events pe
     WHERE EXISTS (
         SELECT 1 FROM paypal_preferences pp 
@@ -127,26 +134,15 @@ BEGIN
         v_deleted_items := array_append(v_deleted_items, 'payment_events (' || v_affected_count || ')'); 
     END IF;
 
-    -- 9. Borrar paypal_preferences del usuario (tabla unificada nueva)
+    -- 9. Borrar paypal_preferences del usuario (tabla unificada)
     DELETE FROM paypal_preferences WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'paypal_preferences (' || v_affected_count || ')'); 
     END IF;
     
-    -- 10. Borrar paypal_seat_preferences (legacy)
-    DELETE FROM paypal_seat_preferences WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'paypal_seat_preferences (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 11. Borrar paypal_upgrade_preferences (legacy)
-    DELETE FROM paypal_upgrade_preferences WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'paypal_upgrade_preferences (' || v_affected_count || ')'); 
-    END IF;
+    -- NOTA: paypal_seat_preferences y paypal_upgrade_preferences son legacy
+    -- y no existen en producción. Toda la data está en paypal_preferences.
     
     -- ============================================
     -- RESULTADO
