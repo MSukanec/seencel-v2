@@ -5,6 +5,7 @@
 DECLARE
     v_invitation RECORD;
     v_already_member BOOLEAN;
+    v_inactive_member_id UUID;
     v_seat_capacity INT;
     v_current_members INT;
     v_pending_invitations INT;
@@ -75,6 +76,13 @@ BEGIN
         );
     END IF;
 
+    -- 4b. Verificar si existe un miembro INACTIVO (fue removido previamente)
+    SELECT id INTO v_inactive_member_id
+    FROM public.organization_members
+    WHERE organization_id = v_invitation.organization_id
+      AND user_id = p_user_id
+      AND is_active = false;
+
     -- 5. Verificar asientos disponibles
     SELECT 
         COALESCE((p.features->>'seats_included')::integer, 1) + COALESCE(org.purchased_seats, 0)
@@ -94,8 +102,6 @@ BEGIN
       AND status IN ('pending', 'registered')
       AND id != v_invitation.id; -- Excluyendo la actual
 
-    -- La invitación actual ya fue contada cuando se creó, 
-    -- así que hay espacio si current_members < capacity
     v_available := v_seat_capacity - v_current_members;
 
     IF v_available <= 0 THEN
@@ -106,25 +112,42 @@ BEGIN
         );
     END IF;
 
-    -- 6. Crear miembro
-    INSERT INTO public.organization_members (
-        organization_id,
-        user_id,
-        role_id,
-        is_active,
-        is_billable,
-        joined_at,
-        invited_by
-    ) VALUES (
-        v_invitation.organization_id,
-        p_user_id,
-        v_invitation.role_id,
-        true,
-        true, -- Miembros invitados son billables
-        NOW(),
-        v_invitation.invited_by
-    )
-    RETURNING id INTO v_new_member_id;
+    -- 6. Crear o reactivar miembro
+    IF v_inactive_member_id IS NOT NULL THEN
+        -- Re-activar miembro existente
+        UPDATE public.organization_members
+        SET 
+            is_active = true,
+            is_billable = true,
+            role_id = v_invitation.role_id,
+            invited_by = v_invitation.invited_by,
+            joined_at = NOW(),
+            updated_at = NOW(),
+            is_over_limit = false
+        WHERE id = v_inactive_member_id;
+
+        v_new_member_id := v_inactive_member_id;
+    ELSE
+        -- Crear miembro nuevo
+        INSERT INTO public.organization_members (
+            organization_id,
+            user_id,
+            role_id,
+            is_active,
+            is_billable,
+            joined_at,
+            invited_by
+        ) VALUES (
+            v_invitation.organization_id,
+            p_user_id,
+            v_invitation.role_id,
+            true,
+            true,
+            NOW(),
+            v_invitation.invited_by
+        )
+        RETURNING id INTO v_new_member_id;
+    END IF;
 
     -- 7. Actualizar invitación
     UPDATE public.organization_invitations
