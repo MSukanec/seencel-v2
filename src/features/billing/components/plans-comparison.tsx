@@ -430,7 +430,26 @@ export function PlansComparison({
                                     const status = getPlanStatus(plan.name);
                                     const userCanClick = canInteract(plan.name);
 
-                                    if (isCurrentPlan) {
+                                    // Plan tier hierarchy: free=0, pro=1, teams=2
+                                    const getPlanTier = (name: string) => {
+                                        const lower = name.toLowerCase();
+                                        if (lower === 'free') return 0;
+                                        if (lower === 'pro') return 1;
+                                        if (lower === 'teams') return 2;
+                                        return 0;
+                                    };
+
+                                    const thisPlanTier = getPlanTier(plan.name);
+
+                                    // Find current plan tier from currentPlanId
+                                    const currentPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
+                                    const currentTier = currentPlan ? getPlanTier(currentPlan.name) : 0;
+
+                                    // Free plan always shows "Plan Actual" for logged-in users
+                                    const isFree = thisPlanTier === 0;
+                                    const isLoggedIn = !!currentPlanId || isDashboard;
+
+                                    if (isCurrentPlan || (isFree && isLoggedIn)) {
                                         return (
                                             <Button
                                                 className="w-full"
@@ -439,6 +458,20 @@ export function PlansComparison({
                                             >
                                                 <Check className="h-4 w-4 mr-2" />
                                                 Plan Actual
+                                            </Button>
+                                        );
+                                    }
+
+                                    // Plan is inferior to current plan - no downgrade
+                                    if (isLoggedIn && thisPlanTier < currentTier) {
+                                        return (
+                                            <Button
+                                                className="w-full"
+                                                variant="outline"
+                                                disabled
+                                            >
+                                                <Check className="h-4 w-4 mr-2" />
+                                                Incluido en tu plan
                                             </Button>
                                         );
                                     }
@@ -524,7 +557,7 @@ export function PlansComparison({
                                         );
                                     }
 
-                                    // Normal active state - full width button
+                                    // Normal active state - upgrade CTA
                                     return (
                                         <Link
                                             href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}
@@ -537,7 +570,7 @@ export function PlansComparison({
                                                 )}
                                                 variant={isPopular ? "default" : "outline"}
                                             >
-                                                {isDashboard ? "Cambiar Plan" : "Empezar Ahora"}
+                                                {isDashboard ? "Mejorar Plan" : "Empezar Ahora"}
                                             </Button>
                                         </Link>
                                     );
@@ -570,24 +603,57 @@ export function PlansComparison({
                                 </button>
                             ))}
                         </div>
-                        {plans[selectedPlanIndex] && (
-                            canInteract(plans[selectedPlanIndex].name) ? (
+                        {plans[selectedPlanIndex] && (() => {
+                            const selectedPlan = plans[selectedPlanIndex];
+                            const getPlanTier = (name: string) => {
+                                const lower = name.toLowerCase();
+                                if (lower === 'free') return 0;
+                                if (lower === 'pro') return 1;
+                                if (lower === 'teams') return 2;
+                                return 0;
+                            };
+                            const thisTier = getPlanTier(selectedPlan.name);
+                            const curPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
+                            const curTier = curPlan ? getPlanTier(curPlan.name) : 0;
+                            const isFree = thisTier === 0;
+                            const isLoggedIn = !!currentPlanId || isDashboard;
+                            const isCurrentPlan = currentPlanId === selectedPlan.id;
+
+                            if (isCurrentPlan || (isFree && isLoggedIn)) {
+                                return (
+                                    <Button size="sm" variant="outline" disabled>
+                                        <Check className="h-4 w-4 mr-1" />
+                                        Actual
+                                    </Button>
+                                );
+                            }
+
+                            if (isLoggedIn && thisTier < curTier) {
+                                return (
+                                    <Button size="sm" variant="outline" disabled>
+                                        <Check className="h-4 w-4 mr-1" />
+                                        Incluido
+                                    </Button>
+                                );
+                            }
+
+                            return canInteract(selectedPlan.name) ? (
                                 <Button
                                     size="sm"
                                     className={cn(
-                                        getPlanGradient(plans[selectedPlanIndex].name).bg,
+                                        getPlanGradient(selectedPlan.name).bg,
                                         "text-white hover:opacity-90"
                                     )}
                                 >
-                                    {isDashboard ? "Cambiar" : "Empezar"}
+                                    {isDashboard ? "Mejorar" : "Empezar"}
                                 </Button>
                             ) : (
                                 <div className="flex items-center gap-1 text-muted-foreground text-xs">
                                     <Wrench className="h-3 w-3" />
                                     <span>Mantenimiento</span>
                                 </div>
-                            )
-                        )}
+                            );
+                        })()}
                     </div>
 
                     {/* Desktop: All plans visible */}
@@ -621,42 +687,78 @@ export function PlansComparison({
                                             <Check className="h-4 w-4 mr-1" />
                                             Plan Actual
                                         </Button>
-                                    ) : planStatus === 'active' ? (
-                                        <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
-                                            <Button
-                                                size="sm"
-                                                variant={isPro ? "default" : "outline"}
-                                                className={cn(
-                                                    "w-full max-w-[140px]",
-                                                    isPro && `${getPlanGradient(plan.name).bg} hover:opacity-90 text-white`
+                                    ) : (() => {
+                                        // Plan tier hierarchy
+                                        const getPlanTier = (name: string) => {
+                                            const lower = name.toLowerCase();
+                                            if (lower === 'free') return 0;
+                                            if (lower === 'pro') return 1;
+                                            if (lower === 'teams') return 2;
+                                            return 0;
+                                        };
+                                        const thisTier = getPlanTier(plan.name);
+                                        const curPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
+                                        const curTier = curPlan ? getPlanTier(curPlan.name) : 0;
+                                        const isFree = thisTier === 0;
+                                        const isLoggedIn = !!currentPlanId || isDashboard;
+
+                                        // Free for logged-in users
+                                        if (isFree && isLoggedIn) {
+                                            return (
+                                                <Button size="sm" variant="outline" disabled className="w-full max-w-[140px]">
+                                                    <Check className="h-4 w-4 mr-1" />
+                                                    Plan Actual
+                                                </Button>
+                                            );
+                                        }
+
+                                        // Inferior plan - no downgrade
+                                        if (isLoggedIn && thisTier < curTier) {
+                                            return (
+                                                <Button size="sm" variant="outline" disabled className="w-full max-w-[140px]">
+                                                    <Check className="h-4 w-4 mr-1" />
+                                                    Incluido
+                                                </Button>
+                                            );
+                                        }
+
+                                        return planStatus === 'active' ? (
+                                            <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
+                                                <Button
+                                                    size="sm"
+                                                    variant={isPro ? "default" : "outline"}
+                                                    className={cn(
+                                                        "w-full max-w-[140px]",
+                                                        isPro && `${getPlanGradient(plan.name).bg} hover:opacity-90 text-white`
+                                                    )}
+                                                >
+                                                    {isDashboard ? "Mejorar" : "Empezar"}
+                                                </Button>
+                                            </Link>
+                                        ) : (
+                                            // Non-active status - show status indicator
+                                            <div className="flex flex-col items-center gap-1">
+                                                {(() => {
+                                                    const config = statusConfig[planStatus];
+                                                    const StatusIcon = config?.icon || Lock;
+                                                    return (
+                                                        <div className={cn("flex items-center gap-1 text-xs py-1", config?.color)}>
+                                                            <StatusIcon className="h-3 w-3" />
+                                                            <span>{config?.label}</span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                                {/* Admin bypass - small link */}
+                                                {isAdmin && (
+                                                    <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
+                                                        <Button size="sm" variant="ghost" className="h-6 text-xs px-2">
+                                                            Admin →
+                                                        </Button>
+                                                    </Link>
                                                 )}
-                                            >
-                                                {isDashboard ? "Cambiar" : "Empezar"}
-                                            </Button>
-                                        </Link>
-                                    ) : (
-                                        // Non-active status - show status indicator
-                                        <div className="flex flex-col items-center gap-1">
-                                            {(() => {
-                                                const config = statusConfig[planStatus];
-                                                const StatusIcon = config?.icon || Lock;
-                                                return (
-                                                    <div className={cn("flex items-center gap-1 text-xs py-1", config?.color)}>
-                                                        <StatusIcon className="h-3 w-3" />
-                                                        <span>{config?.label}</span>
-                                                    </div>
-                                                );
-                                            })()}
-                                            {/* Admin bypass - small link */}
-                                            {isAdmin && (
-                                                <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
-                                                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2">
-                                                        Admin →
-                                                    </Button>
-                                                </Link>
-                                            )}
-                                        </div>
-                                    )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             );
                         })}

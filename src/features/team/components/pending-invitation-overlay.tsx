@@ -13,12 +13,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { UserPlus, ArrowRight, Building2, Shield, User } from "lucide-react";
+import { ArrowRight, Building2, Shield, User } from "lucide-react";
+import Image from "next/image";
 
 interface PendingInvitation {
     id: string;
     token: string;
     organization_name: string;
+    organization_logo: string | null;
     role_name: string;
     inviter_name: string | null;
 }
@@ -44,6 +46,14 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
 
     if (dismissed) return null;
 
+    // Get initials for fallback
+    const initials = invitation.organization_name
+        .split(" ")
+        .map(w => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+
     return (
         <AlertDialog open={true}>
             <AlertDialogContent
@@ -51,8 +61,19 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
                 onEscapeKeyDown={(e: KeyboardEvent) => e.preventDefault()}
             >
                 <AlertDialogHeader className="items-center text-center">
-                    <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                        <UserPlus className="h-7 w-7 text-primary" />
+                    {/* Organization logo or initials */}
+                    <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-xl overflow-hidden border bg-muted">
+                        {invitation.organization_logo ? (
+                            <Image
+                                src={invitation.organization_logo}
+                                alt={invitation.organization_name}
+                                width={64}
+                                height={64}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <span className="text-xl font-bold text-muted-foreground">{initials}</span>
+                        )}
                     </div>
                     <AlertDialogTitle className="text-lg">
                         Te invitaron a una organización

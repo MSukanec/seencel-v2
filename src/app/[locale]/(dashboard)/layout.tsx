@@ -42,7 +42,7 @@ export default async function DashboardLayout({
     const fallbackOrg = wasRemoved ? organizations[0] : null;
 
     // Check for pending invitations for this user
-    let pendingInvitation: { id: string; token: string; organization_name: string; role_name: string; inviter_name: string | null } | null = null;
+    let pendingInvitation: { id: string; token: string; organization_name: string; organization_logo: string | null; role_name: string; inviter_name: string | null } | null = null;
     if (profile?.email) {
         const supabase = await createClient();
         const { data: invitations } = await supabase
@@ -52,7 +52,7 @@ export default async function DashboardLayout({
                 token,
                 status,
                 expires_at,
-                organization:organization_id (name),
+                organization:organization_id (name, logo_path),
                 role:role_id (name),
                 inviter:invited_by (user_id)
             `)
@@ -64,21 +64,27 @@ export default async function DashboardLayout({
 
         if (invitations && invitations.length > 0) {
             const inv = invitations[0] as any;
+            // Handle Supabase join results (can be array or object)
+            const org = Array.isArray(inv.organization) ? inv.organization[0] : inv.organization;
+            const role = Array.isArray(inv.role) ? inv.role[0] : inv.role;
+            const inviter = Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter;
+
             // Get inviter name
             let inviterName: string | null = null;
-            if (inv.inviter?.user_id) {
+            if (inviter?.user_id) {
                 const { data: inviterUser } = await supabase
                     .from('users')
                     .select('full_name')
-                    .eq('id', inv.inviter.user_id)
+                    .eq('id', inviter.user_id)
                     .single();
                 inviterName = inviterUser?.full_name || null;
             }
             pendingInvitation = {
                 id: inv.id,
                 token: inv.token,
-                organization_name: inv.organization?.name || 'Organización',
-                role_name: inv.role?.name || 'Miembro',
+                organization_name: org?.name || 'Organización',
+                organization_logo: org?.logo_path || null,
+                role_name: role?.name || 'Miembro',
                 inviter_name: inviterName,
             };
         }
