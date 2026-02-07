@@ -93,12 +93,9 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
     };
 
     const handleGoToCheckout = () => {
-        // Navigate to checkout with seat purchase params
+        // Navigate to checkout with seat purchase params (client-side, instant)
         closeModal();
-        // Extract locale from current URL
-        const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-        const locale = localeMatch ? localeMatch[1] : 'es';
-        window.location.href = `/${locale}/checkout?type=seats&org=${organizationId}&quantity=${seatsToBuy}`;
+        router.push(`/checkout?type=seats&org=${organizationId}&quantity=${seatsToBuy}` as any);
     };
 
     // Filter out system owner role

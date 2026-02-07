@@ -3,6 +3,7 @@
 # Función get_organization_seat_status:
 
 
+
 DECLARE
     v_seats_included integer;    -- Seats GRATIS del plan
     v_max_members integer;       -- Límite máximo posible
@@ -39,12 +40,12 @@ BEGIN
     FROM public.organizations
     WHERE id = p_organization_id;
 
-    -- Contar miembros billables actuales
+    -- Contar miembros activos (todos ocupan asiento, sin importar si son billables o no)
     SELECT COUNT(*)
     INTO v_current_members
     FROM public.organization_members
     WHERE organization_id = p_organization_id
-      AND is_billable = true;
+      AND is_active = true;
 
     -- Contar invitaciones pendientes (ocupan seat)
     SELECT COUNT(*)
@@ -89,15 +90,15 @@ BEGIN
 
     RETURN jsonb_build_object(
         -- Capacidad
-        'seats_included', v_seats_included,       -- Gratis en el plan
-        'max_members', v_max_members,             -- Límite máximo posible
-        'purchased', v_purchased_seats,           -- Comprados
-        'total_capacity', v_total_capacity,       -- Actual = included + purchased
+        'seats_included', v_seats_included,
+        'max_members', v_max_members,
+        'purchased', v_purchased_seats,
+        'total_capacity', v_total_capacity,
         'used', v_current_members,
         'pending_invitations', v_pending_invitations,
         'available', GREATEST(v_available_seats, 0),
         'can_invite', v_available_seats > 0,
-        'can_buy_more', v_can_buy_more,           -- Si puede seguir comprando
+        'can_buy_more', v_can_buy_more,
         
         -- Precios base
         'seat_price_monthly', v_plan_price_monthly,
@@ -116,7 +117,6 @@ BEGIN
         END
     );
 END;
-
 
 # Función handle_contact_link_user:
 

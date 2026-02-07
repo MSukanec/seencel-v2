@@ -142,14 +142,28 @@ export async function updateMemberRoleAction(
         return { success: false, error: "Miembro no encontrado" };
     }
 
+    // Check if current user is the org owner
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('owner_id')
+        .eq('id', organizationId)
+        .single();
+
+    const currentUserIsOwner = orgData?.owner_id === publicUser.id;
+
     // Cannot change your own role
     if (targetMember.user_id === publicUser.id) {
         return { success: false, error: "No podés cambiar tu propio rol" };
     }
 
-    // Cannot change another admin's role
+    // Cannot change the owner's role
+    if (orgData?.owner_id === targetMember.user_id) {
+        return { success: false, error: "No se puede cambiar el rol del dueño" };
+    }
+
+    // Non-owner admins cannot change another admin's role
     const targetIsAdmin = targetMember.role_type === 'admin' || targetMember.role_name === 'Administrador';
-    if (targetIsAdmin) {
+    if (targetIsAdmin && !currentUserIsOwner) {
         return { success: false, error: "No se puede cambiar el rol de un administrador" };
     }
 
@@ -222,8 +236,23 @@ export async function removeMemberAction(
         return { success: false, error: "No podés eliminarte a vos mismo" };
     }
 
+    // Check if current user is the org owner
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('owner_id')
+        .eq('id', organizationId)
+        .single();
+
+    const currentUserIsOwner = orgData?.owner_id === publicUser.id;
+
+    // Cannot remove the owner
+    if (orgData?.owner_id === targetMember.user_id) {
+        return { success: false, error: "No se puede eliminar al dueño de la organización" };
+    }
+
+    // Non-owner admins cannot remove other admins
     const targetIsAdmin = targetMember.role_type === 'admin' || targetMember.role_name === 'Administrador';
-    if (targetIsAdmin) {
+    if (targetIsAdmin && !currentUserIsOwner) {
         return { success: false, error: "No se puede eliminar a un administrador" };
     }
 

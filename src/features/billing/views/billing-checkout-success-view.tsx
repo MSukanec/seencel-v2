@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, Receipt, Loader2, Rocket, GraduationCap, PartyPopper, Sparkles } from "lucide-react";
+import { Home, BookOpen, Receipt, Loader2, Rocket, GraduationCap, PartyPopper, Sparkles, Users, Settings } from "lucide-react";
 import Link from "next/link";
 
 // Floating emoji component
@@ -47,6 +47,7 @@ export function BillingCheckoutSuccessView() {
     const courseId = searchParams.get("course_id") || capturedCourseId;
 
     const isCourse = productType === "course" || !!courseId;
+    const isSeats = productType === "seats";
 
     // Capture PayPal payment when returning from PayPal approval
     useEffect(() => {
@@ -117,7 +118,9 @@ export function BillingCheckoutSuccessView() {
     // Floating emojis data
     const emojis = isCourse
         ? ["🎓", "📚", "✨", "🎉", "🌟", "💡", "🚀", "📖"]
-        : ["🚀", "⭐", "🎉", "💪", "🔥", "✨", "🏆", "💎"];
+        : isSeats
+            ? ["👥", "🎉", "💪", "🤝", "✨", "🏗️", "⭐", "🪑"]
+            : ["🚀", "⭐", "🎉", "💪", "🔥", "✨", "🏆", "💎"];
 
     // Show loading state while capturing PayPal payment
     if (isCapturing) {
@@ -211,7 +214,7 @@ export function BillingCheckoutSuccessView() {
                     {/* Big Background Text */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 select-none pointer-events-none">
                         <span className="text-[12rem] font-black text-muted/10 leading-none whitespace-nowrap">
-                            {isCourse ? "🎓" : "🚀"}
+                            {isCourse ? "🎓" : isSeats ? "👥" : "🚀"}
                         </span>
                     </div>
 
@@ -226,6 +229,8 @@ export function BillingCheckoutSuccessView() {
                         >
                             {isCourse ? (
                                 <GraduationCap className="w-16 h-16 text-white" strokeWidth={2} />
+                            ) : isSeats ? (
+                                <Users className="w-16 h-16 text-white" strokeWidth={2} />
                             ) : (
                                 <Rocket className="w-16 h-16 text-white" strokeWidth={2} />
                             )}
@@ -247,11 +252,13 @@ export function BillingCheckoutSuccessView() {
                         style={{ animation: showContent ? 'slide-up 0.6s ease-out 0.2s both' : 'none' }}
                     >
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent">
-                            {isCourse ? "¡A aprender! 🎉" : "¡Bienvenido al equipo! 🚀"}
+                            {isCourse ? "¡A aprender! 🎉" : isSeats ? "¡Tu equipo crece! 🪑" : "¡Bienvenido al equipo! 🚀"}
                         </h1>
                         <p className="text-xl text-muted-foreground">
                             {isCourse ? (
                                 <>Tu curso ya está listo. <span className="text-primary font-medium">¡Comienza cuando quieras!</span></>
+                            ) : isSeats ? (
+                                <>Tus nuevos asientos están listos. <span className="text-primary font-medium">¡Invitá a tu equipo!</span></>
                             ) : (
                                 <>Tu plan está activo. <span className="text-primary font-medium">¡Hora de construir!</span></>
                             )}
@@ -286,6 +293,21 @@ export function BillingCheckoutSuccessView() {
                                     </a>
                                 </Button>
                             </>
+                        ) : isSeats ? (
+                            <>
+                                <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
+                                    <Link href="/organization/settings?tab=team">
+                                        <Users className="w-5 h-5 mr-2" />
+                                        Ir al Equipo
+                                    </Link>
+                                </Button>
+                                <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
+                                    <Link href="/organization/settings?tab=billing">
+                                        <Receipt className="w-5 h-5 mr-2" />
+                                        Ver Facturación
+                                    </Link>
+                                </Button>
+                            </>
                         ) : (
                             <>
                                 <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
@@ -310,7 +332,9 @@ export function BillingCheckoutSuccessView() {
                     >
                         {isCourse
                             ? "El conocimiento es poder 💪"
-                            : "Grandes cosas están por venir ✨"
+                            : isSeats
+                                ? "Más sillas, más risas, más construcción 🏗️"
+                                : "Grandes cosas están por venir ✨"
                         }
                     </p>
                 </div>

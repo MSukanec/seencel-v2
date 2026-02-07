@@ -1,0 +1,14 @@
+{
+    "order": [
+        "miembros",
+        "usuarios-externos"
+    ],
+    "items": {
+        "miembros": {
+            "title": "Miembros del Equipo"
+        },
+        "usuarios-externos": {
+            "title": "Usuarios Externos"
+        }
+    }
+}

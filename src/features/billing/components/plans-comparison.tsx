@@ -46,7 +46,7 @@ const FEATURE_MODULES = [
         title: "Funcionalidades Principales",
         description: "Todo lo esencial para gestionar tu organización.",
         features: [
-            { key: "members", label: "Miembros del equipo", featureKey: "max_members" },
+            { key: "members", label: "Invitar miembros", featureKey: "can_invite_members" },
             { key: "projects", label: "Proyectos activos", featureKey: "max_projects" },
             { key: "storage", label: "Almacenamiento", featureKey: "max_storage_mb" },
             { key: "file_size", label: "Tamaño máximo de archivo", featureKey: "max_file_size_mb" },
@@ -187,7 +187,7 @@ export function PlansComparison({
             {
                 icon: Users,
                 label: "Miembros",
-                value: isUnlimited(features.max_members) ? "Ilimitados" : `${features.max_members} miembro${features.max_members > 1 ? "s" : ""}`,
+                value: features.can_invite_members ? "Ilimitados (por asiento)" : "Solo tú",
             },
             {
                 icon: FolderOpen,

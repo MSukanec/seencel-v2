@@ -2,10 +2,32 @@
 
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { FeatureGuard } from "@/components/ui/feature-guard";
 
 // ============================================================================
 // Types
 // ============================================================================
+
+interface SettingsSectionAction {
+    /** Label del botón */
+    label: string;
+    /** Ícono del botón (Lucide icon) */
+    icon?: LucideIcon;
+    /** Callback al hacer click (usar onClick O href, no ambos) */
+    onClick?: () => void;
+    /** Href para navegación en nueva pestaña (usar onClick O href, no ambos) */
+    href?: string;
+    /** Variante: primary (default) o secondary */
+    variant?: "primary" | "secondary";
+    /** Feature guard para bloquear según plan */
+    featureGuard?: {
+        isEnabled: boolean;
+        featureName: string;
+        requiredPlan?: string;
+        customMessage?: string;
+    };
+}
 
 interface SettingsSectionProps {
     /** Icono de la sección (Lucide icon) */
@@ -14,6 +36,8 @@ interface SettingsSectionProps {
     title: string;
     /** Descripción de la sección */
     description?: string;
+    /** Botones de acción debajo de la descripción */
+    actions?: SettingsSectionAction[];
     /** Contenido de la sección (campos, tablas, etc.) - va en columna derecha */
     children: React.ReactNode;
     /** Clases adicionales para el contenedor */
@@ -31,7 +55,7 @@ interface SettingsSectionProps {
  * ┌──────────────────────┬─────────────────────────────────────┐
  * │ [Icon] Título        │                                     │
  * │ Descripción          │        Children (contenido)         │
- * │                      │                                     │
+ * │ [Btn1] [Btn2]        │                                     │
  * └──────────────────────┴─────────────────────────────────────┘
  * 
  * @example
@@ -39,39 +63,81 @@ interface SettingsSectionProps {
  *     icon={Package}
  *     title="Materiales"
  *     description="Materiales necesarios por unidad"
+ *     actions={[
+ *         { label: "Agregar", icon: Plus, onClick: handleAdd },
+ *         { label: "Importar", icon: Upload, onClick: handleImport, variant: "secondary" },
+ *     ]}
  * >
- *     <div className="space-y-4">
- *         <Button>Agregar</Button>
- *         <Table ... />
- *     </div>
+ *     <Table ... />
  * </SettingsSection>
  */
 export function SettingsSection({
     icon: Icon,
     title,
     description,
+    actions,
     children,
     className,
 }: SettingsSectionProps) {
     return (
         <div
             className={cn(
-                "grid grid-cols-1 md:grid-cols-3 gap-6 py-6 border-b last:border-b-0",
+                "grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-4 py-8 border-b last:border-b-0",
                 className
             )}
         >
             {/* Left Column - Label (1/3) */}
-            <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary" />
-                    <h3 className="font-medium leading-none">
-                        {title}
-                    </h3>
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-primary shrink-0" />
+                        <h3 className="font-medium leading-none">
+                            {title}
+                        </h3>
+                    </div>
+                    {description && (
+                        <p className="text-sm text-muted-foreground pl-6 leading-relaxed">
+                            {description}
+                        </p>
+                    )}
                 </div>
-                {description && (
-                    <p className="text-sm text-muted-foreground pl-6">
-                        {description}
-                    </p>
+                {actions && actions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pl-6">
+                        {actions.map((action) => {
+                            const ActionIcon = action.icon;
+                            const button = (
+                                <Button
+                                    key={action.label}
+                                    variant={action.variant === "secondary" ? "outline" : "default"}
+                                    size="sm"
+                                    onClick={action.href
+                                        ? () => window.open(action.href, "_blank")
+                                        : action.onClick
+                                    }
+                                    className="h-8 text-xs"
+                                >
+                                    {ActionIcon && <ActionIcon className="h-3.5 w-3.5 mr-1.5" />}
+                                    {action.label}
+                                </Button>
+                            );
+
+                            if (action.featureGuard) {
+                                return (
+                                    <FeatureGuard
+                                        key={action.label}
+                                        isEnabled={action.featureGuard.isEnabled}
+                                        featureName={action.featureGuard.featureName}
+                                        requiredPlan={action.featureGuard.requiredPlan}
+                                        customMessage={action.featureGuard.customMessage}
+                                    >
+                                        {button}
+                                    </FeatureGuard>
+                                );
+                            }
+
+                            return button;
+                        })}
+                    </div>
                 )}
             </div>
 

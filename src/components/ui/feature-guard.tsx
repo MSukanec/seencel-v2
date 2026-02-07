@@ -12,6 +12,28 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Resolve the CSS variable for a given plan name.
+ * Maps "PRO" → "--plan-pro", "TEAMS" → "--plan-teams", etc.
+ * Falls back to "--plan-pro" if no match.
+ */
+function getPlanCssVar(requiredPlan: string): string {
+    const slug = requiredPlan.toLowerCase().trim();
+    // Only allow known plan slugs
+    if (["free", "pro", "teams"].includes(slug)) {
+        return `--plan-${slug}`;
+    }
+    return "--plan-pro"; // fallback
+}
+
+// ============================================================================
+// Types
+// ============================================================================
+
 interface FeatureGuardProps {
     /** Whether the feature is enabled for the current plan */
     isEnabled: boolean;
@@ -31,6 +53,10 @@ interface FeatureGuardProps {
     showPopover?: boolean;
 }
 
+// ============================================================================
+// Internal Components
+// ============================================================================
+
 function LockPopoverContent({
     featureName,
     requiredPlan,
@@ -44,6 +70,8 @@ function LockPopoverContent({
     upgradeHref: string;
     t: any;
 }) {
+    const planVar = getPlanCssVar(requiredPlan);
+
     return (
         <HoverCardContent
             className="w-64 p-3"
@@ -55,9 +83,9 @@ function LockPopoverContent({
                 <div className="flex items-center gap-2">
                     <div
                         className="h-8 w-8 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: 'color-mix(in srgb, var(--plan-pro) 20%, transparent)' }}
+                        style={{ backgroundColor: `color-mix(in srgb, var(${planVar}) 20%, transparent)` }}
                     >
-                        <Lock className="h-4 w-4" style={{ color: 'var(--plan-pro)' }} />
+                        <Lock className="h-4 w-4" style={{ color: `var(${planVar})` }} />
                     </div>
                     <div className="flex-1">
                         <p className="text-sm font-semibold leading-tight">
@@ -76,8 +104,9 @@ function LockPopoverContent({
                     className={cn(
                         "mt-1 w-full inline-flex items-center justify-center",
                         "text-xs font-medium py-1.5 px-3 rounded-md",
-                        "bg-[var(--plan-pro)] text-white hover:opacity-90 transition-opacity"
+                        "text-white hover:opacity-90 transition-opacity"
                     )}
+                    style={{ backgroundColor: `var(${planVar})` }}
                 >
                     {t('upgrade', { plan: requiredPlan })}
                 </Link>
@@ -101,6 +130,7 @@ export function FeatureLockBadge({
     upgradeHref?: string;
 }) {
     const t = useTranslations('Portal.FeatureGuard');
+    const planVar = getPlanCssVar(requiredPlan);
 
     return (
         <HoverCard openDelay={100} closeDelay={100}>
@@ -109,10 +139,11 @@ export function FeatureLockBadge({
                     variant="secondary"
                     className={cn(
                         "h-5 px-1.5 text-[10px] font-semibold",
-                        "bg-[var(--plan-pro)] text-white border-0",
+                        "text-white border-0",
                         "flex items-center gap-0.5 cursor-help",
                         "hover:scale-105 transition-transform"
                     )}
+                    style={{ backgroundColor: `var(${planVar})` }}
                 >
                     <Lock className="h-2.5 w-2.5" />
                     {requiredPlan}
@@ -147,17 +178,18 @@ export function FeatureGuard({
     upgradeHref = "/pricing"
 }: FeatureGuardProps) {
     const t = useTranslations('Portal.FeatureGuard');
+    const planVar = getPlanCssVar(requiredPlan);
 
     if (isEnabled) {
         // Feature is enabled, render children normally
         return <>{children}</>;
     }
 
-    // Disabled content wrapper
+    // Disabled content wrapper — w-fit so badge hugs the button
     const disabledContent = (
-        <div className="relative w-full cursor-not-allowed group">
+        <div className="relative w-fit cursor-not-allowed group">
             {/* Disabled children */}
-            <div className="pointer-events-none opacity-50 select-none w-full">
+            <div className="pointer-events-none opacity-50 select-none">
                 {children}
             </div>
 
@@ -167,10 +199,11 @@ export function FeatureGuard({
                     variant="secondary"
                     className={cn(
                         "absolute -top-1.5 -right-1.5 h-5 px-1.5 text-[10px] font-semibold",
-                        "bg-[var(--plan-pro)] text-white border-0",
+                        "text-white border-0",
                         "flex items-center gap-0.5 shadow-lg",
                         "group-hover:scale-110 transition-transform"
                     )}
+                    style={{ backgroundColor: `var(${planVar})` }}
                 >
                     <Lock className="h-2.5 w-2.5" />
                     {requiredPlan}
@@ -199,5 +232,3 @@ export function FeatureGuard({
         </HoverCard>
     );
 }
-
-

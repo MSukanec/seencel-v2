@@ -1,19 +1,21 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
 import { OrganizationMemberDetail, OrganizationInvitation, Role } from "@/features/team/types";
-import { ContentLayout } from "@/components/layout";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail, MoreVertical, ShieldCheck, User, UserX, Pencil, Crown } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Mail, Users, UserPlus, CreditCard, Wrench, BookOpen } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useModal } from "@/stores/modal-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
-import { removeMemberAction, updateMemberRoleAction } from "@/features/team/actions";
+import { removeMemberAction, updateMemberRoleAction, getOrganizationSeatStatus } from "@/features/team/actions";
+import { SeatStatus } from "@/features/team/types";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MemberListItem } from "@/components/shared/list-item";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { SettingsSection } from "@/components/shared/settings-section";
 import { toast } from "sonner";
 import {
     AlertDialog,
@@ -34,40 +36,52 @@ interface MembersSettingsViewProps {
     roles: Role[];
     currentUserId: string;
     ownerId: string | null;
+    canInviteMembers: boolean;
 }
 
-export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId }: MembersSettingsViewProps) {
+export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers }: MembersSettingsViewProps) {
     const { openModal } = useModal();
-    const [searchQuery, setSearchQuery] = useState("");
     const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
     const [memberToRemove, setMemberToRemove] = useState<OrganizationMemberDetail | null>(null);
     const [memberToEditRole, setMemberToEditRole] = useState<OrganizationMemberDetail | null>(null);
     const [selectedRoleId, setSelectedRoleId] = useState<string>("");
     const [isPending, startTransition] = useTransition();
+    const [seatStatus, setSeatStatus] = useState<SeatStatus | null>(null);
+    const [isLoadingSeats, setIsLoadingSeats] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadSeats = async () => {
+            try {
+                const result = await getOrganizationSeatStatus(organizationId);
+                if (mounted && result.success && result.data) {
+                    setSeatStatus(result.data);
+                }
+            } catch (error) {
+                console.error("Error loading seats:", error);
+            } finally {
+                if (mounted) setIsLoadingSeats(false);
+            }
+        };
+        loadSeats();
+        return () => { mounted = false; };
+    }, [organizationId, members.length, invitations.length]);
 
     // Roles that can be assigned (exclude admin/system roles that shouldn't be manually assigned)
+    // Only show roles that belong to THIS organization (not system-level roles)
     const assignableRoles = useMemo(() => {
-        return roles.filter(r => r.type !== 'admin');
-    }, [roles]);
+        return roles.filter(r => r.type !== 'admin' && r.organization_id === organizationId);
+    }, [roles, organizationId]);
 
-    // Filter members by search query AND exclude optimistically removed members
+    // Filter members excluding optimistically removed, sorted alphabetically
     const filteredMembers = useMemo(() => {
-        const activeMembers = members.filter(m => !removedMemberIds.includes(m.id));
-        if (!searchQuery.trim()) return activeMembers;
-        const query = searchQuery.toLowerCase();
-        return activeMembers.filter(m =>
-            m.user_full_name?.toLowerCase().includes(query) ||
-            m.user_email?.toLowerCase().includes(query) ||
-            m.role_name?.toLowerCase().includes(query)
-        );
-    }, [members, searchQuery, removedMemberIds]);
+        return members
+            .filter(m => !removedMemberIds.includes(m.id))
+            .sort((a, b) => (a.user_full_name || "").localeCompare(b.user_full_name || ""));
+    }, [members, removedMemberIds]);
 
-    // Filter invitations by search query
-    const filteredInvitations = useMemo(() => {
-        if (!searchQuery.trim()) return invitations;
-        const query = searchQuery.toLowerCase();
-        return invitations.filter(i => i.email?.toLowerCase().includes(query));
-    }, [invitations, searchQuery]);
+    // Active invitations
+    const activeInvitations = useMemo(() => invitations, [invitations]);
 
     const handleInvite = () => {
         openModal(
@@ -135,12 +149,16 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         });
     };
 
+    const currentUserIsOwner = currentUserId === ownerId;
+
     const canRemoveMember = (member: OrganizationMemberDetail) => {
         // Cannot remove yourself
         if (member.user_id === currentUserId) return false;
         // Cannot remove the owner
         if (member.user_id === ownerId) return false;
-        // Cannot remove admins
+        // Owner can remove anyone (including admins)
+        if (currentUserIsOwner) return true;
+        // Non-owner admins cannot remove other admins
         if (member.role_type === 'admin') return false;
         return true;
     };
@@ -150,7 +168,9 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         if (member.user_id === currentUserId) return false;
         // Cannot edit the owner's role
         if (member.user_id === ownerId) return false;
-        // Cannot edit admin roles
+        // Owner can edit anyone's role (including admins)
+        if (currentUserIsOwner) return true;
+        // Non-owner admins cannot edit other admin roles
         if (member.role_type === 'admin' || member.role_name === 'Administrador') return false;
         return true;
     };
@@ -161,167 +181,160 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
 
     return (
         <>
-            <Toolbar
-                portalToHeader={true}
-                searchPlaceholder="Buscar miembros..."
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                actions={[
-                    {
-                        label: "Invitar Miembro",
-                        icon: Plus,
-                        onClick: handleInvite,
-                    },
-                ]}
-            />
+            <div className="space-y-12 pb-12">
+                {/* KPIs Section */}
+                {isLoadingSeats ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                        ))}
+                    </div>
+                ) : seatStatus && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <DashboardKpiCard
+                            title="Miembros Activos"
+                            value={`${seatStatus.used} / ${seatStatus.total_capacity}`}
+                            icon={<Users className="w-4 h-4" />}
+                            description="Asientos ocupados"
+                            size="default"
+                        />
+                        <DashboardKpiCard
+                            title="Disponibles"
+                            value={seatStatus.available}
+                            icon={<UserPlus className="w-4 h-4" />}
+                            description="Para invitar"
+                            size="default"
+                        />
+                        <DashboardKpiCard
+                            title="Invitaciones"
+                            value={seatStatus.pending_invitations}
+                            icon={<Mail className="w-4 h-4" />}
+                            description="Pendientes"
+                            size="default"
+                        />
+                        <DashboardKpiCard
+                            title="Comprados"
+                            value={seatStatus.purchased}
+                            icon={<CreditCard className="w-4 h-4" />}
+                            description="Asientos extra"
+                            size="default"
+                        />
+                    </div>
+                )}
 
-            <ContentLayout variant="narrow">
-                <div className="space-y-12 pb-12">
-                    {/* Members Section */}
-                    <div className="space-y-4">
-                        <div>
-                            <h3 className="text-lg font-medium">Miembros</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Gestiona los miembros de tu equipo, sus roles y permisos para colaborar en los proyectos.
-                            </p>
-                        </div>
+                {/* Members Section */}
+                <SettingsSection
+                    icon={Users}
+                    title="Miembros de la Organización"
+                    description="Personas con acceso completo a la organización. Cada miembro ocupa un asiento del plan e incluye roles, permisos y acceso a todos los proyectos según su nivel."
+                    actions={[
+                        {
+                            label: "Invitar Miembro",
+                            icon: UserPlus,
+                            onClick: handleInvite,
+                            featureGuard: {
+                                isEnabled: canInviteMembers,
+                                featureName: "Invitar Miembros",
+                                requiredPlan: "TEAMS",
+                            },
+                        },
+                        {
+                            label: "Documentación",
+                            icon: BookOpen,
+                            variant: "secondary",
+                            href: "/docs/equipo/miembros",
+                        },
+                    ]}
+                >
+                    <div className="space-y-2">
+                        {filteredMembers.length === 0 ? (
+                            <ViewEmptyState
+                                mode="empty"
+                                icon={Users}
+                                viewName="Miembros"
+                                featureDescription="Los miembros son las personas que forman parte de tu organización con acceso a proyectos y recursos."
+                                onAction={canInviteMembers ? handleInvite : undefined}
+                                actionLabel="Invitar Miembro"
+                            />
+                        ) : (
+                            filteredMembers.map((member) => (
+                                <MemberListItem
+                                    key={member.id}
+                                    member={member}
+                                    isOwner={member.user_id === ownerId}
+                                    isCurrentUser={member.user_id === currentUserId}
+                                    canEditRole={canEditRole(member)}
+                                    canRemove={canRemoveMember(member)}
+                                    onEditRole={(m) => handleEditRole(m as unknown as OrganizationMemberDetail)}
+                                    onRemove={(m) => setMemberToRemove(m as unknown as OrganizationMemberDetail)}
+                                />
+                            ))
+                        )}
+                    </div>
+                </SettingsSection>
 
-                        <Card className="border shadow-sm overflow-hidden">
+                {/* Pending Invitations Section */}
+                {activeInvitations.length > 0 && (
+                    <SettingsSection
+                        icon={Mail}
+                        title="Invitaciones Pendientes"
+                        description="Usuarios que han sido invitados a unirse a la organización pero aún no han aceptado. Cada invitación ocupa un asiento temporalmente."
+                    >
+                        <Card className="border shadow-sm overflow-hidden bg-muted/20">
                             <div className="divide-y">
-                                {filteredMembers.length === 0 ? (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        {searchQuery ? "No se encontraron miembros" : "No hay miembros"}
-                                    </div>
-                                ) : (
-                                    filteredMembers.map((member) => (
-                                        <div key={member.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                                            <div className="flex items-center gap-4">
-                                                <Avatar className="h-10 w-10 border">
-                                                    <AvatarImage src={member.user_avatar_url || undefined} />
-                                                    <AvatarFallback>{member.user_full_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-medium leading-none">{member.user_full_name || "Usuario"}</p>
-                                                        {isCurrentUser(member) && (
-                                                            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">Tú</Badge>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground">{member.user_email}</p>
-                                                </div>
+                                {activeInvitations.map((invite) => (
+                                    <div key={invite.id} className="flex items-center justify-between p-4 px-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
+                                                <Mail className="w-5 h-5" />
                                             </div>
-
-                                            <div className="flex items-center gap-4">
-                                                <div className="hidden sm:flex flex-col items-end gap-1 mr-2">
-                                                    <div className="flex items-center gap-1.5">
-                                                        {isOwner(member) && (
-                                                            <Badge variant="outline" className="font-normal gap-1 border-amber-500/50 text-amber-500 bg-amber-500/10">
-                                                                <Crown className="w-3 h-3" />
-                                                                Dueño
-                                                            </Badge>
-                                                        )}
-                                                        <Badge variant="outline" className="font-normal capitalize gap-1">
-                                                            {member.role_name === 'owner' || member.role_type === 'admin'
-                                                                ? <ShieldCheck className="w-3 h-3 text-primary" />
-                                                                : <User className="w-3 h-3" />
-                                                            }
-                                                            {member.role_name || "Miembro"}
-                                                        </Badge>
-                                                    </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium leading-none">{invite.email}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                                        {roles.find(r => r.id === invite.role_id)?.name || "Rol"}
+                                                    </Badge>
                                                     <span className="text-xs text-muted-foreground">
-                                                        Unido el {new Date(member.joined_at).toLocaleDateString()}
+                                                        Enviado el {new Date(invite.created_at).toLocaleDateString()}
                                                     </span>
                                                 </div>
-
-                                                {/* Only show menu for non-self, non-admin members */}
-                                                {(canEditRole(member) || canRemoveMember(member)) && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group-hover:text-foreground">
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            {canEditRole(member) && (
-                                                                <DropdownMenuItem onClick={() => handleEditRole(member)}>
-                                                                    <Pencil className="w-4 h-4 mr-2" />
-                                                                    Editar Rol
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            {canEditRole(member) && canRemoveMember(member) && (
-                                                                <DropdownMenuSeparator />
-                                                            )}
-                                                            {canRemoveMember(member) && (
-                                                                <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    onClick={() => setMemberToRemove(member)}
-                                                                >
-                                                                    <UserX className="w-4 h-4 mr-2" />
-                                                                    Eliminar Miembro
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
                                             </div>
                                         </div>
-                                    ))
-                                )}
+
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="sm" className="h-8 text-xs">
+                                                Reenviar
+                                            </Button>
+                                            <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+                                                Revocar
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </Card>
+                    </SettingsSection>
+                )}
+
+                {/* External Users Section */}
+                <SettingsSection
+                    icon={Wrench}
+                    title="Usuarios Externos"
+                    description="Colaboradores que no son parte de tu equipo pero participan en proyectos específicos: contadores, albañiles, subcontratistas, proveedores, etc. No ocupan asientos del plan."
+                    actions={[
+                        {
+                            label: "Documentación",
+                            icon: BookOpen,
+                            variant: "secondary",
+                            href: "/docs/equipo/usuarios-externos",
+                        },
+                    ]}
+                >
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                        Próximamente podrás invitar usuarios externos a proyectos específicos.
                     </div>
-
-                    {/* Invitations Section */}
-                    {filteredInvitations.length > 0 && (
-                        <>
-                            <div className="h-px bg-border" />
-
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="text-lg font-medium">Invitaciones Pendientes</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Usuarios que han sido invitados a la organización pero aún no han aceptado.
-                                    </p>
-                                </div>
-
-                                <Card className="border shadow-sm overflow-hidden bg-muted/20">
-                                    <div className="divide-y">
-                                        {filteredInvitations.map((invite) => (
-                                            <div key={invite.id} className="flex items-center justify-between p-4 px-5">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
-                                                        <Mail className="w-5 h-5" />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-sm font-medium leading-none">{invite.email}</p>
-                                                        <div className="flex items-center gap-2">
-                                                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                                                                {roles.find(r => r.id === invite.role_id)?.name || "Rol"}
-                                                            </Badge>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                Enviado el {new Date(invite.created_at).toLocaleDateString()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2">
-                                                    <Button variant="outline" size="sm" className="h-8 text-xs">
-                                                        Reenviar
-                                                    </Button>
-                                                    <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
-                                                        Revocar
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </ContentLayout>
+                </SettingsSection>
+            </div>
 
             {/* Edit Role Dialog */}
             <AlertDialog open={!!memberToEditRole} onOpenChange={(open) => !open && setMemberToEditRole(null)}>
@@ -337,14 +350,14 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-foreground">Rol</label>
                                     <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="text-left">
                                             <SelectValue placeholder="Seleccionar rol" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {assignableRoles.map((role) => (
-                                                <SelectItem key={role.id} value={role.id}>
-                                                    <div className="flex flex-col">
-                                                        <span>{role.name}</span>
+                                                <SelectItem key={role.id} value={role.id} className="py-2">
+                                                    <div className="flex flex-col items-start">
+                                                        <span className="font-medium">{role.name}</span>
                                                         {role.description && (
                                                             <span className="text-xs text-muted-foreground">{role.description}</span>
                                                         )}
@@ -367,10 +380,10 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog >
 
             {/* Remove Member Confirmation Dialog */}
-            <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+            < AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Eliminar a {memberToRemove?.user_full_name || "este miembro"}</AlertDialogTitle>
@@ -408,7 +421,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog >
         </>
     );
 }

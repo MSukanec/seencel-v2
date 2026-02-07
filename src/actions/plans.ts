@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 export interface PlanFeatures {
-    max_members: number;
+    can_invite_members: boolean;
     max_projects: number;
     max_storage_mb: number;
     max_file_size_mb: number;

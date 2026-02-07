@@ -11,9 +11,10 @@ interface SettingsClientProps {
     organizationId: string;
     currentUserId: string;
     ownerId: string | null;
+    canInviteMembers: boolean;
 }
 
-export function SettingsClient({ data, organizationId, currentUserId, ownerId }: SettingsClientProps) {
+export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers }: SettingsClientProps) {
     // Get planId from subscription or fallback
     const planId = data.subscription?.plan_id ?? "";
 
@@ -28,6 +29,7 @@ export function SettingsClient({ data, organizationId, currentUserId, ownerId }:
                     roles={data.roles}
                     currentUserId={currentUserId}
                     ownerId={ownerId}
+                    canInviteMembers={canInviteMembers}
                 />
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">

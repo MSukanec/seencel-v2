@@ -24,10 +24,11 @@ export async function POST(request: NextRequest) {
         // Get request body
         const body = await request.json();
         const {
-            productType,     // 'subscription' | 'course'
-            productId,       // plan_id or course_id
-            organizationId,  // required for subscriptions
+            productType,     // 'subscription' | 'course' | 'seats'
+            productId,       // plan_id or course_id (not required for seats)
+            organizationId,  // required for subscriptions and seats
             billingPeriod,   // 'monthly' | 'annual'
+            seatsQuantity,   // required for seats
             amount,          // in USD
             title,           // product title
             couponCode,      // optional
@@ -35,9 +36,17 @@ export async function POST(request: NextRequest) {
         } = body;
 
         // Validate required fields
-        if (!productType || !productId || !amount || !title) {
+        if (!productType || !amount || !title) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
+
+        // productId is required for subscription and course, not for seats
+        if (productType !== 'seats' && !productId) {
+            return NextResponse.json(
+                { error: 'Missing productId for non-seats order' },
                 { status: 400 }
             );
         }
@@ -93,7 +102,7 @@ export async function POST(request: NextRequest) {
             .insert({
                 id: preferenceId,
                 user_id: internalUser.id,
-                organization_id: productType === 'subscription' ? organizationId : null,
+                organization_id: (productType === 'subscription' || productType === 'seats') ? organizationId : null,
                 plan_id: productType === 'subscription' ? productId : null,
                 plan_slug: planSlug,
                 billing_period: billingPeriod || null,
@@ -107,6 +116,7 @@ export async function POST(request: NextRequest) {
                 is_test: isTestMode,
                 is_sandbox: sandboxMode,
                 status: 'pending',
+                seats_quantity: productType === 'seats' ? seatsQuantity : null,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h expiry
             });
 

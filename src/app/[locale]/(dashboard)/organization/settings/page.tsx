@@ -1,5 +1,6 @@
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
+import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { SettingsClient } from "@/features/organization/components/settings/settings-client";
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout";
@@ -31,7 +32,21 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
         redirect('/');
     }
 
-    const data = await getOrganizationSettingsData(orgId);
+    // Resolve public user ID from auth_id (organizations & members use users.id, not auth_id)
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!publicUser) {
+        redirect('/');
+    }
+
+    const [data, planFeatures] = await Promise.all([
+        getOrganizationSettingsData(orgId),
+        getOrganizationPlanFeatures(orgId),
+    ]);
 
     // Fetch owner_id for the organization
     const { data: orgData } = await supabase
@@ -41,6 +56,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
         .single();
 
     const ownerId = orgData?.owner_id || null;
+    const canInviteMembers = planFeatures?.can_invite_members ?? false;
 
     return (
         <Tabs defaultValue={initialTab} className="h-full flex flex-col">
@@ -63,7 +79,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                 }
             >
                 <ContentLayout variant="wide">
-                    <SettingsClient data={data} organizationId={orgId} currentUserId={user.id} ownerId={ownerId} />
+                    <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} />
                 </ContentLayout>
             </PageWrapper>
         </Tabs>
