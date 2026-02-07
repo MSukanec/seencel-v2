@@ -283,6 +283,26 @@ export async function acceptInvitationAction(
         };
     }
 
+    // 4. Switch active org to the invited one BEFORE revalidating
+    // This must happen here because revalidatePath will unmount the overlay
+    // and prevent any client-side navigation from executing after this action returns.
+    if (res.organization_id) {
+        await supabase
+            .from('user_preferences')
+            .update({ last_organization_id: res.organization_id })
+            .eq('user_id', publicUser.id);
+
+        await supabase
+            .from('user_organization_preferences')
+            .upsert({
+                user_id: publicUser.id,
+                organization_id: res.organization_id,
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_id, organization_id'
+            });
+    }
+
     revalidatePath('/[locale]/organization', 'layout');
 
     return {

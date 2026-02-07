@@ -160,6 +160,12 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
 
     const isCurrentUser = (member: OrganizationMemberDetail) => member.user_id === currentUserId;
 
+    // Optimistic KPI values derived from filteredMembers (already excludes removed members)
+    const optimisticUsed = filteredMembers.length;
+    const optimisticAvailable = seatStatus
+        ? seatStatus.total_capacity - optimisticUsed - seatStatus.pending_invitations
+        : 0;
+
     return (
         <>
             <div className="space-y-12 pb-12">
@@ -168,14 +174,14 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <DashboardKpiCard
                             title="Miembros Activos"
-                            value={`${seatStatus.used} / ${seatStatus.total_capacity}`}
+                            value={`${optimisticUsed} / ${seatStatus.total_capacity}`}
                             icon={<Users className="w-4 h-4" />}
                             description="Asientos ocupados"
                             size="default"
                         />
                         <DashboardKpiCard
                             title="Disponibles"
-                            value={seatStatus.available}
+                            value={Math.max(0, optimisticAvailable)}
                             icon={<UserPlus className="w-4 h-4" />}
                             description="Para invitar"
                             size="default"

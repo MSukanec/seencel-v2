@@ -13,6 +13,7 @@ import { useLayoutStore } from "@/stores/layout-store";
 import { ChevronsUpDown, Briefcase, Check, Plus, Building, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getStorageUrl } from "@/lib/storage-utils";
 
 // ============================================================================
 // BRAND BUTTON - Multi-purpose header button
@@ -138,11 +139,16 @@ export function SidebarBrandButton({
         const textSize = size === "sm" ? "text-[8px]" : "text-[10px]";
         const showFounderBadge = org?.isFounder && size === "md";
 
+        // Resolve relative logo_path to full URL
+        const logoSrc = org?.logo_path
+            ? (org.logo_path.startsWith('http') ? org.logo_path : getStorageUrl(org.logo_path, 'public-assets'))
+            : null;
+
         return (
             <div className="relative">
                 <Avatar className={cn(sizeClass, "rounded-lg")}>
-                    {org?.logo_path && (
-                        <AvatarImage src={org.logo_path} alt={org?.name || ""} />
+                    {logoSrc && (
+                        <AvatarImage src={logoSrc} alt={org?.name || ""} />
                     )}
                     <AvatarFallback className={cn(textSize, "rounded-lg bg-primary/10 text-primary font-semibold")}>
                         {getInitials(org?.name || "")}

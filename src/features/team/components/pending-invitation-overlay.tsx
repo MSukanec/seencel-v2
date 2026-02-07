@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "@/i18n/routing";
 import { acceptInvitationAction } from "@/features/team/actions";
-import { switchOrganization } from "@/features/organization/actions";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -31,18 +29,17 @@ interface PendingInvitationOverlayProps {
 }
 
 export function PendingInvitationOverlay({ invitation }: PendingInvitationOverlayProps) {
-    const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [dismissed, setDismissed] = useState(false);
 
     const handleAccept = () => {
         startTransition(async () => {
             const result = await acceptInvitationAction(invitation.token);
-            if (result.success && result.organizationId) {
-                // Switch to the inviting org, then navigate
-                await switchOrganization(result.organizationId);
-                router.push("/organization" as any);
-                router.refresh();
+            if (result.success) {
+                // The action already switched the active org.
+                // Use hard redirect because revalidatePath may unmount this component
+                // before client-side router.push can execute.
+                window.location.href = "/organization";
             }
         });
     };
