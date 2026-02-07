@@ -20,7 +20,9 @@ interface PageProps {
 export default async function OrganizationSettingsPage({ searchParams }: PageProps) {
     const orgId = await getActiveOrganizationId();
     const params = await searchParams;
-    const initialTab = params.tab || "members";
+    const validTabs = ["members", "permissions", "billing"] as const;
+    const requestedTab = params.tab || "members";
+    const initialTab = validTabs.includes(requestedTab as any) ? requestedTab : "members";
 
     if (!orgId) {
         redirect('/');
