@@ -296,16 +296,16 @@ export function BillingCheckoutSuccessView() {
                         ) : isSeats ? (
                             <>
                                 <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
-                                    <Link href="/organization/settings?tab=team">
+                                    <a href="/organization/settings?tab=members">
                                         <Users className="w-5 h-5 mr-2" />
                                         Ir al Equipo
-                                    </Link>
+                                    </a>
                                 </Button>
                                 <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
-                                    <Link href="/organization/settings?tab=billing">
+                                    <a href="/organization/settings?tab=billing">
                                         <Receipt className="w-5 h-5 mr-2" />
                                         Ver Facturación
-                                    </Link>
+                                    </a>
                                 </Button>
                             </>
                         ) : (

@@ -2,8 +2,6 @@
 
 # Función get_organization_seat_status:
 
-
-
 DECLARE
     v_seats_included integer;    -- Seats GRATIS del plan
     v_max_members integer;       -- Límite máximo posible

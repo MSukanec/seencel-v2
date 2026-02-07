@@ -3,6 +3,7 @@
 import { OrganizationSettingsData } from "@/types/organization";
 import { TabsContent } from "@/components/ui/tabs";
 import { TeamMembersView } from "@/features/team/views/team-members-view";
+import { SeatStatus } from "@/features/team/types";
 import { TeamPermissionsView } from "@/features/team/views/team-permissions-view";
 import { BillingSettingsView } from "@/features/billing/views/billing-settings-view";
 
@@ -12,9 +13,10 @@ interface SettingsClientProps {
     currentUserId: string;
     ownerId: string | null;
     canInviteMembers: boolean;
+    seatStatus: SeatStatus | null;
 }
 
-export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers }: SettingsClientProps) {
+export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers, seatStatus }: SettingsClientProps) {
     // Get planId from subscription or fallback
     const planId = data.subscription?.plan_id ?? "";
 
@@ -30,6 +32,7 @@ export function SettingsClient({ data, organizationId, currentUserId, ownerId, c
                     currentUserId={currentUserId}
                     ownerId={ownerId}
                     canInviteMembers={canInviteMembers}
+                    initialSeatStatus={seatStatus}
                 />
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">

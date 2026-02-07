@@ -1,5 +1,6 @@
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
+import { getOrganizationSeatStatus } from "@/features/team/actions";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { SettingsClient } from "@/features/organization/components/settings/settings-client";
 import { redirect } from "next/navigation";
@@ -43,10 +44,13 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
         redirect('/');
     }
 
-    const [data, planFeatures] = await Promise.all([
+    const [data, planFeatures, seatStatusResult] = await Promise.all([
         getOrganizationSettingsData(orgId),
         getOrganizationPlanFeatures(orgId),
+        getOrganizationSeatStatus(orgId),
     ]);
+
+    const seatStatus = seatStatusResult.success ? seatStatusResult.data ?? null : null;
 
     // Fetch owner_id for the organization
     const { data: orgData } = await supabase
@@ -79,7 +83,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                 }
             >
                 <ContentLayout variant="wide">
-                    <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} />
+                    <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} />
                 </ContentLayout>
             </PageWrapper>
         </Tabs>

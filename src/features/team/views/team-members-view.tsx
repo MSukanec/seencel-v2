@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition, useEffect } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { OrganizationMemberDetail, OrganizationInvitation, Role } from "@/features/team/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +9,9 @@ import { Mail, Users, UserPlus, CreditCard, Wrench, BookOpen } from "lucide-reac
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useModal } from "@/stores/modal-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
-import { removeMemberAction, updateMemberRoleAction, getOrganizationSeatStatus } from "@/features/team/actions";
+import { removeMemberAction, updateMemberRoleAction } from "@/features/team/actions";
 import { SeatStatus } from "@/features/team/types";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { MemberListItem } from "@/components/shared/list-item";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { SettingsSection } from "@/components/shared/settings-section";
@@ -37,35 +36,17 @@ interface MembersSettingsViewProps {
     currentUserId: string;
     ownerId: string | null;
     canInviteMembers: boolean;
+    initialSeatStatus: SeatStatus | null;
 }
 
-export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers }: MembersSettingsViewProps) {
+export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers, initialSeatStatus }: MembersSettingsViewProps) {
     const { openModal } = useModal();
     const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
     const [memberToRemove, setMemberToRemove] = useState<OrganizationMemberDetail | null>(null);
     const [memberToEditRole, setMemberToEditRole] = useState<OrganizationMemberDetail | null>(null);
     const [selectedRoleId, setSelectedRoleId] = useState<string>("");
     const [isPending, startTransition] = useTransition();
-    const [seatStatus, setSeatStatus] = useState<SeatStatus | null>(null);
-    const [isLoadingSeats, setIsLoadingSeats] = useState(true);
-
-    useEffect(() => {
-        let mounted = true;
-        const loadSeats = async () => {
-            try {
-                const result = await getOrganizationSeatStatus(organizationId);
-                if (mounted && result.success && result.data) {
-                    setSeatStatus(result.data);
-                }
-            } catch (error) {
-                console.error("Error loading seats:", error);
-            } finally {
-                if (mounted) setIsLoadingSeats(false);
-            }
-        };
-        loadSeats();
-        return () => { mounted = false; };
-    }, [organizationId, members.length, invitations.length]);
+    const [seatStatus, setSeatStatus] = useState<SeatStatus | null>(initialSeatStatus);
 
     // Roles that can be assigned (exclude admin/system roles that shouldn't be manually assigned)
     // Only show roles that belong to THIS organization (not system-level roles)
@@ -183,13 +164,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         <>
             <div className="space-y-12 pb-12">
                 {/* KPIs Section */}
-                {isLoadingSeats ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map((i) => (
-                            <Skeleton key={i} className="h-32 w-full rounded-xl" />
-                        ))}
-                    </div>
-                ) : seatStatus && (
+                {seatStatus && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <DashboardKpiCard
                             title="Miembros Activos"

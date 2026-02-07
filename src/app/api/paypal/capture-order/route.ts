@@ -170,6 +170,32 @@ export async function POST(request: NextRequest) {
                 console.error('handle_payment_subscription_success error:', error);
                 return NextResponse.json({ error: 'Failed to process subscription payment' }, { status: 500 });
             }
+        } else if (preference.product_type === 'seats') {
+            const seatsQuantity = preference.seats_quantity || 1;
+
+            const { data: seatResult, error } = await adminSupabase.rpc('handle_member_seat_purchase', {
+                p_provider: 'paypal',
+                p_provider_payment_id: captureId,
+                p_user_id: internalUserId,
+                p_organization_id: preference.organization_id,
+                p_plan_id: preference.plan_id,
+                p_seats_purchased: seatsQuantity,
+                p_amount: captureAmount,
+                p_currency: captureCurrency,
+                p_metadata: {
+                    paypal_order_id: orderId,
+                    paypal_capture_id: captureId,
+                    preference_id: preferenceId,
+                    seats_quantity: seatsQuantity,
+                },
+            });
+
+            if (error) {
+                console.error('handle_member_seat_purchase error:', error);
+                return NextResponse.json({ error: 'Failed to process seat purchase' }, { status: 500 });
+            }
+
+            console.log('[PayPal Capture] Seat purchase result:', seatResult);
         }
 
         // Redeem coupon if applicable
