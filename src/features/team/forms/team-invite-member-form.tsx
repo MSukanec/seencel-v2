@@ -102,8 +102,8 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
         router.push(`/checkout?type=seats&org=${organizationId}&quantity=${seatsToBuy}` as any);
     };
 
-    // Filter out system owner role
-    const invitableRoles = roles.filter(r => r.type !== 'owner');
+    // Filter: only organization roles, exclude system roles and owner
+    const invitableRoles = roles.filter(r => !r.is_system && r.type !== 'owner' && r.type !== 'web');
 
     const formatPrice = (amount: number) => {
         return new Intl.NumberFormat('es-AR', {

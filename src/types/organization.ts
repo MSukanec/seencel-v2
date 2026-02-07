@@ -98,6 +98,7 @@ export interface OrganizationBillingCycle {
     plan?: { name: string }[] | { name: string } | null;
     payment?: { provider: string }[] | { provider: string } | null;
     payer_email?: string | null;
+    product_type?: string | null; // 'subscription' | 'seat_purchase' | etc.
 }
 
 export interface Currency {

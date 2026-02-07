@@ -33,7 +33,8 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         orgWalletsRes, // organization_currencies_view
         allCurrenciesRes, // currencies
         allWalletsRes, // wallets
-        organizationRes // Fallback: organization with plan
+        organizationRes, // Fallback: organization with plan
+        seatPaymentsRes // Seat purchase payments
     ] = await Promise.all([
         supabase
             .from('organization_members_full_view')
@@ -109,7 +110,17 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .from('organizations')
             .select('*, plan:plans(*)')
             .eq('id', organizationId)
-            .single()
+            .single(),
+
+        // Seat purchase payments
+        supabase
+            .from('payments')
+            .select('id, created_at, amount, currency, status, provider, product_type, metadata')
+            .eq('organization_id', organizationId)
+            .eq('product_type', 'seat_purchase')
+            .eq('status', 'completed')
+            .order('created_at', { ascending: false })
+            .limit(20)
     ]);
 
     // Build subscription data - use actual subscription or create virtual one from org.plan
@@ -151,6 +162,28 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         };
     }
 
+    // Combine subscription billing cycles with seat purchase payments
+    const subscriptionCycles: OrganizationBillingCycle[] = (billingCyclesRes.data || []).map((c: any) => ({
+        ...c,
+        product_type: 'subscription',
+    }));
+
+    const seatPayments: OrganizationBillingCycle[] = (seatPaymentsRes?.data || []).map((p: any) => ({
+        id: p.id,
+        created_at: p.created_at,
+        amount: p.amount,
+        currency: p.currency || 'USD',
+        status: p.status,
+        billing_period: 'one-time',
+        plan: { name: `${p.metadata?.seats || '?'} asientos` },
+        payment: { provider: p.provider },
+        payer_email: null,
+        product_type: 'seat_purchase',
+    }));
+
+    const allBillingCycles = [...subscriptionCycles, ...seatPayments]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
     return {
         members: (membersRes.data || []) as OrganizationMemberDetail[],
         invitations: (invitationsRes.data || []) as OrganizationInvitation[],
@@ -159,7 +192,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         rolePermissions: (rolePermissionsRes.data || []) as RolePermission[],
         activityLogs: (activityLogsRes.data || []) as OrganizationActivityLog[],
         subscription: subscription,
-        billingCycles: (billingCyclesRes.data || []) as OrganizationBillingCycle[],
+        billingCycles: allBillingCycles,
         preferences: (preferencesRes.data) as OrganizationPreferences | null,
         contactCurrencies: (orgCurrenciesRes.data || []) as OrganizationCurrency[],
         contactWallets: (orgWalletsRes.data || []) as OrganizationWallet[],

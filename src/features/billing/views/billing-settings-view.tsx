@@ -226,6 +226,7 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                             <TableHeader>
                                 <TableRow className="bg-muted/30">
                                     <TableHead>Fecha</TableHead>
+                                    <TableHead>Concepto</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead>Monto</TableHead>
                                     <TableHead>Método</TableHead>
@@ -234,7 +235,7 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                             <TableBody>
                                 {billingCycles.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                             <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                             No hay facturas disponibles
                                         </TableCell>
@@ -246,8 +247,14 @@ export function BillingSettingsView({ subscription, billingCycles = [] }: Billin
                                                 {format(new Date(cycle.created_at), "d MMM yyyy", { locale: es })}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant={cycle.status === 'active' ? "success" : "secondary"}>
-                                                    {cycle.status === 'active' ? "Activo" : cycle.status === 'cancelled' ? "Cancelado" : cycle.status}
+                                                {cycle.product_type === 'seat_purchase'
+                                                    ? <span className="text-sm">Compra de asientos</span>
+                                                    : <span className="text-sm">Suscripción</span>
+                                                }
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={cycle.status === 'active' || cycle.status === 'completed' ? "success" : "secondary"}>
+                                                    {cycle.status === 'active' ? "Activo" : cycle.status === 'completed' ? "Completado" : cycle.status === 'cancelled' ? "Cancelado" : cycle.status}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>

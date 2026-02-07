@@ -39,16 +39,17 @@ export async function sendInvitationAction(
         return { success: false, error: "Usuario no encontrado" };
     }
 
-    // 2. Verify caller is admin member
+    // 2. Verify caller is admin member (using full view like updateMemberRoleAction)
     const { data: callerMember } = await supabase
-        .from('organization_members')
-        .select('id, role_id, roles(type)')
+        .from('organization_members_full_view')
+        .select('id, role_type, role_name, user_id')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
         .eq('is_active', true)
         .single();
 
-    if (!callerMember || (callerMember.roles as any)?.type !== 'admin') {
+    const isAdmin = callerMember?.role_type === 'admin' || callerMember?.role_name === 'Administrador';
+    if (!callerMember || !isAdmin) {
         return { success: false, error: "Solo los administradores pueden invitar miembros" };
     }
 
@@ -101,12 +102,20 @@ export async function sendInvitationAction(
         .eq('id', organizationId)
         .single();
 
-    // 7. Get role name for the email
+    // 7. Get role and validate it's not a system role
     const { data: role } = await supabase
         .from('roles')
-        .select('name')
+        .select('name, is_system, type')
         .eq('id', roleId)
         .single();
+
+    if (!role) {
+        return { success: false, error: "Rol no encontrado" };
+    }
+
+    if (role.is_system || role.type === 'web' || role.type === 'owner') {
+        return { success: false, error: "No se puede asignar un rol de sistema a un miembro invitado" };
+    }
 
     // 8. Generate token and insert invitation
     const token = randomUUID();
