@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "@/i18n/routing";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,7 @@ export function BankTransferForm({
     onSuccess,
     onCancel,
 }: BankTransferFormProps) {
+    const router = useRouter();
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -186,8 +188,9 @@ export function BankTransferForm({
         const celebrationUrl = `/checkout/success?${successParams.toString()}`;
 
         const handleContinue = () => {
+            // Use client-side navigation for instant transition
+            router.push(celebrationUrl as any);
             onSuccess?.();
-            window.location.href = celebrationUrl;
         };
 
         return (
