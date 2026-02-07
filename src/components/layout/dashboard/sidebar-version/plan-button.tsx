@@ -125,7 +125,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
     );
 
     return (
-        <Link href="/organization/billing/plans" className="w-full block">
+        <Link href="/pricing" className="w-full block">
             {content}
         </Link>
     );

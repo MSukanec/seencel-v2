@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Minus, Users, ShoppingCart, AlertTriangle, CheckCircle } from "lucide-react";
-import { Role } from "@/types/organization";
-import { SeatStatus, getOrganizationSeatStatus } from "@/features/organization/actions";
+import { Role, SeatStatus } from "@/features/team/types";
+import { getOrganizationSeatStatus } from "@/features/team/actions";
 import { Link } from "@/i18n/routing";
 
 interface InviteMemberFormProps {
@@ -124,14 +124,14 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
     if (showPurchaseFlow && seatStatus && !seatStatus.can_invite) {
         return (
             <div className="flex flex-col h-full min-h-0">
-                <div className="flex-1 overflow-y-auto space-y-6">
+                <div className="flex-1 overflow-y-auto space-y-4">
                     {/* Current Status */}
-                    <div className="rounded-lg border bg-muted/30 p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Users className="h-5 w-5 text-muted-foreground" />
-                            <span className="font-medium">Estado Actual</span>
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">Estado Actual</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                             <div>
                                 <span className="text-muted-foreground">Incluidos en plan:</span>
                                 <span className="ml-2 font-medium">{seatStatus.seats_included}</span>
@@ -153,21 +153,19 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
 
                     <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10">
                         <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        <AlertDescription>
+                        <AlertDescription className="text-sm">
                             No tenés asientos disponibles. Para invitar nuevos miembros, primero debés comprar asientos adicionales.
                         </AlertDescription>
                     </Alert>
 
-                    <Separator />
-
                     {/* Purchase Form */}
-                    <div className="space-y-4">
-                        <h4 className="font-medium flex items-center gap-2">
+                    <div className="space-y-3">
+                        <h4 className="font-medium flex items-center gap-2 text-sm">
                             <ShoppingCart className="h-4 w-4" />
                             Comprar Asientos
                         </h4>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center gap-4">
                             <Button
                                 type="button"
                                 variant="outline"
@@ -178,7 +176,7 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                                 <Minus className="h-4 w-4" />
                             </Button>
                             <div className="text-center min-w-[80px]">
-                                <div className="text-3xl font-bold">{seatsToBuy}</div>
+                                <div className="text-2xl font-bold">{seatsToBuy}</div>
                                 <div className="text-xs text-muted-foreground">
                                     {seatsToBuy === 1 ? "asiento" : "asientos"}
                                 </div>
@@ -194,10 +192,10 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                         </div>
 
                         {/* Price Breakdown with Proration */}
-                        <div className="rounded-lg border p-4 space-y-3">
+                        <div className="rounded-lg border p-3 space-y-2">
                             {/* Proration Info */}
                             {seatStatus.days_remaining > 0 && (
-                                <div className="flex items-center justify-between text-sm bg-primary/10 -mx-4 -mt-4 px-4 py-2 rounded-t-lg">
+                                <div className="flex items-center justify-between text-sm bg-primary/10 -mx-3 -mt-3 px-3 py-1.5 rounded-t-lg">
                                     <span className="text-muted-foreground">Días restantes del ciclo</span>
                                     <Badge variant="outline">{seatStatus.days_remaining} días</Badge>
                                 </div>
@@ -245,7 +243,7 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                 </div>
 
                 <FormFooter
-                    className="-mx-4 -mb-4 mt-6"
+                    className="-mx-4 -mb-4 mt-4"
                     isLoading={false}
                     isForm={false}
                     submitLabel="Ir a Checkout"

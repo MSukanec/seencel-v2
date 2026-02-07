@@ -68,6 +68,7 @@ export async function getDashboardData() {
             `)
             .eq('user_id', publicUserId)
             .eq('organization_id', orgId)
+            .eq('is_active', true)
             .single();
 
         if (directMember?.organizations) {
@@ -137,6 +138,7 @@ export async function getDashboardData() {
                 )
             `)
             .eq('user_id', publicUserId)
+            .eq('is_active', true)
             .limit(1)
             .single();
 
@@ -293,7 +295,8 @@ export async function getUserOrganizations() {
                 )
             )
         `)
-        .eq('user_id', publicUserId);
+        .eq('user_id', publicUserId)
+        .eq('is_active', true);
 
     if (orgsError) {
         console.error("Error fetching organizations FULL:", JSON.stringify(orgsError, null, 2));
@@ -333,7 +336,8 @@ export async function getUserOrganizations() {
                     email
                 )
             `)
-            .in('organization_id', orgIds);
+            .in('organization_id', orgIds)
+            .eq('is_active', true);
 
         if (membersError) {
             // Log warning but allow the page to render without avatars

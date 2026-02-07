@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ import {
     AlertCircle,
     ArrowRight,
     FileText,
-    ExternalLink,
 } from "lucide-react";
 import {
     createBankTransferPayment,
@@ -168,21 +166,29 @@ export function BankTransferForm({
         }
     };
 
-    // Step 3: Success - show confirmation with access info
+    // Step 3: Success - show brief confirmation then redirect to celebration page
     if (step === 3) {
         const isCourse = !!courseId;
         const isSeats = !courseId && !planId && !!organizationId;
-        // Get locale from current URL (e.g. /es/checkout -> es)
-        const currentLocale = typeof window !== 'undefined'
-            ? window.location.pathname.split('/')[1] || 'es'
-            : 'es';
-        // Redirect based on product type
-        const successUrl = isCourse && courseSlug
-            ? `/${currentLocale}/academia/mis-cursos/${courseSlug}`
-            : isSeats
-                ? `/${currentLocale}/organizacion/configuracion?tab=members`
-                : `/${currentLocale}/organizacion/configuracion?tab=billing`;
-        const successLabel = isCourse ? "Ir al Curso" : isSeats ? "Ir a Miembros" : "Ir a Facturación";
+
+        // Build success page URL with product params
+        const successParams = new URLSearchParams({ source: "transfer" });
+        if (isCourse) {
+            successParams.set("product_type", "course");
+            if (courseId) successParams.set("course_id", courseId);
+        } else if (isSeats) {
+            successParams.set("product_type", "seats");
+            if (organizationId) successParams.set("org_id", organizationId);
+        } else {
+            successParams.set("product_type", "subscription");
+            if (organizationId) successParams.set("org_id", organizationId);
+        }
+        const celebrationUrl = `/checkout/success?${successParams.toString()}`;
+
+        const handleContinue = () => {
+            onSuccess?.();
+            window.location.href = celebrationUrl;
+        };
 
         return (
             <div className="flex flex-col h-full min-h-0">
@@ -205,7 +211,7 @@ export function BankTransferForm({
                             </AlertDescription>
                         </Alert>
 
-                        {/* Verification info + caution combined */}
+                        {/* Verification info */}
                         <Alert className="bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800 text-left">
                             <AlertDescription className="text-blue-700 dark:text-blue-300 text-sm space-y-2">
                                 <p>
@@ -222,27 +228,12 @@ export function BankTransferForm({
                     </div>
                 </div>
 
-                {/* Footer with two buttons */}
+                {/* Footer with single button */}
                 <div className="border-t -mx-4 -mb-4 mt-4 p-4 bg-muted/50">
-                    <div className="flex gap-3">
-                        <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={onSuccess}
-                        >
-                            Cerrar
-                        </Button>
-                        <Button
-                            className="flex-1"
-                            onClick={() => {
-                                onSuccess?.();
-                                window.location.href = successUrl;
-                            }}
-                        >
-                            {successLabel}
-                            <ExternalLink className="ml-2 h-4 w-4" />
-                        </Button>
-                    </div>
+                    <Button className="w-full" onClick={handleContinue}>
+                        Continuar
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                 </div>
             </div>
         );

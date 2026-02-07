@@ -62,7 +62,7 @@ function buildActivitySentence(
     );
 }
 
-export function ActivityFeedCard({ activity, className }: ActivityFeedCardProps) {
+export function TeamActivityFeedCard({ activity, className }: ActivityFeedCardProps) {
     // Only show first 5 items for dashboard
     const recentActivity = activity.slice(0, 5);
 

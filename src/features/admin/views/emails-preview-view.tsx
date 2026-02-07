@@ -85,7 +85,7 @@ const EMAIL_TEMPLATES = [
                 planName="Pro"
                 expiresAt="4 de Febrero, 2026"
                 daysRemaining={7}
-                renewUrl="https://seencel.com/organization/billing/plans"
+                renewUrl="https://seencel.com/pricing"
             />
         ),
     },
@@ -100,7 +100,7 @@ const EMAIL_TEMPLATES = [
                 firstName="Juan"
                 planName="Pro"
                 expiredAt="28 de Enero, 2026"
-                reactivateUrl="https://seencel.com/organization/billing/plans"
+                reactivateUrl="https://seencel.com/pricing"
             />
         ),
     },

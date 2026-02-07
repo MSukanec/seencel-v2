@@ -294,7 +294,7 @@ export function Toolbar<TData>({
                                 </p>
                                 <ToolbarButton
                                     className="w-full h-12"
-                                    onClick={() => window.location.href = '/organization/billing/plans'}
+                                    onClick={() => window.location.href = '/pricing'}
                                 >
                                     Actualizar a {primaryAction.featureGuard?.requiredPlan || "PRO"}
                                 </ToolbarButton>

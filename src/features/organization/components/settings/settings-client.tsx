@@ -2,32 +2,34 @@
 
 import { OrganizationSettingsData } from "@/types/organization";
 import { TabsContent } from "@/components/ui/tabs";
-import { MembersSettingsView } from "@/features/organization/views/organization-members-settings-view";
-import { PermissionsSettingsView } from "@/features/organization/views/organization-permissions-settings-view";
-import { BillingSettingsView } from "@/features/organization/views/organization-billing-settings-view";
+import { TeamMembersView } from "@/features/team/views/team-members-view";
+import { TeamPermissionsView } from "@/features/team/views/team-permissions-view";
+import { BillingSettingsView } from "@/features/billing/views/billing-settings-view";
 
 interface SettingsClientProps {
     data: OrganizationSettingsData;
     organizationId: string;
+    currentUserId: string;
 }
 
-export function SettingsClient({ data, organizationId }: SettingsClientProps) {
+export function SettingsClient({ data, organizationId, currentUserId }: SettingsClientProps) {
     // Get planId from subscription or fallback
     const planId = data.subscription?.plan_id ?? "";
 
     return (
         <>
             <TabsContent value="members" className="m-0 h-full focus-visible:outline-none">
-                <MembersSettingsView
+                <TeamMembersView
                     organizationId={organizationId}
                     planId={planId}
                     members={data.members}
                     invitations={data.invitations}
                     roles={data.roles}
+                    currentUserId={currentUserId}
                 />
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">
-                <PermissionsSettingsView
+                <TeamPermissionsView
                     organizationId={organizationId}
                     roles={data.roles}
                     permissions={data.permissions}

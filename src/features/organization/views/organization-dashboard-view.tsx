@@ -1,6 +1,6 @@
 "use client";
 
-import { ActivityFeedCard } from "@/features/activity/components/activity-feed-card";
+import { TeamActivityFeedCard } from "@/features/team/components/team-activity-feed-card";
 import { ProjectCard } from "@/features/projects/components/project-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Link } from "@/i18n/routing";
@@ -151,7 +151,7 @@ export function OrganizationDashboardView({
                         </DashboardCard>
 
                         {/* Right Column: Activity Feed */}
-                        <ActivityFeedCard activity={activity} />
+                        <TeamActivityFeedCard activity={activity} />
                     </div>
                 </div>
             </ContentLayout>

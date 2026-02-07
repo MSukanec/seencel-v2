@@ -10,6 +10,7 @@ import { ThemeCustomizationHydrator } from "@/stores/theme-store";
 import { OrganizationStoreHydrator } from "@/stores/organization-store";
 import { Currency } from "@/types/currency";
 import MaintenancePage from "./maintenance/page";
+import { MemberRemovedOverlay } from "@/features/organization/components/member-removed-overlay";
 
 // Force dynamic to ensure fresh organization data on every request
 // This is critical for organization switching to work correctly
@@ -32,7 +33,11 @@ export default async function DashboardLayout({
     }
 
     const { profile } = await getUserProfile();
-    const { activeOrgId } = await getUserOrganizations();
+    const { organizations, activeOrgId } = await getUserOrganizations();
+
+    // Detect stale membership: user was removed from their active org
+    const wasRemoved = activeOrgId && organizations.length > 0 && !organizations.some((o: any) => o.id === activeOrgId);
+    const fallbackOrg = wasRemoved ? organizations[0] : null;
 
     // Initialize data arrays
     let currencies: Currency[] = [];
@@ -116,6 +121,12 @@ export default async function DashboardLayout({
             <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>
                 <LayoutSwitcher user={profile} activeOrgId={activeOrgId || undefined}>
                     {children}
+                    {wasRemoved && fallbackOrg && (
+                        <MemberRemovedOverlay
+                            fallbackOrgId={fallbackOrg.id}
+                            fallbackOrgName={fallbackOrg.name}
+                        />
+                    )}
                 </LayoutSwitcher>
             </FeatureFlagsProvider>
         </>

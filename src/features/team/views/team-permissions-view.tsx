@@ -1,6 +1,6 @@
 "use client";
 
-import { Role, Permission, RolePermission } from "@/types/organization";
+import { Role, Permission, RolePermission } from "@/features/team/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +10,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ContentLayout } from "@/components/layout";
 import { useMemo, useState, useTransition, useOptimistic } from "react";
 import { Info, ShieldCheck, Database, Shield, Edit, Eye, User, Briefcase, Loader2 } from "lucide-react";
-import { seedPermissions, toggleRolePermission } from "@/actions/organization-settings";
+import { seedPermissions, toggleRolePermission } from "@/features/team/actions";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface PermissionsSettingsViewProps {
+interface TeamPermissionsViewProps {
     organizationId: string;
     roles: Role[];
     permissions?: Permission[];
@@ -78,7 +78,7 @@ const getRoleIcon = (roleName: string) => {
     return User;
 };
 
-export function PermissionsSettingsView({ organizationId, roles, permissions = [], rolePermissions = [] }: PermissionsSettingsViewProps) {
+export function TeamPermissionsView({ organizationId, roles, permissions = [], rolePermissions = [] }: TeamPermissionsViewProps) {
     const router = useRouter();
     const [isSeeding, setIsSeeding] = useState(false);
     const [isPending, startTransition] = useTransition();

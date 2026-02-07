@@ -175,14 +175,14 @@ export function SidebarAvatarButton({
                     <Separator className="my-1" />
 
                     {/* 3. Ir al Inicio */}
-                    <Link
-                        href="/"
+                    <a
+                        href="/?landing=true"
                         onClick={handleClose}
                         className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors"
                     >
                         <Home className="h-4 w-4 text-muted-foreground" />
                         {tUser('home')}
-                    </Link>
+                    </a>
 
                     {/* 4. Contacto */}
                     <Link

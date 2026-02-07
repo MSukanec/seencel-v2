@@ -265,14 +265,16 @@ export function FoundersContent({ isDashboard = false }: FoundersContentProps) {
                         </Card>
 
                         {/* CTA */}
-                        <Button
-                            variant="outline"
-                            size="lg"
-                            className="mt-8 border-primary/50 text-primary hover:bg-primary/10"
-                        >
-                            <Play className="mr-2 h-5 w-5" />
-                            {t("course.cta")}
-                        </Button>
+                        <a href="/academy/courses/master-archicad">
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                className="mt-8 border-primary/50 text-primary hover:bg-primary/10"
+                            >
+                                <Play className="mr-2 h-5 w-5" />
+                                {t("course.cta")}
+                            </Button>
+                        </a>
                     </div>
                 </div>
             </section>

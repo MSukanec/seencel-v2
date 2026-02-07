@@ -82,7 +82,7 @@ export function PlanStatusButton() {
     const Icon = styles.icon;
 
     return (
-        <Link href="/organization/billing/plans">
+        <Link href="/pricing">
             <Button
                 variant="outline"
                 size="sm"

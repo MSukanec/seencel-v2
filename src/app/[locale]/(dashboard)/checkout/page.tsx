@@ -7,7 +7,7 @@ import { getCourseBySlug } from "@/features/academy/course-queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getExchangeRate, getUserCountryCode } from "@/features/billing/queries";
 import { checkIsAdmin } from "@/features/users/queries";
-import { getOrganizationSeatStatus } from "@/features/organization/actions";
+import { getOrganizationSeatStatus } from "@/features/team/actions";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ShoppingCart } from "lucide-react";

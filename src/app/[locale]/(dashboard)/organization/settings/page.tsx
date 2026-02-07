@@ -6,6 +6,7 @@ import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
 // Reusable tab trigger style
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -20,6 +21,13 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
     const initialTab = params.tab || "members";
 
     if (!orgId) {
+        redirect('/');
+    }
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
         redirect('/');
     }
 
@@ -46,7 +54,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                 }
             >
                 <ContentLayout variant="wide">
-                    <SettingsClient data={data} organizationId={orgId} />
+                    <SettingsClient data={data} organizationId={orgId} currentUserId={user.id} />
                 </ContentLayout>
             </PageWrapper>
         </Tabs>

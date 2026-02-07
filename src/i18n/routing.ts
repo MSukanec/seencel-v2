@@ -79,10 +79,8 @@ export const routing = defineRouting({
             es: "/academia/mis-cursos/[slug]/foro",
             en: "/academy/my-courses/[slug]/forum"
         },
-        '/organization/billing/plans': {
-            en: '/organization/billing/plans',
-            es: '/organizacion/facturacion/planes'
-        },
+
+
         '/organization/finance': {
             en: '/organization/finance',
             es: '/organizacion/finanzas'
@@ -213,10 +211,7 @@ export const routing = defineRouting({
             es: '/fundadores'
         },
 
-        '/organization/billing/founders': {
-            en: '/organization/billing/founders',
-            es: '/organizacion/facturacion/fundadores'
-        },
+
         '/checkout': {
             en: '/checkout',
             es: '/checkout'

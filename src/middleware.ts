@@ -93,7 +93,8 @@ export async function middleware(request: NextRequest) {
         }
 
         // SCENARIO 4: Authenticated user on landing page → redirect to hub instantly
-        if (pathWithoutLocale === "/") {
+        // Skip redirect if user explicitly requested the landing page (?landing=true)
+        if (pathWithoutLocale === "/" && !request.nextUrl.searchParams.has('landing')) {
             const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";
             return NextResponse.redirect(new URL(`/${locale}/hub`, request.url));
         }

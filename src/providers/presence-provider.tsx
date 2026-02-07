@@ -71,7 +71,7 @@ function deriveViewName(pathname: string): string {
         '/organization': 'Organization',
         '/organization/team': 'Team',
         '/organization/roles': 'Roles',
-        '/organization/billing': 'Billing',
+        '/pricing': 'Pricing',
         '/projects': 'Projects',
         '/contacts': 'Contacts',
         '/quotes': 'Quotes',

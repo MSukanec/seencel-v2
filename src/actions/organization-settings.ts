@@ -4,28 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { OrganizationSettingsData, OrganizationMemberDetail, OrganizationInvitation, Role, Permission, RolePermission, OrganizationActivityLog, OrganizationSubscription, OrganizationBillingCycle, OrganizationPreferences, OrganizationCurrency, OrganizationWallet, Currency, Wallet } from "@/types/organization";
 
-export async function seedPermissions(organizationId: string) {
-    const supabase = await createClient();
 
-    const defaultPermissions = [
-        { key: 'billing.view', description: 'Ver Billing', category: 'Administración' },
-        { key: 'billing.manage', description: 'Gestionar Billing', category: 'Administración' },
-        { key: 'plans.view', description: 'Ver Plans', category: 'Administración' },
-        { key: 'plans.manage', description: 'Gestionar Plans', category: 'Administración' },
-        { key: 'admin.access', description: 'Access Administración', category: 'Administración' },
-        { key: 'costs.view', description: 'Ver General Costs', category: 'General Costs' },
-        { key: 'costs.manage', description: 'Gestionar General Costs', category: 'General Costs' },
-        { key: 'org.view', description: 'Ver Organización', category: 'Organización' },
-        { key: 'org.manage', description: 'Gestionar Organización', category: 'Organización' },
-    ];
-
-    const { error } = await supabase.from('permissions').upsert(defaultPermissions, { onConflict: 'key' });
-
-    if (error) {
-        console.error('Error seeding permissions:', error);
-        throw new Error('Failed to seed permissions');
-    }
-}
 
 export async function getOrganizationSettingsData(organizationId: string): Promise<OrganizationSettingsData> {
     const supabase = await createClient();
@@ -60,6 +39,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .from('organization_members_full_view')
             .select('*')
             .eq('organization_id', organizationId)
+            .eq('is_active', true)
             .order('joined_at', { ascending: false }),
 
         supabase
@@ -331,63 +311,4 @@ export async function removeOrganizationWallet(organizationId: string, walletId:
     }
 }
 
-/**
- * Toggle a permission for a role (add or remove)
- * Only allows editing non-admin roles (Editor, Lector)
- */
-export async function toggleRolePermission(
-    organizationId: string,
-    roleId: string,
-    permissionId: string,
-    enabled: boolean
-) {
-    const supabase = await createClient();
-
-    // Verify role belongs to org and is not Administrador
-    const { data: role } = await supabase
-        .from('roles')
-        .select('id, name, organization_id')
-        .eq('id', roleId)
-        .eq('organization_id', organizationId)
-        .single();
-
-    if (!role) {
-        throw new Error('Role not found or not in this organization');
-    }
-
-    // Block editing Administrador role
-    if (role.name === 'Administrador') {
-        throw new Error('Cannot modify Administrador permissions');
-    }
-
-    if (enabled) {
-        // Add permission
-        const { error } = await supabase
-            .from('role_permissions')
-            .insert({
-                role_id: roleId,
-                permission_id: permissionId,
-                organization_id: organizationId
-            });
-
-        if (error && !error.message.includes('duplicate')) {
-            console.error('Error adding role permission:', error);
-            throw new Error('Failed to add permission');
-        }
-    } else {
-        // Remove permission
-        const { error } = await supabase
-            .from('role_permissions')
-            .delete()
-            .eq('role_id', roleId)
-            .eq('permission_id', permissionId);
-
-        if (error) {
-            console.error('Error removing role permission:', error);
-            throw new Error('Failed to remove permission');
-        }
-    }
-
-    return { success: true };
-}
 

@@ -3,84 +3,102 @@
 # Función HANDLE_PAYMENT_COURSE_SUCCESS:
 
 DECLARE
-  v_payment_id uuid;
-  v_step text := 'start';
+    v_payment_id uuid;
+    v_course_name text;
+    v_step text := 'start';
 BEGIN
-  -- ============================================================
-  -- 1) Idempotencia
-  -- ============================================================
-  v_step := 'idempotency_lock';
-  PERFORM pg_advisory_xact_lock(
-    hashtext(p_provider || p_provider_payment_id)
-  );
-
-  -- ============================================================
-  -- 2) Registrar pago
-  -- ============================================================
-  v_step := 'insert_payment';
-  v_payment_id := public.step_payment_insert_idempotent(
-    p_provider,
-    p_provider_payment_id,
-    p_user_id,
-    NULL,
-    'course',
-    NULL,
-    p_course_id,
-    p_amount,
-    p_currency,
-    p_metadata
-  );
-
-  IF v_payment_id IS NULL THEN
-    RETURN jsonb_build_object(
-      'status', 'already_processed'
+    -- ============================================================
+    -- 1) Idempotencia
+    -- ============================================================
+    v_step := 'idempotency_lock';
+    PERFORM pg_advisory_xact_lock(
+        hashtext(p_provider || p_provider_payment_id)
     );
-  END IF;
 
-  -- ============================================================
-  -- 3) Enroll anual al curso
-  -- ============================================================
-  v_step := 'course_enrollment_annual';
-  PERFORM public.step_course_enrollment_annual(
-    p_user_id,
-    p_course_id
-  );
+    -- ============================================================
+    -- 2) Registrar pago
+    -- ============================================================
+    v_step := 'insert_payment';
+    v_payment_id := public.step_payment_insert_idempotent(
+        p_provider,
+        p_provider_payment_id,
+        p_user_id,
+        NULL,
+        'course',
+        NULL,
+        p_course_id,
+        p_amount,
+        p_currency,
+        p_metadata
+    );
 
-  -- ============================================================
-  -- DONE
-  -- ============================================================
-  v_step := 'done';
-  RETURN jsonb_build_object(
-    'status', 'ok',
-    'payment_id', v_payment_id
-  );
+    IF v_payment_id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'already_processed'
+        );
+    END IF;
+
+    -- ============================================================
+    -- 3) Enroll anual al curso
+    -- ============================================================
+    v_step := 'course_enrollment_annual';
+    PERFORM public.step_course_enrollment_annual(
+        p_user_id,
+        p_course_id
+    );
+
+    -- ============================================================
+    -- 4) NUEVO: Enviar emails de confirmación
+    -- ============================================================
+    v_step := 'send_purchase_email';
+    
+    -- Obtener nombre del curso
+    SELECT title INTO v_course_name
+    FROM public.courses
+    WHERE id = p_course_id;
+    
+    PERFORM public.step_send_purchase_email(
+        p_user_id,
+        'course',
+        COALESCE(v_course_name, 'Curso'),
+        p_amount,
+        p_currency,
+        v_payment_id
+    );
+
+    -- ============================================================
+    -- DONE
+    -- ============================================================
+    v_step := 'done';
+    RETURN jsonb_build_object(
+        'status', 'ok',
+        'payment_id', v_payment_id
+    );
 
 EXCEPTION
-  WHEN OTHERS THEN
-    -- 🔥 LOGUEAMOS PERO NO ROMPEMOS EL FLUJO
-    PERFORM public.log_system_error(
-      'payment',
-      'course',
-      'handle_payment_course_success',
-      SQLERRM,
-      jsonb_build_object(
-        'step', v_step,
-        'provider', p_provider,
-        'provider_payment_id', p_provider_payment_id,
-        'user_id', p_user_id,
-        'course_id', p_course_id,
-        'amount', p_amount,
-        'currency', p_currency
-      ),
-      'critical'
-    );
+    WHEN OTHERS THEN
+        PERFORM public.log_system_error(
+            'payment',
+            'course',
+            'handle_payment_course_success',
+            SQLERRM,
+            jsonb_build_object(
+                'step', v_step,
+                'provider', p_provider,
+                'provider_payment_id', p_provider_payment_id,
+                'user_id', p_user_id,
+                'course_id', p_course_id,
+                'amount', p_amount,
+                'currency', p_currency
+            ),
+            'critical'
+        );
 
-    -- ⚠️ CLAVE: NO RAISE
-    RETURN jsonb_build_object(
-      'status', 'ok_with_warning',
-      'payment_id', v_payment_id,
-      'warning_step', v_step
-    );
+        RETURN jsonb_build_object(
+            'status', 'ok_with_warning',
+            'payment_id', v_payment_id,
+            'warning_step', v_step
+        );
 END;
 
 # Función HANDLE_PAYMENT_SUBSCRIPTION_SUCCESS:

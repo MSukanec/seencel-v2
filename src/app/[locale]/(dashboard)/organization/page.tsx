@@ -3,7 +3,7 @@ import { getDashboardData } from "@/features/organization/queries";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { OrganizationDashboardView } from "@/features/organization/views/organization-dashboard-view";
-import { OrganizationActivityView } from "@/features/organization/views/organization-activity-view";
+import { TeamActivityView } from "@/features/team/views/team-activity-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,7 +103,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                     </TabsContent>
 
                     <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <OrganizationActivityView logs={activityLogs} />
+                        <TeamActivityView logs={activityLogs} />
                     </TabsContent>
                 </PageWrapper>
             </Tabs>

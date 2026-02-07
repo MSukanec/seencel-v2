@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { OrganizationActivityLog } from "@/types/organization";
+import { OrganizationActivityLog } from "@/features/team/types";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +11,12 @@ import { ActionConfig, ModuleConfig, actionConfigs, moduleConfigs, getActionVerb
 import { User } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-interface ActivityLogsDataTableProps {
+interface TeamActivityLogsTableProps {
     data: OrganizationActivityLog[];
 }
 
 
-export function ActivityLogsDataTable({ data }: ActivityLogsDataTableProps) {
+export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
     const t = useTranslations("ActivityLogs");
 
     const columns: ColumnDef<OrganizationActivityLog>[] = [
@@ -214,4 +214,3 @@ export function ActivityLogsDataTable({ data }: ActivityLogsDataTableProps) {
         />
     );
 }
-

@@ -93,7 +93,7 @@ export function FeatureLockBadge({
     featureName,
     requiredPlan = "PRO",
     customMessage,
-    upgradeHref = "/organization/billing/plans"
+    upgradeHref = "/pricing"
 }: {
     featureName: string;
     requiredPlan?: string;
@@ -144,7 +144,7 @@ export function FeatureGuard({
     customMessage,
     showBadge = true,
     showPopover = true,
-    upgradeHref = "/organization/billing/plans"
+    upgradeHref = "/pricing"
 }: FeatureGuardProps) {
     const t = useTranslations('Portal.FeatureGuard');
 

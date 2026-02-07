@@ -124,7 +124,7 @@ export function PurchaseConfirmationEmail({
                 </div>
 
                 <div style={emailBaseStyles.ctaContainer}>
-                    <a href="https://seencel.com/organization/billing" style={emailBaseStyles.cta}>
+                    <a href="https://seencel.com/pricing" style={emailBaseStyles.cta}>
                         {l.viewSubscription}
                     </a>
                 </div>

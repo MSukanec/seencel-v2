@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { OrganizationActivityLog } from "@/types/organization";
-import { ActivityLogsDataTable } from "../components/settings/activity-logs-data-table";
+import { OrganizationActivityLog } from "@/features/team/types";
+import { TeamActivityLogsTable } from "@/features/team/components/team-activity-logs-table";
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
@@ -10,11 +10,11 @@ import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashb
 import { moduleConfigs, actionConfigs, getActionVerb } from "@/config/audit-logs";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
-interface OrganizationActivityViewProps {
+interface TeamActivityViewProps {
     logs: OrganizationActivityLog[];
 }
 
-export function OrganizationActivityView({ logs = [] }: OrganizationActivityViewProps) {
+export function TeamActivityView({ logs = [] }: TeamActivityViewProps) {
     // Search state
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -168,7 +168,7 @@ export function OrganizationActivityView({ logs = [] }: OrganizationActivityView
             />
             <div className="flex-1 overflow-y-auto">
                 <ContentLayout variant="wide">
-                    <ActivityLogsDataTable data={filteredLogs} />
+                    <TeamActivityLogsTable data={filteredLogs} />
                 </ContentLayout>
             </div>
         </div>
