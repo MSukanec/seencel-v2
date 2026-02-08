@@ -24,6 +24,7 @@ import {
     createBankTransferPayment,
     uploadTransferReceipt,
 } from "@/features/billing/payments/actions/bank-transfer-actions";
+import { useOrganizationStore } from "@/stores/organization-store";
 import { cn } from "@/lib/utils";
 
 interface BankTransferFormProps {
@@ -160,6 +161,8 @@ export function BankTransferForm({
                 }
 
                 setStep(3);
+                // Invalidate plan in sidebar immediately
+                useOrganizationStore.getState().invalidatePlan();
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido");
             } finally {

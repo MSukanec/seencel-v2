@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/stores/organization-store";
+import { useOrganizationStore } from "@/stores/organization-store";
 import { Crown, Sparkles, Users } from "lucide-react";
 import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
 import { getPlanDisplayName } from "@/lib/plan-utils";
@@ -47,6 +48,7 @@ const getPlanStyle = (name: string) => {
 
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
     const { activeOrgId, isFounder } = useOrganization();
+    const planVersion = useOrganizationStore(state => state.planVersion);
     const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -76,7 +78,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
         }
 
         loadPlanData();
-    }, [activeOrgId, isFounder]); // Re-fetch when founder status changes (after payment)
+    }, [activeOrgId, isFounder, planVersion]); // Re-fetch when plan is invalidated
 
     // Loading skeleton
     if (loading) {

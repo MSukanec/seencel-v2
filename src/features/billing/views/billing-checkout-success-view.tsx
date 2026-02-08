@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Receipt, Loader2, Rocket, GraduationCap, PartyPopper, Sparkles, Users, ArrowUp } from "lucide-react";
 import Link from "next/link";
+import { useOrganizationStore } from "@/stores/organization-store";
 
 // Floating emoji component
 function FloatingEmoji({ emoji, delay, x }: { emoji: string; delay: number; x: number }) {
@@ -101,6 +102,8 @@ export function BillingCheckoutSuccessView() {
 
                 // Force refresh of server components (sidebar, etc.) to update plan/founder status
                 router.refresh();
+                // Also invalidate Zustand plan state for sidebar plan-button
+                useOrganizationStore.getState().invalidatePlan();
             } catch (error) {
                 console.error("PayPal capture error:", error);
                 const errorMessage = encodeURIComponent(error instanceof Error ? error.message : "Payment processing error");
@@ -123,6 +126,9 @@ export function BillingCheckoutSuccessView() {
 
     // For non-PayPal payments (MercadoPago, transfer), refresh on mount to update sidebar
     useEffect(() => {
+        // Invalidate plan in Zustand store so sidebar plan-button refetches
+        useOrganizationStore.getState().invalidatePlan();
+
         if (source !== "paypal") {
             router.refresh();
         }

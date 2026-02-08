@@ -148,12 +148,16 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                                                 <TableCell className="text-sm text-muted-foreground">
                                                     {cycle.started_at
                                                         ? formatDate(cycle.started_at)
-                                                        : "—"}
+                                                        : cycle.product_type === 'seat_purchase' && subscription?.started_at
+                                                            ? formatDate(subscription.started_at)
+                                                            : "—"}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
                                                     {cycle.expires_at
                                                         ? formatDate(cycle.expires_at)
-                                                        : "—"}
+                                                        : cycle.product_type === 'seat_purchase' && subscription?.expires_at
+                                                            ? formatDate(subscription.expires_at)
+                                                            : "—"}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge variant={cycle.status === 'active' ? "success" : cycle.status === 'completed' ? "success" : "secondary"}>

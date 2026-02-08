@@ -54,6 +54,9 @@ interface OrganizationState {
 
     // Hydration status
     isHydrated: boolean;
+
+    // Plan invalidation counter (increment to force plan-button refetch)
+    planVersion: number;
 }
 
 interface OrganizationActions {
@@ -73,6 +76,9 @@ interface OrganizationActions {
     formatAmount: (amount: number, currency?: Currency | string) => string;
     convertToFunctional: (amount: number, fromCurrency: Currency | string, rate?: number) => number;
     convertFromFunctional: (functionalAmount: number, toCurrency: Currency | string, rate?: number) => number;
+
+    // Plan invalidation
+    invalidatePlan: () => void;
 }
 
 type OrganizationStore = OrganizationState & OrganizationActions;
@@ -93,6 +99,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     decimalPlaces: 2,
     kpiCompactFormat: false,
     isHydrated: false,
+    planVersion: 0,
 
     // Hydrate from server data
     hydrate: (data) => {
@@ -128,6 +135,9 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     },
 
     setCurrentExchangeRate: (rate) => set({ currentExchangeRate: rate }),
+
+    // Increment planVersion to force plan-button refetch
+    invalidatePlan: () => set((state) => ({ planVersion: state.planVersion + 1 })),
 
     // Computed getters
     getPrimaryCurrency: () => {
