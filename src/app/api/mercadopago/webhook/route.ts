@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMPClient, validateWebhookSignature } from '@/lib/mercadopago/client';
 import { createAdminClient } from '@/lib/supabase/server';
-import { getFeatureFlag } from '@/actions/feature-flags';
 
 export async function POST(request: NextRequest) {
     try {
@@ -28,8 +27,14 @@ export async function POST(request: NextRequest) {
             status: 'RECEIVED',
         });
 
-        // Determine sandbox mode using feature flag (same as PayPal)
-        const mpEnabled = await getFeatureFlag('mp_enabled');
+        // Determine sandbox mode: read feature flag directly with admin client
+        // (Cannot use getFeatureFlag here — it requires user session cookies)
+        const { data: flagData } = await supabase
+            .from('feature_flags')
+            .select('value')
+            .eq('key', 'mp_enabled')
+            .single();
+        const mpEnabled = flagData?.value ?? true;
         const sandboxMode = !mpEnabled;
 
         // Validate signature
