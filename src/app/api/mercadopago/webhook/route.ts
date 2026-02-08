@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createMPClient, validateWebhookSignature } from '@/lib/mercadopago/client';
 import { createAdminClient } from '@/lib/supabase/server';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
+    let supabase: any;
+
     try {
         // Get headers for signature validation
         const xSignature = request.headers.get('x-signature') || '';
@@ -15,17 +20,30 @@ export async function POST(request: NextRequest) {
         // Get data.id for payment
         const dataId = data?.id?.toString() || '';
 
-        // Log event immediately (before validation)
-        const supabase = await createAdminClient();
-        await supabase.from('payment_events').insert({
-            provider: 'mercadopago',
-            provider_event_id: xRequestId,
-            provider_event_type: type || action,
-            order_id: dataId,
-            raw_headers: { 'x-signature': xSignature, 'x-request-id': xRequestId },
-            raw_payload: body,
-            status: 'RECEIVED',
-        });
+        // Initialize Supabase (can fail if env vars are missing)
+        try {
+            supabase = await createAdminClient();
+        } catch (err) {
+            console.error('[MP Webhook] Failed to create admin client:', err);
+            // Critical failure, but return 200 to MP to stop retrying
+            return NextResponse.json({ received: true, error: 'internal_config_error' });
+        }
+
+        // Log event immediately (fail-safe)
+        try {
+            await supabase.from('payment_events').insert({
+                provider: 'mercadopago',
+                provider_event_id: xRequestId,
+                provider_event_type: type || action,
+                order_id: dataId,
+                raw_headers: { 'x-signature': xSignature, 'x-request-id': xRequestId },
+                raw_payload: body,
+                status: 'RECEIVED',
+            });
+        } catch (logError) {
+            console.error('[MP Webhook] Failed to log event to Supabase:', logError);
+            // Continue processing even if logging fails
+        }
 
         // Determine sandbox mode: 
         // 1. Try to use 'live_mode' from webhook body (most robust)
