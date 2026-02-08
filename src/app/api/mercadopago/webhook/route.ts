@@ -13,19 +13,27 @@ export async function POST(request: NextRequest) {
         const xSignature = request.headers.get('x-signature') || '';
         const xRequestId = request.headers.get('x-request-id') || '';
 
+        // CRITICAL: data.id for signature validation must come from QUERY PARAMS
+        // MercadoPago signs using the query parameter, NOT the body field
+        const queryDataId = request.nextUrl.searchParams.get('data.id') || '';
+
         // Get body
         const body = await request.json();
         const { action, data, type } = body;
 
-        // Get data.id for payment
-        const dataId = data?.id?.toString() || '';
+        // data.id from body (used for payment processing, NOT for signature)
+        const bodyDataId = data?.id?.toString() || '';
+
+        // Use query param for signature, fallback to body if query is empty
+        const signatureDataId = queryDataId || bodyDataId;
+
+        console.log(`[MP Webhook] Query data.id: ${queryDataId}, Body data.id: ${bodyDataId}, type: ${type}, action: ${action}`);
 
         // Initialize Supabase (can fail if env vars are missing)
         try {
             supabase = await createAdminClient();
         } catch (err) {
             console.error('[MP Webhook] Failed to create admin client:', err);
-            // Critical failure, but return 200 to MP to stop retrying
             return NextResponse.json({ received: true, error: 'internal_config_error' });
         }
 
@@ -35,29 +43,22 @@ export async function POST(request: NextRequest) {
                 provider: 'mercadopago',
                 provider_event_id: xRequestId,
                 provider_event_type: type || action,
-                order_id: dataId,
+                order_id: bodyDataId,
                 raw_headers: { 'x-signature': xSignature, 'x-request-id': xRequestId },
                 raw_payload: body,
                 status: 'RECEIVED',
             });
         } catch (logError) {
             console.error('[MP Webhook] Failed to log event to Supabase:', logError);
-            // Continue processing even if logging fails
         }
 
-        // Log FULL payload for debugging
-        console.log('[MP Webhook] Payload received:', JSON.stringify(body, null, 2));
-
-        // Determine sandbox mode: 
-        // 1. Try to use 'live_mode' from webhook body (most robust)
-        // 2. Fallback to feature flag if live_mode is undefined
+        // Determine sandbox mode
         let sandboxMode = false;
 
         if (typeof body.live_mode === 'boolean') {
             sandboxMode = !body.live_mode;
             console.log(`[MP Webhook] Mode determined by live_mode: ${body.live_mode} -> sandbox: ${sandboxMode}`);
         } else {
-            // Fallback to flag
             const { data: flagData } = await supabase
                 .from('feature_flags')
                 .select('value')
@@ -68,21 +69,19 @@ export async function POST(request: NextRequest) {
             console.log(`[MP Webhook] Mode determined by flag: ${mpEnabled} -> sandbox: ${sandboxMode}`);
         }
 
-        // Validate signature
-        // DEBUGGING: Soft-fail validation to inspect payload in logs
+        // Validate signature using QUERY PARAM data.id (as MercadoPago signs it)
         if (process.env.NODE_ENV === 'production') {
-            const isValid = validateWebhookSignature(xSignature, xRequestId, dataId, sandboxMode);
+            const isValid = validateWebhookSignature(xSignature, xRequestId, signatureDataId, sandboxMode);
             if (!isValid) {
-                console.error('[CRITICAL] Invalid webhook signature. Secret might be missing/wrong.');
-                // return NextResponse.json({ received: true, error: 'invalid_signature' }); // TEMPORARILY DISABLED
-            } else {
-                console.log('[MP Webhook] Signature verified successfully.');
+                console.error(`[MP Webhook] Invalid signature. signatureDataId=${signatureDataId}, xRequestId=${xRequestId}`);
+                return NextResponse.json({ received: true, error: 'invalid_signature' });
             }
+            console.log('[MP Webhook] Signature verified OK.');
         }
 
         // Handle payment events
         if (type === 'payment' || action === 'payment.created' || action === 'payment.updated') {
-            await handlePaymentEvent(dataId, supabase, sandboxMode);
+            await handlePaymentEvent(bodyDataId, supabase, sandboxMode);
         }
 
         // Always return 200 to prevent retries
