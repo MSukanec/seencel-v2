@@ -6,12 +6,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ContentLayout } from "@/components/layout";
 import { Receipt } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { format, type Locale } from "date-fns";
+import { es, enUS } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
 import { PlanCardsGrid } from "@/features/billing/components/plan-cards-grid";
 import type { Plan } from "@/actions/plans";
 import type { PlanPurchaseFlags } from "@/features/billing/components/plan-card";
 import { getPlanDisplayName } from "@/lib/plan-utils";
+
+const dateFnsLocales: Record<string, Locale> = { es, en: enUS };
 
 interface BillingSettingsViewProps {
     subscription?: OrganizationSubscription | null;
@@ -24,19 +27,27 @@ interface BillingSettingsViewProps {
 }
 
 export function BillingSettingsView({ subscription, billingCycles = [], organizationId, plans, purchaseFlags, isAdmin, currentPlanId }: BillingSettingsViewProps) {
+    const locale = useLocale();
+    const t = useTranslations("BillingSettings");
+    const dateLocale = dateFnsLocales[locale] || es;
+
     const formatCurrency = (amount: number, currency: string) => {
-        return new Intl.NumberFormat('es-US', {
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: currency,
         }).format(amount);
     };
 
-    // Badge de método de pago - simple
+    const formatDate = (date: string, pattern = "d MMM yyyy") => {
+        return format(new Date(date), pattern, { locale: dateLocale });
+    };
+
+    // Badge de método de pago
     const getProviderBadge = (provider: string | undefined | null) => {
         const p = provider?.toLowerCase() || '';
-        if (p.includes('paypal')) return <Badge variant="outline">PayPal</Badge>;
-        if (p.includes('mercadopago') || p.includes('mercado')) return <Badge variant="outline">MercadoPago</Badge>;
-        if (p.includes('bank') || p.includes('transfer') || !provider) return <Badge variant="outline">Transferencia</Badge>;
+        if (p.includes('paypal')) return <Badge variant="outline">{t("provider.paypal")}</Badge>;
+        if (p.includes('mercadopago') || p.includes('mercado')) return <Badge variant="outline">{t("provider.mercadopago")}</Badge>;
+        if (p.includes('bank') || p.includes('transfer') || !provider) return <Badge variant="outline">{t("provider.transfer")}</Badge>;
         return <Badge variant="outline">{provider}</Badge>;
     };
 
@@ -52,6 +63,12 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
         if (!plan) return '';
         const name = Array.isArray(plan) ? plan[0]?.name : plan.name;
         return getPlanDisplayName(name || '');
+    };
+
+    const getStatusLabel = (status: string) => {
+        const key = status as 'active' | 'completed' | 'cancelled' | 'expired';
+        const knownStatuses = ['active', 'completed', 'cancelled', 'expired'];
+        return knownStatuses.includes(status) ? t(`status.${key}`) : status;
     };
 
     const displayName = getPlanDisplayName(subscription?.plan?.name || '');
@@ -74,9 +91,9 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                 {subscription && !isFree && (
                     <div className="text-sm text-muted-foreground">
                         {subscription.billing_period === 'one-time' ? (
-                            <p>Tu plan <strong>{displayName}</strong> está activo hasta el {format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: es })}.</p>
+                            <p>{t("planActive", { plan: displayName, date: formatDate(subscription.expires_at, "d 'de' MMMM, yyyy") })}</p>
                         ) : (
-                            <p>Tu plan <strong>{displayName}</strong> finalizará el {format(new Date(subscription.expires_at), "d 'de' MMMM, yyyy", { locale: es })}.</p>
+                            <p>{t("planExpires", { plan: displayName, date: formatDate(subscription.expires_at, "d 'de' MMMM, yyyy") })}</p>
                         )}
                     </div>
                 )}
@@ -85,8 +102,8 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                 <div className="space-y-4 pt-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-lg font-medium">Historial de Pagos</h3>
-                            <p className="text-sm text-muted-foreground">Descarga tus facturas y revisa los ciclos anteriores.</p>
+                            <h3 className="text-lg font-medium">{t("history")}</h3>
+                            <p className="text-sm text-muted-foreground">{t("historyDescription")}</p>
                         </div>
                     </div>
 
@@ -94,13 +111,13 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/30">
-                                    <TableHead>Fecha</TableHead>
-                                    <TableHead>Concepto</TableHead>
-                                    <TableHead>Inicio</TableHead>
-                                    <TableHead>Fin</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead>Monto</TableHead>
-                                    <TableHead>Método</TableHead>
+                                    <TableHead>{t("table.date")}</TableHead>
+                                    <TableHead>{t("table.concept")}</TableHead>
+                                    <TableHead>{t("table.start")}</TableHead>
+                                    <TableHead>{t("table.end")}</TableHead>
+                                    <TableHead>{t("table.status")}</TableHead>
+                                    <TableHead>{t("table.amount")}</TableHead>
+                                    <TableHead>{t("table.method")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -108,43 +125,39 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                             <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            No hay facturas disponibles
+                                            {t("noInvoices")}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     billingCycles.map((cycle) => {
                                         const planName = getPlanName(cycle.plan);
                                         const conceptLabel = cycle.product_type === 'upgrade'
-                                            ? `Upgrade a ${planName}`
+                                            ? t("concept.upgrade", { plan: planName })
                                             : cycle.product_type === 'seat_purchase'
-                                                ? 'Compra de asientos'
-                                                : `Suscripción ${planName}`;
+                                                ? t("concept.seats")
+                                                : t("concept.subscription", { plan: planName });
 
                                         return (
                                             <TableRow key={cycle.id}>
                                                 <TableCell className="font-medium">
-                                                    {format(new Date(cycle.created_at), "d MMM yyyy", { locale: es })}
+                                                    {formatDate(cycle.created_at)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <span className="text-sm">{conceptLabel}</span>
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
                                                     {cycle.started_at
-                                                        ? format(new Date(cycle.started_at), "d MMM yyyy", { locale: es })
+                                                        ? formatDate(cycle.started_at)
                                                         : "—"}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
                                                     {cycle.expires_at
-                                                        ? format(new Date(cycle.expires_at), "d MMM yyyy", { locale: es })
+                                                        ? formatDate(cycle.expires_at)
                                                         : "—"}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge variant={cycle.status === 'active' ? "success" : cycle.status === 'completed' ? "success" : "secondary"}>
-                                                        {cycle.status === 'active' ? "Activo"
-                                                            : cycle.status === 'completed' ? "Completado"
-                                                                : cycle.status === 'cancelled' ? "Cancelado"
-                                                                    : cycle.status === 'expired' ? "Expirado"
-                                                                        : cycle.status}
+                                                        {getStatusLabel(cycle.status)}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>

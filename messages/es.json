@@ -900,27 +900,27 @@
         "items": {
             "change_plan": {
                 "question": "¿Puedo cambiar de plan en cualquier momento?",
-                "answer": "Sí, puedes actualizar, degradar o cambiar entre planes en cualquier momento sin penalidades. Cuando cambias de plan en medio de un ciclo de facturación, aplicamos prorrateo automático: si actualizas a un plan superior, tu próxima facturación reflejará el costo proporcional del tiempo restante al nuevo precio. Si degradas a un plan inferior, se acumula un crédito que se aplica a tu próxima facturación. No pierdes datos ni acceso: el cambio se aplica inmediatamente."
+                "answer": "Sí, puedes hacer un upgrade a un plan superior en cualquier momento. Al hacerlo, se aplica un prorrateo automático: solo pagás la diferencia proporcional al tiempo restante de tu ciclo actual. El cambio se aplica inmediatamente y no perdés datos ni acceso. Si necesitás pasar a un plan inferior, contactanos y te ayudamos con el proceso."
             },
             "payment_methods": {
                 "question": "¿Qué métodos de pago aceptan?",
-                "answer": "Aceptamos todas las principales tarjetas de crédito (Visa, Mastercard, Amex) a través de Stripe para clientes internacionales. En Argentina, procesamos pagos locales mediante MercadoPago (dinero en cuenta, tarjetas) y ofrecemos transferencia bancaria directa para planes anuales."
+                "answer": "Aceptamos pagos a través de MercadoPago (tarjetas de crédito, débito y dinero en cuenta) y PayPal para pagos internacionales. También ofrecemos la opción de transferencia bancaria. Todos los pagos se procesan de forma segura y encriptada."
             },
             "data_retention": {
                 "question": "¿Qué sucede con mis datos si cancelo?",
-                "answer": "Tus datos se conservan en nuestros servidores durante 90 días después de la cancelación, lo que te permite reactivar tu cuenta sin perder información. Pasados 90 días, los datos se eliminan permanentemente. Puedes exportar tus datos en cualquier momento antes de la cancelación."
+                "answer": "Al pasar al plan Gratis, conservás acceso a tus datos pero con las limitaciones del plan gratuito. Tus proyectos, contactos y registros permanecen almacenados. Si en el futuro decidís volver a un plan de pago, toda tu información estará disponible tal como la dejaste."
             },
             "billing_cycle": {
-                "question": "¿Puedo cambiar mi ciclo de facturación?",
-                "answer": "Sí. Puedes cambiar tu ciclo de facturación en cualquier momento desde la configuración de tu plan. Si pasas de mensual a anual, se aplica un ajuste de precio en tu próxima facturación. Si pasas de anual a mensual, el cambio toma efecto al final de tu ciclo anual actual."
+                "question": "¿Cómo funciona el ciclo de facturación?",
+                "answer": "Ofrecemos facturación mensual y anual. El plan anual incluye un descuento del 20% respecto al precio mensual. Tu suscripción se activa desde el momento del pago y se renueva de forma manual al finalizar cada ciclo. Recibirás una notificación antes del vencimiento para que puedas renovar."
             },
             "user_roles": {
-                "question": "¿Cómo funcionan los límites de usuarios y roles?",
-                "answer": "Para el plan Free (1 usuario), solo tú tienes acceso. En Pro (1 usuario) también es individual pero con más capacidades. En Teams (usuarios ilimitados), puedes agregar miembros y asignarles roles con permisos específicos. Si degradas desde Teams a Pro o Free, los miembros adicionales pierden acceso automáticamente, pero sus datos se preservan por si reinvitas a más usuarios después."
+                "question": "¿Cómo funcionan los miembros y roles?",
+                "answer": "El plan Gratis incluye 1 miembro. Los planes Pro y Teams incluyen una cantidad base de miembros, y en Teams podés comprar asientos adicionales según lo necesites. Todos los planes de pago permiten asignar roles con permisos específicos (Admin, Miembro, etc.) para controlar qué puede hacer cada persona en tu organización."
             },
             "enterprise": {
-                "question": "¿Qué incluye el plan Enterprise?",
-                "answer": "El plan Enterprise está diseñado para grandes organizaciones. Incluye usuarios ilimitados sin costo adicional por asiento, implementación on-premise, SSO, capacitación personalizada, gerente de cuenta dedicado y SLA del 99.9% con soporte prioritario 24/7. Es ideal para constructoras con más de 50 empleados o desarrolladoras inmobiliarias que manejan múltiples proyectos. Para conocer precios y opciones, <contact>contacta con nuestro equipo de ventas</contact>."
+                "question": "¿Tienen soluciones para grandes empresas?",
+                "answer": "Sí, ofrecemos soluciones personalizadas para organizaciones con necesidades especiales. Esto incluye capacitación para tu equipo, soporte prioritario, y configuraciones adaptadas a tu operación. Es ideal para constructoras o desarrolladoras que manejan múltiples proyectos simultáneamente. Para más información, <contact>contacta con nuestro equipo</contact>."
             }
         }
     },
@@ -1060,6 +1060,96 @@
             "benefit2": "Proyectos ilimitados",
             "benefit3": "Soporte prioritario",
             "benefit4": "Actualizaciones gratuitas"
+        }
+    },
+    "BillingResults": {
+        "processing": "Procesando tu pago...",
+        "processingHint": "Esto solo tomará un momento ✨",
+        "transactionId": "ID de Transacción",
+        "via": "via",
+        "success": {
+            "course": {
+                "title": "¡A aprender! 🎉",
+                "subtitle": "Tu curso ya está listo.",
+                "subtitleHighlight": "¡Comienza cuando quieras!",
+                "cta": "Ir al Curso",
+                "footer": "El conocimiento es poder 💪"
+            },
+            "seats": {
+                "title": "¡Tu equipo crece! 🪑",
+                "subtitle": "Tus nuevos asientos están listos.",
+                "subtitleHighlight": "¡Invitá a tu equipo!",
+                "ctaPrimary": "Ir al Equipo",
+                "ctaSecondary": "Ver Facturación",
+                "footer": "Más sillas, más risas, más construcción 🏗️"
+            },
+            "upgrade": {
+                "title": "¡Upgrade completado! 🚀",
+                "subtitle": "Tu plan ha sido actualizado.",
+                "subtitleHighlight": "¡Disfrutá de las nuevas funcionalidades!",
+                "ctaPrimary": "Ir al Dashboard",
+                "ctaSecondary": "Ver Plan",
+                "footer": "Más poder, más posibilidades ✨"
+            },
+            "subscription": {
+                "title": "¡Bienvenido al equipo! 🚀",
+                "subtitle": "Tu plan está activo.",
+                "subtitleHighlight": "¡Hora de construir!",
+                "ctaPrimary": "Ir al Dashboard",
+                "ctaSecondary": "Ver Plan",
+                "footer": "Grandes cosas están por venir ✨"
+            }
+        },
+        "failure": {
+            "title": "Pago No Completado",
+            "subtitle": "Hubo un problema con tu pago",
+            "defaultError": "El pago fue rechazado o cancelado. No se realizó ningún cargo a tu cuenta.",
+            "referenceId": "ID de Referencia",
+            "gateway": "Gateway",
+            "retryPayment": "Reintentar Pago",
+            "contact": "Contactar"
+        },
+        "pending": {
+            "title": "Pago Pendiente",
+            "subtitle": "Tu pago está siendo procesado",
+            "info": "El pago puede tardar unos minutos en confirmarse. Recibirás un email cuando se complete.",
+            "checking": "Verificando estado del pago...",
+            "paymentId": "ID de Pago",
+            "processedVia": "Procesado via",
+            "goHome": "Ir al Inicio",
+            "contact": "Contactar"
+        }
+    },
+    "BillingSettings": {
+        "planActive": "Tu plan {plan} está activo hasta el {date}.",
+        "planExpires": "Tu plan {plan} finalizará el {date}.",
+        "history": "Historial de Pagos",
+        "historyDescription": "Descarga tus facturas y revisa los ciclos anteriores.",
+        "noInvoices": "No hay facturas disponibles",
+        "table": {
+            "date": "Fecha",
+            "concept": "Concepto",
+            "start": "Inicio",
+            "end": "Fin",
+            "status": "Estado",
+            "amount": "Monto",
+            "method": "Método"
+        },
+        "concept": {
+            "upgrade": "Upgrade a {plan}",
+            "seats": "Compra de asientos",
+            "subscription": "Suscripción {plan}"
+        },
+        "status": {
+            "active": "Activo",
+            "completed": "Completado",
+            "cancelled": "Cancelado",
+            "expired": "Expirado"
+        },
+        "provider": {
+            "paypal": "PayPal",
+            "mercadopago": "MercadoPago",
+            "transfer": "Transferencia"
         }
     },
     "Course": {

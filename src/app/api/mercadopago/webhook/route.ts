@@ -81,7 +81,7 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
         }
 
         // Parse external_reference (pipe-delimited format)
-        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test
+        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test|seats_qty|proration_credit
         const parts = payment.external_reference.split('|');
         if (parts.length < 4) {
             console.error('Invalid external_reference format:', payment.external_reference);
@@ -89,7 +89,7 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
         }
 
         const [
-            product_type,      // 'subscription' | 'course' | 'seats'
+            product_type,      // 'subscription' | 'course' | 'seats' | 'upgrade'
             user_id,           // auth user UUID
             organization_id,   // org UUID or 'x'
             product_id,        // plan_id or course_id or 'x' for seats
@@ -97,6 +97,7 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
             coupon_code,       // coupon code or 'x'
             // is_test         // '1' | '0' - not used in webhook processing
             // seats_qty       // number of seats (only for seats type)
+            // proration_credit // upgrade proration credit or 'x'
         ] = parts;
 
         // Convert 'x' placeholders to null/undefined
@@ -104,6 +105,7 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
         const period = billing_period === 'x' ? 'monthly' : billing_period;
         const coupon = coupon_code === 'x' ? null : coupon_code;
         const seatsQty = parts[7] && parts[7] !== 'x' ? parseInt(parts[7], 10) : 1;
+        const prorationCredit = parts[8] && parts[8] !== 'x' ? parseFloat(parts[8]) : 0;
 
         // Get internal user_id from auth_id
         const { data: userData } = await supabase
@@ -154,6 +156,51 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
                         function_name: result.warning_step,
                         error_message: `Step failed during course payment processing`,
                         context: { payment_id: result.payment_id, user_id: internalUserId, course_id: product_id },
+                        severity: 'warning'
+                    });
+                }
+            }
+
+        } else if (product_type === 'upgrade') {
+            // Handle plan upgrade (Pro → Teams) with proration
+            const { data, error } = await supabase.rpc('handle_upgrade_subscription_success', {
+                p_provider: 'mercadopago',
+                p_provider_payment_id: payment.id?.toString(),
+                p_user_id: internalUserId,
+                p_organization_id: orgId,
+                p_plan_id: product_id,
+                p_billing_period: period,
+                p_amount: payment.transaction_amount,
+                p_currency: payment.currency_id || 'ARS',
+                p_metadata: {
+                    mp_payment_id: payment.id,
+                    payer_email: payment.payer?.email,
+                    is_upgrade: true,
+                    proration_credit: prorationCredit,
+                },
+            });
+
+            if (error) {
+                console.error('handle_upgrade_subscription_success RPC error:', error);
+                await supabase.from('system_error_logs').insert({
+                    domain: 'payment',
+                    entity: 'webhook',
+                    function_name: 'handle_upgrade_subscription_success',
+                    error_message: error.message,
+                    context: { payment_id: payment.id, user_id: internalUserId, org_id: orgId, plan_id: product_id, proration_credit: prorationCredit },
+                    severity: 'critical'
+                });
+            } else {
+                console.log('Upgrade payment processed:', data);
+                const result = data as { status: string; warning_step?: string; payment_id?: string; subscription_id?: string };
+                if (result.status === 'ok_with_warning' && result.warning_step) {
+                    console.warn('⚠️ Upgrade payment had a step failure:', result.warning_step);
+                    await supabase.from('system_error_logs').insert({
+                        domain: 'payment',
+                        entity: 'step_failure',
+                        function_name: result.warning_step,
+                        error_message: `Step failed during upgrade payment processing`,
+                        context: { payment_id: result.payment_id, subscription_id: result.subscription_id, user_id: internalUserId, org_id: orgId, plan_id: product_id },
                         severity: 'warning'
                     });
                 }
@@ -248,14 +295,18 @@ async function handlePaymentEvent(paymentId: string, supabase: any) {
         }
 
         // Redeem coupon if applicable
-        if (coupon && product_type === 'course') {
-            await supabase.rpc('redeem_coupon', {
-                p_code: coupon,
-                p_course_id: product_id,
-                p_order_id: payment.id?.toString(),
-                p_price: payment.transaction_amount,
-                p_currency: payment.currency_id || 'ARS',
-            });
+        if (coupon) {
+            // redeem_coupon expects course-specific params, call only for courses
+            // For subscriptions/upgrades, coupon tracking is handled by the preference record
+            if (product_type === 'course') {
+                await supabase.rpc('redeem_coupon', {
+                    p_code: coupon,
+                    p_course_id: product_id,
+                    p_order_id: payment.id?.toString(),
+                    p_price: payment.transaction_amount,
+                    p_currency: payment.currency_id || 'ARS',
+                });
+            }
         }
 
     } catch (error) {

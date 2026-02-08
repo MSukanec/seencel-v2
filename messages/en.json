@@ -744,27 +744,27 @@
         "items": {
             "change_plan": {
                 "question": "Can I switch plans at any time?",
-                "answer": "Yes, you can upgrade, downgrade or switch between plans at any time without penalties. When you change plans in the middle of a billing cycle, we apply automatic proration: if you upgrade to a higher plan, your next billing will reflect the proportional cost of the time remaining at the new price. If you downgrade to a lower plan, a credit is accumulated and applied to your next billing. You don't lose data or access: the change is applied immediately."
+                "answer": "Yes, you can upgrade to a higher plan at any time. When you do, automatic proration is applied: you only pay the proportional difference for the remaining time in your current cycle. The change is applied immediately and you don't lose any data or access. If you need to move to a lower plan, contact us and we'll help you with the process."
             },
             "payment_methods": {
                 "question": "What payment methods do you accept?",
-                "answer": "We accept all major credit cards (Visa, Mastercard, Amex) via Stripe for international customers. In Argentina, we process local payments via MercadoPago (account balance, cards) and offer direct bank transfer for annual plans."
+                "answer": "We accept payments through MercadoPago (credit cards, debit cards, and account balance) and PayPal for international payments. We also offer the option of bank transfer. All payments are processed securely and encrypted."
             },
             "data_retention": {
                 "question": "What happens to my data if I cancel?",
-                "answer": "Your data is retained on our servers for 90 days after cancellation, allowing you to reactivate your account without losing information. After 90 days, the data is permanently deleted. You can export your data at any time before cancellation."
+                "answer": "When moving to the Free plan, you keep access to your data but with the limitations of the free plan. Your projects, contacts, and records remain stored. If you decide to return to a paid plan in the future, all your information will be available just as you left it."
             },
             "billing_cycle": {
-                "question": "Can I change my billing cycle?",
-                "answer": "Yes. You can change your billing cycle at any time from your plan settings. If you switch from monthly to annual, a price adjustment is applied to your next billing. If you switch from annual to monthly, the change takes effect at the end of your current annual cycle."
+                "question": "How does the billing cycle work?",
+                "answer": "We offer monthly and annual billing. The annual plan includes a 20% discount compared to the monthly price. Your subscription is activated from the moment of payment and renews manually at the end of each cycle. You will receive a notification before expiration so you can renew."
             },
             "user_roles": {
-                "question": "How do user limits and roles work?",
-                "answer": "For the Free plan (1 user), only you have access. In Pro (1 user) it is also individual but with more capabilities. In Teams (unlimited users), you can add members and assign them roles with specific permissions. If you downgrade from Teams to Pro or Free, additional members automatically lose access, but their data is preserved if you reinvite more users later."
+                "question": "How do members and roles work?",
+                "answer": "The Free plan includes 1 member. Pro and Teams plans include a base number of members, and in Teams you can purchase additional seats as needed. All paid plans allow you to assign roles with specific permissions (Admin, Member, etc.) to control what each person can do in your organization."
             },
             "enterprise": {
-                "question": "What is included in the Enterprise plan?",
-                "answer": "The Enterprise plan is designed for large organizations that need a customized solution. Includes: unlimited users at no additional cost per seat, on-premise deployment if necessary, SSO with your identity provider, custom training for your team, a dedicated account manager, and 99.9% SLA with 24/7 priority support. This is ideal for construction companies with more than 50 employees or real estate developers that handle multiple projects simultaneously. For prices and options, <contact>contact our sales team</contact>."
+                "question": "Do you have solutions for large companies?",
+                "answer": "Yes, we offer customized solutions for organizations with special needs. This includes training for your team, priority support, and configurations adapted to your operation. It's ideal for construction companies or developers managing multiple projects simultaneously. For more information, <contact>contact our team</contact>."
             }
         }
     },
@@ -895,6 +895,96 @@
             "complete": "Complete Purchase",
             "secure": "100% secure payment",
             "guarantee": "14-day satisfaction guarantee"
+        }
+    },
+    "BillingResults": {
+        "processing": "Processing your payment...",
+        "processingHint": "This will only take a moment ✨",
+        "transactionId": "Transaction ID",
+        "via": "via",
+        "success": {
+            "course": {
+                "title": "Let's learn! 🎉",
+                "subtitle": "Your course is ready.",
+                "subtitleHighlight": "Start whenever you want!",
+                "cta": "Go to Course",
+                "footer": "Knowledge is power 💪"
+            },
+            "seats": {
+                "title": "Your team grows! 🪑",
+                "subtitle": "Your new seats are ready.",
+                "subtitleHighlight": "Invite your team!",
+                "ctaPrimary": "Go to Team",
+                "ctaSecondary": "View Billing",
+                "footer": "More seats, more laughs, more building 🏗️"
+            },
+            "upgrade": {
+                "title": "Upgrade complete! 🚀",
+                "subtitle": "Your plan has been upgraded.",
+                "subtitleHighlight": "Enjoy the new features!",
+                "ctaPrimary": "Go to Dashboard",
+                "ctaSecondary": "View Plan",
+                "footer": "More power, more possibilities ✨"
+            },
+            "subscription": {
+                "title": "Welcome to the team! 🚀",
+                "subtitle": "Your plan is active.",
+                "subtitleHighlight": "Time to build!",
+                "ctaPrimary": "Go to Dashboard",
+                "ctaSecondary": "View Plan",
+                "footer": "Great things are coming ✨"
+            }
+        },
+        "failure": {
+            "title": "Payment Not Completed",
+            "subtitle": "There was a problem with your payment",
+            "defaultError": "The payment was declined or canceled. No charge was made to your account.",
+            "referenceId": "Reference ID",
+            "gateway": "Gateway",
+            "retryPayment": "Retry Payment",
+            "contact": "Contact Us"
+        },
+        "pending": {
+            "title": "Payment Pending",
+            "subtitle": "Your payment is being processed",
+            "info": "The payment may take a few minutes to confirm. You will receive an email when it's complete.",
+            "checking": "Checking payment status...",
+            "paymentId": "Payment ID",
+            "processedVia": "Processed via",
+            "goHome": "Go Home",
+            "contact": "Contact Us"
+        }
+    },
+    "BillingSettings": {
+        "planActive": "Your {plan} plan is active until {date}.",
+        "planExpires": "Your {plan} plan will expire on {date}.",
+        "history": "Payment History",
+        "historyDescription": "Download your invoices and review previous billing cycles.",
+        "noInvoices": "No invoices available",
+        "table": {
+            "date": "Date",
+            "concept": "Concept",
+            "start": "Start",
+            "end": "End",
+            "status": "Status",
+            "amount": "Amount",
+            "method": "Method"
+        },
+        "concept": {
+            "upgrade": "Upgrade to {plan}",
+            "seats": "Seat purchase",
+            "subscription": "Subscription {plan}"
+        },
+        "status": {
+            "active": "Active",
+            "completed": "Completed",
+            "cancelled": "Cancelled",
+            "expired": "Expired"
+        },
+        "provider": {
+            "paypal": "PayPal",
+            "mercadopago": "MercadoPago",
+            "transfer": "Bank Transfer"
         }
     },
     "Course": {

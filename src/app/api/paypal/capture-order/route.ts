@@ -170,6 +170,30 @@ export async function POST(request: NextRequest) {
                 console.error('handle_payment_subscription_success error:', error);
                 return NextResponse.json({ error: 'Failed to process subscription payment' }, { status: 500 });
             }
+        } else if (preference.product_type === 'upgrade') {
+            // Handle plan upgrade (Pro → Teams)
+            const { error } = await adminSupabase.rpc('handle_upgrade_subscription_success', {
+                p_provider: 'paypal',
+                p_provider_payment_id: captureId,
+                p_user_id: internalUserId,
+                p_organization_id: preference.organization_id,
+                p_plan_id: preference.plan_id,
+                p_billing_period: preference.billing_period || 'annual',
+                p_amount: captureAmount,
+                p_currency: captureCurrency,
+                p_metadata: {
+                    paypal_order_id: orderId,
+                    paypal_capture_id: captureId,
+                    preference_id: preferenceId,
+                    is_upgrade: true,
+                },
+            });
+
+            if (error) {
+                console.error('handle_upgrade_subscription_success error:', error);
+                return NextResponse.json({ error: 'Failed to process upgrade payment' }, { status: 500 });
+            }
+
         } else if (preference.product_type === 'seats') {
             const seatsQuantity = preference.seats_quantity || 1;
 
@@ -199,14 +223,18 @@ export async function POST(request: NextRequest) {
         }
 
         // Redeem coupon if applicable
-        if (preference.coupon_code && preference.product_type === 'course') {
-            await adminSupabase.rpc('redeem_coupon', {
-                p_code: preference.coupon_code,
-                p_course_id: preference.course_id,
-                p_order_id: orderId,
-                p_price: captureAmount,
-                p_currency: captureCurrency,
-            });
+        if (preference.coupon_code) {
+            // redeem_coupon expects course-specific params, call only for courses
+            // For subscriptions/upgrades, coupon tracking is handled by the preference record
+            if (preference.product_type === 'course') {
+                await adminSupabase.rpc('redeem_coupon', {
+                    p_code: preference.coupon_code,
+                    p_course_id: preference.course_id,
+                    p_order_id: orderId,
+                    p_price: captureAmount,
+                    p_currency: captureCurrency,
+                });
+            }
         }
 
         return NextResponse.json({

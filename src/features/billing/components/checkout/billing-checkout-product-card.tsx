@@ -12,6 +12,7 @@
 
 import { useTranslations } from "next-intl";
 import Image from "next/image";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -211,20 +212,20 @@ export function BillingCheckoutProductCard({
                                         Accedé a este curso y muchos más beneficios con el Plan Fundadores por tiempo limitado.
                                     </p>
                                     <div className="flex flex-wrap items-center gap-3">
-                                        <a
+                                        <Link
                                             href="/founders"
                                             className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:underline"
                                         >
                                             Conocer más sobre el Plan
                                             <ArrowRight className="h-4 w-4" />
-                                        </a>
+                                        </Link>
                                         <span className="text-muted-foreground">|</span>
-                                        <a
+                                        <Link
                                             href="/checkout?product=plan-pro&cycle=annual"
                                             className="inline-flex items-center gap-2 text-sm font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors"
                                         >
                                             Obtener Plan Fundadores
-                                        </a>
+                                        </Link>
                                     </div>
                                 </div>
                             </div>

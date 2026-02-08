@@ -24,15 +24,18 @@ export async function POST(request: NextRequest) {
         // Get request body
         const body = await request.json();
         const {
-            productType,     // 'subscription' | 'course' | 'seats'
+            productType,     // 'subscription' | 'course' | 'seats' | 'upgrade'
             productId,       // plan_id or course_id (not required for seats)
-            organizationId,  // required for subscriptions and seats
+            organizationId,  // required for subscriptions, seats, and upgrades
             billingPeriod,   // 'monthly' | 'annual'
             seatsQuantity,   // required for seats
             amount,          // in USD
             title,           // product title
             couponCode,      // optional
             couponDiscount,  // optional discount amount
+            // Upgrade-specific fields
+            is_upgrade,      // boolean
+            proration_credit, // number - credit from current plan
         } = body;
 
         // Validate required fields
@@ -71,9 +74,9 @@ export async function POST(request: NextRequest) {
             couponId = coupon?.id || null;
         }
 
-        // Get plan slug if this is a subscription
+        // Get plan slug if this is a subscription or upgrade
         let planSlug: string | null = null;
-        if (productType === 'subscription') {
+        if (productType === 'subscription' || productType === 'upgrade') {
             const { data: plan } = await supabase
                 .from('plans')
                 .select('slug')
@@ -102,8 +105,8 @@ export async function POST(request: NextRequest) {
             .insert({
                 id: preferenceId,
                 user_id: internalUser.id,
-                organization_id: (productType === 'subscription' || productType === 'seats') ? organizationId : null,
-                plan_id: productType === 'subscription' ? productId : null,
+                organization_id: (productType === 'subscription' || productType === 'seats' || productType === 'upgrade') ? organizationId : null,
+                plan_id: (productType === 'subscription' || productType === 'upgrade') ? productId : null,
                 plan_slug: planSlug,
                 billing_period: billingPeriod || null,
                 amount: finalAmount,

@@ -22,15 +22,18 @@ export async function POST(request: NextRequest) {
         // Get request body
         const body = await request.json();
         const {
-            productType,     // 'subscription' | 'course' | 'seats'
+            productType,     // 'subscription' | 'course' | 'seats' | 'upgrade'
             productId,       // plan_id or course_id (not required for seats)
-            organizationId,  // required for subscriptions and seats
+            organizationId,  // required for subscriptions, seats, and upgrades
             billingPeriod,   // 'monthly' | 'annual'
             amount,          // in ARS
             title,           // product title
             couponCode,      // optional
             couponDiscount,  // optional discount amount
             seatsQuantity,   // required for seats
+            // Upgrade-specific fields
+            is_upgrade,      // boolean - true if this is a plan upgrade
+            proration_credit, // number - credit from current plan
         } = body;
 
         // Validate required fields
@@ -56,10 +59,10 @@ export async function POST(request: NextRequest) {
             .single();
 
         // Build external_reference with compact format (MP limit: 256 chars)
-        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test|seats_qty
+        // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test|seats_qty|proration_credit
         // Use 'x' for null values to keep parsing simple
         const externalReference = [
-            productType, // subscription | course | seats
+            productType, // subscription | course | seats | upgrade
             user.id.slice(0, 36), // auth user UUID
             organizationId || 'x',
             productId ? productId.slice(0, 36) : 'x', // plan_id or course_id (x for seats)
@@ -67,6 +70,7 @@ export async function POST(request: NextRequest) {
             couponCode || 'x',
             isTestMode ? '1' : '0',
             productType === 'seats' ? String(seatsQuantity || 1) : 'x',
+            productType === 'upgrade' && proration_credit ? String(proration_credit) : 'x',
         ].join('|');
 
         // Validate length (MP max 256)
@@ -98,6 +102,8 @@ export async function POST(request: NextRequest) {
             productParams = `product_type=course&course_id=${productId}`;
         } else if (productType === 'seats') {
             productParams = `product_type=seats&org_id=${organizationId || ''}&seats=${seatsQuantity || 1}`;
+        } else if (productType === 'upgrade') {
+            productParams = `product_type=upgrade&org_id=${organizationId || ''}`;
         } else {
             productParams = `product_type=subscription&org_id=${organizationId || ''}`;
         }
@@ -144,17 +150,28 @@ export async function POST(request: NextRequest) {
             .eq('auth_id', user.id)
             .single();
 
+        // Resolve coupon_id from code if provided
+        let couponId: string | null = null;
+        if (couponCode) {
+            const { data: coupon } = await supabase
+                .from('coupons')
+                .select('id')
+                .ilike('code', couponCode)
+                .single();
+            couponId = coupon?.id || null;
+        }
+
         if (internalUser && preference.id) {
             await supabase.from('mp_preferences').insert({
                 id: preference.id,
                 user_id: internalUser.id,
                 organization_id: organizationId || null,
-                plan_id: productType === 'subscription' ? productId : null,
+                plan_id: (productType === 'subscription' || productType === 'upgrade') ? productId : null,
                 course_id: productType === 'course' ? productId : null,
                 billing_period: billingPeriod || 'monthly',
                 amount: finalAmount,
                 currency: 'ARS',
-                coupon_id: null, // TODO: look up coupon ID if code provided
+                coupon_id: couponId,
                 discount_amount: couponDiscount || 0,
                 init_point: preference.init_point || null,
                 status: 'pending',

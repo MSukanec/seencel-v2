@@ -15,6 +15,7 @@ import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { MemberListItem } from "@/components/shared/list-item";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { SettingsSection } from "@/components/shared/settings-section";
+import { ContentLayout } from "@/components/layout";
 import { toast } from "sonner";
 import {
     AlertDialog,
@@ -167,7 +168,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         : 0;
 
     return (
-        <>
+        <ContentLayout variant="wide">
             <div className="space-y-12 pb-12">
                 {/* KPIs Section */}
                 {seatStatus && (
@@ -432,8 +433,8 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog >
-        </>
+            </AlertDialog>
+        </ContentLayout>
     );
 }
 

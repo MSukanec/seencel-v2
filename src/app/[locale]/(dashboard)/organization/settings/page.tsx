@@ -7,7 +7,7 @@ import { checkIsAdmin } from "@/features/users/queries";
 import { SettingsClient } from "@/features/organization/components/settings/settings-client";
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
+
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -89,9 +89,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                     </TabsList>
                 }
             >
-                <ContentLayout variant="wide">
-                    <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} plans={plans} purchaseFlags={purchaseFlags} isAdmin={isAdmin} />
-                </ContentLayout>
+                <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} plans={plans} purchaseFlags={purchaseFlags} isAdmin={isAdmin} />
             </PageWrapper>
         </Tabs>
     );

@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, Receipt, Loader2, Rocket, GraduationCap, PartyPopper, Sparkles, Users, Settings } from "lucide-react";
+import { BookOpen, Receipt, Loader2, Rocket, GraduationCap, PartyPopper, Sparkles, Users, ArrowUp } from "lucide-react";
 import Link from "next/link";
 
 // Floating emoji component
@@ -23,9 +24,12 @@ function FloatingEmoji({ emoji, delay, x }: { emoji: string; delay: number; x: n
     );
 }
 
+type ProductCategory = "course" | "seats" | "upgrade" | "subscription";
+
 export function BillingCheckoutSuccessView() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const t = useTranslations("BillingResults");
     const [isCapturing, setIsCapturing] = useState(false);
     const [capturedPaymentId, setCapturedPaymentId] = useState<string | null>(null);
     const [capturedProductType, setCapturedProductType] = useState<string | null>(null);
@@ -48,6 +52,10 @@ export function BillingCheckoutSuccessView() {
 
     const isCourse = productType === "course" || !!courseId;
     const isSeats = productType === "seats";
+    const isUpgrade = productType === "upgrade";
+
+    // Determine the product category for translations
+    const category: ProductCategory = isCourse ? "course" : isSeats ? "seats" : isUpgrade ? "upgrade" : "subscription";
 
     // Capture PayPal payment when returning from PayPal approval
     useEffect(() => {
@@ -69,8 +77,7 @@ export function BillingCheckoutSuccessView() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error("PayPal capture error:", errorData);
-                    // Redirect to failure page with error details
-                    const errorMessage = encodeURIComponent(errorData.error || "Error al procesar el pago");
+                    const errorMessage = encodeURIComponent(errorData.error || "Payment processing error");
                     router.replace(`/checkout/failure?source=paypal&error=${errorMessage}&token=${paypalToken}`);
                     return;
                 }
@@ -90,7 +97,7 @@ export function BillingCheckoutSuccessView() {
                 router.refresh();
             } catch (error) {
                 console.error("PayPal capture error:", error);
-                const errorMessage = encodeURIComponent(error instanceof Error ? error.message : "Error al procesar el pago");
+                const errorMessage = encodeURIComponent(error instanceof Error ? error.message : "Payment processing error");
                 router.replace(`/checkout/failure?source=paypal&error=${errorMessage}`);
             } finally {
                 setIsCapturing(false);
@@ -120,7 +127,13 @@ export function BillingCheckoutSuccessView() {
         ? ["🎓", "📚", "✨", "🎉", "🌟", "💡", "🚀", "📖"]
         : isSeats
             ? ["👥", "🎉", "💪", "🤝", "✨", "🏗️", "⭐", "🪑"]
-            : ["🚀", "⭐", "🎉", "💪", "🔥", "✨", "🏆", "💎"];
+            : isUpgrade
+                ? ["⬆️", "🚀", "✨", "🎉", "💎", "🔥", "⭐", "🏆"]
+                : ["🚀", "⭐", "🎉", "💪", "🔥", "✨", "🏆", "💎"];
+
+    // Icon for each category
+    const CategoryIcon = isCourse ? GraduationCap : isSeats ? Users : isUpgrade ? ArrowUp : Rocket;
+    const backgroundEmoji = isCourse ? "🎓" : isSeats ? "👥" : isUpgrade ? "⬆️" : "🚀";
 
     // Show loading state while capturing PayPal payment
     if (isCapturing) {
@@ -131,8 +144,8 @@ export function BillingCheckoutSuccessView() {
                         <Loader2 className="w-16 h-16 animate-spin text-primary" />
                         <div className="absolute inset-0 blur-xl bg-primary/30 animate-pulse" />
                     </div>
-                    <p className="text-xl text-muted-foreground">Procesando tu pago...</p>
-                    <p className="text-sm text-muted-foreground/60">Esto solo tomará un momento ✨</p>
+                    <p className="text-xl text-muted-foreground">{t("processing")}</p>
+                    <p className="text-sm text-muted-foreground/60">{t("processingHint")}</p>
                 </div>
             </div>
         );
@@ -214,7 +227,7 @@ export function BillingCheckoutSuccessView() {
                     {/* Big Background Text */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 select-none pointer-events-none">
                         <span className="text-[12rem] font-black text-muted/10 leading-none whitespace-nowrap">
-                            {isCourse ? "🎓" : isSeats ? "👥" : "🚀"}
+                            {backgroundEmoji}
                         </span>
                     </div>
 
@@ -227,13 +240,7 @@ export function BillingCheckoutSuccessView() {
                             className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-2xl"
                             style={{ animation: 'pulse-glow 2s ease-in-out infinite' }}
                         >
-                            {isCourse ? (
-                                <GraduationCap className="w-16 h-16 text-white" strokeWidth={2} />
-                            ) : isSeats ? (
-                                <Users className="w-16 h-16 text-white" strokeWidth={2} />
-                            ) : (
-                                <Rocket className="w-16 h-16 text-white" strokeWidth={2} />
-                            )}
+                            <CategoryIcon className="w-16 h-16 text-white" strokeWidth={2} />
                         </div>
                         {/* Decorative sparkles */}
                         <Sparkles
@@ -252,16 +259,11 @@ export function BillingCheckoutSuccessView() {
                         style={{ animation: showContent ? 'slide-up 0.6s ease-out 0.2s both' : 'none' }}
                     >
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent">
-                            {isCourse ? "¡A aprender! 🎉" : isSeats ? "¡Tu equipo crece! 🪑" : "¡Bienvenido al equipo! 🚀"}
+                            {t(`success.${category}.title`)}
                         </h1>
                         <p className="text-xl text-muted-foreground">
-                            {isCourse ? (
-                                <>Tu curso ya está listo. <span className="text-primary font-medium">¡Comienza cuando quieras!</span></>
-                            ) : isSeats ? (
-                                <>Tus nuevos asientos están listos. <span className="text-primary font-medium">¡Invitá a tu equipo!</span></>
-                            ) : (
-                                <>Tu plan está activo. <span className="text-primary font-medium">¡Hora de construir!</span></>
-                            )}
+                            {t(`success.${category}.subtitle`)}{" "}
+                            <span className="text-primary font-medium">{t(`success.${category}.subtitleHighlight`)}</span>
                         </p>
                     </div>
 
@@ -271,10 +273,10 @@ export function BillingCheckoutSuccessView() {
                             className={`bg-card/80 backdrop-blur border rounded-2xl px-6 py-4 space-y-2 w-full shadow-xl transition-all duration-700 delay-400 ${showContent ? 'opacity-100' : 'opacity-0'}`}
                             style={{ animation: showContent ? 'slide-up 0.6s ease-out 0.4s both' : 'none' }}
                         >
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider">ID de Transacción</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("transactionId")}</p>
                             <p className="font-mono text-sm bg-muted/50 px-3 py-1.5 rounded-lg">{paymentId}</p>
                             <p className="text-xs text-muted-foreground">
-                                via <span className="capitalize font-semibold text-foreground">{source}</span>
+                                {t("via")} <span className="capitalize font-semibold text-foreground">{source}</span>
                             </p>
                         </div>
                     )}
@@ -287,25 +289,25 @@ export function BillingCheckoutSuccessView() {
                         {isCourse ? (
                             <>
                                 <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
-                                    <a href="/academy/my-courses">
+                                    <Link href="/academy/my-courses">
                                         <BookOpen className="w-5 h-5 mr-2" />
-                                        Ir al Curso
-                                    </a>
+                                        {t("success.course.cta")}
+                                    </Link>
                                 </Button>
                             </>
                         ) : isSeats ? (
                             <>
                                 <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
-                                    <a href="/organization/settings?tab=members">
+                                    <Link href="/organization/settings?tab=members">
                                         <Users className="w-5 h-5 mr-2" />
-                                        Ir al Equipo
-                                    </a>
+                                        {t("success.seats.ctaPrimary")}
+                                    </Link>
                                 </Button>
                                 <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
-                                    <a href="/organization/settings?tab=billing">
+                                    <Link href="/organization/settings?tab=billing">
                                         <Receipt className="w-5 h-5 mr-2" />
-                                        Ver Facturación
-                                    </a>
+                                        {t("success.seats.ctaSecondary")}
+                                    </Link>
                                 </Button>
                             </>
                         ) : (
@@ -313,13 +315,13 @@ export function BillingCheckoutSuccessView() {
                                 <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
                                     <Link href="/organization">
                                         <Rocket className="w-5 h-5 mr-2" />
-                                        Ir al Dashboard
+                                        {t(`success.${category}.ctaPrimary`)}
                                     </Link>
                                 </Button>
                                 <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
                                     <Link href="/organization/settings?tab=billing">
                                         <Receipt className="w-5 h-5 mr-2" />
-                                        Ver Plan
+                                        {t(`success.${category}.ctaSecondary`)}
                                     </Link>
                                 </Button>
                             </>
@@ -330,12 +332,7 @@ export function BillingCheckoutSuccessView() {
                     <p
                         className={`text-sm text-muted-foreground/70 pt-4 transition-all duration-700 delay-700 ${showContent ? 'opacity-100' : 'opacity-0'}`}
                     >
-                        {isCourse
-                            ? "El conocimiento es poder 💪"
-                            : isSeats
-                                ? "Más sillas, más risas, más construcción 🏗️"
-                                : "Grandes cosas están por venir ✨"
-                        }
+                        {t(`success.${category}.footer`)}
                     </p>
                 </div>
             </div>
