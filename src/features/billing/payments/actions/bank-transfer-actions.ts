@@ -181,15 +181,30 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
         if (input.planId) productName = "Suscripción " + (input.billingPeriod === 'annual' ? 'Anual' : 'Mensual');
         if (input.seatsQuantity) productName = `Paquete de ${input.seatsQuantity} asientos`;
 
-        await supabase.rpc('queue_email_bank_transfer', {
-            p_user_id: userData.id,
+        // Obtener email y nombre del usuario de Auth
+        const userEmail = user.email;
+        const userFirstName = user.user_metadata?.full_name?.split(' ')[0] || user.user_metadata?.name?.split(' ')[0] || input.payerName.split(' ')[0];
+
+        console.log("Queueing bank transfer email for:", userEmail);
+
+        const { data: rpcData, error: rpcError } = await supabase.rpc('queue_email_bank_transfer', {
+            p_user_id: userData.id, // Se mantiene por si acaso, pero ya no es crítico para el email d usuario
             p_transfer_id: orderId,
             p_product_name: productName,
             p_amount: input.amount,
             p_currency: input.currency,
             p_payer_name: input.payerName,
-            p_receipt_url: input.receiptUrl
+            p_receipt_url: input.receiptUrl,
+            p_user_email: userEmail,
+            p_user_first_name: userFirstName
         });
+
+        if (rpcError) {
+            console.error("RPC Error queueing emails:", rpcError);
+        } else {
+            console.log("RPC Success queueing emails:", rpcData);
+        }
+
     } catch (emailError) {
         console.error("Error queueing bank transfer emails:", emailError);
         // Don't fail the action
