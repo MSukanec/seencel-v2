@@ -75,7 +75,7 @@ BEGIN
         status,
         created_at
     ) VALUES (
-        'seencel@seencel.com', -- Admin email hardcodeado por ahora
+        'contacto@seencel.com', -- Admin email
         'Admin Seencel',
         'admin_new_transfer',
         '💸 Nueva transferencia: ' || p_product_name || ' - ' || p_payer_name,
