@@ -252,6 +252,8 @@ create table public.mp_preferences (
   expires_at timestamp with time zone null,
   completed_at timestamp with time zone null,
   seats_quantity integer null,
+  is_sandbox boolean null default false,
+  is_test boolean null default false,
   constraint mp_subscription_preferences_pkey primary key (id),
   constraint mp_preferences_course_id_fkey foreign KEY (course_id) references courses (id) on delete set null,
   constraint mp_preferences_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,

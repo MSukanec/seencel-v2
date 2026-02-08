@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { preferenceApi } from '@/lib/mercadopago/client';
+import { createMPClient } from '@/lib/mercadopago/client';
 import { createClient } from '@/lib/supabase/server';
 import { getFeatureFlag } from '@/actions/feature-flags';
-
-// Test mode price: ~$0.10 USD in ARS (minimum for real testing)
-const TEST_PRICE_ARS = 150;
 
 export async function POST(request: NextRequest) {
     try {
@@ -16,8 +13,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Check if test mode is active
-        const isTestMode = await getFeatureFlag('mercadopago_modo_test');
+        // Check if MP is enabled (same pattern as PayPal)
+        // When disabled (mp_enabled = false): use sandbox credentials
+        // When enabled (mp_enabled = true): use production credentials
+        const mpEnabled = await getFeatureFlag('mp_enabled');
+        const sandboxMode = !mpEnabled;
+        const isTestMode = sandboxMode;
+
+        // Create MP client with appropriate credentials
+        const { preferenceApi: mpPreferenceApi } = createMPClient(sandboxMode);
 
         // Get request body
         const body = await request.json();
@@ -82,15 +86,13 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Calculate final amount - override to test price if test mode is active
-        let finalAmount: number;
-        if (isTestMode) {
-            finalAmount = TEST_PRICE_ARS;
-            console.log('[TEST MODE] MercadoPago price overridden to', TEST_PRICE_ARS, 'ARS');
-        } else {
-            finalAmount = couponDiscount
-                ? Math.max(0, amount - couponDiscount)
-                : amount;
+        // Calculate final amount
+        const finalAmount = couponDiscount
+            ? Math.max(0, amount - couponDiscount)
+            : amount;
+
+        if (sandboxMode) {
+            console.log(`[MP SANDBOX] Using sandbox credentials, amount: ${finalAmount} ARS`);
         }
 
         // Build back URLs with product info for success page
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
         const failureUrl = `${baseUrl}/checkout/failure?source=mercadopago&${productParams}`;
 
         // Create preference
-        const preference = await preferenceApi.create({
+        const preference = await mpPreferenceApi.create({
             body: {
                 items: [
                     {
@@ -178,6 +180,8 @@ export async function POST(request: NextRequest) {
                 product_type: productType,
                 payer_email: userData?.email || user.email || '',
                 seats_quantity: productType === 'seats' ? (seatsQuantity || 1) : null,
+                is_sandbox: sandboxMode,
+                is_test: isTestMode,
             });
         }
 

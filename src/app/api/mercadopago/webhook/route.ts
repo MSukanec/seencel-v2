@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { paymentApi, validateWebhookSignature } from '@/lib/mercadopago/client';
+import { createMPClient, validateWebhookSignature } from '@/lib/mercadopago/client';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getFeatureFlag } from '@/actions/feature-flags';
 
 export async function POST(request: NextRequest) {
     try {
@@ -27,19 +28,22 @@ export async function POST(request: NextRequest) {
             status: 'RECEIVED',
         });
 
-        // Validate signature (optional in development)
+        // Determine sandbox mode using feature flag (same as PayPal)
+        const mpEnabled = await getFeatureFlag('mp_enabled');
+        const sandboxMode = !mpEnabled;
+
+        // Validate signature
         if (process.env.NODE_ENV === 'production') {
-            const isValid = validateWebhookSignature(xSignature, xRequestId, dataId);
+            const isValid = validateWebhookSignature(xSignature, xRequestId, dataId, sandboxMode);
             if (!isValid) {
                 console.error('Invalid webhook signature');
-                // Still return 200 to prevent retries
                 return NextResponse.json({ received: true, error: 'invalid_signature' });
             }
         }
 
         // Handle payment events
         if (type === 'payment' || action === 'payment.created' || action === 'payment.updated') {
-            await handlePaymentEvent(dataId, supabase);
+            await handlePaymentEvent(dataId, supabase, sandboxMode);
         }
 
         // Always return 200 to prevent retries
@@ -52,10 +56,13 @@ export async function POST(request: NextRequest) {
     }
 }
 
-async function handlePaymentEvent(paymentId: string, supabase: any) {
+async function handlePaymentEvent(paymentId: string, supabase: any, sandboxMode: boolean = false) {
     try {
+        // Create MP client with appropriate credentials
+        const { paymentApi: mpPaymentApi } = createMPClient(sandboxMode);
+
         // Fetch payment details from MercadoPago
-        const payment = await paymentApi.get({ id: paymentId });
+        const payment = await mpPaymentApi.get({ id: paymentId });
 
         if (!payment || !payment.external_reference) {
             console.error('Payment not found or no external_reference:', paymentId);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { paymentApi } from '@/lib/mercadopago/client';
+import { createMPClient } from '@/lib/mercadopago/client';
+import { getFeatureFlag } from '@/actions/feature-flags';
 
 /**
  * GET /api/mercadopago/payment-status?payment_id=xxx
@@ -15,7 +16,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'payment_id is required' }, { status: 400 });
         }
 
-        const payment = await paymentApi.get({ id: paymentId });
+        // Use same sandbox logic as other MP routes
+        const mpEnabled = await getFeatureFlag('mp_enabled');
+        const sandboxMode = !mpEnabled;
+        const { paymentApi: mpPaymentApi } = createMPClient(sandboxMode);
+
+        const payment = await mpPaymentApi.get({ id: paymentId });
 
         return NextResponse.json({
             status: payment.status, // approved, pending, rejected, cancelled, etc.
