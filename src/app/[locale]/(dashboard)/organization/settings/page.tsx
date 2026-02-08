@@ -1,7 +1,9 @@
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
 import { getOrganizationSeatStatus } from "@/features/team/actions";
-import { getOrganizationPlanFeatures } from "@/actions/plans";
+import { getOrganizationPlanFeatures, getPlans } from "@/actions/plans";
+import { getPlanPurchaseFlags } from "@/actions/feature-flags";
+import { checkIsAdmin } from "@/features/users/queries";
 import { SettingsClient } from "@/features/organization/components/settings/settings-client";
 import { redirect } from "next/navigation";
 import { PageWrapper } from "@/components/layout";
@@ -46,10 +48,13 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
         redirect('/');
     }
 
-    const [data, planFeatures, seatStatusResult] = await Promise.all([
+    const [data, planFeatures, seatStatusResult, plans, purchaseFlags, isAdmin] = await Promise.all([
         getOrganizationSettingsData(orgId),
         getOrganizationPlanFeatures(orgId),
         getOrganizationSeatStatus(orgId),
+        getPlans(),
+        getPlanPurchaseFlags(),
+        checkIsAdmin(),
     ]);
 
     const seatStatus = seatStatusResult.success ? seatStatusResult.data ?? null : null;
@@ -85,7 +90,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
                 }
             >
                 <ContentLayout variant="wide">
-                    <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} />
+                    <SettingsClient data={data} organizationId={orgId} currentUserId={publicUser.id} ownerId={ownerId} canInviteMembers={canInviteMembers} seatStatus={seatStatus} plans={plans} purchaseFlags={purchaseFlags} isAdmin={isAdmin} />
                 </ContentLayout>
             </PageWrapper>
         </Tabs>

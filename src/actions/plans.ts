@@ -52,15 +52,15 @@ export async function getPlans(): Promise<Plan[]> {
 }
 
 /**
- * Gets the current user's active organization plan_id.
- * Returns null if user is not logged in or has no organization.
+ * Gets the current user's active organization ID and plan_id.
+ * Returns null values if user is not logged in or has no organization.
  */
-export async function getCurrentOrganizationPlanId(): Promise<string | null> {
+export async function getCurrentOrganizationInfo(): Promise<{ organizationId: string | null; planId: string | null }> {
     const supabase = await createClient();
 
     // 1. Get Current User
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    if (!user) return { organizationId: null, planId: null };
 
     // 2. Get User's active organization ID from preferences
     const { data: userData } = await supabase
@@ -74,14 +74,14 @@ export async function getCurrentOrganizationPlanId(): Promise<string | null> {
         .eq('auth_id', user.id)
         .single();
 
-    if (!userData || !userData.user_preferences) return null;
+    if (!userData || !userData.user_preferences) return { organizationId: null, planId: null };
 
     const pref = Array.isArray(userData.user_preferences)
         ? (userData.user_preferences as any)[0]
         : (userData.user_preferences as any);
 
     const orgId = pref?.last_organization_id;
-    if (!orgId) return null;
+    if (!orgId) return { organizationId: null, planId: null };
 
     // 3. Get the organization's plan_id
     const { data: orgData } = await supabase
@@ -90,7 +90,19 @@ export async function getCurrentOrganizationPlanId(): Promise<string | null> {
         .eq('id', orgId)
         .single();
 
-    return orgData?.plan_id || null;
+    return {
+        organizationId: orgId,
+        planId: orgData?.plan_id || null
+    };
+}
+
+/**
+ * Gets the current user's active organization plan_id.
+ * Returns null if user is not logged in or has no organization.
+ */
+export async function getCurrentOrganizationPlanId(): Promise<string | null> {
+    const { planId } = await getCurrentOrganizationInfo();
+    return planId;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
 import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
-import { getPlans, getCurrentOrganizationPlanId, isOrganizationFounder } from "@/actions/plans";
+import { getPlans, getCurrentOrganizationInfo, isOrganizationFounder } from "@/actions/plans";
 import { PlansComparison } from "@/features/billing/components/plans-comparison";
 import { PricingFaq } from "@/features/billing/components/pricing-faq";
 import { getPlanPurchaseFlags } from "@/actions/feature-flags";
@@ -23,13 +23,16 @@ export const metadata: Metadata = {
 
 export default async function PricingPage() {
     const { profile } = await getUserProfile();
-    const [plans, purchaseFlags, currentPlanId, isAdmin, isFounder] = await Promise.all([
+    const [plans, purchaseFlags, orgInfo, isAdmin, isFounder] = await Promise.all([
         getPlans(),
         getPlanPurchaseFlags(),
-        getCurrentOrganizationPlanId(),
+        getCurrentOrganizationInfo(),
         checkIsAdmin(),
         isOrganizationFounder(),
     ]);
+
+    const currentPlanId = orgInfo.planId;
+    const organizationId = orgInfo.organizationId;
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -72,6 +75,7 @@ export default async function PricingPage() {
                     purchaseFlags={purchaseFlags}
                     currentPlanId={currentPlanId}
                     isAdmin={isAdmin}
+                    organizationId={organizationId}
                 />
                 <PricingFaq />
             </main>

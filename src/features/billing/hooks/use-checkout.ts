@@ -4,7 +4,7 @@
 // USE-CHECKOUT HOOK
 // ============================================================
 // Hook central que maneja todo el estado y lógica del checkout.
-// Soporta: plan, course, seats
+// Soporta: plan, course, seats, upgrade
 // ============================================================
 
 import { useState, useCallback, useMemo } from "react";
@@ -54,6 +54,7 @@ export function useCheckout(props: CheckoutViewProps): UseCheckoutReturn {
         plans,
         course,
         seatsData,
+        upgradeData,
         initialPlanSlug,
         initialCycle = "annual",
         exchangeRate = 1,
@@ -158,6 +159,7 @@ export function useCheckout(props: CheckoutViewProps): UseCheckoutReturn {
 
     const isCourse = productType === "course";
     const isSeats = productType === "seats";
+    const isUpgrade = productType === "upgrade";
 
     // Pricing
     const coursePrice = course?.price || 0;
@@ -174,8 +176,9 @@ export function useCheckout(props: CheckoutViewProps): UseCheckoutReturn {
     const basePrice = useMemo(() => {
         if (isCourse) return coursePrice;
         if (isSeats) return seatsTotalPrice;
+        if (isUpgrade && upgradeData) return upgradeData.upgradePrice;
         return planPrice;
-    }, [isCourse, isSeats, coursePrice, seatsTotalPrice, planPrice]);
+    }, [isCourse, isSeats, isUpgrade, coursePrice, seatsTotalPrice, upgradeData, planPrice]);
 
     // Final price with coupon
     const finalPrice = appliedCoupon ? appliedCoupon.finalPrice : basePrice;
@@ -191,8 +194,9 @@ export function useCheckout(props: CheckoutViewProps): UseCheckoutReturn {
     const productName = useMemo(() => {
         if (isCourse) return course?.title || "Curso";
         if (isSeats) return `${seatsQuantity} asiento(s) adicional(es)`;
+        if (isUpgrade && upgradeData) return `Upgrade a ${upgradeData.targetPlanName}`;
         return currentPlan?.name || "Plan";
-    }, [isCourse, isSeats, course, seatsQuantity, currentPlan]);
+    }, [isCourse, isSeats, isUpgrade, course, seatsQuantity, currentPlan, upgradeData]);
 
     // If payment is in ARS
     const isArsPayment = paymentMethod === "transfer" || paymentMethod === "mercadopago";
@@ -210,10 +214,11 @@ export function useCheckout(props: CheckoutViewProps): UseCheckoutReturn {
     const canProceed = useMemo(() => {
         if (!acceptedTerms) return false;
         if (isCourse && !course) return false;
-        if (!isCourse && !isSeats && !currentPlan) return false;
+        if (isUpgrade && !upgradeData) return false;
+        if (!isCourse && !isSeats && !isUpgrade && !currentPlan) return false;
         if (isSeats && seatsQuantity < 1) return false;
         return true;
-    }, [acceptedTerms, isCourse, isSeats, course, currentPlan, seatsQuantity]);
+    }, [acceptedTerms, isCourse, isSeats, isUpgrade, course, currentPlan, seatsQuantity, upgradeData]);
 
     // ============================================================
     // ACTIONS
@@ -298,6 +303,7 @@ export function useCheckout(props: CheckoutViewProps): UseCheckoutReturn {
         billingCycle,
         seatsQuantity,
         seatsData: seatsData || null,
+        upgradeData: upgradeData || null,
         paymentMethod,
         couponCode,
         appliedCoupon,

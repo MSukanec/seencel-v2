@@ -7,6 +7,7 @@
 // - Course: Muestra info del curso
 // - Plan: Selector de plan + billing cycle
 // - Seats: Muestra info de asientos adicionales
+// - Upgrade: Muestra info del upgrade prorrateado
 // ============================================================
 
 import { useTranslations } from "next-intl";
@@ -34,6 +35,7 @@ import type {
     CheckoutPlan,
     CheckoutCourse,
     CheckoutSeats,
+    CheckoutUpgrade,
     BillingCycle,
     ProductType,
     PlanFlagStatus,
@@ -93,6 +95,8 @@ interface BillingCheckoutProductCardProps {
     seatsData?: CheckoutSeats | null;
     seatsQuantity?: number;
     onSeatsQuantityChange?: (quantity: number) => void;
+    // Upgrade props
+    upgradeData?: CheckoutUpgrade | null;
 }
 
 // ============================================================
@@ -113,6 +117,7 @@ export function BillingCheckoutProductCard({
     seatsData,
     seatsQuantity = 1,
     onSeatsQuantityChange,
+    upgradeData,
 }: BillingCheckoutProductCardProps) {
     const t = useTranslations("Founders.checkout");
     const isAnnual = billingCycle === "annual";
@@ -291,6 +296,102 @@ export function BillingCheckoutProductCard({
                         <p className="font-medium text-foreground">
                             {new Date(seatsData.expiresAt).toLocaleDateString()}
                         </p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // ============================================================
+    // UPGRADE VIEW
+    // ============================================================
+    if (productType === "upgrade" && upgradeData) {
+        const colors = planColors.teams;
+
+        return (
+            <Card>
+                <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <ArrowRight className="h-5 w-5 text-primary" />
+                        Mejorar Plan
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Current → Target */}
+                    <div className="flex items-center gap-3">
+                        {/* Current Plan */}
+                        <div className="flex-1 p-4 rounded-xl bg-muted/50 border border-border">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Zap className="h-4 w-4 text-[oklch(0.55_0.22_260)]" />
+                                <span className="font-medium text-muted-foreground">
+                                    {upgradeData.currentPlanName}
+                                </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                Plan actual
+                            </p>
+                        </div>
+
+                        <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+
+                        {/* Target Plan */}
+                        <div className={cn(
+                            "flex-1 p-4 rounded-xl border-2",
+                            colors.bg, colors.border
+                        )}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Users className={cn("h-4 w-4", colors.text)} />
+                                <span className={cn("font-bold", colors.text)}>
+                                    {upgradeData.targetPlanName}
+                                </span>
+                            </div>
+                            <p className="text-lg font-bold">
+                                {formatPrice(upgradeData.targetPrice)}
+                                <span className="text-sm font-normal text-muted-foreground">
+                                    /{upgradeData.billingPeriod === "annual" ? "año" : "mes"}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Proration Breakdown */}
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+                        <h4 className="font-medium text-sm">Detalle del prorrateo</h4>
+
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                    Plan {upgradeData.targetPlanName} ({upgradeData.billingPeriod === "annual" ? "anual" : "mensual"})
+                                </span>
+                                <span>{formatPrice(upgradeData.targetPrice)}</span>
+                            </div>
+
+                            <div className="flex justify-between text-green-600 dark:text-green-400">
+                                <span>
+                                    Crédito por {upgradeData.daysRemaining} días restantes de {upgradeData.currentPlanName}
+                                </span>
+                                <span>-{formatPrice(upgradeData.credit)}</span>
+                            </div>
+
+                            <div className="border-t pt-2 flex justify-between font-bold text-base">
+                                <span>Total a pagar</span>
+                                <span className="text-primary">{formatPrice(upgradeData.upgradePrice)}</span>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                            Tu nueva suscripción comenzará inmediatamente y vencerá el{" "}
+                            {new Date(upgradeData.expiresAt).toLocaleDateString()}.
+                        </p>
+                    </div>
+
+                    {/* Billing Period Badge */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4" />
+                        <span>
+                            Ciclo de facturación: <strong>{upgradeData.billingPeriod === "annual" ? "Anual" : "Mensual"}</strong>
+                            {" "}(heredado de tu plan actual)
+                        </span>
                     </div>
                 </CardContent>
             </Card>

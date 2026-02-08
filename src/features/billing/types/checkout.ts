@@ -11,7 +11,7 @@ import type { LucideIcon } from "lucide-react";
 // PRODUCT TYPES
 // ============================================================
 
-export type ProductType = "plan" | "course" | "seats";
+export type ProductType = "plan" | "course" | "seats" | "upgrade";
 export type BillingCycle = "monthly" | "annual" | "one-time";
 export type PaymentMethodId = "transfer" | "mercadopago" | "paypal";
 export type PlanFlagStatus = "active" | "founders" | "coming_soon" | "disabled" | "maintenance" | "hidden";
@@ -57,6 +57,27 @@ export interface CheckoutSeats {
     expiresAt: string;
     billingPeriod: BillingCycle;
     basePricePerSeat: number;
+}
+
+// ============================================================
+// UPGRADE (PRO → TEAMS)
+// ============================================================
+
+export interface CheckoutUpgrade {
+    organizationId: string;
+    currentPlanId: string;
+    currentPlanSlug: string;
+    currentPlanName: string;
+    targetPlanId: string;
+    targetPlanSlug: string;
+    targetPlanName: string;
+    billingPeriod: BillingCycle;
+    credit: number;
+    targetPrice: number;
+    upgradePrice: number;
+    daysRemaining: number;
+    expiresAt: string;
+    subscriptionAmount: number;
 }
 
 // ============================================================
@@ -120,6 +141,9 @@ export interface CheckoutState {
     seatsQuantity: number;
     seatsData: CheckoutSeats | null;
 
+    // Upgrade (when productType === 'upgrade')
+    upgradeData: CheckoutUpgrade | null;
+
     // Payment
     paymentMethod: PaymentMethodId;
 
@@ -151,6 +175,7 @@ export interface CheckoutViewProps {
     plans: CheckoutPlan[];
     course?: CheckoutCourse | null;
     seatsData?: CheckoutSeats | null;
+    upgradeData?: CheckoutUpgrade | null;
     initialPlanSlug?: string;
     initialCycle?: BillingCycle;
     countries?: { id: string; name: string; alpha_2: string | null }[];

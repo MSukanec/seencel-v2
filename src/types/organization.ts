@@ -91,6 +91,8 @@ export interface OrganizationSubscription {
 export interface OrganizationBillingCycle {
     id: string;
     created_at: string;
+    started_at?: string;
+    expires_at?: string;
     amount: number;
     currency: string;
     status: string;
@@ -98,7 +100,7 @@ export interface OrganizationBillingCycle {
     plan?: { name: string }[] | { name: string } | null;
     payment?: { provider: string }[] | { provider: string } | null;
     payer_email?: string | null;
-    product_type?: string | null; // 'subscription' | 'seat_purchase' | etc.
+    product_type?: string | null; // 'subscription' | 'seat_purchase' | 'upgrade' | etc.
 }
 
 export interface Currency {

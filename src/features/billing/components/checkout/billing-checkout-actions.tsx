@@ -43,6 +43,7 @@ export function BillingCheckoutActions({
 
     const isCourse = state.productType === "course";
     const isSeats = state.productType === "seats";
+    const isUpgrade = state.productType === "upgrade";
     const isAnnual = state.billingCycle === "annual";
     const isArsPayment = computed.isArsPayment;
 
@@ -139,7 +140,7 @@ export function BillingCheckoutActions({
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        productType: isCourse ? "course" : isSeats ? "seats" : "subscription",
+                        productType: isCourse ? "course" : isSeats ? "seats" : isUpgrade ? "upgrade" : "subscription",
                         productId: isCourse ? computed.currentCourse?.id : state.selectedPlanId,
                         organizationId: !isCourse ? organizationId : undefined,
                         billingPeriod: !isCourse && !isSeats ? state.billingCycle : undefined,
@@ -150,6 +151,11 @@ export function BillingCheckoutActions({
                         couponDiscount: state.appliedCoupon?.discount
                             ? Math.round(state.appliedCoupon.discount * exchangeRate)
                             : undefined,
+                        // Upgrade-specific fields
+                        ...(isUpgrade && state.upgradeData ? {
+                            is_upgrade: true,
+                            proration_credit: state.upgradeData.credit,
+                        } : {}),
                     }),
                 });
 
@@ -174,7 +180,7 @@ export function BillingCheckoutActions({
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        productType: isCourse ? "course" : isSeats ? "seats" : "subscription",
+                        productType: isCourse ? "course" : isSeats ? "seats" : isUpgrade ? "upgrade" : "subscription",
                         productId: isCourse ? computed.currentCourse?.id : state.selectedPlanId,
                         organizationId: !isCourse ? organizationId : undefined,
                         billingPeriod: !isCourse && !isSeats ? state.billingCycle : undefined,
@@ -183,6 +189,11 @@ export function BillingCheckoutActions({
                         title: computed.productName,
                         couponCode: state.appliedCoupon?.code,
                         couponDiscount: state.appliedCoupon?.discount,
+                        // Upgrade-specific fields
+                        ...(isUpgrade && state.upgradeData ? {
+                            is_upgrade: true,
+                            proration_credit: state.upgradeData.credit,
+                        } : {}),
                     }),
                 });
 

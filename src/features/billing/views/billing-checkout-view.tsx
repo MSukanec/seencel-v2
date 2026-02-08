@@ -4,7 +4,7 @@
 // BILLING CHECKOUT VIEW
 // ============================================================
 // Vista principal de checkout refactorizada y modular.
-// Soporta: plan, course, seats
+// Soporta: plan, course, seats, upgrade
 // ============================================================
 
 import { useState } from "react";
@@ -46,12 +46,22 @@ export function BillingCheckoutView(props: CheckoutViewProps) {
     const isArgentina = userCountryCode === "AR";
     const isCourse = state.productType === "course";
     const isSeats = state.productType === "seats";
+    const isUpgrade = state.productType === "upgrade";
 
     // Course validation
     if (isCourse && !props.course) {
         return (
             <div className="h-full flex items-center justify-center">
                 <p className="text-muted-foreground">Curso no encontrado</p>
+            </div>
+        );
+    }
+
+    // Upgrade validation
+    if (isUpgrade && !props.upgradeData) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <p className="text-muted-foreground">No se pudo calcular el upgrade. Verificá tu plan actual.</p>
             </div>
         );
     }
@@ -87,6 +97,7 @@ export function BillingCheckoutView(props: CheckoutViewProps) {
                         seatsData={props.seatsData}
                         seatsQuantity={state.seatsQuantity}
                         onSeatsQuantityChange={actions.setSeatsQuantity}
+                        upgradeData={props.upgradeData}
                     />
 
                     {/* Payment Methods */}

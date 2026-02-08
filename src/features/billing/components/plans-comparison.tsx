@@ -2,20 +2,18 @@
 
 import { useState } from "react";
 import { Plan, PlanFeatures } from "@/actions/plans";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Sparkles, Zap, Crown, Users, FileText, Plug2, Headphones, Shield, Wrench, FolderOpen, HardDrive, BarChart3, Webhook, Clock, Lock } from "lucide-react";
+import { Check, Sparkles, Crown, FileText, Plug2, Headphones, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
+import { PlanCardsGrid, getPlanTier } from "./plan-cards-grid";
+import { getPlanGradient, PLAN_STATUS_CONFIG, type PlanFlagStatus, type PlanPurchaseFlags } from "./plan-card";
 
-export type PlanFlagStatus = 'active' | 'maintenance' | 'hidden' | 'founders' | 'coming_soon';
-
-export interface PlanPurchaseFlags {
-    pro: PlanFlagStatus;
-    teams: PlanFlagStatus;
-}
+// Re-export plan types for backward compatibility
+export type { PlanFlagStatus, PlanPurchaseFlags };
 
 interface PlansComparisonProps {
     plans: Plan[];
@@ -35,6 +33,10 @@ interface PlansComparisonProps {
      * Whether the current user is an admin (can bypass maintenance/coming_soon)
      */
     isAdmin?: boolean;
+    /**
+     * Organization ID for building upgrade URLs
+     */
+    organizationId?: string | null;
 }
 
 // Feature modules organized by category (like Vercel's pricing page)
@@ -86,51 +88,15 @@ const FEATURE_MODULES = [
     },
 ];
 
-// Plan icons based on tier (matching badge icons)
-const getPlanIcon = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes("team")) return Users;
-    if (lower.includes("pro")) return Crown;
-    return Sparkles; // Free default
-};
-
-// Plan gradient colors matching CSS variables
-const getPlanGradient = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes("team")) {
-        return {
-            gradient: "from-purple-500 to-violet-600",
-            bg: "bg-purple-500",
-            text: "text-purple-600 dark:text-purple-400",
-            border: "border-purple-300 dark:border-purple-700",
-            lightBg: "bg-purple-50 dark:bg-purple-900/30",
-        };
-    }
-    if (lower.includes("pro")) {
-        return {
-            gradient: "from-indigo-500 to-blue-600",
-            bg: "bg-indigo-500",
-            text: "text-indigo-600 dark:text-indigo-400",
-            border: "border-indigo-300 dark:border-indigo-700",
-            lightBg: "bg-indigo-50 dark:bg-indigo-900/30",
-        };
-    }
-    // Free (lime/green)
-    return {
-        gradient: "from-lime-500 to-green-500",
-        bg: "bg-lime-500",
-        text: "text-lime-600 dark:text-lime-400",
-        border: "border-lime-300 dark:border-lime-700",
-        lightBg: "bg-lime-50 dark:bg-lime-900/30",
-    };
-};
+// getPlanIcon and getPlanGradient are now exported from plan-card.tsx
 
 export function PlansComparison({
     plans,
     isDashboard = false,
     purchaseFlags = { pro: 'active', teams: 'active' },
     currentPlanId,
-    isAdmin = false
+    isAdmin = false,
+    organizationId,
 }: PlansComparisonProps) {
     const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
     const [selectedPlanIndex, setSelectedPlanIndex] = useState(1); // Default to Pro (middle plan)
@@ -144,68 +110,35 @@ export function PlansComparison({
         return 'active';
     };
 
-    // Check if user can interact with the plan (click button)
-    // Admin can always interact, others only if status is 'active' or 'founders'
-    const canInteract = (planName: string): boolean => {
-        if (isAdmin) return true; // Admin bypass
-        const status = getPlanStatus(planName);
-        return status === 'active' || status === 'founders';
+    // Helper: build checkout URL (upgrade if PRO user clicks on TEAMS)
+    const getCheckoutUrl = (plan: Plan): string => {
+        const currentPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
+        const currentSlug = currentPlan?.slug?.toLowerCase() || currentPlan?.name?.toLowerCase() || '';
+        const targetSlug = plan.slug?.toLowerCase() || plan.name?.toLowerCase() || '';
+
+        // PRO → TEAMS upgrade flow
+        if (currentSlug.includes('pro') && targetSlug.includes('team') && organizationId) {
+            return `/checkout?type=upgrade&org=${organizationId}&target=${plan.slug || plan.name.toLowerCase()}`;
+        }
+
+        // Normal checkout
+        return `/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`;
     };
 
-    // Price mapping: planName -> { monthly, annual }
-    const PRICE_MAP: Record<string, { monthly: number; annual: number }> = {
-        free: { monthly: 0, annual: 0 },
-        pro: { monthly: 20, annual: 16 },
-        teams: { monthly: 30, annual: 24 },
+    // Helper: get CTA label
+    const getCtaLabel = (plan: Plan, short = false): string => {
+        const currentPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
+        const currentSlug = currentPlan?.slug?.toLowerCase() || currentPlan?.name?.toLowerCase() || '';
+        const targetSlug = plan.slug?.toLowerCase() || plan.name?.toLowerCase() || '';
+
+        if (currentSlug.includes('pro') && targetSlug.includes('team') && organizationId) {
+            return short ? "Mejorar" : "Mejorar Plan";
+        }
+
+        return isDashboard ? (short ? "Mejorar" : "Mejorar Plan") : (short ? "Empezar" : "Empezar Ahora");
     };
 
-    const getPrice = (planName: string): number => {
-        const lower = planName.toLowerCase();
-        const prices = PRICE_MAP[lower] || { monthly: 0, annual: 0 };
-        return billingPeriod === "annual" ? prices.annual : prices.monthly;
-    };
-
-    const formatPrice = (amount: number) => {
-        if (!amount) return "Gratis";
-        return `US$ ${amount}`;
-    };
-
-    // Format storage from MB to human readable
-    const formatStorage = (mb: number): string => {
-        if (mb >= 1024) return `${Math.round(mb / 1024)} GB`;
-        return `${mb} MB`;
-    };
-
-    // Get card features from plan.features (dynamic)
-    const getCardFeatures = (plan: Plan): Array<{ icon: React.ElementType; label: string; value: string }> => {
-        const features = plan.features;
-        if (!features) return [];
-
-        const isUnlimited = (val: number) => val >= 999;
-
-        return [
-            {
-                icon: Users,
-                label: "Miembros",
-                value: features.can_invite_members ? "Ilimitados (por asiento)" : "Solo tú",
-            },
-            {
-                icon: FolderOpen,
-                label: "Proyectos",
-                value: isUnlimited(features.max_projects) ? "Ilimitados" : `${features.max_projects} proyectos`,
-            },
-            {
-                icon: HardDrive,
-                label: "Almacenamiento",
-                value: formatStorage(features.max_storage_mb),
-            },
-            {
-                icon: BarChart3,
-                label: "Analíticas",
-                value: features.analytics_level === "basic" ? "Básicas" : features.analytics_level === "advanced" ? "Avanzadas" : "Personalizadas",
-            },
-        ];
-    };
+    // Price, storage, card features helpers are now in plan-card.tsx
 
     // Get feature value for a plan from plan.features using featureKey
     const getDynamicFeatureValue = (plan: Plan, featureKey: string): string | boolean => {
@@ -331,9 +264,11 @@ export function PlansComparison({
                                     </CardDescription>
                                 </div>
                             </div>
-                            <Button variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
-                                Desde $16/mes →
-                            </Button>
+                            <Link href="/founders">
+                                <Button variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
+                                    Desde $16/mes →
+                                </Button>
+                            </Link>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -354,231 +289,19 @@ export function PlansComparison({
                 </Card>
             )}
 
-            {/* Plan Cards */}
-            <div className="grid gap-8 md:grid-cols-3 mb-16">
-                {plans.map((plan, index) => {
-                    const PlanIcon = getPlanIcon(plan.name);
-                    const planColors = getPlanGradient(plan.name);
-                    const isPopular = index === 1; // Middle plan is "popular"
-                    const isCurrentPlan = currentPlanId === plan.id;
-
-                    return (
-                        <Card
-                            key={plan.id}
-                            className={cn(
-                                "relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
-                                isPopular && `border-2 shadow-lg ring-2 ${planColors.border} ring-current/20`,
-                            )}
-                        >
-                            {/* Gradient accent bar */}
-                            <div className={cn("h-1.5 w-full bg-gradient-to-r", getPlanGradient(plan.name).gradient)} />
-
-                            {/* Badges container */}
-                            <div className="absolute top-4 right-4 flex flex-col gap-1 items-end">
-                                {isPopular && !isCurrentPlan && (
-                                    <Badge className={cn("text-white", planColors.bg)}>
-                                        Popular
-                                    </Badge>
-                                )}
-                            </div>
-
-                            <CardHeader className="pt-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className={cn(
-                                        "p-2 rounded-lg bg-gradient-to-br",
-                                        getPlanGradient(plan.name).gradient,
-                                        "text-white"
-                                    )}>
-                                        <PlanIcon className="h-5 w-5" />
-                                    </div>
-                                    <CardTitle className="text-xl">{getPlanDisplayName(plan.name)}</CardTitle>
-                                </div>
-                                <CardDescription>
-                                    {plan.billing_type === "per_user" ? "Por usuario / mes" : "Tarifa plana"}
-                                </CardDescription>
-                            </CardHeader>
-
-                            <CardContent>
-                                <div className="mb-6">
-                                    <span className="text-4xl font-bold">
-                                        {formatPrice(getPrice(plan.name))}
-                                    </span>
-                                    {getPrice(plan.name) > 0 && (
-                                        <span className="text-muted-foreground ml-1 text-sm">/ mes</span>
-                                    )}
-                                </div>
-
-                                {/* Dynamic feature list from plan.features */}
-                                <ul className="space-y-3 text-sm">
-                                    {getCardFeatures(plan).map((feature) => {
-                                        const FeatureIcon = feature.icon;
-                                        return (
-                                            <li key={feature.label} className="flex items-center gap-3">
-                                                <FeatureIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                                                <span>
-                                                    <span className="text-muted-foreground">{feature.label}:</span>{" "}
-                                                    <span className="font-medium">{feature.value}</span>
-                                                </span>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            </CardContent>
-
-                            <CardFooter className="flex-col gap-2">
-                                {(() => {
-                                    const status = getPlanStatus(plan.name);
-                                    const userCanClick = canInteract(plan.name);
-
-                                    // Plan tier hierarchy: free=0, pro=1, teams=2
-                                    const getPlanTier = (name: string) => {
-                                        const lower = name.toLowerCase();
-                                        if (lower === 'free') return 0;
-                                        if (lower === 'pro') return 1;
-                                        if (lower === 'teams') return 2;
-                                        return 0;
-                                    };
-
-                                    const thisPlanTier = getPlanTier(plan.name);
-
-                                    // Find current plan tier from currentPlanId
-                                    const currentPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
-                                    const currentTier = currentPlan ? getPlanTier(currentPlan.name) : 0;
-
-                                    // Free plan always shows "Plan Actual" for logged-in users
-                                    const isFree = thisPlanTier === 0;
-                                    const isLoggedIn = !!currentPlanId || isDashboard;
-
-                                    if (isCurrentPlan || (isFree && isLoggedIn)) {
-                                        return (
-                                            <Button
-                                                className="w-full"
-                                                variant="outline"
-                                                disabled
-                                            >
-                                                <Check className="h-4 w-4 mr-2" />
-                                                Plan Actual
-                                            </Button>
-                                        );
-                                    }
-
-                                    // Plan is inferior to current plan - no downgrade
-                                    if (isLoggedIn && thisPlanTier < currentTier) {
-                                        return (
-                                            <Button
-                                                className="w-full"
-                                                variant="outline"
-                                                disabled
-                                            >
-                                                <Check className="h-4 w-4 mr-2" />
-                                                Incluido en tu plan
-                                            </Button>
-                                        );
-                                    }
-
-                                    // Show status indicator for non-active states
-                                    if (status !== 'active') {
-                                        const statusConfig = {
-                                            maintenance: {
-                                                icon: Wrench,
-                                                label: "En Mantenimiento",
-                                                sublabel: "Vuelve pronto",
-                                                bgColor: "bg-orange-500/10",
-                                                textColor: "text-orange-500",
-                                                borderColor: "border-orange-500/30"
-                                            },
-                                            coming_soon: {
-                                                icon: Clock,
-                                                label: "Próximamente",
-                                                sublabel: "Disponible pronto",
-                                                bgColor: "bg-blue-500/10",
-                                                textColor: "text-blue-500",
-                                                borderColor: "border-blue-500/30"
-                                            },
-                                            hidden: {
-                                                icon: Lock,
-                                                label: "No Disponible",
-                                                sublabel: "",
-                                                bgColor: "bg-muted",
-                                                textColor: "text-muted-foreground",
-                                                borderColor: "border-muted"
-                                            },
-                                            founders: {
-                                                icon: Crown,
-                                                label: "Solo Fundadores",
-                                                sublabel: "",
-                                                bgColor: "bg-amber-500/10",
-                                                textColor: "text-amber-500",
-                                                borderColor: "border-amber-500/30"
-                                            }
-                                        };
-
-                                        const config = statusConfig[status as keyof typeof statusConfig];
-                                        const StatusIcon = config?.icon || Lock;
-
-                                        return (
-                                            <>
-                                                {/* Status badge - always visible */}
-                                                <div className={cn(
-                                                    "w-full rounded-lg border py-3 px-4",
-                                                    config?.bgColor,
-                                                    config?.borderColor
-                                                )}>
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <StatusIcon className={cn("h-4 w-4", config?.textColor)} />
-                                                        <span className={cn("text-sm font-medium", config?.textColor)}>
-                                                            {config?.label}
-                                                        </span>
-                                                    </div>
-                                                    {config?.sublabel && (
-                                                        <p className="text-xs text-muted-foreground text-center mt-1">
-                                                            {config.sublabel}
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                {/* Admin bypass button */}
-                                                {isAdmin && (
-                                                    <Link
-                                                        href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}
-                                                        className="w-full"
-                                                    >
-                                                        <Button
-                                                            className="w-full"
-                                                            variant="outline"
-                                                            size="sm"
-                                                        >
-                                                            <Lock className="h-3 w-3 mr-1" />
-                                                            Admin: Comprar Igual
-                                                        </Button>
-                                                    </Link>
-                                                )}
-                                            </>
-                                        );
-                                    }
-
-                                    // Normal active state - upgrade CTA
-                                    return (
-                                        <Link
-                                            href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}
-                                            className="w-full"
-                                        >
-                                            <Button
-                                                className={cn(
-                                                    "w-full",
-                                                    isPopular && `${planColors.bg} hover:opacity-90 text-white border-0`
-                                                )}
-                                                variant={isPopular ? "default" : "outline"}
-                                            >
-                                                {isDashboard ? "Mejorar Plan" : "Empezar Ahora"}
-                                            </Button>
-                                        </Link>
-                                    );
-                                })()}
-                            </CardFooter>
-                        </Card>
-                    );
-                })}
+            {/* Plan Cards - Using reusable PlanCardsGrid */}
+            <div className="mb-16">
+                <PlanCardsGrid
+                    plans={plans}
+                    currentPlanId={currentPlanId}
+                    organizationId={organizationId}
+                    isAdmin={isAdmin}
+                    purchaseFlags={purchaseFlags}
+                    isDashboard={isDashboard}
+                    billingPeriod={billingPeriod}
+                    onBillingPeriodChange={setBillingPeriod}
+                    showToggle={false}
+                />
             </div>
 
             {/* Detailed Comparison - Vercel Style */}
@@ -605,19 +328,13 @@ export function PlansComparison({
                         </div>
                         {plans[selectedPlanIndex] && (() => {
                             const selectedPlan = plans[selectedPlanIndex];
-                            const getPlanTier = (name: string) => {
-                                const lower = name.toLowerCase();
-                                if (lower === 'free') return 0;
-                                if (lower === 'pro') return 1;
-                                if (lower === 'teams') return 2;
-                                return 0;
-                            };
                             const thisTier = getPlanTier(selectedPlan.name);
                             const curPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
                             const curTier = curPlan ? getPlanTier(curPlan.name) : 0;
                             const isFree = thisTier === 0;
                             const isLoggedIn = !!currentPlanId || isDashboard;
                             const isCurrentPlan = currentPlanId === selectedPlan.id;
+                            const status = getPlanStatus(selectedPlan.name);
 
                             if (isCurrentPlan || (isFree && isLoggedIn)) {
                                 return (
@@ -637,21 +354,41 @@ export function PlansComparison({
                                 );
                             }
 
-                            return canInteract(selectedPlan.name) ? (
-                                <Button
-                                    size="sm"
-                                    className={cn(
-                                        getPlanGradient(selectedPlan.name).bg,
-                                        "text-white hover:opacity-90"
-                                    )}
-                                >
-                                    {isDashboard ? "Mejorar" : "Empezar"}
-                                </Button>
-                            ) : (
-                                <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                                    <Wrench className="h-3 w-3" />
-                                    <span>Mantenimiento</span>
-                                </div>
+                            if (status !== 'active') {
+                                const config = PLAN_STATUS_CONFIG[status];
+                                if (config) {
+                                    const StatusIcon = config.icon;
+                                    if (isAdmin) {
+                                        return (
+                                            <Link href={getCheckoutUrl(selectedPlan) as "/checkout"}>
+                                                <Button size="sm" variant="outline" className={config.buttonColor}>
+                                                    <StatusIcon className="h-3 w-3 mr-1" />
+                                                    {config.label}
+                                                </Button>
+                                            </Link>
+                                        );
+                                    }
+                                    return (
+                                        <Button size="sm" variant="outline" className={config.buttonColor} disabled>
+                                            <StatusIcon className="h-3 w-3 mr-1" />
+                                            {config.label}
+                                        </Button>
+                                    );
+                                }
+                            }
+
+                            return (
+                                <Link href={getCheckoutUrl(selectedPlan) as "/checkout"}>
+                                    <Button
+                                        size="sm"
+                                        className={cn(
+                                            getPlanGradient(selectedPlan.name).bg,
+                                            "text-white hover:opacity-90"
+                                        )}
+                                    >
+                                        {isDashboard ? "Mejorar" : "Empezar"}
+                                    </Button>
+                                </Link>
                             );
                         })()}
                     </div>
@@ -665,19 +402,16 @@ export function PlansComparison({
                             const planStatus = getPlanStatus(plan.name);
                             const isCurrentPlan = currentPlanId === plan.id;
                             const isPro = plan.name.toLowerCase().includes("pro");
-
-                            // Status config for non-active states
-                            const statusConfig: Record<string, { icon: typeof Clock; label: string; color: string }> = {
-                                maintenance: { icon: Wrench, label: "Mantenimiento", color: "text-orange-500" },
-                                coming_soon: { icon: Clock, label: "Próximamente", color: "text-blue-500" },
-                                hidden: { icon: Lock, label: "No Disponible", color: "text-muted-foreground" },
-                                founders: { icon: Crown, label: "Fundadores", color: "text-amber-500" }
-                            };
+                            const thisTier = getPlanTier(plan.name);
+                            const curPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
+                            const curTier = curPlan ? getPlanTier(curPlan.name) : 0;
+                            const isFree = thisTier === 0;
+                            const isLoggedIn = !!currentPlanId || isDashboard;
 
                             return (
                                 <div key={plan.id} className="text-center">
                                     <div className="font-semibold mb-2">{getPlanDisplayName(plan.name)}</div>
-                                    {isCurrentPlan ? (
+                                    {isCurrentPlan || (isFree && isLoggedIn) ? (
                                         <Button
                                             size="sm"
                                             variant="outline"
@@ -685,80 +419,56 @@ export function PlansComparison({
                                             className="w-full max-w-[140px]"
                                         >
                                             <Check className="h-4 w-4 mr-1" />
-                                            Plan Actual
+                                            {isCurrentPlan ? "Plan Actual" : "Plan Actual"}
                                         </Button>
-                                    ) : (() => {
-                                        // Plan tier hierarchy
-                                        const getPlanTier = (name: string) => {
-                                            const lower = name.toLowerCase();
-                                            if (lower === 'free') return 0;
-                                            if (lower === 'pro') return 1;
-                                            if (lower === 'teams') return 2;
-                                            return 0;
-                                        };
-                                        const thisTier = getPlanTier(plan.name);
-                                        const curPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
-                                        const curTier = curPlan ? getPlanTier(curPlan.name) : 0;
-                                        const isFree = thisTier === 0;
-                                        const isLoggedIn = !!currentPlanId || isDashboard;
-
-                                        // Free for logged-in users
-                                        if (isFree && isLoggedIn) {
+                                    ) : isLoggedIn && thisTier < curTier ? (
+                                        <Button size="sm" variant="outline" disabled className="w-full max-w-[140px]">
+                                            <Check className="h-4 w-4 mr-1" />
+                                            Incluido
+                                        </Button>
+                                    ) : planStatus !== 'active' ? (() => {
+                                        const config = PLAN_STATUS_CONFIG[planStatus];
+                                        if (!config) return null;
+                                        const StatusIcon = config.icon;
+                                        if (isAdmin) {
                                             return (
-                                                <Button size="sm" variant="outline" disabled className="w-full max-w-[140px]">
-                                                    <Check className="h-4 w-4 mr-1" />
-                                                    Plan Actual
-                                                </Button>
+                                                <Link href={getCheckoutUrl(plan) as "/checkout"}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className={cn("w-full max-w-[140px]", config.buttonColor)}
+                                                    >
+                                                        <StatusIcon className="h-3 w-3 mr-1" />
+                                                        {config.label}
+                                                    </Button>
+                                                </Link>
                                             );
                                         }
-
-                                        // Inferior plan - no downgrade
-                                        if (isLoggedIn && thisTier < curTier) {
-                                            return (
-                                                <Button size="sm" variant="outline" disabled className="w-full max-w-[140px]">
-                                                    <Check className="h-4 w-4 mr-1" />
-                                                    Incluido
-                                                </Button>
-                                            );
-                                        }
-
-                                        return planStatus === 'active' ? (
-                                            <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
-                                                <Button
-                                                    size="sm"
-                                                    variant={isPro ? "default" : "outline"}
-                                                    className={cn(
-                                                        "w-full max-w-[140px]",
-                                                        isPro && `${getPlanGradient(plan.name).bg} hover:opacity-90 text-white`
-                                                    )}
-                                                >
-                                                    {isDashboard ? "Mejorar" : "Empezar"}
-                                                </Button>
-                                            </Link>
-                                        ) : (
-                                            // Non-active status - show status indicator
-                                            <div className="flex flex-col items-center gap-1">
-                                                {(() => {
-                                                    const config = statusConfig[planStatus];
-                                                    const StatusIcon = config?.icon || Lock;
-                                                    return (
-                                                        <div className={cn("flex items-center gap-1 text-xs py-1", config?.color)}>
-                                                            <StatusIcon className="h-3 w-3" />
-                                                            <span>{config?.label}</span>
-                                                        </div>
-                                                    );
-                                                })()}
-                                                {/* Admin bypass - small link */}
-                                                {isAdmin && (
-                                                    <Link href={(`/checkout?product=plan-${plan.slug || plan.name.toLowerCase()}&cycle=${billingPeriod}`) as "/checkout"}>
-                                                        <Button size="sm" variant="ghost" className="h-6 text-xs px-2">
-                                                            Admin →
-                                                        </Button>
-                                                    </Link>
-                                                )}
-                                            </div>
+                                        return (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className={cn("w-full max-w-[140px]", config.buttonColor)}
+                                                disabled
+                                            >
+                                                <StatusIcon className="h-3 w-3 mr-1" />
+                                                {config.label}
+                                            </Button>
                                         );
-                                    })()}
+                                    })() : (
+                                        <Link href={getCheckoutUrl(plan) as "/checkout"}>
+                                            <Button
+                                                size="sm"
+                                                variant={isPro ? "default" : "outline"}
+                                                className={cn(
+                                                    "w-full max-w-[140px]",
+                                                    isPro && `${getPlanGradient(plan.name).bg} hover:opacity-90 text-white`
+                                                )}
+                                            >
+                                                {getCtaLabel(plan, true)}
+                                            </Button>
+                                        </Link>
+                                    )}
                                 </div>
                             );
                         })}

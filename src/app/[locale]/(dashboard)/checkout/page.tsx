@@ -5,14 +5,14 @@ import { getFeatureFlag, getPlanPurchaseFlags, getPaymentMethodFlags } from "@/a
 import { getCountries } from "@/features/countries/queries";
 import { getCourseBySlug } from "@/features/academy/course-queries";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getExchangeRate, getUserCountryCode } from "@/features/billing/queries";
+import { getExchangeRate, getUserCountryCode, getUpgradeProration } from "@/features/billing/queries";
 import { checkIsAdmin } from "@/features/users/queries";
 import { getOrganizationSeatStatus } from "@/features/team/actions";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ShoppingCart } from "lucide-react";
 import { BillingCheckoutView } from "@/features/billing/views/billing-checkout-view";
-import type { CheckoutSeats } from "@/features/billing/types/checkout";
+import type { CheckoutSeats, CheckoutUpgrade } from "@/features/billing/types/checkout";
 
 // Metadata
 export async function generateMetadata({
@@ -35,6 +35,8 @@ interface CheckoutPageProps {
         type?: string;
         org?: string;
         quantity?: string;
+        // Upgrade params
+        target?: string;
     }>;
 }
 
@@ -43,9 +45,10 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
     const productParam = params.product || "";
 
     // Determine product type from URL parameters
+    const isUpgrade = params.type === "upgrade";
     const isSeats = params.type === "seats";
     const isCourse = productParam.startsWith("course-");
-    const isPlan = productParam.startsWith("plan-") || (!isCourse && !isSeats);
+    const isPlan = productParam.startsWith("plan-") || (!isCourse && !isSeats && !isUpgrade);
 
     // Check feature flag for course purchases (pass to view instead of redirect)
     const coursePurchasesEnabled = isCourse
@@ -77,6 +80,35 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
         }
     }
 
+    // Fetch upgrade proration data if type=upgrade
+    let upgradeData: CheckoutUpgrade | null = null;
+    if (isUpgrade && params.org && params.target) {
+        // First find the target plan ID from slug
+        const allPlans = await getPlans();
+        const targetPlan = allPlans.find(p => p.slug === params.target);
+        if (targetPlan) {
+            const prorationResult = await getUpgradeProration(params.org, targetPlan.id);
+            if (prorationResult.ok) {
+                upgradeData = {
+                    organizationId: params.org,
+                    currentPlanId: prorationResult.current_plan_id!,
+                    currentPlanSlug: prorationResult.current_plan_slug!,
+                    currentPlanName: prorationResult.current_plan_name!,
+                    targetPlanId: prorationResult.target_plan_id!,
+                    targetPlanSlug: prorationResult.target_plan_slug!,
+                    targetPlanName: prorationResult.target_plan_name!,
+                    billingPeriod: (prorationResult.billing_period as "monthly" | "annual") || "annual",
+                    credit: prorationResult.credit!,
+                    targetPrice: prorationResult.target_price!,
+                    upgradePrice: prorationResult.upgrade_price!,
+                    daysRemaining: prorationResult.days_remaining!,
+                    expiresAt: prorationResult.expires_at || new Date().toISOString(),
+                    subscriptionAmount: prorationResult.subscription_amount!,
+                };
+            }
+        }
+    }
+
     // Fetch data based on product type
     const [plans, countries, course, userOrgs, exchangeRate, userCountryCode, purchaseFlags, paymentMethodFlags, isAdmin] = await Promise.all([
         getPlans(),
@@ -94,7 +126,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
     const cycle = params.cycle === "monthly" ? "monthly" : params.cycle === "one-time" ? "one-time" : "annual";
 
     // Determine product type
-    const productType = isSeats ? "seats" : isCourse ? "course" : "plan";
+    const productType = isUpgrade ? "upgrade" : isSeats ? "seats" : isCourse ? "course" : "plan";
 
     return (
         <PageWrapper
@@ -108,10 +140,11 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                     plans={plans}
                     course={course}
                     seatsData={seatsData}
-                    initialPlanSlug={productSlug}
-                    initialCycle={cycle as "monthly" | "annual"}
+                    upgradeData={upgradeData}
+                    initialPlanSlug={isUpgrade ? (upgradeData?.targetPlanSlug || params.target) : productSlug}
+                    initialCycle={isUpgrade ? upgradeData?.billingPeriod : (cycle as "monthly" | "annual")}
                     countries={countries}
-                    organizationId={isSeats ? params.org : (userOrgs.activeOrgId || undefined)}
+                    organizationId={isUpgrade ? params.org : (isSeats ? params.org : (userOrgs.activeOrgId || undefined))}
                     exchangeRate={exchangeRate}
                     userCountryCode={userCountryCode}
                     purchaseFlags={purchaseFlags}

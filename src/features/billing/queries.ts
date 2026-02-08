@@ -130,4 +130,49 @@ export async function getUserCountryCode(): Promise<string | null> {
     return countryObj?.alpha_2 || null;
 }
 
+// ============================================================
+// UPGRADE PRORATION
+// ============================================================
 
+export interface UpgradeProrationData {
+    ok: boolean;
+    error?: string;
+    current_plan_id?: string;
+    current_plan_slug?: string;
+    current_plan_name?: string;
+    target_plan_id?: string;
+    target_plan_slug?: string;
+    target_plan_name?: string;
+    target_price?: number;
+    subscription_id?: string;
+    billing_period?: string;
+    expires_at?: string;
+    subscription_amount?: number;
+    days_remaining?: number;
+    period_total_days?: number;
+    credit?: number;
+    upgrade_price?: number;
+}
+
+/**
+ * Get proration data for upgrading from current plan to target plan.
+ * Calls the get_upgrade_proration RPC function.
+ */
+export async function getUpgradeProration(
+    organizationId: string,
+    targetPlanId: string
+): Promise<UpgradeProrationData> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.rpc("get_upgrade_proration", {
+        p_organization_id: organizationId,
+        p_target_plan_id: targetPlanId,
+    });
+
+    if (error) {
+        console.error("Error fetching upgrade proration:", error);
+        return { ok: false, error: "DATABASE_ERROR" };
+    }
+
+    return data as UpgradeProrationData;
+}

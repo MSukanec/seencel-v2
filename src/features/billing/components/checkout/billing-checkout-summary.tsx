@@ -36,13 +36,14 @@ export function BillingCheckoutSummary({
 
     const isCourse = state.productType === "course";
     const isSeats = state.productType === "seats";
+    const isUpgrade = state.productType === "upgrade";
     const isAnnual = state.billingCycle === "annual";
 
     // Calculate monthly cost for annual comparison
     const monthlyCostIfAnnual = computed.monthlyPrice * 12;
 
     // Determine product label for communications checkbox
-    const productLabel = isCourse ? "curso" : isSeats ? "asientos" : "suscripción";
+    const productLabel = isCourse ? "curso" : isSeats ? "asientos" : isUpgrade ? "upgrade" : "suscripción";
 
     return (
         <Card className="sticky top-4">
@@ -56,7 +57,7 @@ export function BillingCheckoutSummary({
                 {/* Product Name */}
                 <div className="flex justify-between items-center">
                     <span className="font-medium">{computed.productName}</span>
-                    {!isCourse && !isSeats && (
+                    {!isCourse && !isSeats && !isUpgrade && (
                         <span className="text-sm text-muted-foreground">
                             {isAnnual ? "/ año" : "/ mes"}
                         </span>
@@ -64,7 +65,7 @@ export function BillingCheckoutSummary({
                 </div>
 
                 {/* Founder Badge for annual */}
-                {!isCourse && !isSeats && isAnnual && (
+                {!isCourse && !isSeats && !isUpgrade && isAnnual && (
                     <div className="flex items-center gap-2 text-sm">
                         <Sparkles className="h-4 w-4 text-amber-500" />
                         <span className="font-medium text-amber-500">
@@ -129,6 +130,15 @@ export function BillingCheckoutSummary({
                     <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                         <p>Precio prorrateado por {state.seatsData.daysRemaining} días restantes</p>
                         <p className="text-foreground">Válido hasta {new Date(state.seatsData.expiresAt).toLocaleDateString()}</p>
+                    </div>
+                )}
+
+                {/* Upgrade proration info */}
+                {isUpgrade && (
+                    <div className="text-xs text-muted-foreground bg-green-500/10 border border-green-500/20 p-2 rounded">
+                        <p className="text-green-600 dark:text-green-400 font-medium">
+                            Incluye crédito prorrateado por tu plan actual
+                        </p>
                     </div>
                 )}
 

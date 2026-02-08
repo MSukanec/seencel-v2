@@ -6,6 +6,8 @@ import { TeamMembersView } from "@/features/team/views/team-members-view";
 import { SeatStatus } from "@/features/team/types";
 import { TeamPermissionsView } from "@/features/team/views/team-permissions-view";
 import { BillingSettingsView } from "@/features/billing/views/billing-settings-view";
+import type { Plan } from "@/actions/plans";
+import type { PlanPurchaseFlags } from "@/features/billing/components/plan-card";
 
 interface SettingsClientProps {
     data: OrganizationSettingsData;
@@ -14,9 +16,12 @@ interface SettingsClientProps {
     ownerId: string | null;
     canInviteMembers: boolean;
     seatStatus: SeatStatus | null;
+    plans: Plan[];
+    purchaseFlags: PlanPurchaseFlags;
+    isAdmin: boolean;
 }
 
-export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers, seatStatus }: SettingsClientProps) {
+export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers, seatStatus, plans, purchaseFlags, isAdmin }: SettingsClientProps) {
     // Get planId from subscription or fallback
     const planId = data.subscription?.plan_id ?? "";
 
@@ -47,6 +52,11 @@ export function SettingsClient({ data, organizationId, currentUserId, ownerId, c
                 <BillingSettingsView
                     subscription={data.subscription}
                     billingCycles={data.billingCycles}
+                    organizationId={organizationId}
+                    plans={plans}
+                    purchaseFlags={purchaseFlags}
+                    isAdmin={isAdmin}
+                    currentPlanId={data.subscription?.plan_id ?? null}
                 />
             </TabsContent>
         </>
