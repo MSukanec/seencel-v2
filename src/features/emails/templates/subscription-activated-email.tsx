@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow } from '../lib/email-base';
 
 interface SubscriptionActivatedEmailProps {
     firstName: string;
@@ -39,20 +39,9 @@ export function SubscriptionActivatedEmail({
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>Detalles de tu Plan</h3>
 
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Plan</span>
-                        <span style={emailBaseStyles.cardValue}>{planName}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Ciclo de facturación</span>
-                        <span style={emailBaseStyles.cardValue}>{cycleLabels[billingCycle]}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>Válido hasta</span>
-                        <span style={emailBaseStyles.cardValue}>{expiresAt}</span>
-                    </div>
+                    <EmailCardRow label="Plan" value={planName} />
+                    <EmailCardRow label="Ciclo de facturación" value={cycleLabels[billingCycle]} />
+                    <EmailCardRow label="Válido hasta" value={expiresAt} last />
                 </div>
 
                 <div style={emailBaseStyles.ctaContainer}>

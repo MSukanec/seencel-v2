@@ -42,8 +42,9 @@ El sistema de emails de SEENCEL usa una **arquitectura de cola asíncrona** para
 
 ### Email de Bienvenida
 ```sql
--- Ejecutar: DB/add_welcome_email_trigger.sql
--- Trigger: on_user_created_send_welcome_email
+-- Ejecutar: DB/rename_email_functions_to_queue_email.sql
+-- Trigger: on_user_created_queue_email_welcome
+-- Función: queue_email_welcome()
 -- Se dispara: INSERT en public.users
 ```
 

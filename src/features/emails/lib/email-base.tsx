@@ -4,6 +4,7 @@ import { type EmailLocale, getFooterText } from './email-translations';
 /**
  * Shared base styles for all email templates
  * Design: Professional, minimal, no emojis, logo at top
+ * NOTE: Email clients do NOT support flexbox. Use table-based layouts.
  */
 export const emailBaseStyles: Record<string, React.CSSProperties> = {
     // Container
@@ -70,16 +71,19 @@ export const emailBaseStyles: Record<string, React.CSSProperties> = {
         textTransform: 'uppercase' as const,
         letterSpacing: '0.5px',
     },
-    cardRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
+    // Table-based row styles (compatible with all email clients)
+    cardTable: {
+        width: '100%',
+        borderCollapse: 'collapse' as const,
+    },
+    cardRowTd: {
         padding: '6px 0',
         borderBottom: '1px solid #e4e4e7',
+        verticalAlign: 'top' as const,
     },
-    cardRowLast: {
-        display: 'flex',
-        justifyContent: 'space-between',
+    cardRowTdLast: {
         padding: '6px 0',
+        verticalAlign: 'top' as const,
     },
     cardLabel: {
         fontSize: '14px',
@@ -89,19 +93,19 @@ export const emailBaseStyles: Record<string, React.CSSProperties> = {
         fontSize: '14px',
         color: '#18181b',
         fontWeight: '500',
+        textAlign: 'right' as const,
     },
     cardValueMono: {
         fontSize: '14px',
         color: '#18181b',
         fontWeight: '500',
         fontFamily: 'monospace',
+        textAlign: 'right' as const,
     },
-    cardTotal: {
-        display: 'flex',
-        justifyContent: 'space-between',
+    cardTotalTd: {
         padding: '12px 0 0',
-        marginTop: '12px',
         borderTop: '1px solid #d4d4d8',
+        verticalAlign: 'top' as const,
     },
     cardTotalLabel: {
         fontSize: '15px',
@@ -112,6 +116,7 @@ export const emailBaseStyles: Record<string, React.CSSProperties> = {
         fontSize: '18px',
         color: '#18181b',
         fontWeight: '700',
+        textAlign: 'right' as const,
     },
 
     // Highlight box (for important info like references)
@@ -201,6 +206,52 @@ export const emailBaseStyles: Record<string, React.CSSProperties> = {
     },
 };
 
+// ============================================================
+// REUSABLE EMAIL COMPONENTS (Table-based for email compatibility)
+// ============================================================
+
+/**
+ * A single row in an email card. Uses <table> for universal email client support.
+ * @param last - If true, removes bottom border
+ * @param mono - If true, uses monospace font for the value
+ */
+export function EmailCardRow({ label, value, last, mono }: {
+    label: string;
+    value: string;
+    last?: boolean;
+    mono?: boolean;
+}) {
+    const tdStyle = last ? emailBaseStyles.cardRowTdLast : emailBaseStyles.cardRowTd;
+    const valueStyle = mono ? emailBaseStyles.cardValueMono : emailBaseStyles.cardValue;
+
+    return (
+        <table style={emailBaseStyles.cardTable} role="presentation">
+            <tbody>
+                <tr>
+                    <td style={{ ...tdStyle, ...emailBaseStyles.cardLabel }}>{label}</td>
+                    <td style={{ ...tdStyle, ...valueStyle }}>{value}</td>
+                </tr>
+            </tbody>
+        </table>
+    );
+}
+
+/**
+ * Total row at the bottom of an email card.
+ */
+export function EmailCardTotal({ label, value }: { label: string; value: string }) {
+    return (
+        <table style={{ ...emailBaseStyles.cardTable, marginTop: '12px' }} role="presentation">
+            <tbody>
+                <tr>
+                    <td style={{ ...emailBaseStyles.cardTotalTd, ...emailBaseStyles.cardTotalLabel }}>{label}</td>
+                    <td style={{ ...emailBaseStyles.cardTotalTd, ...emailBaseStyles.cardTotalValue }}>{value}</td>
+                </tr>
+            </tbody>
+        </table>
+    );
+}
+
 /**
  * Email header component with logo
  */
@@ -241,3 +292,4 @@ export function EmailFooter({ locale = 'es' }: EmailFooterProps) {
         </div>
     );
 }
+

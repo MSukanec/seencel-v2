@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow } from '../lib/email-base';
 import { t, type EmailLocale } from '../lib/email-translations';
 
 interface TeamInvitationEmailProps {
@@ -30,18 +30,9 @@ export function TeamInvitationEmail({
 
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>{t('teamInvitation', 'detailsLabel', locale)}</h3>
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>{t('teamInvitation', 'organizationLabel', locale)}</span>
-                        <span style={emailBaseStyles.cardValue}>{organizationName}</span>
-                    </div>
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>{t('teamInvitation', 'roleLabel', locale)}</span>
-                        <span style={emailBaseStyles.cardValue}>{roleName}</span>
-                    </div>
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>{t('teamInvitation', 'invitedByLabel', locale)}</span>
-                        <span style={emailBaseStyles.cardValue}>{inviterName}</span>
-                    </div>
+                    <EmailCardRow label={t('teamInvitation', 'organizationLabel', locale)} value={organizationName} />
+                    <EmailCardRow label={t('teamInvitation', 'roleLabel', locale)} value={roleName} />
+                    <EmailCardRow label={t('teamInvitation', 'invitedByLabel', locale)} value={inviterName} last />
                 </div>
 
                 <div style={emailBaseStyles.ctaContainer}>

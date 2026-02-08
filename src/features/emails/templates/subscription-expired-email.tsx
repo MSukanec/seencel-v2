@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow } from '../lib/email-base';
 
 interface SubscriptionExpiredEmailProps {
     firstName: string;
@@ -31,15 +31,8 @@ export function SubscriptionExpiredEmail({
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>Cambio de Estado</h3>
 
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Estado anterior</span>
-                        <span style={emailBaseStyles.cardValue}>{planName}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>Estado actual</span>
-                        <span style={emailBaseStyles.cardValue}>Free</span>
-                    </div>
+                    <EmailCardRow label="Estado anterior" value={planName} />
+                    <EmailCardRow label="Estado actual" value="Free" last />
                 </div>
 
                 <div style={emailBaseStyles.noticeBox}>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow } from '../lib/email-base';
 
 interface BankTransferVerifiedEmailProps {
     firstName: string;
@@ -33,20 +33,9 @@ export function BankTransferVerifiedEmail({
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>Resumen del Pago</h3>
 
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Plan</span>
-                        <span style={emailBaseStyles.cardValue}>{planName}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Monto</span>
-                        <span style={emailBaseStyles.cardValue}>{currency} {amount}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>Verificado el</span>
-                        <span style={emailBaseStyles.cardValue}>{verifiedAt}</span>
-                    </div>
+                    <EmailCardRow label="Plan" value={planName} />
+                    <EmailCardRow label="Monto" value={`${currency} ${amount}`} />
+                    <EmailCardRow label="Verificado el" value={verifiedAt} last />
                 </div>
 
                 <p style={emailBaseStyles.text}>

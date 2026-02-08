@@ -15,7 +15,7 @@ export const metadata = {
 
 export default async function TermsPage() {
     const { profile } = await getUserProfile().catch(() => ({ profile: null }));
-    const lastUpdated = "Enero 2026";
+    const lastUpdated = "Febrero 2026";
 
     return (
         <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10">
@@ -72,6 +72,7 @@ export default async function TermsPage() {
                                 "Indemnización",
                                 "Confidencialidad",
                                 "Pagos",
+                                "Política de Reembolsos",
                                 "Vigencia y Terminación",
                                 "Limitación de Responsabilidad",
                                 "Ley Aplicable y Disputas",
@@ -222,10 +223,12 @@ export default async function TermsPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                                <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-                                    <strong>Política de Reembolsos:</strong> Todas las tarifas no son reembolsables,
-                                    excepto como se indique expresamente en este Acuerdo.
+                            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                                    <strong>Derecho de Desistimiento:</strong> Podés solicitar un reembolso completo
+                                    dentro de los primeros <strong>7 días</strong> desde la activación de tu suscripción,
+                                    siempre que no haya habido uso significativo del plan. Consultá la Sección 17
+                                    para más detalles.
                                 </p>
                             </div>
                         </section>
@@ -282,10 +285,12 @@ export default async function TermsPage() {
                                     </p>
                                 </div>
                             </div>
-                            <div className="bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-4">
-                                <p className="text-sm text-red-800 dark:text-red-200 font-medium">
-                                    <strong>Sin Reembolsos:</strong> Las compras de Cursos no son reembolsables una vez
-                                    que se haya otorgado acceso al contenido del curso.
+                            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+                                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                                    <strong>Reembolsos de Cursos:</strong> Podés solicitar un reembolso dentro de las
+                                    primeras <strong>48 horas</strong> desde la compra, siempre que tu progreso
+                                    en el curso sea inferior al 15%. Una vez superado ese umbral, la compra
+                                    se considera definitiva. Consultá la Sección 17 para el proceso completo.
                                 </p>
                             </div>
                         </section>
@@ -479,11 +484,86 @@ export default async function TermsPage() {
                             </ul>
                         </section>
 
-                        {/* 17. Terminación */}
+                        {/* 17. Política de Reembolsos */}
+                        <section className="bg-card border rounded-xl p-8 space-y-6">
+                            <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
+                                <RefreshCw className="h-6 w-6 text-primary" />
+                                17. Política de Reembolsos y Derecho de Desistimiento
+                            </h2>
+
+                            <p className="text-muted-foreground">
+                                En cumplimiento con la Directiva Europea de Derechos del Consumidor y como compromiso
+                                con la transparencia, Seencel ofrece las siguientes condiciones de reembolso:
+                            </p>
+
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="bg-background p-4 rounded-lg border">
+                                    <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                        <CreditCard className="h-4 w-4 text-primary" />
+                                        Suscripciones (Pro, Teams)
+                                    </h3>
+                                    <ul className="text-sm text-muted-foreground space-y-2">
+                                        <li className="flex gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                                            <span><strong>Reembolso completo</strong> dentro de los primeros 7 días desde la activación</span>
+                                        </li>
+                                        <li className="flex gap-2">
+                                            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                                            <span>Condición: que no haya habido uso significativo del plan (creación de proyectos, miembros, datos)</span>
+                                        </li>
+                                        <li className="flex gap-2">
+                                            <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                            <span>Después de 7 días: sin reembolso, pero podés cancelar para el siguiente período</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="bg-background p-4 rounded-lg border">
+                                    <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                        <BookOpen className="h-4 w-4 text-primary" />
+                                        Cursos (Academia)
+                                    </h3>
+                                    <ul className="text-sm text-muted-foreground space-y-2">
+                                        <li className="flex gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                                            <span><strong>Reembolso completo</strong> dentro de las primeras 48 horas desde la compra</span>
+                                        </li>
+                                        <li className="flex gap-2">
+                                            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                                            <span>Condición: que tu progreso en el curso sea inferior al 15%</span>
+                                        </li>
+                                        <li className="flex gap-2">
+                                            <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                            <span>Superado el 15% o las 48 horas, la compra se considera definitiva</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="bg-muted/40 p-4 rounded-lg border space-y-3">
+                                <h4 className="font-semibold text-sm">Proceso de Solicitud</h4>
+                                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                                    <li>Enviá un email a <strong>contacto@seencel.com</strong> con el asunto "Solicitud de Reembolso"</li>
+                                    <li>Incluí tu email de registro y el motivo de la solicitud</li>
+                                    <li>Procesaremos tu solicitud en un plazo máximo de <strong>5 días hábiles</strong></li>
+                                    <li>El reembolso se efectuará por el mismo medio de pago utilizado en la compra</li>
+                                </ol>
+                            </div>
+
+                            <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                                <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                                    <strong>Nota importante:</strong> Al completar una compra, aceptás que Seencel
+                                    te proporcione acceso inmediato al servicio. En caso de renunciar expresamente
+                                    al período de desistimiento al momento de la compra, los plazos indicados arriba
+                                    aplicarán como política comercial de Seencel.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* 18. Terminación */}
                         <section className="prose dark:prose-invert max-w-none">
                             <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
                                 <RefreshCw className="h-6 w-6 text-primary" />
-                                17. Vigencia y Terminación
+                                18. Vigencia y Terminación
                             </h2>
                             <p className="text-muted-foreground mt-4">
                                 Este Acuerdo entrará en vigor al aceptarlo y continuará mientras uses los Servicios.
@@ -510,11 +590,11 @@ export default async function TermsPage() {
                             </p>
                         </section>
 
-                        {/* 18. Limitación de Responsabilidad */}
+                        {/* 19. Limitación de Responsabilidad */}
                         <section className="bg-zinc-950 text-zinc-50 rounded-2xl p-8 shadow-xl">
                             <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight mb-6">
                                 <Scale className="h-6 w-6 text-amber-400" />
-                                18. Exención de Garantías y Limitación de Responsabilidad
+                                19. Exención de Garantías y Limitación de Responsabilidad
                             </h2>
                             <div className="space-y-6">
                                 <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
@@ -538,11 +618,11 @@ export default async function TermsPage() {
                             </div>
                         </section>
 
-                        {/* 19. Ley Aplicable */}
+                        {/* 20. Ley Aplicable */}
                         <section className="prose dark:prose-invert max-w-none">
                             <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
                                 <Globe className="h-6 w-6 text-primary" />
-                                19. Ley Aplicable y Resolución de Disputas
+                                20. Ley Aplicable y Resolución de Disputas
                             </h2>
                             <p className="text-muted-foreground mt-4">
                                 Este Acuerdo se regirá e interpretará de acuerdo con las leyes aplicables internacionalmente
@@ -559,11 +639,11 @@ export default async function TermsPage() {
                             </div>
                         </section>
 
-                        {/* 20. Disposiciones Generales */}
+                        {/* 21. Disposiciones Generales */}
                         <section className="prose dark:prose-invert max-w-none">
                             <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
                                 <Gavel className="h-6 w-6 text-primary" />
-                                20. Disposiciones Generales
+                                21. Disposiciones Generales
                             </h2>
                             <ul className="list-disc pl-5 mt-4 space-y-2 text-muted-foreground">
                                 <li><strong>Modificaciones:</strong> Seencel puede modificar este Acuerdo notificándote por correo electrónico o mediante un aviso en el sitio web</li>

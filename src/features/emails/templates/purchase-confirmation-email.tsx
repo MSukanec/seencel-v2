@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow, EmailCardTotal } from '../lib/email-base';
 import { t, type EmailLocale } from '../lib/email-translations';
 
 interface PurchaseConfirmationEmailProps {
@@ -92,35 +92,12 @@ export function PurchaseConfirmationEmail({
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>{l.detailsTitle}</h3>
 
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>{l.plan}</span>
-                        <span style={emailBaseStyles.cardValue}>{planName}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>{l.cycle}</span>
-                        <span style={emailBaseStyles.cardValue}>{cycleLabels[locale][billingCycle]}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>{l.paymentMethod}</span>
-                        <span style={emailBaseStyles.cardValue}>{paymentMethodLabels[locale][paymentMethod]}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>{l.date}</span>
-                        <span style={emailBaseStyles.cardValue}>{purchaseDate}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>{l.transactionId}</span>
-                        <span style={emailBaseStyles.cardValueMono}>{transactionId}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardTotal}>
-                        <span style={emailBaseStyles.cardTotalLabel}>{l.total}</span>
-                        <span style={emailBaseStyles.cardTotalValue}>{currency} {amount}</span>
-                    </div>
+                    <EmailCardRow label={l.plan} value={planName} />
+                    <EmailCardRow label={l.cycle} value={cycleLabels[locale][billingCycle]} />
+                    <EmailCardRow label={l.paymentMethod} value={paymentMethodLabels[locale][paymentMethod]} />
+                    <EmailCardRow label={l.date} value={purchaseDate} />
+                    <EmailCardRow label={l.transactionId} value={transactionId} last mono />
+                    <EmailCardTotal label={l.total} value={`${currency} ${amount}`} />
                 </div>
 
                 <div style={emailBaseStyles.ctaContainer}>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/features/emails/lib/send-email";
 import { PurchaseConfirmationEmail } from "@/features/emails/templates/purchase-confirmation-email";
+import { CoursePurchaseConfirmationEmail } from "@/features/emails/templates/course-purchase-confirmation-email";
 import { AdminSaleNotificationEmail } from "@/features/emails/templates/admin-sale-notification-email";
 import { WelcomeEmail } from "@/features/emails/templates/welcome-email";
 import { type EmailLocale } from "@/features/emails/lib/email-translations";
@@ -138,11 +139,28 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
 
     switch (email.template_type) {
         case "purchase_confirmation": {
-            // Extract billing cycle from product_name (e.g., "Pro (annual)" -> "annual")
+            const productType = String(data.product_type || "subscription");
+            const locale = (data.locale as EmailLocale) || 'es';
+
+            // Curso: template específico
+            if (productType === "course") {
+                return (
+                    <CoursePurchaseConfirmationEmail
+                        firstName={String(data.user_name || "Usuario")}
+                        courseName={String(data.product_name || "Curso")}
+                        amount={String(data.amount || "0")}
+                        currency={String(data.currency || "USD")}
+                        transactionId={String(data.payment_id || "")}
+                        purchaseDate={purchaseDate}
+                        locale={locale}
+                    />
+                );
+            }
+
+            // Suscripción / Upgrade: template original
             const productName = String(data.product_name || "");
             const billingCycle = productName.includes("annual") ? "annual" : "monthly";
             const planName = productName.replace(/\s*\((monthly|annual)\)/i, "");
-            const locale = (data.locale as EmailLocale) || 'es';
 
             return (
                 <PurchaseConfirmationEmail

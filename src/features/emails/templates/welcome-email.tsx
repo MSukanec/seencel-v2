@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow } from '../lib/email-base';
 import { t, type EmailLocale } from '../lib/email-translations';
 
 interface WelcomeEmailProps {
@@ -24,10 +24,7 @@ export function WelcomeEmail({ firstName, email, locale = 'es' }: Readonly<Welco
 
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>{t('welcome', 'accountLabel', locale)}</h3>
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>{t('welcome', 'emailLabel', locale)}</span>
-                        <span style={emailBaseStyles.cardValue}>{email}</span>
-                    </div>
+                    <EmailCardRow label={t('welcome', 'emailLabel', locale)} value={email} last />
                 </div>
 
                 <p style={emailBaseStyles.text}>

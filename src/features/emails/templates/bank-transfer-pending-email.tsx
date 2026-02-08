@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { emailBaseStyles, EmailHeader, EmailFooter } from '../lib/email-base';
+import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow, EmailCardTotal } from '../lib/email-base';
 
 interface BankTransferPendingEmailProps {
     firstName: string;
@@ -42,25 +42,10 @@ export function BankTransferPendingEmail({
                 <div style={emailBaseStyles.card}>
                     <h3 style={emailBaseStyles.cardTitle}>Datos Bancarios</h3>
 
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Banco</span>
-                        <span style={emailBaseStyles.cardValue}>{bankName}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRow}>
-                        <span style={emailBaseStyles.cardLabel}>Titular</span>
-                        <span style={emailBaseStyles.cardValue}>{accountHolder}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardRowLast}>
-                        <span style={emailBaseStyles.cardLabel}>CBU / Cuenta</span>
-                        <span style={emailBaseStyles.cardValueMono}>{accountNumber}</span>
-                    </div>
-
-                    <div style={emailBaseStyles.cardTotal}>
-                        <span style={emailBaseStyles.cardTotalLabel}>Monto a transferir</span>
-                        <span style={emailBaseStyles.cardTotalValue}>{currency} {amount}</span>
-                    </div>
+                    <EmailCardRow label="Banco" value={bankName} />
+                    <EmailCardRow label="Titular" value={accountHolder} />
+                    <EmailCardRow label="CBU / Cuenta" value={accountNumber} last mono />
+                    <EmailCardTotal label="Monto a transferir" value={`${currency} ${amount}`} />
                 </div>
 
                 <div style={emailBaseStyles.highlightBox}>

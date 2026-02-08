@@ -47,11 +47,16 @@ export function BillingCheckoutTerms({
                     Acepto los{" "}
                     <Link href="/terms" className="text-primary hover:underline">
                         Términos y Condiciones
-                    </Link>{" "}
-                    y la{" "}
+                    </Link>
+                    , la{" "}
                     <Link href="/privacy" className="text-primary hover:underline">
                         Política de Privacidad
+                    </Link>{" "}
+                    y la{" "}
+                    <Link href="/terms" className="text-primary hover:underline">
+                        Política de Reembolsos
                     </Link>
+                    . Acepto recibir acceso inmediato al servicio.
                 </label>
             </div>
             <div className="flex items-start gap-3">
