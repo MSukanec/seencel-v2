@@ -16,6 +16,10 @@ import { type EmailLocale } from "@/features/emails/lib/email-translations";
 // Max emails to process per run (avoid timeout)
 const BATCH_SIZE = 10;
 const MAX_ATTEMPTS = 3;
+// Delay between sends to respect Resend rate limit (2 emails/second)
+const SEND_DELAY_MS = 600;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface EmailQueueItem {
     id: string;
@@ -72,8 +76,14 @@ export async function GET(request: NextRequest) {
             errors: [] as string[],
         };
 
-        for (const email of pendingEmails as EmailQueueItem[]) {
+        for (let i = 0; i < (pendingEmails as EmailQueueItem[]).length; i++) {
+            const email = (pendingEmails as EmailQueueItem[])[i];
             results.processed++;
+
+            // Rate limit: wait between sends (skip first)
+            if (i > 0) {
+                await sleep(SEND_DELAY_MS);
+            }
 
             try {
                 // Build the React email component based on template_type
