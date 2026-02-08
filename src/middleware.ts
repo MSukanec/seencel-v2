@@ -135,9 +135,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    // Matcher ignores static files and _next internals
+    // Matcher ignores static files and _next internals AND /api
     // We REMOVED 'api|' from the negative lookahead to let API routes enter middleware
     // and be handled by our explicit check at the top of the file.
-    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)", "/((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)"],
+    // UPDATE: We are adding 'api|' back to the negative lookahead to blindly EXCLUDE /api from middleware.
+    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)", "/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)"],
 };
 

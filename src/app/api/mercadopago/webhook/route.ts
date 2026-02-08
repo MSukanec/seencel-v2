@@ -5,28 +5,14 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
-        console.log('[MP Webhook] HIT - Starting processing...');
+        console.log('[MP Webhook] HIT - Payment/Merchant Event received (Body reading disabled)');
 
-        // --- MINIMAL DEBUG MODE START ---
-        // We are temporarily disabling logic to verify connectivity and eliminate 502s.
-
-        const body = await request.json();
-        console.log('[MP Webhook] Payload received:', JSON.stringify(body, null, 2));
+        // --- ZERO-TOUCH DEBUG MODE ---
+        // We do NOT read the body to see if parsing causes the 502.
+        // If this works (200 OK), then request.json() was likely crashing on specific payloads.
 
         // Respond immediately
         return NextResponse.json({ status: 'ok', received: true });
-
-        // --- MINIMAL DEBUG MODE END ---
-
-        /*
-        // ORIGINAL LOGIC (Commented out for triage)
-        
-        // Get headers for signature validation
-        const xSignature = request.headers.get('x-signature') || '';
-        const xRequestId = request.headers.get('x-request-id') || '';
-
-        // ... (rest of logic) ...
-        */
 
     } catch (error) {
         console.error('[MP Webhook] Fatal Error:', error);
