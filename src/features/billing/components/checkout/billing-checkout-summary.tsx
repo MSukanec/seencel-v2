@@ -115,6 +115,14 @@ export function BillingCheckoutSummary({
                             <span>-{computed.formatPrice(state.appliedCoupon.discount).replace("$", "$ ")}</span>
                         </div>
                     )}
+
+                    {/* Upgrade proration credit */}
+                    {isUpgrade && state.upgradeData && state.upgradeData.credit > 0 && (
+                        <div className="flex justify-between text-green-600 dark:text-green-400">
+                            <span>Crédito prorrateo ({state.upgradeData.daysRemaining}d)</span>
+                            <span>-{computed.formatPrice(state.upgradeData.credit).replace("$", "$ ")}</span>
+                        </div>
+                    )}
                 </div>
 
                 <Separator />
@@ -130,15 +138,6 @@ export function BillingCheckoutSummary({
                     <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                         <p>Precio prorrateado por {state.seatsData.daysRemaining} días restantes</p>
                         <p className="text-foreground">Válido hasta {new Date(state.seatsData.expiresAt).toLocaleDateString()}</p>
-                    </div>
-                )}
-
-                {/* Upgrade proration info */}
-                {isUpgrade && (
-                    <div className="text-xs text-muted-foreground bg-green-500/10 border border-green-500/20 p-2 rounded">
-                        <p className="text-green-600 dark:text-green-400 font-medium">
-                            Incluye crédito prorrateado por tu plan actual
-                        </p>
                     </div>
                 )}
 

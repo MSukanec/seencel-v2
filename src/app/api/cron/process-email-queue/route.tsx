@@ -185,7 +185,7 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
                     billingCycle={billingCycle as "monthly" | "annual"}
                     amount={String(data.amount || "0")}
                     currency={String(data.currency || "USD")}
-                    paymentMethod="mercadopago"
+                    paymentMethod={(String(data.provider || "mercadopago")) as "mercadopago" | "paypal" | "bank_transfer"}
                     transactionId={String(data.payment_id || "")}
                     purchaseDate={purchaseDate}
                     locale={locale}

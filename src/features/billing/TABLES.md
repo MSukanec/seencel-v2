@@ -487,7 +487,8 @@ create table public.paypal_preferences (
           array[
             'subscription'::text,
             'course'::text,
-            'seats'::text
+            'seats'::text,
+            'upgrade'::text
           ]
         )
       )

@@ -170,6 +170,106 @@ BEGIN
     );
 END;
 
+# Función notify_subscription_activated:
+
+DECLARE
+    v_plan_name text;
+    v_owner_id uuid;
+    v_is_upgrade boolean := false;
+    v_previous_plan text;
+    v_title_owner text;
+    v_body_owner text;
+    v_title_admin text;
+    v_body_admin text;
+    v_billing_label text;
+BEGIN
+    -- Solo notificar cuando la suscripción se crea activa
+    IF NEW.status = 'active' THEN
+        
+        -- Obtener nombre del plan
+        SELECT name INTO v_plan_name
+        FROM public.plans
+        WHERE id = NEW.plan_id;
+        
+        -- Obtener el owner de la organización
+        SELECT owner_id INTO v_owner_id
+        FROM public.organizations
+        WHERE id = NEW.organization_id;
+
+        -- Etiqueta del período
+        v_billing_label := CASE 
+            WHEN NEW.billing_period = 'annual' THEN 'anual'
+            ELSE 'mensual'
+        END;
+        
+        -- Detectar si es upgrade: ¿hay una suscripción anterior para esta org?
+        SELECT p.name INTO v_previous_plan
+        FROM public.organization_subscriptions s
+        JOIN public.plans p ON p.id = s.plan_id
+        WHERE s.organization_id = NEW.organization_id
+          AND s.id != NEW.id
+          AND s.status IN ('expired', 'cancelled')
+        ORDER BY s.created_at DESC
+        LIMIT 1;
+        
+        v_is_upgrade := (v_previous_plan IS NOT NULL);
+        
+        -- Construir mensajes según sea upgrade o nueva suscripción
+        IF v_is_upgrade THEN
+            v_title_owner := '⬆️ ¡Plan Mejorado!';
+            v_body_owner := 'Tu plan fue mejorado a ' || COALESCE(v_plan_name, '') || '. ¡A disfrutarlo! 🚀';
+            v_title_admin := '⬆️ Upgrade de Plan';
+            v_body_admin := 'Organización mejoró de ' || COALESCE(v_previous_plan, '?') || ' a ' || COALESCE(v_plan_name, '') || ' (' || v_billing_label || ') por ' || NEW.amount || ' ' || NEW.currency;
+        ELSE
+            v_title_owner := '¡Plan Activado!';
+            v_body_owner := 'Tu plan ' || COALESCE(v_plan_name, '') || ' está activo. ¡Hora de construir! 🚀';
+            v_title_admin := '💰 Nueva Suscripción';
+            v_body_admin := 'Organización activó plan ' || COALESCE(v_plan_name, '') || ' (' || v_billing_label || ') por ' || NEW.amount || ' ' || NEW.currency;
+        END IF;
+        
+        -- Notificación al dueño de la organización
+        IF v_owner_id IS NOT NULL THEN
+            PERFORM public.send_notification(
+                v_owner_id,
+                'success',
+                v_title_owner,
+                v_body_owner,
+                jsonb_build_object(
+                    'subscription_id', NEW.id,
+                    'plan_id', NEW.plan_id,
+                    'plan_name', v_plan_name,
+                    'billing_period', NEW.billing_period,
+                    'is_upgrade', v_is_upgrade,
+                    'url', '/organization/settings?tab=billing'
+                ),
+                'direct'
+            );
+        END IF;
+        
+        -- Notificar a admins de la plataforma
+        PERFORM public.send_notification(
+            NULL,
+            'info',
+            v_title_admin,
+            v_body_admin,
+            jsonb_build_object(
+                'subscription_id', NEW.id,
+                'organization_id', NEW.organization_id,
+                'plan_name', v_plan_name,
+                'billing_period', NEW.billing_period,
+                'amount', NEW.amount,
+                'currency', NEW.currency,
+                'is_upgrade', v_is_upgrade,
+                'previous_plan', v_previous_plan
+            ),
+            'admins'
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+
+
 # Funcion step_payment_insert_idempotent:
 
 declare
@@ -338,6 +438,7 @@ END;
 
 # Función step_send_purchase_email:
 
+
 DECLARE
     v_user_email text;
     v_user_name text;
@@ -352,8 +453,7 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Llamar a Edge Function via pg_net (si está habilitado)
-    -- O insertar en una cola de emails para procesamiento async
+    -- Email al comprador
     INSERT INTO public.email_queue (
         recipient_email,
         recipient_name,
@@ -378,7 +478,8 @@ BEGIN
             'product_name', p_product_name,
             'amount', p_amount,
             'currency', p_currency,
-            'payment_id', p_payment_id
+            'payment_id', p_payment_id,
+            'provider', p_provider  -- ← NUEVO: incluir provider
         ),
         NOW()
     );
@@ -392,7 +493,7 @@ BEGIN
         data,
         created_at
     ) VALUES (
-        'seencel@seencel.com',  -- Admin email
+        'contacto@seencel.com',
         'Admin SEENCEL',
         'admin_sale_notification',
         '💰 Nueva venta: ' || p_product_name,
@@ -403,15 +504,12 @@ BEGIN
             'product_name', p_product_name,
             'amount', p_amount,
             'currency', p_currency,
-            'payment_id', p_payment_id
+            'payment_id', p_payment_id,
+            'provider', p_provider  -- ← NUEVO: incluir provider
         ),
         NOW()
     );
 
 EXCEPTION WHEN OTHERS THEN
-    -- Log pero NO romper el flujo principal
     RAISE NOTICE 'step_send_purchase_email error: %', SQLERRM;
 END;
-
-
-
