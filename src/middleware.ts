@@ -19,6 +19,12 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // CRITICAL: API routes must NEVER go through i18n middleware
+    // MercadoPago/PayPal webhooks receive 307 redirect otherwise
+    if (pathname.startsWith('/api/')) {
+        return NextResponse.next();
+    }
+
     // 1. Run I18n Middleware first to generate the response with locale
     const response = handleI18nRouting(request);
 
