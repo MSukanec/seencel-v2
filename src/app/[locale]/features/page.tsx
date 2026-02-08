@@ -3,6 +3,49 @@ import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/users/queries";
 import { DemoCard, MiniKanban, MiniBudget, MiniHealthBlob, MiniGantt } from "@/features/interactive-demos";
 import { Kanban, HeartPulse, BarChart3, FileStack, Calculator, Calendar } from "lucide-react";
+import type { Metadata } from 'next';
+
+const BASE_URL = 'https://seencel.com';
+
+export async function generateMetadata({
+    params
+}: {
+    params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+    const { locale } = await params;
+    const isEs = locale === 'es';
+
+    return {
+        title: isEs ? 'Características | SEENCEL' : 'Features | SEENCEL',
+        description: isEs
+            ? 'Explorá las herramientas interactivas de Seencel: Kanban, presupuestos, cronogramas Gantt, salud del proyecto y más.'
+            : 'Explore Seencel interactive tools: Kanban boards, budgets, Gantt charts, project health and more.',
+        openGraph: {
+            title: isEs ? 'Características | SEENCEL' : 'Features | SEENCEL',
+            description: isEs
+                ? 'Herramientas interactivas para gestionar obras de construcción.'
+                : 'Interactive tools for construction project management.',
+            url: isEs ? `${BASE_URL}/es/caracteristicas` : `${BASE_URL}/en/features`,
+            siteName: 'SEENCEL',
+            images: [{ url: `${BASE_URL}/og-image.jpg`, width: 1200, height: 630, alt: 'SEENCEL Features' }],
+            locale: isEs ? 'es_AR' : 'en_US',
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: isEs ? 'Características | SEENCEL' : 'Features | SEENCEL',
+            images: [`${BASE_URL}/og-image.jpg`],
+        },
+        alternates: {
+            canonical: isEs ? `${BASE_URL}/es/caracteristicas` : `${BASE_URL}/en/features`,
+            languages: {
+                'es': `${BASE_URL}/es/caracteristicas`,
+                'en': `${BASE_URL}/en/features`,
+            },
+        },
+        robots: { index: true, follow: true },
+    };
+}
 
 export default async function FeaturesPage() {
     const { profile } = await getUserProfile();

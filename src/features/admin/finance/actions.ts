@@ -206,13 +206,13 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
                         p_course_id: transferData.course_id,
                         p_amount: transferData.amount,
                         p_currency: transferData.currency,
-                        p_metadata: JSON.stringify({
+                        p_metadata: {
                             transfer_id: input.id,
                             exchange_rate: transferData.exchange_rate || null,
                             payer_name: transferData.payer_name,
                             discount_percent: transferData.discount_percent,
                             approved_by: reviewerId
-                        })
+                        }
                     }
                 );
 
@@ -242,13 +242,13 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
                         p_billing_period: transferData.billing_period || "monthly",
                         p_amount: transferData.amount,
                         p_currency: transferData.currency,
-                        p_metadata: JSON.stringify({
+                        p_metadata: {
                             transfer_id: input.id,
                             exchange_rate: transferData.exchange_rate || null,
                             payer_name: transferData.payer_name,
                             discount_percent: transferData.discount_percent,
                             approved_by: reviewerId
-                        })
+                        }
                     }
                 );
 

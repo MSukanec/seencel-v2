@@ -153,11 +153,11 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
                     p_seats_purchased: input.seatsQuantity,
                     p_amount: input.amount,
                     p_currency: input.currency,
-                    p_metadata: JSON.stringify({
+                    p_metadata: {
                         billing_period: input.billingPeriod || 'annual',
                         seats_count: input.seatsQuantity,
                         payment_method: 'bank_transfer'
-                    })
+                    }
                 });
 
                 if (seatError) {

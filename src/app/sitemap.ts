@@ -6,22 +6,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return [
         // Landing pages
         {
-            url: `${BASE_URL}`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
-            priority: 1,
-        },
-        {
             url: `${BASE_URL}/es`,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 1,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es`,
+                    en: `${BASE_URL}/en`,
+                },
+            },
         },
         {
             url: `${BASE_URL}/en`,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 1,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es`,
+                    en: `${BASE_URL}/en`,
+                },
+            },
         },
         // Pricing
         {
@@ -29,12 +35,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.9,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/precios`,
+                    en: `${BASE_URL}/en/pricing`,
+                },
+            },
         },
         {
             url: `${BASE_URL}/en/pricing`,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.9,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/precios`,
+                    en: `${BASE_URL}/en/pricing`,
+                },
+            },
         },
         // Features
         {
@@ -42,12 +60,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.8,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/caracteristicas`,
+                    en: `${BASE_URL}/en/features`,
+                },
+            },
         },
         {
             url: `${BASE_URL}/en/features`,
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.8,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/caracteristicas`,
+                    en: `${BASE_URL}/en/features`,
+                },
+            },
         },
         // Contact
         {
@@ -55,12 +85,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.7,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/contacto`,
+                    en: `${BASE_URL}/en/contact`,
+                },
+            },
         },
         {
             url: `${BASE_URL}/en/contact`,
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.7,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/contacto`,
+                    en: `${BASE_URL}/en/contact`,
+                },
+            },
         },
         // Legal
         {
@@ -75,15 +117,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'yearly',
             priority: 0.3,
         },
-        // Auth (public but low priority)
+        // Auth (public, with locale)
         {
-            url: `${BASE_URL}/login`,
+            url: `${BASE_URL}/es/login`,
             lastModified: new Date(),
             changeFrequency: 'yearly',
             priority: 0.4,
         },
         {
-            url: `${BASE_URL}/signup`,
+            url: `${BASE_URL}/es/signup`,
             lastModified: new Date(),
             changeFrequency: 'yearly',
             priority: 0.4,
@@ -94,12 +136,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/academia/cursos`,
+                    en: `${BASE_URL}/en/academy/courses`,
+                },
+            },
         },
         {
             url: `${BASE_URL}/en/academy/courses`,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
+            alternates: {
+                languages: {
+                    es: `${BASE_URL}/es/academia/cursos`,
+                    en: `${BASE_URL}/en/academy/courses`,
+                },
+            },
         },
     ]
 }

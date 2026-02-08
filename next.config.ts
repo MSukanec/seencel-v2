@@ -32,6 +32,21 @@ const nextConfig = {
             bodySizeLimit: 10485760, // 10MB
         },
     },
+    async redirects() {
+        return [
+            // Legacy URLs que Google rastreó y dan 404
+            {
+                source: '/cursos',
+                destination: '/es/academia/cursos',
+                permanent: true, // 301
+            },
+            {
+                source: '/courses',
+                destination: '/en/academy/courses',
+                permanent: true, // 301
+            },
+        ];
+    },
 };
 
 // Chain plugins: NextIntl -> BundleAnalyzer

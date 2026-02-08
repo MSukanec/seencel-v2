@@ -8,38 +8,70 @@ import { getTranslations } from 'next-intl/server';
 import { getUserProfile } from "@/features/users/queries";
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'SEENCEL | Gestión Inteligente de Construcción',
-  description: 'Plataforma integral para gestionar proyectos de construcción. Control de presupuestos, cronogramas, equipos y documentación en tiempo real.',
-  keywords: ['construcción', 'gestión de proyectos', 'presupuestos', 'software construcción', 'project management'],
-  authors: [{ name: 'Seencel' }],
-  openGraph: {
-    title: 'SEENCEL | Gestión Inteligente de Construcción',
-    description: 'Plataforma integral para gestionar proyectos de construcción. Control de presupuestos, cronogramas, equipos y documentación en tiempo real.',
-    url: 'https://seencel.com',
-    siteName: 'SEENCEL',
-    images: [
-      {
-        url: 'https://seencel.com/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'SEENCEL - Gestión de Construcción',
+const BASE_URL = 'https://seencel.com';
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const isEs = locale === 'es';
+
+  return {
+    title: isEs
+      ? 'SEENCEL | Gestión Inteligente de Construcción'
+      : 'SEENCEL | Smart Construction Management',
+    description: isEs
+      ? 'Plataforma integral para gestionar proyectos de construcción. Control de presupuestos, cronogramas, equipos y documentación en tiempo real.'
+      : 'Comprehensive platform for construction project management. Real-time budget control, scheduling, teams and documentation.',
+    keywords: isEs
+      ? ['construcción', 'gestión de proyectos', 'presupuestos', 'software construcción', 'project management']
+      : ['construction', 'project management', 'budgets', 'construction software', 'building management'],
+    authors: [{ name: 'Seencel' }],
+    openGraph: {
+      title: isEs
+        ? 'SEENCEL | Gestión Inteligente de Construcción'
+        : 'SEENCEL | Smart Construction Management',
+      description: isEs
+        ? 'Plataforma integral para gestionar proyectos de construcción. Control de presupuestos, cronogramas, equipos y documentación en tiempo real.'
+        : 'Comprehensive platform for construction project management. Real-time budget control, scheduling, teams and documentation.',
+      url: `${BASE_URL}/${locale}`,
+      siteName: 'SEENCEL',
+      images: [
+        {
+          url: `${BASE_URL}/og-image.jpg`,
+          width: 1200,
+          height: 630,
+          alt: 'SEENCEL - Construction Management',
+        },
+      ],
+      locale: isEs ? 'es_AR' : 'en_US',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: isEs
+        ? 'SEENCEL | Gestión Inteligente de Construcción'
+        : 'SEENCEL | Smart Construction Management',
+      description: isEs
+        ? 'Plataforma integral para gestionar proyectos de construcción.'
+        : 'Comprehensive platform for construction project management.',
+      images: [`${BASE_URL}/og-image.jpg`],
+    },
+    alternates: {
+      canonical: `${BASE_URL}/${locale}`,
+      languages: {
+        'es': `${BASE_URL}/es`,
+        'en': `${BASE_URL}/en`,
       },
-    ],
-    locale: 'es_AR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'SEENCEL | Gestión Inteligente de Construcción',
-    description: 'Plataforma integral para gestionar proyectos de construcción.',
-    images: ['https://seencel.com/og-image.jpg'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 export default async function Home() {
   const t = await getTranslations('Landing');
