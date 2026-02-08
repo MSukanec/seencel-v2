@@ -27,15 +27,25 @@ export async function POST(request: NextRequest) {
             status: 'RECEIVED',
         });
 
-        // Determine sandbox mode: read feature flag directly with admin client
-        // (Cannot use getFeatureFlag here — it requires user session cookies)
-        const { data: flagData } = await supabase
-            .from('feature_flags')
-            .select('value')
-            .eq('key', 'mp_enabled')
-            .single();
-        const mpEnabled = flagData?.value ?? true;
-        const sandboxMode = !mpEnabled;
+        // Determine sandbox mode: 
+        // 1. Try to use 'live_mode' from webhook body (most robust)
+        // 2. Fallback to feature flag if live_mode is undefined
+        let sandboxMode = false;
+
+        if (typeof body.live_mode === 'boolean') {
+            sandboxMode = !body.live_mode;
+            console.log(`[MP Webhook] Mode determined by live_mode: ${body.live_mode} -> sandbox: ${sandboxMode}`);
+        } else {
+            // Fallback to flag
+            const { data: flagData } = await supabase
+                .from('feature_flags')
+                .select('value')
+                .eq('key', 'mp_enabled')
+                .single();
+            const mpEnabled = flagData?.value ?? true;
+            sandboxMode = !mpEnabled;
+            console.log(`[MP Webhook] Mode determined by flag: ${mpEnabled} -> sandbox: ${sandboxMode}`);
+        }
 
         // Validate signature
         if (process.env.NODE_ENV === 'production') {

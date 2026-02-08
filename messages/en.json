@@ -23,6 +23,10 @@
         "cookiesPolicy": "Cookies Policy"
     },
     "Auth": {
+        "login": {
+            "title": "Log In",
+            "description": "Access your Seencel account to manage your projects."
+        },
         "Register": {
             "title": "Create an account",
             "subtitle": "Start managing your construction projects today.",
@@ -1452,8 +1456,7 @@
         "readOnly": "Read only",
         "categories": "Categories",
         "selectThreadToView": "Select a topic to view the conversation",
-        "noThreads": "No topics in this category",
-        "allThreads": "All topics"
+        "noThreads": "No topics in this category"
     },
     "CourseNotes": {
         "title": "My Notes",

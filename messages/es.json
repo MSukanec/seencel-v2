@@ -136,6 +136,10 @@
         "cookiesPolicy": "Política de Cookies"
     },
     "Auth": {
+        "login": {
+            "title": "Iniciar Sesión",
+            "description": "Accede a tu cuenta de Seencel para gestionar tus proyectos."
+        },
         "Register": {
             "title": "Crear una cuenta",
             "subtitle": "Comienza a gestionar tus proyectos de construcción hoy mismo.",
