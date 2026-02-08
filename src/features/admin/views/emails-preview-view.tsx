@@ -113,14 +113,10 @@ const EMAIL_TEMPLATES = [
         component: (
             <BankTransferPendingEmail
                 firstName="Juan"
-                planName="Pro"
+                productName="Suscripción Pro"
                 amount="15,000"
                 currency="ARS"
-                bankName="Banco Galicia"
-                accountHolder="Seencel S.R.L."
-                accountNumber="0070012030004567891234"
                 reference="SEENCEL-ABC123"
-                expiresAt="30 de Enero, 2026"
             />
         ),
     },

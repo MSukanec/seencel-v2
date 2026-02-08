@@ -44,14 +44,10 @@ export interface SubscriptionExpiredPayload extends EmailPayload {
 
 export interface BankTransferPendingPayload extends EmailPayload {
     firstName: string;
-    planName: string;
+    productName: string;
     amount: string;
     currency: string;
-    bankName: string;
-    accountHolder: string;
-    accountNumber: string;
     reference: string;
-    expiresAt: string;
 }
 
 export interface BankTransferVerifiedPayload extends EmailPayload {
@@ -82,6 +78,16 @@ export interface AdminSaleNotificationPayload extends EmailPayload {
     purchaseDate: string;
 }
 
+export interface AdminNewTransferPayload extends EmailPayload {
+    payerName: string;
+    payerEmail: string;
+    productName: string;
+    amount: string;
+    currency: string;
+    transferId: string;
+    receiptUrl: string;
+}
+
 export interface TeamInvitationPayload extends EmailPayload {
     organizationName: string;
     inviterName: string;
@@ -94,6 +100,7 @@ export type AnyEmailPayload =
     | PurchaseConfirmationPayload
     | CoursePurchaseConfirmationPayload
     | AdminSaleNotificationPayload
+    | AdminNewTransferPayload
     | SubscriptionActivatedPayload
     | SubscriptionExpiringPayload
     | SubscriptionExpiredPayload

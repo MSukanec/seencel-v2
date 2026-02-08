@@ -3,80 +3,55 @@ import { emailBaseStyles, EmailHeader, EmailFooter, EmailCardRow, EmailCardTotal
 
 interface BankTransferPendingEmailProps {
     firstName: string;
-    planName: string;
+    productName: string;
     amount: string;
     currency: string;
-    bankName: string;
-    accountHolder: string;
-    accountNumber: string;
     reference: string;
-    expiresAt: string;
 }
 
 export function BankTransferPendingEmail({
     firstName,
-    planName,
+    productName,
     amount,
     currency,
-    bankName,
-    accountHolder,
-    accountNumber,
     reference,
-    expiresAt,
 }: Readonly<BankTransferPendingEmailProps>) {
     return (
         <div style={emailBaseStyles.container}>
             <EmailHeader />
 
             <div style={emailBaseStyles.content}>
-                <h1 style={emailBaseStyles.title}>Instrucciones de Transferencia</h1>
+                <h1 style={emailBaseStyles.title}>Comprobante Recibido</h1>
 
                 <p style={emailBaseStyles.greeting}>Hola {firstName},</p>
 
                 <p style={emailBaseStyles.text}>
-                    Has elegido pagar tu suscripción <strong>{planName}</strong> mediante
-                    transferencia bancaria. A continuación te dejamos los datos para
-                    realizar el pago.
+                    Gracias por enviar tu comprobante de transferencia para <strong>{productName}</strong>.
                 </p>
-
-                <div style={emailBaseStyles.card}>
-                    <h3 style={emailBaseStyles.cardTitle}>Datos Bancarios</h3>
-
-                    <EmailCardRow label="Banco" value={bankName} />
-                    <EmailCardRow label="Titular" value={accountHolder} />
-                    <EmailCardRow label="CBU / Cuenta" value={accountNumber} last mono />
-                    <EmailCardTotal label="Monto a transferir" value={`${currency} ${amount}`} />
-                </div>
 
                 <div style={emailBaseStyles.highlightBox}>
                     <p style={emailBaseStyles.highlightLabel}>
-                        Referencia obligatoria (incluir en descripción)
+                        ¡Ya tenés acceso!
                     </p>
-                    <p style={emailBaseStyles.highlightValue}>{reference}</p>
+                    <p style={emailBaseStyles.highlightValue}>
+                        Hemos habilitado tu acceso mientras nuestro equipo verifica el pago.
+                    </p>
+                </div>
+
+                <div style={emailBaseStyles.card}>
+                    <h3 style={emailBaseStyles.cardTitle}>Detalles de la Operación</h3>
+                    <EmailCardRow label="Producto" value={productName} />
+                    <EmailCardRow label="Referencia" value={reference} mono />
+                    <EmailCardTotal label="Monto declarado" value={`${currency} ${amount}`} />
                 </div>
 
                 <div style={emailBaseStyles.noticeBox}>
                     <p style={emailBaseStyles.noticeText}>
-                        <strong>Importante:</strong> Esta solicitud vence el{' '}
-                        <strong>{expiresAt}</strong>. Después de esa fecha, deberás
-                        generar una nueva orden de pago.
+                        <strong>Información importante:</strong><br />
+                        La verificación manual puede demorar hasta 24 horas hábiles.
+                        Te enviaremos un email de confirmación definitiva cuando el proceso finalice.
                     </p>
                 </div>
-
-                <p style={emailBaseStyles.text}>
-                    <strong>Próximos pasos:</strong>
-                </p>
-                <ol style={emailBaseStyles.stepsList}>
-                    <li>Realizá la transferencia con los datos indicados</li>
-                    <li>Incluí el código de referencia en el concepto</li>
-                    <li>Te enviaremos un email cuando verifiquemos el pago</li>
-                    <li>Tu suscripción se activará automáticamente</li>
-                </ol>
-
-                <p style={emailBaseStyles.smallText}>
-                    La verificación puede demorar entre 24 y 48 horas hábiles.
-                    Si tenés dudas, respondé a este email.
-                </p>
             </div>
 
             <EmailFooter />

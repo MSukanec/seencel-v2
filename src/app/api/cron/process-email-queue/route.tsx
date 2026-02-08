@@ -4,6 +4,7 @@ import { sendEmail } from "@/features/emails/lib/send-email";
 import { PurchaseConfirmationEmail } from "@/features/emails/templates/purchase-confirmation-email";
 import { CoursePurchaseConfirmationEmail } from "@/features/emails/templates/course-purchase-confirmation-email";
 import { AdminSaleNotificationEmail } from "@/features/emails/templates/admin-sale-notification-email";
+import { AdminNewTransferEmail } from "@/features/emails/templates/admin-new-transfer-email";
 import { WelcomeEmail } from "@/features/emails/templates/welcome-email";
 import { BankTransferPendingEmail } from "@/features/emails/templates/bank-transfer-pending-email";
 import { BankTransferVerifiedEmail } from "@/features/emails/templates/bank-transfer-verified-email";
@@ -211,15 +212,25 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
         case "bank_transfer_pending": {
             return (
                 <BankTransferPendingEmail
-                    firstName={String(data.user_name || "Usuario")}
-                    planName={String(data.plan_name || "Plan")}
+                    firstName={String(data.firstName || "Usuario")}
+                    productName={String(data.productName || "Producto")}
                     amount={String(data.amount || "0")}
                     currency={String(data.currency || "USD")}
-                    bankName={String(data.bank_name || "")}
-                    accountHolder={String(data.account_holder || "")}
-                    accountNumber={String(data.account_number || "")}
                     reference={String(data.reference || "")}
-                    expiresAt={String(data.expires_at || "")}
+                />
+            );
+        }
+
+        case "admin_new_transfer": {
+            return (
+                <AdminNewTransferEmail
+                    payerName={String(data.payerName || "Usuario")}
+                    payerEmail={String(data.payerEmail || "")}
+                    productName={String(data.productName || "")}
+                    amount={String(data.amount || "0")}
+                    currency={String(data.currency || "USD")}
+                    transferId={String(data.transferId || "")}
+                    receiptUrl={String(data.receiptUrl || "")}
                 />
             );
         }

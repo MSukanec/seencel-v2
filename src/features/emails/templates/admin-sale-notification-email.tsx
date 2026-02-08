@@ -32,7 +32,7 @@ export function AdminSaleNotificationEmail({
             <EmailHeader />
 
             <div style={emailBaseStyles.content}>
-                <h1 style={emailBaseStyles.title}>💰 Nueva Venta</h1>
+                <h1 style={emailBaseStyles.title}>Nueva Venta</h1>
 
                 <p style={emailBaseStyles.text}>
                     Se ha registrado una nueva compra en la plataforma.

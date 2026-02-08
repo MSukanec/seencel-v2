@@ -172,6 +172,29 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
         // Payment is still recorded successfully
     }
 
+    // ============================================================
+    // SEND EMAILS (User + Admin)
+    // ============================================================
+    try {
+        let productName = "Producto";
+        if (input.courseId) productName = "Curso"; // Idealmente buscar nombre real, pero por ahora genérico o pasar como prop
+        if (input.planId) productName = "Suscripción " + (input.billingPeriod === 'annual' ? 'Anual' : 'Mensual');
+        if (input.seatsQuantity) productName = `Paquete de ${input.seatsQuantity} asientos`;
+
+        await supabase.rpc('queue_email_bank_transfer', {
+            p_user_id: userData.id,
+            p_transfer_id: orderId,
+            p_product_name: productName,
+            p_amount: input.amount,
+            p_currency: input.currency,
+            p_payer_name: input.payerName,
+            p_receipt_url: input.receiptUrl
+        });
+    } catch (emailError) {
+        console.error("Error queueing bank transfer emails:", emailError);
+        // Don't fail the action
+    }
+
     revalidatePath("/checkout");
     revalidatePath("/");
     revalidatePath("/[locale]/organization/settings", "page");
