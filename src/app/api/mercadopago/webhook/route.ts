@@ -79,17 +79,35 @@ export async function POST(request: NextRequest) {
             console.log('[MP Webhook] Signature verified OK.');
         }
 
-        // Handle payment events
-        if (type === 'payment' || action === 'payment.created' || action === 'payment.updated') {
-            await handlePaymentEvent(bodyDataId, supabase, sandboxMode);
-        }
+        // FAST-RETURN PATTERN:
+        // Respond 200 OK immediately to prevent MP timeouts (502).
+        // Processing happens after response.
 
-        // Always return 200 to prevent retries
+        // We use a detached promise execution. In Vercel, this might be killed if function freezes,
+        // but for short tasks it often completes. Ideally use `waitUntil` (Next.js internal) if available,
+        // but here we just don't await the promise before returning.
+
+        const processingPromise = (async () => {
+            try {
+                // Handle payment events
+                if (type === 'payment' || action === 'payment.created' || action === 'payment.updated') {
+                    console.log(`[MP Webhook] Starting background processing for ${bodyDataId}...`);
+                    await handlePaymentEvent(bodyDataId, supabase, sandboxMode);
+                    console.log(`[MP Webhook] Finished background processing for ${bodyDataId}.`);
+                }
+            } catch (err) {
+                console.error('[MP Webhook] Background processing error:', err);
+            }
+        })();
+
+        // Try to use Edge Runtime logic to keep alive if possible (not needed in Node usually if async)
+        // But to be safe, we just return.
+
         return NextResponse.json({ received: true });
 
     } catch (error) {
         console.error('MercadoPago webhook error:', error);
-        // Still return 200 to prevent endless retries
+        // Still return 200 to prevent endless retries from MP
         return NextResponse.json({ received: true, error: 'processing_error' });
     }
 }
