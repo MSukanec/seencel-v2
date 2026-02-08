@@ -135,6 +135,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)", "/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)"],
+    // Matcher ignores static files and _next internals
+    // We REMOVED 'api|' from the negative lookahead to let API routes enter middleware
+    // and be handled by our explicit check at the top of the file.
+    matcher: ["/", "/(es|en)/:path*((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)", "/((?!_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|xml|txt|webmanifest)$).*)"],
 };
 
