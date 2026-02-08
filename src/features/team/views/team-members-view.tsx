@@ -43,6 +43,8 @@ interface MembersSettingsViewProps {
 export function TeamMembersView({ organizationId, planId, members, invitations, roles, currentUserId, ownerId, canInviteMembers, initialSeatStatus }: MembersSettingsViewProps) {
     const { openModal } = useModal();
     const [removedMemberIds, setRemovedMemberIds] = useState<string[]>([]);
+    const [removedInvitationIds, setRemovedInvitationIds] = useState<string[]>([]);
+    const [roleOverrides, setRoleOverrides] = useState<Record<string, { roleId: string; roleName: string }>>();
     const [memberToRemove, setMemberToRemove] = useState<OrganizationMemberDetail | null>(null);
     const [memberToEditRole, setMemberToEditRole] = useState<OrganizationMemberDetail | null>(null);
     const [selectedRoleId, setSelectedRoleId] = useState<string>("");
@@ -62,8 +64,11 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
             .sort((a, b) => (a.user_full_name || "").localeCompare(b.user_full_name || ""));
     }, [members, removedMemberIds]);
 
-    // Active invitations
-    const activeInvitations = useMemo(() => invitations, [invitations]);
+    // Active invitations (excludes optimistically revoked)
+    const activeInvitations = useMemo(() =>
+        invitations.filter(inv => !removedInvitationIds.includes(inv.id)),
+        [invitations, removedInvitationIds]
+    );
 
     const handleInvite = () => {
         openModal(
@@ -90,19 +95,40 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
 
         const member = memberToEditRole;
         const newRoleName = roles.find(r => r.id === selectedRoleId)?.name || "Rol";
+        const previousRoleId = member.role_id;
+        const previousRoleName = member.role_name;
+        const newRoleId = selectedRoleId;
+
+        // Optimistic: update role in UI immediately
+        setRoleOverrides(prev => ({
+            ...prev,
+            [member.id]: { roleId: newRoleId, roleName: newRoleName },
+        }));
 
         // Close dialog
         setMemberToEditRole(null);
 
         startTransition(async () => {
             try {
-                const result = await updateMemberRoleAction(organizationId, member.id, selectedRoleId);
+                const result = await updateMemberRoleAction(organizationId, member.id, newRoleId);
                 if (!result.success) {
+                    // Rollback
+                    setRoleOverrides(prev => {
+                        const next = { ...prev };
+                        delete next[member.id];
+                        return next;
+                    });
                     toast.error(result.error || "Error al cambiar el rol");
                 } else {
                     toast.success(`El rol de ${member.user_full_name || "miembro"} fue cambiado a ${newRoleName}`);
                 }
             } catch {
+                // Rollback
+                setRoleOverrides(prev => {
+                    const next = { ...prev };
+                    delete next[member.id];
+                    return next;
+                });
                 toast.error("Error inesperado al cambiar el rol");
             }
         });
@@ -239,18 +265,25 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                 actionLabel="Invitar Miembro"
                             />
                         ) : (
-                            filteredMembers.map((member) => (
-                                <MemberListItem
-                                    key={member.id}
-                                    member={member}
-                                    isOwner={member.user_id === ownerId}
-                                    isCurrentUser={member.user_id === currentUserId}
-                                    canEditRole={canEditRole(member)}
-                                    canRemove={canRemoveMember(member)}
-                                    onEditRole={(m) => handleEditRole(m as unknown as OrganizationMemberDetail)}
-                                    onRemove={(m) => setMemberToRemove(m as unknown as OrganizationMemberDetail)}
-                                />
-                            ))
+                            filteredMembers.map((member) => {
+                                // Apply optimistic role override if exists
+                                const override = roleOverrides?.[member.id];
+                                const displayMember = override
+                                    ? { ...member, role_id: override.roleId, role_name: override.roleName }
+                                    : member;
+                                return (
+                                    <MemberListItem
+                                        key={member.id}
+                                        member={displayMember}
+                                        isOwner={member.user_id === ownerId}
+                                        isCurrentUser={member.user_id === currentUserId}
+                                        canEditRole={canEditRole(member)}
+                                        canRemove={canRemoveMember(member)}
+                                        onEditRole={(m) => handleEditRole(m as unknown as OrganizationMemberDetail)}
+                                        onRemove={(m) => setMemberToRemove(m as unknown as OrganizationMemberDetail)}
+                                    />
+                                );
+                            })
                         )}
                     </div>
                 </SettingsSection>
@@ -308,11 +341,17 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                                                 className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                                                 disabled={isPending}
                                                 onClick={() => {
+                                                    // Optimistic: remove invitation immediately
+                                                    const inviteId = invite.id;
+                                                    setRemovedInvitationIds(prev => [...prev, inviteId]);
+
                                                     startTransition(async () => {
-                                                        const result = await revokeInvitationAction(organizationId, invite.id);
+                                                        const result = await revokeInvitationAction(organizationId, inviteId);
                                                         if (result.success) {
                                                             toast.success("Invitación revocada");
                                                         } else {
+                                                            // Rollback
+                                                            setRemovedInvitationIds(prev => prev.filter(id => id !== inviteId));
                                                             toast.error(result.error || "Error al revocar");
                                                         }
                                                     });

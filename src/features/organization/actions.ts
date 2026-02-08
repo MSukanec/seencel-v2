@@ -86,3 +86,61 @@ export async function switchOrganization(organizationId: string) {
     redirect(path);
 }
 
+export async function createOrganization(organizationName: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // 1. Get Current User
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { success: false, error: "No autenticado" };
+    }
+
+    // 2. Get Public User ID
+    const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!publicUser) {
+        return { success: false, error: "Usuario no encontrado" };
+    }
+
+    // 3. Call handle_new_organization RPC
+    // The function creates the org, roles, member, currencies, wallets, preferences
+    // and sets it as the active organization in user_preferences
+    const { data: newOrgId, error: rpcError } = await supabase.rpc('handle_new_organization', {
+        p_user_id: publicUser.id,
+        p_organization_name: organizationName.trim(),
+    });
+
+    if (rpcError) {
+        console.error("Error creating organization:", rpcError);
+        return { success: false, error: rpcError.message };
+    }
+
+    if (!newOrgId) {
+        return { success: false, error: "No se pudo crear la organización" };
+    }
+
+    // 4. Upsert Org-Specific Preferences (Last Access Timestamp)
+    await supabase
+        .from('user_organization_preferences')
+        .upsert({
+            user_id: publicUser.id,
+            organization_id: newOrgId,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'user_id, organization_id'
+        });
+
+    // 5. Revalidate to refresh data across the app
+    revalidatePath('/', 'layout');
+
+    // 6. Redirect to the new org's dashboard
+    const locale = await getLocale();
+    const path = locale === 'es' ? '/es/organizacion' : '/en/organization';
+
+    redirect(path);
+}
+

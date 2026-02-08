@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { useModal } from '@/stores/modal-store';
 import { MODAL_REGISTRY } from './modal-registry';
@@ -11,11 +11,18 @@ function ModalUrlSynchronizerContent() {
     const router = useRouter();
     const { stack, openModal, closeModal } = useModal();
 
+    // Guard: prevents URL->Modal sync from reopening a modal that's being closed
+    // This fixes the race condition where router.replace() hasn't updated searchParams yet
+    const closingRef = useRef(false);
+
     // 1. URL -> Modal Sync (Deep Linking & Back Button)
     useEffect(() => {
         const modalKey = searchParams.get('modal');
 
         if (modalKey) {
+            // If we're in the process of closing, don't reopen
+            if (closingRef.current) return;
+
             // Check if modal is already open to prevent loops or duplicates
             const isAlreadyOpen = stack.some(m => m.key === modalKey);
 
@@ -32,6 +39,9 @@ function ModalUrlSynchronizerContent() {
                 }
             }
         } else {
+            // URL was cleaned, reset the closing guard
+            closingRef.current = false;
+
             // If URL param is gone, but we have a URL-tracked modal open, close it.
             // This handles the Browser Back button.
             const topModal = stack[stack.length - 1];
@@ -46,11 +56,14 @@ function ModalUrlSynchronizerContent() {
         if (stack.length === 0) {
             // Clean URL if it has a modal param
             if (searchParams.has('modal')) {
+                // Set guard BEFORE cleaning URL to prevent race condition
+                closingRef.current = true;
                 const newParams = new URLSearchParams(searchParams.toString());
                 newParams.delete('modal');
                 // Remove other params linked to modal? ideally yes, but risky.
                 // For now just remove 'modal'
-                router.replace(`${pathname}?${newParams.toString()}`);
+                const paramString = newParams.toString();
+                router.replace(paramString ? `${pathname}?${paramString}` : pathname);
             }
             return;
         }

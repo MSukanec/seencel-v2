@@ -126,7 +126,7 @@ BEGIN
     PERFORM public.step_send_purchase_email(
         p_user_id,
         'upgrade',
-        'Upgrade a ' || COALESCE(v_plan_name, 'Plan') || ' (' || p_billing_period || ')',
+        'Upgrade a ' || COALESCE(v_plan_name, 'Plan') || ' (' || CASE WHEN p_billing_period = 'annual' THEN 'anual' ELSE 'mensual' END || ')',
         p_amount,
         p_currency,
         v_payment_id

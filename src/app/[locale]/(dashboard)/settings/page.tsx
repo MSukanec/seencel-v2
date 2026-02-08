@@ -11,6 +11,7 @@ import { Bell, Shield, User, Building, Settings2, Check, Crown, Users, Sparkles,
 import { getTranslations } from 'next-intl/server';
 import { getUserOrganizations } from "@/features/organization/queries";
 import { SwitchOrganizationButton } from "@/features/organization/components/switch-organization-button";
+import { CreateOrganizationButton } from "@/features/organization/components/create-organization-button";
 import { getUserProfile } from "@/features/users/queries";
 import { ProfileForm } from "@/features/users/components/profile-form";
 import { PreferencesView } from "@/features/users/views/preferences-view";
@@ -151,10 +152,15 @@ export default async function SettingsPage({
                         <TabsContent value="organization" className="space-y-6 mt-0">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>{t('Organization.title')}</CardTitle>
-                                    <CardDescription>
-                                        {t('Organization.description')}
-                                    </CardDescription>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle>{t('Organization.title')}</CardTitle>
+                                            <CardDescription>
+                                                {t('Organization.description')}
+                                            </CardDescription>
+                                        </div>
+                                        <CreateOrganizationButton />
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {organizations.length === 0 ? (

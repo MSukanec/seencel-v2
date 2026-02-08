@@ -7,6 +7,7 @@ import { useModal } from "@/stores/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,6 @@ interface InviteMemberFormProps {
 export function InviteMemberForm({ organizationId, planId, roles }: InviteMemberFormProps) {
     const router = useRouter();
     const { closeModal, openModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
     const [seatStatus, setSeatStatus] = useState<SeatStatus | null>(null);
     const [loadingSeats, setLoadingSeats] = useState(true);
 
@@ -55,12 +55,6 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
         loadSeatStatus();
     }, [organizationId]);
 
-    // Callbacks internos - semi-autónomo
-    const handleSuccess = () => {
-        closeModal();
-        router.refresh();
-    };
-
     const handleCancel = () => {
         closeModal();
     };
@@ -78,21 +72,21 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
             return;
         }
 
-        setIsLoading(true);
-        try {
-            const result = await sendInvitationAction(organizationId, email.trim(), roleId);
+        // Optimistic: close modal immediately and show toast
+        const inviteEmail = email.trim();
+        const inviteRoleId = roleId;
+        closeModal();
+        toast.success("Invitación enviada correctamente");
 
+        // Server call in background
+        try {
+            const result = await sendInvitationAction(organizationId, inviteEmail, inviteRoleId);
             if (!result.success) {
                 toast.error(result.error || "Error al enviar la invitación");
-                return;
             }
-
-            toast.success("Invitación enviada correctamente");
-            handleSuccess();
+            router.refresh();
         } catch (error) {
             toast.error("Error inesperado al enviar la invitación");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -115,8 +109,10 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
 
     if (loadingSeats) {
         return (
-            <div className="flex items-center justify-center py-8">
-                <div className="animate-pulse text-muted-foreground">Cargando información de asientos...</div>
+            <div className="space-y-4 py-2">
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
             </div>
         );
     }
@@ -319,7 +315,7 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
 
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
-                isLoading={isLoading}
+                isLoading={false}
                 submitLabel="Enviar Invitación"
                 onCancel={handleCancel}
             />

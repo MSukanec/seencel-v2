@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -29,6 +29,12 @@ type ProductCategory = "course" | "seats" | "upgrade" | "subscription";
 export function BillingCheckoutSuccessView() {
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    // Navigate with cache invalidation so sidebar plan button refreshes
+    const handleNavigate = useCallback((href: string) => {
+        router.refresh(); // Invalidate RSC cache (plan data, subscription, etc.)
+        router.push(href);
+    }, [router]);
     const t = useTranslations("BillingResults");
     const [isCapturing, setIsCapturing] = useState(false);
     const [capturedPaymentId, setCapturedPaymentId] = useState<string | null>(null);
@@ -297,32 +303,24 @@ export function BillingCheckoutSuccessView() {
                             </>
                         ) : isSeats ? (
                             <>
-                                <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
-                                    <Link href="/organization/settings?tab=members">
-                                        <Users className="w-5 h-5 mr-2" />
-                                        {t("success.seats.ctaPrimary")}
-                                    </Link>
+                                <Button size="lg" className="flex-1 h-12 text-base font-medium" onClick={() => handleNavigate('/organization/settings?tab=members')}>
+                                    <Users className="w-5 h-5 mr-2" />
+                                    {t("success.seats.ctaPrimary")}
                                 </Button>
-                                <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
-                                    <Link href="/organization/settings?tab=billing">
-                                        <Receipt className="w-5 h-5 mr-2" />
-                                        {t("success.seats.ctaSecondary")}
-                                    </Link>
+                                <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => handleNavigate('/organization/settings?tab=billing')}>
+                                    <Receipt className="w-5 h-5 mr-2" />
+                                    {t("success.seats.ctaSecondary")}
                                 </Button>
                             </>
                         ) : (
                             <>
-                                <Button size="lg" className="flex-1 h-12 text-base font-medium" asChild>
-                                    <Link href="/organization">
-                                        <Rocket className="w-5 h-5 mr-2" />
-                                        {t(`success.${category}.ctaPrimary`)}
-                                    </Link>
+                                <Button size="lg" className="flex-1 h-12 text-base font-medium" onClick={() => handleNavigate('/organization')}>
+                                    <Rocket className="w-5 h-5 mr-2" />
+                                    {t(`success.${category}.ctaPrimary`)}
                                 </Button>
-                                <Button size="lg" variant="outline" className="flex-1 h-12" asChild>
-                                    <Link href="/organization/settings?tab=billing">
-                                        <Receipt className="w-5 h-5 mr-2" />
-                                        {t(`success.${category}.ctaSecondary`)}
-                                    </Link>
+                                <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => handleNavigate('/organization/settings?tab=billing')}>
+                                    <Receipt className="w-5 h-5 mr-2" />
+                                    {t(`success.${category}.ctaSecondary`)}
                                 </Button>
                             </>
                         )}
