@@ -62,11 +62,41 @@ export interface BankTransferVerifiedPayload extends EmailPayload {
     verifiedAt: string;
 }
 
+export interface CoursePurchaseConfirmationPayload extends EmailPayload {
+    firstName: string;
+    courseName: string;
+    amount: string;
+    currency: string;
+    transactionId: string;
+    purchaseDate: string;
+}
+
+export interface AdminSaleNotificationPayload extends EmailPayload {
+    buyerName: string;
+    buyerEmail: string;
+    productType: 'subscription' | 'course';
+    productName: string;
+    amount: string;
+    currency: string;
+    paymentId: string;
+    purchaseDate: string;
+}
+
+export interface TeamInvitationPayload extends EmailPayload {
+    organizationName: string;
+    inviterName: string;
+    roleName: string;
+    acceptUrl: string;
+}
+
 export type AnyEmailPayload =
     | WelcomeEmailPayload
     | PurchaseConfirmationPayload
+    | CoursePurchaseConfirmationPayload
+    | AdminSaleNotificationPayload
     | SubscriptionActivatedPayload
     | SubscriptionExpiringPayload
     | SubscriptionExpiredPayload
     | BankTransferPendingPayload
-    | BankTransferVerifiedPayload;
+    | BankTransferVerifiedPayload
+    | TeamInvitationPayload;

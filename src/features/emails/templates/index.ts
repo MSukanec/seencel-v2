@@ -1,5 +1,7 @@
 export { WelcomeEmail } from './welcome-email';
 export { PurchaseConfirmationEmail } from './purchase-confirmation-email';
+export { CoursePurchaseConfirmationEmail } from './course-purchase-confirmation-email';
+export { AdminSaleNotificationEmail } from './admin-sale-notification-email';
 export { SubscriptionActivatedEmail } from './subscription-activated-email';
 export { SubscriptionExpiringEmail } from './subscription-expiring-email';
 export { SubscriptionExpiredEmail } from './subscription-expired-email';

@@ -5,6 +5,11 @@ import { PurchaseConfirmationEmail } from "@/features/emails/templates/purchase-
 import { CoursePurchaseConfirmationEmail } from "@/features/emails/templates/course-purchase-confirmation-email";
 import { AdminSaleNotificationEmail } from "@/features/emails/templates/admin-sale-notification-email";
 import { WelcomeEmail } from "@/features/emails/templates/welcome-email";
+import { BankTransferPendingEmail } from "@/features/emails/templates/bank-transfer-pending-email";
+import { BankTransferVerifiedEmail } from "@/features/emails/templates/bank-transfer-verified-email";
+import { SubscriptionActivatedEmail } from "@/features/emails/templates/subscription-activated-email";
+import { SubscriptionExpiringEmail } from "@/features/emails/templates/subscription-expiring-email";
+import { SubscriptionExpiredEmail } from "@/features/emails/templates/subscription-expired-email";
 import { type EmailLocale } from "@/features/emails/lib/email-translations";
 
 // Max emails to process per run (avoid timeout)
@@ -199,6 +204,70 @@ function buildEmailComponent(email: EmailQueueItem): React.ReactElement | null {
                     firstName={String(data.user_name || "Usuario")}
                     email={String(data.user_email || "")}
                     locale={welcomeLocale}
+                />
+            );
+        }
+
+        case "bank_transfer_pending": {
+            return (
+                <BankTransferPendingEmail
+                    firstName={String(data.user_name || "Usuario")}
+                    planName={String(data.plan_name || "Plan")}
+                    amount={String(data.amount || "0")}
+                    currency={String(data.currency || "USD")}
+                    bankName={String(data.bank_name || "")}
+                    accountHolder={String(data.account_holder || "")}
+                    accountNumber={String(data.account_number || "")}
+                    reference={String(data.reference || "")}
+                    expiresAt={String(data.expires_at || "")}
+                />
+            );
+        }
+
+        case "bank_transfer_verified": {
+            return (
+                <BankTransferVerifiedEmail
+                    firstName={String(data.user_name || "Usuario")}
+                    planName={String(data.plan_name || "Plan")}
+                    amount={String(data.amount || "0")}
+                    currency={String(data.currency || "USD")}
+                    verifiedAt={String(data.verified_at || new Date().toLocaleDateString("es-AR"))}
+                />
+            );
+        }
+
+        case "subscription_activated": {
+            const billingCycle = String(data.billing_cycle || "monthly");
+            return (
+                <SubscriptionActivatedEmail
+                    firstName={String(data.user_name || "Usuario")}
+                    planName={String(data.plan_name || "Plan")}
+                    billingCycle={billingCycle as "monthly" | "annual"}
+                    expiresAt={String(data.expires_at || "")}
+                    dashboardUrl={String(data.dashboard_url || "https://seencel.com/hub")}
+                />
+            );
+        }
+
+        case "subscription_expiring": {
+            return (
+                <SubscriptionExpiringEmail
+                    firstName={String(data.user_name || "Usuario")}
+                    planName={String(data.plan_name || "Plan")}
+                    expiresAt={String(data.expires_at || "")}
+                    daysRemaining={Number(data.days_remaining || 7)}
+                    renewUrl={String(data.renew_url || "https://seencel.com/hub")}
+                />
+            );
+        }
+
+        case "subscription_expired": {
+            return (
+                <SubscriptionExpiredEmail
+                    firstName={String(data.user_name || "Usuario")}
+                    planName={String(data.plan_name || "Plan")}
+                    expiredAt={String(data.expired_at || "")}
+                    reactivateUrl={String(data.reactivate_url || "https://seencel.com/hub")}
                 />
             );
         }
