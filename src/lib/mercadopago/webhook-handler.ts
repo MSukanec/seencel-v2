@@ -145,12 +145,24 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
         } else if (productType === 'seat_purchase' || productType === 'seats') {
             const seatsQty = ref.seatsQty;
 
+            // Seats require plan_id — fetch from organization's current plan
+            let planId = productId; // might be in external_reference
+            if (!planId && orgId) {
+                const { data: orgData } = await supabase
+                    .from('organizations')
+                    .select('plan_id')
+                    .eq('id', orgId)
+                    .single();
+                planId = orgData?.plan_id || null;
+            }
+
             rpcResult = await supabase.rpc('handle_member_seat_purchase', {
                 p_provider: 'mercadopago',
                 p_provider_payment_id: paymentId.toString(),
                 p_user_id: userId,
                 p_organization_id: orgId,
-                p_seats_qty: seatsQty,
+                p_plan_id: planId,
+                p_seats_purchased: seatsQty,
                 p_amount: transaction_amount,
                 p_currency: currency_id || 'ARS',
                 p_metadata: rpcMetadata

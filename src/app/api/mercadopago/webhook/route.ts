@@ -62,6 +62,21 @@ export async function POST(request: NextRequest) {
         }
 
         // ============================================================
+        // 1b. EARLY EXIT: Skip non-payment events immediately
+        // ============================================================
+        // merchant_order, test, etc. — we never process these.
+        // Skip them before signature validation (they use different params and always fail).
+        const isPaymentEvent =
+            eventType === 'payment' ||
+            eventType === 'payment.created' ||
+            eventType === 'payment.updated';
+
+        if (!isPaymentEvent) {
+            console.log(`[MP Webhook] Skipping non-payment event: type=${eventType}, id=${paymentId}`);
+            return NextResponse.json({ received: true, skipped: eventType });
+        }
+
+        // ============================================================
         // 2. Initialize Supabase
         // ============================================================
         let supabase: any;
@@ -128,17 +143,13 @@ export async function POST(request: NextRequest) {
         // ============================================================
         // 6. Process Payment Logic
         // ============================================================
-        const isPaymentEvent =
-            eventType === 'payment' ||
-            eventType === 'payment.created' ||
-            eventType === 'payment.updated';
-
-        if (isPaymentEvent && paymentId) {
+        // Only payment events reach this point (non-payment events exit early above)
+        if (paymentId) {
             console.log(`[MP Webhook] Processing payment ID: ${paymentId}...`);
             await handlePaymentEvent(paymentId, supabase, sandboxMode);
             console.log(`[MP Webhook] Processing finished for ${paymentId}.`);
         } else {
-            console.log(`[MP Webhook] Skipping event: type=${eventType}, id=${paymentId}`);
+            console.log(`[MP Webhook] Skipping: no paymentId found for type=${eventType}`);
         }
 
         // ============================================================
