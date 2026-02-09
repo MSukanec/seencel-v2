@@ -1,10 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, HelpCircle, Bug } from "lucide-react";
+import { MessageCircle, HelpCircle } from "lucide-react";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { SupportToolsContainer } from "@/features/admin/support/components/support-tools-container";
 import { SupportInboxView } from "@/features/admin/support/components/support-inbox-view";
 
 
@@ -38,15 +37,6 @@ export default async function SupportPage({ params }: PageProps) {
                             </div>
                         </TabsTrigger>
                         <TabsTrigger
-                            value="debug"
-                            className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Bug className="h-4 w-4" />
-                                <span>Debug</span>
-                            </div>
-                        </TabsTrigger>
-                        <TabsTrigger
                             value="faq"
                             className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
                         >
@@ -62,13 +52,6 @@ export default async function SupportPage({ params }: PageProps) {
                 <TabsContent value="tickets" className="m-0 h-full focus-visible:outline-none">
                     <ContentLayout variant="wide">
                         <SupportInboxView />
-                    </ContentLayout>
-                </TabsContent>
-
-                {/* Tab: Herramientas de Debug */}
-                <TabsContent value="debug" className="m-0 h-full focus-visible:outline-none">
-                    <ContentLayout variant="wide">
-                        <SupportToolsContainer />
                     </ContentLayout>
                 </TabsContent>
 
@@ -88,4 +71,3 @@ export default async function SupportPage({ params }: PageProps) {
         </Tabs>
     );
 }
-

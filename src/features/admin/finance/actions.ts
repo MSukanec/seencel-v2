@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -168,7 +170,7 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
 
     if (fetchError || !transferData) {
         console.error("Error fetching bank transfer:", fetchError);
-        return { success: false, error: fetchError?.message || "Transfer not found" };
+        return { success: false, error: sanitizeError(fetchError) || "Transfer not found" };
     }
 
     // If already approved/rejected and trying to change again, prevent it
@@ -186,7 +188,7 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
 
     if (error) {
         console.error("Error updating bank transfer:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     // If status changed to APPROVED, create the payment record and activate enrollment/subscription
@@ -287,7 +289,7 @@ export async function deleteBankTransfer(id: string) {
 
     if (error) {
         console.error("Error deleting bank transfer:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/finance");

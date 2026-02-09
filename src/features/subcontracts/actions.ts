@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -328,7 +330,7 @@ export async function createQuickSubcontractAction(organizationId: string, proje
 
     if (error) {
         console.error("Error creating quick subcontract:", error);
-        throw new Error(`Error: ${error.message}`);
+        throw new Error(`Error: ${sanitizeError(error)}`);
     }
 
     revalidatePath('/organization/subcontracts');
@@ -356,7 +358,7 @@ export async function createSubcontractAction(input: z.infer<typeof createSubcon
 
     if (error) {
         console.error("Error creating subcontract:", error);
-        throw new Error(`Error al crear el subcontrato: ${error.message}`);
+        throw new Error(`Error al crear el subcontrato: ${sanitizeError(error)}`);
     }
 
     revalidatePath(`/project/${input.project_id}/subcontracts`);

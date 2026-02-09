@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -108,7 +110,7 @@ export async function createCoupon(input: CreateCouponInput): Promise<{ success:
         if (error.code === "23505") {
             return { success: false, error: "Ya existe un cupón con ese código" };
         }
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/finance");
@@ -146,7 +148,7 @@ export async function updateCoupon(
 
     if (error) {
         console.error("Error updating coupon:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/finance");
@@ -166,7 +168,7 @@ export async function deleteCoupon(id: string): Promise<{ success: boolean; erro
 
     if (error) {
         console.error("Error deleting coupon:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/finance");
@@ -186,7 +188,7 @@ export async function toggleCouponStatus(id: string, isActive: boolean): Promise
 
     if (error) {
         console.error("Error toggling coupon status:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/finance");

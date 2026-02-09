@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -59,7 +61,7 @@ export async function createHeroSection(input: CreateHeroSectionInput) {
 
     if (error) {
         console.error("Error creating hero section:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/hub-content');
@@ -88,7 +90,7 @@ export async function updateHeroSection(input: UpdateHeroSectionInput) {
 
     if (error) {
         console.error("Error updating hero section:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/hub-content');
@@ -110,7 +112,7 @@ export async function toggleHeroSectionActive(id: string, isActive: boolean) {
 
     if (error) {
         console.error("Error toggling hero section:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/hub-content');
@@ -135,7 +137,7 @@ export async function deleteHeroSection(id: string) {
 
     if (error) {
         console.error("Error deleting hero section:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/hub-content');
@@ -164,7 +166,7 @@ export async function reorderHeroSections(orderedIds: string[]) {
 
         if (error) {
             console.error("Error reordering hero section:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
     }
 

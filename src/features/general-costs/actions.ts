@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -242,7 +244,7 @@ export async function createGeneralCostCategory(data: Partial<GeneralCostCategor
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return newCategory;
 }
@@ -260,7 +262,7 @@ export async function updateGeneralCostCategory(id: string, data: Partial<Genera
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return updatedCategory;
 }
@@ -276,7 +278,7 @@ export async function deleteGeneralCostCategory(id: string) {
         })
         .eq('id', id);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return true;
 }
@@ -299,7 +301,7 @@ export async function createGeneralCost(data: Partial<GeneralCost>) {
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return newCost;
 }
@@ -320,7 +322,7 @@ export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) 
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return updatedCost;
 }
@@ -333,7 +335,7 @@ export async function deleteGeneralCost(id: string) {
     const { error } = await supabase
         .rpc('soft_delete_general_cost', { p_cost_id: id });
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return true;
 }
@@ -361,7 +363,7 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
 
     // Handle media files if provided (correct pattern: media_files -> media_links)
     if (data.media_files && data.media_files.length > 0 && newPayment) {
@@ -439,7 +441,7 @@ export async function updateGeneralCostPayment(id: string, data: Partial<General
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
 
     // Handle media files if provided (correct pattern: media_files -> media_links)
     if (data.media_files && data.media_files.length > 0 && updatedPayment) {
@@ -507,7 +509,7 @@ export async function deleteGeneralCostPayment(id: string) {
         .delete()
         .eq('id', id);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/organization/general-costs');
     return true;
 }

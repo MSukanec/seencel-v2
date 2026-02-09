@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserNotifications } from "./queries";
@@ -36,7 +38,7 @@ export async function markNotificationAsRead(notificationId: string) {
 
     if (error) {
         console.error("Error marking notification as read:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/[locale]/settings', 'page');
@@ -71,7 +73,7 @@ export async function markAllNotificationsAsRead() {
 
     if (error) {
         console.error("Error marking all notifications as read:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/[locale]/settings', 'page');

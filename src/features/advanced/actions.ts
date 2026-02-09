@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Periodicity } from "./types";
@@ -96,7 +98,7 @@ export async function updateIndexTypeAction(
 
     if (error) {
         console.error('Error updating index type:', error);
-        throw new Error(error.message || 'Failed to update index type');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');
@@ -113,7 +115,7 @@ export async function deleteIndexTypeAction(id: string) {
 
     if (error) {
         console.error('Error deleting index type:', error);
-        throw new Error(error.message || 'Failed to delete index type');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');
@@ -152,7 +154,7 @@ export async function createIndexValueAction(input: CreateIndexValueInput) {
 
     if (error) {
         console.error('Error creating index value:', error);
-        throw new Error(error.message || 'Failed to create index value');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');
@@ -182,7 +184,7 @@ export async function updateIndexValueAction(
 
     if (error) {
         console.error('Error updating index value:', error);
-        throw new Error(error.message || 'Failed to update index value');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');
@@ -199,7 +201,7 @@ export async function deleteIndexValueAction(id: string) {
 
     if (error) {
         console.error('Error deleting index value:', error);
-        throw new Error(error.message || 'Failed to delete index value');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');
@@ -236,7 +238,7 @@ export async function createComponentAction(input: CreateComponentInput) {
 
     if (error) {
         console.error('Error creating component:', error);
-        throw new Error(error.message || 'Failed to create component');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');
@@ -253,7 +255,7 @@ export async function deleteComponentAction(id: string) {
 
     if (error) {
         console.error('Error deleting component:', error);
-        throw new Error(error.message || 'Failed to delete component');
+        throw new Error(sanitizeError(error));
     }
 
     revalidatePath('/organization/advanced');

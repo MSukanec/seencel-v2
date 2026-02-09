@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { SignatureData } from "@/components/ui/signature-pad";
 import { headers } from "next/headers";
@@ -113,7 +115,7 @@ export async function approveQuote({ quoteId, projectId, clientId, signatureData
 
     if (updateError) {
         console.error("Error updating quote:", updateError);
-        return { error: `Error al actualizar: ${updateError.message}` };
+        return { error: sanitizeError(updateError) };
     }
 
     if (!updated || updated.length === 0) {

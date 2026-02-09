@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { optimizeImage } from '@/lib/image-optimizer';
+import { sanitizeError } from '@/lib/error-utils';
 
 // ============================================================================
 // Types
@@ -214,7 +215,7 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
         return { success: true, avatar_url: publicUrl };
     } catch (error) {
         console.error("Critical Upload Error:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Unknown server error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -233,7 +234,7 @@ export async function removeAvatar() {
         })
         .eq('id', userId);
 
-    if (error) throw new Error(`Failed to remove avatar: ${error.message}`);
+    if (error) throw new Error(`Failed to remove avatar: ${sanitizeError(error)}`);
     revalidatePath('/settings');
     return { success: true };
 }
@@ -257,7 +258,7 @@ export async function restoreProviderAvatar() {
         })
         .eq('id', userId);
 
-    if (error) throw new Error(`Failed to restore avatar: ${error.message}`);
+    if (error) throw new Error(`Failed to restore avatar: ${sanitizeError(error)}`);
     revalidatePath('/settings');
     return { success: true, avatar_url: providerAvatar };
 }

@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -37,7 +39,7 @@ export async function createSystemMaterial(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe un material con ese nombre" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -83,7 +85,7 @@ export async function updateSystemMaterial(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe un material con ese nombre" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -133,7 +135,7 @@ export async function deleteSystemMaterial(id: string, replacementId: string | n
 
     if (error) {
         console.error("Error deleting system material:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -165,7 +167,7 @@ export async function createMaterialCategory(name: string, parentId: string | nu
 
     if (error) {
         console.error("Error creating material category:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -203,7 +205,7 @@ export async function updateMaterialCategory(id: string, name: string, parentId:
 
     if (error) {
         console.error("Error updating material category:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -230,7 +232,7 @@ export async function deleteMaterialCategory(id: string) {
 
     if (error) {
         console.error("Error deleting material category:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");

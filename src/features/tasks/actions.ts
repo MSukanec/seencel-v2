@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserOrganizations } from "@/features/organization/queries";
@@ -69,7 +71,7 @@ export async function createTask(formData: FormData) {
 
     if (error) {
         console.error("Error creating task:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/catalog");
@@ -131,7 +133,7 @@ export async function updateTask(formData: FormData) {
 
     if (error) {
         console.error("Error updating task:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/catalog");
@@ -164,7 +166,7 @@ export async function updateTaskOrganization(
 
     if (error) {
         console.error("Error updating task organization:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -200,7 +202,7 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
 
     if (error) {
         console.error("Error deleting task:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/catalog");
@@ -240,7 +242,7 @@ export async function addTaskMaterial(
         if (error.code === "23505") {
             return { error: "Este material ya está agregado a la tarea" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog/task");
@@ -267,7 +269,7 @@ export async function updateTaskMaterial(
 
     if (error) {
         console.error("Error updating task material:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog/task");
@@ -288,7 +290,7 @@ export async function removeTaskMaterial(id: string, isSystemTask: boolean = fal
 
     if (error) {
         console.error("Error removing task material:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog/task");
@@ -328,7 +330,7 @@ export async function addTaskLabor(
         if (error.code === "23505") {
             return { error: "Este tipo de mano de obra ya está agregado a la tarea" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog/task");
@@ -355,7 +357,7 @@ export async function updateTaskLabor(
 
     if (error) {
         console.error("Error updating task labor:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog/task");
@@ -376,7 +378,7 @@ export async function removeTaskLabor(id: string, isSystemTask: boolean = false)
 
     if (error) {
         console.error("Error removing task labor:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog/task");
@@ -419,7 +421,7 @@ export async function createTaskDivision(formData: FormData) {
 
     if (error) {
         console.error("Error creating task division:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -463,7 +465,7 @@ export async function updateTaskDivision(formData: FormData) {
 
     if (error) {
         console.error("Error updating task division:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -490,7 +492,7 @@ export async function deleteTaskDivision(
 
         if (reassignError) {
             console.error("Error reassigning tasks:", reassignError);
-            return { error: "Error al reasignar tareas: " + reassignError.message };
+            return { error: sanitizeError(reassignError) };
         }
     } else {
         // Set tasks to null division
@@ -501,7 +503,7 @@ export async function deleteTaskDivision(
 
         if (nullifyError) {
             console.error("Error nullifying task divisions:", nullifyError);
-            return { error: "Error al desvincular tareas: " + nullifyError.message };
+            return { error: sanitizeError(nullifyError) };
         }
     }
 
@@ -516,7 +518,7 @@ export async function deleteTaskDivision(
 
     if (error) {
         console.error("Error deleting task division:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -597,7 +599,7 @@ export async function createTaskParameter(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe un parámetro con este slug" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -643,7 +645,7 @@ export async function updateTaskParameter(id: string, formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe un parámetro con este slug" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -664,7 +666,7 @@ export async function deleteTaskParameter(id: string) {
 
     if (error) {
         console.error("Error deleting task parameter:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -718,7 +720,7 @@ export async function createParameterOption(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe una opción con este valor" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -768,7 +770,7 @@ export async function updateParameterOption(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe una opción con este valor" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -788,7 +790,7 @@ export async function deleteParameterOption(id: string) {
 
     if (error) {
         console.error("Error deleting parameter option:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -832,7 +834,7 @@ export async function createTaskElement(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe un elemento con este código" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -878,7 +880,7 @@ export async function updateTaskElement(formData: FormData) {
         if (error.code === "23505") {
             return { error: "Ya existe un elemento con este código" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -901,7 +903,7 @@ export async function deleteTaskElement(id: string) {
 
     if (error) {
         console.error("Error deleting task element:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -926,9 +928,9 @@ export async function toggleDivisionElement(
 
         if (error) {
             // Ignore duplicate key errors
-            if (!error.message.includes("duplicate")) {
+            if (!sanitizeError(error).includes("duplicate")) {
                 console.error("Error linking element:", error);
-                return { error: error.message };
+                return { error: sanitizeError(error) };
             }
         }
     } else {
@@ -941,7 +943,7 @@ export async function toggleDivisionElement(
 
         if (error) {
             console.error("Error unlinking element:", error);
-            return { error: error.message };
+            return { error: sanitizeError(error) };
         }
     }
 
@@ -965,9 +967,9 @@ export async function toggleDivisionKind(
             .insert({ division_id: divisionId, kind_id: kindId });
 
         if (error) {
-            if (!error.message.includes("duplicate")) {
+            if (!sanitizeError(error).includes("duplicate")) {
                 console.error("Error linking kind:", error);
-                return { error: error.message };
+                return { error: sanitizeError(error) };
             }
         }
     } else {
@@ -979,7 +981,7 @@ export async function toggleDivisionKind(
 
         if (error) {
             console.error("Error unlinking kind:", error);
-            return { error: error.message };
+            return { error: sanitizeError(error) };
         }
     }
 
@@ -1003,9 +1005,9 @@ export async function toggleKindElement(
             .insert({ kind_id: kindId, element_id: elementId });
 
         if (error) {
-            if (!error.message.includes("duplicate")) {
+            if (!sanitizeError(error).includes("duplicate")) {
                 console.error("Error linking element to kind:", error);
-                return { error: error.message };
+                return { error: sanitizeError(error) };
             }
         }
     } else {
@@ -1017,7 +1019,7 @@ export async function toggleKindElement(
 
         if (error) {
             console.error("Error unlinking element from kind:", error);
-            return { error: error.message };
+            return { error: sanitizeError(error) };
         }
     }
 
@@ -1046,9 +1048,9 @@ export async function toggleElementParameter(
             });
 
         if (error) {
-            if (!error.message.includes("duplicate")) {
+            if (!sanitizeError(error).includes("duplicate")) {
                 console.error("Error linking parameter to element:", error);
-                return { error: error.message };
+                return { error: sanitizeError(error) };
             }
         }
     } else {
@@ -1060,7 +1062,7 @@ export async function toggleElementParameter(
 
         if (error) {
             console.error("Error unlinking parameter from element:", error);
-            return { error: error.message };
+            return { error: sanitizeError(error) };
         }
     }
 
@@ -1166,7 +1168,7 @@ export async function createRecipe(data: TaskRecipeFormData) {
 
     if (error) {
         console.error("Error creating recipe:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1197,7 +1199,7 @@ export async function updateRecipeVisibility(
 
     if (error) {
         console.error("Error updating recipe visibility:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1220,7 +1222,7 @@ export async function deleteRecipe(recipeId: string) {
 
     if (error) {
         console.error("Error deleting recipe:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1276,7 +1278,7 @@ export async function addRecipeItem(data: TaskRecipeItemFormData) {
 
     if (error) {
         console.error("Error adding recipe item:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1309,7 +1311,7 @@ export async function updateRecipeItem(
 
     if (error) {
         console.error("Error updating recipe item:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1329,7 +1331,7 @@ export async function deleteRecipeItem(itemId: string) {
 
     if (error) {
         console.error("Error deleting recipe item:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1383,7 +1385,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
 
     if (error) {
         console.error("Error rating recipe:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
@@ -1419,7 +1421,7 @@ export async function adoptRecipe(taskId: string, recipeId: string) {
 
     if (error) {
         console.error("Error adopting recipe:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");

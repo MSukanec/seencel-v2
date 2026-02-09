@@ -488,7 +488,14 @@ export function GanttChart({
                                 return (
                                     <div
                                         key={item.id}
+                                        className="absolute group"
                                         data-gantt-bar-id={item.id}
+                                        style={{
+                                            left: position.x,
+                                            top: position.y,
+                                            width: position.width,
+                                            height: GANTT_ROW_HEIGHT,
+                                        }}
                                         onMouseEnter={(e) => handleBarMouseEnter(item, e)}
                                         onMouseLeave={handleBarMouseLeave}
                                         onMouseMove={handleBarMouseMove}
@@ -528,7 +535,12 @@ export function GanttChart({
                             return (
                                 <svg
                                     className="absolute inset-0 pointer-events-none z-40"
-                                    style={{ width: totalWidth, height: totalHeight }}
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        minWidth: totalWidth,
+                                        minHeight: totalHeight,
+                                    }}
                                 >
                                     <line
                                         x1={startX}

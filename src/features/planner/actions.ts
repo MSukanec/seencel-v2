@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import {
@@ -123,7 +125,7 @@ export async function createList(input: CreateListInput) {
 
     if (error) {
         console.error('Error creating list:', error);
-        throw new Error(`Error al crear la columna: ${error.message}`);
+        throw new Error(`Error al crear la columna: ${sanitizeError(error)}`);
     }
 
     revalidatePath('/organization/kanban');
@@ -231,7 +233,7 @@ export async function reorderLists(boardId: string, listIds: string[]) {
 
     if (error) {
         console.error('Error reordering lists:', error);
-        throw new Error(`Error al reordenar las columnas: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Error al reordenar las columnas: ${sanitizeError(error)} (Code: ${error.code})`);
     }
 
     revalidatePath('/organization/kanban');
@@ -307,7 +309,7 @@ export async function updateCard(cardId: string, input: UpdateCardInput) {
 
     if (error) {
         console.error('Error updating card:', error);
-        throw new Error(`Error al actualizar la tarjeta: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Error al actualizar la tarjeta: ${sanitizeError(error)} (Code: ${error.code})`);
     }
 
     revalidatePath('/organization/kanban');
@@ -376,7 +378,7 @@ export async function reorderCards(listId: string, cardIds: string[]) {
 
     if (error) {
         console.error('Error reordering cards:', error);
-        throw new Error(`Error al reordenar las tarjetas: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Error al reordenar las tarjetas: ${sanitizeError(error)} (Code: ${error.code})`);
     }
 
     revalidatePath('/organization/kanban');
@@ -471,7 +473,7 @@ export async function createCalendarEvent(input: CreateCalendarEventInput) {
 
     if (error) {
         console.error('Error creating calendar event:', error);
-        throw new Error(`Error al crear el evento: ${error.message}`);
+        throw new Error(`Error al crear el evento: ${sanitizeError(error)}`);
     }
 
     revalidatePath('/organization/planner');
@@ -493,7 +495,7 @@ export async function updateCalendarEvent(eventId: string, input: UpdateCalendar
 
     if (error) {
         console.error('Error updating calendar event:', error);
-        throw new Error(`Error al actualizar el evento: ${error.message}`);
+        throw new Error(`Error al actualizar el evento: ${sanitizeError(error)}`);
     }
 
     revalidatePath('/organization/planner');
@@ -515,7 +517,7 @@ export async function deleteCalendarEvent(eventId: string) {
 
     if (error) {
         console.error('Error deleting calendar event:', error);
-        throw new Error(`Error al eliminar el evento: ${error.message} (${error.code})`);
+        throw new Error(`Error al eliminar el evento: ${sanitizeError(error)} (${error.code})`);
     }
 
     revalidatePath('/organization/planner');

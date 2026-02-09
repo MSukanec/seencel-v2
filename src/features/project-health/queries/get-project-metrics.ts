@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { sanitizeError } from '@/lib/error-utils';
 import { ProjectMetrics } from '../types';
 
 interface GetProjectMetricsResult {
@@ -29,7 +30,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
             .single();
 
         if (projectError) {
-            return { data: null, error: `Error al obtener datos del proyecto: ${projectError.message}` };
+            return { data: null, error: sanitizeError(projectError) };
         }
 
         // 2. Obtener estadísticas de tareas
@@ -40,7 +41,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
             .eq('is_deleted', false);
 
         if (tasksError) {
-            return { data: null, error: `Error al obtener tareas: ${tasksError.message}` };
+            return { data: null, error: sanitizeError(tasksError) };
         }
 
         // Contar tareas por estado
@@ -58,7 +59,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
             .in('status', ['approved', 'signed']);
 
         if (quotesError) {
-            return { data: null, error: `Error al obtener presupuestos: ${quotesError.message}` };
+            return { data: null, error: sanitizeError(quotesError) };
         }
 
         const budgetTotal = quotes?.reduce((sum, q) => sum + (Number(q.total_with_tax) || 0), 0) || 0;
@@ -73,7 +74,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
             .or('is_deleted.is.null,is_deleted.eq.false');
 
         if (paymentsError) {
-            return { data: null, error: `Error al obtener pagos: ${paymentsError.message}` };
+            return { data: null, error: sanitizeError(paymentsError) };
         }
 
         const costExecuted = payments?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
@@ -121,7 +122,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
         return { data: metrics, error: null };
 
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Error desconocido';
+        const message = sanitizeError(error);
         return { data: null, error: message };
     }
 }

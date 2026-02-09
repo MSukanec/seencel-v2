@@ -21,6 +21,8 @@ import {
     Upload,
     LayoutGrid,
     History,
+    Shield,
+    Globe,
 } from "lucide-react";
 import { ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
@@ -64,6 +66,9 @@ export interface MaterialWithDetails extends Material {
     org_unit_price?: number | null;
     org_price_currency_id?: string | null;
     org_price_valid_from?: string | null;
+    // Organization info (admin mode)
+    organization_name?: string | null;
+    organization_logo_path?: string | null;
 }
 
 // Category hierarchy node
@@ -76,6 +81,7 @@ export interface MaterialCategoryNode {
 
 export interface MaterialsCatalogViewProps {
     materials: MaterialWithDetails[];
+    allMaterials?: MaterialWithDetails[]; // All materials (system + org) for admin scope filter
     units: Unit[];
     categories: MaterialCategory[];
     categoryHierarchy: MaterialCategoryNode[];
@@ -86,6 +92,7 @@ export interface MaterialsCatalogViewProps {
 
 export function MaterialsCatalogView({
     materials,
+    allMaterials,
     units,
     categories,
     categoryHierarchy,
@@ -98,6 +105,14 @@ export function MaterialsCatalogView({
     const [activeTab, setActiveTab] = useState<"all" | "material" | "consumable">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    // Admin scope filter: 'system' shows only system materials, 'all' shows everything
+    const [adminScope, setAdminScope] = useState<'system' | 'all'>('system');
+
+    // Determine active source based on admin scope
+    const sourceMaterials = useMemo(() => {
+        if (!isAdminMode) return materials;
+        return adminScope === 'all' && allMaterials ? allMaterials : materials;
+    }, [isAdminMode, adminScope, materials, allMaterials]);
 
     // Material delete modal state
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -109,7 +124,7 @@ export function MaterialsCatalogView({
 
     // Optimistic updates for materials list
     const { optimisticItems, addItem, removeItem, updateItem } = useOptimisticList({
-        items: materials,
+        items: sourceMaterials,
         getItemId: (m) => m.id,
     });
 
@@ -641,15 +656,30 @@ export function MaterialsCatalogView({
                                 ? "Buscar materiales por nombre, categoría o unidad..."
                                 : "Buscar insumos por nombre, categoría o unidad..."}
                     leftActions={
-                        <ToolbarTabs
-                            value={activeTab}
-                            onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
-                            options={[
-                                { label: "Todos", value: "all", icon: LayoutGrid },
-                                { label: "Materiales", value: "material", icon: Package },
-                                { label: "Insumos", value: "consumable", icon: Wrench },
-                            ]}
-                        />
+                        <div className="flex items-center gap-3">
+                            <ToolbarTabs
+                                value={activeTab}
+                                onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
+                                options={[
+                                    { label: "Todos", value: "all", icon: LayoutGrid },
+                                    { label: "Materiales", value: "material", icon: Package },
+                                    { label: "Insumos", value: "consumable", icon: Wrench },
+                                ]}
+                            />
+                            {isAdminMode && allMaterials && (
+                                <>
+                                    <div className="h-5 w-px bg-border" />
+                                    <ToolbarTabs
+                                        value={adminScope}
+                                        onValueChange={(v) => setAdminScope(v as 'system' | 'all')}
+                                        options={[
+                                            { label: "Sistema", value: "system", icon: Shield },
+                                            { label: "Todos", value: "all", icon: Globe },
+                                        ]}
+                                    />
+                                </>
+                            )}
+                        </div>
                     }
                     actions={[
                         {
@@ -707,6 +737,7 @@ export function MaterialsCatalogView({
                                 key={material.id}
                                 material={material}
                                 canEdit={canEdit(material)}
+                                isAdminMode={isAdminMode}
                                 selected={multiSelect.isSelected(material.id)}
                                 onToggleSelect={multiSelect.toggle}
                                 onEdit={handleEditMaterial}

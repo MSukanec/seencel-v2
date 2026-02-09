@@ -51,8 +51,8 @@ export const GanttBar = React.memo(function GanttBar({
             <div
                 className="absolute group cursor-pointer"
                 style={{
-                    left: position.x - GANTT_MILESTONE_SIZE / 2,
-                    top: position.y + GANTT_BAR_VERTICAL_PADDING + (GANTT_BAR_HEIGHT - GANTT_MILESTONE_SIZE) / 2,
+                    left: -GANTT_MILESTONE_SIZE / 2,
+                    top: GANTT_BAR_VERTICAL_PADDING + (GANTT_BAR_HEIGHT - GANTT_MILESTONE_SIZE) / 2,
                 }}
                 onClick={() => onClick?.(item.id)}
             >
@@ -116,14 +116,14 @@ export const GanttBar = React.memo(function GanttBar({
         <div
             ref={barRef}
             className={cn(
-                "absolute group transition-all duration-100",
+                "absolute transition-all duration-100",
                 !readOnly && !item.isDisabled && "cursor-grab active:cursor-grabbing",
                 item.isDisabled && "opacity-50 cursor-not-allowed"
             )}
             style={{
-                left: position.x,
-                top: position.y + GANTT_BAR_VERTICAL_PADDING,
-                width: position.width,
+                left: 0,
+                right: 0,
+                top: GANTT_BAR_VERTICAL_PADDING,
                 height: GANTT_BAR_HEIGHT,
             }}
             onMouseEnter={() => setIsHovered(true)}
@@ -134,9 +134,6 @@ export const GanttBar = React.memo(function GanttBar({
             }}
             onClick={() => onClick?.(item.id)}
         >
-            {/* Invisible extended hover zone for connection dots */}
-            <div className="absolute -inset-x-7 inset-y-0 pointer-events-auto" />
-
             {/* Bar background */}
             <div
                 className={cn(
@@ -240,12 +237,12 @@ export const GanttBar = React.memo(function GanttBar({
                 <>
                     {/* Left connector */}
                     <div
-                        className="absolute -left-6 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-background cursor-crosshair z-30 transition-transform hover:scale-125"
+                        className="absolute -left-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-primary border-2 border-background cursor-crosshair z-30 transition-transform hover:scale-150 shadow-sm"
                         onMouseDown={(e) => handleConnectMouseDown(e, "left")}
                     />
                     {/* Right connector */}
                     <div
-                        className="absolute -right-6 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-background cursor-crosshair z-30 transition-transform hover:scale-125"
+                        className="absolute -right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-primary border-2 border-background cursor-crosshair z-30 transition-transform hover:scale-150 shadow-sm"
                         onMouseDown={(e) => handleConnectMouseDown(e, "right")}
                     />
                 </>

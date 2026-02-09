@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { completeOnboardingStep } from "@/features/onboarding/actions";
@@ -165,7 +167,7 @@ export async function createProject(formData: FormData) {
 
     if (insertError) {
         console.error("Create Project Error:", insertError);
-        return { error: insertError.message };
+        return { error: sanitizeError(insertError) };
     }
 
     // Insert empty project_data (Types/Modalities removed from here)
@@ -357,7 +359,7 @@ export async function updateProject(formData: FormData) {
         return { success: true };
     } catch (e: any) {
         console.error("Update Project Error:", e);
-        return { error: e.message || "Failed to update project" };
+        return { error: sanitizeError(e) };
     }
 }
 
@@ -379,7 +381,7 @@ export async function deleteProject(projectId: string) {
         return { success: true };
     } catch (e: any) {
         console.error("Delete Project Error:", e);
-        return { error: e.message || "Failed to delete project" };
+        return { error: sanitizeError(e) };
     }
 }
 
@@ -468,7 +470,7 @@ export async function createProjectType(
 
     if (error) {
         console.error("Error creating project type:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath('/organization/projects');
@@ -491,7 +493,7 @@ export async function updateProjectType(
 
     if (error) {
         console.error("Error updating project type:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath('/organization/projects');
@@ -524,7 +526,7 @@ export async function deleteProjectType(id: string, replacementId?: string) {
         return { success: true };
     } catch (e: any) {
         console.error("Error deleting project type:", e);
-        return { error: e.message };
+        return { error: sanitizeError(e) };
     }
 }
 
@@ -596,7 +598,7 @@ export async function createProjectModality(
 
     if (error) {
         console.error("Error creating project modality:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath('/organization/projects');
@@ -619,7 +621,7 @@ export async function updateProjectModality(
 
     if (error) {
         console.error("Error updating project modality:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath('/organization/projects');
@@ -652,7 +654,7 @@ export async function deleteProjectModality(id: string, replacementId?: string) 
         return { success: true };
     } catch (e: any) {
         console.error("Error deleting project modality:", e);
-        return { error: e.message };
+        return { error: sanitizeError(e) };
     }
 }
 

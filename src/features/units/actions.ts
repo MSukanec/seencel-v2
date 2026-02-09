@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -41,7 +43,7 @@ export async function createUnit(formData: FormData) {
         if (error.code === "23505") {
             return { success: false, error: "Ya existe una unidad con ese nombre" };
         }
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
@@ -87,7 +89,7 @@ export async function updateUnit(formData: FormData) {
 
     if (error) {
         console.error("Error updating unit:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
@@ -107,7 +109,7 @@ export async function deleteUnit(id: string) {
 
     if (error) {
         console.error("Error deleting unit:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
@@ -146,7 +148,7 @@ export async function createUnitPresentation(formData: FormData) {
         if (error.code === "23505") {
             return { success: false, error: "Ya existe una presentación con ese nombre para esta unidad" };
         }
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
@@ -178,7 +180,7 @@ export async function updateUnitPresentation(formData: FormData) {
 
     if (error) {
         console.error("Error updating unit presentation:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");
@@ -195,7 +197,7 @@ export async function deleteUnitPresentation(id: string) {
 
     if (error) {
         console.error("Error deleting unit presentation:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/[locale]/(dashboard)/organization/catalog", "page");

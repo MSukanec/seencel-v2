@@ -31,9 +31,14 @@ Ejemplo: "Quiero notificar al usuario cuando su proyecto sea aprobado".
 ### Paso 2: Crear el Trigger (SQL)
 Ejecuta esto en tu editor SQL (Supabase). Usa esta plantilla exacta:
 
+> ⚠️ **Convención de Naming OBLIGATORIA:**
+> - **Función:** `notify_<evento>()` (ej: `notify_project_approved`, `notify_system_error`)
+> - **Trigger:** `trg_notify_<evento>` (ej: `trg_notify_project_approved`)
+> - ❌ **NUNCA** usar `trigger_notify_*` como nombre de función
+
 ```sql
 -- 1. Función del Trigger
-CREATE OR REPLACE FUNCTION public.trigger_notify_project_approved()
+CREATE OR REPLACE FUNCTION public.notify_project_approved()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Validar condición (ej. status cambió a approved)
@@ -61,7 +66,7 @@ DROP TRIGGER IF EXISTS trg_notify_project_approved ON public.projects;
 CREATE TRIGGER trg_notify_project_approved
 AFTER INSERT OR UPDATE ON public.projects
 FOR EACH ROW
-EXECUTE FUNCTION public.trigger_notify_project_approved();
+EXECUTE FUNCTION public.notify_project_approved();
 ```
 
 ### Paso 3: Tipos de Notificaciones

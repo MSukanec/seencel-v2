@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { LaborPaymentView, LaborCategory, LaborType, LaborTypeWithPrice, ProjectLabor, ProjectLaborView } from "./types";
@@ -165,7 +167,7 @@ export async function upsertLaborPrice(input: {
 
     if (error) {
         console.error('Error upserting labor price:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/organization/catalog', 'page');
@@ -197,7 +199,7 @@ export async function createLaborCategory(input: CreateLaborCategoryInput): Prom
 
     if (error) {
         console.error('Error creating labor category:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/project/[projectId]/labor', 'page');
@@ -226,7 +228,7 @@ export async function updateLaborCategory(input: UpdateLaborCategoryInput): Prom
 
     if (error) {
         console.error('Error updating labor category:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/project/[projectId]/labor', 'page');
@@ -244,7 +246,7 @@ export async function deleteLaborCategory(id: string): Promise<{ success: boolea
 
     if (error) {
         console.error('Error deleting labor category:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/project/[projectId]/labor', 'page');
@@ -279,7 +281,7 @@ export async function createSystemLaborCategory(input: CreateSystemLaborCategory
 
     if (error) {
         console.error('Error creating system labor category:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -310,7 +312,7 @@ export async function updateSystemLaborCategory(input: UpdateSystemLaborCategory
 
     if (error) {
         console.error('Error updating system labor category:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -331,7 +333,7 @@ export async function deleteSystemLaborCategory(id: string): Promise<{ success: 
 
     if (error) {
         console.error('Error deleting system labor category:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -365,7 +367,7 @@ export async function createSystemLaborLevel(input: CreateSystemLaborLevelInput)
 
     if (error) {
         console.error('Error creating system labor level:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -396,7 +398,7 @@ export async function updateSystemLaborLevel(input: UpdateSystemLaborLevelInput)
 
     if (error) {
         console.error('Error updating system labor level:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -417,7 +419,7 @@ export async function deleteSystemLaborLevel(id: string): Promise<{ success: boo
 
     if (error) {
         console.error('Error deleting system labor level:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -451,7 +453,7 @@ export async function createSystemLaborRole(input: CreateSystemLaborRoleInput): 
 
     if (error) {
         console.error('Error creating system labor role:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -482,7 +484,7 @@ export async function updateSystemLaborRole(input: UpdateSystemLaborRoleInput): 
 
     if (error) {
         console.error('Error updating system labor role:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -503,7 +505,7 @@ export async function deleteSystemLaborRole(id: string): Promise<{ success: bool
 
     if (error) {
         console.error('Error deleting system labor role:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -546,7 +548,7 @@ export async function createSystemLaborType(input: CreateSystemLaborTypeInput): 
 
     if (error) {
         console.error('Error creating system labor type:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -581,7 +583,7 @@ export async function updateSystemLaborType(input: UpdateSystemLaborTypeInput): 
 
     if (error) {
         console.error('Error updating system labor type:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -602,7 +604,7 @@ export async function deleteSystemLaborType(id: string): Promise<{ success: bool
 
     if (error) {
         console.error('Error deleting system labor type:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/admin/catalog', 'page');
@@ -680,7 +682,7 @@ export async function createProjectLabor(input: CreateProjectLaborInput): Promis
 
     if (error) {
         console.error('Error creating project labor:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${input.project_id}/labor`);
@@ -711,7 +713,7 @@ export async function updateProjectLabor(input: UpdateProjectLaborInput): Promis
 
     if (error) {
         console.error('Error updating project labor:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${input.project_id}/labor`);
@@ -728,7 +730,7 @@ export async function deleteProjectLabor(id: string, projectId: string): Promise
 
     if (error) {
         console.error('Error deleting project labor:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${projectId}/labor`);
@@ -807,7 +809,7 @@ export async function createLaborPayment(data: {
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath(`/project/${data.project_id}/labor`);
     return newPayment;
 }
@@ -841,7 +843,7 @@ export async function updateLaborPayment(id: string, data: {
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath(`/project/${projectId}/labor`);
     return updatedPayment;
 }
@@ -856,7 +858,7 @@ export async function deleteLaborPayment(id: string, projectId: string) {
         })
         .eq('id', id);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath(`/project/${projectId}/labor`);
     return true;
 }

@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -342,7 +344,7 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
         if (error.code === "23505") {
             return { error: "Ya existe un material con ese nombre" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     // Fetch full material data from view for optimistic update
@@ -413,7 +415,7 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
         if (error.code === "23505") {
             return { error: "Ya existe un material con ese nombre" };
         }
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     // Fetch full material data from view for optimistic update
@@ -475,7 +477,7 @@ export async function deleteMaterial(id: string, replacementId: string | null, i
 
     if (error) {
         console.error("Error deleting material:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/catalog");
@@ -511,7 +513,7 @@ export async function deleteMaterialsBulk(ids: string[], isAdminMode: boolean = 
 
     if (error) {
         console.error("Error bulk deleting materials:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/catalog");
@@ -558,7 +560,7 @@ export async function createPurchaseOrder(input: {
 
     if (orderError || !order) {
         console.error("Error creating purchase order:", orderError);
-        return { error: orderError?.message || "Error al crear la orden de compra" };
+        return { error: sanitizeError(orderError) || "Error al crear la orden de compra" };
     }
 
     // 2. Create items if any
@@ -634,7 +636,7 @@ export async function updatePurchaseOrder(input: {
 
     if (updateError) {
         console.error("Error updating purchase order:", updateError);
-        return { error: updateError.message };
+        return { error: sanitizeError(updateError) };
     }
 
     // 3. Update items if provided (delete all and re-insert)
@@ -716,7 +718,7 @@ export async function updatePurchaseOrderStatus(
 
     if (updateError) {
         console.error("Error updating PO status:", updateError);
-        return { error: updateError.message };
+        return { error: sanitizeError(updateError) };
     }
 
     revalidatePath('/project');
@@ -754,7 +756,7 @@ export async function deletePurchaseOrder(orderId: string) {
 
     if (error) {
         console.error("Error deleting purchase order:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath('/project');
@@ -798,7 +800,7 @@ export async function createMaterialType(data: Partial<MaterialType>) {
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/project');
     return newType;
 }
@@ -815,7 +817,7 @@ export async function updateMaterialType(id: string, data: Partial<MaterialType>
         .select()
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/project');
     return updatedType;
 }
@@ -831,7 +833,7 @@ export async function deleteMaterialType(id: string) {
         })
         .eq('id', id);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
     revalidatePath('/project');
     return true;
 }
@@ -888,7 +890,7 @@ export async function upsertMaterialPrice(input: {
 
     if (error) {
         console.error("Error upserting material price:", error);
-        throw new Error("Error al guardar el precio: " + error.message);
+        throw new Error("Error al guardar el precio: " + sanitizeError(error));
     }
 
     revalidatePath('/organization/catalog');

@@ -1,6 +1,8 @@
 
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -609,7 +611,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
     } catch (e) {
         console.error("Critical error in post-payment operations:", e);
         rollbackNeeded = true;
-        rollbackReason = e instanceof Error ? e.message : 'Unknown error';
+        rollbackReason = e instanceof Error ? sanitizeError(e) : 'Unknown error';
     }
 
     // === ROLLBACK IF NEEDED ===

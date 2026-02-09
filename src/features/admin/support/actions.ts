@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -64,7 +66,7 @@ export async function getAllUsers(): Promise<{ success: boolean; users?: UserBas
             .order("email");
 
         if (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         return {
@@ -77,7 +79,7 @@ export async function getAllUsers(): Promise<{ success: boolean; users?: UserBas
         };
     } catch (error) {
         console.error("Error en getAllUsers:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -102,7 +104,7 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
             .eq("user_id", userId);
 
         if (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         return {
@@ -115,7 +117,7 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
         };
     } catch (error) {
         console.error("Error en getUserOrganizations:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -182,7 +184,7 @@ export async function cleanupTestPurchase(email: string, orgId: string): Promise
             console.error("Error en RPC admin_cleanup_test_purchase:", error);
             return {
                 success: false,
-                message: `Error RPC: ${error.message}`
+                message: `Error RPC: ${sanitizeError(error)}`
             };
         }
 
@@ -210,7 +212,7 @@ export async function cleanupTestPurchase(email: string, orgId: string): Promise
         console.error("Error en cleanupTestPurchase:", error);
         return {
             success: false,
-            message: `Error: ${error instanceof Error ? error.message : "Error desconocido"}`
+            message: `Error: ${sanitizeError(error)}`
         };
     }
 }
@@ -418,7 +420,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
         console.error("Error en getTestUserStatus:", error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : "Error desconocido"
+            error: sanitizeError(error)
         };
     }
 }
@@ -461,7 +463,7 @@ export async function getSystemErrors(hours: number = 24): Promise<{ success: bo
 
         if (error) {
             console.error("Error fetching system_error_logs:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         const errors: SystemError[] = (data || []).map((e: Record<string, unknown>) => ({
@@ -480,7 +482,7 @@ export async function getSystemErrors(hours: number = 24): Promise<{ success: bo
         console.error("Error en getSystemErrors:", error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : "Error desconocido"
+            error: sanitizeError(error)
         };
     }
 }
@@ -517,7 +519,7 @@ export async function getSupportChats(): Promise<{ success: boolean; chats?: Sup
 
         if (error) {
             console.error("Error fetching support messages:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         // Agrupar por user_id
@@ -571,7 +573,7 @@ export async function getSupportChats(): Promise<{ success: boolean; chats?: Sup
         return { success: true, chats };
     } catch (error) {
         console.error("Error en getSupportChats:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -590,7 +592,7 @@ export async function getChatMessages(userId: string): Promise<{ success: boolea
 
         if (error) {
             console.error("Error fetching chat messages:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         const messages: SupportMessage[] = (data || []).map((m: any) => ({
@@ -606,7 +608,7 @@ export async function getChatMessages(userId: string): Promise<{ success: boolea
         return { success: true, messages };
     } catch (error) {
         console.error("Error en getChatMessages:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -635,14 +637,14 @@ export async function sendAdminMessage(userId: string, message: string): Promise
 
         if (error) {
             console.error("Error sending admin message:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         revalidatePath("/admin/support");
         return { success: true };
     } catch (error) {
         console.error("Error en sendAdminMessage:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -662,14 +664,14 @@ export async function markChatAsRead(userId: string): Promise<{ success: boolean
 
         if (error) {
             console.error("Error marking chat as read:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         revalidatePath("/admin/support");
         return { success: true };
     } catch (error) {
         console.error("Error en markChatAsRead:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 
@@ -689,7 +691,7 @@ export async function getUnreadChatsCount(): Promise<{ success: boolean; count?:
 
         if (error) {
             console.error("Error counting unread chats:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         // Contar usuarios únicos con mensajes sin leer
@@ -698,7 +700,7 @@ export async function getUnreadChatsCount(): Promise<{ success: boolean; count?:
         return { success: true, count: uniqueUsers.size };
     } catch (error) {
         console.error("Error en getUnreadChatsCount:", error);
-        return { success: false, error: error instanceof Error ? error.message : "Error" };
+        return { success: false, error: sanitizeError(error) };
     }
 }
 

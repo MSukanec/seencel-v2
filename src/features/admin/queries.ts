@@ -313,6 +313,10 @@ export interface SystemMaterial {
     is_system: boolean;
     is_deleted: boolean;
     created_at: string | null;
+    // Organization info (for admin "Todos" scope)
+    organization_id: string | null;
+    organization_name: string | null;
+    organization_logo_path: string | null;
 }
 
 export interface MaterialCategory {
@@ -365,6 +369,56 @@ export async function getSystemMaterials(): Promise<SystemMaterial[]> {
         is_system: m.is_system,
         is_deleted: m.is_deleted,
         created_at: m.created_at,
+        organization_id: null,
+        organization_name: null,
+        organization_logo_path: null,
+    }));
+}
+
+/**
+ * Get ALL materials (system + org) for admin catalog - allows admins to see everything
+ */
+export async function getAllMaterialsAdmin(): Promise<SystemMaterial[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('materials')
+        .select(`
+            id,
+            name,
+            unit_id,
+            category_id,
+            material_type,
+            is_system,
+            is_deleted,
+            created_at,
+            organization_id,
+            units!materials_unit_id_fkey (name),
+            material_categories (name),
+            organizations (name, logo_path)
+        `)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching all materials for admin:", error);
+        return [];
+    }
+
+    return (data || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        unit_id: m.unit_id,
+        unit_name: m.units?.name || null,
+        category_id: m.category_id,
+        category_name: m.material_categories?.name || null,
+        material_type: m.material_type || 'material',
+        is_system: m.is_system,
+        is_deleted: m.is_deleted,
+        created_at: m.created_at,
+        organization_id: m.organization_id || null,
+        organization_name: m.organizations?.name || null,
+        organization_logo_path: m.organizations?.logo_path || null,
     }));
 }
 

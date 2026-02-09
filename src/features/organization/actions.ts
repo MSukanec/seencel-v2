@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { OrganizationPreferences, OrganizationCurrency } from "@/types/organization";
+import { sanitizeError } from "@/lib/error-utils";
 
 export async function updateInsightConfig(organizationId: string, newConfig: any) {
     const supabase = await createClient();
@@ -26,7 +27,7 @@ export async function updateInsightConfig(organizationId: string, newConfig: any
         .update({ insight_config: updatedSettings })
         .eq('organization_id', organizationId);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(sanitizeError(error));
 
     revalidatePath('/dashboard/organization/settings');
     return { success: true };
@@ -116,7 +117,7 @@ export async function createOrganization(organizationName: string): Promise<{ su
 
     if (rpcError) {
         console.error("Error creating organization:", rpcError);
-        return { success: false, error: rpcError.message };
+        return { success: false, error: sanitizeError(rpcError) };
     }
 
     if (!newOrgId) {

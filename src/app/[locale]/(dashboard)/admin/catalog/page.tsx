@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskKinds, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
-import { getSystemMaterials, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor, getSystemUnits, getSystemUnitCategories } from "@/features/admin/queries";
+import { getSystemMaterials, getAllMaterialsAdmin, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor, getSystemUnits, getSystemUnitCategories } from "@/features/admin/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
 import { TasksParametersView } from "@/features/tasks/views/tasks-parameters-view";
@@ -63,6 +63,7 @@ export default async function AdminCatalogPage() {
             elementsResult,
             elementParameterLinksResult,
             systemMaterials,
+            allMaterials,
             materialCategories,
             materialUnits,
             categoryHierarchy,
@@ -82,6 +83,7 @@ export default async function AdminCatalogPage() {
             getAllElements(), // Get all elements for sidebar
             getElementParameterLinks(), // Get element-parameter links for filtering
             getSystemMaterials(),
+            getAllMaterialsAdmin(),
             getMaterialCategories(),
             getUnitsForMaterials(),
             getMaterialCategoriesHierarchy(),
@@ -188,16 +190,15 @@ export default async function AdminCatalogPage() {
                     </TabsContent>
 
                     <TabsContent value="materials" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <MaterialsCatalogView
-                                materials={materialsForView}
-                                units={unitsForView}
-                                categories={categoriesForView}
-                                categoryHierarchy={categoryHierarchyForView}
-                                orgId="" // No org - admin mode
-                                isAdminMode={true}
-                            />
-                        </ContentLayout>
+                        <MaterialsCatalogView
+                            materials={materialsForView}
+                            allMaterials={allMaterials}
+                            units={unitsForView}
+                            categories={categoriesForView}
+                            categoryHierarchy={categoryHierarchyForView}
+                            orgId="" // No org - admin mode
+                            isAdminMode={true}
+                        />
                     </TabsContent>
 
                     <TabsContent value="divisions" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">

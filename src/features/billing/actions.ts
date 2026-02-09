@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -68,7 +70,7 @@ export async function updateBillingProfile(formData: FormData) {
 
     if (result.error) {
         console.error("Error updating billing profile:", result.error);
-        return { success: false, error: result.error.message };
+        return { success: false, error: sanitizeError(result.error) };
     }
 
     revalidatePath('/[locale]/settings', 'page');

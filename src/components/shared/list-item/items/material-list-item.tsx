@@ -4,13 +4,14 @@ import { memo, useCallback } from "react";
 import { ListItem } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Shield } from "lucide-react";
 
 // ============================================================================
 // Types
@@ -37,6 +38,9 @@ export interface MaterialListItemData {
     org_unit_price?: number | null;
     org_price_currency_id?: string | null;
     org_price_valid_from?: string | null;
+    // Organization info (admin mode)
+    organization_name?: string | null;
+    organization_logo_path?: string | null;
 }
 
 export interface MaterialListItemProps {
@@ -46,6 +50,8 @@ export interface MaterialListItemProps {
     canEdit?: boolean;
     /** Whether this item is selected */
     selected?: boolean;
+    /** Whether we're in admin mode (shows org info) */
+    isAdminMode?: boolean;
     /** Callback when selection is toggled */
     onToggleSelect?: (id: string) => void;
     /** Callback when edit is clicked - uses any to allow extended types */
@@ -62,6 +68,7 @@ export const MaterialListItem = memo(function MaterialListItem({
     material,
     canEdit = false,
     selected = false,
+    isAdminMode = false,
     onToggleSelect,
     onEdit,
     onDelete
@@ -127,6 +134,27 @@ export const MaterialListItem = memo(function MaterialListItem({
                         <Badge variant="secondary" className="text-xs">
                             {material.category_name}
                         </Badge>
+                    )}
+                    {/* Admin mode: show organization info or system badge */}
+                    {isAdminMode && (
+                        material.is_system ? (
+                            <Badge variant="outline" className="text-xs gap-1 border-amber-500/30 text-amber-500">
+                                <Shield className="h-3 w-3" />
+                                Sistema
+                            </Badge>
+                        ) : material.organization_name ? (
+                            <Badge variant="outline" className="text-xs gap-1.5 pl-1">
+                                <Avatar className="h-4 w-4">
+                                    {material.organization_logo_path && (
+                                        <AvatarImage src={material.organization_logo_path} alt={material.organization_name} />
+                                    )}
+                                    <AvatarFallback className="text-[8px]">
+                                        {material.organization_name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                {material.organization_name}
+                            </Badge>
+                        ) : null
                     )}
                 </ListItem.Badges>
             </ListItem.Content>

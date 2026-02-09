@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -73,7 +75,7 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     if (error) {
         console.error("Error creating bank transfer payment:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     // ============================================================
@@ -250,7 +252,7 @@ export async function uploadTransferReceipt(formData: FormData) {
 
     if (uploadError) {
         console.error("Error uploading transfer receipt:", uploadError);
-        return { success: false, error: uploadError.message };
+        return { success: false, error: sanitizeError(uploadError) };
     }
 
     // Get signed URL (valid for 10 years for admin review)

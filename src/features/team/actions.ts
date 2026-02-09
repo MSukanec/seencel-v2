@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { SeatStatus, PurchaseSeatsInput } from "./types";
@@ -266,7 +268,7 @@ export async function revokeInvitationAction(
 
     if (error) {
         console.error('Error revoking invitation:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath('/[locale]/organization', 'layout');
@@ -342,7 +344,7 @@ export async function resendInvitationAction(
 
     if (updateError) {
         console.error('Error resending invitation:', updateError);
-        return { success: false, error: updateError.message };
+        return { success: false, error: sanitizeError(updateError) };
     }
 
     // Re-send email
@@ -408,7 +410,7 @@ export async function acceptInvitationAction(
 
     if (error) {
         console.error('Error accepting invitation:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     const res = result as {
@@ -521,7 +523,7 @@ export async function toggleRolePermission(
                 organization_id: organizationId
             });
 
-        if (error && !error.message.includes('duplicate')) {
+        if (error && !sanitizeError(error).includes('duplicate')) {
             console.error('Error adding role permission:', error);
             throw new Error('Failed to add permission');
         }
@@ -744,7 +746,7 @@ export async function getOrganizationSeatStatus(
 
     if (error) {
         console.error('Error getting seat status:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     return { success: true, data: data as SeatStatus };
@@ -797,7 +799,7 @@ export async function purchaseMemberSeats(
 
     if (error) {
         console.error('Error purchasing seats:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     const status = (result as { status: string })?.status;

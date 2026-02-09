@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { ConstructionTaskFormData, ConstructionTaskStatus } from "./types";
@@ -40,7 +42,7 @@ export async function createConstructionTask(
 
     if (error) {
         console.error("Error creating construction task:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${projectId}/construction-tasks`);
@@ -80,7 +82,7 @@ export async function updateConstructionTask(
 
     if (error) {
         console.error("Error updating construction task:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${projectId}/construction-tasks`);
@@ -114,7 +116,7 @@ export async function updateConstructionTaskStatus(
 
     if (error) {
         console.error("Error updating construction task status:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${projectId}/construction-tasks`);
@@ -137,7 +139,7 @@ export async function deleteConstructionTask(taskId: string, projectId: string) 
 
     if (error) {
         console.error("Error deleting construction task:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${projectId}/construction-tasks`);
@@ -172,7 +174,7 @@ export async function createConstructionDependency(
 
     if (error) {
         console.error("Error creating construction dependency:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     return { success: true, id: data.id };
@@ -191,7 +193,7 @@ export async function deleteConstructionDependency(dependencyId: string) {
 
     if (error) {
         console.error("Error deleting construction dependency:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     return { success: true };
@@ -224,7 +226,7 @@ export async function upsertProjectSettings(
 
     if (error) {
         console.error("Error upserting project settings:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath(`/project/${projectId}/construction-tasks`);

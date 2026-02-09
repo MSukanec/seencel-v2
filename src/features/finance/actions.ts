@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 
 export interface MovementAttachment {
@@ -266,7 +268,7 @@ export async function createCurrencyExchange(
         console.error("Error creating OUT movement:", outError);
         // Rollback: delete the operation
         await supabase.from('financial_operations').delete().eq('id', operation.id);
-        return { success: false, error: `Error al crear movimiento de salida: ${outError.message}` };
+        return { success: false, error: sanitizeError(outError) };
     }
 
     // 3. Create the IN movement (compro)

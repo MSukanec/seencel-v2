@@ -30,6 +30,7 @@ import {
     Handshake,
     Landmark,
     LayoutTemplate,
+    MessageCircle,
 } from "lucide-react";
 import { NavigationContext } from "@/stores/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -292,10 +293,11 @@ export function useSidebarNavigation() {
                     { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
                     { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
                     { title: 'Plataforma', href: '/admin/system', icon: Monitor },
+                    { title: 'Monitoreo', href: '/admin/monitoring', icon: HeartPulse },
                     { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
                     { title: 'Plantillas', href: '/admin/emails', icon: LayoutTemplate },
                     { title: 'Changelog', href: '/admin/changelog', icon: FileText },
-                    { title: 'Soporte', href: '/admin/support', icon: Wrench },
+                    { title: 'Soporte', href: '/admin/support', icon: MessageCircle },
                     { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },
                 ];
             default:

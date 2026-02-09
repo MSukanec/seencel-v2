@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { optimizeImage } from "@/lib/image-optimizer";
@@ -409,6 +411,6 @@ export async function uploadPdfLogo(formData: FormData): Promise<{
 
     } catch (error: any) {
         console.error("Upload PDF Logo Error:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: sanitizeError(error) };
     }
 }

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { sanitizeError } from "@/lib/error-utils";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -24,7 +25,7 @@ export async function sendEmail({ to, subject, react, from }: SendEmailOptions):
 
         if (error) {
             console.error("Resend Error:", error);
-            return { success: false, error: error.message };
+            return { success: false, error: sanitizeError(error) };
         }
 
         return { success: true, id: data?.id };
@@ -32,7 +33,7 @@ export async function sendEmail({ to, subject, react, from }: SendEmailOptions):
         console.error("Email Send Error:", error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : "Unknown error"
+            error: sanitizeError(error)
         };
     }
 }

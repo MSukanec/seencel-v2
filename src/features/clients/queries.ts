@@ -1,5 +1,6 @@
 
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeError } from "@/lib/error-utils";
 import {
     ProjectClientView,
     ClientFinancialSummary,
@@ -673,7 +674,7 @@ export async function getMyClientPortals(): Promise<{ data: ProjectPortal[]; err
 
     if (error) {
         console.error("Error fetching client portals:", error);
-        return { data: [], error: error.message };
+        return { data: [], error: sanitizeError(error) };
     }
 
     // Group by project for better UI

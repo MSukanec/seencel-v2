@@ -1,5 +1,7 @@
 "use server";
 
+
+import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserOrganizations } from "@/features/organization/queries";
@@ -62,7 +64,7 @@ export async function createQuote(formData: FormData) {
 
     if (error) {
         console.error("Error creating quote:", error);
-        return { error: error.message, data: null };
+        return { error: sanitizeError(error), data: null };
     }
 
     revalidatePath("/organization/quotes");
@@ -144,7 +146,7 @@ export async function createChangeOrder(
 
     if (error) {
         console.error("Error creating change order:", error);
-        return { error: error.message, data: null };
+        return { error: sanitizeError(error), data: null };
     }
 
     revalidatePath("/organization/quotes");
@@ -216,7 +218,7 @@ export async function updateQuote(formData: FormData) {
 
     if (error) {
         console.error("Error updating quote:", error);
-        return { error: error.message, data: null };
+        return { error: sanitizeError(error), data: null };
     }
 
     revalidatePath("/organization/quotes");
@@ -245,7 +247,7 @@ export async function deleteQuote(id: string) {
 
     if (error) {
         console.error("Error deleting quote:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/quotes");
@@ -279,7 +281,7 @@ export async function updateQuoteStatus(id: string, status: string) {
 
     if (error) {
         console.error("Error updating quote status:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/quotes");
@@ -336,7 +338,7 @@ export async function approveQuote(quoteId: string) {
         console.error("Error approving quote:", error);
         return {
             success: false,
-            error: error.message
+            error: sanitizeError(error)
         };
     }
 
@@ -429,7 +431,7 @@ export async function duplicateQuote(id: string) {
 
     if (createError) {
         console.error("Error duplicating quote:", createError);
-        return { error: createError.message, data: null };
+        return { error: sanitizeError(createError), data: null };
     }
 
     // Duplicate quote_items
@@ -518,7 +520,7 @@ export async function createQuoteItem(formData: FormData) {
 
     if (error) {
         console.error("Error creating quote item:", error);
-        return { error: error.message, data: null };
+        return { error: sanitizeError(error), data: null };
     }
 
     revalidatePath(`/organization/quotes/${quote_id}`);
@@ -562,7 +564,7 @@ export async function updateQuoteItem(id: string, formData: FormData) {
 
     if (error) {
         console.error("Error updating quote item:", error);
-        return { error: error.message, data: null };
+        return { error: sanitizeError(error), data: null };
     }
 
     // Revalidate both list and detail pages (org and project level)
@@ -596,7 +598,7 @@ export async function deleteQuoteItem(id: string, quoteId?: string) {
 
     if (error) {
         console.error("Error deleting quote item:", error);
-        return { error: error.message };
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/organization/quotes");
@@ -656,7 +658,7 @@ export async function convertQuoteToContract(quoteId: string) {
 
     if (updateError) {
         console.error("Error converting to contract:", updateError);
-        return { error: updateError.message };
+        return { error: sanitizeError(updateError) };
     }
 
     revalidatePath("/organization/quotes");
@@ -712,7 +714,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
 
     if (projectError || !project) {
         console.error("Error creating project:", projectError);
-        return { error: projectError?.message || "Error al crear el proyecto", data: null };
+        return { error: sanitizeError(projectError) || "Error al crear el proyecto", data: null };
     }
 
     // Create project_data with description if exists
@@ -739,7 +741,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
 
     if (updateError) {
         console.error("Error updating quote:", updateError);
-        return { error: updateError.message, data: null };
+        return { error: sanitizeError(updateError), data: null };
     }
 
     // Also update quote_items to link to project
@@ -880,7 +882,7 @@ export async function generateCommitmentsFromQuote(
 
     if (error) {
         console.error("Error creating commitments:", error);
-        return { error: error.message, data: null };
+        return { error: sanitizeError(error), data: null };
     }
 
     revalidatePath(`/project/${quote.project_id}/clients`);
