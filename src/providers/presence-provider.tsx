@@ -58,76 +58,160 @@ function getOrCreateSessionId(): string {
 }
 
 /**
- * Derives a readable view name from the pathname
+ * Derives a readable view name from the pathname.
+ * Uses ordered prefix matching (most specific first) to ensure
+ * deep routes are correctly identified before shallow ones.
  */
 function deriveViewName(pathname: string): string {
-    // Remove locale prefix (e.g., /es/dashboard -> /dashboard)
+    // Remove locale prefix (e.g., /es/hub -> /hub)
     const cleanPath = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '');
 
-    // Map common paths to readable names
-    const pathMap: Record<string, string> = {
+    // ================================================================
+    // 1. Exact match map (static routes without dynamic segments)
+    // ================================================================
+    const exactMap: Record<string, string> = {
         '': 'Hub',
         '/': 'Hub',
-        '/organization': 'Organization',
-        '/organization/team': 'Team',
-        '/organization/roles': 'Roles',
-        '/pricing': 'Pricing',
-        '/projects': 'Projects',
-        '/contacts': 'Contacts',
-        '/quotes': 'Quotes',
-        '/reports': 'Reports',
-        '/insights': 'Insights',
-        '/preferences': 'Preferences',
-        '/community': 'Community',
-        '/finance': 'Finance',
-        '/materials': 'Materials',
-        // Academy general pages
-        '/academy': 'Academia',
-        '/academy/courses': 'Academia - Catálogo',
+        '/hub': 'Hub',
+        '/settings': 'Preferencias',
+        '/maintenance': 'Mantenimiento',
+        '/docs': 'Documentación',
+
+        // ── Organization ──
+        '/organization': 'Organización',
+        '/organization/catalog': 'Catálogo de Tareas',
+        '/organization/contacts': 'Contactos',
+        '/organization/finance': 'Finanzas',
+        '/organization/general-costs': 'Gastos Generales',
+        '/organization/capital': 'Capital',
+        '/organization/identity': 'Identidad',
+        '/organization/planner': 'Planificador',
+        '/organization/projects': 'Proyectos',
+        '/organization/quotes': 'Presupuestos',
+        '/organization/reports': 'Reportes',
+        '/organization/files': 'Archivos',
+        '/organization/settings': 'Configuración',
+        '/organization/advanced': 'Avanzado',
+
+        // ── Academy ──
         '/academy/my-courses': 'Academia - Mis Cursos',
+
+        // ── Community ──
+        '/community/founders': 'Comunidad - Fundadores',
+        '/community/map': 'Comunidad - Mapa',
+
+        // ── Checkout ──
+        '/checkout': 'Checkout',
+        '/checkout/success': 'Checkout - Éxito',
+        '/checkout/pending': 'Checkout - Pendiente',
+        '/checkout/failure': 'Checkout - Error',
+
+        // ── Admin ──
+        '/admin': 'Admin - Dashboard',
+        '/admin/academy': 'Admin - Academia',
+        '/admin/audit-logs': 'Admin - Auditoría',
+        '/admin/billing': 'Admin - Facturación',
+        '/admin/catalog': 'Admin - Catálogo',
+        '/admin/changelog': 'Admin - Changelog',
+        '/admin/directory': 'Admin - Directorio',
+        '/admin/emails': 'Admin - Emails',
+        '/admin/feedback': 'Admin - Feedback',
+        '/admin/finance': 'Admin - Finanzas',
+        '/admin/hub-content': 'Admin - Contenido Hub',
+        '/admin/organizations': 'Admin - Organizaciones',
+        '/admin/settings': 'Admin - Configuración',
+        '/admin/support': 'Admin - Soporte',
+        '/admin/system': 'Admin - Sistema',
+        '/admin/users': 'Admin - Usuarios',
     };
 
-    // Check for exact match
-    if (pathMap[cleanPath]) {
-        return pathMap[cleanPath];
+    if (exactMap[cleanPath]) {
+        return exactMap[cleanPath];
     }
 
-    // === SPECIAL: Extract course name from academy paths ===
-    // Patterns: /academy/courses/[slug], /academy/my-courses/[slug]/[tab]
-    const coursePatterns = [
-        /^\/academy\/courses\/([^\/]+)/,
-        /^\/academy\/my-courses\/([^\/]+)/,
+    // ================================================================
+    // 2. Dynamic route patterns (ordered most specific first)
+    // ================================================================
+    const dynamicPatterns: Array<{ pattern: RegExp; label: string | ((match: RegExpMatchArray) => string) }> = [
+        // ── Academy: course detail with tab ──
+        { pattern: /^\/academy\/my-courses\/([^/]+)\/player$/, label: (m) => `Curso: ${formatCourseSlug(m[1])} - Reproductor` },
+        { pattern: /^\/academy\/my-courses\/([^/]+)\/content$/, label: (m) => `Curso: ${formatCourseSlug(m[1])} - Contenido` },
+        { pattern: /^\/academy\/my-courses\/([^/]+)\/forum$/, label: (m) => `Curso: ${formatCourseSlug(m[1])} - Foro` },
+        { pattern: /^\/academy\/my-courses\/([^/]+)\/notes$/, label: (m) => `Curso: ${formatCourseSlug(m[1])} - Notas` },
+        { pattern: /^\/academy\/my-courses\/([^/]+)/, label: (m) => `Curso: ${formatCourseSlug(m[1])}` },
+
+        // ── Admin: course detail with tab ──
+        { pattern: /^\/admin\/academy\/([^/]+)\/content$/, label: 'Admin - Curso: Contenido' },
+        { pattern: /^\/admin\/academy\/([^/]+)\/forum$/, label: 'Admin - Curso: Foro' },
+        { pattern: /^\/admin\/academy\/([^/]+)\/general$/, label: 'Admin - Curso: General' },
+        { pattern: /^\/admin\/academy\/([^/]+)\/marketing$/, label: 'Admin - Curso: Marketing' },
+        { pattern: /^\/admin\/academy\/([^/]+)\/testimonials$/, label: 'Admin - Curso: Testimonios' },
+        { pattern: /^\/admin\/academy\/([^/]+)/, label: 'Admin - Curso: Detalle' },
+
+        // ── Admin: catalog detail ──
+        { pattern: /^\/admin\/catalog\/division\//, label: 'Admin - División' },
+        { pattern: /^\/admin\/catalog\/element\//, label: 'Admin - Elemento' },
+        { pattern: /^\/admin\/catalog\/task\//, label: 'Admin - Tarea' },
+
+        // ── Organization: catalog detail ──
+        { pattern: /^\/organization\/catalog\/task\//, label: 'Catálogo - Tarea' },
+        { pattern: /^\/organization\/quotes\//, label: 'Presupuesto - Detalle' },
+
+        // ── Project (with projectId) ──
+        { pattern: /^\/project\/[^/]+\/construction-tasks$/, label: 'Proyecto - Tareas' },
+        { pattern: /^\/project\/[^/]+\/clients$/, label: 'Proyecto - Clientes' },
+        { pattern: /^\/project\/[^/]+\/details$/, label: 'Proyecto - Detalles' },
+        { pattern: /^\/project\/[^/]+\/files$/, label: 'Proyecto - Archivos' },
+        { pattern: /^\/project\/[^/]+\/finance$/, label: 'Proyecto - Finanzas' },
+        { pattern: /^\/project\/[^/]+\/health$/, label: 'Proyecto - Salud' },
+        { pattern: /^\/project\/[^/]+\/labor$/, label: 'Proyecto - Mano de Obra' },
+        { pattern: /^\/project\/[^/]+\/materials$/, label: 'Proyecto - Materiales' },
+        { pattern: /^\/project\/[^/]+\/planner$/, label: 'Proyecto - Planificador' },
+        { pattern: /^\/project\/[^/]+\/portal$/, label: 'Proyecto - Portal' },
+        { pattern: /^\/project\/[^/]+\/quotes$/, label: 'Proyecto - Presupuestos' },
+        { pattern: /^\/project\/[^/]+\/sitelog$/, label: 'Proyecto - Bitácora' },
+        { pattern: /^\/project\/[^/]+\/subcontracts$/, label: 'Proyecto - Subcontratos' },
+        { pattern: /^\/project\/[^/]+$/, label: 'Proyecto - Resumen' },
+
+        // ── Docs ──
+        { pattern: /^\/docs\//, label: 'Documentación' },
     ];
 
-    for (const pattern of coursePatterns) {
+    for (const { pattern, label } of dynamicPatterns) {
         const match = cleanPath.match(pattern);
-        if (match && match[1]) {
-            const courseSlug = match[1];
-            // Known course names mapping
-            const courseNames: Record<string, string> = {
-                'master-archicad': 'Master ArchiCAD',
-            };
-            // Return known name or format the slug nicely
-            return courseNames[courseSlug] || courseSlug
-                .replace(/-/g, ' ')
-                .replace(/\b\w/g, c => c.toUpperCase());
+        if (match) {
+            return typeof label === 'function' ? label(match) : label;
         }
     }
 
-    // Check for prefix matches (e.g., /projects/abc -> Projects Detail)
-    for (const [prefix, name] of Object.entries(pathMap)) {
-        if (prefix && cleanPath.startsWith(prefix + '/')) {
-            return `${name} Detail`;
-        }
-    }
-
-    // Fallback: capitalize the first segment
+    // ================================================================
+    // 3. Fallback: format the path segments
+    // ================================================================
     const segments = cleanPath.split('/').filter(Boolean);
-    if (segments.length > 0) {
-        return segments[0].charAt(0).toUpperCase() + segments[0].slice(1);
+
+    // Skip UUID-like segments for better readability
+    const meaningful = segments.filter(s => !/^[0-9a-f-]{20,}$/.test(s));
+
+    if (meaningful.length > 0) {
+        return meaningful
+            .map(s => s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' '))
+            .join(' - ');
     }
 
-    return 'Unknown';
+    return 'Desconocido';
+}
+
+/**
+ * Formats a course slug into a readable name.
+ * Uses a known map for branded courses, otherwise humanizes the slug.
+ */
+function formatCourseSlug(slug: string): string {
+    const knownCourses: Record<string, string> = {
+        'master-archicad': 'Master ArchiCAD',
+    };
+    return knownCourses[slug] || slug
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export function PresenceProvider({ children, userId }: PresenceProviderProps) {
