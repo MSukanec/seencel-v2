@@ -22,6 +22,10 @@ export const FEATURE_DOCS_MAP: Record<string, string> = {
     '/organization/projects': 'proyectos/introduccion',
     '/organizacion/proyectos': 'proyectos/introduccion',
 
+    // Construction Tasks (Ejecución de Obra) - project level
+    '/project/': 'ejecucion-de-obra/introduccion',
+    '/proyecto/': 'ejecucion-de-obra/introduccion',
+
     // Add more feature -> docs mappings here as documentation is created
 };
 

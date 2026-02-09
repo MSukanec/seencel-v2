@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { useModal } from "@/stores/modal-store";
 import { SettingsSection } from "@/components/shared/settings-section";
 import { Badge } from "@/components/ui/badge";

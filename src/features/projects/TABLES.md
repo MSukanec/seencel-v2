@@ -160,6 +160,29 @@ create trigger set_updated_by_project_types BEFORE
 update on project_types for EACH row
 execute FUNCTION handle_updated_by ();
 
+# Tabla PROJECT_SETTINGS:
+
+create table public.project_settings (
+  id uuid not null default gen_random_uuid (),
+  project_id uuid not null,
+  organization_id uuid not null,
+  work_days integer[] not null default '{1,2,3,4,5}'::integer[],
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint project_settings_pkey primary key (id),
+  constraint project_settings_project_id_unique unique (project_id),
+  constraint project_settings_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint project_settings_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_project_settings_project_id on public.project_settings using btree (project_id) TABLESPACE pg_default;
+
+create index IF not exists idx_project_settings_organization_id on public.project_settings using btree (organization_id) TABLESPACE pg_default;
+
+create trigger set_project_settings_updated_at BEFORE
+update on project_settings for EACH row
+execute FUNCTION update_updated_at_column ();
+
 ## Tabla PROJECTS:
 
 create table public.projects (

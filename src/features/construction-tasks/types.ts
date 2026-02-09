@@ -17,9 +17,10 @@ export const constructionTaskSchema = z.object({
     custom_unit: z.string().nullable().optional(),
     quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0"),
     original_quantity: z.coerce.number().positive().nullable().optional(),
-    start_date: z.string().nullable().optional(),
-    end_date: z.string().nullable().optional(),
-    duration_in_days: z.coerce.number().int().positive().nullable().optional(),
+    planned_start_date: z.string().nullable().optional(),
+    planned_end_date: z.string().nullable().optional(),
+    actual_start_date: z.string().nullable().optional(),
+    actual_end_date: z.string().nullable().optional(),
     status: z.enum(['pending', 'in_progress', 'completed', 'paused']).default('pending'),
     progress_percent: z.coerce.number().int().min(0).max(100).nullable().optional(),
     description: z.string().nullable().optional(),
@@ -40,9 +41,10 @@ export interface ConstructionTask {
     quote_item_id: string | null;
     quantity: number | null;
     original_quantity: number | null;
-    start_date: string | null;
-    end_date: string | null;
-    duration_in_days: number | null;
+    planned_start_date: string | null;
+    planned_end_date: string | null;
+    actual_start_date: string | null;
+    actual_end_date: string | null;
     status: ConstructionTaskStatus;
     progress_percent: number | null;
     description: string | null;
@@ -66,6 +68,7 @@ export interface ConstructionTaskView extends ConstructionTask {
     division_name: string | null;
     cost_scope_label: string;
     quantity_variance: number | null;
+    schedule_variance_days: number | null;
     quote_id: string | null;
     quote_name: string | null;
     phase_name: string | null;

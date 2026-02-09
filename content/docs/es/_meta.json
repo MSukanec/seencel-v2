@@ -3,6 +3,7 @@
         "primeros-pasos",
         "materiales",
         "tareas",
+        "ejecucion-de-obra",
         "equipo",
         "finanzas",
         "proyectos"
@@ -19,6 +20,10 @@
         "tareas": {
             "title": "Tareas",
             "icon": "clipboard-list"
+        },
+        "ejecucion-de-obra": {
+            "title": "Ejecución de Obra",
+            "icon": "hard-hat"
         },
         "equipo": {
             "title": "Equipo",

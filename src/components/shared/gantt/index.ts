@@ -1,0 +1,11 @@
+// ============================================================================
+// Gantt Chart — Public API
+// ============================================================================
+
+export { GanttChart } from "./gantt-chart";
+export type {
+    GanttItem,
+    GanttDependency,
+    GanttChartProps,
+    GanttZoom,
+} from "./gantt-types";

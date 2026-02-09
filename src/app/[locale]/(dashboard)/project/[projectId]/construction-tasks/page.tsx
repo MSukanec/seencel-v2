@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
-import { ConstructionTasksPage as ConstructionTasksPageClient } from "@/features/construction-tasks/views/construction-tasks-page";
-import { getProjectConstructionTasks } from "@/features/construction-tasks/queries";
+import { notFound, redirect } from "next/navigation";
+import { ClipboardList } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageWrapper, ContentLayout } from "@/components/layout";
+import { ErrorDisplay } from "@/components/ui/error-display";
+
+import { ConstructionTasksView } from "@/features/construction-tasks/views/construction-tasks-view";
+import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
+import { ConstructionTasksSettingsView } from "@/features/construction-tasks/views/construction-tasks-settings-view";
+import { getProjectConstructionTasks, getProjectConstructionDependencies, getProjectSettings } from "@/features/construction-tasks/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
-import { getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskKinds } from "@/features/tasks/queries";
-import { notFound, redirect } from "next/navigation";
+import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskKinds } from "@/features/tasks/queries";
 
-// ============================================
-// METADATA (SEO)
-// ============================================
+// ============================================================================
+// Metadata
+// ============================================================================
+
 export async function generateMetadata({
     params,
 }: {
@@ -26,9 +34,10 @@ export async function generateMetadata({
     };
 }
 
-// ============================================
-// PAGE PROPS
-// ============================================
+// ============================================================================
+// Types
+// ============================================================================
+
 interface PageProps {
     params: Promise<{
         projectId: string;
@@ -36,57 +45,130 @@ interface PageProps {
     searchParams: Promise<{ view?: string }>;
 }
 
-// ============================================
-// PAGE COMPONENT
-// ============================================
+// ============================================================================
+// Page Component
+// ============================================================================
+
 export default async function ConstructionTasksPage({ params, searchParams }: PageProps) {
-    const { projectId } = await params;
-    const resolvedSearchParams = await searchParams;
-    const defaultTab = resolvedSearchParams.view || "tasks";
+    try {
+        const { projectId } = await params;
+        const resolvedSearchParams = await searchParams;
+        const defaultTab = resolvedSearchParams.view || "tasks";
 
-    const { activeOrgId } = await getUserOrganizations();
+        const { activeOrgId } = await getUserOrganizations();
 
-    if (!activeOrgId) {
-        redirect("/");
+        if (!activeOrgId) {
+            redirect("/");
+        }
+
+        // Validate project exists and belongs to org
+        const project = await getProjectById(projectId);
+
+        if (!project) {
+            notFound();
+        }
+
+        if (project.organization_id !== activeOrgId) {
+            notFound();
+        }
+
+        // Fetch construction tasks and catalog data in parallel
+        const [
+            tasks,
+            initialDependencies,
+            projectSettings,
+            catalogResult,
+            catalogGroupedTasks,
+            divisionsResult,
+            unitsResult,
+            kindsResult
+        ] = await Promise.all([
+            getProjectConstructionTasks(projectId),
+            getProjectConstructionDependencies(projectId),
+            getProjectSettings(projectId),
+            getOrganizationTasks(activeOrgId),
+            getTasksGroupedByDivision(activeOrgId),
+            getTaskDivisions(),
+            getUnits(),
+            getTaskKinds()
+        ]);
+
+        // Flatten catalog tasks for the form selector
+        const catalogTasks = (catalogResult.data || []).map(t => ({
+            id: t.id,
+            name: t.name,
+            custom_name: t.custom_name,
+            unit_name: t.unit_name,
+            division_name: t.division_name,
+            code: t.code,
+        }));
+
+        // Check if catalog data is available
+        const hasCatalogData = catalogGroupedTasks.length > 0 || divisionsResult.data.length > 0;
+
+        return (
+            <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
+                <PageWrapper
+                    type="page"
+                    title="Tareas"
+                    icon={<ClipboardList />}
+                    tabs={
+                        <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
+                            <TabsTrigger value="tasks">Tareas del Proyecto</TabsTrigger>
+                            {hasCatalogData && (
+                                <TabsTrigger value="catalog">Catálogo</TabsTrigger>
+                            )}
+                            <TabsTrigger value="settings">Ajustes</TabsTrigger>
+                        </TabsList>
+                    }
+                >
+                    <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <ConstructionTasksView
+                                projectId={projectId}
+                                organizationId={activeOrgId}
+                                tasks={tasks}
+                                initialDependencies={initialDependencies}
+                                catalogTasks={catalogTasks}
+                                workDays={projectSettings.work_days}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    {hasCatalogData && (
+                        <TabsContent value="catalog" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                            <ContentLayout variant="wide">
+                                <TasksCatalogView
+                                    groupedTasks={catalogGroupedTasks}
+                                    orgId={activeOrgId}
+                                    units={unitsResult.data}
+                                    divisions={divisionsResult.data}
+                                    kinds={kindsResult.data}
+                                    isAdminMode={false}
+                                />
+                            </ContentLayout>
+                        </TabsContent>
+                    )}
+
+                    <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ConstructionTasksSettingsView
+                            projectId={projectId}
+                            organizationId={activeOrgId}
+                            initialWorkDays={projectSettings.work_days}
+                        />
+                    </TabsContent>
+                </PageWrapper>
+            </Tabs>
+        );
+    } catch (error) {
+        return (
+            <div className="h-full w-full flex items-center justify-center">
+                <ErrorDisplay
+                    title="Error al cargar las tareas"
+                    message={error instanceof Error ? error.message : "Error desconocido"}
+                    retryLabel="Reintentar"
+                />
+            </div>
+        );
     }
-
-    // Validate project exists and belongs to org
-    const project = await getProjectById(projectId);
-
-    if (!project) {
-        notFound();
-    }
-
-    if (project.organization_id !== activeOrgId) {
-        notFound();
-    }
-
-    // Fetch construction tasks and catalog data in parallel
-    const [
-        tasks,
-        catalogGroupedTasks,
-        divisionsResult,
-        unitsResult,
-        kindsResult
-    ] = await Promise.all([
-        getProjectConstructionTasks(projectId),
-        getTasksGroupedByDivision(activeOrgId),
-        getTaskDivisions(),
-        getUnits(),
-        getTaskKinds()
-    ]);
-
-    return (
-        <ConstructionTasksPageClient
-            projectId={projectId}
-            organizationId={activeOrgId}
-            tasks={tasks}
-            defaultTab={defaultTab}
-            catalogGroupedTasks={catalogGroupedTasks}
-            catalogUnits={unitsResult.data}
-            catalogDivisions={divisionsResult.data}
-            catalogKinds={kindsResult.data}
-        />
-    );
 }
-

@@ -1,0 +1,79 @@
+---
+title: "Ejecución de Obra"
+description: "Cómo gestionar las tareas de construcción en tus proyectos"
+---
+
+# Ejecución de Obra
+
+La **Ejecución de Obra** es donde todo lo que planificaste cobra vida. Desde aquí gestionás las tareas reales de tu proyecto de construcción: asignás fechas, hacés seguimiento de avances, y controlás desvíos.
+
+## ¿Cómo funciona?
+
+Cuando aprobás un presupuesto o agregás tareas manualmente a un proyecto, se crean **tareas de construcción**. Cada tarea tiene:
+
+| Campo | Descripción |
+|-------|-------------|
+| **Nombre** | El nombre de la tarea (del catálogo o personalizado) |
+| **Fechas planificadas** | Inicio y fin programados |
+| **Fechas reales** | Inicio y fin efectivos |
+| **Estado** | Pendiente, En Progreso, Completada o Pausada |
+| **Avance** | Porcentaje de progreso (0-100%) |
+| **Cantidad** | Unidades de trabajo (m², ml, u, etc.) |
+
+## Tres formas de ver tus tareas
+
+### Gantt Interactivo
+
+La vista principal. Te permite ver todas las tareas en una línea de tiempo visual:
+
+- **Arrastrá** barras para mover fechas
+- **Estirá** los bordes para cambiar la duración
+- **Zoom**: Día, Semana, Mes o Trimestre
+- **Línea de Hoy**: siempre visible para referencia
+- Los cambios se guardan automáticamente
+
+### Tarjetas
+
+Vista compacta con cards que muestran el estado, fechas y avance de cada tarea. Ideal para una vista rápida de estado general.
+
+### Tabla
+
+Vista detallada con todas las columnas: nombre, estado, avance, fechas, duración, fase y cantidad. Ideal para análisis y comparación.
+
+## Tareas del Catálogo vs Personalizadas
+
+### Del Catálogo
+
+Cuando seleccionás una tarea del **Catálogo Técnico**, se crea con:
+- Todos los datos de la tarea original
+- Un snapshot de materiales y costos al momento de la creación
+- Los cambios futuros al catálogo **no afectan** las tareas ya asignadas
+
+### Personalizadas
+
+Podés crear tareas **sin seleccionar del catálogo** para imprevistos o trabajos no planificados. Simplemente ingresá un nombre y unidad.
+
+## Desvíos
+
+Toda tarea de ejecución puede desviarse del plan:
+
+- **Desvío de cantidad**: la cantidad real difiere de la planificada
+- **Desvío de tiempo**: las fechas reales difieren de las planificadas
+- **Desvío de costo**: el costo real difiere del presupuestado
+
+<Callout type="info" title="Seguimiento Automático">
+SEENCEL calcula automáticamente los desvíos comparando lo planificado con lo real. Esto aparece en la vista de tabla como indicadores visuales.
+</Callout>
+
+## Flujo de Trabajo
+
+1. **Crear o importar tareas** desde el catálogo técnico
+2. **Asignar fechas planificadas** arrastrando en el Gantt
+3. **Actualizar avances** durante la ejecución
+4. **Controlar desvíos** en la vista de tabla
+5. **Generar reportes** de avance para el cliente
+
+## Próximos Pasos
+
+- [Tareas del Catálogo Técnico](/docs/tareas/introduccion) - Crear y gestionar el catálogo de tareas
+- [Importar Tareas](/docs/tareas/importar) - Carga masiva desde Excel

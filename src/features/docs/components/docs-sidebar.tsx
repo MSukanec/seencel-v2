@@ -12,7 +12,8 @@ import {
     ChevronDown,
     FileText,
     ClipboardList,
-    Users
+    Users,
+    HardHat
 } from "lucide-react";
 import { useState } from "react";
 import type { DocTreeItem } from "../types";
@@ -28,6 +29,7 @@ const iconMap: Record<string, React.ElementType> = {
     building: Building,
     "clipboard-list": ClipboardList,
     users: Users,
+    "hard-hat": HardHat,
 };
 
 export function DocsSidebar({ tree }: DocsSidebarProps) {

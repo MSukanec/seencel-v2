@@ -95,18 +95,18 @@ export function ConstructionTaskCard({
                         </div>
 
                         {/* Dates */}
-                        {(task.start_date || task.end_date) && (
+                        {(task.planned_start_date || task.planned_end_date) && (
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Calendar className="h-3 w-3" />
-                                {task.start_date && (
+                                {task.planned_start_date && (
                                     <span>
-                                        {format(new Date(task.start_date), "dd MMM", { locale: es })}
+                                        {format(new Date(task.planned_start_date), "dd MMM", { locale: es })}
                                     </span>
                                 )}
-                                {task.start_date && task.end_date && <span>→</span>}
-                                {task.end_date && (
+                                {task.planned_start_date && task.planned_end_date && <span>→</span>}
+                                {task.planned_end_date && (
                                     <span>
-                                        {format(new Date(task.end_date), "dd MMM yyyy", { locale: es })}
+                                        {format(new Date(task.planned_end_date), "dd MMM yyyy", { locale: es })}
                                     </span>
                                 )}
                             </div>

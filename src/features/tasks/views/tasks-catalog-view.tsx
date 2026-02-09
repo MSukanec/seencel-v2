@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { Plus, Monitor, Building2, ClipboardList, Upload, History } from "lucide-react";
 
 import { TasksByDivision, Unit, TaskDivision, TaskKind } from "@/features/tasks/types";

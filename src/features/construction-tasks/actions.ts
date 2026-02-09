@@ -23,10 +23,11 @@ export async function createConstructionTask(
             custom_name: data.custom_name || null,
             custom_unit: data.custom_unit || null,
             quantity: data.quantity,
-            original_quantity: data.original_quantity || null,
-            start_date: data.start_date || null,
-            end_date: data.end_date || null,
-            duration_in_days: data.duration_in_days || null,
+            original_quantity: data.original_quantity || data.quantity,
+            planned_start_date: data.planned_start_date || null,
+            planned_end_date: data.planned_end_date || null,
+            actual_start_date: data.actual_start_date || null,
+            actual_end_date: data.actual_end_date || null,
             status: data.status || 'pending',
             progress_percent: data.progress_percent || 0,
             description: data.description || null,
@@ -63,9 +64,10 @@ export async function updateConstructionTask(
             custom_name: data.custom_name,
             custom_unit: data.custom_unit,
             quantity: data.quantity,
-            start_date: data.start_date,
-            end_date: data.end_date,
-            duration_in_days: data.duration_in_days,
+            planned_start_date: data.planned_start_date,
+            planned_end_date: data.planned_end_date,
+            actual_start_date: data.actual_start_date,
+            actual_end_date: data.actual_end_date,
             status: data.status,
             progress_percent: data.progress_percent,
             description: data.description,
@@ -135,6 +137,93 @@ export async function deleteConstructionTask(taskId: string, projectId: string) 
 
     if (error) {
         console.error("Error deleting construction task:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath(`/project/${projectId}/construction-tasks`);
+    return { success: true };
+}
+
+// ============================================================================
+// Construction Dependencies
+// ============================================================================
+
+/**
+ * Create a dependency between two construction tasks
+ */
+export async function createConstructionDependency(
+    organizationId: string,
+    predecessorTaskId: string,
+    successorTaskId: string,
+    type: "FS" | "FF" | "SS" | "SF" = "FS"
+) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("construction_dependencies")
+        .insert({
+            organization_id: organizationId,
+            predecessor_task_id: predecessorTaskId,
+            successor_task_id: successorTaskId,
+            type,
+        })
+        .select("id")
+        .single();
+
+    if (error) {
+        console.error("Error creating construction dependency:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true, id: data.id };
+}
+
+/**
+ * Delete a construction dependency
+ */
+export async function deleteConstructionDependency(dependencyId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("construction_dependencies")
+        .delete()
+        .eq("id", dependencyId);
+
+    if (error) {
+        console.error("Error deleting construction dependency:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// ============================================================================
+// Project Settings
+// ============================================================================
+
+/**
+ * Upsert project settings (work days, etc.)
+ */
+export async function upsertProjectSettings(
+    projectId: string,
+    organizationId: string,
+    workDays: number[],
+) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("project_settings")
+        .upsert(
+            {
+                project_id: projectId,
+                organization_id: organizationId,
+                work_days: workDays,
+            },
+            { onConflict: "project_id" }
+        );
+
+    if (error) {
+        console.error("Error upserting project settings:", error);
         return { success: false, error: error.message };
     }
 
