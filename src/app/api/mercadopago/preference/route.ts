@@ -55,19 +55,27 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get user email from supabase
-        const { data: userData } = await supabase
+        // Get internal user (users.id) — NEVER use auth_id as FK (Rule 6)
+        const { data: internalUser } = await supabase
             .from('users')
-            .select('email, full_name')
+            .select('id, email, full_name')
             .eq('auth_id', user.id)
             .single();
 
+        if (!internalUser) {
+            return NextResponse.json(
+                { error: 'User not found' },
+                { status: 404 }
+            );
+        }
+
         // Build external_reference with compact format (MP limit: 256 chars)
         // Format: type|user_id|org_id|product_id|billing_period|coupon_code|is_test|seats_qty|proration_credit
+        // user_id = users.id (internal), NOT auth_id
         // Use 'x' for null values to keep parsing simple
         const externalReference = [
             productType, // subscription | course | seats | upgrade
-            user.id.slice(0, 36), // auth user UUID
+            internalUser.id, // users.id (internal UUID)
             organizationId || 'x',
             productId ? productId.slice(0, 36) : 'x', // plan_id or course_id (x for seats)
             billingPeriod || 'x',
@@ -127,8 +135,8 @@ export async function POST(request: NextRequest) {
                     }
                 ],
                 payer: {
-                    email: userData?.email || user.email || '',
-                    name: userData?.full_name || '',
+                    email: internalUser.email || user.email || '',
+                    name: internalUser.full_name || '',
                 },
                 external_reference: externalReference,
                 back_urls: {
@@ -145,13 +153,6 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        // Store preference in mp_preferences table
-        const { data: internalUser } = await supabase
-            .from('users')
-            .select('id')
-            .eq('auth_id', user.id)
-            .single();
-
         // Resolve coupon_id from code if provided
         let couponId: string | null = null;
         if (couponCode) {
@@ -163,7 +164,8 @@ export async function POST(request: NextRequest) {
             couponId = coupon?.id || null;
         }
 
-        if (internalUser && preference.id) {
+        // Store preference in mp_preferences table
+        if (preference.id) {
             await supabase.from('mp_preferences').insert({
                 id: preference.id,
                 user_id: internalUser.id,
@@ -178,7 +180,7 @@ export async function POST(request: NextRequest) {
                 init_point: preference.init_point || null,
                 status: 'pending',
                 product_type: productType,
-                payer_email: userData?.email || user.email || '',
+                payer_email: internalUser.email || user.email || '',
                 seats_quantity: productType === 'seats' ? (seatsQuantity || 1) : null,
                 is_sandbox: sandboxMode,
                 is_test: isTestMode,

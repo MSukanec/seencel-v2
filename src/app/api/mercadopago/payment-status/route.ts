@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
             status: payment.status, // approved, pending, rejected, cancelled, etc.
             status_detail: payment.status_detail,
             product_type: payment.external_reference
-                ? payment.external_reference.split('|')[1] || null
+                ? payment.external_reference.split('|')[0] || null
                 : null,
         });
     } catch (error) {

@@ -1,5 +1,50 @@
 import { createMPClient } from './client';
 
+// ============================================================
+// external_reference format (pipe-delimited, 256 char max):
+// [0] productType  — subscription | course | seats | upgrade
+// [1] userId       — users.id (internal UUID, NOT auth_id)
+// [2] orgId        — organization UUID or 'x'
+// [3] productId    — plan_id or course_id or 'x'
+// [4] billingPeriod — monthly | annual | 'x'
+// [5] couponCode   — string or 'x'
+// [6] isTest       — '1' or '0'
+// [7] seatsQty     — number or 'x'
+// [8] prorationCredit — number or 'x'
+// ============================================================
+
+interface ExternalReferenceData {
+    productType: string;
+    userId: string | null;
+    organizationId: string | null;
+    productId: string | null;
+    billingPeriod: string | null;
+    couponCode: string | null;
+    isTest: boolean;
+    seatsQty: number | null;
+    prorationCredit: number | null;
+}
+
+function parseExternalReference(ref: string): ExternalReferenceData {
+    const parts = ref.split('|');
+    const val = (index: number): string | null => {
+        const v = parts[index];
+        return v && v !== 'x' ? v : null;
+    };
+
+    return {
+        productType: parts[0] || 'unknown',
+        userId: val(1),
+        organizationId: val(2),
+        productId: val(3),
+        billingPeriod: val(4),
+        couponCode: val(5),
+        isTest: parts[6] === '1',
+        seatsQty: val(7) ? parseInt(parts[7], 10) : null,
+        prorationCredit: val(8) ? parseFloat(parts[8]) : null,
+    };
+}
+
 export async function handlePaymentEvent(paymentId: string, supabase: any, sandboxMode: boolean) {
     console.log(`[MP Handler] Handling payment ${paymentId} (Sandbox: ${sandboxMode})`);
 
@@ -13,8 +58,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
             return;
         }
 
-        const { status, status_detail, metadata: rawMetadata, transaction_amount, currency_id, payer } = paymentData;
-        const metadata = rawMetadata as any;
+        const { status, transaction_amount, currency_id } = paymentData;
 
         // 2. Only process approved payments
         if (status !== 'approved') {
@@ -22,30 +66,32 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
             return;
         }
 
-        // 3. Extract Metadata
-        // MP metadata is usually snake_case or whatever we sent.
-        // Assuming we sent generic fields.
-        const productType = metadata?.product_type || 'unknown';
-        const userId = metadata?.user_id;
+        // 3. Parse external_reference (MP persists this, NOT metadata)
+        const rawRef = (paymentData as any).external_reference || '';
+        const ref = parseExternalReference(rawRef);
+        const { productType, userId, organizationId: orgId, productId, billingPeriod, couponCode } = ref;
 
         console.log(`[MP Handler] Processing ${productType} for user ${userId}`);
+        console.log(`[MP Handler] external_reference parsed:`, JSON.stringify(ref));
 
         if (!userId) {
-            console.error('[MP Handler] Missing user_id in metadata');
+            console.error('[MP Handler] Missing user_id in external_reference');
             return;
         }
+
+        // Build metadata object for RPC calls (audit purposes)
+        const rpcMetadata = {
+            external_reference: rawRef,
+            product_type: productType,
+            coupon_code: couponCode,
+            is_test: ref.isTest,
+        };
 
         // 4. Dispatch to Database RPCs
         let rpcResult;
 
         if (productType === 'course') {
-            /* 
-             * Metadata expected: 
-             * - course_id
-             * - coupon_code (optional)
-             */
-            const courseId = metadata.course_id;
-            const couponCode = metadata.coupon_code;
+            const courseId = productId;
 
             rpcResult = await supabase.rpc('handle_payment_course_success', {
                 p_provider: 'mercadopago',
@@ -54,7 +100,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
                 p_course_id: courseId,
                 p_amount: transaction_amount,
                 p_currency: currency_id || 'ARS',
-                p_metadata: metadata
+                p_metadata: rpcMetadata
             });
 
             // Handle Coupon Redemption if applicable
@@ -67,15 +113,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
             }
 
         } else if (productType === 'subscription') {
-            /*
-             * Metadata expected:
-             * - organization_id
-             * - plan_id
-             * - billing_period
-             */
-            const orgId = metadata.organization_id;
-            const planId = metadata.plan_id;
-            const billingPeriod = metadata.billing_period;
+            const planId = productId;
 
             rpcResult = await supabase.rpc('handle_payment_subscription_success', {
                 p_provider: 'mercadopago',
@@ -86,19 +124,11 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
                 p_amount: transaction_amount,
                 p_currency: currency_id || 'ARS',
                 p_billing_period: billingPeriod,
-                p_metadata: metadata
+                p_metadata: rpcMetadata
             });
 
         } else if (productType === 'upgrade') {
-            /*
-             * Metadata expected:
-             * - organization_id
-             * - plan_id (target)
-             * - billing_period
-             */
-            const orgId = metadata.organization_id;
-            const planId = metadata.plan_id;
-            const billingPeriod = metadata.billing_period;
+            const planId = productId;
 
             rpcResult = await supabase.rpc('handle_upgrade_subscription_success', {
                 p_provider: 'mercadopago',
@@ -109,22 +139,12 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
                 p_amount: transaction_amount,
                 p_currency: currency_id || 'ARS',
                 p_billing_period: billingPeriod,
-                p_metadata: metadata
+                p_metadata: rpcMetadata
             });
 
         } else if (productType === 'seat_purchase' || productType === 'seats') {
-            /*
-             * Metadata expected:
-             * - organization_id
-             * - seats_qty
-             * - proration_credit (maybe?)
-             */
-            const orgId = metadata.organization_id;
-            const seatsQty = metadata.seats_qty;
+            const seatsQty = ref.seatsQty;
 
-            // RPC name guessed from logs: handle_member_seat_purchase
-            // Need to check params in DB or assume standard
-            // Assuming similar signature
             rpcResult = await supabase.rpc('handle_member_seat_purchase', {
                 p_provider: 'mercadopago',
                 p_provider_payment_id: paymentId.toString(),
@@ -133,7 +153,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
                 p_seats_qty: seatsQty,
                 p_amount: transaction_amount,
                 p_currency: currency_id || 'ARS',
-                p_metadata: metadata
+                p_metadata: rpcMetadata
             });
         } else {
             console.warn(`[MP Handler] Unknown product type: ${productType}`);
