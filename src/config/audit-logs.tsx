@@ -22,7 +22,8 @@ import {
     CheckCheck,
     ArrowRightLeft,
     LucideIcon,
-    NotebookPen
+    NotebookPen,
+    CalendarDays
 } from "lucide-react";
 
 // Module configuration with icons and colors
@@ -35,200 +36,386 @@ export interface ModuleConfig {
 
 export const moduleConfigs: Record<string, ModuleConfig> = {
     'projects': {
-        label: 'Proyecto',
+        label: 'un proyecto',
         singularLabel: 'proyecto',
         icon: FolderKanban,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'project_data': {
-        label: 'Datos del Proyecto',
+        label: 'los datos del proyecto',
         singularLabel: 'datos del proyecto',
         icon: FolderKanban,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'project_types': {
-        label: 'Tipo de Proyecto',
+        label: 'un tipo de proyecto',
         singularLabel: 'tipo de proyecto',
         icon: Tag,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'project_modalities': {
-        label: 'Modalidad de Proyecto',
+        label: 'una modalidad de proyecto',
         singularLabel: 'modalidad de proyecto',
         icon: Layers,
         color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
     },
     'contacts': {
-        label: 'Contacto',
+        label: 'un contacto',
         singularLabel: 'contacto',
         icon: Users,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'contact_types': {
-        label: 'Tipo de Contacto',
+        label: 'un tipo de contacto',
         singularLabel: 'tipo de contacto',
         icon: Tag,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'client_payments': {
-        label: 'Pago de Cliente',
+        label: 'un pago de cliente',
         singularLabel: 'pago de cliente',
         icon: Wallet,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'site_logs': {
-        label: 'Entrada de Bitácora',
+        label: 'una entrada de bitácora',
         singularLabel: 'entrada de bitácora',
         icon: NotebookPen,
         color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800'
     },
     'site_log_types': {
-        label: 'Tipo de Bitácora',
+        label: 'un tipo de bitácora',
         singularLabel: 'tipo de bitácora',
         icon: Tag,
         color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800'
     },
     'organization_members': {
-        label: 'Miembro',
+        label: 'un miembro',
         singularLabel: 'miembro',
         icon: Users,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'organization_data': {
-        label: 'Datos de Organización',
+        label: 'los datos de la organización',
         singularLabel: 'datos de la organización',
         icon: Building,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'tasks': {
-        label: 'Tarea',
+        label: 'una tarea',
         singularLabel: 'tarea',
         icon: CheckSquare,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
     'design_documents': {
-        label: 'Documento',
+        label: 'un documento',
         singularLabel: 'documento',
         icon: FileText,
         color: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
     },
     'financial_movements': {
-        label: 'Movimiento',
+        label: 'un movimiento',
         singularLabel: 'movimiento financiero',
         icon: Wallet,
         color: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
     },
     'import_batches': {
-        label: 'Importación',
+        label: 'una importación',
         singularLabel: 'importación',
         icon: Upload,
         color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
     },
     'general_cost_categories': {
-        label: 'Categoría de Gasto',
+        label: 'una categoría de gasto',
         singularLabel: 'categoría de gasto',
         icon: Tag,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
     'general_costs': {
-        label: 'Gasto General',
+        label: 'un gasto general',
         singularLabel: 'gasto general',
         icon: Receipt,
         color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
     },
     'general_costs_payments': {
-        label: 'Pago de Gasto',
+        label: 'un pago de gasto',
         singularLabel: 'pago de gasto',
         icon: Wallet,
         color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
     },
     'organizations': {
-        label: 'Organización',
+        label: 'la organización',
         singularLabel: 'organización',
         icon: Building,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'organization': {
-        label: 'Organización',
+        label: 'la organización',
         singularLabel: 'organización',
         icon: Building,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
-    // Kanban Module
+    // Planner / Tareas Module
     'kanban_boards': {
-        label: 'Tablero Kanban',
-        singularLabel: 'tablero kanban',
+        label: 'un tablero de tareas',
+        singularLabel: 'tablero de tareas',
         icon: Kanban,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_cards': {
-        label: 'Tarjeta Kanban',
-        singularLabel: 'tarjeta kanban',
+        label: 'una tarea',
+        singularLabel: 'tarea',
         icon: SquareKanban,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_lists': {
-        label: 'Columna Kanban',
-        singularLabel: 'columna kanban',
+        label: 'una columna del tablero',
+        singularLabel: 'columna del tablero',
         icon: Kanban,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_labels': {
-        label: 'Etiqueta Kanban',
-        singularLabel: 'etiqueta kanban',
+        label: 'una etiqueta del tablero',
+        singularLabel: 'etiqueta del tablero',
         icon: Tag,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
     'kanban_comments': {
-        label: 'Comentario Kanban',
-        singularLabel: 'comentario kanban',
+        label: 'un comentario en tarea',
+        singularLabel: 'comentario en tarea',
         icon: MessageSquare,
         color: 'bg-lime-100 text-lime-700 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800'
     },
+    // Calendar Module
+    'calendar_events': {
+        label: 'un evento',
+        singularLabel: 'evento',
+        icon: CalendarDays,
+        color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
+    },
     // Subcontracts Module
     'subcontracts': {
-        label: 'Subcontrato',
+        label: 'un subcontrato',
         singularLabel: 'subcontrato',
         icon: Receipt,
         color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
     },
     'subcontract_payments': {
-        label: 'Pago de Subcontrato',
+        label: 'un pago de subcontrato',
         singularLabel: 'pago de subcontrato',
         icon: Wallet,
         color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
     },
     'subcontract_adjustments': {
-        label: 'Ajuste de Subcontrato',
+        label: 'un ajuste de subcontrato',
         singularLabel: 'ajuste de subcontrato',
         icon: ArrowRightLeft,
         color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
     },
     // Materials Module
     'materials': {
-        label: 'Material',
+        label: 'un material',
         singularLabel: 'material',
         icon: Layers,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     'material_purchases': {
-        label: 'Compra de Material',
+        label: 'una compra de material',
         singularLabel: 'compra de material',
         icon: Receipt,
         color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
     },
     // Quotes Module
     'quotes': {
-        label: 'Presupuesto',
+        label: 'un presupuesto',
         singularLabel: 'presupuesto',
         icon: FileText,
         color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
     },
     'quote_items': {
-        label: 'Item de Presupuesto',
+        label: 'un item de presupuesto',
         singularLabel: 'item de presupuesto',
         icon: FileText,
         color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
+    },
+    // Tasks & Recipes
+    'task_recipe_materials': {
+        label: 'un material en una receta de tarea',
+        singularLabel: 'material de receta',
+        icon: Layers,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    'task_recipe_labor': {
+        label: 'mano de obra en una receta de tarea',
+        singularLabel: 'mano de obra de receta',
+        icon: Users,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    'task_recipe_equipment': {
+        label: 'un equipo en una receta de tarea',
+        singularLabel: 'equipo de receta',
+        icon: Layers,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    'task_recipe_subcontracts': {
+        label: 'un subcontrato en una receta de tarea',
+        singularLabel: 'subcontrato de receta',
+        icon: Receipt,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    'task_dependencies': {
+        label: 'una dependencia de tarea',
+        singularLabel: 'dependencia de tarea',
+        icon: CheckSquare,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    'task_kinds': {
+        label: 'un tipo de tarea',
+        singularLabel: 'tipo de tarea',
+        icon: Tag,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
+    // Labor
+    'labor_categories': {
+        label: 'una categoría laboral',
+        singularLabel: 'categoría laboral',
+        icon: Users,
+        color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
+    },
+    'labor_levels': {
+        label: 'un nivel laboral',
+        singularLabel: 'nivel laboral',
+        icon: Users,
+        color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
+    },
+    'labor_roles': {
+        label: 'un rol laboral',
+        singularLabel: 'rol laboral',
+        icon: Users,
+        color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
+    },
+    'labor_types': {
+        label: 'un tipo de mano de obra',
+        singularLabel: 'tipo de mano de obra',
+        icon: Users,
+        color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800'
+    },
+    // Equipment
+    'equipment': {
+        label: 'un equipo',
+        singularLabel: 'equipo',
+        icon: Layers,
+        color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800'
+    },
+    'equipment_categories': {
+        label: 'una categoría de equipo',
+        singularLabel: 'categoría de equipo',
+        icon: Tag,
+        color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800'
+    },
+    // Finance Infrastructure
+    'wallets': {
+        label: 'una billetera',
+        singularLabel: 'billetera',
+        icon: Wallet,
+        color: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
+    },
+    'currencies': {
+        label: 'una moneda',
+        singularLabel: 'moneda',
+        icon: ArrowRightLeft,
+        color: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
+    },
+    // Units & Catalog
+    'units': {
+        label: 'una unidad',
+        singularLabel: 'unidad',
+        icon: Tag,
+        color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
+    },
+    'material_categories': {
+        label: 'una categoría de material',
+        singularLabel: 'categoría de material',
+        icon: Tag,
+        color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+    },
+    'material_payments': {
+        label: 'un pago de material',
+        singularLabel: 'pago de material',
+        icon: Wallet,
+        color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+    },
+    // Construction Elements
+    'construction_elements': {
+        label: 'un elemento constructivo',
+        singularLabel: 'elemento constructivo',
+        icon: Building,
+        color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
+    },
+    'construction_divisions': {
+        label: 'un rubro',
+        singularLabel: 'rubro',
+        icon: Layers,
+        color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800'
+    },
+    // Clients
+    'clients': {
+        label: 'un cliente',
+        singularLabel: 'cliente',
+        icon: Users,
+        color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    },
+    'client_commitments': {
+        label: 'un compromiso de cliente',
+        singularLabel: 'compromiso de cliente',
+        icon: FileText,
+        color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    },
+    // Capital
+    'capital_contributions': {
+        label: 'un aporte de capital',
+        singularLabel: 'aporte de capital',
+        icon: Wallet,
+        color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
+    },
+    'capital_participants': {
+        label: 'un participante de capital',
+        singularLabel: 'participante de capital',
+        icon: Users,
+        color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800'
+    },
+    // Invitations
+    'organization_invitations': {
+        label: 'una invitación',
+        singularLabel: 'invitación',
+        icon: Users,
+        color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+    },
+    // Change Orders
+    'change_orders': {
+        label: 'una orden de cambio',
+        singularLabel: 'orden de cambio',
+        icon: FileText,
+        color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
+    },
+    'change_order_items': {
+        label: 'un item de orden de cambio',
+        singularLabel: 'item de orden de cambio',
+        icon: FileText,
+        color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
+    },
+    // Media
+    'media_files': {
+        label: 'un archivo',
+        singularLabel: 'archivo',
+        icon: FileText,
+        color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
+    },
+    'media_links': {
+        label: 'un adjunto',
+        singularLabel: 'adjunto',
+        icon: FileText,
+        color: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700'
     }
 };
 

@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { FinanceDashboardProvider, useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { DashboardWidgetGrid } from "@/features/finance/components/widgets/dashboard-widget-grid";
-import { DEFAULT_FINANCE_LAYOUT } from "@/features/finance/components/widgets/registry";
+import { DashboardWidgetGrid } from "@/components/widgets/grid";
+import { WIDGET_REGISTRY, DEFAULT_FINANCE_LAYOUT } from "@/components/widgets/registry";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
@@ -203,7 +203,12 @@ function FinancesDashboardContent() {
 
 
             {/* Enterprise Widget Grid */}
-            <DashboardWidgetGrid layout={DEFAULT_FINANCE_LAYOUT} isEditing={isEditing} />
+            <DashboardWidgetGrid
+                registry={WIDGET_REGISTRY}
+                layout={DEFAULT_FINANCE_LAYOUT}
+                isEditing={isEditing}
+                storageKey="seencel_finance_layout_v2"
+            />
 
             <div className="border-t border-border/50 my-6" />
 

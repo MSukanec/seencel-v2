@@ -79,7 +79,7 @@ export function PlannerPageView({
                 tabs={tabs}
                 icon={<CalendarDays />}
             >
-                <TabsContent value="calendar" className="m-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                <TabsContent value="calendar" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                     <ContentLayout variant="wide">
                         <PlannerCalendarView
                             organizationId={organizationId}
@@ -89,7 +89,7 @@ export function PlannerPageView({
                         />
                     </ContentLayout>
                 </TabsContent>
-                <TabsContent value="kanban" className="m-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                <TabsContent value="kanban" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                     <ContentLayout variant="full">
                         <KanbanDashboard
                             boards={boards}

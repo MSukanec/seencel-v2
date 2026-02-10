@@ -1,14 +1,29 @@
 "use client";
 
-import { useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { BentoCard } from "@/components/bento/bento-card";
+import { useFinanceDashboardSafe } from "@/features/finance/context/finance-dashboard-context";
+import { BentoCard } from "@/components/widgets/grid/bento-card";
+import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 export function RecentTransactionsWidget({ size = 'md' }: { size?: 'md' | 'tall' }) {
-    const { filteredMovements } = useFinanceDashboard();
+    const ctx = useFinanceDashboardSafe();
+
+    if (!ctx) {
+        return (
+            <WidgetEmptyState
+                icon={Clock}
+                title="Últimos Movimientos"
+                description="Disponible en el dashboard de Finanzas"
+                href="/organization/finance"
+                actionLabel="Ir a Finanzas"
+            />
+        );
+    }
+
+    const { filteredMovements } = ctx;
     const recent = filteredMovements.slice(0, 5);
 
     return (

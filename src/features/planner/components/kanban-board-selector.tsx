@@ -3,6 +3,7 @@
 import { KanbanBoard } from "@/features/planner/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import {
     LayoutGrid,
     Plus,
@@ -34,21 +35,15 @@ interface KanbanBoardSelectorProps {
 export function KanbanBoardSelector({ boards, onCreateBoard }: KanbanBoardSelectorProps) {
     if (boards.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="rounded-full bg-lime-100 dark:bg-lime-900/30 p-4 mb-4">
-                    <FolderKanban className="h-8 w-8 text-lime-600 dark:text-lime-400" />
-                </div>
-                <h3 className="text-lg font-semibold mb-1">
-                    No hay paneles aún
-                </h3>
-                <p className="text-muted-foreground text-sm mb-4 max-w-xs">
-                    Los paneles de tareas te ayudan a organizar y visualizar el progreso de tus proyectos
-                </p>
-                <Button onClick={onCreateBoard} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Crear primer panel
-                </Button>
-            </div>
+            <ViewEmptyState
+                mode="empty"
+                icon={FolderKanban}
+                viewName="Panel de Tareas"
+                featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas. Podés asignar responsables, definir fechas límite y prioridades para coordinar el trabajo con tu equipo de forma visual."
+                onAction={onCreateBoard}
+                actionLabel="Crear primer panel"
+                docsPath="/docs/agenda/kanban"
+            />
         );
     }
 

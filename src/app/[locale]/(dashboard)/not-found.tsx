@@ -17,7 +17,7 @@ export default function DashboardNotFound() {
             <div className="space-y-6 max-w-md w-full">
                 {/* Visual Element */}
                 <div className="relative flex justify-center">
-                    <div className="text-[10rem] font-bold text-muted/20 leading-none select-none">
+                    <div className="text-[10rem] font-bold text-foreground/10 leading-none select-none">
                         404
                     </div>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm p-4 rounded-full border shadow-sm">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
+import { useFinanceDashboardSafe } from "@/features/finance/context/finance-dashboard-context";
 import { useMoney } from "@/hooks/use-money";
 import { Card } from "@/components/ui/card";
+import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import {
     ComposedChart,
@@ -47,8 +48,22 @@ function CustomTooltip({ active, payload, label }: {
 }
 
 export function BalanceSummaryWidget() {
-    const { kpis, trends } = useFinanceDashboard();
+    const ctx = useFinanceDashboardSafe();
     const { format } = useMoney();
+
+    if (!ctx) {
+        return (
+            <WidgetEmptyState
+                icon={Wallet}
+                title="Resumen Financiero"
+                description="Disponible en el dashboard de Finanzas"
+                href="/organization/finance"
+                actionLabel="Ir a Finanzas"
+            />
+        );
+    }
+
+    const { kpis, trends } = ctx;
 
     // Combine data for the chart
     const chartData = trends.income.map((item, i) => ({

@@ -146,7 +146,7 @@ export function PageHeader({
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
                         {/* Only show currency selector and feedback in org/project routes */}
-                        {(pathname.includes('/organization/') || pathname.includes('/organizacion/') || pathname.includes('/project/') || pathname.includes('/proyecto/')) && (
+                        {(pathname.includes('/organization') || pathname.includes('/organizacion') || pathname.includes('/project') || pathname.includes('/proyecto')) && (
                             <>
                                 <CurrencyModeSelector />
                                 {/* Documentation button - only shown when docs exist for this feature */}

@@ -1,11 +1,25 @@
 "use client";
 
-import { useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { BentoKpiCard } from "@/components/bento";
+import { useFinanceDashboardSafe } from "@/features/finance/context/finance-dashboard-context";
+import { BentoKpiCard } from "@/components/widgets/grid";
+import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { TrendingUp } from "lucide-react";
 
 export function IncomeKpiWidget() {
-    const { kpis, trends } = useFinanceDashboard();
+    const ctx = useFinanceDashboardSafe();
+    if (!ctx) {
+        return (
+            <WidgetEmptyState
+                icon={TrendingUp}
+                title="Ingresos Totales"
+                description="Disponible en el dashboard de Finanzas"
+                href="/organization/finance"
+                actionLabel="Ir a Finanzas"
+            />
+        );
+    }
+
+    const { kpis, trends } = ctx;
 
     return (
         <BentoKpiCard

@@ -3,11 +3,9 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { OrganizationActivityLog } from "@/features/team/types";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
+import { createDateColumn, createTextColumn } from "@/components/shared/data-table/columns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
-import { ActionConfig, ModuleConfig, actionConfigs, moduleConfigs, getActionVerb } from "@/config/audit-logs";
+import { actionConfigs, moduleConfigs, getActionVerb } from "@/config/audit-logs";
 import { User } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -20,18 +18,16 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
     const t = useTranslations("ActivityLogs");
 
     const columns: ColumnDef<OrganizationActivityLog>[] = [
-        {
+        // Fecha — relative mode "full" para "Hoy", "Ayer", "Hace X días"
+        createDateColumn<OrganizationActivityLog>({
             accessorKey: "created_at",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-            cell: ({ row }) => {
-                return (
-                    <div className="whitespace-nowrap text-muted-foreground text-sm">
-                        {formatDistanceToNow(new Date(row.original.created_at), { addSuffix: true, locale: es })}
-                    </div>
-                );
-            },
-            sortingFn: "datetime"
-        },
+            title: "Fecha",
+            showAvatar: false,
+            showTime: true,
+            relativeMode: "full",
+        }),
+
+        // Usuario — inline (custom con avatar + rol)
         {
             accessorKey: "member",
             id: "member",
@@ -43,9 +39,10 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                 if (isSystem) {
                     return (
                         <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="h-8 px-3">
-                                Sistema
-                            </Badge>
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <span className="text-sm text-muted-foreground">Sistema</span>
                         </div>
                     );
                 }
@@ -62,6 +59,11 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                             <span className="text-sm font-medium">
                                 {log.full_name || log.email}
                             </span>
+                            {log.role_name && (
+                                <span className="text-xs text-muted-foreground">
+                                    {log.role_name}
+                                </span>
+                            )}
                         </div>
                     </div>
                 );
@@ -78,74 +80,80 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                 return userName.toLowerCase().includes(String(value).toLowerCase());
             }
         },
+
+        // Módulo — text column con customRender para icon del config
         {
-            accessorKey: "target_table",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Módulo" />,
-            cell: ({ row }) => {
-                const rawEntity = row.original.target_table;
-                const config = moduleConfigs[rawEntity];
-
-                if (config) {
-                    const Icon = config.icon;
+            ...createTextColumn<OrganizationActivityLog>({
+                accessorKey: "target_table",
+                title: "Módulo",
+                muted: true,
+                customRender: (value) => {
+                    const config = value ? moduleConfigs[value] : null;
+                    if (config) {
+                        const Icon = config.icon;
+                        return (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Icon className="h-3.5 w-3.5" />
+                                <span>{config.label}</span>
+                            </div>
+                        );
+                    }
                     return (
-                        <Badge variant="outline" className={`font-medium gap-1.5 ${config.color}`}>
-                            <Icon className="h-3.5 w-3.5" />
-                            {config.label}
-                        </Badge>
+                        <span className="text-sm text-muted-foreground capitalize">
+                            {value || "-"}
+                        </span>
                     );
-                }
-
-                // Fallback for unknown modules
-                return (
-                    <Badge variant="outline" className="font-medium capitalize">
-                        {rawEntity}
-                    </Badge>
-                );
-            },
+                },
+            }),
             filterFn: (row, id, value) => {
                 const rawEntity = row.original.target_table;
                 const config = moduleConfigs[rawEntity];
                 const entityLabel = config?.label || rawEntity;
                 if (Array.isArray(value)) return value.includes(entityLabel);
                 return entityLabel.toLowerCase().includes(String(value).toLowerCase());
-            }
-        },
-        {
-            accessorKey: "action",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Acción" />,
-            cell: ({ row }) => {
-                const log = row.original;
-                const actionVerb = getActionVerb(log.action);
-                const config = actionConfigs[actionVerb];
-
-                if (config) {
-                    const Icon = config.icon;
-                    return (
-                        <Badge variant="outline" className={`font-medium gap-1.5 ${config.color}`}>
-                            <Icon className="h-3.5 w-3.5" />
-                            {config.label}
-                        </Badge>
-                    );
-                }
-
-                // Fallback for unknown actions
-                return (
-                    <span className="text-sm font-medium capitalize">
-                        {log.action}
-                    </span>
-                );
             },
+        },
+
+        // Acción — text column con customRender para icon del config
+        {
+            ...createTextColumn<OrganizationActivityLog>({
+                accessorKey: "action",
+                title: "Acción",
+                muted: true,
+                customRender: (value) => {
+                    const actionVerb = value ? getActionVerb(value) : null;
+                    const config = actionVerb ? actionConfigs[actionVerb] : null;
+                    if (config) {
+                        const Icon = config.icon;
+                        return (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Icon className="h-3.5 w-3.5" />
+                                <span>{config.label}</span>
+                            </div>
+                        );
+                    }
+                    return (
+                        <span className="text-sm text-muted-foreground capitalize">
+                            {value || "-"}
+                        </span>
+                    );
+                },
+            }),
             filterFn: (row, id, value) => {
                 const actionVerb = getActionVerb(row.original.action);
                 if (Array.isArray(value)) return value.includes(actionVerb);
                 return actionVerb.toLowerCase().includes(String(value).toLowerCase());
-            }
+            },
         },
-        {
-            id: "details",
-            header: "Detalles",
-            cell: ({ row }) => {
-                const metadata = row.original.metadata as any || {};
+
+        // Detalles — text column con customRender para metadata parsing
+        createTextColumn<OrganizationActivityLog>({
+            accessorKey: "metadata",
+            title: "Detalles",
+            enableSorting: false,
+            muted: true,
+            customRender: (_value, row) => {
+                const metadata = row.metadata as any || {};
 
                 let displayName = metadata.name;
                 if (!displayName && (metadata.first_name || metadata.last_name)) {
@@ -155,7 +163,7 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                 return (
                     <div className="flex flex-col gap-1">
                         {displayName && (
-                            <span className="text-sm text-foreground">
+                            <span className="text-sm text-muted-foreground">
                                 {displayName}
                             </span>
                         )}
@@ -171,8 +179,8 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                         )}
                     </div>
                 );
-            }
-        },
+            },
+        }),
     ];
 
     // Compute unique users for the filter

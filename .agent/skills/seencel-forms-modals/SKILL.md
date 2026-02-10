@@ -22,7 +22,7 @@ Los forms en Seencel V2 son **semi-autónomos**: manejan su propio ciclo de vida
 
 ```tsx
 // === Form (Semi-Autónomo) ===
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { useRouter } from "@/i18n/routing";
 
 interface MyFormProps {
@@ -111,7 +111,7 @@ const openMyModal = () => {
 ## Uso de Modales
 
 ```tsx
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 
 const { openModal, closeModal } = useModal();
 
@@ -208,7 +208,7 @@ Para que el footer quede **fijo en la parte inferior** del modal mientras el con
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
-import { useModal } from "@/providers/modal-store";
+import { useModal } from "@/stores/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
@@ -542,63 +542,23 @@ openModal(
 
 ---
 
-### Posibles Soluciones Futuras
+### Estado Actual de la Migración
 
-#### Opción 1: Mover ModalProvider dentro del dashboard layout
+#### ✅ Implementado: Zustand para Modal State
 
-```tsx
-// src/app/[locale]/(dashboard)/layout.tsx
-<OrganizationProvider>
-    <CurrencyProvider>
-        <ModalProvider>  {/* ← Moverlo aquí */}
-            {children}
-        </ModalProvider>
-    </CurrencyProvider>
-</OrganizationProvider>
-```
+El store de modales ya fue migrado a **Zustand** (`@/stores/modal-store`). Esto resuelve el acceso al estado del modal desde cualquier lugar.
 
-**Problema**: Los modales en páginas públicas (landing, auth) dejarían de funcionar.
+#### ⚠️ Pendiente: Context Providers en Portales
 
-**Solución**: Crear `DashboardModalProvider` separado del `GlobalModalProvider`.
+Los modales siguen montándose vía `DialogPrimitive.Portal` en `document.body`, por lo que **no tienen acceso** a:
+- `CurrencyProvider`
+- `OrganizationProvider`
+- Otros Context Providers del dashboard
 
-#### Opción 2: Usar `container` prop de Radix Portal
+**Workaround actual**: Pasar datos como props desde la View que abre el modal (ver sección "Patrón Correcto" arriba).
 
-Radix soporta especificar dónde montar el Portal:
-
-```tsx
-<DialogPrimitive.Portal container={containerRef.current}>
-```
-
-**Problema**: Requiere refactorizar todo el sistema de modales para usar un container dentro del árbol.
-
-#### Opción 3: Envolver el modal content con Providers
-
-En `modal-provider.tsx`, envolver `modal.view` con los providers:
-
-```tsx
-<OrganizationProviderClient value={orgContext}>
-    <CurrencyProviderClient value={currencyContext}>
-        {modal.view}
-    </CurrencyProviderClient>
-</OrganizationProviderClient>
-```
-
-**Problema**: Necesitarías pasar los valores del context de alguna forma al ModalProvider.
-
-#### Opción 4: Zustand para estado global
-
-Migrar de Context API a Zustand para estado que necesitan los modales:
-
-```tsx
-// store/organization-store.ts
-export const useOrganizationStore = create((set) => ({
-    wallets: [],
-    projects: [],
-    setFinancialData: (data) => set(data),
-}));
-```
-
-**Beneficio**: Zustand no depende del árbol de React, funciona en cualquier lugar.
+> [!NOTE]
+> Este workaround es aceptable y es el patrón estándar del proyecto. No se considera deuda técnica bloqueante.
 
 ---
 

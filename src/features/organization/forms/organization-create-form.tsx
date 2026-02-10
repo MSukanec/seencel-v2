@@ -47,11 +47,14 @@ export function OrganizationCreateForm() {
                 toast.error(result.error || "Error al crear la organización");
                 setIsLoading(false);
             }
-        } catch (error) {
-            // Next.js redirect throws NEXT_REDIRECT, we should not catch it
-            // If it's a real error, show it
-            if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-                return; // Let the redirect happen
+        } catch (error: any) {
+            // Next.js redirect() throws a special error that must be re-thrown.
+            // In Next.js 15+ the identifier is in `digest`, in older versions in `message`.
+            if (
+                error?.digest?.includes?.("NEXT_REDIRECT") ||
+                error?.message?.includes?.("NEXT_REDIRECT")
+            ) {
+                throw error; // Re-throw so Next.js handles the redirect
             }
             toast.error("Error inesperado al crear la organización");
             setIsLoading(false);

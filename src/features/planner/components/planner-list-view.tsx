@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { PlannerEventActions } from "./planner-event-actions";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 interface PlannerListViewProps {
     events: CalendarEvent[];
@@ -59,11 +60,12 @@ export function PlannerListView({ events, onEventClick }: PlannerListViewProps) 
 
     if (events.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                <CalendarIcon className="h-12 w-12 mb-4 opacity-20" />
-                <p className="text-lg font-medium">No hay eventos</p>
-                <p className="text-sm">No se encontraron eventos con los filtros actuales.</p>
-            </div>
+            <ViewEmptyState
+                mode="no-results"
+                icon={CalendarIcon}
+                viewName="eventos"
+                filterContext="con los filtros actuales"
+            />
         );
     }
 

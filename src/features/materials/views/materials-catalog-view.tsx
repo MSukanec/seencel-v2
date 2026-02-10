@@ -741,8 +741,7 @@ export function MaterialsCatalogView({
 
                 {/* Materials/Consumables View */}
                 {filteredMaterials.length === 0 ? (
-                    // Empty state wrapper - min-h-full ensures it takes available height
-                    <div className="min-h-full flex flex-col">
+                    <div className="h-full flex flex-col">
                         {searchQuery || selectedCategoryId ? (
                             <ViewEmptyState
                                 mode="no-results"
@@ -782,15 +781,16 @@ export function MaterialsCatalogView({
                         ))}
                     </div>
                 )}
-            </ContentLayout>
+            </ContentLayout >
 
             {/* Material Delete Modal */}
-            <DeleteReplacementModal
+            < DeleteReplacementModal
                 isOpen={deleteModalOpen}
                 onClose={() => {
                     setDeleteModalOpen(false);
                     setMaterialToDelete(null);
-                }}
+                }
+                }
                 onConfirm={handleConfirmDeleteMaterial}
                 itemToDelete={materialToDelete ? { id: materialToDelete.id, name: materialToDelete.name } : null}
                 replacementOptions={materialReplacementOptions}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { BentoGrid, BentoKpiCard, BentoListCard, type BentoListItem } from "@/components/bento";
+import { BentoKpiCard, BentoListCard, type BentoListItem } from "@/components/widgets/grid";
 import { AdminCharts } from "./admin-charts";
 import {
     Activity, Users, Building, Folder, UserPlus, Zap,
@@ -89,7 +89,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
     return (
         <div className="flex flex-col gap-6">
             {/* Hero Bento Grid - KPIs with embedded charts */}
-            <BentoGrid columns={4} gap="md">
+            <div className="grid grid-cols-1 auto-rows-fr md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Featured KPI with chart */}
                 <BentoKpiCard
                     size="sm"
@@ -152,10 +152,10 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     icon={<Activity className="w-5 h-5" />}
                     trend={{ value: "-2.5%", direction: "down", label: "Mejorando" }}
                 />
-            </BentoGrid>
+            </div>
 
             {/* Lists Row - Using BentoListCard */}
-            <BentoGrid columns={4} gap="md">
+            <div className="grid grid-cols-1 auto-rows-fr md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <BentoListCard
                     title="Actividad Reciente"
                     description="Últimas conexiones"
@@ -188,7 +188,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     items={dropOffItems}
                     size="tall"
                 />
-            </BentoGrid>
+            </div>
 
             {/* Insights Row */}
             {insights.length > 0 && (

@@ -1,0 +1,18 @@
+{
+    "order": [
+        "introduccion",
+        "calendario",
+        "kanban"
+    ],
+    "items": {
+        "introduccion": {
+            "title": "Introducción"
+        },
+        "calendario": {
+            "title": "Calendario"
+        },
+        "kanban": {
+            "title": "Panel de Tareas"
+        }
+    }
+}

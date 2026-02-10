@@ -193,11 +193,16 @@ export function FinanceDashboardProvider({
     );
 }
 
-// === HOOK ===
+// === HOOK (strict — throws if no provider) ===
 export function useFinanceDashboard() {
     const context = useContext(FinanceDashboardContext);
     if (!context) {
         throw new Error("useFinanceDashboard must be used within a FinanceDashboardProvider");
     }
     return context;
+}
+
+// === HOOK (safe — returns null if no provider, for widgets on any dashboard) ===
+export function useFinanceDashboardSafe() {
+    return useContext(FinanceDashboardContext);
 }

@@ -39,11 +39,15 @@ select
   l.created_at,
   u.full_name,
   u.avatar_url,
-  u.email
+  u.email,
+  r.name as role_name
 from
   organization_activity_logs l
-  left join organization_members m on l.member_id = m.id
-  left join users u on m.user_id = u.id;
+  join organization_members m on l.member_id = m.id
+  join users u on m.user_id = u.id
+  left join roles r on m.role_id = r.id
+where
+  l.member_id is not null;
 
 # Tabla ORGANIZATION_INVITATIONS:
 

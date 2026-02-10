@@ -5,49 +5,58 @@ description: Patrones de UI obligatorios para EmptyState, Toolbar, DataTable, To
 
 # Seencel UI Patterns Standard
 
-## 1. Empty State
+## 1. Empty State (`ViewEmptyState`)
 
-**OBLIGATORIO**: Todas las listas/tablas DEBEN mostrar `EmptyState` cuando no hay datos.
+**OBLIGATORIO**: Todas las vistas DEBEN usar `ViewEmptyState` para manejar estados vacíos y sin resultados.
 
-**Ubicación:** `@/components/ui/empty-state`
+**Ubicación:** `@/components/shared/empty-state`
 
-### Uso
+> ⛔ **NUNCA** usar el viejo `EmptyState` de `@/components/ui/empty-state` — es legacy.
+
+### Variante A: Vista Vacía (`mode="empty"`)
 
 ```tsx
-import { EmptyState } from "@/components/ui/empty-state";
-import { FileText, Plus } from "lucide-react";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { Package } from "lucide-react";
 
-// Early return ANTES de renderizar la UI completa
 if (items.length === 0) {
     return (
-        <EmptyState
-            icon={FileText}
-            title="Sin elementos"
-            description="Creá tu primer elemento para comenzar."
-            action={
-                <Button onClick={handleCreate} size="lg">
-                    <Plus className="mr-2 h-4 w-4" /> Nuevo Elemento
-                </Button>
-            }
+        <ViewEmptyState
+            mode="empty"
+            icon={Package}
+            viewName="Materiales e Insumos"
+            featureDescription="Los materiales e insumos son los productos físicos y consumibles que utilizás en tus proyectos de construcción."
+            onAction={handleCreate}
+            actionLabel="Nuevo Material"
+            docsPath="/docs/materiales"  // Solo si existe documentación
         />
     );
 }
+```
 
-// Renderizado normal DESPUÉS del check
-return (
-    <div>
-        <Toolbar>...</Toolbar>
-        <DataTable data={items} />
-    </div>
-);
+### Variante B: Sin Resultados (`mode="no-results"`)
+
+```tsx
+<ViewEmptyState
+    mode="no-results"
+    icon={Package}
+    viewName="materiales e insumos"
+    filterContext="con esa búsqueda"
+    onResetFilters={() => {
+        setSearchQuery("");
+        setSelectedCategoryId(null);
+    }}
+/>
 ```
 
 ### Reglas
 
-1. **Full Page Coverage**: EmptyState reemplaza TODO el área de contenido
-2. **Early Return**: Usar `if (data.length === 0) return <EmptyState />` ANTES del JSX normal
-3. **Action Button**: Si la vista tiene botón "Crear", pasarlo al prop `action`
-4. **Icon Match**: Usar ícono relevante a la entidad
+1. **Full Page Coverage**: `ViewEmptyState` reemplaza TODO el área de contenido
+2. **Early Return**: Usar `if (data.length === 0) return <ViewEmptyState />` ANTES del JSX normal
+3. **Dos modos obligatorios**: Toda vista debe manejar AMBOS modos (empty + no-results)
+4. **Icon Match**: Usar el mismo ícono de la página
+5. **docsPath**: Solo si existe documentación para ese feature
+6. **Empty Unificado**: Para tabs (ej: Materiales/Insumos), usar UN empty para todos
 
 ---
 
@@ -157,7 +166,7 @@ const file = await compressImage(rawFile, 'avatar'); // 'avatar' | 'cover' | 'do
 
 ## Checklist
 
-- [ ] ¿Lista vacía muestra `EmptyState`?
+- [ ] ¿Lista vacía muestra `ViewEmptyState` con ambos modos (empty + no-results)?
 - [ ] ¿Toolbar usa `portalToHeader`?
 - [ ] ¿DataTable para listas > 20 items?
 - [ ] ¿Toasts para feedback, no mensajes inline?

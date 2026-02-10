@@ -9,11 +9,13 @@ import {
     Package,
     DollarSign,
     Building,
+    Building2,
     ChevronDown,
     FileText,
     ClipboardList,
     Users,
-    HardHat
+    HardHat,
+    Calendar
 } from "lucide-react";
 import { useState } from "react";
 import type { DocTreeItem } from "../types";
@@ -27,9 +29,11 @@ const iconMap: Record<string, React.ElementType> = {
     package: Package,
     "dollar-sign": DollarSign,
     building: Building,
+    "building-2": Building2,
     "clipboard-list": ClipboardList,
     users: Users,
     "hard-hat": HardHat,
+    calendar: Calendar,
 };
 
 export function DocsSidebar({ tree }: DocsSidebarProps) {

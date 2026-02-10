@@ -1,6 +1,6 @@
 "use client";
 
-import { BentoCard } from "@/components/bento/bento-card";
+import { BentoCard } from "@/components/widgets/grid/bento-card";
 import { RefreshCw, ArrowLeftRight } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
 import { useCurrency } from "@/stores/organization-store";

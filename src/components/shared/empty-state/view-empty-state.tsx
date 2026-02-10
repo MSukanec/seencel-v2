@@ -169,7 +169,7 @@ export function ViewEmptyState({
             </h3>
 
             {/* Description */}
-            <p className="relative z-10 mt-2 mb-6 text-base text-muted-foreground max-w-md leading-relaxed">
+            <p className="relative z-10 mt-2 mb-6 text-base text-muted-foreground max-w-lg leading-relaxed">
                 {description}
             </p>
 

@@ -17,6 +17,7 @@ export interface PlanFeatures {
     custom_portal_branding: boolean;
     max_org_boards?: number;
     max_project_boards?: number;
+    custom_dashboard?: boolean;
 }
 
 export interface Plan {

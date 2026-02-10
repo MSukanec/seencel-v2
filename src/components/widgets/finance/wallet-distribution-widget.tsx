@@ -1,16 +1,31 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { BentoCard } from "@/components/bento/bento-card";
+import { useFinanceDashboardSafe } from "@/features/finance/context/finance-dashboard-context";
+import { BentoCard } from "@/components/widgets/grid/bento-card";
+import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { BaseDonutChart } from "@/components/charts/pie/base-donut-chart";
 import { PieChart } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
 import { ChartConfig } from "@/components/ui/chart";
 
 export function WalletDistributionWidget({ size = 'md' }: { size?: 'md' | 'lg' }) {
-    const { filteredMovements } = useFinanceDashboard();
+    const ctx = useFinanceDashboardSafe();
     const money = useMoney();
+
+    if (!ctx) {
+        return (
+            <WidgetEmptyState
+                icon={PieChart}
+                title="Distribución de Fondos"
+                description="Disponible en el dashboard de Finanzas"
+                href="/organization/finance"
+                actionLabel="Ir a Finanzas"
+            />
+        );
+    }
+
+    const { filteredMovements } = ctx;
 
     const distributionData = useMemo(() => {
         const walletBalances = filteredMovements.reduce((acc, m) => {

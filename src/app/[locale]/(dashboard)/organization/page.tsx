@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { getDashboardData } from "@/features/organization/queries";
 import { getOrganizationSettingsData } from "@/actions/organization-settings";
+import { prefetchOrgWidgetData } from "@/actions/widget-actions";
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
+import { getOrganizationPlanFeatures } from "@/actions/plans";
+import { createClient } from "@/lib/supabase/server";
 import { OrganizationDashboardView } from "@/features/organization/views/organization-dashboard-view";
 import { TeamActivityView } from "@/features/team/views/team-activity-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
+import { DashboardCustomizeButton } from "@/components/widgets/grid/dashboard-customize-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTranslations } from "next-intl/server";
 import { Building2 } from "lucide-react";
@@ -27,7 +30,7 @@ export async function generateMetadata({
     return {
         title: "Dashboard | Seencel",
         description: t('header.subtitle'),
-        robots: "noindex, nofollow", // Private dashboard
+        robots: "noindex, nofollow",
     };
 }
 
@@ -45,46 +48,28 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
     const defaultTab = view === 'activity' ? 'activity' : 'overview';
 
     try {
-        // Fetch dashboard data
-        const data = await getDashboardData();
-
-        if (!data || data.error) {
-            return (
-                <div className="h-full w-full flex items-center justify-center">
-                    <ErrorDisplay
-                        title={t('errors.unableToLoad')}
-                        message={data?.error || t('errors.unknownError')}
-                        retryLabel={t('errors.retry')}
-                    />
-                </div>
-            );
-        }
-
-        const { user, organization, stats, projects, activity } = data;
-
-        if (!user || !organization || !stats) {
-            return (
-                <div className="h-full w-full flex items-center justify-center">
-                    <ErrorDisplay
-                        title={t('errors.unableToLoad')}
-                        message={t('errors.unknownError')}
-                        retryLabel={t('errors.retry')}
-                    />
-                </div>
-            );
-        }
-
-        // Fetch activity logs for the activity tab
+        // Only fetch what's needed for the Activity tab
         const orgId = await getActiveOrganizationId();
-        const settingsData = orgId ? await getOrganizationSettingsData(orgId) : null;
+
+        // Fetch settings + widget data + org name in parallel
+        const supabase = await createClient();
+        const [settingsData, widgetData, orgResult, planFeatures] = await Promise.all([
+            orgId ? getOrganizationSettingsData(orgId) : null,
+            orgId ? prefetchOrgWidgetData(orgId) : {},
+            orgId ? supabase.from("organizations").select("name").eq("id", orgId).single() : null,
+            orgId ? getOrganizationPlanFeatures(orgId) : null,
+        ]);
+
         const activityLogs = settingsData?.activityLogs || [];
+        const orgName = orgResult?.data?.name || "Organización";
 
         return (
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
-                    title={(organization as { name: string }).name}
+                    title={orgName}
                     icon={<Building2 className="h-5 w-5" />}
+                    actions={<DashboardCustomizeButton isEnabled={planFeatures?.custom_dashboard ?? false} />}
                     tabs={
                         <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
                             <TabsTrigger value="overview">Visión General</TabsTrigger>
@@ -93,13 +78,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                     }
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <OrganizationDashboardView
-                            user={user}
-                            organization={organization as unknown as import("@/features/organization/types").Organization}
-                            stats={stats}
-                            projects={projects || []}
-                            activity={activity || []}
-                        />
+                        <OrganizationDashboardView prefetchedData={widgetData} />
                     </TabsContent>
 
                     <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">

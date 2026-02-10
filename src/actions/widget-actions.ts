@@ -1,0 +1,572 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+
+// ============================================================================
+// WIDGET SERVER ACTIONS
+// ============================================================================
+// Acciones livianas para que los widgets fetcheen sus propios datos.
+// Cada widget es autónomo y no depende de providers.
+// ============================================================================
+
+async function getActiveOrganizationId(): Promise<string | null> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: userData } = await supabase
+        .from('users')
+        .select(`id, user_preferences!inner(last_organization_id)`)
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData?.user_preferences) return null;
+    const pref = Array.isArray(userData.user_preferences)
+        ? (userData.user_preferences as any)[0]
+        : (userData.user_preferences as any);
+    return pref?.last_organization_id || null;
+}
+
+// ============================================================================
+// Activity Feed Item (returned to client)
+// ============================================================================
+export interface ActivityFeedItem {
+    id: string;
+    action: string;          // e.g. "create", "update", "delete"
+    target_table: string;    // e.g. "materials", "tasks"
+    full_name: string | null;
+    avatar_url: string | null;
+    metadata: Record<string, any> | null;
+    created_at: string;
+}
+
+/**
+ * Fetches recent activity items for the ActivityWidget.
+ * Returns the last `limit` items based on scope.
+ */
+export async function getActivityFeedItems(
+    scope: string,
+    limit: number = 5
+): Promise<ActivityFeedItem[]> {
+    try {
+        const orgId = await getActiveOrganizationId();
+        if (!orgId) return [];
+
+        const supabase = await createClient();
+
+        // All scopes query organization_activity_logs_view,
+        // but filter by target_table for domain-specific scopes.
+        let query = supabase
+            .from("organization_activity_logs_view")
+            .select("id, action, target_table, full_name, avatar_url, metadata, created_at")
+            .eq("organization_id", orgId)
+            .order("created_at", { ascending: false })
+            .limit(limit);
+
+        // Filter by relevant tables depending on scope
+        switch (scope) {
+            case "finance":
+                query = query.in("target_table", [
+                    "financial_movements",
+                    "general_costs",
+                    "general_costs_payments",
+                    "general_cost_categories",
+                    "client_payments",
+                    "subcontract_payments",
+                ]);
+                break;
+            case "project":
+                query = query.in("target_table", [
+                    "projects",
+                    "project_data",
+                    "tasks",
+                    "design_documents",
+                    "quotes",
+                    "quote_items",
+                ]);
+                break;
+            // 'organization' → no filter, show everything
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+            console.error("Activity feed error:", error);
+            return [];
+        }
+
+        return (data || []) as ActivityFeedItem[];
+    } catch (error) {
+        console.error("Activity feed error:", error);
+        return [];
+    }
+}
+
+// ============================================================================
+// Recent Projects (returned to client)
+// ============================================================================
+export interface RecentProject {
+    id: string;
+    name: string;
+    city: string | null;
+    country: string | null;
+    image_url: string | null;
+    image_bucket: string | null;
+    image_path: string | null;
+    image_palette: {
+        primary: string;
+        secondary: string;
+        background: string;
+        accent: string;
+    } | null;
+    color: string | null;
+    custom_color_hex: string | null;
+    use_custom_color: boolean;
+}
+
+/**
+ * Fetches the most recently active projects for the RecentProjectsWidget.
+ */
+export async function getRecentProjects(
+    limit: number = 6
+): Promise<RecentProject[]> {
+    try {
+        const orgId = await getActiveOrganizationId();
+        if (!orgId) return [];
+
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("projects_view")
+            .select("*")
+            .eq("organization_id", orgId)
+            .eq("is_deleted", false)
+            .order("last_active_at", { ascending: false, nullsFirst: false })
+            .limit(limit);
+
+        if (error) {
+            console.error("Recent projects error:", error);
+            return [];
+        }
+
+        return (data || []) as RecentProject[];
+    } catch (error) {
+        console.error("Recent projects error:", error);
+        return [];
+    }
+}
+
+// ============================================================================
+// Upcoming Events (returned to client)
+// ============================================================================
+
+export interface UpcomingEventItem {
+    id: string;
+    title: string;
+    date: string;            // ISO date/datetime
+    type: 'calendar' | 'kanban';
+    color: string | null;
+    isAllDay: boolean;
+    priority: string | null; // kanban priority
+    projectName: string | null;
+}
+
+/**
+ * Fetches upcoming events from calendar_events and/or kanban_cards.
+ * @param scope 'all' | 'calendar' | 'kanban'
+ * @param limit Max items to return
+ */
+export async function getUpcomingEvents(
+    scope: string = 'all',
+    limit: number = 8
+): Promise<UpcomingEventItem[]> {
+    try {
+        const orgId = await getActiveOrganizationId();
+        if (!orgId) return [];
+
+        const supabase = await createClient();
+        const now = new Date().toISOString();
+        const today = now.split('T')[0]; // YYYY-MM-DD
+
+        const items: UpcomingEventItem[] = [];
+
+        // Calendar events
+        if (scope === 'all' || scope === 'calendar') {
+            const { data: events } = await supabase
+                .from('calendar_events')
+                .select('id, title, start_at, color, is_all_day, status, projects(name)')
+                .eq('organization_id', orgId)
+                .eq('status', 'scheduled')
+                .is('deleted_at', null)
+                .gte('start_at', now)
+                .order('start_at', { ascending: true })
+                .limit(limit);
+
+            if (events) {
+                for (const e of events) {
+                    items.push({
+                        id: e.id,
+                        title: e.title,
+                        date: e.start_at,
+                        type: 'calendar',
+                        color: e.color,
+                        isAllDay: e.is_all_day,
+                        priority: null,
+                        projectName: (e as any).projects?.name || null,
+                    });
+                }
+            }
+        }
+
+        // Kanban cards with due_date
+        if (scope === 'all' || scope === 'kanban') {
+            const { data: cards } = await supabase
+                .from('kanban_cards')
+                .select('id, title, due_date, priority, is_completed, kanban_boards!inner(organization_id, name)')
+                .eq('kanban_boards.organization_id', orgId)
+                .eq('is_completed', false)
+                .eq('is_archived', false)
+                .not('due_date', 'is', null)
+                .gte('due_date', today)
+                .order('due_date', { ascending: true })
+                .limit(limit);
+
+            if (cards) {
+                for (const c of cards) {
+                    items.push({
+                        id: c.id,
+                        title: c.title,
+                        date: c.due_date!,
+                        type: 'kanban',
+                        color: null,
+                        isAllDay: true,
+                        priority: c.priority,
+                        projectName: null,
+                    });
+                }
+            }
+        }
+
+        // Sort by date, take first `limit`
+        items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return items.slice(0, limit);
+    } catch (error) {
+        console.error('[getUpcomingEvents] Error:', error);
+        return [];
+    }
+}
+
+// ============================================================================
+// Financial Summary (Ingresos / Egresos / Balance)
+// ============================================================================
+
+export type FinancialSummaryData = {
+    income: number;
+    expenses: number;
+    balance: number;
+    currencySymbol: string;
+    currencyCode: string;
+};
+
+/** Raw movement data for client-side KPI calculation via useMoney */
+export type FinancialMovementRaw = {
+    amount: number;
+    currency_code: string;
+    exchange_rate: number | null;
+    amount_sign: number;
+    payment_date: string | null;
+};
+
+/**
+ * Fetches financial summary (income, expenses, balance) in functional currency.
+ * Uses unified_financial_movements_view with amount_sign:
+ *   1 = income (client_payment)
+ *  -1 = expense (material, labor, subcontract, general_cost)
+ *   0 = neutral (transfers, exchanges) - excluded from totals
+ */
+export async function getFinancialSummary(
+    scope: string = 'organization',
+    projectId?: string | null
+): Promise<FinancialSummaryData> {
+    const supabase = await createClient();
+    const orgId = await getActiveOrganizationId();
+    if (!orgId) {
+        return { income: 0, expenses: 0, balance: 0, currencySymbol: '$', currencyCode: 'ARS' };
+    }
+
+    // Get functional currency symbol
+    const { data: prefs } = await supabase
+        .from('organization_preferences')
+        .select('functional_currency_id')
+        .eq('organization_id', orgId)
+        .single();
+
+    let currencySymbol = '$';
+    let currencyCode = 'ARS';
+    if (prefs?.functional_currency_id) {
+        const { data: cur } = await supabase
+            .from('currencies')
+            .select('symbol, code')
+            .eq('id', prefs.functional_currency_id)
+            .single();
+        if (cur) {
+            currencySymbol = cur.symbol || '$';
+            currencyCode = cur.code || 'ARS';
+        }
+    }
+
+    // Build query for movements
+    let query = supabase
+        .from('unified_financial_movements_view')
+        .select('functional_amount, amount_sign')
+        .eq('organization_id', orgId)
+        .neq('amount_sign', 0); // Exclude neutral (transfers/exchanges)
+
+    if (scope === 'project' && projectId) {
+        query = query.eq('project_id', projectId);
+    }
+
+    const { data: movements } = await query;
+
+    let income = 0;
+    let expenses = 0;
+
+    if (movements) {
+        for (const m of movements) {
+            const fa = Number(m.functional_amount) || 0;
+            if (m.amount_sign === 1) {
+                income += fa;
+            } else if (m.amount_sign === -1) {
+                expenses += fa;
+            }
+        }
+    }
+
+    return {
+        income,
+        expenses,
+        balance: income - expenses,
+        currencySymbol,
+        currencyCode,
+    };
+}
+
+// ============================================================================
+// PREFETCH ALL ORG WIDGET DATA (Server-side, single auth)
+// ============================================================================
+// Called from page.tsx to fetch all widget data in parallel on the server.
+// Receives orgId as param so we avoid repeated auth lookups.
+// ============================================================================
+
+export async function prefetchOrgWidgetData(orgId: string): Promise<Record<string, any>> {
+    const supabase = await createClient();
+    const now = new Date().toISOString();
+    const today = now.split('T')[0];
+
+    const [activityResult, projectsResult, orgResult, membersResult, projectCountResult, projectLocationsResult, membersAvatarResult, calendarResult, kanbanResult, financialResult, prefsResult, teamMembersResult] = await Promise.all([
+        // Activity feed (scope: organization, no filter)
+        supabase
+            .from("organization_activity_logs_view")
+            .select("id, action, target_table, full_name, avatar_url, metadata, created_at")
+            .eq("organization_id", orgId)
+            .order("created_at", { ascending: false })
+            .limit(5),
+
+        // Recent projects
+        supabase
+            .from("projects_view")
+            .select("*")
+            .eq("organization_id", orgId)
+            .eq("is_deleted", false)
+            .order("last_active_at", { ascending: false, nullsFirst: false })
+            .limit(2),
+
+        // Org info (name, logo, plan, settings) for pulse widget
+        supabase
+            .from("organizations")
+            .select("name, logo_path, settings, plans(name, slug)")
+            .eq("id", orgId)
+            .single(),
+
+        // Member count
+        supabase
+            .from("organization_members")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", orgId)
+            .eq("is_active", true),
+
+        // Active project count
+        supabase
+            .from("projects")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", orgId)
+            .eq("is_deleted", false),
+
+        // Project locations for map (only projects with coordinates)
+        supabase
+            .from("project_data")
+            .select("lat, lng, city, country, address, projects!inner(id, name, status, is_deleted, image_url)")
+            .eq("organization_id", orgId)
+            .not("lat", "is", null)
+            .not("lng", "is", null),
+
+        // Member avatars for pulse widget
+        supabase
+            .from("organization_members")
+            .select("users(full_name, avatar_url, email)")
+            .eq("organization_id", orgId)
+            .eq("is_active", true)
+            .limit(8),
+
+        // Upcoming calendar events (next 14 days)
+        supabase
+            .from('calendar_events')
+            .select('id, title, start_at, color, is_all_day, status, projects(name)')
+            .eq('organization_id', orgId)
+            .eq('status', 'scheduled')
+            .is('deleted_at', null)
+            .gte('start_at', now)
+            .order('start_at', { ascending: true })
+            .limit(8),
+
+        // Upcoming kanban cards with due_date
+        supabase
+            .from('kanban_cards')
+            .select('id, title, due_date, priority, is_completed, kanban_boards!inner(organization_id, name)')
+            .eq('kanban_boards.organization_id', orgId)
+            .eq('is_completed', false)
+            .eq('is_archived', false)
+            .not('due_date', 'is', null)
+            .gte('due_date', today)
+            .order('due_date', { ascending: true })
+            .limit(8),
+
+        // Financial movements (raw fields for client-side calculation via useMoney)
+        supabase
+            .from('unified_financial_movements_view')
+            .select('amount, currency_code, exchange_rate, amount_sign, payment_date')
+            .eq('organization_id', orgId)
+            .neq('amount_sign', 0),
+
+        // Org preferences for currency
+        supabase
+            .from('organization_preferences')
+            .select('functional_currency_id')
+            .eq('organization_id', orgId)
+            .single(),
+
+        // Team members with real presence via user_presence
+        supabase
+            .from('organization_members')
+            .select('id, users(full_name, avatar_url, email, user_presence(last_seen_at)), roles(name)')
+            .eq('organization_id', orgId)
+            .eq('is_active', true)
+            .limit(10),
+    ]);
+
+    // Build project locations (filter out deleted projects)
+    const projectLocations = (projectLocationsResult.data || [])
+        .filter((pd: any) => pd.projects && !pd.projects.is_deleted)
+        .map((pd: any) => {
+            const p = pd.projects;
+            return {
+                id: p.id,
+                name: p.name,
+                status: p.status,
+                lat: Number(pd.lat),
+                lng: Number(pd.lng),
+                city: pd.city,
+                country: pd.country,
+                address: pd.address || null,
+                imageUrl: p.image_url || null,
+            };
+        });
+
+    // Build members list for AvatarStack
+    const membersForStack = (membersAvatarResult?.data || [])
+        .filter((m: any) => m.users)
+        .map((m: any) => ({
+            name: m.users.full_name || "Member",
+            image: m.users.avatar_url || null,
+            email: m.users.email || undefined,
+        }));
+
+    // Build pulse data
+    const orgData = orgResult.data as any;
+    const pulseData = {
+        name: orgData?.name || "Organización",
+        logoPath: orgData?.logo_path || null,
+        planName: orgData?.plans?.name || null,
+        planSlug: orgData?.plans?.slug || null,
+        isFounder: (orgData?.settings as any)?.is_founder === true,
+        memberCount: membersResult.count || 0,
+        projectCount: projectCountResult.count || 0,
+        recentActivityCount: activityResult.data?.length || 0,
+        projectLocations,
+        members: membersForStack,
+    };
+
+    // Build upcoming events (unified calendar + kanban)
+    const upcomingItems: UpcomingEventItem[] = [];
+    if (calendarResult.data) {
+        for (const e of calendarResult.data) {
+            upcomingItems.push({
+                id: e.id,
+                title: e.title,
+                date: e.start_at,
+                type: 'calendar',
+                color: e.color,
+                isAllDay: e.is_all_day,
+                priority: null,
+                projectName: (e as any).projects?.name || null,
+            });
+        }
+    }
+    if (kanbanResult.data) {
+        for (const c of kanbanResult.data) {
+            upcomingItems.push({
+                id: c.id,
+                title: c.title,
+                date: c.due_date!,
+                type: 'kanban',
+                color: null,
+                isAllDay: true,
+                priority: c.priority,
+                projectName: null,
+            });
+        }
+    }
+    upcomingItems.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Pass raw movements for client-side KPI calculation via useMoney
+    const rawMovements: FinancialMovementRaw[] = (financialResult.data || []).map((m: any) => ({
+        amount: Number(m.amount) || 0,
+        currency_code: m.currency_code || '',
+        exchange_rate: m.exchange_rate != null ? Number(m.exchange_rate) : null,
+        amount_sign: Number(m.amount_sign) || 0,
+        payment_date: m.payment_date || null,
+    }));
+
+    return {
+        activity_kpi: (activityResult.data || []) as ActivityFeedItem[],
+        org_recent_projects: (projectsResult.data || []) as RecentProject[],
+        org_pulse: pulseData,
+        upcoming_events: upcomingItems.slice(0, 8),
+        financial_summary: rawMovements,
+        team_members: (teamMembersResult.data || []).map((m: any) => ({
+            id: m.id,
+            user_full_name: m.users?.full_name || null,
+            user_avatar_url: m.users?.avatar_url || null,
+            user_email: m.users?.email || null,
+            role_name: m.roles?.name || null,
+            last_active_at: m.users?.user_presence?.last_seen_at || null,
+        })).sort((a: any, b: any) => {
+            // Sort: most recently active first, nulls last
+            if (!a.last_active_at && !b.last_active_at) return 0;
+            if (!a.last_active_at) return 1;
+            if (!b.last_active_at) return -1;
+            return new Date(b.last_active_at).getTime() - new Date(a.last_active_at).getTime();
+        }),
+    };
+}
+

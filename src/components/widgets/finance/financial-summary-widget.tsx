@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFinanceDashboard } from "@/features/finance/context/finance-dashboard-context";
-import { BentoCard } from "@/components/bento/bento-card";
+import { useFinanceDashboardSafe } from "@/features/finance/context/finance-dashboard-context";
+import { BentoCard } from "@/components/widgets/grid/bento-card";
+import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { BaseDualAreaChart } from "@/components/charts/area/base-dual-area-chart";
 import { TrendingUp, TrendingDown, Wallet, BarChart3 } from "lucide-react";
 import { useMoney } from "@/hooks/use-money";
@@ -10,8 +11,22 @@ import { ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 
 export function FinancialSummaryWidget({ size = 'wide' }: { size?: 'lg' | 'wide' }) {
-    const { kpis, filteredMovements } = useFinanceDashboard();
+    const ctx = useFinanceDashboardSafe();
     const money = useMoney();
+
+    if (!ctx) {
+        return (
+            <WidgetEmptyState
+                icon={BarChart3}
+                title="Resumen Financiero"
+                description="Disponible en el dashboard de Finanzas"
+                href="/organization/finance"
+                actionLabel="Ir a Finanzas"
+            />
+        );
+    }
+
+    const { kpis, filteredMovements } = ctx;
 
     const evolutionData = useMemo(() => {
         const grouped = filteredMovements.reduce((acc, m) => {

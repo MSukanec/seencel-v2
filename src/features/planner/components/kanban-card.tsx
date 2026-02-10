@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format, isPast, isToday } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseDateFromDB } from "@/lib/timezone-data";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -47,8 +48,9 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging }: Kanb
 
     const priorityConfig = PRIORITY_CONFIG[optimisticCard.priority];
     const hasDueDate = !!optimisticCard.due_date;
-    const isOverdue = hasDueDate && isPast(new Date(optimisticCard.due_date!)) && !optimisticCard.is_completed;
-    const isDueToday = hasDueDate && isToday(new Date(optimisticCard.due_date!));
+    const parsedDueDate = hasDueDate ? parseDateFromDB(optimisticCard.due_date!) : null;
+    const isOverdue = hasDueDate && parsedDueDate && isPast(parsedDueDate) && !optimisticCard.is_completed;
+    const isDueToday = hasDueDate && parsedDueDate && isToday(parsedDueDate);
 
     // 🚀 OPTIMISTIC ARCHIVE: Visual feedback instantly, server in background
     const handleArchive = (e: React.MouseEvent) => {
@@ -217,7 +219,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging }: Kanb
                         ) : (
                             <Calendar className="h-3 w-3" />
                         )}
-                        {format(new Date(card.due_date!), "d MMM", { locale: es })}
+                        {format(parseDateFromDB(card.due_date!)!, "d MMM", { locale: es })}
                     </div>
                 )}
 

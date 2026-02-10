@@ -56,7 +56,7 @@ export default function DashboardError({ error, reset }: ErrorPageProps) {
             <div className="space-y-6 max-w-md w-full">
                 {/* Visual Element - Giant 500 with floating icon */}
                 <div className="relative flex justify-center">
-                    <div className="text-[10rem] font-bold text-muted/20 leading-none select-none animate-pulse">
+                    <div className="text-[10rem] font-bold text-foreground/10 leading-none select-none animate-pulse">
                         500
                     </div>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm p-4 rounded-full border shadow-lg animate-bounce">

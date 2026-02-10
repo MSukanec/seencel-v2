@@ -1,6 +1,6 @@
 "use client";
 
-import { BentoCard } from "@/components/bento/bento-card";
+import { BentoCard } from "@/components/widgets/grid/bento-card";
 import { Zap, Plus, ArrowRightLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";

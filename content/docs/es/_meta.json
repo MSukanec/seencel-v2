@@ -1,6 +1,8 @@
 {
     "order": [
+        "organizacion",
         "primeros-pasos",
+        "agenda",
         "materiales",
         "tareas",
         "ejecucion-de-obra",
@@ -9,9 +11,17 @@
         "proyectos"
     ],
     "items": {
+        "organizacion": {
+            "title": "Organización",
+            "icon": "building-2"
+        },
         "primeros-pasos": {
             "title": "Primeros Pasos",
             "icon": "rocket"
+        },
+        "agenda": {
+            "title": "Agenda",
+            "icon": "calendar"
         },
         "materiales": {
             "title": "Materiales",

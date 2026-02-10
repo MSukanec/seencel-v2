@@ -9,6 +9,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/client-image-compression";
 import { getStorageUrl } from "@/lib/storage-utils";
+import { parseDateFromDB, formatDateForDB } from "@/lib/timezone-data";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -86,8 +87,8 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
             title: initialData?.title || "",
             description: initialData?.description || "",
             priority: (initialData?.priority as any) || "none",
-            start_date: initialData?.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : "",
-            due_date: initialData?.due_date ? new Date(initialData.due_date).toISOString().split('T')[0] : "",
+            start_date: initialData?.start_date ? formatDateForDB(parseDateFromDB(initialData.start_date)!) : "",
+            due_date: initialData?.due_date ? formatDateForDB(parseDateFromDB(initialData.due_date)!) : "",
             estimated_hours: initialData?.estimated_hours ?? null,
             assigned_to: initialData?.assigned_to || "none",
             cover_image_url: initialData?.cover_image_url || null,

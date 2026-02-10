@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { KanbanBoard, PRIORITY_CONFIG } from "@/features/planner/types";
 import { Project } from "@/types/project";
@@ -53,6 +53,11 @@ export function KanbanDashboard({
     const { actions } = useLayoutStore();
     const [isSwitching, setIsSwitching] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const debouncedSetSearch = useCallback((value: string) => {
+        clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = setTimeout(() => setSearchQuery(value), 300);
+    }, []);
     // Optimistic state for boards
     const [optimisticBoards, setOptimisticBoards] = useState(initialBoards);
 
@@ -203,7 +208,7 @@ export function KanbanDashboard({
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
+                onSearchChange={debouncedSetSearch}
                 searchPlaceholder="Buscar tarjetas..."
                 leftActions={
                     <div className="flex items-center gap-1">
@@ -293,10 +298,11 @@ export function KanbanDashboard({
                         <ViewEmptyState
                             mode="empty"
                             icon={LayoutDashboard}
-                            viewName="Paneles Kanban"
-                            featureDescription="Creá tu primer panel para organizar tus tareas y proyectos de forma visual."
+                            viewName="Panel de Tareas"
+                            featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas. Podés asignar responsables, definir fechas límite y prioridades para coordinar el trabajo con tu equipo de forma visual."
                             onAction={handleCreateBoard}
                             actionLabel="Nuevo Panel"
+                            docsPath="/docs/agenda/kanban"
                         />
                     </div>
                 ) : activeBoardData ? (

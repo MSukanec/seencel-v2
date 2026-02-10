@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,11 @@ const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 export function PlannerCalendar({ organizationId, projectId, events, onRefresh, projects }: PlannerCalendarProps) {
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [searchQuery, setSearchQuery] = React.useState("");
+    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const debouncedSetSearch = useCallback((value: string) => {
+        clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = setTimeout(() => setSearchQuery(value), 300);
+    }, []);
     const [typeFilter, setTypeFilter] = React.useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = React.useState<'month' | 'list'>('month');
     const { openModal, closeModal } = useModal();
@@ -179,7 +185,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                     portalToHeader
                     mobileShowViewToggler
                     searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
+                    onSearchChange={debouncedSetSearch}
                     searchPlaceholder="Buscar eventos..."
                     filterContent={
                         <FacetedFilter
@@ -222,7 +228,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                 portalToHeader
                 mobileShowViewToggler
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
+                onSearchChange={debouncedSetSearch}
                 searchPlaceholder="Buscar eventos..."
                 filterContent={
                     <FacetedFilter
@@ -238,32 +244,34 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                     onClick: handleNewEvent
                 }]}
                 leftActions={
-                    <div className="flex items-center gap-2">
-                        <ToolbarTabs
-                            value={viewMode}
-                            onValueChange={(v) => setViewMode(v as 'month' | 'list')}
-                            options={[
-                                { label: "Mes", value: "month", icon: CalendarIcon },
-                                { label: "Agenda", value: "list", icon: List },
-                            ]}
-                        />
-                        <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1 ml-2">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPrevMonth}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <span className="text-sm font-medium w-32 text-center select-none capitalize">
-                                {format(currentDate, "MMMM yyyy", { locale: es })}
-                            </span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNextMonth}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Button variant="outline" size="sm" className="h-8 ml-2" onClick={goToToday}>
-                            Hoy
-                        </Button>
-                    </div>
+                    <ToolbarTabs
+                        value={viewMode}
+                        onValueChange={(v) => setViewMode(v as 'month' | 'list')}
+                        options={[
+                            { label: "Mes", value: "month", icon: CalendarIcon },
+                            { label: "Agenda", value: "list", icon: List },
+                        ]}
+                    />
                 }
             />
+
+            {/* Calendar Navigation Row */}
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPrevMonth}>
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium w-36 text-center select-none capitalize">
+                        {format(currentDate, "MMMM yyyy", { locale: es })}
+                    </span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNextMonth}>
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={goToToday}>
+                    Hoy
+                </Button>
+            </div>
 
             {/* Day Headers Row */}
             <div className="grid grid-cols-7 border-b bg-muted/30">

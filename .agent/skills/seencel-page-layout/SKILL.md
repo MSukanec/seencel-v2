@@ -74,12 +74,12 @@ app/[locale]/.../page.tsx
 
 ## 🚨 Reglas de Oro (Resumen Ejecutivo)
 
-1.  **Architecture**: `PAGE.tsx` en `app/` (Server) hace fetch → `[feature]-page.tsx` en `views/` (Client) orquesta tabs → `[feature]-*-view.tsx` contienen UI.
+1.  **Architecture**: `page.tsx` en `app/` (Server) hace fetch y renderiza Tabs → importa `[feature]-*-view.tsx` directamente (sin intermediario client).
 2.  **Tabs**: Siempre van en el **Header** (prop `tabs` de `PageWrapper`), nunca en el body.
 3.  **Metadata**: TODA página debe exportar `generateMetadata` (con título y robots).
 4.  **Error Handling**: Usar `try/catch` y `<ErrorDisplay>` en el servidor para evitar pantallas blancas.
 5.  **Toolbar**: Usar `<Toolbar portalToHeader />` dentro de las Views de Listado/Gestión. **NO usar en Dashboards/Overview**.
-6.  **EmptyState**: Responsabilidad de la **View**, prohibido en DataTables.
+6.  **EmptyState**: Usar `ViewEmptyState` de `@/components/shared/empty-state`. Responsabilidad de la **View**, prohibido en DataTables.
 7.  **Translations**: **NUNCA** dejar claves de traducción faltantes. Asegurar que `es.json` incluya `title`, `detailTitle` (si aplica), `subtitle` y `back`.
 
 ---
@@ -291,13 +291,12 @@ NUNCA pongas botones de acción directamente en el body de la View. El Toolbar s
 // src/features/[feature]/views/[feature]-list-view.tsx
 "use client";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 
 export function ListView({ data }) {
     const handleCreate = () => { /* ... */ };
 
-    // ✅ CORRECTO: EmptyState SIN action + Toolbar en paralelo
-    // La acción de crear ya está en el Toolbar, NO duplicar en EmptyState
+    // ✅ CORRECTO: ViewEmptyState con action + Toolbar en paralelo
     if (data.length === 0) {
         return (
             <>
@@ -307,15 +306,14 @@ export function ListView({ data }) {
                         { label: "Crear", icon: Plus, onClick: handleCreate }
                     ]}
                 />
-                <div className="h-full flex items-center justify-center">
-                    <EmptyState
-                        icon={ListIcon}
-                        title="Sin elementos"
-                        description="Creá tu primer elemento."
-                        // ⚠️ NO usar action por defecto - ya está en Toolbar
-                        // Solo agregar action si el usuario lo pide explícitamente
-                    />
-                </div>
+                <ViewEmptyState
+                    mode="empty"
+                    icon={ListIcon}
+                    viewName="Elementos"
+                    featureDescription="Creá tu primer elemento para comenzar."
+                    onAction={handleCreate}
+                    actionLabel="Crear Elemento"
+                />
             </>
         );
     }
@@ -541,21 +539,11 @@ const handleTabChange = (value: string) => {
 <Tabs value={activeTab} onValueChange={handleTabChange}>
 ```
 
-### 10.4 React Query (Caching)
+### 10.4 Data Refresh
 
-**Hooks:**
-- `@/hooks/use-query-patterns` - Query keys estandarizadas
-- `@/hooks/use-smart-refresh` - Patrón híbrido de refresh
+Después de una mutación, usar `router.refresh()` como fallback combinado con optimistic updates.
 
-```tsx
-import { useSmartRefresh } from "@/hooks/use-smart-refresh";
-import { queryKeys } from "@/hooks/use-query-patterns";
-
-const { invalidate, refresh } = useSmartRefresh();
-
-// Después de mutación:
-invalidate(queryKeys.clients(projectId)); // Invalidar cache específico
-```
+> ⛔ **NUNCA** usar `router.refresh()` como ÚNICO mecanismo de update. Siempre combinarlo con updates optimistas.
 
 ### 10.5 Duraciones de Animación
 

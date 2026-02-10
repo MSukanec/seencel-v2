@@ -60,6 +60,7 @@ export interface OrganizationActivityLog {
     full_name: string | null;
     avatar_url: string | null;
     email: string | null;
+    role_name: string | null;
 }
 
 export interface Plan {
