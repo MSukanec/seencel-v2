@@ -7,11 +7,9 @@ import { usePathname } from "next/navigation";
 import { useModal } from "@/stores/modal-store";
 import { FeedbackForm } from "@/components/shared/forms/feedback-form";
 import { Button } from "@/components/ui/button";
-import { useTranslations, useLocale } from "next-intl";
-import { MessageSquarePlus, BookOpen } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { MessageSquarePlus } from "lucide-react";
 import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
-import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
-import Link from "next/link";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -67,9 +65,6 @@ export function PageHeader({
         );
     };
 
-    // Get locale and docs slug for current page
-    const locale = useLocale();
-    const docsSlug = getDocsSlugForPath(pathname);
 
     // Helper to find the matching item in all contexts
     const findActiveItem = () => {
@@ -149,20 +144,6 @@ export function PageHeader({
                         {(pathname.includes('/organization') || pathname.includes('/organizacion') || pathname.includes('/project') || pathname.includes('/proyecto')) && (
                             <>
                                 <CurrencyModeSelector />
-                                {/* Documentation button - only shown when docs exist for this feature */}
-                                {docsSlug && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        asChild
-                                        className="h-8 gap-2 px-3 text-xs font-medium"
-                                    >
-                                        <Link href={`/${locale}/docs/${docsSlug}`} target="_blank">
-                                            <BookOpen className="h-4 w-4" />
-                                            Documentación
-                                        </Link>
-                                    </Button>
-                                )}
                                 {!hideFeedback && (
                                     <Button
                                         variant="outline"

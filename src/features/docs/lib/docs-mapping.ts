@@ -4,37 +4,47 @@
  * When a user is on a route that has an entry here,
  * the "Documentación" button will appear in the header.
  * 
- * Format: 'route-prefix' => 'docs-slug'
+ * Format: { slug, exactOnly? }
+ * - slug: matches the folder/file structure in content/docs/
+ * - exactOnly: if true, only exact pathname match shows the button
+ *   (prevents /organizacion from being a catch-all for all sub-routes)
  * 
- * The route-prefix should match the pathname (without locale).
- * The docs-slug should match the folder/file structure in content/docs/
+ * The route key should match the pathname (without locale).
  */
-export const FEATURE_DOCS_MAP: Record<string, string> = {
+
+interface DocsMapping {
+    slug: string;
+    /** If true, only show docs button on exact route match (no prefix matching) */
+    exactOnly?: boolean;
+}
+
+export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     // Organization Catalog (Catálogo Técnico)
-    '/organization/catalog': 'materiales/introduccion',
-    '/organizacion/catalogo': 'materiales/introduccion',
+    '/organization/catalog': { slug: 'materiales/introduccion' },
+    '/organizacion/catalogo': { slug: 'materiales/introduccion' },
 
     // Finance
-    '/organization/finance': 'finanzas/introduccion',
-    '/organizacion/finanzas': 'finanzas/introduccion',
+    '/organization/finance': { slug: 'finanzas/introduccion' },
+    '/organizacion/finanzas': { slug: 'finanzas/introduccion' },
 
     // Projects
-    '/organization/projects': 'proyectos/introduccion',
-    '/organizacion/proyectos': 'proyectos/introduccion',
+    '/organization/projects': { slug: 'proyectos/introduccion' },
+    '/organizacion/proyectos': { slug: 'proyectos/introduccion' },
 
     // Construction Tasks (Ejecución de Obra) - project level
-    '/project/': 'ejecucion-de-obra/introduccion',
-    '/proyecto/': 'ejecucion-de-obra/introduccion',
+    '/project/': { slug: 'ejecucion-de-obra/introduccion' },
+    '/proyecto/': { slug: 'ejecucion-de-obra/introduccion' },
 
-    // Add more feature -> docs mappings here as documentation is created
-
-    // Organization (Dashboard principal)
-    '/organization': 'organizacion/introduccion',
-    '/organizacion': 'organizacion/introduccion',
+    // Organization (Dashboard principal) - EXACT ONLY to prevent
+    // catch-all for sub-routes like /organizacion/gastos-generales
+    '/organization': { slug: 'organizacion/introduccion', exactOnly: true },
+    '/organizacion': { slug: 'organizacion/introduccion', exactOnly: true },
 
     // Planner (Agenda)
-    '/organization/planner': 'agenda/introduccion',
-    '/organizacion/planificador': 'agenda/introduccion',
+    '/organization/planner': { slug: 'agenda/introduccion' },
+    '/organizacion/planificador': { slug: 'agenda/introduccion' },
+
+    // Add more feature -> docs mappings here as documentation is created
 };
 
 /**
@@ -47,13 +57,15 @@ export function getDocsSlugForPath(pathname: string): string | null {
 
     // Try exact match first
     if (FEATURE_DOCS_MAP[pathWithoutLocale]) {
-        return FEATURE_DOCS_MAP[pathWithoutLocale];
+        return FEATURE_DOCS_MAP[pathWithoutLocale].slug;
     }
 
     // Try prefix match (for nested routes like /organization/catalog/task/123)
-    for (const [routePrefix, docsSlug] of Object.entries(FEATURE_DOCS_MAP)) {
+    // Skip entries marked as exactOnly
+    for (const [routePrefix, mapping] of Object.entries(FEATURE_DOCS_MAP)) {
+        if (mapping.exactOnly) continue;
         if (pathWithoutLocale.startsWith(routePrefix)) {
-            return docsSlug;
+            return mapping.slug;
         }
     }
 

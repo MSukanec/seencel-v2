@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Receipt, DollarSign, TrendingDown, Loader2 } from "lucide-react";
+import { Plus, Receipt, DollarSign, TrendingDown, Loader2, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
@@ -17,6 +17,12 @@ import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
+import { BulkImportModal } from "@/components/shared/import/import-modal";
+import { ImportConfig, createImportBatch, revertImportBatch } from "@/lib/import";
+import { exportToCSV, exportToExcel, ExportColumn } from "@/lib/export";
+import { parseDateFromDB } from "@/lib/timezone-data";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 import { useMoney } from "@/hooks/use-money";
 
@@ -73,6 +79,130 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                 size: "lg"
             }
         );
+    };
+
+    // ========================================
+    // IMPORT / EXPORT
+    // ========================================
+    const paymentImportConfig: ImportConfig<any> = {
+        entityLabel: "Pagos de Gastos Generales",
+        entityId: "general_cost_payments",
+        columns: [
+            { id: "payment_date", label: "Fecha", required: true, example: "2024-01-20" },
+            { id: "general_cost_name", label: "Concepto", required: true, example: "Alquiler Oficina" },
+            { id: "amount", label: "Monto", required: true, type: "number", example: "50000" },
+            {
+                id: "currency_code",
+                label: "Moneda",
+                required: false,
+                example: "ARS",
+                foreignKey: {
+                    table: 'currencies',
+                    labelField: 'code',
+                    valueField: 'id',
+                    fetchOptions: async () => {
+                        return (currencies || []).map((c) => ({
+                            id: c.id,
+                            label: `${c.name} (${c.code})`
+                        }));
+                    }
+                }
+            },
+            {
+                id: "wallet_name",
+                label: "Billetera",
+                required: false,
+                example: "Caja Chica",
+                foreignKey: {
+                    table: 'organization_wallets',
+                    labelField: 'name',
+                    valueField: 'id',
+                    fetchOptions: async () => {
+                        return (wallets || []).map((w) => ({
+                            id: w.id,
+                            label: w.wallet_name
+                        }));
+                    }
+                }
+            },
+            { id: "notes", label: "Notas", required: false },
+            { id: "reference", label: "Referencia", required: false, example: "Transferencia #123" },
+        ],
+        onImport: async (data) => {
+            const batch = await createImportBatch(organizationId, "general_cost_payments", data.length);
+            // TODO: implementar importGeneralCostPaymentsBatch
+            toast.info("Importación de gastos generales próximamente");
+            return { success: 0, errors: ["Funcionalidad en desarrollo"], warnings: [], batchId: batch.id };
+        },
+        onRevert: async (batchId) => {
+            await revertImportBatch(batchId, 'general_cost_payments');
+        }
+    };
+
+    const handleImport = () => {
+        openModal(
+            <BulkImportModal config={paymentImportConfig} organizationId={organizationId} />,
+            {
+                size: "2xl",
+                title: "Importar Pagos de Gastos Generales",
+                description: "Importá pagos masivamente desde Excel o CSV."
+            }
+        );
+    };
+
+    // Export column definitions
+    const exportColumns: ExportColumn<GeneralCostPaymentView>[] = [
+        {
+            key: 'payment_date',
+            header: 'Fecha',
+            transform: (val) => {
+                const d = parseDateFromDB(val);
+                return d ? format(d, 'dd/MM/yyyy', { locale: es }) : '';
+            }
+        },
+        { key: 'general_cost_name', header: 'Concepto', transform: (val) => val ?? '' },
+        { key: 'category_name', header: 'Categoría', transform: (val) => val ?? 'Sin categoría' },
+        {
+            key: 'amount',
+            header: 'Monto',
+            transform: (val) => typeof val === 'number' ? val : 0
+        },
+        { key: 'currency_code', header: 'Moneda', transform: (val) => val ?? '' },
+        { key: 'wallet_name', header: 'Billetera', transform: (val) => val ?? '' },
+        {
+            key: 'status',
+            header: 'Estado',
+            transform: (val) => {
+                const map: Record<string, string> = {
+                    confirmed: 'Confirmado',
+                    pending: 'Pendiente',
+                    overdue: 'Vencido',
+                    cancelled: 'Cancelado',
+                };
+                return map[val] ?? val ?? '';
+            }
+        },
+        { key: 'reference', header: 'Referencia', transform: (val) => val ?? '' },
+        { key: 'notes', header: 'Notas', transform: (val) => val ?? '' },
+    ];
+
+    const handleExportCSV = () => {
+        exportToCSV({
+            data,
+            columns: exportColumns,
+            fileName: `gastos-generales-pagos-${format(new Date(), 'yyyy-MM-dd')}`,
+        });
+        toast.success('Exportación CSV descargada');
+    };
+
+    const handleExportExcel = () => {
+        exportToExcel({
+            data,
+            columns: exportColumns,
+            fileName: `gastos-generales-pagos-${format(new Date(), 'yyyy-MM-dd')}`,
+            sheetName: 'Pagos Gastos Generales',
+        });
+        toast.success('Exportación Excel descargada');
     };
 
     // Open form in view mode (read-only) when row is clicked
@@ -247,7 +377,10 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                 <Toolbar
                     portalToHeader
                     actions={[
-                        { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() }
+                        { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() },
+                        { label: "Importar", icon: Upload, onClick: handleImport },
+                        { label: "Exportar CSV", icon: Download, onClick: handleExportCSV },
+                        { label: "Exportar Excel", icon: Download, onClick: handleExportExcel },
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
@@ -276,7 +409,10 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
             <Toolbar
                 portalToHeader
                 actions={[
-                    { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() }
+                    { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() },
+                    { label: "Importar", icon: Upload, onClick: handleImport },
+                    { label: "Exportar CSV", icon: Download, onClick: handleExportCSV },
+                    { label: "Exportar Excel", icon: Download, onClick: handleExportExcel },
                 ]}
             />
             <div className="space-y-6">

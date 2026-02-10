@@ -31,21 +31,16 @@ export function DashboardCustomizeButton({ isEnabled = true }: DashboardCustomiz
     const button = (
         <Button
             variant={isEditing ? "default" : "outline"}
-            size="sm"
+            size="icon"
             onClick={toggle}
-            className="h-8 gap-2 px-3 text-xs font-medium cursor-pointer"
+            className="h-8 w-8 cursor-pointer"
         >
             {isEditing ? (
-                <>
-                    <Check className="h-4 w-4" />
-                    Guardar
-                </>
+                <Check className="h-4 w-4" />
             ) : (
-                <>
-                    <LayoutDashboard className="h-4 w-4" />
-                    Personalizar
-                </>
+                <LayoutDashboard className="h-4 w-4" />
             )}
+            <span className="sr-only">{isEditing ? "Guardar" : "Personalizar"}</span>
         </Button>
     );
 

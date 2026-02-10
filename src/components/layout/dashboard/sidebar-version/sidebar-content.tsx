@@ -11,9 +11,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     PanelLeft,
     PanelLeftClose,
+    PanelLeftOpen,
     ArrowLeft,
     Building,
     EyeOff,
+    Check,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
@@ -25,6 +27,12 @@ import {
 } from "@/components/ui/hover-card";
 import { Lock, Crown, ChevronRight } from "lucide-react";
 import { Link } from "@/i18n/routing";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { SidebarMode } from "@/types/preferences";
 
 // ============================================================================
 // V2 EXPERIMENTAL - DRILL-DOWN SIDEBAR
@@ -88,6 +96,7 @@ export function SidebarContent({
 
     // Animation direction
     const [slideDirection, setSlideDirection] = React.useState<"left" | "right">("right");
+    const [sidebarPopoverOpen, setSidebarPopoverOpen] = React.useState(false);
 
     // Handle context button click - drill into that context AND navigate instantly
     const handleContextEnter = (ctx: NavigationContext) => {
@@ -107,14 +116,23 @@ export function SidebarContent({
         router.push("/hub");
     };
 
-    // Toggle sidebar mode
+    // Toggle sidebar mode: docked → expanded_hover → collapsed → docked
     const cycleSidebarMode = () => {
         if (sidebarMode === 'docked') actions.setSidebarMode('expanded_hover');
+        else if (sidebarMode === 'expanded_hover') actions.setSidebarMode('collapsed');
         else actions.setSidebarMode('docked');
     };
 
-    const getModeIcon = () => sidebarMode === 'docked' ? PanelLeftClose : PanelLeft;
-    const getModeLabel = () => sidebarMode === 'docked' ? "Colapsar" : "Fijar";
+    // Icons: docked (full) → PanelLeftClose, expanded_hover (hover) → PanelLeft, collapsed → PanelLeft
+    const getModeIcon = () => {
+        if (sidebarMode === 'docked') return PanelLeftClose;      // "click to reduce"
+        return PanelLeft;                                          // "click to expand more"
+    };
+    const getModeLabel = () => {
+        if (sidebarMode === 'docked') return "Hover";              // next: expanded_hover
+        if (sidebarMode === 'expanded_hover') return "Colapsar";   // next: collapsed
+        return "Fijar";                                            // next: docked
+    };
 
     // Get nav items for specific contexts
     const orgNavItems = getNavItems("organization");
@@ -326,19 +344,53 @@ export function SidebarContent({
                 widthClass
             )}
         >
-            {/* TOGGLE FLAP BUTTON */}
+            {/* SIDEBAR MODE POPOVER */}
             {!isMobile && (
-                <button
-                    onClick={cycleSidebarMode}
-                    className="absolute left-full bottom-8 z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-md transition-colors hover:bg-accent hover:text-foreground text-muted-foreground"
-                    title={getModeLabel()}
-                >
-                    {sidebarMode === 'docked' ? (
-                        <PanelLeftClose className="h-3 w-3" />
-                    ) : (
-                        <PanelLeft className="h-3 w-3" />
-                    )}
-                </button>
+                <Popover open={sidebarPopoverOpen} onOpenChange={setSidebarPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <button
+                            className="absolute left-full bottom-8 z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-md transition-colors hover:bg-accent hover:text-foreground text-muted-foreground"
+                            title="Modo del sidebar"
+                        >
+                            {React.createElement(getModeIcon(), { className: "h-3 w-3" })}
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        side="right"
+                        align="end"
+                        sideOffset={12}
+                        className="w-[180px] p-1.5"
+                    >
+                        {([
+                            { mode: 'docked' as SidebarMode, icon: PanelLeftClose, label: 'Fijado', desc: 'Siempre visible' },
+                            { mode: 'expanded_hover' as SidebarMode, icon: PanelLeftOpen, label: 'Hover', desc: 'Aparece al pasar el cursor' },
+                            { mode: 'collapsed' as SidebarMode, icon: PanelLeft, label: 'Colapsado', desc: 'Solo íconos' },
+                        ]).map((opt) => (
+                            <button
+                                key={opt.mode}
+                                onClick={() => {
+                                    actions.setSidebarMode(opt.mode);
+                                    setSidebarPopoverOpen(false);
+                                }}
+                                className={cn(
+                                    "flex items-center gap-2.5 w-full px-2.5 py-2 text-left rounded-md transition-colors",
+                                    sidebarMode === opt.mode
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                )}
+                            >
+                                <opt.icon className="h-4 w-4 shrink-0" />
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-xs font-medium">{opt.label}</span>
+                                    <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
+                                </div>
+                                {sidebarMode === opt.mode && (
+                                    <Check className="h-3 w-3 ml-auto shrink-0 text-primary" />
+                                )}
+                            </button>
+                        ))}
+                    </PopoverContent>
+                </Popover>
             )}
 
             <div className="flex flex-col w-full h-full overflow-hidden">

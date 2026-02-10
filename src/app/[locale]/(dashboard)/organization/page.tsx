@@ -8,7 +8,6 @@ import { OrganizationDashboardView } from "@/features/organization/views/organiz
 import { TeamActivityView } from "@/features/team/views/team-activity-view";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
-import { DashboardCustomizeButton } from "@/components/widgets/grid/dashboard-customize-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTranslations } from "next-intl/server";
 import { Building2 } from "lucide-react";
@@ -70,7 +69,6 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                     type="page"
                     title={orgName}
                     icon={<Building2 className="h-5 w-5" />}
-                    actions={<DashboardCustomizeButton isEnabled={planFeatures?.custom_dashboard ?? false} />}
                     tabs={
                         <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
                             <TabsTrigger value="overview">Visión General</TabsTrigger>
@@ -79,7 +77,11 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                     }
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <OrganizationDashboardView prefetchedData={widgetData} savedLayout={savedLayout} />
+                        <OrganizationDashboardView
+                            prefetchedData={widgetData}
+                            savedLayout={savedLayout}
+                            isCustomDashboardEnabled={planFeatures?.custom_dashboard ?? false}
+                        />
                     </TabsContent>
 
                     <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">

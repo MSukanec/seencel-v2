@@ -1,13 +1,17 @@
 "use client";
 
 import { Table } from "@tanstack/react-table";
-import { Search, X, Plus, MoreHorizontal, LayoutTemplate, Lock } from "lucide-react";
+import { Search, X, Plus, MoreHorizontal, LayoutTemplate, Lock, BookOpen } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
+import { useLocale } from "next-intl";
+import Link from "next/link";
 import { DataTableFacetedFilter } from "./toolbar-faceted-filter";
 import { FacetedFilter } from "./toolbar-faceted-filter"; // Generic filter for non-table use
 import { ToolbarButton, ToolbarSplitButton, ToolbarAction } from "./toolbar-button";
 import { ToolbarSearch } from "./toolbar-search";
+import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
 
 // Note: Removed DataTableViewOptions as requested by user.
 import { DataTableBulkActions } from "@/components/shared/data-table/data-table-bulk-actions";
@@ -75,6 +79,8 @@ export interface ToolbarProps<TData> {
 
     mobileShowViewToggler?: boolean;
     portalToHeader?: boolean;
+    /** Show auto-detected documentation button (icon-only). Default: true */
+    showDocsButton?: boolean;
 }
 
 export function Toolbar<TData>({
@@ -98,10 +104,16 @@ export function Toolbar<TData>({
 
     mobileShowViewToggler = true,
     portalToHeader = false,
+    showDocsButton = true,
 }: ToolbarProps<TData>) {
     const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
     const [mobileViewOpen, setMobileViewOpen] = React.useState(false);
     const [mounted, setMounted] = React.useState(false);
+
+    // Auto-detect docs for current route
+    const pathname = usePathname();
+    const locale = useLocale();
+    const docsSlug = showDocsButton ? getDocsSlugForPath(pathname) : null;
 
     // Mount state for Portal (avoid SSR hydration issues)
     React.useEffect(() => {
@@ -210,13 +222,23 @@ export function Toolbar<TData>({
 
                     {/* Right side: Actions */}
                     <div className="flex items-center gap-2 shrink-0">
-                        {/* 
-                   Strategy:
-                   1. Render children first (e.g., custom toolbar buttons like CreateProjectButton)
-                   2. Then render ToolbarSplitButton if 'actions' are provided
-                   Both can coexist.
-                */}
+                        {/* Auto-injected docs button (icon-only) */}
+                        {showDocsButton && docsSlug && (
+                            <ToolbarButton
+                                variant="outline"
+                                size="icon"
+                                asChild
+                                className="h-8 w-8"
+                            >
+                                <Link href={`/${locale}/docs/${docsSlug}`} target="_blank">
+                                    <BookOpen className="h-4 w-4" />
+                                    <span className="sr-only">Documentación</span>
+                                </Link>
+                            </ToolbarButton>
+                        )}
+                        {/* Custom toolbar buttons (e.g., Personalizar) */}
                         {children}
+                        {/* Primary + secondary actions as SplitButton */}
                         {actions && actions.length > 0 && (
                             <ToolbarSplitButton
                                 mainAction={actions[0]}

@@ -19,6 +19,7 @@ export function Sidebar({ user }: SidebarProps) {
     const isExpanded =
         sidebarMode === 'docked' ||
         (sidebarMode === 'expanded_hover' && isHovered);
+    // 'collapsed' mode: siempre colapsado, sin hover expansion
 
     return (
         <aside
