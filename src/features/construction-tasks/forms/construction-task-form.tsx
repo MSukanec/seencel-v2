@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { ConstructionTaskView, ConstructionTaskStatus, CostScope } from "../types";
-import { createConstructionTask, updateConstructionTask } from "../actions";
+import { createConstructionTask, updateConstructionTask, getRecipesForTask } from "../actions";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
+import type { TaskRecipeView } from "@/features/tasks/types";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
@@ -16,8 +17,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { DateField, NotesField } from "@/components/shared/forms/fields";
-import { TaskView } from "@/features/tasks/types";
-import { Search, X } from "lucide-react";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 
 // ============================================================================
 // Types
@@ -37,7 +37,7 @@ interface ConstructionTaskFormProps {
     organizationId: string;
     catalogTasks: CatalogTask[];
     initialData?: ConstructionTaskView | null;
-    onSuccess?: () => void;
+    onSuccess?: (data: any, isEditing: boolean) => void;
     onCancel?: () => void;
 }
 
@@ -58,26 +58,86 @@ export function ConstructionTaskForm({
 
     // --- Task Selection ---
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialData?.task_id || null);
-    const [taskSearch, setTaskSearch] = useState("");
     const [isCustomTask, setIsCustomTask] = useState(
         isEditing ? !initialData?.task_id : false
     );
 
-    const selectedCatalogTask = useMemo(() => {
-        if (!selectedTaskId) return null;
-        return catalogTasks.find(t => t.id === selectedTaskId) || null;
-    }, [selectedTaskId, catalogTasks]);
+    // --- Recipe Selection ---
+    const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(initialData?.recipe_id || null);
+    const [availableRecipes, setAvailableRecipes] = useState<TaskRecipeView[]>([]);
+    const [isLoadingRecipes, setIsLoadingRecipes] = useState(false);
 
-    const filteredCatalogTasks = useMemo(() => {
-        if (!taskSearch.trim()) return catalogTasks;
-        const q = taskSearch.toLowerCase();
-        return catalogTasks.filter(t => {
-            const name = (t.name || t.custom_name || "").toLowerCase();
-            const code = (t.code || "").toLowerCase();
-            const division = (t.division_name || "").toLowerCase();
-            return name.includes(q) || code.includes(q) || division.includes(q);
+    // Fetch recipes when a catalog task is selected
+    const fetchRecipes = useCallback(async (taskId: string) => {
+        setIsLoadingRecipes(true);
+        try {
+            const recipes = await getRecipesForTask(taskId, organizationId);
+            setAvailableRecipes(recipes);
+            // Auto-select if only one recipe
+            if (recipes.length === 1 && !isEditing) {
+                setSelectedRecipeId(recipes[0].id);
+            }
+        } catch (error) {
+            console.error("Error fetching recipes:", error);
+            setAvailableRecipes([]);
+        } finally {
+            setIsLoadingRecipes(false);
+        }
+    }, [organizationId, isEditing]);
+
+    useEffect(() => {
+        if (selectedTaskId && !isCustomTask) {
+            fetchRecipes(selectedTaskId);
+        } else {
+            setAvailableRecipes([]);
+            setSelectedRecipeId(null);
+        }
+    }, [selectedTaskId, isCustomTask, fetchRecipes]);
+
+    // Build Combobox options for recipes
+    const recipeOptions: ComboboxOption[] = useMemo(() => {
+        return availableRecipes.map((r) => {
+            const label = r.name || "Receta sin nombre";
+            const details = [
+                r.item_count > 0 ? `${r.item_count} ítems` : null,
+                r.is_public ? "Pública" : "Propia",
+            ].filter(Boolean).join(" · ");
+            return {
+                value: r.id,
+                label,
+                searchTerms: `${label} ${r.org_name || ""}`,
+                content: (
+                    <div className="flex flex-col">
+                        <span className="text-sm font-medium truncate">{label}</span>
+                        {details && (
+                            <span className="text-xs text-muted-foreground">{details}</span>
+                        )}
+                    </div>
+                ),
+            };
         });
-    }, [taskSearch, catalogTasks]);
+    }, [availableRecipes]);
+
+    // Build Combobox options from catalog tasks
+    const catalogTaskOptions: ComboboxOption[] = useMemo(() => {
+        return catalogTasks.map((t) => {
+            const label = t.name || t.custom_name || "Sin nombre";
+            const subtitle = [t.code, t.unit_name, t.division_name].filter(Boolean).join(" · ");
+            return {
+                value: t.id,
+                label,
+                searchTerms: `${label} ${t.code || ""} ${t.division_name || ""}`,
+                content: (
+                    <div className="flex flex-col">
+                        <span className="text-sm font-medium truncate">{label}</span>
+                        {subtitle && (
+                            <span className="text-xs text-muted-foreground">{subtitle}</span>
+                        )}
+                    </div>
+                ),
+            };
+        });
+    }, [catalogTasks]);
 
     // --- Form Fields ---
     const [customName, setCustomName] = useState(initialData?.custom_name || "");
@@ -124,21 +184,11 @@ export function ConstructionTaskForm({
 
     // --- Handlers ---
 
-    const handleSelectTask = (task: CatalogTask) => {
-        setSelectedTaskId(task.id);
-        setTaskSearch("");
-        setErrors(prev => ({ ...prev, task: "" }));
-    };
-
-    const handleClearTask = () => {
-        setSelectedTaskId(null);
-        setTaskSearch("");
-    };
-
     const handleToggleCustom = () => {
         setIsCustomTask(!isCustomTask);
         setSelectedTaskId(null);
-        setTaskSearch("");
+        setSelectedRecipeId(null);
+        setAvailableRecipes([]);
         setCustomName("");
         setCustomUnit("");
     };
@@ -153,6 +203,7 @@ export function ConstructionTaskForm({
         try {
             const payload = {
                 task_id: isCustomTask ? null : selectedTaskId,
+                recipe_id: isCustomTask ? null : selectedRecipeId,
                 custom_name: isCustomTask ? customName.trim() : null,
                 custom_unit: isCustomTask ? (customUnit.trim() || null) : null,
                 quantity: parseFloat(quantity),
@@ -170,7 +221,7 @@ export function ConstructionTaskForm({
 
             if (result.success) {
                 toast.success(isEditing ? "Tarea actualizada" : "Tarea creada");
-                onSuccess?.();
+                onSuccess?.(result.data, isEditing);
             } else {
                 toast.error(result.error || "Error al guardar la tarea");
             }
@@ -195,90 +246,56 @@ export function ConstructionTaskForm({
                     {/* =================================== */}
 
                     {!isCustomTask ? (
-                        <FormGroup
-                            label="Tarea del Catálogo"
-                            htmlFor="task_selector"
-                            required
-                            error={errors.task}
-                        >
-                            {selectedCatalogTask ? (
-                                /* Tarea seleccionada */
-                                <div className="flex items-center gap-2 p-3 rounded-lg border bg-accent/50">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm truncate">
-                                            {selectedCatalogTask.name || selectedCatalogTask.custom_name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {[
-                                                selectedCatalogTask.code,
-                                                selectedCatalogTask.unit_name,
-                                                selectedCatalogTask.division_name,
-                                            ].filter(Boolean).join(" · ")}
-                                        </p>
-                                    </div>
-                                    {!isEditing && (
-                                        <button
-                                            type="button"
-                                            onClick={handleClearTask}
-                                            className="p-1 rounded-md hover:bg-muted transition-colors"
-                                        >
-                                            <X className="h-4 w-4 text-muted-foreground" />
-                                        </button>
-                                    )}
-                                </div>
-                            ) : (
-                                /* Buscador de tareas */
-                                <div className="space-y-1">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="task_selector"
-                                            placeholder="Buscar por nombre, código o división..."
-                                            value={taskSearch}
-                                            onChange={(e) => setTaskSearch(e.target.value)}
-                                            className="pl-9"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
-                                        {filteredCatalogTasks.length === 0 ? (
-                                            <p className="text-sm text-muted-foreground p-3 text-center">
-                                                No se encontraron tareas
-                                            </p>
-                                        ) : (
-                                            filteredCatalogTasks.map((task) => (
-                                                <button
-                                                    key={task.id}
-                                                    type="button"
-                                                    onClick={() => handleSelectTask(task)}
-                                                    className="w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors"
-                                                >
-                                                    <p className="text-sm font-medium truncate">
-                                                        {task.name || task.custom_name}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {[task.code, task.unit_name, task.division_name]
-                                                            .filter(Boolean)
-                                                            .join(" · ")}
-                                                    </p>
-                                                </button>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                        <>
+                            <FormGroup
+                                label="Tarea del Catálogo"
+                                htmlFor="task_selector"
+                                required
+                                error={errors.task}
+                            >
+                                <Combobox
+                                    value={selectedTaskId || ""}
+                                    onValueChange={(v) => {
+                                        setSelectedTaskId(v || null);
+                                        setErrors(prev => ({ ...prev, task: "" }));
+                                    }}
+                                    options={catalogTaskOptions}
+                                    placeholder="Seleccionar tarea..."
+                                    searchPlaceholder="Buscar por nombre, código o división..."
+                                    emptyMessage="No se encontraron tareas"
+                                    disabled={isEditing}
+                                />
 
-                            {/* Toggle a tarea custom */}
-                            {!isEditing && (
-                                <button
-                                    type="button"
-                                    onClick={handleToggleCustom}
-                                    className="text-xs text-primary hover:underline mt-1"
+                                {/* Toggle a tarea custom */}
+                                {!isEditing && (
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleCustom}
+                                        className="text-xs text-primary hover:underline mt-1"
+                                    >
+                                        Crear tarea personalizada (sin catálogo)
+                                    </button>
+                                )}
+                            </FormGroup>
+
+                            {/* Recipe Selector — only when task has recipes */}
+                            {selectedTaskId && availableRecipes.length > 0 && (
+                                <FormGroup
+                                    label="Receta"
+                                    htmlFor="recipe_selector"
                                 >
-                                    Crear tarea personalizada (sin catálogo)
-                                </button>
+                                    <Combobox
+                                        value={selectedRecipeId || ""}
+                                        onValueChange={(v) => setSelectedRecipeId(v || null)}
+                                        options={recipeOptions}
+                                        placeholder={isLoadingRecipes ? "Cargando recetas..." : "Seleccionar receta (opcional)"}
+                                        searchPlaceholder="Buscar receta..."
+                                        emptyMessage="No se encontraron recetas"
+                                        disabled={isLoadingRecipes}
+                                    />
+                                </FormGroup>
                             )}
-                        </FormGroup>
+                        </>
                     ) : (
                         /* Tarea Custom */
                         <>

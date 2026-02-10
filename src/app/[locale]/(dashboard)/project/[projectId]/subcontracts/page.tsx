@@ -63,7 +63,7 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
         ]);
 
         return (
-            <Tabs defaultValue="list" className="h-full flex flex-col">
+            <Tabs defaultValue="list" syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title={t('title', { default: 'Subcontratos' })}

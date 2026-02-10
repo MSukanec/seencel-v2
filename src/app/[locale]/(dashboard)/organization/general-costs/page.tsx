@@ -38,7 +38,7 @@ export default async function GeneralCostsPage() {
     const currencies = financialData.currencies.map(c => ({ id: c.id, name: c.name, code: c.code, symbol: c.symbol }));
 
     return (
-        <Tabs defaultValue="dashboard" className="h-full flex flex-col">
+        <Tabs defaultValue="dashboard" syncUrl="view" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Gastos Generales"

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskKinds, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
 import { getSystemMaterials, getAllMaterialsAdmin, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor, getSystemUnits, getSystemUnitCategories } from "@/features/admin/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
@@ -59,7 +59,7 @@ export default async function AdminCatalogPage() {
             taskUnitsResult,
             divisionsResult,
             parametersResult,
-            kindsResult,
+            actionsResult,
             elementsResult,
             elementParameterLinksResult,
             systemMaterials,
@@ -79,7 +79,7 @@ export default async function AdminCatalogPage() {
             getUnits(),
             getTaskDivisions(), // No org filter - get all divisions
             getTaskParameters(), // Get all parameters with options
-            getTaskKinds(), // Get all kinds for parametric tasks
+            getTaskActions(), // Get all actions for parametric tasks
             getAllElements(), // Get all elements for sidebar
             getElementParameterLinks(), // Get element-parameter links for filtering
             getSystemMaterials(),
@@ -183,7 +183,8 @@ export default async function AdminCatalogPage() {
                                 orgId="" // No org - admin mode
                                 units={taskUnitsResult.data}
                                 divisions={divisionsResult.data}
-                                kinds={kindsResult.data}
+                                kinds={actionsResult.data}
+                                elements={elementsResult.data}
                                 isAdminMode={true}
                             />
                         </ContentLayout>

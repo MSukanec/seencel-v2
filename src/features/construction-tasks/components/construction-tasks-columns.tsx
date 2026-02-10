@@ -32,12 +32,13 @@ export function getConstructionTaskColumns(
             subtitle: (row) => row.division_name,
             customRender: (value, row) => {
                 const name = value || row.custom_name || "Sin nombre";
+                const subtitle = [row.division_name, row.recipe_name ? `Receta: ${row.recipe_name}` : null].filter(Boolean).join(" · ");
                 return (
                     <div className="flex flex-col" style={{ maxWidth: "220px" }}>
                         <span className="text-sm font-medium truncate">{name}</span>
-                        {row.division_name && (
+                        {subtitle && (
                             <span className="text-xs text-muted-foreground truncate">
-                                {row.division_name}
+                                {subtitle}
                             </span>
                         )}
                     </div>

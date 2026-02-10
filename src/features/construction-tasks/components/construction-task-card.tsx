@@ -60,6 +60,11 @@ export function ConstructionTaskCard({
                                         {task.division_name}
                                     </p>
                                 )}
+                                {task.recipe_name && (
+                                    <p className="text-xs text-muted-foreground/70 truncate italic">
+                                        Receta: {task.recipe_name}
+                                    </p>
+                                )}
                             </div>
                             <Badge
                                 variant="outline"

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ListItem, MaterialListItem } from "@/components/shared/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import {
@@ -21,8 +22,8 @@ import {
     Upload,
     LayoutGrid,
     History,
-    Shield,
-    Globe,
+    Monitor,
+    Building2,
 } from "lucide-react";
 import { ImportConfig } from "@/lib/import";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
@@ -105,14 +106,52 @@ export function MaterialsCatalogView({
     const [activeTab, setActiveTab] = useState<"all" | "material" | "consumable">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-    // Admin scope filter: 'system' shows only system materials, 'all' shows everything
-    const [adminScope, setAdminScope] = useState<'system' | 'all'>('system');
+    // Admin origin filter (FacetedFilter with Set-based selection)
+    const [originFilter, setOriginFilter] = useState<Set<string>>(new Set());
 
-    // Determine active source based on admin scope
+    // Determine active source based on origin filter
     const sourceMaterials = useMemo(() => {
-        if (!isAdminMode) return materials;
-        return adminScope === 'all' && allMaterials ? allMaterials : materials;
-    }, [isAdminMode, adminScope, materials, allMaterials]);
+        if (!isAdminMode || !allMaterials) return materials;
+        if (originFilter.size === 0 || originFilter.size === 2) {
+            // No filter or both selected = show all
+            return allMaterials;
+        }
+        if (originFilter.has('system')) return materials; // system-only
+        if (originFilter.has('organization')) {
+            return allMaterials.filter(m => !m.is_system);
+        }
+        return allMaterials;
+    }, [isAdminMode, originFilter, materials, allMaterials]);
+
+    // Calculate facet counts for origin filter
+    const originFacets = useMemo(() => {
+        if (!allMaterials) return new Map<string, number>();
+        const facets = new Map<string, number>();
+        facets.set('system', allMaterials.filter(m => m.is_system).length);
+        facets.set('organization', allMaterials.filter(m => !m.is_system).length);
+        return facets;
+    }, [allMaterials]);
+
+    // Origin filter handlers
+    const handleOriginSelect = (value: string) => {
+        const newSet = new Set(originFilter);
+        if (newSet.has(value)) {
+            newSet.delete(value);
+        } else {
+            newSet.add(value);
+        }
+        setOriginFilter(newSet);
+    };
+
+    const handleOriginClear = () => {
+        setOriginFilter(new Set());
+    };
+
+    // Origin filter options
+    const originOptions = [
+        { label: "Sistema", value: "system", icon: Monitor },
+        { label: "Organizaciones", value: "organization", icon: Building2 },
+    ];
 
     // Material delete modal state
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -656,7 +695,7 @@ export function MaterialsCatalogView({
                                 ? "Buscar materiales por nombre, categoría o unidad..."
                                 : "Buscar insumos por nombre, categoría o unidad..."}
                     leftActions={
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             <ToolbarTabs
                                 value={activeTab}
                                 onValueChange={(v) => setActiveTab(v as 'all' | 'material' | 'consumable')}
@@ -667,17 +706,14 @@ export function MaterialsCatalogView({
                                 ]}
                             />
                             {isAdminMode && allMaterials && (
-                                <>
-                                    <div className="h-5 w-px bg-border" />
-                                    <ToolbarTabs
-                                        value={adminScope}
-                                        onValueChange={(v) => setAdminScope(v as 'system' | 'all')}
-                                        options={[
-                                            { label: "Sistema", value: "system", icon: Shield },
-                                            { label: "Todos", value: "all", icon: Globe },
-                                        ]}
-                                    />
-                                </>
+                                <FacetedFilter
+                                    title="Origen"
+                                    options={originOptions}
+                                    selectedValues={originFilter}
+                                    onSelect={handleOriginSelect}
+                                    onClear={handleOriginClear}
+                                    facets={originFacets}
+                                />
                             )}
                         </div>
                     }

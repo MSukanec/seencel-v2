@@ -37,7 +37,7 @@ export default async function ReportsPage() {
         const companyInfo = pdfThemeResult.demoData;
 
         return (
-            <Tabs defaultValue="builder" className="h-full flex flex-col">
+            <Tabs defaultValue="builder" syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title="Informes"

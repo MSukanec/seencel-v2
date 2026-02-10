@@ -80,7 +80,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
         const activityLogs = settingsData?.activityLogs || [];
 
         return (
-            <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
+            <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title={(organization as { name: string }).name}

@@ -451,9 +451,9 @@ export async function deleteMaterial(id: string, replacementId: string | null, i
             .update({ material_id: replacementId })
             .eq("material_id", id);
 
-        // task_materials table
+        // task_recipe_materials table
         await supabase
-            .from("task_materials")
+            .from("task_recipe_materials")
             .update({ material_id: replacementId })
             .eq("material_id", id);
     }

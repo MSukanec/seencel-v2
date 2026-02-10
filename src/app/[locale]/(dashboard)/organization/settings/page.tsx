@@ -70,7 +70,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
     const canInviteMembers = planFeatures?.can_invite_members ?? false;
 
     return (
-        <Tabs defaultValue={initialTab} className="h-full flex flex-col">
+        <Tabs defaultValue={initialTab} syncUrl="tab" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Configuración"

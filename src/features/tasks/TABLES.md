@@ -1,29 +1,21 @@
 # Tablas y Vistas en DB para TASKS (Tareas Paramétricas)
 
+# Tabla TASK_ACTIONS:
 
+create table public.task_actions (
+  name text null,
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  description text null,
+  short_code character varying(10) null,
+  constraint task_kind_pkey primary key (id),
+  constraint task_kind_name_key unique (name)
+) TABLESPACE pg_default;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+create trigger task_kind_set_updated_at BEFORE
+update on task_actions for EACH row
+execute FUNCTION set_timestamp ();
 
 # Vista TASK_COSTS_VIEW:
 
@@ -47,15 +39,15 @@ create table public.task_division_elements (
   constraint task_division_elements_element_id_fkey foreign KEY (element_id) references task_elements (id) on delete CASCADE
 ) TABLESPACE pg_default;
 
-# Tabla TASK_DIVISION_KINDS:
+# Tabla TASK_DIVISION_ACTIONS:
 
-create table public.task_division_kinds (
+create table public.task_division_actions (
   division_id uuid not null,
-  kind_id uuid not null,
+  action_id uuid not null,
   created_at timestamp with time zone null default now(),
-  constraint task_division_kinds_pkey primary key (division_id, kind_id),
-  constraint task_division_kinds_division_id_fkey foreign KEY (division_id) references task_divisions (id) on delete CASCADE,
-  constraint task_division_kinds_kind_id_fkey foreign KEY (kind_id) references task_kind (id) on delete CASCADE
+  constraint task_division_kinds_pkey primary key (division_id, action_id),
+  constraint task_division_actions_action_id_fkey foreign KEY (action_id) references task_actions (id) on delete CASCADE,
+  constraint task_division_kinds_division_id_fkey foreign KEY (division_id) references task_divisions (id) on delete CASCADE
 ) TABLESPACE pg_default;
 
 # Tabla TASK_DIVISIONS:
@@ -82,6 +74,17 @@ where
 create trigger task_divisions_set_updated_at BEFORE
 update on task_divisions for EACH row
 execute FUNCTION set_timestamp ();
+
+# Tabla TASK_ELEMENT_ACTIONS:
+
+create table public.task_element_actions (
+  action_id uuid not null,
+  element_id uuid not null,
+  created_at timestamp with time zone null default now(),
+  constraint task_kind_elements_pkey primary key (action_id, element_id),
+  constraint task_element_actions_action_id_fkey foreign KEY (action_id) references task_actions (id) on delete CASCADE,
+  constraint task_kind_elements_element_id_fkey foreign KEY (element_id) references task_elements (id) on delete CASCADE
+) TABLESPACE pg_default;
 
 # Tabla TASK_ELEMENT_PARAMETERS:
 
@@ -126,102 +129,6 @@ where
 create trigger task_elements_set_updated_at BEFORE
 update on task_elements for EACH row
 execute FUNCTION set_timestamp ();
-
-# Tabla TASK_KIND:
-
-create table public.task_kind (
-  name text null,
-  id uuid not null default gen_random_uuid (),
-  created_at timestamp with time zone null default now(),
-  updated_at timestamp with time zone null default now(),
-  code text null,
-  is_active boolean not null default true,
-  description text null,
-  is_deleted boolean not null default false,
-  deleted_at timestamp with time zone null,
-  "order" integer null,
-  short_code character varying(10) null,
-  constraint task_kind_pkey primary key (id),
-  constraint task_kind_code_key unique (code),
-  constraint task_kind_name_key unique (name)
-) TABLESPACE pg_default;
-
-create index IF not exists idx_task_kind_not_deleted on public.task_kind using btree (is_deleted) TABLESPACE pg_default
-where
-  (is_deleted = false);
-
-create trigger task_kind_set_updated_at BEFORE
-update on task_kind for EACH row
-execute FUNCTION set_timestamp ();
-
-# Tabla TASK_KIND_ELEMENTS:
-
-create table public.task_kind_elements (
-  kind_id uuid not null,
-  element_id uuid not null,
-  created_at timestamp with time zone null default now(),
-  constraint task_kind_elements_pkey primary key (kind_id, element_id),
-  constraint task_kind_elements_element_id_fkey foreign KEY (element_id) references task_elements (id) on delete CASCADE,
-  constraint task_kind_elements_kind_id_fkey foreign KEY (kind_id) references task_kind (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-# Tabla TASK_LABOR:
-
-create table public.task_labor (
-  id uuid not null default gen_random_uuid (),
-  task_id uuid not null,
-  labor_type_id uuid null,
-  quantity numeric(12, 2) not null default 1,
-  created_at timestamp with time zone not null default now(),
-  updated_at timestamp with time zone not null default now(),
-  organization_id uuid null,
-  is_system boolean not null default false,
-  constraint task_labor_pkey primary key (id),
-  constraint task_labor_unique unique (task_id, labor_type_id),
-  constraint task_labor_labor_type_id_fkey foreign KEY (labor_type_id) references labor_categories (id) on delete set null,
-  constraint task_labor_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
-  constraint task_labor_task_id_fkey foreign KEY (task_id) references tasks (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-create index IF not exists idx_task_labor_task_id on public.task_labor using btree (task_id) TABLESPACE pg_default;
-
-create index IF not exists idx_task_labor_labor_type_id on public.task_labor using btree (labor_type_id) TABLESPACE pg_default;
-
-create trigger task_labor_set_updated_at BEFORE
-update on task_labor for EACH row
-execute FUNCTION set_timestamp ();
-
-create trigger trg_set_task_labor_organization BEFORE INSERT on task_labor for EACH row
-execute FUNCTION set_task_labor_organization ();
-
-# Tabla TASK_MATERIALS:
-
-create table public.task_materials (
-  id uuid not null default gen_random_uuid (),
-  created_at timestamp with time zone not null default now(),
-  task_id uuid not null,
-  material_id uuid null,
-  amount numeric(12, 4) null,
-  organization_id uuid null,
-  updated_at timestamp with time zone null default now(),
-  is_system boolean not null default false,
-  constraint task_materials_pkey primary key (id),
-  constraint task_materials_unique unique (task_id, material_id),
-  constraint task_materials_material_id_fkey foreign KEY (material_id) references materials (id) on delete CASCADE,
-  constraint task_materials_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
-  constraint task_materials_task_id_fkey foreign KEY (task_id) references tasks (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-create index IF not exists idx_task_materials_task_id on public.task_materials using btree (task_id) TABLESPACE pg_default;
-
-create index IF not exists idx_task_materials_material_id on public.task_materials using btree (material_id) TABLESPACE pg_default;
-
-create trigger task_materials_set_updated_at BEFORE
-update on task_materials for EACH row
-execute FUNCTION set_timestamp ();
-
-create trigger trg_set_task_material_organization BEFORE INSERT on task_materials for EACH row
-execute FUNCTION set_task_material_organization ();
 
 # Tabla TASK_PARAMETER_OPTIONS:
 
@@ -303,37 +210,135 @@ create trigger task_parameters_set_updated_at BEFORE
 update on task_parameters for EACH row
 execute FUNCTION set_timestamp ();
 
-# Tabla TASK_RECIPE_ITEMS:
+# Tabla TASK_RECIPE_LABOR:
 
-create table public.task_recipe_items (
+create table public.task_recipe_labor (
   id uuid not null default gen_random_uuid (),
   recipe_id uuid not null,
-  material_id uuid null,
-  material_name text not null,
-  material_category text null,
+  labor_type_id uuid not null,
   quantity numeric(20, 4) not null,
   unit_id uuid null,
-  unit_name text null,
-  display_order integer not null default 0,
   notes text null,
   is_optional boolean not null default false,
+  organization_id uuid not null,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
-  constraint task_recipe_items_pkey primary key (id),
-  constraint task_recipe_items_material_fkey foreign KEY (material_id) references materials (id) on delete set null,
-  constraint task_recipe_items_recipe_fkey foreign KEY (recipe_id) references task_recipes (id) on delete CASCADE,
-  constraint task_recipe_items_unit_fkey foreign KEY (unit_id) references units (id) on delete set null,
-  constraint task_recipe_items_qty_positive check ((quantity > (0)::numeric))
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  created_by uuid null,
+  updated_by uuid null,
+  import_batch_id uuid null,
+  constraint task_recipe_labor_pkey primary key (id),
+  constraint task_recipe_labor_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id) on delete set null,
+  constraint task_recipe_labor_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint task_recipe_labor_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint task_recipe_labor_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint task_recipe_labor_recipe_fkey foreign KEY (recipe_id) references task_recipes (id) on delete CASCADE,
+  constraint task_recipe_labor_type_fkey foreign KEY (labor_type_id) references labor_types (id) on delete CASCADE,
+  constraint task_recipe_labor_unit_fkey foreign KEY (unit_id) references units (id) on delete set null,
+  constraint task_recipe_labor_qty_positive check ((quantity > (0)::numeric))
 ) TABLESPACE pg_default;
 
-create index IF not exists idx_task_recipe_items_recipe on public.task_recipe_items using btree (recipe_id) TABLESPACE pg_default;
-
-create index IF not exists idx_task_recipe_items_material on public.task_recipe_items using btree (material_id) TABLESPACE pg_default
+create index IF not exists idx_trl_recipe on public.task_recipe_labor using btree (recipe_id) TABLESPACE pg_default
 where
-  (material_id is not null);
+  (is_deleted = false);
 
-create trigger task_recipe_items_set_updated_at BEFORE
-update on task_recipe_items for EACH row
+create index IF not exists idx_trl_labor_type on public.task_recipe_labor using btree (labor_type_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_trl_org on public.task_recipe_labor using btree (organization_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_trl_import_batch_id on public.task_recipe_labor using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
+
+create trigger on_recipe_labor_audit
+after INSERT
+or DELETE
+or
+update on task_recipe_labor for EACH row
+execute FUNCTION log_recipe_labor_activity ();
+
+create trigger set_updated_by_task_recipe_labor BEFORE INSERT
+or
+update on task_recipe_labor for EACH row
+execute FUNCTION handle_updated_by ();
+
+create trigger task_recipe_labor_set_updated_at BEFORE
+update on task_recipe_labor for EACH row
+execute FUNCTION set_timestamp ();
+
+# Tabla TASK_RECIPE_MATERIALS:
+
+create table public.task_recipe_materials (
+  id uuid not null default gen_random_uuid (),
+  recipe_id uuid not null,
+  material_id uuid not null,
+  quantity numeric(20, 4) not null,
+  unit_id uuid null,
+  notes text null,
+  is_optional boolean not null default false,
+  organization_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  created_by uuid null,
+  updated_by uuid null,
+  import_batch_id uuid null,
+  waste_percentage numeric(5, 2) not null default 0,
+  total_quantity numeric GENERATED ALWAYS as (
+    (
+      quantity * (
+        (1)::numeric + (waste_percentage / (100)::numeric)
+      )
+    )
+  ) STORED (20, 4) null,
+  constraint task_recipe_materials_pkey primary key (id),
+  constraint task_recipe_materials_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint task_recipe_materials_material_fkey foreign KEY (material_id) references materials (id) on delete CASCADE,
+  constraint task_recipe_materials_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint task_recipe_materials_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id) on delete set null,
+  constraint task_recipe_materials_recipe_fkey foreign KEY (recipe_id) references task_recipes (id) on delete CASCADE,
+  constraint task_recipe_materials_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint task_recipe_materials_unit_fkey foreign KEY (unit_id) references units (id) on delete set null,
+  constraint task_recipe_materials_waste_pct_positive check ((waste_percentage >= (0)::numeric)),
+  constraint task_recipe_materials_qty_positive check ((quantity > (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_trm_recipe on public.task_recipe_materials using btree (recipe_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_trm_material on public.task_recipe_materials using btree (material_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_trm_org on public.task_recipe_materials using btree (organization_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_trm_import_batch_id on public.task_recipe_materials using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
+
+create trigger on_recipe_material_audit
+after INSERT
+or DELETE
+or
+update on task_recipe_materials for EACH row
+execute FUNCTION log_recipe_material_activity ();
+
+create trigger set_updated_by_task_recipe_materials BEFORE INSERT
+or
+update on task_recipe_materials for EACH row
+execute FUNCTION handle_updated_by ();
+
+create trigger task_recipe_materials_set_updated_at BEFORE
+update on task_recipe_materials for EACH row
 execute FUNCTION set_timestamp ();
 
 # Tabla TASK_RECIPE_RATINGS:
@@ -381,8 +386,6 @@ create table public.task_recipes (
   task_id uuid not null,
   organization_id uuid not null,
   is_public boolean not null default false,
-  is_system boolean not null default false,
-  is_anonymous boolean not null default false,
   region text null,
   rating_avg numeric(3, 2) null,
   rating_count integer not null default 0,
@@ -393,9 +396,11 @@ create table public.task_recipes (
   updated_by uuid null,
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
+  import_batch_id uuid null,
+  name text null,
   constraint task_recipes_pkey primary key (id),
-  constraint task_recipes_unique_org_task unique (organization_id, task_id),
   constraint task_recipes_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint task_recipes_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id) on delete set null,
   constraint task_recipes_org_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
   constraint task_recipes_task_fkey foreign KEY (task_id) references tasks (id) on delete CASCADE,
   constraint task_recipes_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null
@@ -416,12 +421,16 @@ where
     and (is_deleted = false)
   );
 
-create index IF not exists idx_task_recipes_system on public.task_recipes using btree (is_system) TABLESPACE pg_default
+create index IF not exists idx_task_recipes_import_batch_id on public.task_recipes using btree (import_batch_id) TABLESPACE pg_default
 where
-  (
-    (is_system = true)
-    and (is_deleted = false)
-  );
+  (import_batch_id is not null);
+
+create trigger on_task_recipe_audit
+after INSERT
+or DELETE
+or
+update on task_recipes for EACH row
+execute FUNCTION log_task_recipe_activity ();
 
 create trigger set_updated_by_task_recipes BEFORE INSERT
 or
@@ -439,9 +448,8 @@ select
   tr.id,
   tr.task_id,
   tr.organization_id,
+  tr.name,
   tr.is_public,
-  tr.is_system,
-  tr.is_anonymous,
   tr.region,
   tr.rating_avg,
   tr.rating_count,
@@ -449,15 +457,13 @@ select
   tr.created_at,
   tr.updated_at,
   tr.is_deleted,
+  tr.import_batch_id,
   t.name as task_name,
   t.custom_name as task_custom_name,
   COALESCE(t.custom_name, t.name) as task_display_name,
   td.name as division_name,
   u.name as unit_name,
-  case
-    when tr.is_anonymous then null::text
-    else o.name
-  end as org_name,
+  o.name as org_name,
   (
     select
       count(*) as count
@@ -529,17 +535,19 @@ create table public.tasks (
   deleted_at timestamp with time zone null,
   created_by uuid null,
   updated_by uuid null,
-  task_kind_id uuid null,
+  task_action_id uuid null,
   task_element_id uuid null,
   is_parametric boolean not null default false,
   parameter_values jsonb null default '{}'::jsonb,
+  import_batch_id uuid null,
   constraint task_parametric_pkey primary key (id),
   constraint tasks_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint tasks_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id) on delete set null,
   constraint tasks_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
   constraint task_parametric_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete set null,
+  constraint tasks_task_action_id_fkey foreign KEY (task_action_id) references task_actions (id),
   constraint tasks_task_division_id_fkey foreign KEY (task_division_id) references task_divisions (id) on delete set null,
   constraint tasks_task_element_id_fkey foreign KEY (task_element_id) references task_elements (id),
-  constraint tasks_task_kind_id_fkey foreign KEY (task_kind_id) references task_kind (id),
   constraint tasks_unit_id_fkey foreign KEY (unit_id) references units (id) on delete set null,
   constraint tasks_system_org_consistency_chk check (
     (
@@ -584,7 +592,7 @@ where
   (is_deleted = false);
 
 create unique INDEX IF not exists tasks_parametric_signature_uniq on public.tasks using btree (
-  task_kind_id,
+  task_action_id,
   task_element_id,
   task_division_id,
   parameter_values
@@ -594,6 +602,10 @@ where
     (is_parametric = true)
     and (is_deleted = false)
   );
+
+create index IF not exists idx_tasks_import_batch_id on public.tasks using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
 
 create trigger on_task_audit
 after INSERT
@@ -622,16 +634,26 @@ select
   t.organization_id,
   t.unit_id,
   t.task_division_id,
+  t.task_action_id,
+  t.task_element_id,
+  t.is_parametric,
+  t.parameter_values,
+  t.import_batch_id,
   t.created_at,
   t.updated_at,
   t.created_by,
   t.updated_by,
   u.name as unit_name,
-  d.name as division_name
+  d.name as division_name,
+  ta.name as action_name,
+  ta.short_code as action_short_code,
+  te.name as element_name
 from
   tasks t
   left join units u on u.id = t.unit_id
-  left join task_divisions d on d.id = t.task_division_id;
+  left join task_divisions d on d.id = t.task_division_id
+  left join task_actions ta on ta.id = t.task_action_id
+  left join task_elements te on te.id = t.task_element_id;
 
 # Tabla UNITS:
 

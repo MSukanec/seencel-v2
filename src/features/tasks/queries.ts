@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { TaskView, TasksByDivision, TaskDivision, Unit, TaskParameter, TaskKind, TaskElement } from "./types";
+import { TaskView, TasksByDivision, TaskDivision, Unit, TaskParameter, TaskAction, TaskElement } from "./types";
 
 /**
  * Get all tasks for an organization (includes system tasks + org custom tasks)
@@ -139,15 +139,7 @@ export async function getUnits() {
 // TASK DETAIL PAGE QUERIES
 // ============================================================================
 
-export interface TaskMaterial {
-    id: string;
-    task_id: string;
-    material_id: string;
-    material_name: string;
-    unit_name: string | null;
-    amount: number | null;
-    is_system: boolean;
-}
+
 
 /**
  * Get a single task by ID with full details
@@ -189,173 +181,6 @@ export async function getTaskById(taskId: string): Promise<TaskView | null> {
     };
 }
 
-/**
- * Get all materials linked to a task (the "recipe")
- */
-export async function getTaskMaterials(taskId: string): Promise<TaskMaterial[]> {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .from('task_materials')
-        .select(`
-            id,
-            task_id,
-            material_id,
-            amount,
-            is_system,
-            materials (
-                name,
-                units (name)
-            )
-        `)
-        .eq('task_id', taskId);
-
-    if (error) {
-        console.error("Error fetching task materials:", error);
-        return [];
-    }
-
-    return (data || []).map((tm: any) => ({
-        id: tm.id,
-        task_id: tm.task_id,
-        material_id: tm.material_id,
-        material_name: tm.materials?.name || 'Material desconocido',
-        unit_name: tm.materials?.units?.name || null,
-        amount: tm.amount,
-        is_system: tm.is_system || false,
-    }));
-}
-
-/**
- * Get all available materials for adding to a task
- * For system tasks: only system materials
- * For org tasks: system + org materials
- */
-export async function getAvailableMaterials(isSystemTask: boolean, organizationId?: string | null) {
-    const supabase = await createClient();
-
-    let query = supabase
-        .from('materials')
-        .select(`
-            id,
-            name,
-            units (name)
-        `)
-        .eq('is_deleted', false)
-        .order('name', { ascending: true });
-
-    if (isSystemTask) {
-        // System tasks can only use system materials
-        query = query.eq('is_system', true);
-    } else if (organizationId) {
-        // Org tasks can use system + org materials
-        query = query.or(`is_system.eq.true,organization_id.eq.${organizationId}`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error("Error fetching available materials:", error);
-        return [];
-    }
-
-    return (data || []).map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        unit_name: m.units?.name || null,
-    }));
-}
-
-// ============================================================================
-// TASK LABOR QUERIES
-// ============================================================================
-
-export interface TaskLabor {
-    id: string;
-    task_id: string;
-    labor_type_id: string;
-    labor_type_name: string;
-    unit_name: string | null;
-    quantity: number;
-    is_system: boolean;
-}
-
-/**
- * Get all labor types linked to a task
- */
-export async function getTaskLabor(taskId: string): Promise<TaskLabor[]> {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .from('task_labor')
-        .select(`
-            id,
-            task_id,
-            labor_type_id,
-            quantity,
-            is_system,
-            labor_categories (
-                name,
-                units (name)
-            )
-        `)
-        .eq('task_id', taskId);
-
-    if (error) {
-        console.error("Error fetching task labor:", error);
-        return [];
-    }
-
-    return (data || []).map((tl: any) => ({
-        id: tl.id,
-        task_id: tl.task_id,
-        labor_type_id: tl.labor_type_id,
-        labor_type_name: tl.labor_categories?.name || 'Tipo desconocido',
-        unit_name: tl.labor_categories?.units?.name || null,
-        quantity: tl.quantity || 1,
-        is_system: tl.is_system || false,
-    }));
-}
-
-/**
- * Get all available labor types for adding to a task
- * For system tasks: only system labor types
- * For org tasks: system + org labor types
- */
-export async function getAvailableLaborTypes(isSystemTask: boolean, organizationId?: string | null) {
-    const supabase = await createClient();
-
-    let query = supabase
-        .from('labor_categories')
-        .select(`
-            id,
-            name,
-            units (name)
-        `)
-        .eq('is_deleted', false)
-        .order('name', { ascending: true });
-
-    if (isSystemTask) {
-        // System tasks can only use system labor types
-        query = query.eq('is_system', true);
-    } else if (organizationId) {
-        // Org tasks can use system + org labor types
-        query = query.or(`is_system.eq.true,organization_id.eq.${organizationId}`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error("Error fetching available labor types:", error);
-        return [];
-    }
-
-    return (data || []).map((l: any) => ({
-        id: l.id,
-        name: l.name,
-        unit_name: l.units?.name || null,
-    }));
-}
 
 /**
  * Get all task parameters with their options (system table - visible to all)
@@ -430,25 +255,22 @@ export async function getLinkedParametersForElement(elementId: string) {
 }
 
 /**
- * Get all task kinds (action types: Ejecución, Instalación, etc.)
+ * Get all task actions (action types: Ejecución, Demolición, Limpieza, etc.)
  */
-export async function getTaskKinds() {
+export async function getTaskActions() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_kind')
+        .from('task_actions')
         .select('*')
-        .eq('is_active', true)
-        .eq('is_deleted', false)
-        .order('order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true });
 
     if (error) {
-        console.error("Error fetching task kinds:", error);
+        console.error("Error fetching task actions:", error);
         return { data: [], error };
     }
 
-    return { data: data as TaskKind[], error: null };
+    return { data: data as TaskAction[], error: null };
 }
 
 /**
@@ -473,14 +295,14 @@ export async function getTaskElements() {
 }
 
 /**
- * Get elements compatible with a specific kind
- * @param kindId - The task_kind ID to filter by
+ * Get elements compatible with a specific action
+ * @param actionId - The task_actions ID to filter by
  */
-export async function getCompatibleElements(kindId: string) {
+export async function getCompatibleElements(actionId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_kind_elements')
+        .from('task_element_actions')
         .select(`
             element_id,
             task_elements!inner (
@@ -492,7 +314,7 @@ export async function getCompatibleElements(kindId: string) {
                 "order"
             )
         `)
-        .eq('kind_id', kindId);
+        .eq('action_id', actionId);
 
     if (error) {
         console.error("Error fetching compatible elements:", error);
@@ -519,6 +341,45 @@ export async function getCompatibleElements(kindId: string) {
     });
 
     return { data: elements, error: null };
+}
+
+/**
+ * Get actions compatible with a specific element (inverse of getCompatibleElements)
+ * @param elementId - The task_element ID to filter by
+ */
+export async function getCompatibleActionsForElement(elementId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('task_element_actions')
+        .select(`
+            action_id,
+            task_actions!inner (
+                id,
+                name,
+                short_code,
+                description
+            )
+        `)
+        .eq('element_id', elementId);
+
+    if (error) {
+        console.error("Error fetching compatible actions for element:", error);
+        return { data: [], error };
+    }
+
+    // Flatten the nested structure
+    const actions = (data || []).map((row: any) => ({
+        id: row.task_actions.id,
+        name: row.task_actions.name,
+        short_code: row.task_actions.short_code,
+        description: row.task_actions.description,
+    })) as TaskAction[];
+
+    // Sort by name
+    actions.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { data: actions, error: null };
 }
 
 /**
@@ -646,23 +507,23 @@ export async function getDivisionElementIds(divisionId: string) {
 }
 
 /**
- * Get kind IDs linked to a division
+ * Get action IDs linked to a division
  */
-export async function getDivisionKindIds(divisionId: string) {
+export async function getDivisionActionIds(divisionId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_division_kinds')
-        .select('kind_id')
+        .from('task_division_actions')
+        .select('action_id')
         .eq('division_id', divisionId);
 
     if (error) {
-        console.error('Error fetching division kinds:', error);
+        console.error('Error fetching division actions:', error);
         return { data: [], error };
     }
 
     return {
-        data: (data || []).map(d => d.kind_id),
+        data: (data || []).map(d => d.action_id),
         error: null
     };
 }

@@ -11,7 +11,7 @@ import { ConstructionTasksSettingsView } from "@/features/construction-tasks/vie
 import { getProjectConstructionTasks, getProjectConstructionDependencies, getProjectSettings } from "@/features/construction-tasks/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getProjectById } from "@/features/projects/queries";
-import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskKinds } from "@/features/tasks/queries";
+import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskActions, getTaskElements } from "@/features/tasks/queries";
 
 // ============================================================================
 // Metadata
@@ -81,7 +81,8 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
             catalogGroupedTasks,
             divisionsResult,
             unitsResult,
-            kindsResult
+            actionsResult,
+            elementsResult
         ] = await Promise.all([
             getProjectConstructionTasks(projectId),
             getProjectConstructionDependencies(projectId),
@@ -90,7 +91,8 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
             getTasksGroupedByDivision(activeOrgId),
             getTaskDivisions(),
             getUnits(),
-            getTaskKinds()
+            getTaskActions(),
+            getTaskElements()
         ]);
 
         // Flatten catalog tasks for the form selector
@@ -107,7 +109,7 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
         const hasCatalogData = catalogGroupedTasks.length > 0 || divisionsResult.data.length > 0;
 
         return (
-            <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
+            <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title="Tareas"
@@ -123,16 +125,14 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
                     }
                 >
                     <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <ConstructionTasksView
-                                projectId={projectId}
-                                organizationId={activeOrgId}
-                                tasks={tasks}
-                                initialDependencies={initialDependencies}
-                                catalogTasks={catalogTasks}
-                                workDays={projectSettings.work_days}
-                            />
-                        </ContentLayout>
+                        <ConstructionTasksView
+                            projectId={projectId}
+                            organizationId={activeOrgId}
+                            tasks={tasks}
+                            initialDependencies={initialDependencies}
+                            catalogTasks={catalogTasks}
+                            workDays={projectSettings.work_days}
+                        />
                     </TabsContent>
 
                     {hasCatalogData && (
@@ -143,7 +143,8 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
                                     orgId={activeOrgId}
                                     units={unitsResult.data}
                                     divisions={divisionsResult.data}
-                                    kinds={kindsResult.data}
+                                    kinds={actionsResult.data}
+                                    elements={elementsResult.data}
                                     isAdminMode={false}
                                 />
                             </ContentLayout>

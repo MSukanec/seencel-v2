@@ -9,13 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { TasksDivisionGeneralView } from "@/features/tasks/views/tasks-division-general-view";
 import { TasksDivisionElementsView } from "@/features/tasks/views/tasks-division-elements-view";
-import { TasksDivisionKindsView } from "@/features/tasks/views/tasks-division-kinds-view";
+import { TasksDivisionActionsView } from "@/features/tasks/views/tasks-division-kinds-view";
 import {
     getDivisionById,
     getAllElements,
     getDivisionElementIds,
-    getDivisionKindIds,
-    getTaskKinds,
+    getDivisionActionIds,
+    getTaskActions,
     getUnits
 } from "@/features/tasks/queries";
 
@@ -62,15 +62,15 @@ export default async function DivisionDetailPage({ params, searchParams }: Divis
             { data: division },
             { data: allElements },
             { data: linkedElementIds },
-            { data: allKinds },
-            { data: linkedKindIds },
+            { data: allActions },
+            { data: linkedActionIds },
             { data: units }
         ] = await Promise.all([
             getDivisionById(divisionId),
             getAllElements(),
             getDivisionElementIds(divisionId),
-            getTaskKinds(),
-            getDivisionKindIds(divisionId),
+            getTaskActions(),
+            getDivisionActionIds(divisionId),
             getUnits()
         ]);
 
@@ -105,11 +105,11 @@ export default async function DivisionDetailPage({ params, searchParams }: Divis
                                     {linkedElementIds.length}
                                 </Badge>
                             </TabsTrigger>
-                            <TabsTrigger value="kinds" className="gap-2">
+                            <TabsTrigger value="actions" className="gap-2">
                                 <Zap className="h-4 w-4" />
                                 Tipos de Acción
                                 <Badge variant="secondary" className="ml-1 text-xs">
-                                    {linkedKindIds.length}
+                                    {linkedActionIds.length}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
@@ -134,13 +134,13 @@ export default async function DivisionDetailPage({ params, searchParams }: Divis
                         </ContentLayout>
                     </TabsContent>
 
-                    {/* Kinds Tab */}
-                    <TabsContent value="kinds" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    {/* Actions Tab */}
+                    <TabsContent value="actions" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
-                            <TasksDivisionKindsView
+                            <TasksDivisionActionsView
                                 division={division}
-                                allKinds={allKinds}
-                                linkedKindIds={linkedKindIds}
+                                allActions={allActions}
+                                linkedActionIds={linkedActionIds}
                             />
                         </ContentLayout>
                     </TabsContent>

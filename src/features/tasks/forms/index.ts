@@ -6,3 +6,5 @@ export { TasksParameterForm } from "./tasks-parameter-form";
 export { TasksForm } from "./tasks-form";
 export { TasksTypeSelector, type TaskCreationType } from "./tasks-creation-selector";
 export { TasksParametricForm } from "./tasks-parametric-form";
+export { TasksRecipeMaterialForm } from "./tasks-recipe-material-form";
+export { TasksRecipeLaborForm } from "./tasks-recipe-labor-form";

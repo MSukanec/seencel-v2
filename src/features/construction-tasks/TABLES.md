@@ -101,10 +101,12 @@ create table public.construction_tasks (
   custom_unit text null,
   actual_start_date date null,
   actual_end_date date null,
+  recipe_id uuid null,
   constraint construction_tasks_pkey primary key (id),
   constraint construction_tasks_id_key unique (id),
   constraint construction_tasks_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
   constraint construction_tasks_quote_item_id_fkey foreign KEY (quote_item_id) references quote_items (id) on delete set null,
+  constraint construction_tasks_recipe_id_fkey foreign KEY (recipe_id) references task_recipes (id) on delete set null,
   constraint construction_tasks_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
   constraint construction_tasks_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
   constraint construction_tasks_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
@@ -135,6 +137,8 @@ create index IF not exists idx_construction_tasks_not_deleted on public.construc
 where
   (is_deleted = false);
 
+create index IF not exists idx_construction_tasks_recipe_id on public.construction_tasks using btree (recipe_id) TABLESPACE pg_default;
+
 create trigger on_construction_task_audit
 after INSERT
 or DELETE
@@ -159,6 +163,7 @@ select
   ct.organization_id,
   ct.project_id,
   ct.task_id,
+  ct.recipe_id,
   ct.quote_item_id,
   COALESCE(t.custom_name, t.name, ct.custom_name) as task_name,
   COALESCE(u.name, ct.custom_unit) as unit,
@@ -201,7 +206,8 @@ select
   qi.quote_id,
   q.name as quote_name,
   qi.markup_pct as quote_markup_pct,
-  ph.phase_name
+  ph.phase_name,
+  tr.name as recipe_name
 from
   construction_tasks ct
   left join tasks t on t.id = ct.task_id
@@ -209,6 +215,7 @@ from
   left join task_divisions td on td.id = t.task_division_id
   left join quote_items qi on qi.id = ct.quote_item_id
   left join quotes q on q.id = qi.quote_id
+  left join task_recipes tr on tr.id = ct.recipe_id
   left join lateral (
     select
       cp.name as phase_name

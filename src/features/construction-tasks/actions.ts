@@ -5,6 +5,7 @@ import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { ConstructionTaskFormData, ConstructionTaskStatus } from "./types";
+import type { TaskRecipeView } from "@/features/tasks/types";
 
 /**
  * Create a new construction task
@@ -22,6 +23,7 @@ export async function createConstructionTask(
             project_id: projectId,
             organization_id: organizationId,
             task_id: data.task_id || null,
+            recipe_id: data.recipe_id || null,
             custom_name: data.custom_name || null,
             custom_unit: data.custom_unit || null,
             quantity: data.quantity,
@@ -63,6 +65,7 @@ export async function updateConstructionTask(
         .from("construction_tasks")
         .update({
             task_id: data.task_id,
+            recipe_id: data.recipe_id,
             custom_name: data.custom_name,
             custom_unit: data.custom_unit,
             quantity: data.quantity,
@@ -231,4 +234,34 @@ export async function upsertProjectSettings(
 
     revalidatePath(`/project/${projectId}/construction-tasks`);
     return { success: true };
+}
+
+// ============================================================================
+// Task Recipes
+// ============================================================================
+
+/**
+ * Get available recipes for a catalog task.
+ * Returns recipes owned by the organization + public recipes.
+ */
+export async function getRecipesForTask(
+    taskId: string,
+    organizationId: string,
+): Promise<TaskRecipeView[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("task_recipes_view")
+        .select("*")
+        .eq("task_id", taskId)
+        .eq("is_deleted", false)
+        .or(`organization_id.eq.${organizationId},is_public.eq.true`)
+        .order("name", { ascending: true });
+
+    if (error) {
+        console.error("Error fetching recipes for task:", error);
+        return [];
+    }
+
+    return data as TaskRecipeView[];
 }

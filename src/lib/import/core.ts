@@ -58,7 +58,7 @@ export async function revertImportBatch(batchId: string, entityTable: string = '
 
     // 2. Soft delete ONLY active records associated with this batch
     // (Records already deleted manually by user are skipped)
-    const allowedTables = ['contacts', 'client_payments', 'subcontract_payments', 'material_payments', 'materials'];
+    const allowedTables = ['contacts', 'client_payments', 'subcontract_payments', 'material_payments', 'materials', 'tasks'];
     if (!allowedTables.includes(entityTable)) throw new Error("Invalid entity table for revert");
 
     const { data: deletedRecords, error: recordsError } = await supabase

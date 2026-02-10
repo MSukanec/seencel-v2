@@ -77,7 +77,10 @@ function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {
 
     return {
         id: task.id,
-        label: task.task_name || task.custom_name || "Sin nombre",
+        label: [
+            task.task_name || task.custom_name || "Sin nombre",
+            task.recipe_name,
+        ].filter(Boolean).join(" — "),
         subtitle: task.division_name || undefined,
         startDate,
         endDate: endDate >= startDate ? endDate : startDate,
@@ -135,7 +138,10 @@ export function ConstructionTasksView({
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
             const matchesSearch =
-                (task.task_name || task.custom_name || "")
+                [
+                    task.task_name || task.custom_name || "",
+                    task.recipe_name || "",
+                ].join(" ")
                     .toLowerCase()
                     .includes(searchQuery.toLowerCase());
             const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(task.status);
@@ -167,9 +173,15 @@ export function ConstructionTasksView({
         setSelectedStatuses(next);
     };
 
-    const handleFormSuccess = () => {
+    const handleFormSuccess = (data: any, isEditing: boolean) => {
         closeModal();
-        router.refresh();
+        if (isEditing && data) {
+            // Optimistic: update local state with server response
+            setTasks(prev => prev.map(t => t.id === data.id ? { ...t, ...data } : t));
+        } else if (data) {
+            // For new tasks, we need the full view data — refresh to get joined fields
+            router.refresh();
+        }
     };
 
     const handleCreate = () => {
@@ -213,40 +225,56 @@ export function ConstructionTasksView({
 
     const confirmDelete = () => {
         if (!deletingTask) return;
+        const taskToDelete = deletingTask;
 
+        // Optimistic: remove from UI immediately
+        setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
+        setDeletingTask(null);
+        toast.success("Tarea eliminada");
+
+        // Persist in background
         startTransition(async () => {
-            const result = await deleteConstructionTask(deletingTask.id, projectId);
-            if (result.success) {
-                setTasks(prev => prev.filter(t => t.id !== deletingTask.id));
-                toast.success("Tarea eliminada");
-            } else {
+            const result = await deleteConstructionTask(taskToDelete.id, projectId);
+            if (!result.success) {
+                // Rollback on error
+                setTasks(prev => [...prev, taskToDelete]);
                 toast.error(result.error || "Error al eliminar");
             }
-            setDeletingTask(null);
         });
     };
 
     const handleStatusChange = (task: ConstructionTaskView, newStatus: string) => {
+        // Optimistic: update UI immediately
+        const previousStatus = task.status;
+        const previousProgress = task.progress_percent;
+        setTasks(prev =>
+            prev.map(t =>
+                t.id === task.id
+                    ? {
+                        ...t,
+                        status: newStatus as ConstructionTaskStatus,
+                        progress_percent: newStatus === 'completed' ? 100 : t.progress_percent
+                    }
+                    : t
+            )
+        );
+
+        // Persist in background
         startTransition(async () => {
             const result = await updateConstructionTaskStatus(
                 task.id,
                 projectId,
                 newStatus as ConstructionTaskStatus
             );
-            if (result.success) {
+            if (!result.success) {
+                // Rollback on error
                 setTasks(prev =>
                     prev.map(t =>
                         t.id === task.id
-                            ? {
-                                ...t,
-                                status: newStatus as ConstructionTaskStatus,
-                                progress_percent: newStatus === 'completed' ? 100 : t.progress_percent
-                            }
+                            ? { ...t, status: previousStatus, progress_percent: previousProgress }
                             : t
                     )
                 );
-                toast.success("Estado actualizado");
-            } else {
                 toast.error(result.error || "Error al actualizar");
             }
         });

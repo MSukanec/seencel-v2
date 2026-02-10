@@ -64,7 +64,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
 
             const result = await parseFile(file);
 
-            if (!result.rawPreview || result.rawPreview.length === 0) {
+            if (!result.rawData || result.rawData.length === 0) {
                 // Fallback if no preview available or empty
                 if (result.data.length === 0) throw new Error("Archivo vacío o inválido.");
 
@@ -207,7 +207,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
                 </div>
             )}
 
-            {stage === 'header-selection' && rawResult?.rawPreview && previewFile && (
+            {stage === 'header-selection' && rawResult?.rawData && previewFile && (
                 // Header Selection State
                 <div className="flex flex-col h-full min-h-0 overflow-hidden">
                     {/* Header card with selected row preview */}
@@ -229,7 +229,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
                                     Fila {selectedHeaderIndex + 1}
                                 </span>
                                 <div className="flex gap-2">
-                                    {rawResult.rawPreview[selectedHeaderIndex]?.map((cell: any, i: number) => (
+                                    {rawResult.rawData[selectedHeaderIndex]?.map((cell: any, i: number) => (
                                         <span
                                             key={i}
                                             className="text-sm font-semibold text-primary bg-background px-3 py-1 rounded shadow-sm ring-1 ring-primary/20 truncate max-w-[150px]"
@@ -250,7 +250,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
                                     <TableHeader className="bg-muted/50 sticky top-0 z-10">
                                         <TableRow>
                                             <TableHead className="w-[50px] text-center">#</TableHead>
-                                            {rawResult.rawPreview[0]?.map((_: any, i: number) => (
+                                            {rawResult.rawData[0]?.map((_: any, i: number) => (
                                                 <TableHead key={i} className="min-w-[100px] max-w-[180px]">
                                                     Col {i + 1}
                                                 </TableHead>
@@ -258,7 +258,7 @@ export function ImportStepUpload({ config, onFileSelected, onReset, initialFile,
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {rawResult.rawPreview.map((row, rowIndex) => (
+                                        {rawResult.rawData.slice(0, 20).map((row, rowIndex) => (
                                             <TableRow
                                                 key={rowIndex}
                                                 className={cn(

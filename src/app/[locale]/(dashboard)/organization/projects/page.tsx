@@ -54,7 +54,7 @@ export default async function ProjectsPage({
     const maxProjects = planFeatures?.max_projects ?? -1;
 
     return (
-        <Tabs defaultValue="projects" className="h-full flex flex-col">
+        <Tabs defaultValue="projects" syncUrl="view" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Proyectos"

@@ -7,6 +7,7 @@ import { ImportStepUpload } from "./steps/step-upload";
 import { ImportStepMapping } from "./steps/step-mapping";
 import { ImportStepValidation } from "./steps/step-validation";
 import { ImportStepConflicts } from "./steps/step-conflicts";
+import { StepAIAnalysis } from "./steps/step-ai-analysis";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -17,13 +18,14 @@ import { FormFooter } from "@/components/shared/forms/form-footer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslations } from "next-intl";
 import { ImportConfig, ParseResult } from "@/lib/import";
+import type { AIAnalysisResult } from "@/features/ai/types";
 
 interface BulkImportModalProps<T> {
     config: ImportConfig<T>;
     organizationId: string;
 }
 
-type Step = 'upload' | 'mapping' | 'validation' | 'conflicts' | 'importing' | 'result';
+type Step = 'upload' | 'ai-analysis' | 'mapping' | 'validation' | 'conflicts' | 'importing' | 'result';
 
 export function BulkImportModal<T>({ config, organizationId }: BulkImportModalProps<T>) {
     const t = useTranslations('ImportSystem.Modal');
@@ -34,6 +36,10 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     const [step, setStep] = useState<Step>('upload');
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<ParseResult | null>(null);
+    const [rawExcelData, setRawExcelData] = useState<any[][] | null>(null);
+    const [headerRowIdx, setHeaderRowIdx] = useState(0);
+
+    const hasAI = !!config.aiAnalyzer;
     const [mapping, setMapping] = useState<Record<string, string>>({}); // Header -> ColumnId
     const [isMappingValid, setIsMappingValid] = useState(false);
     const [mappedData, setMappedData] = useState<any[]>([]);
@@ -57,6 +63,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     } | null>(null);
 
     const handleBack = () => {
+        if (step === 'ai-analysis') setStep('upload');
         if (step === 'mapping') setStep('upload');
         if (step === 'validation') setStep('mapping');
         if (step === 'conflicts') setStep('validation');
@@ -65,6 +72,37 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
     const handleFileUpload = (file: File, result: ParseResult) => {
         setFile(file);
         setParsedData(result);
+        // Save raw data for AI analysis
+        if (result.rawData) {
+            setRawExcelData(result.rawData);
+        }
+        // If the config has AI analyzer, go to AI step; otherwise manual mapping
+        if (hasAI) {
+            setStep('ai-analysis');
+        } else {
+            setStep('mapping');
+        }
+    };
+
+    // Handle AI analysis accept — import directly via AI batch action
+    const handleAIAccept = async (result: AIAnalysisResult) => {
+        if (!config.aiAnalyzer) return;
+        setStep('importing');
+        setImportProgress({ total: result.summary.totalTasks, current: 0, phase: 'Importando tareas con recetas...' });
+
+        try {
+            const importResult = await config.aiAnalyzer.onImportAI(result);
+            setImportResult(importResult);
+            setStep('result');
+        } catch (error) {
+            console.error('[AI Import] Failed:', error);
+            setImportResult({ success: 0, errors: [error instanceof Error ? error.message : 'Error desconocido'] });
+            setStep('result');
+        }
+    };
+
+    // Handle AI skip — go to manual mapping flow
+    const handleAISkip = () => {
         setStep('mapping');
     };
 
@@ -242,6 +280,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                         <div className="min-w-0">
                             <h2 className="text-base font-semibold leading-none">
                                 {step === 'upload' && t('headers.upload', { entity: config.entityLabel })}
+                                {step === 'ai-analysis' && 'Análisis con IA'}
                                 {step === 'mapping' && t('headers.mapping')}
                                 {step === 'validation' && t('headers.validation')}
                                 {step === 'conflicts' && 'Resolver Conflictos'}
@@ -250,6 +289,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                             </h2>
                             <p className="text-xs text-muted-foreground mt-1 max-w-md">
                                 {step === 'upload' && t('descriptions.upload')}
+                                {step === 'ai-analysis' && 'La IA detectará automáticamente la estructura de tareas y recetas en tu archivo.'}
                                 {step === 'mapping' && t('descriptions.mapping')}
                                 {step === 'validation' && t('descriptions.validation')}
                                 {step === 'conflicts' && 'Algunos valores no existen en el sistema. Decide cómo proceder.'}
@@ -281,10 +321,21 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                             onReset={() => {
                                 setFile(null);
                                 setParsedData(null);
+                                setRawExcelData(null);
                             }}
                             initialFile={file}
                             initialResult={parsedData}
                             onHeaderSelectionStateChange={setHeaderSelectionState}
+                        />
+                    )}
+                    {step === 'ai-analysis' && config.aiAnalyzer && rawExcelData && (
+                        <StepAIAnalysis
+                            key="step-ai"
+                            rawData={rawExcelData}
+                            headerRowIndex={headerRowIdx}
+                            onAnalyze={config.aiAnalyzer.analyzeAction}
+                            onAccept={handleAIAccept}
+                            onSkip={handleAISkip}
                         />
                     )}
                     {step === 'mapping' && parsedData && (
@@ -371,33 +422,33 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
 
                             {/* Warnings Section (amber) */}
                             {importResult.warnings && importResult.warnings.length > 0 && (
-                                <div className="w-full max-w-md mt-4">
+                                <div className="w-full mt-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                        <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                                        <p className="text-base font-medium text-amber-600 dark:text-amber-400">
                                             Advertencias
                                         </p>
                                     </div>
-                                    <div className="border border-amber-500/30 rounded-md bg-amber-500/5 p-3">
+                                    <div className="border border-amber-500/30 rounded-md bg-amber-500/5 p-4">
                                         {importResult.warnings.map((w, i) => (
-                                            <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{w}</p>
+                                            <p key={i} className="text-sm text-amber-700 dark:text-amber-300">{w}</p>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
                             {importResult.errors.length > 0 && (
-                                <div className="w-full max-w-md mt-4 flex flex-col min-h-0 flex-1">
+                                <div className="w-full mt-4 flex flex-col min-h-0 flex-1">
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-medium text-destructive">
+                                        <p className="text-base font-medium text-destructive">
                                             {tResult('errorsMessage', { count: importResult.errors.length })}
                                         </p>
                                     </div>
                                     <div className="border rounded-md bg-destructive/5 overflow-hidden flex-1 relative">
                                         <ScrollArea className="h-full">
-                                            <div className="p-3 text-left space-y-2">
+                                            <div className="p-4 text-left space-y-2">
                                                 {Array.from(new Set(importResult.errors.map(e => typeof e === 'string' ? e : JSON.stringify(e)))).map((err, i) => (
-                                                    <div key={i} className="text-xs text-destructive flex items-start gap-2">
+                                                    <div key={i} className="text-sm text-destructive flex items-start gap-2">
                                                         <span className="font-mono opacity-70">•</span>
                                                         <span className="font-mono break-all">{err}</span>
                                                     </div>
@@ -413,7 +464,7 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
             </div>
 
             {/* Footer */}
-            {step !== 'importing' && step !== 'result' && (
+            {step !== 'importing' && step !== 'result' && step !== 'ai-analysis' && (
                 <FormFooter
                     className="-mx-4 -mb-4 mt-4 border-t pt-4 px-4 bg-background z-10"
                     isForm={false}
@@ -430,7 +481,10 @@ export function BulkImportModal<T>({ config, organizationId }: BulkImportModalPr
                     onSubmit={() => {
                         if (headerSelectionState?.isInHeaderSelection) {
                             headerSelectionState.onConfirm();
-                        } else if (step === 'upload') setStep('mapping');
+                        } else if (step === 'upload') {
+                            if (hasAI) setStep('ai-analysis');
+                            else setStep('mapping');
+                        }
                         else if (step === 'mapping') transformDataAndProceed();
                         else if (step === 'validation') handleValidationContinue();
                         else if (step === 'conflicts') handleImport();

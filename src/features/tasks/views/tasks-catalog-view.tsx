@@ -2,18 +2,33 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "@/i18n/routing";
-import { Plus, Monitor, Building2, ClipboardList, Upload, History } from "lucide-react";
+import { Plus, Monitor, Building2, ClipboardList, Upload, History, Trash2 } from "lucide-react";
 
-import { TasksByDivision, Unit, TaskDivision, TaskKind } from "@/features/tasks/types";
+import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement } from "@/features/tasks/types";
 import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
 import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } from "@/features/tasks/forms";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useModal } from "@/stores/modal-store";
-import { ImportConfig, createImportBatch, importTasksCatalogBatch, revertImportBatch } from "@/lib/import";
+import { useMultiSelect } from "@/hooks/use-multi-select";
+import { deleteTasksBulk } from "@/features/tasks/actions";
+import { ImportConfig, createImportBatch, importTasksCatalogBatch, importAITasksBatch, revertImportBatch } from "@/lib/import";
+import { analyzeExcelStructure } from "@/features/ai/actions";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { ImportHistoryModal } from "@/components/shared/import/import-history-modal";
+import { toast } from "sonner";
 
 // Filter type for origin
 type OriginFilter = "all" | "system" | "organization";
@@ -23,7 +38,8 @@ interface TasksCatalogViewProps {
     orgId: string;
     units: Unit[];
     divisions: TaskDivision[];
-    kinds?: TaskKind[];
+    kinds?: TaskAction[];
+    elements?: TaskElement[];
     isAdminMode?: boolean;
 }
 
@@ -33,6 +49,7 @@ export function TasksCatalogView({
     units,
     divisions,
     kinds = [],
+    elements = [],
     isAdminMode = false
 }: TasksCatalogViewProps) {
     const router = useRouter();
@@ -78,6 +95,48 @@ export function TasksCatalogView({
     const handleOriginClear = () => {
         setOriginFilter(new Set());
     };
+
+    // ========================================================================
+    // Multi-select for bulk actions
+    // ========================================================================
+    const multiSelect = useMultiSelect({
+        items: allTasks,
+        getItemId: (t) => t.id,
+    });
+
+    const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+
+    const handleBulkDelete = async () => {
+        const ids = Array.from(multiSelect.selectedIds);
+        const count = ids.length;
+
+        multiSelect.clearSelection();
+        setBulkDeleteModalOpen(false);
+
+        try {
+            const result = await deleteTasksBulk(ids, isAdminMode);
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success(`${count} tarea${count > 1 ? 's' : ''} eliminada${count > 1 ? 's' : ''}`);
+                router.refresh();
+            }
+        } catch (error) {
+            toast.error("Error al eliminar tareas");
+        }
+    };
+
+    const bulkActionsContent = (
+        <>
+            <Button variant="outline" size="sm" onClick={multiSelect.selectAll} className="gap-2">
+                Seleccionar todo ({allTasks.length})
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteModalOpen(true)} className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Eliminar
+            </Button>
+        </>
+    );
 
     // ========================================================================
     // Import Configuration
@@ -145,6 +204,14 @@ export function TasksCatalogView({
                 }
             },
         ],
+        aiAnalyzer: {
+            analyzeAction: analyzeExcelStructure,
+            onImportAI: async (result) => {
+                const importResult = await importAITasksBatch(orgId, result);
+                router.refresh();
+                return importResult;
+            },
+        },
         onImport: async (records) => {
             try {
                 const batch = await createImportBatch(orgId, "tasks_catalog", records.length);
@@ -249,9 +316,8 @@ export function TasksCatalogView({
             // Open parametric task wizard
             openModal(
                 <TasksParametricForm
-                    divisions={divisions}
+                    elements={elements}
                     units={units}
-                    kinds={kinds}
                     onCancel={closeModal}
                     onSuccess={() => {
                         closeModal();
@@ -391,6 +457,9 @@ export function TasksCatalogView({
                         onClick: handleImportHistory,
                     },
                 ]}
+                selectedCount={multiSelect.selectedCount}
+                onClearSelection={multiSelect.clearSelection}
+                bulkActions={bulkActionsContent}
             />
             <TaskCatalog
                 groupedTasks={groupedTasks}
@@ -400,7 +469,27 @@ export function TasksCatalogView({
                 isAdminMode={isAdminMode}
                 searchQuery={searchQuery}
                 originFilter={computedOriginFilter}
+                isSelected={multiSelect.isSelected}
+                onToggleSelect={multiSelect.toggle}
             />
+
+            {/* Bulk Delete Confirmation */}
+            <AlertDialog open={bulkDeleteModalOpen} onOpenChange={setBulkDeleteModalOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar {multiSelect.selectedCount} tarea{multiSelect.selectedCount > 1 ? 's' : ''}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Las tareas seleccionadas serán eliminadas permanentemente.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

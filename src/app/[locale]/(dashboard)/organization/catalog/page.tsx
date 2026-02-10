@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskKinds } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskActions, getTaskElements } from "@/features/tasks/queries";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
 import { getUnitsForOrganization, getUnitCategories } from "@/features/units/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
@@ -65,7 +65,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             groupedTasks,
             taskUnitsResult,
             divisionsResult,
-            kindsResult,
+            actionsResult,
+            elementsResult,
             materials,
             materialCategories,
             materialUnits,
@@ -79,7 +80,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             getTasksGroupedByDivision(activeOrgId),
             getUnits(),
             getTaskDivisions(),
-            getTaskKinds(),
+            getTaskActions(),
+            getTaskElements(),
             getMaterialsForOrganization(activeOrgId),
             getMaterialCategoriesForCatalog(),
             getUnitsForMaterialCatalog(),
@@ -97,7 +99,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
         const activeTab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab : 'tasks';
 
         return (
-            <Tabs defaultValue={activeTab} className="h-full flex flex-col">
+            <Tabs defaultValue={activeTab} syncUrl="tab" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title="Catálogo Técnico"
@@ -130,7 +132,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                                 orgId={activeOrgId}
                                 units={taskUnitsResult.data}
                                 divisions={divisionsResult.data}
-                                kinds={kindsResult.data}
+                                kinds={actionsResult.data}
+                                elements={elementsResult.data}
                             />
                         </ContentLayout>
                     </TabsContent>

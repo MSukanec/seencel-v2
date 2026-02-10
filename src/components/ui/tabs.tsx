@@ -5,7 +5,44 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
 
-const Tabs = TabsPrimitive.Root
+// ============================================================================
+// Tabs with optional URL sync
+// ============================================================================
+
+interface TabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
+    /** When set, the active tab value is synced to this URL search param via replaceState.
+     *  Example: syncUrl="view" → URL gets ?view=tasks when tab changes.
+     *  Pages that don't pass syncUrl work exactly as before. */
+    syncUrl?: string;
+}
+
+const Tabs = React.forwardRef<
+    React.ElementRef<typeof TabsPrimitive.Root>,
+    TabsProps
+>(({ syncUrl, onValueChange, ...props }, ref) => {
+    const handleValueChange = React.useCallback(
+        (value: string) => {
+            // Sync to URL if enabled
+            if (syncUrl && typeof window !== "undefined") {
+                const url = new URL(window.location.href);
+                url.searchParams.set(syncUrl, value);
+                window.history.replaceState(window.history.state, "", url.toString());
+            }
+            // Forward original callback
+            onValueChange?.(value);
+        },
+        [syncUrl, onValueChange]
+    );
+
+    return (
+        <TabsPrimitive.Root
+            ref={ref}
+            onValueChange={handleValueChange}
+            {...props}
+        />
+    );
+});
+Tabs.displayName = "Tabs"
 
 const TabsList = React.forwardRef<
     React.ElementRef<typeof TabsPrimitive.List>,

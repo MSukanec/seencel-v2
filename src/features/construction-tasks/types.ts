@@ -13,6 +13,7 @@ export type CostScope = 'materials_and_labor' | 'labor_only' | 'materials_only';
 // Schema for form validation
 export const constructionTaskSchema = z.object({
     task_id: z.string().uuid().nullable().optional(),
+    recipe_id: z.string().uuid().nullable().optional(),
     custom_name: z.string().min(1, "Nombre requerido").nullable().optional(),
     custom_unit: z.string().nullable().optional(),
     quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0"),
@@ -38,6 +39,7 @@ export interface ConstructionTask {
     organization_id: string;
     project_id: string;
     task_id: string | null;
+    recipe_id: string | null;
     quote_item_id: string | null;
     quantity: number | null;
     original_quantity: number | null;
@@ -64,6 +66,7 @@ export interface ConstructionTask {
 // View interface (from construction_tasks_view)
 export interface ConstructionTaskView extends ConstructionTask {
     task_name: string | null;
+    recipe_name: string | null;
     unit: string | null;
     division_name: string | null;
     cost_scope_label: string;

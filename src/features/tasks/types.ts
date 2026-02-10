@@ -27,11 +27,21 @@ export interface Task {
     deleted_at: string | null;
 }
 
-// Extended task with joined data for display
+// Extended task with joined data for display (matches tasks_view)
 export interface TaskView extends Task {
     unit_name?: string;
     division_name?: string;
     division_color?: string;
+    // Parametric fields
+    task_action_id?: string | null;
+    task_element_id?: string | null;
+    is_parametric?: boolean;
+    parameter_values?: Record<string, string | number | boolean>;
+    import_batch_id?: string | null;
+    // Joined names from tasks_view
+    action_name?: string | null;
+    action_short_code?: string | null;
+    element_name?: string | null;
 }
 
 export interface TaskDivision {
@@ -58,15 +68,7 @@ export interface TasksByDivision {
     tasks: TaskView[];
 }
 
-export interface TaskMaterial {
-    id: string;
-    task_id: string;
-    material_id: string;
-    material_name: string;
-    unit_name: string | null;
-    amount: number | null;
-    is_system: boolean;
-}
+
 
 // Parameter type for reusable task parameters
 export type ParameterType = 'text' | 'number' | 'select' | 'material' | 'boolean';
@@ -103,15 +105,12 @@ export interface TaskParameterOption {
     is_deleted: boolean;
 }
 
-// Task Kind (Action type: Ejecución, Instalación, etc.)
-export interface TaskKind {
+// Task Action (Action type: Ejecución, Demolición, Limpieza, etc.)
+export interface TaskAction {
     id: string;
-    code: string;
     name: string;
     short_code: string | null;
     description: string | null;
-    order: number | null;
-    is_active: boolean;
 }
 
 // Task Element (Object: Contrapiso, Muro, etc.)
@@ -128,12 +127,12 @@ export interface TaskElement {
 
 // Extended Task with parametric fields
 export interface ParametricTask extends Task {
-    task_kind_id: string | null;
+    task_action_id: string | null;
     task_element_id: string | null;
     is_parametric: boolean;
     parameter_values: Record<string, string | number | boolean>;
     // Joined data
-    kind?: TaskKind;
+    action?: TaskAction;
     element?: TaskElement;
 }
 
@@ -147,9 +146,8 @@ export interface TaskRecipe {
     id: string;
     task_id: string;
     organization_id: string;
+    name: string | null;
     is_public: boolean;
-    is_system: boolean;
-    is_anonymous: boolean;
     region: string | null;
     rating_avg: number | null;
     rating_count: number;
@@ -159,6 +157,7 @@ export interface TaskRecipe {
     created_by: string | null;
     updated_by: string | null;
     is_deleted: boolean;
+    import_batch_id: string | null;
 }
 
 export interface TaskRecipeView extends TaskRecipe {
@@ -171,20 +170,50 @@ export interface TaskRecipeView extends TaskRecipe {
     item_count: number;
 }
 
-export interface TaskRecipeItem {
+// --- Recipe Resources (Multi-tipo) ---
+
+export interface TaskRecipeMaterial {
     id: string;
     recipe_id: string;
-    material_id: string | null;
-    material_name: string;
-    material_category: string | null;
+    material_id: string;
     quantity: number;
+    waste_percentage: number;
+    /** Calculated by DB: quantity * (1 + waste_percentage / 100) */
+    total_quantity: number;
     unit_id: string | null;
-    unit_name: string | null;
-    display_order: number;
     notes: string | null;
     is_optional: boolean;
+    organization_id: string;
     created_at: string;
     updated_at: string;
+    // Joined fields (from query)
+    material_name?: string;
+    material_code?: string | null;
+    unit_name?: string | null;
+    unit_symbol?: string | null;
+}
+
+export interface TaskRecipeLabor {
+    id: string;
+    recipe_id: string;
+    labor_type_id: string;
+    quantity: number;
+    unit_id: string | null;
+    notes: string | null;
+    is_optional: boolean;
+    organization_id: string;
+    created_at: string;
+    updated_at: string;
+    // Joined fields (from query)
+    labor_name?: string;
+    unit_name?: string | null;
+    unit_symbol?: string | null;
+}
+
+/** Combined resources for a single recipe */
+export interface RecipeResources {
+    materials: TaskRecipeMaterial[];
+    labor: TaskRecipeLabor[];
 }
 
 export interface TaskRecipeRating {
@@ -212,27 +241,35 @@ export interface OrganizationRecipePreference {
 
 export const taskRecipeSchema = z.object({
     task_id: z.string().uuid(),
+    name: z.string().min(1, "El nombre de la receta es obligatorio"),
     is_public: z.boolean().default(false),
-    is_anonymous: z.boolean().default(false),
     region: z.string().nullable().optional(),
 });
 
 export type TaskRecipeFormData = z.infer<typeof taskRecipeSchema>;
 
-export const taskRecipeItemSchema = z.object({
+export const taskRecipeMaterialSchema = z.object({
     recipe_id: z.string().uuid(),
-    material_id: z.string().uuid().nullable().optional(),
-    material_name: z.string().min(1, "Nombre del material requerido"),
-    material_category: z.string().nullable().optional(),
+    material_id: z.string().uuid("Seleccioná un material"),
     quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0"),
+    waste_percentage: z.coerce.number().min(0, "La merma no puede ser negativa").default(0),
     unit_id: z.string().uuid().nullable().optional(),
-    unit_name: z.string().nullable().optional(),
-    display_order: z.coerce.number().int().default(0),
     notes: z.string().nullable().optional(),
     is_optional: z.boolean().default(false),
 });
 
-export type TaskRecipeItemFormData = z.infer<typeof taskRecipeItemSchema>;
+export type TaskRecipeMaterialFormData = z.infer<typeof taskRecipeMaterialSchema>;
+
+export const taskRecipeLaborSchema = z.object({
+    recipe_id: z.string().uuid(),
+    labor_type_id: z.string().uuid("Seleccioná un tipo de mano de obra"),
+    quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0"),
+    unit_id: z.string().uuid().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    is_optional: z.boolean().default(false),
+});
+
+export type TaskRecipeLaborFormData = z.infer<typeof taskRecipeLaborSchema>;
 
 export const taskRecipeRatingSchema = z.object({
     recipe_id: z.string().uuid(),

@@ -4,50 +4,50 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { CheckboxGrid } from "../components/checkbox-grid";
-import { toggleDivisionKind } from "../actions";
-import { TaskDivision, TaskKind } from "../types";
+import { toggleDivisionAction } from "../actions";
+import { TaskDivision, TaskAction } from "../types";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface DivisionKindsViewProps {
+interface DivisionActionsViewProps {
     division: TaskDivision;
-    allKinds: TaskKind[];
-    linkedKindIds: string[];
+    allActions: TaskAction[];
+    linkedActionIds: string[];
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export function TasksDivisionKindsView({
+export function TasksDivisionActionsView({
     division,
-    allKinds,
-    linkedKindIds,
-}: DivisionKindsViewProps) {
+    allActions,
+    linkedActionIds,
+}: DivisionActionsViewProps) {
     const [searchQuery, setSearchQuery] = useState("");
 
     // ========================================================================
     // Filtered kinds
     // ========================================================================
 
-    const filteredKinds = useMemo(() => {
-        if (!searchQuery.trim()) return allKinds;
+    const filteredActions = useMemo(() => {
+        if (!searchQuery.trim()) return allActions;
         const query = searchQuery.toLowerCase();
-        return allKinds.filter(k =>
+        return allActions.filter(k =>
             k.name.toLowerCase().includes(query) ||
             k.short_code?.toLowerCase().includes(query) ||
             k.description?.toLowerCase().includes(query)
         );
-    }, [allKinds, searchQuery]);
+    }, [allActions, searchQuery]);
 
     // ========================================================================
     // Handlers
     // ========================================================================
 
-    const handleToggleKind = async (kindId: string, checked: boolean) => {
-        return await toggleDivisionKind(division.id, kindId, checked);
+    const handleToggleAction = async (actionId: string, checked: boolean) => {
+        return await toggleDivisionAction(division.id, actionId, checked);
     };
 
     // ========================================================================
@@ -74,14 +74,14 @@ export function TasksDivisionKindsView({
                 </CardHeader>
                 <CardContent>
                     <CheckboxGrid
-                        items={filteredKinds.map(k => ({
+                        items={filteredActions.map(k => ({
                             id: k.id,
                             name: k.name,
-                            code: k.short_code || k.code,
+                            code: k.short_code,
                             description: k.description
                         }))}
-                        selectedIds={linkedKindIds}
-                        onToggle={handleToggleKind}
+                        selectedIds={linkedActionIds}
+                        onToggle={handleToggleAction}
                         columns={2}
                         showSearch={false}
                         emptyMessage="No hay tipos de acción definidos"

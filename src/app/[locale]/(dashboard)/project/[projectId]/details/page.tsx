@@ -33,7 +33,7 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
     }
 
     return (
-        <Tabs defaultValue="general" className="h-full flex flex-col">
+        <Tabs defaultValue="general" syncUrl="view" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Información"

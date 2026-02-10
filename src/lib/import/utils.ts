@@ -40,6 +40,18 @@ export interface ImportConfig<T = any> {
     description?: string;
     /** Path to documentation for this import (e.g. '/docs/materiales/importar') */
     docsPath?: string;
+    /** AI-powered analysis config — when present, offers AI structure detection after upload */
+    aiAnalyzer?: {
+        /** Server action that analyzes raw Excel rows with AI */
+        analyzeAction: (rows: any[][], headerRowIndex: number) => Promise<
+            { success: true; data: import("@/features/ai/types").AIAnalysisResult } |
+            { success: false; error: string }
+        >;
+        /** Server action that imports the AI-analyzed data in batch */
+        onImportAI: (result: import("@/features/ai/types").AIAnalysisResult) => Promise<
+            { success: number; errors: any[]; batchId?: string }
+        >;
+    };
 }
 
 export interface ParsedRow {
@@ -50,7 +62,7 @@ export interface ParseResult {
     data: ParsedRow[];
     headers: string[];
     errors: string[];
-    rawPreview?: any[][]; // Top rows for manual header selection
+    rawData?: any[][]; // All raw rows as 2D array (for AI analysis and header selection)
 }
 
 import * as XLSX from 'xlsx';
@@ -79,7 +91,7 @@ export async function parseFile(file: File, options?: ParseOptions): Promise<Par
                 }) as any[][];
 
                 if (!rawData || rawData.length === 0) {
-                    resolve({ data: [], headers: [], errors: ["Archivo vacío"], rawPreview: [] });
+                    resolve({ data: [], headers: [], errors: ["Archivo vacío"], rawData: [] });
                     return;
                 }
 
@@ -87,7 +99,7 @@ export async function parseFile(file: File, options?: ParseOptions): Promise<Par
 
                 // Validate if header row exists
                 if (headerRowIndex >= rawData.length) {
-                    resolve({ data: [], headers: [], errors: ["La fila de encabezado seleccionada no existe"], rawPreview: rawData.slice(0, 20) });
+                    resolve({ data: [], headers: [], errors: ["La fila de encabezado seleccionada no existe"], rawData: rawData });
                     return;
                 }
 
@@ -106,7 +118,7 @@ export async function parseFile(file: File, options?: ParseOptions): Promise<Par
                     data: rows,
                     headers: headers,
                     errors: [],
-                    rawPreview: rawData.slice(0, 20) // Return top 20 rows for preview UI
+                    rawData: rawData // Return all raw rows (for AI and header selection UI)
                 });
 
             } catch (error: any) {

@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Loader2, AlertTriangle } from "lucide-react";
-import { TaskKind, TaskElement, TaskDivision, Unit, TaskParameter, TaskParameterOption } from "../types";
+import { ArrowLeft, ArrowRight, Check, Loader2, AlertTriangle, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { TaskAction, TaskElement, Unit, TaskParameter, TaskParameterOption } from "../types";
 import { createTask } from "../actions";
 import { cn } from "@/lib/utils";
 
@@ -18,9 +19,8 @@ import { cn } from "@/lib/utils";
 // ============================================================================
 
 interface TasksParametricFormProps {
-    divisions: TaskDivision[];
+    elements: TaskElement[];
     units: Unit[];
-    kinds: TaskKind[];
     onCancel?: () => void;
     onSuccess?: () => void;
     onBack?: () => void;
@@ -31,55 +31,47 @@ interface ParameterWithOptions extends TaskParameter {
     options: TaskParameterOption[];
 }
 
-type Step = "division" | "kind" | "element" | "parameters" | "confirm";
+type Step = "element" | "action" | "parameters" | "confirm";
 
 // ============================================================================
 // Component
 // ============================================================================
 
 export function TasksParametricForm({
-    divisions,
+    elements,
     units,
-    kinds,
     onCancel,
     onSuccess,
     onBack,
 }: TasksParametricFormProps) {
     // State
-    const [step, setStep] = useState<Step>("division");
+    const [step, setStep] = useState<Step>("element");
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingElements, setIsLoadingElements] = useState(false);
+    const [isLoadingActions, setIsLoadingActions] = useState(false);
     const [isLoadingParameters, setIsLoadingParameters] = useState(false);
 
     // Selections
-    const [selectedDivisionId, setSelectedDivisionId] = useState<string>("");
-    const [selectedKindId, setSelectedKindId] = useState<string>("");
     const [selectedElementId, setSelectedElementId] = useState<string>("");
+    const [selectedActionId, setSelectedActionId] = useState<string>("");
+    const [elementSearch, setElementSearch] = useState("");
 
     // Parameter values: { parameter_slug: option_id }
     const [parameterValues, setParameterValues] = useState<Record<string, string>>({});
 
     // Dynamic data
-    const [compatibleKinds, setCompatibleKinds] = useState<TaskKind[]>([]);
-    const [isLoadingKinds, setIsLoadingKinds] = useState(false);
-    const [compatibleElements, setCompatibleElements] = useState<TaskElement[]>([]);
+    const [compatibleActions, setCompatibleActions] = useState<TaskAction[]>([]);
     const [elementParameters, setElementParameters] = useState<ParameterWithOptions[]>([]);
     const [duplicateTask, setDuplicateTask] = useState<any>(null);
 
     // Derived data
-    const selectedKind = useMemo(() =>
-        compatibleKinds.find(k => k.id === selectedKindId) || kinds.find(k => k.id === selectedKindId),
-        [compatibleKinds, kinds, selectedKindId]
-    );
-
     const selectedElement = useMemo(() =>
-        compatibleElements.find(e => e.id === selectedElementId),
-        [compatibleElements, selectedElementId]
+        elements.find(e => e.id === selectedElementId),
+        [elements, selectedElementId]
     );
 
-    const selectedDivision = useMemo(() =>
-        divisions.find(d => d.id === selectedDivisionId),
-        [divisions, selectedDivisionId]
+    const selectedAction = useMemo(() =>
+        compatibleActions.find(k => k.id === selectedActionId),
+        [compatibleActions, selectedActionId]
     );
 
     // Get selected option objects for each parameter
@@ -101,11 +93,11 @@ export function TasksParametricForm({
             .every(p => parameterValues[p.slug]);
     }, [elementParameters, parameterValues]);
 
-    // Generated name with parameters
+    // Generated name: "Ejecución de Cielorraso de Durlock..."
     const generatedName = useMemo(() => {
-        if (!selectedKind || !selectedElement) return "";
+        if (!selectedAction || !selectedElement) return "";
 
-        let name = `${selectedKind.name} de ${selectedElement.name.toLowerCase()}`;
+        let name = `${selectedAction.name} de ${selectedElement.name.toLowerCase()}`;
 
         // Add parameter labels to name
         const paramParts: string[] = [];
@@ -121,17 +113,16 @@ export function TasksParametricForm({
         }
 
         return name;
-    }, [selectedKind, selectedElement, elementParameters, selectedOptions]);
+    }, [selectedAction, selectedElement, elementParameters, selectedOptions]);
 
-    // Generated code with parameters
+    // Generated code: "EJE-MUR-LH-15"
     const generatedCode = useMemo(() => {
-        if (!selectedKind || !selectedDivision) return "";
+        if (!selectedAction || !selectedElement) return "";
 
-        const kindCode = selectedKind.short_code || selectedKind.code?.substring(0, 3).toUpperCase() || "???";
-        const divCode = (selectedDivision as any).code || selectedDivision.name.substring(0, 3).toUpperCase();
-        const elemCode = selectedElement?.code || selectedElement?.name.substring(0, 3).toUpperCase() || "";
+        const actionCode = selectedAction.short_code || selectedAction.name?.substring(0, 3).toUpperCase() || "???";
+        const elemCode = selectedElement.code || selectedElement.name.substring(0, 3).toUpperCase();
 
-        let code = elemCode ? `${kindCode}-${divCode}-${elemCode}` : `${kindCode}-${divCode}`;
+        let code = `${actionCode}-${elemCode}`;
 
         // Add parameter codes
         const paramCodes: string[] = [];
@@ -147,98 +138,54 @@ export function TasksParametricForm({
         }
 
         return code;
-    }, [selectedKind, selectedDivision, selectedElement, elementParameters, selectedOptions]);
+    }, [selectedAction, selectedElement, elementParameters, selectedOptions]);
 
     // ========================================================================
     // Effects
     // ========================================================================
 
-    // Load compatible kinds when division changes
+    // Load compatible actions when element changes
     useEffect(() => {
-        if (!selectedDivisionId) {
-            setCompatibleKinds([]);
+        if (!selectedElementId) {
+            setCompatibleActions([]);
             return;
         }
 
-        const loadKinds = async () => {
-            setIsLoadingKinds(true);
+        const loadActions = async () => {
+            setIsLoadingActions(true);
             const supabase = createClient();
 
-            const { data: kindLinks } = await supabase
-                .from('task_division_kinds')
-                .select('kind_id')
-                .eq('division_id', selectedDivisionId);
+            const { data: actionLinks } = await supabase
+                .from('task_element_actions')
+                .select('action_id')
+                .eq('element_id', selectedElementId);
 
-            if (kindLinks && kindLinks.length > 0) {
-                const kindIds = kindLinks.map(l => l.kind_id);
-                const filteredKinds = kinds.filter(k => kindIds.includes(k.id));
-                setCompatibleKinds(filteredKinds.length > 0 ? filteredKinds : kinds);
-            } else {
-                setCompatibleKinds(kinds);
-            }
-
-            setIsLoadingKinds(false);
-        };
-
-        loadKinds();
-        setSelectedKindId("");
-        setSelectedElementId("");
-        setParameterValues({});
-    }, [selectedDivisionId, kinds]);
-
-    // Load compatible elements when kind changes
-    useEffect(() => {
-        if (!selectedKindId || !selectedDivisionId) {
-            setCompatibleElements([]);
-            return;
-        }
-
-        const loadElements = async () => {
-            setIsLoadingElements(true);
-            const supabase = createClient();
-
-            // Get elements compatible with selected kind
-            const { data: kindLinks } = await supabase
-                .from('task_kind_elements')
-                .select('element_id')
-                .eq('kind_id', selectedKindId);
-
-            // Get elements compatible with selected division
-            const { data: divLinks } = await supabase
-                .from('task_division_elements')
-                .select('element_id')
-                .eq('division_id', selectedDivisionId);
-
-            // Intersect both sets
-            let elementIds: string[] = [];
-            if (kindLinks && divLinks) {
-                const kindElementIds = new Set(kindLinks.map(l => l.element_id));
-                const divElementIds = new Set(divLinks.map(l => l.element_id));
-                elementIds = [...kindElementIds].filter(id => divElementIds.has(id));
-            } else if (kindLinks) {
-                elementIds = kindLinks.map(l => l.element_id);
-            }
-
-            if (elementIds.length > 0) {
-                const { data: elements } = await supabase
-                    .from('task_elements')
+            if (actionLinks && actionLinks.length > 0) {
+                const actionIds = actionLinks.map(l => l.action_id);
+                const { data: actionsData } = await supabase
+                    .from('task_actions')
                     .select('*')
-                    .in('id', elementIds)
-                    .eq('is_deleted', false)
-                    .order('order', { ascending: true });
+                    .in('id', actionIds)
+                    .order('name', { ascending: true });
 
-                setCompatibleElements(elements || []);
+                setCompatibleActions(actionsData || []);
             } else {
-                setCompatibleElements([]);
+                // If no links, show all actions
+                const { data: allActions } = await supabase
+                    .from('task_actions')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                setCompatibleActions(allActions || []);
             }
 
-            setIsLoadingElements(false);
+            setIsLoadingActions(false);
         };
 
-        loadElements();
-        setSelectedElementId("");
+        loadActions();
+        setSelectedActionId("");
         setParameterValues({});
-    }, [selectedKindId, selectedDivisionId]);
+    }, [selectedElementId]);
 
     // Load parameters when element changes
     useEffect(() => {
@@ -300,15 +247,13 @@ export function TasksParametricForm({
         setParameterValues({});
     }, [selectedElementId]);
 
-    // Check for duplicates - only after parameters are filled (or if element has no parameters)
+    // Check for duplicates
     useEffect(() => {
-        // Don't check until we have the basic selection
-        if (!selectedKindId || !selectedElementId || !selectedDivisionId) {
+        if (!selectedActionId || !selectedElementId) {
             setDuplicateTask(null);
             return;
         }
 
-        // If element has parameters, wait until all required ones are filled
         if (elementParameters.length > 0 && !allRequiredParametersFilled) {
             setDuplicateTask(null);
             return;
@@ -317,8 +262,6 @@ export function TasksParametricForm({
         const checkDuplicate = async () => {
             const supabase = createClient();
 
-            // Check by generated code - this includes all parameter codes
-            // so "EJE-MAP-MUR-LH-15" won't match "EJE-MAP-MUR-LC-20"
             if (!generatedCode) {
                 setDuplicateTask(null);
                 return;
@@ -335,29 +278,29 @@ export function TasksParametricForm({
         };
 
         checkDuplicate();
-    }, [selectedKindId, selectedElementId, selectedDivisionId, generatedCode, elementParameters.length, allRequiredParametersFilled]);
+    }, [selectedActionId, selectedElementId, generatedCode, elementParameters.length, allRequiredParametersFilled]);
 
     // ========================================================================
     // Handlers
     // ========================================================================
 
     const handleNext = () => {
-        const steps: Step[] = elementParameters.length > 0
-            ? ["division", "kind", "element", "parameters", "confirm"]
-            : ["division", "kind", "element", "confirm"];
-        const currentIndex = steps.indexOf(step);
-        if (currentIndex < steps.length - 1) {
-            setStep(steps[currentIndex + 1]);
+        const stepsList: Step[] = elementParameters.length > 0
+            ? ["element", "action", "parameters", "confirm"]
+            : ["element", "action", "confirm"];
+        const currentIndex = stepsList.indexOf(step);
+        if (currentIndex < stepsList.length - 1) {
+            setStep(stepsList[currentIndex + 1]);
         }
     };
 
     const handlePrev = () => {
-        const steps: Step[] = elementParameters.length > 0
-            ? ["division", "kind", "element", "parameters", "confirm"]
-            : ["division", "kind", "element", "confirm"];
-        const currentIndex = steps.indexOf(step);
+        const stepsList: Step[] = elementParameters.length > 0
+            ? ["element", "action", "parameters", "confirm"]
+            : ["element", "action", "confirm"];
+        const currentIndex = stepsList.indexOf(step);
         if (currentIndex > 0) {
-            setStep(steps[currentIndex - 1]);
+            setStep(stepsList[currentIndex - 1]);
         } else if (onBack) {
             onBack();
         }
@@ -365,9 +308,8 @@ export function TasksParametricForm({
 
     const canProceed = () => {
         switch (step) {
-            case "division": return !!selectedDivisionId;
-            case "kind": return !!selectedKindId;
-            case "element": return !!selectedElementId; // No duplicate check here - wait for parameters
+            case "element": return !!selectedElementId;
+            case "action": return !!selectedActionId;
             case "parameters": return allRequiredParametersFilled && !duplicateTask;
             case "confirm": return !duplicateTask;
             default: return false;
@@ -406,9 +348,8 @@ export function TasksParametricForm({
             formData.set("name", generatedName);
             formData.set("is_system", "true");
             formData.set("is_parametric", "true");
-            formData.set("task_kind_id", selectedKindId);
+            formData.set("task_action_id", selectedActionId);
             formData.set("task_element_id", selectedElementId);
-            formData.set("task_division_id", selectedDivisionId);
             formData.set("unit_id", unitId);
             formData.set("code", generatedCode);
             formData.set("parameter_values", JSON.stringify(savedParamValues));
@@ -434,78 +375,80 @@ export function TasksParametricForm({
     // Render Steps
     // ========================================================================
 
-    const renderDivisionStep = () => (
-        <div className="space-y-3">
-            {divisions.map((division) => (
-                <Card
-                    key={division.id}
-                    className={cn(
-                        "p-4 cursor-pointer transition-all hover:border-primary",
-                        selectedDivisionId === division.id && "border-primary bg-primary/5"
-                    )}
-                    onClick={() => setSelectedDivisionId(division.id)}
-                >
-                    <div className="flex items-center gap-3">
-                        <div className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center text-lg",
-                            selectedDivisionId === division.id ? "bg-primary text-primary-foreground" : "bg-muted"
-                        )}>
-                            {division.name.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                            <div className="font-medium">{division.name}</div>
-                            {division.description && (
-                                <div className="text-sm text-muted-foreground">{division.description}</div>
-                            )}
-                        </div>
-                        {selectedDivisionId === division.id && (
-                            <Check className="h-5 w-5 text-primary" />
-                        )}
-                    </div>
-                </Card>
-            ))}
-        </div>
-    );
-
-    const renderKindStep = () => {
-        const kindsToShow = compatibleKinds.length > 0 ? compatibleKinds : kinds;
-
-        if (isLoadingKinds) {
+    const renderElementStep = () => {
+        if (elements.length === 0) {
             return (
-                <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="text-center py-8 text-muted-foreground">
+                    No hay elementos disponibles
                 </div>
             );
         }
 
+        // Filter and sort alphabetically
+        const filteredElements = elements
+            .filter(e =>
+                !elementSearch ||
+                e.name.toLowerCase().includes(elementSearch.toLowerCase()) ||
+                e.code?.toLowerCase().includes(elementSearch.toLowerCase())
+            )
+            .sort((a, b) => a.name.localeCompare(b.name));
+
         return (
             <div className="space-y-3">
-                {kindsToShow.map((kind) => (
-                    <Card
-                        key={kind.id}
-                        className={cn(
-                            "p-4 cursor-pointer transition-all hover:border-primary",
-                            selectedKindId === kind.id && "border-primary bg-primary/5"
-                        )}
-                        onClick={() => setSelectedKindId(kind.id)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="font-mono">{kind.short_code || kind.code}</Badge>
-                            <div className="flex-1">
-                                <div className="font-medium">{kind.name}</div>
-                            </div>
-                            {selectedKindId === kind.id && (
-                                <Check className="h-5 w-5 text-primary" />
+                {/* Search */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Buscar elemento..."
+                        value={elementSearch}
+                        onChange={(e) => setElementSearch(e.target.value)}
+                        className="pl-9"
+                    />
+                </div>
+
+                {filteredElements.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                        No se encontraron elementos con &quot;{elementSearch}&quot;
+                    </div>
+                ) : (
+                    filteredElements.map((element) => (
+                        <Card
+                            key={element.id}
+                            className={cn(
+                                "p-4 cursor-pointer transition-all hover:border-primary",
+                                selectedElementId === element.id && "border-primary bg-primary/5"
                             )}
-                        </div>
-                    </Card>
-                ))}
+                            onClick={() => setSelectedElementId(element.id)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={cn(
+                                    "w-10 h-10 rounded-lg flex items-center justify-center text-lg",
+                                    selectedElementId === element.id ? "bg-primary text-primary-foreground" : "bg-muted"
+                                )}>
+                                    {element.icon || element.name.charAt(0)}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="font-medium">{element.name}</div>
+                                    {element.description && (
+                                        <div className="text-sm text-muted-foreground">{element.description}</div>
+                                    )}
+                                </div>
+                                {element.code && (
+                                    <Badge variant="outline" className="font-mono text-xs">{element.code}</Badge>
+                                )}
+                                {selectedElementId === element.id && (
+                                    <Check className="h-5 w-5 text-primary" />
+                                )}
+                            </div>
+                        </Card>
+                    ))
+                )}
             </div>
         );
     };
 
-    const renderElementStep = () => {
-        if (isLoadingElements) {
+    const renderActionStep = () => {
+        if (isLoadingActions) {
             return (
                 <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -513,31 +456,36 @@ export function TasksParametricForm({
             );
         }
 
-        if (compatibleElements.length === 0) {
+        if (compatibleActions.length === 0) {
             return (
                 <div className="text-center py-8 text-muted-foreground">
-                    No hay elementos disponibles para esta combinación
+                    No hay acciones disponibles para este elemento
                 </div>
             );
         }
 
         return (
             <div className="space-y-3">
-                {compatibleElements.map((element) => (
+                {compatibleActions.map((action) => (
                     <Card
-                        key={element.id}
+                        key={action.id}
                         className={cn(
                             "p-4 cursor-pointer transition-all hover:border-primary",
-                            selectedElementId === element.id && "border-primary bg-primary/5"
+                            selectedActionId === action.id && "border-primary bg-primary/5"
                         )}
-                        onClick={() => setSelectedElementId(element.id)}
+                        onClick={() => setSelectedActionId(action.id)}
                     >
                         <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="font-mono">{element.code || "---"}</Badge>
+                            {action.short_code && (
+                                <Badge variant="outline" className="font-mono">{action.short_code}</Badge>
+                            )}
                             <div className="flex-1">
-                                <div className="font-medium">{element.name}</div>
+                                <div className="font-medium">{action.name}</div>
+                                {action.description && (
+                                    <div className="text-sm text-muted-foreground">{action.description}</div>
+                                )}
                             </div>
-                            {selectedElementId === element.id && (
+                            {selectedActionId === action.id && (
                                 <Check className="h-5 w-5 text-primary" />
                             )}
                         </div>
@@ -610,7 +558,7 @@ export function TasksParametricForm({
                     </Card>
                 )}
 
-                {/* Duplicate warning - only shows after all parameters are filled */}
+                {/* Duplicate warning */}
                 {duplicateTask && allRequiredParametersFilled && (
                     <Card className="p-4 border-amber-500 bg-amber-500/10 mt-4">
                         <div className="flex items-start gap-3">
@@ -618,7 +566,7 @@ export function TasksParametricForm({
                             <div>
                                 <div className="font-medium text-amber-600">Esta combinación ya existe</div>
                                 <div className="text-sm text-muted-foreground mt-1">
-                                    Ya existe la tarea "{duplicateTask.name}" con código {duplicateTask.code}
+                                    Ya existe la tarea &quot;{duplicateTask.name}&quot; con código {duplicateTask.code}
                                 </div>
                             </div>
                         </div>
@@ -646,16 +594,12 @@ export function TasksParametricForm({
                             <Badge variant="outline" className="font-mono">{generatedCode}</Badge>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">Rubro:</span>
-                            <span>{selectedDivision?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Tipo:</span>
-                            <span>{selectedKind?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
                             <span className="text-muted-foreground">Elemento:</span>
                             <span>{selectedElement?.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Acción:</span>
+                            <span>{selectedAction?.name}</span>
                         </div>
                         {elementParameters.length > 0 && (
                             <>
@@ -679,6 +623,21 @@ export function TasksParametricForm({
                     </div>
                 </Card>
 
+                {/* Duplicate warning in confirm */}
+                {duplicateTask && (
+                    <Card className="p-4 border-amber-500 bg-amber-500/10">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                            <div>
+                                <div className="font-medium text-amber-600">Esta combinación ya existe</div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                    Ya existe la tarea &quot;{duplicateTask.name}&quot; con código {duplicateTask.code}
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
                 <p className="text-sm text-muted-foreground text-center">
                     Esta tarea se creará como <strong>tarea de sistema</strong> y estará disponible para todas las organizaciones.
                 </p>
@@ -690,20 +649,17 @@ export function TasksParametricForm({
     // Main Render
     // ========================================================================
 
-    // Dynamic steps based on whether element has parameters
     const hasParameters = elementParameters.length > 0;
     const steps: { key: Step; label: string }[] = hasParameters
         ? [
-            { key: "division", label: "Rubro" },
-            { key: "kind", label: "Tipo" },
             { key: "element", label: "Elemento" },
+            { key: "action", label: "Acción" },
             { key: "parameters", label: "Parámetros" },
             { key: "confirm", label: "Confirmar" },
         ]
         : [
-            { key: "division", label: "Rubro" },
-            { key: "kind", label: "Tipo" },
             { key: "element", label: "Elemento" },
+            { key: "action", label: "Acción" },
             { key: "confirm", label: "Confirmar" },
         ];
 
@@ -733,11 +689,25 @@ export function TasksParametricForm({
                 ))}
             </div>
 
+            {/* Step label */}
+            <div className="text-center mb-4">
+                <h3 className="font-medium text-lg">
+                    {step === "element" && "¿Sobre qué elemento vas a trabajar?"}
+                    {step === "action" && "¿Qué acción vas a realizar?"}
+                    {step === "parameters" && "Definí los parámetros"}
+                    {step === "confirm" && "Confirmá la tarea"}
+                </h3>
+                {step === "element" && selectedElement && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Seleccionado: <strong>{selectedElement.name}</strong>
+                    </p>
+                )}
+            </div>
+
             {/* Step content */}
             <div className="flex-1 overflow-y-auto min-h-0">
-                {step === "division" && renderDivisionStep()}
-                {step === "kind" && renderKindStep()}
                 {step === "element" && renderElementStep()}
+                {step === "action" && renderActionStep()}
                 {step === "parameters" && renderParametersStep()}
                 {step === "confirm" && renderConfirmStep()}
             </div>
@@ -751,7 +721,7 @@ export function TasksParametricForm({
                     disabled={isLoading}
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    {step === "division" ? "Volver" : "Anterior"}
+                    {step === "element" ? "Volver" : "Anterior"}
                 </Button>
 
                 {step === "confirm" ? (

@@ -2,19 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "@/i18n/routing";
-import { MoreHorizontal, Pencil, Trash2, Eye, Monitor, Building2, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { ListItem } from "@/components/ui/list-item";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { TaskListItem } from "@/components/shared/list-item";
 import { useModal } from "@/stores/modal-store";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
@@ -32,6 +24,10 @@ interface TaskCatalogProps {
     isAdminMode?: boolean;
     searchQuery?: string;
     originFilter?: "all" | "system" | "organization";
+    /** Multi-select: check if a task is selected */
+    isSelected?: (id: string) => boolean;
+    /** Multi-select: toggle selection of a task */
+    onToggleSelect?: (id: string) => void;
 }
 
 export function TaskCatalog({
@@ -42,6 +38,8 @@ export function TaskCatalog({
     isAdminMode = false,
     searchQuery: externalSearchQuery = "",
     originFilter = "all",
+    isSelected,
+    onToggleSelect,
 }: TaskCatalogProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
@@ -207,7 +205,7 @@ export function TaskCatalog({
                 {sidebarContent}
             </ContextSidebar>
 
-            {/* Main Content - same pattern as MaterialsCatalogView */}
+            {/* Main Content */}
             <div className="space-y-2">
                 {filteredTasks.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
@@ -225,7 +223,9 @@ export function TaskCatalog({
                             key={task.id}
                             task={task}
                             isAdminMode={isAdminMode}
-                            onView={handleViewTask}
+                            selected={isSelected?.(task.id) ?? false}
+                            onToggleSelect={onToggleSelect}
+                            onClick={handleViewTask}
                             onEdit={handleEditTask}
                             onDelete={handleDeleteClick}
                         />
@@ -250,83 +250,3 @@ export function TaskCatalog({
         </>
     );
 }
-
-// Individual Task List Item
-interface TaskListItemProps {
-    task: TaskView;
-    isAdminMode: boolean;
-    onView: (task: TaskView) => void;
-    onEdit: (task: TaskView) => void;
-    onDelete: (task: TaskView) => void;
-}
-
-function TaskListItem({ task, isAdminMode, onView, onEdit, onDelete }: TaskListItemProps) {
-    // System tasks are NEVER editable - they are immutable by design
-    // Only organization tasks (is_system = false) can be edited
-    const isEditable = !task.is_system;
-    const displayName = task.name || task.custom_name || "Sin nombre";
-
-    return (
-        <ListItem onClick={() => onView(task)} variant="card">
-            <ListItem.Content>
-                <ListItem.Title>{displayName}</ListItem.Title>
-                <ListItem.Badges>
-                    {task.division_name && (
-                        <Badge variant="secondary" className="text-xs">
-                            {task.division_name}
-                        </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                        {task.unit_name || "Sin unidad"}
-                    </Badge>
-                    {task.code && (
-                        <Badge variant="secondary" className="text-xs font-mono">
-                            {task.code}
-                        </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                        {task.is_system ? 'Sistema' : 'Propia'}
-                    </Badge>
-                    {!task.is_published && (
-                        <Badge variant="secondary" className="text-xs">
-                            Borrador
-                        </Badge>
-                    )}
-                </ListItem.Badges>
-            </ListItem.Content>
-
-            <ListItem.Actions>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                        >
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        {isEditable && (
-                            <>
-                                <DropdownMenuItem onClick={() => onEdit(task)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => onDelete(task)}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </ListItem.Actions>
-        </ListItem>
-    );
-}
-
-

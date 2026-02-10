@@ -41,7 +41,7 @@ export default async function ClientPortalPage({ params }: PageProps) {
     const canCustomize = currentPlan?.features?.custom_portal_branding ?? false;
 
     return (
-        <Tabs defaultValue="design" className="h-full flex flex-col">
+        <Tabs defaultValue="design" syncUrl="view" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title="Portal de Clientes"

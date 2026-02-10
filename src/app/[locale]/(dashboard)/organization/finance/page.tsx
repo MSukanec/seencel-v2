@@ -28,8 +28,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     };
 }
 
-export default async function FinancePage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function FinancePage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ view?: string }> }) {
     const { locale } = await params;
+    const resolvedSearch = await searchParams;
+    const defaultTab = resolvedSearch.view || "overview";
     const t = await getTranslations({ locale, namespace: 'MegaMenu.Finance' });
 
     const orgId = await getActiveOrganizationId();
@@ -76,7 +78,7 @@ export default async function FinancePage({ params }: { params: Promise<{ locale
     };
 
     return (
-        <Tabs defaultValue="overview" className="h-full flex flex-col">
+        <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
             <PageWrapper
                 type="page"
                 title={t('title')}

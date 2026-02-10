@@ -28,7 +28,7 @@ export default async function AdvancedPage() {
         const indexTypes = await getIndexTypes(organizationId);
 
         return (
-            <Tabs defaultValue="indices" className="h-full flex flex-col">
+            <Tabs defaultValue="indices" syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
                     title="Avanzado"

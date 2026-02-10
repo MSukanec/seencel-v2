@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Link } from "@/i18n/routing";
-import { ArrowLeft, Settings, Package } from "lucide-react";
+import { Settings, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { TasksDetailGeneralView } from "@/features/tasks/views/tasks-detail-general-view";
-import { TasksDetailRecipeView } from "@/features/tasks/views/tasks-detail-recipe-view";
-import { getTaskById, getTaskMaterials, getAvailableMaterials, getUnits, getTaskDivisions, getTaskLabor, getAvailableLaborTypes } from "@/features/tasks/queries";
+import { BackButton } from "@/components/shared/back-button";
+import { TasksDetailGeneralView } from "@/features/tasks/views/detail/tasks-detail-general-view";
+import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detail-recipe-view";
+import { getTaskById, getUnits, getTaskDivisions } from "@/features/tasks/queries";
+import { getTaskRecipes, getRecipeResources } from "@/features/tasks/actions";
 import { getAdminOrganizations } from "@/features/admin/queries";
+import { getMaterialsForOrganization } from "@/features/materials/queries";
+import { getLaborTypes } from "@/features/labor/actions";
 
 // ============================================================================
 // Metadata
@@ -51,12 +53,8 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
         const { view = "general" } = await searchParams;
 
         // Fetch all data in parallel
-        const [task, taskMaterials, taskLabor, availableMaterials, availableLaborTypes, unitsRes, divisionsRes, organizations] = await Promise.all([
+        const [task, unitsRes, divisionsRes, organizations] = await Promise.all([
             getTaskById(taskId),
-            getTaskMaterials(taskId),
-            getTaskLabor(taskId),
-            getAvailableMaterials(true), // System tasks only
-            getAvailableLaborTypes(true), // System labor types only
             getUnits(),
             getTaskDivisions(),
             getAdminOrganizations()
@@ -66,16 +64,29 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
             notFound();
         }
 
-        // Admin can view any task (system or org-specific)
+        // Fetch all recipes for this task + catalog data
+        const taskOrgId = task.organization_id || "";
+        const [recipes, catalogMaterials, catalogLaborTypes] = await Promise.all([
+            getTaskRecipes(taskId),
+            taskOrgId ? getMaterialsForOrganization(taskOrgId) : Promise.resolve([]),
+            getLaborTypes(),
+        ]);
+
+        // Load resources for each recipe in parallel
+        const resourcesEntries = await Promise.all(
+            recipes.map(async (r) => {
+                const resources = await getRecipeResources(r.id);
+                return [r.id, resources] as const;
+            })
+        );
+        const recipeResourcesMap = Object.fromEntries(resourcesEntries);
 
         const displayName = task.name || task.custom_name || "Tarea";
-        // Truncar título largo para el header
         const truncatedName = displayName.length > 60
             ? displayName.slice(0, 57) + "..."
             : displayName;
 
-        // Total de items en la receta (materiales + mano de obra)
-        const recipeItemCount = taskMaterials.length + taskLabor.length;
+        const recipeCount = recipes.length;
 
         return (
             <Tabs defaultValue={view} className="h-full flex flex-col">
@@ -83,11 +94,7 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                     type="page"
                     title={truncatedName}
                     backButton={
-                        <Button variant="ghost" size="icon" asChild className="mr-2">
-                            <Link href="/admin/catalog">
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
+                        <BackButton fallbackHref="/admin/catalog" />
                     }
 
                     tabs={
@@ -98,9 +105,9 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                             </TabsTrigger>
                             <TabsTrigger value="recipe" className="gap-2">
                                 <Package className="h-4 w-4" />
-                                Receta
+                                Recetas
                                 <Badge variant="secondary" className="ml-1 text-xs">
-                                    {recipeItemCount}
+                                    {recipeCount}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
@@ -112,6 +119,8 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                             <TasksDetailGeneralView
                                 task={task}
                                 divisions={divisionsRes.data}
+                                units={unitsRes.data}
+                                organizationId={task.organization_id || ""}
                                 isAdminMode={true}
                                 organizations={organizations.map(org => ({ id: org.id, name: org.name }))}
                             />
@@ -123,11 +132,12 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
                         <ContentLayout variant="wide">
                             <TasksDetailRecipeView
                                 task={task}
-                                taskMaterials={taskMaterials}
-                                taskLabor={taskLabor}
-                                availableMaterials={availableMaterials}
-                                availableLaborTypes={availableLaborTypes}
+                                recipes={recipes}
+                                recipeResourcesMap={recipeResourcesMap}
+                                organizationId={task.organization_id || ""}
                                 isAdminMode={true}
+                                catalogMaterials={catalogMaterials}
+                                catalogLaborTypes={catalogLaborTypes}
                             />
                         </ContentLayout>
                     </TabsContent>

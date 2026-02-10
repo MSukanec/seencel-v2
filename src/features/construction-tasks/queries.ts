@@ -130,3 +130,4 @@ export async function getProjectSettings(
         work_days: data.work_days ?? DEFAULT_WORK_DAYS,
     };
 }
+

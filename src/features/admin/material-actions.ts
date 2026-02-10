@@ -102,7 +102,6 @@ export async function deleteSystemMaterial(id: string, replacementId: string | n
     // If replacement is provided, update all references first
     if (replacementId) {
         // Update any references in other tables that use material_id
-        // Example: products, organization_material_prices, task_materials, etc.
 
         // products table
         await supabase
@@ -116,9 +115,9 @@ export async function deleteSystemMaterial(id: string, replacementId: string | n
             .update({ material_id: replacementId })
             .eq("material_id", id);
 
-        // task_materials table
+        // task_recipe_materials table
         await supabase
-            .from("task_materials")
+            .from("task_recipe_materials")
             .update({ material_id: replacementId })
             .eq("material_id", id);
     }

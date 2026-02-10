@@ -34,7 +34,7 @@ export async function createTask(formData: FormData) {
 
     // Parametric task fields
     const is_parametric = formData.get("is_parametric") === "true";
-    const task_kind_id = formData.get("task_kind_id") as string | null;
+    const task_action_id = formData.get("task_action_id") as string | null;
     const task_element_id = formData.get("task_element_id") as string | null;
     const parameter_values_raw = formData.get("parameter_values") as string | null;
     const parameter_values = parameter_values_raw ? JSON.parse(parameter_values_raw) : {};
@@ -62,7 +62,7 @@ export async function createTask(formData: FormData) {
             is_deleted: false,
             // Parametric fields
             is_parametric,
-            task_kind_id: task_kind_id || null,
+            task_action_id: task_action_id || null,
             task_element_id: task_element_id || null,
             parameter_values: is_parametric ? parameter_values : {},
         })
@@ -210,181 +210,45 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
     return { success: true, error: null };
 }
 
-// ============================================================================
-// TASK MATERIALS CRUD (Recipe Management)
-// ============================================================================
+// ============================================
+// DELETE TASKS BULK (soft delete multiple)
+// ============================================
+export async function deleteTasksBulk(ids: string[], isAdminMode: boolean = false) {
+    if (ids.length === 0) return { success: true, deletedCount: 0, error: null };
 
-/**
- * Add a material to a task's recipe
- */
-export async function addTaskMaterial(
-    taskId: string,
-    materialId: string,
-    amount: number,
-    isSystemTask: boolean = false
-) {
-    const supabase = isSystemTask ? createServiceClient() : await createClient();
+    const supabase = isAdminMode ? createServiceClient() : await createClient();
 
-    const { data, error } = await supabase
-        .from("task_materials")
-        .insert({
-            task_id: taskId,
-            material_id: materialId,
-            amount,
-            is_system: isSystemTask,
-            // organization_id is auto-set by trigger for non-system
+    let query = supabase
+        .from("tasks")
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
         })
-        .select()
-        .single();
+        .in("id", ids);
 
-    if (error) {
-        console.error("Error adding task material:", error);
-        if (error.code === "23505") {
-            return { error: "Este material ya está agregado a la tarea" };
+    // Safety: only delete the correct type of task
+    if (isAdminMode) {
+        query = query.eq("is_system", true);
+    } else {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) {
+            return { error: "No hay organización activa" };
         }
-        return { error: sanitizeError(error) };
+        query = query.eq("organization_id", activeOrgId).eq("is_system", false);
     }
 
-    revalidatePath("/admin/catalog/task");
-    revalidatePath("/organization/catalog/task");
-    return { data, error: null };
-}
-
-/**
- * Update a task material's amount
- */
-export async function updateTaskMaterial(
-    id: string,
-    amount: number,
-    isSystemTask: boolean = false
-) {
-    const supabase = isSystemTask ? createServiceClient() : await createClient();
-
-    const { data, error } = await supabase
-        .from("task_materials")
-        .update({ amount })
-        .eq("id", id)
-        .select()
-        .single();
+    const { error } = await query;
 
     if (error) {
-        console.error("Error updating task material:", error);
+        console.error("Error bulk deleting tasks:", error);
         return { error: sanitizeError(error) };
     }
 
-    revalidatePath("/admin/catalog/task");
-    revalidatePath("/organization/catalog/task");
-    return { data, error: null };
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { success: true, deletedCount: ids.length, error: null };
 }
 
-/**
- * Remove a material from a task's recipe
- */
-export async function removeTaskMaterial(id: string, isSystemTask: boolean = false) {
-    const supabase = isSystemTask ? createServiceClient() : await createClient();
-
-    const { error } = await supabase
-        .from("task_materials")
-        .delete()
-        .eq("id", id);
-
-    if (error) {
-        console.error("Error removing task material:", error);
-        return { error: sanitizeError(error) };
-    }
-
-    revalidatePath("/admin/catalog/task");
-    revalidatePath("/organization/catalog/task");
-    return { success: true, error: null };
-}
-
-// ============================================================================
-// TASK LABOR CRUD (Recipe Management)
-// ============================================================================
-
-/**
- * Add a labor type to a task's recipe
- */
-export async function addTaskLabor(
-    taskId: string,
-    laborTypeId: string,
-    quantity: number,
-    isSystemTask: boolean = false
-) {
-    const supabase = isSystemTask ? createServiceClient() : await createClient();
-
-    const { data, error } = await supabase
-        .from("task_labor")
-        .insert({
-            task_id: taskId,
-            labor_type_id: laborTypeId,
-            quantity,
-            is_system: isSystemTask,
-            // organization_id is auto-set by trigger for non-system
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error adding task labor:", error);
-        if (error.code === "23505") {
-            return { error: "Este tipo de mano de obra ya está agregado a la tarea" };
-        }
-        return { error: sanitizeError(error) };
-    }
-
-    revalidatePath("/admin/catalog/task");
-    revalidatePath("/organization/catalog/task");
-    return { data, error: null };
-}
-
-/**
- * Update a task labor's quantity
- */
-export async function updateTaskLabor(
-    id: string,
-    quantity: number,
-    isSystemTask: boolean = false
-) {
-    const supabase = isSystemTask ? createServiceClient() : await createClient();
-
-    const { data, error } = await supabase
-        .from("task_labor")
-        .update({ quantity })
-        .eq("id", id)
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error updating task labor:", error);
-        return { error: sanitizeError(error) };
-    }
-
-    revalidatePath("/admin/catalog/task");
-    revalidatePath("/organization/catalog/task");
-    return { data, error: null };
-}
-
-/**
- * Remove a labor type from a task's recipe
- */
-export async function removeTaskLabor(id: string, isSystemTask: boolean = false) {
-    const supabase = isSystemTask ? createServiceClient() : await createClient();
-
-    const { error } = await supabase
-        .from("task_labor")
-        .delete()
-        .eq("id", id);
-
-    if (error) {
-        console.error("Error removing task labor:", error);
-        return { error: sanitizeError(error) };
-    }
-
-    revalidatePath("/admin/catalog/task");
-    revalidatePath("/organization/catalog/task");
-    return { success: true, error: null };
-}
 
 
 // ============================================================================
@@ -952,35 +816,35 @@ export async function toggleDivisionElement(
 }
 
 // ============================================
-// DIVISION COMPATIBILITY - KINDS
+// DIVISION COMPATIBILITY - ACTIONS
 // ============================================
-export async function toggleDivisionKind(
+export async function toggleDivisionAction(
     divisionId: string,
-    kindId: string,
+    actionId: string,
     shouldLink: boolean
 ) {
     const supabase = await createClient();
 
     if (shouldLink) {
         const { error } = await supabase
-            .from("task_division_kinds")
-            .insert({ division_id: divisionId, kind_id: kindId });
+            .from("task_division_actions")
+            .insert({ division_id: divisionId, action_id: actionId });
 
         if (error) {
             if (!sanitizeError(error).includes("duplicate")) {
-                console.error("Error linking kind:", error);
+                console.error("Error linking action:", error);
                 return { error: sanitizeError(error) };
             }
         }
     } else {
         const { error } = await supabase
-            .from("task_division_kinds")
+            .from("task_division_actions")
             .delete()
             .eq("division_id", divisionId)
-            .eq("kind_id", kindId);
+            .eq("action_id", actionId);
 
         if (error) {
-            console.error("Error unlinking kind:", error);
+            console.error("Error unlinking action:", error);
             return { error: sanitizeError(error) };
         }
     }
@@ -990,10 +854,10 @@ export async function toggleDivisionKind(
 }
 
 // ============================================
-// KIND COMPATIBILITY - ELEMENTS
+// ACTION COMPATIBILITY - ELEMENTS
 // ============================================
-export async function toggleKindElement(
-    kindId: string,
+export async function toggleActionElement(
+    actionId: string,
     elementId: string,
     shouldLink: boolean
 ) {
@@ -1001,24 +865,24 @@ export async function toggleKindElement(
 
     if (shouldLink) {
         const { error } = await supabase
-            .from("task_kind_elements")
-            .insert({ kind_id: kindId, element_id: elementId });
+            .from("task_element_actions")
+            .insert({ action_id: actionId, element_id: elementId });
 
         if (error) {
             if (!sanitizeError(error).includes("duplicate")) {
-                console.error("Error linking element to kind:", error);
+                console.error("Error linking element to action:", error);
                 return { error: sanitizeError(error) };
             }
         }
     } else {
         const { error } = await supabase
-            .from("task_kind_elements")
+            .from("task_element_actions")
             .delete()
-            .eq("kind_id", kindId)
+            .eq("action_id", actionId)
             .eq("element_id", elementId);
 
         if (error) {
-            console.error("Error unlinking element from kind:", error);
+            console.error("Error unlinking element from action:", error);
             return { error: sanitizeError(error) };
         }
     }
@@ -1076,32 +940,35 @@ export async function toggleElementParameter(
 
 import {
     TaskRecipeFormData,
-    TaskRecipeItemFormData,
+    TaskRecipeMaterialFormData,
+    TaskRecipeLaborFormData,
     TaskRecipeRatingFormData,
     TaskRecipeView,
-    TaskRecipeItem,
+    TaskRecipeMaterial,
+    TaskRecipeLabor,
+    RecipeResources,
 } from "./types";
 
 /**
- * Get recipe for a task by current organization
+ * Get ALL recipes for a task by current organization
  */
-export async function getMyRecipe(taskId: string): Promise<TaskRecipeView | null> {
+export async function getMyRecipes(taskId: string): Promise<TaskRecipeView[]> {
     const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
 
     const { data, error } = await supabase
         .from("task_recipes_view")
         .select("*")
         .eq("task_id", taskId)
-        .eq("organization_id", (await supabase.rpc("get_user_org_id")))
-        .single();
+        .eq("organization_id", activeOrgId)
+        .order("created_at", { ascending: true });
 
     if (error) {
-        if (error.code === "PGRST116") return null; // Not found
-        console.error("Error fetching my recipe:", error);
-        return null;
+        console.error("Error fetching my recipes:", error);
+        return [];
     }
 
-    return data as TaskRecipeView;
+    return data as TaskRecipeView[];
 }
 
 /**
@@ -1114,7 +981,7 @@ export async function getPublicRecipes(taskId: string): Promise<TaskRecipeView[]
         .from("task_recipes_view")
         .select("*")
         .eq("task_id", taskId)
-        .or("is_public.eq.true,is_system.eq.true")
+        .eq("is_public", true)
         .order("rating_avg", { ascending: false, nullsFirst: false })
         .order("usage_count", { ascending: false });
 
@@ -1124,6 +991,25 @@ export async function getPublicRecipes(taskId: string): Promise<TaskRecipeView[]
     }
 
     return data as TaskRecipeView[];
+}
+
+/**
+ * Get ALL recipes visible for a task:
+ * - My org's recipes
+ * - Public recipes from other orgs
+ * Returns deduped array with own recipes first
+ */
+export async function getTaskRecipes(taskId: string): Promise<TaskRecipeView[]> {
+    const [myRecipes, publicRecipes] = await Promise.all([
+        getMyRecipes(taskId),
+        getPublicRecipes(taskId),
+    ]);
+
+    // Dedupe: my recipes might also be public
+    const myRecipeIds = new Set(myRecipes.map(r => r.id));
+    const otherPublic = publicRecipes.filter(r => !myRecipeIds.has(r.id));
+
+    return [...myRecipes, ...otherPublic];
 }
 
 /**
@@ -1151,16 +1037,15 @@ export async function getRecipeById(recipeId: string): Promise<TaskRecipeView | 
  */
 export async function createRecipe(data: TaskRecipeFormData) {
     const supabase = await createClient();
-
-    const orgId = await supabase.rpc("get_user_org_id");
+    const { activeOrgId } = await getUserOrganizations();
 
     const { data: result, error } = await supabase
         .from("task_recipes")
         .insert({
             task_id: data.task_id,
-            organization_id: orgId,
+            organization_id: activeOrgId,
+            name: data.name,
             is_public: data.is_public,
-            is_anonymous: data.is_anonymous,
             region: data.region || null,
         })
         .select()
@@ -1180,21 +1065,13 @@ export async function createRecipe(data: TaskRecipeFormData) {
  */
 export async function updateRecipeVisibility(
     recipeId: string,
-    isPublic: boolean,
-    isAnonymous?: boolean
+    isPublic: boolean
 ) {
     const supabase = await createClient();
 
-    const updateData: { is_public: boolean; is_anonymous?: boolean } = {
-        is_public: isPublic,
-    };
-    if (isAnonymous !== undefined) {
-        updateData.is_anonymous = isAnonymous;
-    }
-
     const { error } = await supabase
         .from("task_recipes")
-        .update(updateData)
+        .update({ is_public: isPublic })
         .eq("id", recipeId);
 
     if (error) {
@@ -1230,54 +1107,65 @@ export async function deleteRecipe(recipeId: string) {
 }
 
 // ============================================
-// RECIPE ITEMS CRUD
+// RECIPE MATERIALS CRUD
 // ============================================
 
 /**
- * Get items for a recipe
+ * Get materials for a recipe (with joined names)
  */
-export async function getRecipeItems(recipeId: string): Promise<TaskRecipeItem[]> {
+export async function getRecipeMaterials(recipeId: string): Promise<TaskRecipeMaterial[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("task_recipe_items")
-        .select("*")
+        .from("task_recipe_materials")
+        .select(`
+            *,
+            materials!inner(name, code),
+            units(name, symbol)
+        `)
         .eq("recipe_id", recipeId)
-        .order("display_order", { ascending: true });
+        .eq("is_deleted", false);
 
     if (error) {
-        console.error("Error fetching recipe items:", error);
+        console.error("Error fetching recipe materials:", error);
         return [];
     }
 
-    return data as TaskRecipeItem[];
+    return (data || []).map((row: any) => ({
+        ...row,
+        material_name: row.materials?.name,
+        material_code: row.materials?.code,
+        unit_name: row.units?.name,
+        unit_symbol: row.units?.symbol,
+        materials: undefined,
+        units: undefined,
+    })).sort((a: any, b: any) => (a.material_name || "").localeCompare(b.material_name || "")) as TaskRecipeMaterial[];
 }
 
 /**
- * Add item to recipe
+ * Add material to recipe
  */
-export async function addRecipeItem(data: TaskRecipeItemFormData) {
+export async function addRecipeMaterial(data: TaskRecipeMaterialFormData) {
     const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
 
     const { data: result, error } = await supabase
-        .from("task_recipe_items")
+        .from("task_recipe_materials")
         .insert({
             recipe_id: data.recipe_id,
-            material_id: data.material_id || null,
-            material_name: data.material_name,
-            material_category: data.material_category || null,
+            material_id: data.material_id,
             quantity: data.quantity,
+            waste_percentage: data.waste_percentage ?? 0,
             unit_id: data.unit_id || null,
-            unit_name: data.unit_name || null,
-            display_order: data.display_order,
             notes: data.notes || null,
             is_optional: data.is_optional,
+            organization_id: activeOrgId,
         })
         .select()
         .single();
 
     if (error) {
-        console.error("Error adding recipe item:", error);
+        console.error("Error adding recipe material:", error);
         return { success: false, error: sanitizeError(error) };
     }
 
@@ -1286,31 +1174,28 @@ export async function addRecipeItem(data: TaskRecipeItemFormData) {
 }
 
 /**
- * Update recipe item
+ * Update recipe material
  */
-export async function updateRecipeItem(
+export async function updateRecipeMaterial(
     itemId: string,
-    data: Partial<TaskRecipeItemFormData>
+    data: Partial<TaskRecipeMaterialFormData>
 ) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_items")
+        .from("task_recipe_materials")
         .update({
             material_id: data.material_id,
-            material_name: data.material_name,
-            material_category: data.material_category,
             quantity: data.quantity,
+            waste_percentage: data.waste_percentage,
             unit_id: data.unit_id,
-            unit_name: data.unit_name,
-            display_order: data.display_order,
             notes: data.notes,
             is_optional: data.is_optional,
         })
         .eq("id", itemId);
 
     if (error) {
-        console.error("Error updating recipe item:", error);
+        console.error("Error updating recipe material:", error);
         return { success: false, error: sanitizeError(error) };
     }
 
@@ -1319,23 +1204,152 @@ export async function updateRecipeItem(
 }
 
 /**
- * Delete recipe item
+ * Delete recipe material
  */
-export async function deleteRecipeItem(itemId: string) {
+export async function deleteRecipeMaterial(itemId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_items")
+        .from("task_recipe_materials")
         .delete()
         .eq("id", itemId);
 
     if (error) {
-        console.error("Error deleting recipe item:", error);
+        console.error("Error deleting recipe material:", error);
         return { success: false, error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");
     return { success: true };
+}
+
+// ============================================
+// RECIPE LABOR CRUD
+// ============================================
+
+/**
+ * Get labor items for a recipe (with joined names)
+ */
+export async function getRecipeLabor(recipeId: string): Promise<TaskRecipeLabor[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("task_recipe_labor")
+        .select(`
+            *,
+            labor_types!inner(name),
+            units(name, symbol)
+        `)
+        .eq("recipe_id", recipeId)
+        .eq("is_deleted", false);
+
+    if (error) {
+        console.error("Error fetching recipe labor:", error);
+        return [];
+    }
+
+    return (data || []).map((row: any) => ({
+        ...row,
+        labor_name: row.labor_types?.name,
+        unit_name: row.units?.name,
+        unit_symbol: row.units?.symbol,
+        labor_types: undefined,
+        units: undefined,
+    })).sort((a: any, b: any) => (a.labor_name || "").localeCompare(b.labor_name || "")) as TaskRecipeLabor[];
+}
+
+/**
+ * Add labor to recipe
+ */
+export async function addRecipeLabor(data: TaskRecipeLaborFormData) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    const { data: result, error } = await supabase
+        .from("task_recipe_labor")
+        .insert({
+            recipe_id: data.recipe_id,
+            labor_type_id: data.labor_type_id,
+            quantity: data.quantity,
+            unit_id: data.unit_id || null,
+            notes: data.notes || null,
+            is_optional: data.is_optional,
+            organization_id: activeOrgId,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error adding recipe labor:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, data: result };
+}
+
+/**
+ * Update recipe labor
+ */
+export async function updateRecipeLabor(
+    itemId: string,
+    data: Partial<TaskRecipeLaborFormData>
+) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("task_recipe_labor")
+        .update({
+            labor_type_id: data.labor_type_id,
+            quantity: data.quantity,
+            unit_id: data.unit_id,
+            notes: data.notes,
+            is_optional: data.is_optional,
+        })
+        .eq("id", itemId);
+
+    if (error) {
+        console.error("Error updating recipe labor:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+/**
+ * Delete recipe labor
+ */
+export async function deleteRecipeLabor(itemId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("task_recipe_labor")
+        .delete()
+        .eq("id", itemId);
+
+    if (error) {
+        console.error("Error deleting recipe labor:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+// ============================================
+// RECIPE RESOURCES (Combined query)
+// ============================================
+
+/**
+ * Get all resources (materials + labor) for a recipe
+ */
+export async function getRecipeResources(recipeId: string): Promise<RecipeResources> {
+    const [materials, labor] = await Promise.all([
+        getRecipeMaterials(recipeId),
+        getRecipeLabor(recipeId),
+    ]);
+    return { materials, labor };
 }
 
 // ============================================
@@ -1354,7 +1368,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
     }
 
     // Get user's org
-    const orgId = await supabase.rpc("get_user_org_id");
+    const { activeOrgId } = await getUserOrganizations();
 
     // Get user's internal ID
     const { data: userData } = await supabase
@@ -1373,7 +1387,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
         .upsert(
             {
                 recipe_id: data.recipe_id,
-                organization_id: orgId,
+                organization_id: activeOrgId,
                 user_id: userData.id,
                 rating: data.rating,
                 comment: data.comment || null,
@@ -1401,15 +1415,14 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
  */
 export async function adoptRecipe(taskId: string, recipeId: string) {
     const supabase = await createClient();
-
-    const orgId = await supabase.rpc("get_user_org_id");
+    const { activeOrgId } = await getUserOrganizations();
 
     // Upsert preference (one per org per task)
     const { error } = await supabase
         .from("organization_recipe_preferences")
         .upsert(
             {
-                organization_id: orgId,
+                organization_id: activeOrgId,
                 task_id: taskId,
                 recipe_id: recipeId,
                 adopted_at: new Date().toISOString(),
@@ -1433,13 +1446,12 @@ export async function adoptRecipe(taskId: string, recipeId: string) {
  */
 export async function getAdoptedRecipe(taskId: string): Promise<string | null> {
     const supabase = await createClient();
-
-    const orgId = await supabase.rpc("get_user_org_id");
+    const { activeOrgId } = await getUserOrganizations();
 
     const { data, error } = await supabase
         .from("organization_recipe_preferences")
         .select("recipe_id")
-        .eq("organization_id", orgId)
+        .eq("organization_id", activeOrgId)
         .eq("task_id", taskId)
         .single();
 
@@ -1450,4 +1462,118 @@ export async function getAdoptedRecipe(taskId: string): Promise<string | null> {
     }
 
     return data?.recipe_id || null;
+}
+
+// ============================================
+// PARAMETRIC WIZARD — Server-side data loading
+// ============================================
+
+/**
+ * Get actions compatible with a specific element (server action)
+ * Replaces client-side createClient() in the parametric form
+ */
+export async function getCompatibleActionsForElementAction(elementId: string) {
+    try {
+        const supabase = await createClient();
+
+        const { data: actionLinks } = await supabase
+            .from('task_element_actions')
+            .select('action_id')
+            .eq('element_id', elementId);
+
+        if (actionLinks && actionLinks.length > 0) {
+            const actionIds = actionLinks.map(l => l.action_id);
+            const { data: actionsData } = await supabase
+                .from('task_actions')
+                .select('*')
+                .in('id', actionIds)
+                .order('name', { ascending: true });
+
+            return { data: actionsData || [], error: null };
+        } else {
+            // If no links, show all actions
+            const { data: allActions } = await supabase
+                .from('task_actions')
+                .select('*')
+                .order('name', { ascending: true });
+
+            return { data: allActions || [], error: null };
+        }
+    } catch (error) {
+        return { data: [], error: sanitizeError(error) };
+    }
+}
+
+/**
+ * Get parameters for a specific element with their options (server action)
+ * Replaces client-side createClient() in the parametric form
+ */
+export async function getElementParametersAction(elementId: string) {
+    try {
+        const supabase = await createClient();
+
+        // Get parameter links for this element
+        const { data: links } = await supabase
+            .from('task_element_parameters')
+            .select('parameter_id, order, is_required')
+            .eq('element_id', elementId)
+            .order('order', { ascending: true });
+
+        if (!links || links.length === 0) {
+            return { data: [], error: null };
+        }
+
+        // Get parameters
+        const paramIds = links.map(l => l.parameter_id);
+        const { data: params } = await supabase
+            .from('task_parameters')
+            .select('*')
+            .in('id', paramIds)
+            .eq('is_deleted', false);
+
+        // Get options for all parameters
+        const { data: options } = await supabase
+            .from('task_parameter_options')
+            .select('*')
+            .in('parameter_id', paramIds)
+            .eq('is_deleted', false)
+            .order('order', { ascending: true });
+
+        // Build result
+        const result = (params || []).map(param => {
+            const link = links.find(l => l.parameter_id === param.id);
+            const paramOptions = (options || []).filter(o => o.parameter_id === param.id);
+            return {
+                ...param,
+                order: link?.order ?? param.order,
+                is_required: link?.is_required ?? param.is_required,
+                options: paramOptions
+            };
+        }).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+        return { data: result, error: null };
+    } catch (error) {
+        return { data: [], error: sanitizeError(error) };
+    }
+}
+
+/**
+ * Check if a task with the given code already exists (server action)
+ * Replaces client-side createClient() in the parametric form
+ */
+export async function checkDuplicateTaskAction(code: string) {
+    try {
+        const supabase = await createClient();
+
+        const { data } = await supabase
+            .from('tasks')
+            .select('id, name, code')
+            .eq('code', code)
+            .eq('is_deleted', false)
+            .limit(1);
+
+        return { duplicate: data && data.length > 0 ? data[0] : null, error: null };
+    } catch (error) {
+        return { duplicate: null, error: sanitizeError(error) };
+    }
 }
