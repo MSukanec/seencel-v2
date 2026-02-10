@@ -11,15 +11,18 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Building, Clock, Users as UsersIcon, Crown, Sparkles } from "lucide-react";
+import { MoreHorizontal, Building, Clock, Users as UsersIcon, Crown, Sparkles, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOrganizationStore } from "@/stores/organization-store";
+import { adminImpersonateOrg } from "@/actions/admin-impersonation-actions";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { getStorageUrl } from "@/lib/storage-utils";
@@ -43,6 +46,18 @@ function getPlanBadgeInfo(planName?: string | null) {
 }
 
 export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
+    const activeOrgId = useOrganizationStore(state => state.activeOrgId);
+    const setImpersonating = useOrganizationStore(state => state.setImpersonating);
+
+    const handleImpersonate = async (orgId: string, orgName: string) => {
+        // Save current org to restore later
+        if (activeOrgId) {
+            sessionStorage.setItem('seencel_original_org_id', activeOrgId);
+        }
+        setImpersonating(orgName);
+        await adminImpersonateOrg(orgId);
+    };
+
     if (!organizations || organizations.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground border border-dashed rounded-lg bg-muted/5">
@@ -159,6 +174,11 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
                                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(org.id)}>
                                                 Copiar ID
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => handleImpersonate(org.id, org.name)}>
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                Ver como esta org
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>

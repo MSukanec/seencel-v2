@@ -8,6 +8,7 @@ import {
     verticalCompactor,
 } from "react-grid-layout";
 import type { Layout, LayoutItem, ResponsiveLayouts } from "react-grid-layout";
+import { saveDashboardLayout } from "@/actions/widget-actions";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/routing";
 import {
@@ -55,6 +56,8 @@ interface DashboardWidgetGridProps {
     isEditing?: boolean;
     storageKey: string;
     prefetchedData?: Record<string, any>;
+    /** Server-fetched layout. If provided, overrides localStorage. */
+    savedLayout?: WidgetLayoutItem[] | null;
 }
 
 // ============================================================================
@@ -359,10 +362,36 @@ export function DashboardWidgetGrid({
     layout: defaultLayout,
     isEditing = false,
     storageKey,
-    prefetchedData
+    prefetchedData,
+    savedLayout,
 }: DashboardWidgetGridProps) {
-    const [items, setItems] = useState<WidgetLayoutItem[]>(defaultLayout);
+    // Use server layout > localStorage cache > default
+    const [items, setItems] = useState<WidgetLayoutItem[]>(() => {
+        if (savedLayout && savedLayout.length > 0) return savedLayout;
+        return defaultLayout;
+    });
     const [isClient, setIsClient] = useState(false);
+
+    // Debounced save to server
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const persistToServer = useCallback((data: WidgetLayoutItem[]) => {
+        // Save to localStorage immediately (fast cache)
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        // Debounce server save (1.5s)
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+            saveDashboardLayout(storageKey, data).catch(err =>
+                console.error('[DashboardGrid] Server save failed:', err)
+            );
+        }, 1500);
+    }, [storageKey]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, []);
 
     // Container width measurement — custom ResizeObserver (more reliable than useContainerWidth)
     const containerRef = useRef<HTMLDivElement>(null);
@@ -386,9 +415,13 @@ export function DashboardWidgetGrid({
         return () => observer.disconnect();
     }, []);
 
-    // 1. Load from LocalStorage (with legacy migration)
+    // 1. Load from server (already done via savedLayout prop) or localStorage fallback
     useEffect(() => {
         setIsClient(true);
+        // If server already provided a layout, skip localStorage
+        if (savedLayout && savedLayout.length > 0) return;
+
+        // Fallback: try localStorage (legacy or cache)
         const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
@@ -397,15 +430,12 @@ export function DashboardWidgetGrid({
                 if (validated.length > 0) {
                     const migrated = migrateLegacyLayout(validated);
                     setItems(migrated || validated);
-                    if (migrated) {
-                        localStorage.setItem(storageKey, JSON.stringify(migrated));
-                    }
                 }
             } catch (e) {
                 console.error("Failed to load layout", e);
             }
         }
-    }, [storageKey, registry]);
+    }, [storageKey, registry, savedLayout]);
 
     // 2. Convert items to react-grid-layout format
     const rglLayout = useMemo(
@@ -417,18 +447,18 @@ export function DashboardWidgetGrid({
     const handleLayoutChange = useCallback((newLayout: Layout, _layouts: ResponsiveLayouts) => {
         setItems(prev => {
             const updated = fromRGLLayout(newLayout, prev);
-            localStorage.setItem(storageKey, JSON.stringify(updated));
+            persistToServer(updated);
             return updated;
         });
-    }, [storageKey]);
+    }, [persistToServer]);
 
     const handleRemove = useCallback((id: string) => {
         setItems(prev => {
             const newItems = prev.filter(i => (i.instanceId || i.id) !== id);
-            localStorage.setItem(storageKey, JSON.stringify(newItems));
+            persistToServer(newItems);
             return newItems;
         });
-    }, [storageKey]);
+    }, [persistToServer]);
 
     const handleAdd = useCallback((id: string) => {
         const def = registry[id];
@@ -445,20 +475,20 @@ export function DashboardWidgetGrid({
                 ...(def.defaultConfig ? { config: { ...def.defaultConfig } } : {}),
             };
             const newItems = [...prev, newItem];
-            localStorage.setItem(storageKey, JSON.stringify(newItems));
+            persistToServer(newItems);
             return newItems;
         });
-    }, [storageKey, registry]);
+    }, [persistToServer, registry]);
 
     const handleConfigChange = useCallback((id: string, newConfig: Record<string, any>) => {
         setItems(prev => {
             const newItems = prev.map(item =>
                 (item.instanceId || item.id) === id ? { ...item, config: newConfig } : item
             );
-            localStorage.setItem(storageKey, JSON.stringify(newItems));
+            persistToServer(newItems);
             return newItems;
         });
-    }, [storageKey]);
+    }, [persistToServer]);
 
     // SSR fallback
     if (!isClient) {

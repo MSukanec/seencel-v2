@@ -6,9 +6,11 @@ import { GlobalDrawer } from "./drawer/global-drawer";
 import { UserProfile } from "@/types/user";
 
 import { useUserStore } from "@/stores/user-store";
+import { useOrganizationStore } from "@/stores/organization-store";
 import { QueryProvider } from "@/providers/query-provider";
 import { PresenceProvider } from "@/providers/presence-provider";
 import { OnboardingWidgetWrapper } from "@/features/onboarding/checklist";
+import { ImpersonationBanner } from "./impersonation-banner";
 
 export function LayoutSwitcher({
     children,
@@ -19,6 +21,7 @@ export function LayoutSwitcher({
     activeOrgId?: string; // Keep for backwards compatibility but unused
 }) {
     const [mounted, setMounted] = React.useState(false);
+    const isImpersonating = useOrganizationStore(state => state.isImpersonating);
 
     React.useEffect(() => {
         setMounted(true);
@@ -41,19 +44,22 @@ export function LayoutSwitcher({
     // ContextSidebarProvider eliminated - now using Zustand store
     return (
         <QueryProvider>
-            {user?.id ? (
-                <PresenceProvider userId={user.id}>
+            <ImpersonationBanner />
+            <div className={isImpersonating ? "pt-9" : ""}>
+                {user?.id ? (
+                    <PresenceProvider userId={user.id}>
+                        <SidebarLayout user={user}>
+                            {children}
+                        </SidebarLayout>
+                        <GlobalDrawer />
+                        <OnboardingWidgetWrapper />
+                    </PresenceProvider>
+                ) : (
                     <SidebarLayout user={user}>
                         {children}
                     </SidebarLayout>
-                    <GlobalDrawer />
-                    <OnboardingWidgetWrapper />
-                </PresenceProvider>
-            ) : (
-                <SidebarLayout user={user}>
-                    {children}
-                </SidebarLayout>
-            )}
+                )}
+            </div>
         </QueryProvider>
     );
 }

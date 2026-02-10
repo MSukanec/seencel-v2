@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/stores/organization-store";
+import { useOrganizationStore } from "@/stores/organization-store";
 
 // ============================================================================
 // Types
@@ -216,6 +217,7 @@ function formatCourseSlug(slug: string): string {
 
 export function PresenceProvider({ children, userId }: PresenceProviderProps) {
     const { activeOrgId } = useOrganization();
+    const isImpersonating = useOrganizationStore(state => state.isImpersonating);
     const pathname = usePathname();
     const sessionIdRef = useRef<string>('');
     const lastPathRef = useRef<string>('');
@@ -231,6 +233,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
     // ========================================================================
     useEffect(() => {
         if (!userId || !activeOrgId || !sessionIdRef.current) return;
+        if (isImpersonating) return; // Suppress heartbeat during admin impersonation
 
         const supabase = createClient();
 
@@ -257,7 +260,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
         return () => {
             clearInterval(interval);
         };
-    }, [userId, activeOrgId]);
+    }, [userId, activeOrgId, isImpersonating]);
 
     // ========================================================================
     // Navigation Tracking Effect
@@ -265,6 +268,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
     useEffect(() => {
         if (!userId || !activeOrgId || !sessionIdRef.current) return;
         if (!pathname) return;
+        if (isImpersonating) return; // Suppress tracking during admin impersonation
 
         // Skip if same path
         if (pathname === lastPathRef.current) return;
@@ -287,13 +291,14 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
         };
 
         trackNavigation();
-    }, [pathname, userId, activeOrgId]);
+    }, [pathname, userId, activeOrgId, isImpersonating]);
 
     // ========================================================================
     // Visibility Change Effect (tab switching)
     // ========================================================================
     useEffect(() => {
         if (!userId || !activeOrgId || !sessionIdRef.current) return;
+        if (isImpersonating) return; // Suppress visibility during admin impersonation
 
         const supabase = createClient();
 
@@ -316,7 +321,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [userId, activeOrgId]);
+    }, [userId, activeOrgId, isImpersonating]);
 
     return (
         <PresenceContext.Provider value={{ sessionId: sessionIdRef.current, isTracking }}>

@@ -269,6 +269,12 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
         icon: CheckSquare,
         color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
     },
+    'construction_tasks': {
+        label: 'una tarea de construcción',
+        singularLabel: 'tarea de construcción',
+        icon: CheckSquare,
+        color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    },
     'task_kinds': {
         label: 'un tipo de tarea',
         singularLabel: 'tipo de tarea',

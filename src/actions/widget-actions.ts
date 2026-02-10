@@ -570,3 +570,93 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
     };
 }
 
+// ============================================================================
+// DASHBOARD LAYOUT PERSISTENCE
+// ============================================================================
+// Persists widget grid configuration (positions, sizes, configs) per user
+// per organization in the dashboard_layouts table.
+// ============================================================================
+
+/**
+ * Get the saved dashboard layout for the current user + active org.
+ * Returns null if no custom layout exists (caller should use DEFAULT_ORG_LAYOUT).
+ */
+export async function getDashboardLayout(
+    layoutKey: string = 'org_dashboard'
+): Promise<any[] | null> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Get public user ID + active org in one query
+    const { data: userData } = await supabase
+        .from('users')
+        .select(`id, user_preferences!inner(last_organization_id)`)
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData) return null;
+
+    const pref = Array.isArray(userData.user_preferences)
+        ? (userData.user_preferences as any)[0]
+        : (userData.user_preferences as any);
+    const orgId = pref?.last_organization_id;
+    if (!orgId) return null;
+
+    const { data } = await supabase
+        .from('dashboard_layouts')
+        .select('layout_data')
+        .eq('user_id', userData.id)
+        .eq('organization_id', orgId)
+        .eq('layout_key', layoutKey)
+        .single();
+
+    return data?.layout_data || null;
+}
+
+/**
+ * Save the dashboard layout for the current user + active org.
+ * Uses upsert on the unique constraint (user_id, organization_id, layout_key).
+ */
+export async function saveDashboardLayout(
+    layoutKey: string,
+    layoutData: any[]
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    // Get public user ID + active org
+    const { data: userData } = await supabase
+        .from('users')
+        .select(`id, user_preferences!inner(last_organization_id)`)
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData) return { success: false, error: 'User not found' };
+
+    const pref = Array.isArray(userData.user_preferences)
+        ? (userData.user_preferences as any)[0]
+        : (userData.user_preferences as any);
+    const orgId = pref?.last_organization_id;
+    if (!orgId) return { success: false, error: 'No active organization' };
+
+    const { error } = await supabase
+        .from('dashboard_layouts')
+        .upsert({
+            user_id: userData.id,
+            organization_id: orgId,
+            layout_key: layoutKey,
+            layout_data: layoutData,
+            updated_at: new Date().toISOString(),
+        }, {
+            onConflict: 'user_id, organization_id, layout_key',
+        });
+
+    if (error) {
+        console.error('[saveDashboardLayout] Error:', error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}

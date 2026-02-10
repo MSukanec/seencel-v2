@@ -326,9 +326,8 @@ export const DEFAULT_FINANCE_LAYOUT: WidgetLayoutItem[] = [
 /** Default layout for Organization Dashboard */
 export const DEFAULT_ORG_LAYOUT: WidgetLayoutItem[] = [
     { id: 'org_pulse', x: 0, y: 0, w: 4, h: 2 },
-    { id: 'activity_kpi', x: 0, y: 2, w: 1, h: 1, config: { scope: 'organization' } },
-    { id: 'team_members', x: 1, y: 2, w: 1, h: 1 },
-    { id: 'upcoming_events', x: 2, y: 2, w: 2, h: 1, config: { scope: 'all' } },
-    { id: 'org_recent_projects', x: 0, y: 3, w: 2, h: 1 },
-    { id: 'financial_summary', x: 2, y: 3, w: 2, h: 1, config: { scope: 'organization' } },
+    { id: 'org_recent_projects', x: 0, y: 2, w: 1, h: 1 },
+    { id: 'upcoming_events', x: 1, y: 2, w: 1, h: 1, config: { scope: 'all' } },
+    { id: 'team_members', x: 2, y: 2, w: 1, h: 1 },
+    { id: 'activity_kpi', x: 3, y: 2, w: 1, h: 1, config: { scope: 'organization' } },
 ];

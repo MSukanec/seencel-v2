@@ -57,6 +57,10 @@ interface OrganizationState {
 
     // Plan invalidation counter (increment to force plan-button refetch)
     planVersion: number;
+
+    // Admin impersonation (support mode)
+    isImpersonating: boolean;
+    impersonationOrgName: string | null;
 }
 
 interface OrganizationActions {
@@ -79,6 +83,10 @@ interface OrganizationActions {
 
     // Plan invalidation
     invalidatePlan: () => void;
+
+    // Admin impersonation
+    setImpersonating: (orgName: string) => void;
+    clearImpersonating: () => void;
 }
 
 type OrganizationStore = OrganizationState & OrganizationActions;
@@ -100,6 +108,8 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     kpiCompactFormat: false,
     isHydrated: false,
     planVersion: 0,
+    isImpersonating: false,
+    impersonationOrgName: null,
 
     // Hydrate from server data
     hydrate: (data) => {
@@ -138,6 +148,10 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
 
     // Increment planVersion to force plan-button refetch
     invalidatePlan: () => set((state) => ({ planVersion: state.planVersion + 1 })),
+
+    // Admin impersonation
+    setImpersonating: (orgName: string) => set({ isImpersonating: true, impersonationOrgName: orgName }),
+    clearImpersonating: () => set({ isImpersonating: false, impersonationOrgName: null }),
 
     // Computed getters
     getPrimaryCurrency: () => {
@@ -206,6 +220,8 @@ interface OrganizationStoreHydratorProps {
     currencies: Currency[];
     decimalPlaces: number;
     kpiCompactFormat: boolean;
+    isImpersonating?: boolean;
+    impersonationOrgName?: string | null;
 }
 
 import { useEffect, useRef } from 'react';
@@ -220,6 +236,8 @@ export function OrganizationStoreHydrator({
     currencies,
     decimalPlaces,
     kpiCompactFormat,
+    isImpersonating = false,
+    impersonationOrgName = null,
 }: OrganizationStoreHydratorProps) {
     // Track previous critical values to detect changes that require re-hydration
     const prevActiveOrgId = useRef(activeOrgId);
@@ -251,8 +269,15 @@ export function OrganizationStoreHydrator({
                 decimalPlaces,
                 kpiCompactFormat,
             });
+
+            // Set impersonation state (from server detection)
+            if (isImpersonating) {
+                useOrganizationStore.getState().setImpersonating(impersonationOrgName || '');
+            } else {
+                useOrganizationStore.getState().clearImpersonating();
+            }
         }
-    }, [activeOrgId, preferences, isFounder, wallets, projects, clients, currencies, decimalPlaces, kpiCompactFormat]);
+    }, [activeOrgId, preferences, isFounder, wallets, projects, clients, currencies, decimalPlaces, kpiCompactFormat, isImpersonating, impersonationOrgName]);
 
     return null;
 }
@@ -270,8 +295,10 @@ export function useOrganization() {
     const wallets = useOrganizationStore(state => state.wallets);
     const projects = useOrganizationStore(state => state.projects);
     const clients = useOrganizationStore(state => state.clients);
+    const isImpersonating = useOrganizationStore(state => state.isImpersonating);
+    const impersonationOrgName = useOrganizationStore(state => state.impersonationOrgName);
 
-    return { activeOrgId, preferences, isFounder, wallets, projects, clients };
+    return { activeOrgId, preferences, isFounder, wallets, projects, clients, isImpersonating, impersonationOrgName };
 }
 
 /**

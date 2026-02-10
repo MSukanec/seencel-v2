@@ -4,6 +4,7 @@ import { ContentLayout } from "@/components/layout";
 import { DashboardWidgetGrid } from "@/components/widgets/grid";
 import { WIDGET_REGISTRY, DEFAULT_ORG_LAYOUT } from "@/components/widgets/registry";
 import { useDashboardEditStore } from "@/stores/dashboard-edit-store";
+import type { WidgetLayoutItem } from "@/components/widgets/grid/types";
 
 // ============================================================================
 // ORGANIZATION DASHBOARD VIEW
@@ -16,9 +17,11 @@ import { useDashboardEditStore } from "@/stores/dashboard-edit-store";
 interface OrganizationDashboardViewProps {
     /** Server-prefetched widget data keyed by widget ID */
     prefetchedData?: Record<string, any>;
+    /** Server-fetched saved layout for this user+org. null = use default. */
+    savedLayout?: WidgetLayoutItem[] | null;
 }
 
-export function OrganizationDashboardView({ prefetchedData }: OrganizationDashboardViewProps) {
+export function OrganizationDashboardView({ prefetchedData, savedLayout }: OrganizationDashboardViewProps) {
     const isEditing = useDashboardEditStore((s) => s.isEditing);
 
     return (
@@ -27,8 +30,9 @@ export function OrganizationDashboardView({ prefetchedData }: OrganizationDashbo
                 registry={WIDGET_REGISTRY}
                 layout={DEFAULT_ORG_LAYOUT}
                 isEditing={isEditing}
-                storageKey="seencel_org_layout_v4"
+                storageKey="org_dashboard"
                 prefetchedData={prefetchedData}
+                savedLayout={savedLayout}
             />
         </ContentLayout>
     );

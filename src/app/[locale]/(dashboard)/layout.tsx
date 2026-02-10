@@ -39,8 +39,21 @@ export default async function DashboardLayout({
     const { organizations, activeOrgId } = await getUserOrganizations();
 
     // Detect stale membership: user was removed from their active org
-    const wasRemoved = activeOrgId && organizations.length > 0 && !organizations.some((o: any) => o.id === activeOrgId);
+    const wasRemoved = !isAdmin && activeOrgId && organizations.length > 0 && !organizations.some((o: any) => o.id === activeOrgId);
     const fallbackOrg = wasRemoved ? organizations[0] : null;
+
+    // Detect admin impersonation: admin viewing an org they don't belong to
+    const isImpersonating = isAdmin && activeOrgId != null && !organizations.some((o: any) => o.id === activeOrgId);
+    let impersonationOrgName: string | null = null;
+    if (isImpersonating && activeOrgId) {
+        const supabaseForOrgName = await createClient();
+        const { data: orgData } = await supabaseForOrgName
+            .from('organizations')
+            .select('name')
+            .eq('id', activeOrgId)
+            .single();
+        impersonationOrgName = orgData?.name || null;
+    }
 
     // Check for pending invitations for this user
     let pendingInvitation: { id: string; token: string; organization_name: string; organization_logo: string | null; role_name: string; inviter_name: string | null } | null = null;
@@ -194,6 +207,8 @@ export default async function DashboardLayout({
                 currencies={currencies}
                 decimalPlaces={decimalPlaces}
                 kpiCompactFormat={kpiCompactFormat}
+                isImpersonating={isImpersonating}
+                impersonationOrgName={impersonationOrgName}
             />
             <ThemeCustomizationHydrator />
             <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>

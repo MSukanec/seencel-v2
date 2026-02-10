@@ -202,7 +202,7 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
             .from('users')
             .update({
                 avatar_url: publicUrl,
-                avatar_source: 'storage'
+                avatar_source: 'upload'
             })
             .eq('id', userId);
 
