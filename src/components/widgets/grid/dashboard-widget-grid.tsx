@@ -38,9 +38,9 @@ import "react-resizable/css/styles.css";
 // ============================================================================
 
 /** Number of columns per breakpoint */
-const GRID_COLS = { lg: 4, md: 4, sm: 2, xs: 1, xxs: 1 };
+const GRID_COLS = { lg: 4, md: 2, sm: 2, xs: 1, xxs: 1 };
 /** Breakpoint widths */
-const BREAKPOINTS = { lg: 1024, md: 768, sm: 480, xs: 0, xxs: 0 };
+const BREAKPOINTS = { lg: 1200, md: 768, sm: 480, xs: 0, xxs: 0 };
 /** Row height in pixels */
 const ROW_HEIGHT = 180;
 /** Margin between items [horizontal, vertical] */
@@ -396,6 +396,7 @@ export function DashboardWidgetGrid({
     // Container width measurement — custom ResizeObserver (more reliable than useContainerWidth)
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(1200);
+    const currentBreakpointRef = useRef<string>('lg');
 
     useEffect(() => {
         const el = containerRef.current;
@@ -445,12 +446,20 @@ export function DashboardWidgetGrid({
 
     // 3. Handlers
     const handleLayoutChange = useCallback((newLayout: Layout, _layouts: ResponsiveLayouts) => {
+        // Only persist layout when at the widest breakpoint (lg = 4 cols)
+        // This prevents mobile/tablet compressed layouts from overwriting the desktop layout
+        if (currentBreakpointRef.current !== 'lg') return;
+
         setItems(prev => {
             const updated = fromRGLLayout(newLayout, prev);
             persistToServer(updated);
             return updated;
         });
     }, [persistToServer]);
+
+    const handleBreakpointChange = useCallback((newBreakpoint: string) => {
+        currentBreakpointRef.current = newBreakpoint;
+    }, []);
 
     const handleRemove = useCallback((id: string) => {
         setItems(prev => {
@@ -538,6 +547,7 @@ export function DashboardWidgetGrid({
                 }}
                 compactor={verticalCompactor}
                 onLayoutChange={handleLayoutChange}
+                onBreakpointChange={handleBreakpointChange}
                 autoSize={true}
             >
                 {items.map((item) => {

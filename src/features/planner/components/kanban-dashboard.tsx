@@ -7,6 +7,7 @@ import { Project } from "@/types/project";
 import { useLayoutStore } from "@/stores/layout-store";
 import { KanbanBoard as KanbanBoardComponent } from "@/features/planner/components/kanban-board";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { Plus, LayoutDashboard, Search, Filter, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useModal } from "@/stores/modal-store";
@@ -36,6 +37,8 @@ interface KanbanDashboardProps {
     baseUrl: string;
     /** Max boards allowed by plan (-1 = unlimited) */
     maxBoards?: number;
+    /** Whether the organization can invite members (Teams plan) */
+    isTeamsEnabled?: boolean;
 }
 
 export function KanbanDashboard({
@@ -46,13 +49,16 @@ export function KanbanDashboard({
     projectId,
     projects = [],
     baseUrl,
-    maxBoards = -1
+    maxBoards = -1,
+    isTeamsEnabled = false
 }: KanbanDashboardProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const { actions } = useLayoutStore();
     const [isSwitching, setIsSwitching] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [deleteBoardId, setDeleteBoardId] = useState<string | null>(null);
+    const [isDeletingBoard, setIsDeletingBoard] = useState(false);
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const debouncedSetSearch = useCallback((value: string) => {
         clearTimeout(searchTimerRef.current);
@@ -60,6 +66,9 @@ export function KanbanDashboard({
     }, []);
     // Optimistic state for boards
     const [optimisticBoards, setOptimisticBoards] = useState(initialBoards);
+    // Local override for active board (used during optimistic create)
+    const [overrideActiveBoardId, setOverrideActiveBoardId] = useState<string | null>(null);
+    const resolvedActiveBoardId = overrideActiveBoardId ?? activeBoardId;
 
     // Set active context to organization
     useEffect(() => {
@@ -69,6 +78,8 @@ export function KanbanDashboard({
     // Sync loading state with board switching
     useEffect(() => {
         setIsSwitching(false);
+        // Clear override when server catches up
+        setOverrideActiveBoardId(null);
     }, [activeBoardId]);
 
     // Sync optimistic boards when prop changes (navigation, etc)
@@ -90,9 +101,23 @@ export function KanbanDashboard({
         openModal(
             <KanbanBoardForm
                 organizationId={organizationId}
-                onSuccess={(newBoard: KanbanBoard) => {
+                onOptimisticCreate={(tempBoard: KanbanBoard) => {
+                    // Instantly add board to list, set as active, and close modal
+                    setOptimisticBoards(prev => [...prev, tempBoard]);
+                    setOverrideActiveBoardId(tempBoard.id);
                     closeModal();
+                }}
+                onSuccess={(newBoard: KanbanBoard) => {
+                    // Replace temp board with real one and navigate
+                    setOptimisticBoards(prev =>
+                        prev.map(b => b.id.startsWith('temp-') ? newBoard : b)
+                    );
                     router.push(`${baseUrl}?boardId=${newBoard.id}`);
+                }}
+                onRollback={() => {
+                    // Remove temp board on error and clear override
+                    setOptimisticBoards(prev => prev.filter(b => !b.id.startsWith('temp-')));
+                    setOverrideActiveBoardId(null);
                 }}
             />,
             {
@@ -108,10 +133,14 @@ export function KanbanDashboard({
             <KanbanBoardForm
                 organizationId={organizationId}
                 initialData={board}
-                onSuccess={(updatedBoard: KanbanBoard) => {
-                    // Optimistic update
+                onOptimisticUpdate={(updatedBoard: KanbanBoard) => {
+                    // Optimistic update — instantly apply changes
                     setOptimisticBoards(prev => prev.map(b => b.id === board.id ? { ...b, ...updatedBoard } : b));
                     closeModal();
+                }}
+                onRollback={() => {
+                    // Rollback to original boards
+                    setOptimisticBoards(initialBoards);
                 }}
             />,
             {
@@ -123,46 +152,33 @@ export function KanbanDashboard({
     };
 
     const handleDeleteBoard = (boardId: string) => {
-        openModal(
-            <div className="flex flex-col gap-4">
-                <p>¿Estás seguro de eliminar este tablero? Esta acción también eliminará todas las listas y tarjetas asociadas.</p>
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={closeModal}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        onClick={async () => {
-                            // Optimistic delete
-                            const remaining = optimisticBoards.filter(b => b.id !== boardId);
-                            setOptimisticBoards(remaining);
-                            closeModal();
+        setDeleteBoardId(boardId);
+    };
 
-                            try {
-                                await deleteBoard(boardId);
-                                toast.success("Panel eliminado");
+    const confirmDeleteBoard = async () => {
+        if (!deleteBoardId) return;
+        setIsDeletingBoard(true);
 
-                                if (remaining.length > 0) {
-                                    router.push(`${baseUrl}?boardId=${remaining[0].id}`);
-                                } else {
-                                    router.push(`${baseUrl}`);
-                                }
-                            } catch (error) {
-                                // Rollback on error
-                                setOptimisticBoards(initialBoards);
-                                toast.error("Error al eliminar el tablero");
-                            }
-                        }}
-                    >
-                        Eliminar
-                    </Button>
-                </div>
-            </div>,
-            {
-                title: "Eliminar Panel",
-                description: "Esta acción no se puede deshacer."
+        // Optimistic delete
+        const remaining = optimisticBoards.filter(b => b.id !== deleteBoardId);
+        setOptimisticBoards(remaining);
+        setDeleteBoardId(null);
+        setIsDeletingBoard(false);
+
+        try {
+            await deleteBoard(deleteBoardId);
+            toast.success("Panel eliminado");
+
+            if (remaining.length > 0) {
+                router.push(`${baseUrl}?boardId=${remaining[0].id}`);
+            } else {
+                router.push(`${baseUrl}`);
             }
-        );
+        } catch (error) {
+            // Rollback on error
+            setOptimisticBoards(initialBoards);
+            toast.error("Error al eliminar el tablero");
+        }
     };
 
     const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
@@ -203,131 +219,144 @@ export function KanbanDashboard({
     }));
 
     return (
-        <div className="flex flex-col h-full">
-            {/* UNIFIED TOOLBAR - Portaled to Header */}
-            <Toolbar
-                portalToHeader
-                searchQuery={searchQuery}
-                onSearchChange={debouncedSetSearch}
-                searchPlaceholder="Buscar tarjetas..."
-                leftActions={
-                    <div className="flex items-center gap-1">
-                        {optimisticBoards.map((board) => (
-                            <div key={board.id} className="group relative flex items-center">
-                                <button
-                                    onClick={() => handleBoardSwitch(board.id)}
-                                    className={cn(
-                                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap border pr-7",
-                                        activeBoardId === board.id
-                                            ? "bg-background border-border shadow-sm text-foreground ring-1 ring-primary/20"
-                                            : "bg-transparent border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                                    )}
-                                >
-                                    {board.color && (
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: board.color }} />
-                                    )}
-                                    {board.name}
-                                </button>
+        <>
+            <div className="flex flex-col h-full">
+                {/* UNIFIED TOOLBAR - Portaled to Header */}
+                <Toolbar
+                    portalToHeader
+                    searchQuery={searchQuery}
+                    onSearchChange={debouncedSetSearch}
+                    searchPlaceholder="Buscar tarjetas..."
+                    leftActions={
+                        <div className="flex items-center gap-1">
+                            {optimisticBoards.map((board) => (
+                                <div key={board.id} className="group relative flex items-center">
+                                    <button
+                                        onClick={() => handleBoardSwitch(board.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap border pr-7",
+                                            board.id.startsWith('temp-') && "opacity-70",
+                                            resolvedActiveBoardId === board.id
+                                                ? "bg-background border-border shadow-sm text-foreground ring-1 ring-primary/20"
+                                                : "bg-transparent border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                                        )}
+                                    >
+                                        {board.color && (
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: board.color }} />
+                                        )}
+                                        {board.name}
+                                    </button>
 
-                                {/* Hover Actions Menu */}
-                                <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <DropdownMenu modal={false}>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted">
-                                                <MoreHorizontal className="h-3 w-3" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start">
-                                            <DropdownMenuItem onClick={() => handleChangeBoard(board)}>
-                                                <Pencil className="mr-2 h-4 w-4" />
-                                                Editar
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteBoard(board.id)}>
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Eliminar
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    {/* Hover Actions Menu */}
+                                    <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <DropdownMenu modal={false}>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted">
+                                                    <MoreHorizontal className="h-3 w-3" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start">
+                                                <DropdownMenuItem onClick={() => handleChangeBoard(board)}>
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteBoard(board.id)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Eliminar
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                }
-                filterContent={
-                    <div className="flex items-center gap-2">
-                        <FacetedFilter
-                            title="Prioridad"
-                            options={priorityOptions}
-                            selectedValues={selectedPriorities}
-                            onSelect={handlePrioritySelect}
-                            onClear={() => setSelectedPriorities(new Set())}
-                        />
-                        <FacetedFilter
-                            title="Etiquetas"
-                            options={labelOptions}
-                            selectedValues={selectedLabels}
-                            onSelect={handleLabelSelect}
-                            onClear={() => setSelectedLabels(new Set())}
-                        />
-                    </div>
-                }
-                actions={[{
-                    label: "Nuevo Panel",
-                    icon: Plus,
-                    onClick: handleCreateBoard,
-                    featureGuard: {
-                        isEnabled: canCreateBoard,
-                        featureName: "Crear más paneles",
-                        requiredPlan: "PRO",
-                        customMessage: `Has alcanzado el límite de ${maxBoards} panel${maxBoards !== 1 ? 'es' : ''} de tu plan actual (${optimisticBoards.length}/${maxBoards}). Actualiza a PRO para crear paneles ilimitados.`
-                    }
-                }]}
-            />
-
-            {/* BOARD CONTENT */}
-            <div className="flex-1 overflow-hidden relative">
-                {isSwitching ? (
-                    <div className="flex items-center justify-center h-full w-full absolute inset-0 bg-background/50 backdrop-blur-sm z-50">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                ) : null}
-
-                {initialBoards.length === 0 ? (
-                    // Empty State - No boards exist
-                    <div className="h-full flex items-center justify-center p-8">
-                        <ViewEmptyState
-                            mode="empty"
-                            icon={LayoutDashboard}
-                            viewName="Panel de Tareas"
-                            featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas. Podés asignar responsables, definir fechas límite y prioridades para coordinar el trabajo con tu equipo de forma visual."
-                            onAction={handleCreateBoard}
-                            actionLabel="Nuevo Panel"
-                            docsPath="/docs/agenda/kanban"
-                        />
-                    </div>
-                ) : activeBoardData ? (
-                    <KanbanBoardComponent
-                        board={activeBoardData.board}
-                        lists={activeBoardData.lists}
-                        labels={activeBoardData.labels}
-                        members={activeBoardData.members || []}
-                        projects={projects}
-                        searchQuery={searchQuery}
-                        selectedPriorities={Array.from(selectedPriorities)}
-                        selectedLabels={Array.from(selectedLabels)}
-                    />
-                ) : (
-                    // Loading skeletons for board content
-                    <div className="p-8 space-y-4">
-                        <div className="flex gap-4">
-                            <Skeleton className="h-[500px] w-80 rounded-xl" />
-                            <Skeleton className="h-[500px] w-80 rounded-xl" />
-                            <Skeleton className="h-[500px] w-80 rounded-xl" />
+                            ))}
                         </div>
-                    </div>
-                )}
+                    }
+                    filterContent={
+                        <div className="flex items-center gap-2">
+                            <FacetedFilter
+                                title="Prioridad"
+                                options={priorityOptions}
+                                selectedValues={selectedPriorities}
+                                onSelect={handlePrioritySelect}
+                                onClear={() => setSelectedPriorities(new Set())}
+                            />
+                            <FacetedFilter
+                                title="Etiquetas"
+                                options={labelOptions}
+                                selectedValues={selectedLabels}
+                                onSelect={handleLabelSelect}
+                                onClear={() => setSelectedLabels(new Set())}
+                            />
+                        </div>
+                    }
+                    actions={[{
+                        label: "Nuevo Panel",
+                        icon: Plus,
+                        onClick: handleCreateBoard,
+                        featureGuard: {
+                            isEnabled: canCreateBoard,
+                            featureName: "Crear más paneles",
+                            requiredPlan: "PRO",
+                            customMessage: `Has alcanzado el límite de ${maxBoards} panel${maxBoards !== 1 ? 'es' : ''} de tu plan actual (${optimisticBoards.length}/${maxBoards}). Actualiza a PRO para crear paneles ilimitados.`
+                        }
+                    }]}
+                />
+
+                {/* BOARD CONTENT */}
+                <div className="flex-1 overflow-hidden relative">
+                    {isSwitching ? (
+                        <div className="flex items-center justify-center h-full w-full absolute inset-0 bg-background/50 backdrop-blur-sm z-50">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                    ) : null}
+
+                    {optimisticBoards.length === 0 ? (
+                        // Empty State - No boards exist
+                        <div className="h-full flex items-center justify-center p-8">
+                            <ViewEmptyState
+                                mode="empty"
+                                icon={LayoutDashboard}
+                                viewName="Panel de Tareas"
+                                featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas. Podés asignar responsables, definir fechas límite y prioridades para coordinar el trabajo con tu equipo de forma visual."
+                                onAction={handleCreateBoard}
+                                actionLabel="Nuevo Panel"
+                                docsPath="/docs/agenda/kanban"
+                            />
+                        </div>
+                    ) : activeBoardData ? (
+                        <KanbanBoardComponent
+                            board={activeBoardData.board}
+                            lists={activeBoardData.lists}
+                            labels={activeBoardData.labels}
+                            members={activeBoardData.members || []}
+                            projects={projects}
+                            searchQuery={searchQuery}
+                            selectedPriorities={Array.from(selectedPriorities)}
+                            selectedLabels={Array.from(selectedLabels)}
+                            isTeamsEnabled={isTeamsEnabled}
+                        />
+                    ) : (
+                        // Loading skeletons for board content
+                        <div className="p-8 space-y-4">
+                            <div className="flex gap-4">
+                                <Skeleton className="h-[500px] w-80 rounded-xl" />
+                                <Skeleton className="h-[500px] w-80 rounded-xl" />
+                                <Skeleton className="h-[500px] w-80 rounded-xl" />
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+
+            <DeleteConfirmationDialog
+                open={!!deleteBoardId}
+                onOpenChange={(open) => !open && setDeleteBoardId(null)}
+                onConfirm={confirmDeleteBoard}
+                title="Eliminar Panel"
+                description="¿Estás seguro de eliminar este tablero? Esta acción también eliminará todas las listas y tarjetas asociadas."
+                isDeleting={isDeletingBoard}
+            />
+        </>
     );
 }
 

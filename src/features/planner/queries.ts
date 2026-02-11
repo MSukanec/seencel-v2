@@ -111,9 +111,9 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
     const { data: membersData, error: membersError } = await supabase
         .from('organization_members')
         .select(`
+            id,
             user_id,
             user: users (
-                id,
                 full_name,
                 avatar_url
             )
@@ -125,7 +125,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
     }
 
     const members: KanbanMember[] = (membersData || []).map((m: any) => ({
-        id: m.user?.id || m.user_id,
+        id: m.id, // organization_members.id — FK target for assigned_to
         full_name: m.user?.full_name || null,
         avatar_url: m.user?.avatar_url || null,
     }));

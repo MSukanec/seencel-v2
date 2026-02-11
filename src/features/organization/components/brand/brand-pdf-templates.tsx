@@ -174,7 +174,7 @@ export function BrandPdfTemplates() {
             {
                 title: "Nueva Plantilla",
                 description: "Crea una nueva plantilla para personalizar el diseño de tus documentos.",
-                size: "sm"
+                size: "md"
             }
         );
     };

@@ -287,7 +287,7 @@ export async function createCard(input: CreateCardInput) {
 
     if (error) {
         console.error('Error creating card:', error);
-        throw new Error('Error al crear la tarjeta');
+        throw new Error(`Error al crear la tarjeta: ${sanitizeError(error)} (Code: ${error.code})`);
     }
 
     revalidatePath('/organization/kanban');

@@ -20,19 +20,14 @@ import {
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { Badge } from "@/components/ui/badge";
-import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { Lock, Crown, ChevronRight } from "lucide-react";
-import { Link } from "@/i18n/routing";
+import { Lock, Medal } from "lucide-react";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { SidebarMode } from "@/types/preferences";
+import { SidebarTooltipProvider, SidebarTooltip, type SidebarRestriction } from "./sidebar-tooltip";
 
 // ============================================================================
 // V2 EXPERIMENTAL - DRILL-DOWN SIDEBAR
@@ -210,7 +205,7 @@ export function SidebarContent({
     const renderNavItem = (item: any, idx: number) => {
         const status = item.status;
         const isDisabled = item.disabled;
-        const isHidden = item.hidden; // Hidden items shown only to admins with special styling
+        const isHidden = item.hidden;
 
         // Badge
         let badge = null;
@@ -228,11 +223,16 @@ export function SidebarContent({
             );
         } else if (status === 'founders') {
             badge = (
-                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 shadow-none">
-                    <Lock className="h-3 w-3 text-yellow-500" />
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-slate-400/10 hover:bg-slate-400/20 shadow-none">
+                    <Medal className="h-3 w-3 text-slate-400" />
                 </Badge>
             );
         }
+
+        // Determine restriction for tooltip
+        const restriction: SidebarRestriction = isHidden
+            ? "hidden"
+            : (status as SidebarRestriction) || null;
 
         const button = (
             <React.Fragment key={idx}>
@@ -255,453 +255,337 @@ export function SidebarContent({
             </React.Fragment>
         );
 
-        if (status === 'maintenance') {
-            return (
-                <HoverCard key={idx} openDelay={100} closeDelay={100}>
-                    <HoverCardTrigger asChild>
-                        <div className="w-full">{button}</div>
-                    </HoverCardTrigger>
-                    <HoverCardContent side="right" className="w-80" align="start">
-                        <div className="flex gap-4">
-                            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                                <Lock className="h-5 w-5 text-orange-600" />
-                            </div>
-                            <div className="space-y-1">
-                                <h4 className="text-sm font-semibold">En Mantenimiento</h4>
-                                <p className="text-xs text-muted-foreground">
-                                    Estamos realizando mejoras en este módulo. Estará disponible nuevamente en breve.
-                                </p>
-                            </div>
-                        </div>
-                    </HoverCardContent>
-                </HoverCard>
-            );
-        }
-
-        if (status === 'founders') {
-            return (
-                <HoverCard key={idx} openDelay={100} closeDelay={100}>
-                    <HoverCardTrigger asChild>
-                        <div className="w-full">{button}</div>
-                    </HoverCardTrigger>
-                    <HoverCardContent side="right" className="w-80" align="start">
-                        <div className="flex gap-4">
-                            <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
-                                <Crown className="h-5 w-5 text-yellow-600" />
-                            </div>
-                            <div className="space-y-2">
-                                <div>
-                                    <h4 className="text-sm font-semibold text-yellow-700">Acceso Fundadores</h4>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Este módulo está en acceso anticipado exclusivo para organizaciones fundadoras.
-                                    </p>
-                                </div>
-                                <Link
-                                    href={"/community/founders" as any}
-                                    className="text-xs font-medium text-yellow-600 hover:text-yellow-700 flex items-center gap-1"
-                                >
-                                    Conocer más <ChevronRight className="h-3 w-3" />
-                                </Link>
-                            </div>
-                        </div>
-                    </HoverCardContent>
-                </HoverCard>
-            );
-        }
-
-        // Hidden items (admin only)
-        if (isHidden) {
-            return (
-                <HoverCard key={idx} openDelay={100} closeDelay={100}>
-                    <HoverCardTrigger asChild>
-                        <div className="w-full">{button}</div>
-                    </HoverCardTrigger>
-                    <HoverCardContent side="right" className="w-80" align="start">
-                        <div className="flex gap-4">
-                            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                                <EyeOff className="h-5 w-5 text-gray-600" />
-                            </div>
-                            <div className="space-y-1">
-                                <h4 className="text-sm font-semibold">Oculto para Usuarios</h4>
-                                <p className="text-xs text-muted-foreground">
-                                    Este módulo está oculto para usuarios. Solo los administradores pueden verlo y acceder.
-                                </p>
-                            </div>
-                        </div>
-                    </HoverCardContent>
-                </HoverCard>
-            );
-        }
-
-        return button;
+        // Wrap with unified SidebarTooltip (handles both tooltip + restriction info)
+        return (
+            <SidebarTooltip
+                key={idx}
+                label={item.title}
+                restriction={restriction}
+                isExpanded={isExpanded}
+            >
+                {button}
+            </SidebarTooltip>
+        );
     };
 
     return (
 
-        <div
-            className={cn(
-                "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out relative",
-                widthClass
-            )}
-        >
-            {/* SIDEBAR MODE POPOVER */}
-            {!isMobile && (
-                <Popover open={sidebarPopoverOpen} onOpenChange={setSidebarPopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <button
-                            className="absolute left-full bottom-8 z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-md transition-colors hover:bg-accent hover:text-foreground text-muted-foreground"
-                            title="Modo del sidebar"
-                        >
-                            {React.createElement(getModeIcon(), { className: "h-3 w-3" })}
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                        side="right"
-                        align="end"
-                        sideOffset={12}
-                        className="w-[180px] p-1.5"
-                    >
-                        {([
-                            { mode: 'docked' as SidebarMode, icon: PanelLeftClose, label: 'Fijado', desc: 'Siempre visible' },
-                            { mode: 'expanded_hover' as SidebarMode, icon: PanelLeftOpen, label: 'Hover', desc: 'Aparece al pasar el cursor' },
-                            { mode: 'collapsed' as SidebarMode, icon: PanelLeft, label: 'Colapsado', desc: 'Solo íconos' },
-                        ]).map((opt) => (
+        <SidebarTooltipProvider>
+            <div
+                className={cn(
+                    "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out relative",
+                    widthClass
+                )}
+            >
+                {/* SIDEBAR MODE POPOVER */}
+                {!isMobile && (
+                    <Popover open={sidebarPopoverOpen} onOpenChange={setSidebarPopoverOpen}>
+                        <PopoverTrigger asChild>
                             <button
-                                key={opt.mode}
-                                onClick={() => {
-                                    actions.setSidebarMode(opt.mode);
-                                    setSidebarPopoverOpen(false);
-                                }}
-                                className={cn(
-                                    "flex items-center gap-2.5 w-full px-2.5 py-2 text-left rounded-md transition-colors",
-                                    sidebarMode === opt.mode
-                                        ? "bg-primary/10 text-primary"
-                                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                                )}
+                                className="absolute left-full bottom-8 z-50 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-md transition-colors hover:bg-accent hover:text-foreground text-muted-foreground"
+                                title="Modo del sidebar"
                             >
-                                <opt.icon className="h-4 w-4 shrink-0" />
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-xs font-medium">{opt.label}</span>
-                                    <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
-                                </div>
-                                {sidebarMode === opt.mode && (
-                                    <Check className="h-3 w-3 ml-auto shrink-0 text-primary" />
-                                )}
+                                {React.createElement(getModeIcon(), { className: "h-3 w-3" })}
                             </button>
-                        ))}
-                    </PopoverContent>
-                </Popover>
-            )}
+                        </PopoverTrigger>
+                        <PopoverContent
+                            side="right"
+                            align="end"
+                            sideOffset={12}
+                            className="w-[180px] p-1.5"
+                        >
+                            {([
+                                { mode: 'docked' as SidebarMode, icon: PanelLeftClose, label: 'Fijado', desc: 'Siempre visible' },
+                                { mode: 'expanded_hover' as SidebarMode, icon: PanelLeftOpen, label: 'Hover', desc: 'Aparece al pasar el cursor' },
+                                { mode: 'collapsed' as SidebarMode, icon: PanelLeft, label: 'Colapsado', desc: 'Solo íconos' },
+                            ]).map((opt) => (
+                                <button
+                                    key={opt.mode}
+                                    onClick={() => {
+                                        actions.setSidebarMode(opt.mode);
+                                        setSidebarPopoverOpen(false);
+                                    }}
+                                    className={cn(
+                                        "flex items-center gap-2.5 w-full px-2.5 py-2 text-left rounded-md transition-colors",
+                                        sidebarMode === opt.mode
+                                            ? "bg-primary/10 text-primary"
+                                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                    )}
+                                >
+                                    <opt.icon className="h-4 w-4 shrink-0" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-medium">{opt.label}</span>
+                                        <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
+                                    </div>
+                                    {sidebarMode === opt.mode && (
+                                        <Check className="h-3 w-3 ml-auto shrink-0 text-primary" />
+                                    )}
+                                </button>
+                            ))}
+                        </PopoverContent>
+                    </Popover>
+                )}
 
-            <div className="flex flex-col w-full h-full overflow-hidden">
-                {/* Top Brand Section */}
-                <div className="w-full flex items-center mb-2 px-2">
-                    <SidebarBrandButton
-                        mode={drillState === "home" || drillState === "learnings" || drillState === "community" || drillState === "admin" ? "home" : drillState === "project" ? "project" : "organization"}
-                        isExpanded={isExpanded}
-                        currentOrg={currentOrg}
-                        currentProject={currentProject}
-                        projects={projects}
-                        onOrgClick={() => {
-                            setSlideDirection("left");
-                            setDrillState("organization");
-                            actions.setActiveContext("organization");
+                <div className="flex flex-col w-full h-full overflow-hidden">
+                    {/* Top Brand Section */}
+                    <div className="w-full flex items-center mb-2 px-2">
+                        <SidebarBrandButton
+                            mode={drillState === "home" || drillState === "learnings" || drillState === "community" || drillState === "admin" ? "home" : drillState === "project" ? "project" : "organization"}
+                            isExpanded={isExpanded}
+                            currentOrg={currentOrg}
+                            currentProject={currentProject}
+                            projects={projects}
+                            onOrgClick={() => {
+                                setSlideDirection("left");
+                                setDrillState("organization");
+                                actions.setActiveContext("organization");
 
-                            // Navigate to organization dashboard to resolve context conflict
-                            // Extract locale from current URL (e.g., /es/project/... -> es)
-                            const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-                            const locale = localeMatch ? localeMatch[1] : 'es';
-                            nativeRouter.push(`/${locale}/organization`);
-                        }}
-                        onProjectChange={(projectId) => {
-                            // OPTIMIZED NAVIGATION:
-                            // We do NOT update state here manually to avoid blocking the main thread.
-                            // We immediately navigate and let the URL change drive the state via useEffect.
+                                // Navigate to organization dashboard to resolve context conflict
+                                // Extract locale from current URL (e.g., /es/project/... -> es)
+                                const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+                                const locale = localeMatch ? localeMatch[1] : 'es';
+                                nativeRouter.push(`/${locale}/organization`);
+                            }}
+                            onProjectChange={(projectId) => {
+                                // OPTIMIZED NAVIGATION:
+                                // We do NOT update state here manually to avoid blocking the main thread.
+                                // We immediately navigate and let the URL change drive the state via useEffect.
 
-                            // 1. Save preference (Fire and forget, non-blocking)
-                            saveProjectPreference(projectId);
+                                // 1. Save preference (Fire and forget, non-blocking)
+                                saveProjectPreference(projectId);
 
-                            // 2. Navigate immediately
-                            // Extract locale from current URL
-                            const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-                            const locale = localeMatch ? localeMatch[1] : 'es';
+                                // 2. Navigate immediately
+                                // Extract locale from current URL
+                                const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+                                const locale = localeMatch ? localeMatch[1] : 'es';
 
-                            const projectPathMatch = pathname.match(/\/project\/[^/]+\/?(.*)$/);
-                            if (projectPathMatch) {
-                                // On a project page, navigate to same sub-page in new project
-                                const subPage = projectPathMatch[1] || '';
-                                nativeRouter.push(`/${locale}/project/${projectId}${subPage ? `/${subPage}` : ''}`);
-                            } else {
-                                // On organization page, navigate to project overview
-                                nativeRouter.push(`/${locale}/project/${projectId}`);
-                            }
-                        }}
-                    />
-                </div>
+                                const projectPathMatch = pathname.match(/\/project\/[^/]+\/?(.*)$/);
+                                if (projectPathMatch) {
+                                    // On a project page, navigate to same sub-page in new project
+                                    const subPage = projectPathMatch[1] || '';
+                                    nativeRouter.push(`/${locale}/project/${projectId}${subPage ? `/${subPage}` : ''}`);
+                                } else {
+                                    // On organization page, navigate to project overview
+                                    nativeRouter.push(`/${locale}/project/${projectId}`);
+                                }
+                            }}
+                        />
+                    </div>
 
-                {/* Separator */}
-                <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
+                    {/* Separator */}
+                    <div className="w-8 h-px bg-border/50 mb-2 mx-auto" />
 
-                <ScrollArea className="flex-1" type="scroll">
-                    {/* ... (Previous Content Kept Same via Context, but I need to re-render it because replace_file requires context) 
+                    <ScrollArea className="flex-1" type="scroll">
+                        {/* ... (Previous Content Kept Same via Context, but I need to re-render it because replace_file requires context) 
                         Wait, this content is huge. using replace_file_content for the whole return is risky on size.
                         I should target START and END specific lines if possible.
                         But I am wrapping EVERYTHING inside the root div.
                         
                         I'll try to just wrap the RETURN statement content.
                     */}
-                    {/* Only showing the modified structure here for clarity, will use code below */}
+                        {/* Only showing the modified structure here for clarity, will use code below */}
 
-                    {/* ============================================================ */}
-                    {/* HOME STATE: Context Buttons */}
-                    {/* ============================================================ */}
-                    {drillState === "home" && (
-                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
-                            {contexts.map(ctx => {
-                                const descriptions: Record<string, string> = {
-                                    organization: "Organización y proyectos",
-                                    learnings: "Cursos y capacitaciones",
-                                    community: "Fundadores y red Seencel",
-                                    admin: "Panel de administración"
-                                };
+                        {/* ============================================================ */}
+                        {/* HOME STATE: Context Buttons */}
+                        {/* ============================================================ */}
+                        {drillState === "home" && (
+                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="home">
+                                {contexts.map(ctx => {
+                                    const descriptions: Record<string, string> = {
+                                        organization: "Organización y proyectos",
+                                        learnings: "Cursos y capacitaciones",
+                                        community: "Fundadores y red Seencel",
+                                        admin: "Panel de administración"
+                                    };
 
-                                const labels: Record<string, string> = {
-                                    organization: "Espacio de Trabajo"
-                                };
+                                    const labels: Record<string, string> = {
+                                        organization: "Espacio de Trabajo"
+                                    };
 
-                                const isDisabled = ctx.disabled;
-                                const status = ctx.status;
+                                    const isDisabled = ctx.disabled;
+                                    const status = ctx.status;
 
-                                // Badge Logic
-                                let badge = null;
-                                if (status === 'maintenance') {
-                                    badge = (
-                                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
-                                            <Lock className="h-3 w-3 text-orange-500" />
-                                        </Badge>
+                                    // Badge Logic
+                                    let badge = null;
+                                    if (status === 'maintenance') {
+                                        badge = (
+                                            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
+                                                <Lock className="h-3 w-3 text-orange-500" />
+                                            </Badge>
+                                        );
+                                    } else if (status === 'founders') {
+                                        badge = (
+                                            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-slate-400/10 hover:bg-slate-400/20 shadow-none">
+                                                <Medal className="h-3 w-3 text-slate-400" />
+                                            </Badge>
+                                        );
+                                    }
+
+                                    const restriction: SidebarRestriction = (status as SidebarRestriction) || null;
+                                    const ctxLabel = labels[ctx.id] || ctx.label;
+
+                                    return (
+                                        <SidebarTooltip
+                                            key={ctx.id}
+                                            label={ctxLabel}
+                                            restriction={restriction}
+                                            isExpanded={isExpanded}
+                                        >
+                                            <SidebarContextButton
+                                                icon={ctx.icon}
+                                                label={ctxLabel}
+                                                description={descriptions[ctx.id]}
+                                                isExpanded={isExpanded}
+                                                onClick={() => {
+                                                    if (isDisabled) return;
+                                                    handleContextEnter(ctx.id);
+                                                }}
+                                                badge={isExpanded ? badge : null}
+                                                isLocked={!!status}
+                                                className={cn(
+                                                    isDisabled && "cursor-not-allowed hover:bg-transparent",
+                                                    !isDisabled && status && "cursor-pointer hover:opacity-60",
+                                                    ctx.hidden && "opacity-40 border border-dashed border-primary/20 bg-muted/20"
+                                                )}
+                                            />
+                                        </SidebarTooltip>
                                     );
-                                } else if (status === 'founders') {
-                                    badge = (
-                                        <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-yellow-500/10 hover:bg-yellow-500/20 shadow-none">
-                                            <Lock className="h-3 w-3 text-yellow-500" />
-                                        </Badge>
-                                    );
-                                }
+                                })}
+                            </nav>
+                        )}
 
-                                const button = (
-                                    <SidebarContextButton
-                                        key={ctx.id}
-                                        icon={ctx.icon}
-                                        label={labels[ctx.id] || ctx.label}
-                                        description={descriptions[ctx.id]}
+                        {/* ============================================================ */}
+                        {/* ORGANIZATION STATE: Direct navigation buttons */}
+                        {/* ============================================================ */}
+                        {drillState === "organization" && (
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
+                                {/* Back Button */}
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label="Volver al Hub"
+                                    isExpanded={isExpanded}
+                                    onClick={handleBack}
+                                />
+
+                                {/* Separator */}
+                                <div className="w-full h-px bg-border/30 my-1" />
+
+                                {/* Organization Nav Items */}
+                                {orgNavItems.map(renderNavItem)}
+                            </nav>
+                        )}
+
+                        {/* PROJECT STATE */}
+                        {drillState === "project" && (
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="project">
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label="Volver al Hub"
+                                    isExpanded={isExpanded}
+                                    onClick={handleBack}
+                                />
+                                <div className="w-full h-px bg-border/30 my-1" />
+                                {projectNavItems.map(renderNavItem)}
+                            </nav>
+                        )}
+
+                        {/* LEARNINGS STATE */}
+                        {drillState === "learnings" && (
+                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label="Volver al Hub"
+                                    isExpanded={isExpanded}
+                                    onClick={handleBack}
+                                />
+                                <div className="w-full h-px bg-border/30 my-1" />
+                                {getNavItems("learnings").map((item, idx) => (
+                                    <SidebarNavButton
+                                        key={idx}
+                                        icon={item.icon}
+                                        label={item.title}
+                                        href={item.href}
+                                        isActive={pathname === item.href}
                                         isExpanded={isExpanded}
-                                        onClick={() => {
-                                            if (isDisabled) return;
-                                            handleContextEnter(ctx.id);
-                                        }}
-                                        badge={isExpanded ? badge : null}
-                                        isLocked={!!status}
-                                        className={cn(
-                                            // Disabled items (Users)
-                                            isDisabled && "cursor-not-allowed hover:bg-transparent",
-                                            // Admin specific: Keep interactivity if not disabled
-                                            !isDisabled && status && "cursor-pointer hover:opacity-60",
-                                            // Hidden items (Admins only) - Override locked style
-                                            ctx.hidden && "opacity-40 border border-dashed border-primary/20 bg-muted/20"
-                                        )}
+                                        onClick={onLinkClick}
                                     />
-                                );
+                                ))}
+                            </nav>
+                        )}
 
-                                if (status === 'maintenance') {
-                                    return (
-                                        <HoverCard key={ctx.id} openDelay={100} closeDelay={100}>
-                                            <HoverCardTrigger asChild>
-                                                <div className="w-full">{button}</div>
-                                            </HoverCardTrigger>
-                                            <HoverCardContent side="right" className="w-80" align="start">
-                                                <div className="flex gap-4">
-                                                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                                                        <Lock className="h-5 w-5 text-orange-600" />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <h4 className="text-sm font-semibold">En Mantenimiento</h4>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Estamos realizando mejoras en este módulo. Estará disponible nuevamente en breve.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </HoverCardContent>
-                                        </HoverCard>
-                                    );
-                                }
-
-                                if (status === 'founders') {
-                                    return (
-                                        <HoverCard key={ctx.id} openDelay={100} closeDelay={100}>
-                                            <HoverCardTrigger asChild>
-                                                <div className="w-full">{button}</div>
-                                            </HoverCardTrigger>
-                                            <HoverCardContent side="right" className="w-80" align="start">
-                                                <div className="flex gap-4">
-                                                    <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
-                                                        <Crown className="h-5 w-5 text-yellow-600" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <div>
-                                                            <h4 className="text-sm font-semibold text-yellow-700">Acceso Fundadores</h4>
-                                                            <p className="text-xs text-muted-foreground mt-1">
-                                                                Este módulo está en acceso anticipado exclusivo para organizaciones fundadoras.
-                                                            </p>
-                                                        </div>
-                                                        <Link
-                                                            href={"/community/founders" as any}
-                                                            className="text-xs font-medium text-yellow-600 hover:text-yellow-700 flex items-center gap-1"
-                                                        >
-                                                            Conocer más <ChevronRight className="h-3 w-3" />
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                            </HoverCardContent>
-                                        </HoverCard>
-                                    );
-                                }
-
-                                return button;
-                            })}
-                        </nav>
-                    )}
-
-                    {/* ============================================================ */}
-                    {/* ORGANIZATION STATE: Direct navigation buttons */}
-                    {/* ============================================================ */}
-                    {drillState === "organization" && (
-                        <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
-                            {/* Back Button */}
-                            <SidebarNavButton
-                                icon={ArrowLeft}
-                                label="Volver al Hub"
-                                isExpanded={isExpanded}
-                                onClick={handleBack}
-                            />
-
-                            {/* Separator */}
-                            <div className="w-full h-px bg-border/30 my-1" />
-
-                            {/* Organization Nav Items */}
-                            {orgNavItems.map(renderNavItem)}
-                        </nav>
-                    )}
-
-                    {/* PROJECT STATE */}
-                    {drillState === "project" && (
-                        <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="project">
-                            <SidebarNavButton
-                                icon={ArrowLeft}
-                                label="Volver al Hub"
-                                isExpanded={isExpanded}
-                                onClick={handleBack}
-                            />
-                            <div className="w-full h-px bg-border/30 my-1" />
-                            {projectNavItems.map(renderNavItem)}
-                        </nav>
-                    )}
-
-                    {/* LEARNINGS STATE */}
-                    {drillState === "learnings" && (
-                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
-                            <SidebarNavButton
-                                icon={ArrowLeft}
-                                label="Volver al Hub"
-                                isExpanded={isExpanded}
-                                onClick={handleBack}
-                            />
-                            <div className="w-full h-px bg-border/30 my-1" />
-                            {getNavItems("learnings").map((item, idx) => (
+                        {/* COMMUNITY STATE */}
+                        {drillState === "community" && (
+                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
                                 <SidebarNavButton
-                                    key={idx}
-                                    icon={item.icon}
-                                    label={item.title}
-                                    href={item.href}
-                                    isActive={pathname === item.href}
+                                    icon={ArrowLeft}
+                                    label="Volver al Hub"
                                     isExpanded={isExpanded}
-                                    onClick={onLinkClick}
+                                    onClick={handleBack}
                                 />
-                            ))}
-                        </nav>
-                    )}
+                                <div className="w-full h-px bg-border/30 my-1" />
+                                {isExpanded && (
+                                    <div className="px-3 py-2 text-sm font-semibold text-primary">
+                                        Comunidad
+                                    </div>
+                                )}
+                                {getNavItems("community").map(renderNavItem)}
+                            </nav>
+                        )}
 
-                    {/* COMMUNITY STATE */}
-                    {drillState === "community" && (
-                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
-                            <SidebarNavButton
-                                icon={ArrowLeft}
-                                label="Volver al Hub"
-                                isExpanded={isExpanded}
-                                onClick={handleBack}
-                            />
-                            <div className="w-full h-px bg-border/30 my-1" />
-                            {isExpanded && (
-                                <div className="px-3 py-2 text-sm font-semibold text-primary">
-                                    Comunidad
-                                </div>
-                            )}
-                            {getNavItems("community").map(renderNavItem)}
-                        </nav>
-                    )}
-
-                    {/* ADMIN STATE */}
-                    {drillState === "admin" && (
-                        <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
-                            <SidebarNavButton
-                                icon={ArrowLeft}
-                                label="Volver al Hub"
-                                isExpanded={isExpanded}
-                                onClick={handleBack}
-                            />
-                            <div className="w-full h-px bg-border/30 my-1" />
-
-                            {getNavItems("admin").map((item, idx) => (
+                        {/* ADMIN STATE */}
+                        {drillState === "admin" && (
+                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
                                 <SidebarNavButton
-                                    key={idx}
-                                    icon={item.icon}
-                                    label={item.title}
-                                    href={item.href}
-                                    isActive={pathname === item.href}
+                                    icon={ArrowLeft}
+                                    label="Volver al Hub"
                                     isExpanded={isExpanded}
-                                    onClick={onLinkClick}
+                                    onClick={handleBack}
                                 />
-                            ))}
-                        </nav>
+                                <div className="w-full h-px bg-border/30 my-1" />
+
+                                {getNavItems("admin").map((item, idx) => (
+                                    <SidebarNavButton
+                                        key={idx}
+                                        icon={item.icon}
+                                        label={item.title}
+                                        href={item.href}
+                                        isActive={pathname === item.href}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
+                                ))}
+                            </nav>
+                        )}
+                    </ScrollArea>
+
+                    {/* Mode Toggle (bottom, desktop only) */}
+                    {!isMobile && (
+                        <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
+                            {/* SidebarNavButton for toggle REMOVED */}
+
+                            {/* Feedback Button REMOVED - Moved to User Menu */}
+
+                            {/* Plan Status Button */}
+                            <SidebarPlanButton isExpanded={isExpanded} />
+
+                            {/* Admin Button (only visible to admins) */}
+                            <SidebarAdminButton isExpanded={isExpanded} />
+
+                            {/* Notifications Button */}
+                            <SidebarNotificationsButton isExpanded={isExpanded} />
+
+                            {/* User Avatar Button */}
+                            <SidebarAvatarButton
+                                avatarUrl={user?.avatar_url}
+                                name={user?.full_name || "Usuario"}
+                                email={user?.email}
+                                isExpanded={isExpanded}
+                            />
+                        </div>
                     )}
-                </ScrollArea>
-
-                {/* Mode Toggle (bottom, desktop only) */}
-                {!isMobile && (
-                    <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
-                        {/* SidebarNavButton for toggle REMOVED */}
-
-                        {/* Feedback Button REMOVED - Moved to User Menu */}
-
-                        {/* Plan Status Button */}
-                        <SidebarPlanButton isExpanded={isExpanded} />
-
-                        {/* Admin Button (only visible to admins) */}
-                        <SidebarAdminButton isExpanded={isExpanded} />
-
-                        {/* Notifications Button */}
-                        <SidebarNotificationsButton isExpanded={isExpanded} />
-
-                        {/* User Avatar Button */}
-                        <SidebarAvatarButton
-                            avatarUrl={user?.avatar_url}
-                            name={user?.full_name || "Usuario"}
-                            email={user?.email}
-                            isExpanded={isExpanded}
-                        />
-                    </div>
-                )}
+                </div>
             </div>
-        </div>
+        </SidebarTooltipProvider>
     );
 }
 

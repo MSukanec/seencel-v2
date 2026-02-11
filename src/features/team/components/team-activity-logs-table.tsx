@@ -81,39 +81,6 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
             }
         },
 
-        // Módulo — text column con customRender para icon del config
-        {
-            ...createTextColumn<OrganizationActivityLog>({
-                accessorKey: "target_table",
-                title: "Módulo",
-                muted: true,
-                customRender: (value) => {
-                    const config = value ? moduleConfigs[value] : null;
-                    if (config) {
-                        const Icon = config.icon;
-                        return (
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <Icon className="h-3.5 w-3.5" />
-                                <span>{config.label}</span>
-                            </div>
-                        );
-                    }
-                    return (
-                        <span className="text-sm text-muted-foreground capitalize">
-                            {value || "-"}
-                        </span>
-                    );
-                },
-            }),
-            filterFn: (row, id, value) => {
-                const rawEntity = row.original.target_table;
-                const config = moduleConfigs[rawEntity];
-                const entityLabel = config?.label || rawEntity;
-                if (Array.isArray(value)) return value.includes(entityLabel);
-                return entityLabel.toLowerCase().includes(String(value).toLowerCase());
-            },
-        },
-
         // Acción — text column con customRender para icon del config
         {
             ...createTextColumn<OrganizationActivityLog>({
@@ -143,6 +110,39 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                 const actionVerb = getActionVerb(row.original.action);
                 if (Array.isArray(value)) return value.includes(actionVerb);
                 return actionVerb.toLowerCase().includes(String(value).toLowerCase());
+            },
+        },
+
+        // Herramienta — text column con customRender para icon del config
+        {
+            ...createTextColumn<OrganizationActivityLog>({
+                accessorKey: "target_table",
+                title: "Herramienta",
+                muted: true,
+                customRender: (value) => {
+                    const config = value ? moduleConfigs[value] : null;
+                    if (config) {
+                        const Icon = config.icon;
+                        return (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Icon className="h-3.5 w-3.5" />
+                                <span>{config.label}</span>
+                            </div>
+                        );
+                    }
+                    return (
+                        <span className="text-sm text-muted-foreground capitalize">
+                            {value || "-"}
+                        </span>
+                    );
+                },
+            }),
+            filterFn: (row, id, value) => {
+                const rawEntity = row.original.target_table;
+                const config = moduleConfigs[rawEntity];
+                const entityLabel = config?.label || rawEntity;
+                if (Array.isArray(value)) return value.includes(entityLabel);
+                return entityLabel.toLowerCase().includes(String(value).toLowerCase());
             },
         },
 
@@ -204,7 +204,7 @@ export function TeamActivityLogsTable({ data }: TeamActivityLogsTableProps) {
                 },
                 {
                     columnId: "target_table",
-                    title: "Módulo",
+                    title: "Herramienta",
                     options: Object.entries(moduleConfigs).map(([key, config]) => ({
                         label: config.label,
                         value: config.label

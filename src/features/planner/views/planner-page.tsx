@@ -36,6 +36,8 @@ interface PlannerPageViewProps {
     projects?: Project[];
     /** Max boards allowed by plan (-1 = unlimited) */
     maxBoards?: number;
+    /** Whether the organization can invite members (Teams plan) */
+    isTeamsEnabled?: boolean;
 }
 
 export function PlannerPageView({
@@ -47,7 +49,8 @@ export function PlannerPageView({
     baseUrl,
     calendarEvents,
     projects,
-    maxBoards = -1
+    maxBoards = -1,
+    isTeamsEnabled = false
 }: PlannerPageViewProps) {
     const t = useTranslations('Planner');
     const searchParams = useSearchParams();
@@ -100,6 +103,7 @@ export function PlannerPageView({
                             projects={projects}
                             baseUrl={baseUrl}
                             maxBoards={maxBoards}
+                            isTeamsEnabled={isTeamsEnabled}
                         />
                     </ContentLayout>
                 </TabsContent>

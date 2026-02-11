@@ -173,7 +173,7 @@ export function CoursesTable({ courses, instructors }: { courses: AdminCourse[],
             {
                 title: "Eliminar Curso",
                 description: "Esta acción no se puede deshacer.",
-                size: "sm"
+                size: "md"
             }
         );
     };

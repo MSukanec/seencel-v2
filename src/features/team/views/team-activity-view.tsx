@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { OrganizationActivityLog } from "@/features/team/types";
 import { TeamActivityLogsTable } from "@/features/team/components/team-activity-logs-table";
 import { ContentLayout } from "@/components/layout";
@@ -15,8 +15,13 @@ interface TeamActivityViewProps {
 }
 
 export function TeamActivityView({ logs = [] }: TeamActivityViewProps) {
-    // Search state
+    // Search state with debounce
     const [searchQuery, setSearchQuery] = useState("");
+    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const debouncedSetSearch = useCallback((value: string) => {
+        clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = setTimeout(() => setSearchQuery(value), 300);
+    }, []);
 
     // Filter states
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
@@ -141,18 +146,18 @@ export function TeamActivityView({ logs = [] }: TeamActivityViewProps) {
                 onClear={() => setSelectedUsers(new Set())}
             />
             <FacetedFilter
-                title="Módulo"
-                options={moduleOptions}
-                selectedValues={selectedModules}
-                onSelect={handleModuleSelect}
-                onClear={() => setSelectedModules(new Set())}
-            />
-            <FacetedFilter
                 title="Acción"
                 options={actionOptions}
                 selectedValues={selectedActions}
                 onSelect={handleActionSelect}
                 onClear={() => setSelectedActions(new Set())}
+            />
+            <FacetedFilter
+                title="Herramienta"
+                options={moduleOptions}
+                selectedValues={selectedModules}
+                onSelect={handleModuleSelect}
+                onClear={() => setSelectedModules(new Set())}
             />
         </>
     );
@@ -162,7 +167,7 @@ export function TeamActivityView({ logs = [] }: TeamActivityViewProps) {
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
+                onSearchChange={debouncedSetSearch}
                 searchPlaceholder="Buscar en actividad..."
                 filterContent={filterContent}
             />

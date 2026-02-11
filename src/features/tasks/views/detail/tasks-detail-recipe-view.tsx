@@ -96,7 +96,7 @@ export function TasksDetailRecipeView({
             {
                 title: "Nueva Receta",
                 description: "Definí un nombre descriptivo para la nueva receta.",
-                size: "sm",
+                size: "md",
             }
         );
     }, [task.id, openModal]);

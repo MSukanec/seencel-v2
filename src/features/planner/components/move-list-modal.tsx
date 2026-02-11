@@ -27,10 +27,11 @@ const formSchema = z.object({
 interface MoveListModalProps {
     listId: string;
     currentBoardId: string;
+    organizationId: string;
     onSuccess: () => void;
 }
 
-export function MoveListModal({ listId, currentBoardId, onSuccess }: MoveListModalProps) {
+export function MoveListModal({ listId, currentBoardId, organizationId, onSuccess }: MoveListModalProps) {
     const [isPending, startTransition] = useTransition();
     const [boards, setBoards] = useState<KanbanBoard[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,7 +52,8 @@ export function MoveListModal({ listId, currentBoardId, onSuccess }: MoveListMod
             const { data, error } = await supabase
                 .from('kanban_boards')
                 .select('*')
-                .neq('id', currentBoardId) // Exclude current board
+                .eq('organization_id', organizationId)
+                .neq('id', currentBoardId)
                 .is('deleted_at', null)
                 .order('name');
 
@@ -62,7 +64,7 @@ export function MoveListModal({ listId, currentBoardId, onSuccess }: MoveListMod
         };
 
         fetchBoards();
-    }, [currentBoardId]);
+    }, [currentBoardId, organizationId]);
 
     const onSubmit = (values: z.infer<typeof formSchema>) => {
         startTransition(async () => {

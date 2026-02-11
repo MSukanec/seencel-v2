@@ -1,5 +1,6 @@
 import { getBoards, getBoardWithData, getCalendarEvents } from "@/features/planner/queries";
 import { getProjectById } from "@/features/projects/queries";
+import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { notFound } from "next/navigation";
 import { PlannerPageView } from "@/features/planner/views/planner-page";
 
@@ -20,10 +21,13 @@ export default async function ProjectPlannerPage({ params, searchParams }: Plann
     const organizationId = project.organization_id;
 
     // Fetch data in parallel
-    const [boards, calendarEvents] = await Promise.all([
+    const [boards, calendarEvents, planFeatures] = await Promise.all([
         getBoards(organizationId, projectId),
-        getCalendarEvents(organizationId, { projectId })
+        getCalendarEvents(organizationId, { projectId }),
+        getOrganizationPlanFeatures(organizationId)
     ]);
+
+    const isTeamsEnabled = planFeatures?.can_invite_members ?? false;
 
     // Determine active board ID from URL params
     const resolvedParams = await searchParams;
@@ -53,6 +57,7 @@ export default async function ProjectPlannerPage({ params, searchParams }: Plann
             projectId={projectId}
             baseUrl={`/project/${projectId}/planner`}
             calendarEvents={calendarEvents}
+            isTeamsEnabled={isTeamsEnabled}
         />
     );
 }

@@ -14,9 +14,15 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 interface PlannerListViewProps {
     events: CalendarEvent[];
     onEventClick?: (event: CalendarEvent) => void;
+    /** Total events before filtering — to distinguish empty vs no-results */
+    totalEvents?: number;
+    /** Callback to create a new event */
+    onCreateEvent?: () => void;
+    /** Callback to reset filters */
+    onResetFilters?: () => void;
 }
 
-export function PlannerListView({ events, onEventClick }: PlannerListViewProps) {
+export function PlannerListView({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters }: PlannerListViewProps) {
     // Group events by date category
     const groupedEvents = React.useMemo(() => {
         const sorted = [...events].sort((a, b) =>
@@ -59,12 +65,29 @@ export function PlannerListView({ events, onEventClick }: PlannerListViewProps) 
     });
 
     if (events.length === 0) {
+        const isReallyEmpty = (totalEvents ?? 0) === 0;
+
+        if (isReallyEmpty) {
+            return (
+                <ViewEmptyState
+                    mode="empty"
+                    icon={CalendarIcon}
+                    viewName="Agenda"
+                    featureDescription="La agenda te permite organizar eventos, reuniones, visitas a obra y fechas importantes. Creá eventos con horarios, colores y descripciones para tener una vista completa de tu calendario."
+                    onAction={onCreateEvent}
+                    actionLabel="Nuevo Evento"
+                    docsPath="/docs/agenda/kanban"
+                />
+            );
+        }
+
         return (
             <ViewEmptyState
                 mode="no-results"
                 icon={CalendarIcon}
                 viewName="eventos"
                 filterContext="con los filtros actuales"
+                onResetFilters={onResetFilters}
             />
         );
     }

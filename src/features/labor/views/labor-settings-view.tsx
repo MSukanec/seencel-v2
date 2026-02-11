@@ -64,7 +64,7 @@ export function LaborSettingsView({
                 description: category
                     ? "Modificá los datos de la categoría de trabajo."
                     : "Creá una nueva categoría para clasificar a tus trabajadores.",
-                size: "sm",
+                size: "md",
             }
         );
     };

@@ -79,7 +79,7 @@ export function LaborTypesView({
             {
                 title: "Establecer Precio",
                 description: `Define el costo por ${laborType.unit_name || 'unidad'} para "${laborType.name}"`,
-                size: "sm"
+                size: "md"
             }
         );
     };

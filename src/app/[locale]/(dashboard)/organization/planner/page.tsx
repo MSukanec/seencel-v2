@@ -48,6 +48,7 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
 
         // Get max boards from plan (-1 = unlimited)
         const maxBoards = planFeatures?.max_org_boards ?? -1;
+        const isTeamsEnabled = planFeatures?.can_invite_members ?? false;
 
         // Determine active board ID from URL params
         const resolvedParams = await searchParams;
@@ -79,6 +80,7 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
                 calendarEvents={calendarEvents}
                 projects={projects}
                 maxBoards={maxBoards}
+                isTeamsEnabled={isTeamsEnabled}
             />
         );
     } catch (error) {

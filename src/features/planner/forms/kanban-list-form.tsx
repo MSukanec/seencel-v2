@@ -6,21 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { FormFooter } from "@/components/shared/forms/form-footer";
+import { TextField, ColorField } from "@/components/shared/forms/fields";
 import { useModal } from "@/stores/modal-store";
 import { createList, updateList } from "@/features/planner/actions";
 import { DEFAULT_LIST_COLORS, KanbanList } from "@/features/planner/types";
-import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
     name: z.string().min(1, "El nombre es obligatorio"),
@@ -50,18 +40,18 @@ export function KanbanListForm({ boardId, initialData, onSuccess, onOptimisticCr
     });
 
     function onSubmit(values: z.infer<typeof formSchema>) {
-        startTransition(async () => {
-            try {
-                if (initialData) {
-                    // Optimistic update
-                    const optimisticItem: KanbanList = {
-                        ...initialData,
-                        name: values.name,
-                        color: values.color || null,
-                    };
-                    onOptimisticUpdate?.(optimisticItem);
-                    closeModal();
+        if (initialData) {
+            // Optimistic update - execute immediately
+            const optimisticItem: KanbanList = {
+                ...initialData,
+                name: values.name,
+                color: values.color || null,
+            };
+            onOptimisticUpdate?.(optimisticItem);
+            closeModal();
 
+            startTransition(async () => {
+                try {
                     const result = await updateList(initialData.id, {
                         board_id: boardId,
                         name: values.name,
@@ -69,24 +59,32 @@ export function KanbanListForm({ boardId, initialData, onSuccess, onOptimisticCr
                     });
                     toast.success("Columna actualizada");
                     onSuccess?.(result);
-                } else {
-                    // Create with temporary ID for optimistic UI
-                    const tempId = `temp-${Date.now()}`;
-                    const tempList: KanbanList = {
-                        id: tempId,
-                        board_id: boardId,
-                        name: values.name,
-                        color: values.color || null,
-                        position: 9999, // Will be at the end
-                        limit_wip: null,
-                        auto_complete: false,
-                        is_collapsed: false,
-                        cards: [],
-                        created_at: new Date().toISOString(),
-                    };
-                    onOptimisticCreate?.(tempList);
-                    closeModal();
+                } catch (error) {
+                    console.error(error);
+                    onRollback?.(initialData.id);
+                    toast.error("Error al actualizar la columna");
+                }
+            });
+        } else {
+            // Optimistic create - execute immediately
+            const tempId = `temp-${Date.now()}`;
+            const tempList: KanbanList = {
+                id: tempId,
+                board_id: boardId,
+                name: values.name,
+                color: values.color || null,
+                position: 9999,
+                limit_wip: null,
+                auto_complete: false,
+                is_collapsed: false,
+                cards: [],
+                created_at: new Date().toISOString(),
+            };
+            onOptimisticCreate?.(tempList);
+            closeModal();
 
+            startTransition(async () => {
+                try {
                     const result = await createList({
                         board_id: boardId,
                         name: values.name,
@@ -94,88 +92,42 @@ export function KanbanListForm({ boardId, initialData, onSuccess, onOptimisticCr
                     });
                     toast.success("Columna creada");
                     onSuccess?.(result);
+                } catch (error) {
+                    console.error(error);
+                    // Remove temp item
+                    onRollback?.(tempId);
+                    toast.error("Error al crear la columna");
                 }
-            } catch (error) {
-                console.error(error);
-                // Rollback optimistic update
-                if (initialData) {
-                    onRollback?.(initialData.id);
-                } else {
-                    // Remove temp item - parent handles via refresh
-                }
-                toast.error(initialData ? "Error al actualizar la columna" : "Error al crear la columna");
-            }
-        });
+            });
+        }
     }
 
-    const selectedColor = form.watch("color");
-
     return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nombre</FormLabel>
-                            <FormControl>
-                                <Input
-                                    placeholder="Ej: Por hacer, En progreso, Hecho..."
-                                    autoFocus
-                                    {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-full min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+                <TextField
+                    label="Nombre"
+                    value={form.watch("name") || ""}
+                    onChange={(val) => form.setValue("name", val)}
+                    placeholder="Ej: Por hacer, En progreso, Hecho..."
+                    autoFocus
+                    error={form.formState.errors.name?.message}
                 />
 
-                <FormField
-                    control={form.control}
-                    name="color"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Color (opcional)</FormLabel>
-                            <div className="flex flex-wrap gap-3 p-1">
-                                {DEFAULT_LIST_COLORS.map((color) => (
-                                    <button
-                                        key={color}
-                                        type="button"
-                                        className={cn(
-                                            "w-7 h-7 rounded-full transition-all",
-                                            "hover:scale-110 hover:shadow-md",
-                                            selectedColor === color && "ring-2 ring-offset-2 ring-primary"
-                                        )}
-                                        style={{ backgroundColor: color }}
-                                        onClick={() => field.onChange(color)}
-                                    />
-                                ))}
-                                {/* No color option */}
-                                <button
-                                    type="button"
-                                    className={cn(
-                                        "w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/30",
-                                        "hover:scale-110 hover:border-muted-foreground/50 transition-all",
-                                        !selectedColor && "ring-2 ring-offset-2 ring-primary"
-                                    )}
-                                    onClick={() => field.onChange("")}
-                                    title="Sin color"
-                                />
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+                <ColorField
+                    label="Color (opcional)"
+                    value={form.watch("color")}
+                    onChange={(val) => form.setValue("color", val)}
+                    colors={DEFAULT_LIST_COLORS}
                 />
+            </div>
 
-                <FormFooter
-                    className="-mx-4 -mb-4 mt-6"
-                    onCancel={closeModal}
-                    isLoading={isPending}
-                    submitLabel={initialData ? "Guardar Cambios" : "Crear Columna"}
-                />
-            </form>
-        </Form>
+            <FormFooter
+                className="-mx-4 -mb-4 mt-6"
+                onCancel={closeModal}
+                isLoading={isPending}
+                submitLabel={initialData ? "Guardar Cambios" : "Crear Columna"}
+            />
+        </form>
     );
 }
-

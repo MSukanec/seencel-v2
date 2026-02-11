@@ -26,7 +26,7 @@ interface ToolbarTabsProps {
 
 export function ToolbarTabs({ value, onValueChange, options, className }: ToolbarTabsProps) {
     return (
-        <div className={cn("inline-flex items-center h-9 p-1 bg-muted/50 rounded-md", className)}>
+        <div className={cn("inline-flex items-center h-9 p-1 bg-background/50 rounded-md border border-dashed border-input", className)}>
             {options.map((option) => {
                 const isSelected = value === option.value;
                 const Icon = option.icon;
@@ -38,7 +38,7 @@ export function ToolbarTabs({ value, onValueChange, options, className }: Toolba
                         size="sm"
                         onClick={() => onValueChange(option.value)}
                         className={cn(
-                            "relative h-full px-3 text-sm font-medium transition-all hover:bg-transparent flex-1",
+                            "relative h-full px-2.5 text-xs font-medium transition-all hover:bg-transparent flex-1",
                             isSelected
                                 ? "text-primary-foreground shadow-sm"
                                 : "text-muted-foreground hover:text-foreground"
@@ -52,8 +52,8 @@ export function ToolbarTabs({ value, onValueChange, options, className }: Toolba
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             />
                         )}
-                        <span className="relative z-10 flex items-center gap-2">
-                            {Icon && <Icon className="h-4 w-4" />}
+                        <span className="relative z-10 flex items-center gap-1.5">
+                            {Icon && <Icon className="h-3.5 w-3.5" />}
                             {option.label}
                         </span>
                     </Button>

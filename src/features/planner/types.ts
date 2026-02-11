@@ -209,7 +209,6 @@ export const DEFAULT_LIST_COLORS = [
     '#f43f5e', // Rose
     '#f97316', // Orange
     '#eab308', // Yellow
-    '#22c55e', // Green
     '#14b8a6', // Teal
     '#0ea5e9', // Sky
     '#84cc16', // Lime

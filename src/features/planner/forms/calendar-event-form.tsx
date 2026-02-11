@@ -5,16 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { CalendarIcon, Clock, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -22,14 +16,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { DateField, NotesField, TimeField, TextField, SwitchField } from "@/components/shared/forms/fields";
 
 import { CalendarEvent, EVENT_COLORS } from "@/features/planner/types";
 import { createCalendarEvent, updateCalendarEvent } from "@/features/planner/actions";
@@ -241,199 +230,138 @@ export function CalendarEventForm({
             <div className="flex-1 overflow-y-auto min-h-0 pr-2">
                 <div className="space-y-4">
                     {/* Title */}
-                    <FormGroup label="Título" error={form.formState.errors.title?.message}>
-                        <Input
-                            placeholder="Reunión de proyecto..."
-                            {...form.register("title")}
-                        />
-                    </FormGroup>
+                    <TextField
+                        label="Título"
+                        value={form.watch("title") || ""}
+                        onChange={(val) => form.setValue("title", val)}
+                        placeholder="Reunión de proyecto..."
+                        error={form.formState.errors.title?.message}
+                    />
 
-                    {/* Project Selector (Optional) */}
-                    <FormGroup label="Proyecto (Opcional)">
-                        <Select
-                            value={form.watch("project_id") || "none"}
-                            onValueChange={(val) => form.setValue("project_id", val === "none" ? null : val)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar proyecto..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Sin proyecto (Global)</SelectItem>
-                                {projects?.map((project) => (
-                                    <SelectItem key={project.id} value={project.id}>
+                    {/* Project + Color (inline) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormGroup label="Proyecto (Opcional)">
+                            <Select
+                                value={form.watch("project_id") || "none"}
+                                onValueChange={(val) => form.setValue("project_id", val === "none" ? null : val)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar proyecto..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Sin proyecto (Global)</SelectItem>
+                                    {projects?.map((project) => (
+                                        <SelectItem key={project.id} value={project.id}>
+                                            <div className="flex items-center gap-2">
+                                                {project.custom_color_hex && (
+                                                    <div
+                                                        className="w-2 h-2 rounded-full"
+                                                        style={{ backgroundColor: project.custom_color_hex }}
+                                                    />
+                                                )}
+                                                {project.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+
+                        <FormGroup label="Color">
+                            <Select
+                                onValueChange={(val) => form.setValue("color", val)}
+                                value={form.watch("color")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue>
                                         <div className="flex items-center gap-2">
-                                            {project.custom_color_hex && (
-                                                <div
-                                                    className="w-2 h-2 rounded-full"
-                                                    style={{ backgroundColor: project.custom_color_hex }}
-                                                />
-                                            )}
-                                            {project.name}
+                                            <div
+                                                className="w-4 h-4 rounded-full"
+                                                style={{ backgroundColor: form.watch("color") }}
+                                            />
+                                            {EVENT_COLORS.find(c => c.value === form.watch("color"))?.name || "Azul"}
                                         </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {EVENT_COLORS.map((color) => (
+                                        <SelectItem key={color.value} value={color.value}>
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="w-4 h-4 rounded-full"
+                                                    style={{ backgroundColor: color.value }}
+                                                />
+                                                {color.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormGroup>
+                    </div>
 
                     {/* All Day Toggle */}
-                    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <Label className="text-base text-foreground">Todo el día</Label>
-                            <p className="text-sm text-muted-foreground">
-                                El evento ocupa todo el día sin hora específica.
-                            </p>
-                        </div>
-                        <Switch
-                            checked={form.watch("is_all_day")}
-                            onCheckedChange={(val) => form.setValue("is_all_day", val)}
-                        />
-                    </div>
+                    <SwitchField
+                        label="Todo el día"
+                        description="El evento ocupa todo el día sin hora específica."
+                        value={form.watch("is_all_day")}
+                        onChange={(val) => form.setValue("is_all_day", val)}
+                    />
 
                     {/* Start Date/Time */}
                     <div className={cn("grid gap-4", isAllDay ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
-                        <FormGroup label="Fecha inicio">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !form.watch("start_date") && "text-muted-foreground"
-                                        )}
-                                    >
-                                        {form.watch("start_date") ? (
-                                            format(form.watch("start_date"), "PPP", { locale: es })
-                                        ) : (
-                                            <span>Seleccionar fecha</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={form.watch("start_date")}
-                                        onSelect={(date) => date && form.setValue("start_date", date)}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        </FormGroup>
+                        <DateField
+                            label="Fecha inicio"
+                            value={form.watch("start_date")}
+                            onChange={(date) => date && form.setValue("start_date", date)}
+                        />
 
                         {!isAllDay && (
-                            <FormGroup label="Hora inicio">
-                                <div className="relative">
-                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="time"
-                                        className="pl-10"
-                                        {...form.register("start_time")}
-                                    />
-                                </div>
-                            </FormGroup>
+                            <TimeField
+                                label="Hora inicio"
+                                value={form.watch("start_time") || "00:00"}
+                                onChange={(val) => form.setValue("start_time", val)}
+                            />
                         )}
                     </div>
 
                     {/* End Date/Time */}
                     <div className={cn("grid gap-4", isAllDay ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
-                        <FormGroup label="Fecha fin (opcional)">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !form.watch("end_date") && "text-muted-foreground"
-                                        )}
-                                    >
-                                        {form.watch("end_date") ? (
-                                            format(form.watch("end_date")!, "PPP", { locale: es })
-                                        ) : (
-                                            <span>Sin fecha fin</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={form.watch("end_date") || undefined}
-                                        onSelect={(date) => form.setValue("end_date", date || null)}
-                                        disabled={(date) => date < form.watch("start_date")}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        </FormGroup>
+                        <DateField
+                            label="Fecha fin (opcional)"
+                            value={form.watch("end_date") || undefined}
+                            onChange={(date) => form.setValue("end_date", date || null)}
+                            required={false}
+                            placeholder="Sin fecha fin"
+                        />
 
                         {!isAllDay && (
-                            <FormGroup label="Hora fin">
-                                <div className="relative">
-                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="time"
-                                        className="pl-10"
-                                        {...form.register("end_time")}
-                                    />
-                                </div>
-                            </FormGroup>
+                            <TimeField
+                                label="Hora fin"
+                                value={form.watch("end_time") || "00:00"}
+                                onChange={(val) => form.setValue("end_time", val)}
+                            />
                         )}
                     </div>
 
                     {/* Location */}
-                    <FormGroup label="Ubicación">
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Oficina, Obra, etc."
-                                className="pl-10"
-                                {...form.register("location")}
-                            />
-                        </div>
-                    </FormGroup>
-
-                    {/* Color */}
-                    <FormGroup label="Color">
-                        <Select
-                            onValueChange={(val) => form.setValue("color", val)}
-                            value={form.watch("color")}
-                        >
-                            <SelectTrigger>
-                                <SelectValue>
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="w-4 h-4 rounded-full"
-                                            style={{ backgroundColor: form.watch("color") }}
-                                        />
-                                        {EVENT_COLORS.find(c => c.value === form.watch("color"))?.name || "Azul"}
-                                    </div>
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {EVENT_COLORS.map((color) => (
-                                    <SelectItem key={color.value} value={color.value}>
-                                        <div className="flex items-center gap-2">
-                                            <div
-                                                className="w-4 h-4 rounded-full"
-                                                style={{ backgroundColor: color.value }}
-                                            />
-                                            {color.name}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <TextField
+                        label="Ubicación"
+                        value={form.watch("location") || ""}
+                        onChange={(val) => form.setValue("location", val)}
+                        placeholder="Oficina, Obra, etc."
+                        icon={MapPin}
+                        required={false}
+                    />
 
                     {/* Description */}
-                    <FormGroup label="Descripción">
-                        <Textarea
-                            placeholder="Notas adicionales..."
-                            className="min-h-[80px] resize-none"
-                            {...form.register("description")}
-                        />
-                    </FormGroup>
+                    <NotesField
+                        label="Descripción"
+                        value={form.watch("description") || ""}
+                        onChange={(val) => form.setValue("description", val)}
+                        placeholder="Notas adicionales..."
+                        rows={3}
+                    />
                 </div>
             </div>
 

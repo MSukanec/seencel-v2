@@ -24,7 +24,7 @@ export function EmptyState({
         <div
             className={cn(
                 "relative flex flex-col items-center justify-center flex-1 min-h-0 h-full p-8 text-center animate-in fade-in-50 zoom-in-95 duration-500 overflow-hidden",
-                "border-2 border-dashed border-primary/25 rounded-xl",
+                "border-2 border-dashed border-muted-foreground/20 rounded-xl",
                 className
             )}
         >
@@ -43,17 +43,17 @@ export function EmptyState({
             />
 
             {/* Accent Gradient Blur (Subtle ambient light) */}
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-muted-foreground/5 via-transparent to-transparent opacity-50 pointer-events-none" />
 
             <div className="relative mb-6 z-10">
                 {/* Icon Container with Bounce/Float Animation */}
                 <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-card to-muted border border-border shadow-sm animate-[bounce_3s_infinite] rotate-3 hover:rotate-6 transition-transform duration-500">
                     {/* Inner glow */}
-                    <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-md" />
-                    <Icon className="relative h-10 w-10 text-primary/80" />
+                    <div className="absolute inset-0 bg-muted-foreground/5 rounded-2xl blur-md" />
+                    <Icon className="relative h-10 w-10 text-muted-foreground/60" />
 
                     {/* Decorative square element */}
-                    <div className="absolute -top-2 -right-2 w-6 h-6 border-2 border-primary/20 rounded-md animate-[spin_8s_linear_infinite]" />
+                    <div className="absolute -top-2 -right-2 w-6 h-6 border-2 border-muted-foreground/15 rounded-md animate-[spin_8s_linear_infinite]" />
                 </div>
             </div>
 

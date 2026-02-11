@@ -198,7 +198,7 @@ export function FeatureGuard({
                 <Badge
                     variant="secondary"
                     className={cn(
-                        "absolute -top-1.5 -right-1.5 h-5 px-1.5 text-[10px] font-semibold",
+                        "absolute -top-1.5 right-0 h-5 px-1.5 text-[10px] font-semibold",
                         "text-white border-0",
                         "flex items-center gap-0.5 shadow-lg",
                         "group-hover:scale-110 transition-transform"

@@ -123,6 +123,30 @@ Para cada página, verificar los siguientes puntos en orden. NO pasar al siguien
 - [ ] El `docsPath` en el `ViewEmptyState` apunta a la documentación correcta
 - [ ] El botón de documentación funciona correctamente (abre en nueva tab)
 
+### 13. SHARED FORM FIELDS
+
+- [ ] Forms usan `TextField`, `NotesField`, `ColorField`, etc. de `@/components/shared/forms/fields` (NO `FormField`+`Input` manuales)
+- [ ] NO hay `<Form>`, `<FormField>`, `<FormControl>`, `<FormItem>` de `@/components/ui/form` en forms nuevos
+- [ ] Los forms pasan `error={form.formState.errors.field?.message}` a los shared fields
+
+### 14. MODALES Y FOOTER STICKY
+
+- [ ] El `<form>` usa `className="flex flex-col max-h-full min-h-0"`
+- [ ] El contenido está en `<div className="flex-1 overflow-y-auto min-h-0 space-y-4">`
+- [ ] `FormFooter` está FUERA del div scrollable (queda sticky abajo)
+- [ ] Ningún modal usa `size: "sm"` (ya no existe) — mínimo `"md"`
+
+### 15. OPTIMISTIC UPDATES COMPLETOS
+
+- [ ] Create, edit Y delete son todos optimistas (no solo create)
+- [ ] Las condiciones de empty state usan la lista optimista (`optimisticItems`), no la del server (`initialItems`)
+- [ ] Queries client-side (si existen) filtran por `organization_id` para evitar data leakage cross-org
+
+### 16. LOADING STATES
+
+- [ ] Existe `loading.tsx` en la carpeta de la ruta con `PageSkeleton`
+- [ ] El `PageSkeleton` usa `variant` y `contentType` apropiados al contenido de la página
+
 ---
 
 ## PROCESO DE EJECUCIÓN

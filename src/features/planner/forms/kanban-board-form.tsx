@@ -6,22 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-    FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { FormFooter } from "@/components/shared/forms/form-footer";
+import { TextField, NotesField, ColorField } from "@/components/shared/forms/fields";
 import { useModal } from "@/stores/modal-store";
 import { createBoard, updateBoard } from "@/features/planner/actions";
 import { DEFAULT_LIST_COLORS, KanbanBoard } from "@/features/planner/types";
-import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
     name: z.string().min(1, "El nombre es obligatorio"),
@@ -34,9 +23,15 @@ interface KanbanBoardFormProps {
     projectId?: string | null;
     initialData?: KanbanBoard;
     onSuccess?: (newBoard?: any) => void;
+    /** Optimistic: instantly add temp board before server responds */
+    onOptimisticCreate?: (tempBoard: KanbanBoard) => void;
+    /** Optimistic: instantly update board before server responds */
+    onOptimisticUpdate?: (updatedBoard: KanbanBoard) => void;
+    /** Rollback on server error */
+    onRollback?: () => void;
 }
 
-export function KanbanBoardForm({ organizationId, projectId, initialData, onSuccess }: KanbanBoardFormProps) {
+export function KanbanBoardForm({ organizationId, projectId, initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanBoardFormProps) {
     const [isPending, startTransition] = useTransition();
     const { closeModal } = useModal();
     const isEditing = !!initialData;
@@ -51,19 +46,55 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
     });
 
     function onSubmit(values: z.infer<typeof formSchema>) {
-        startTransition(async () => {
-            try {
-                let resultBoard;
+        if (isEditing && initialData) {
+            // Optimistic edit — update UI immediately
+            const optimisticBoard: KanbanBoard = {
+                ...initialData,
+                name: values.name,
+                description: values.description || null,
+                color: values.color || null,
+            };
+            onOptimisticUpdate?.(optimisticBoard);
+            closeModal();
 
-                if (isEditing && initialData) {
-                    resultBoard = await updateBoard(initialData.id, {
+            startTransition(async () => {
+                try {
+                    const resultBoard = await updateBoard(initialData.id, {
                         name: values.name,
                         description: values.description,
                         color: values.color,
                     });
                     toast.success("Panel actualizado");
-                } else {
-                    resultBoard = await createBoard({
+                    onSuccess?.(resultBoard);
+                } catch (error) {
+                    console.error(error);
+                    onRollback?.();
+                    toast.error("Error al actualizar");
+                }
+            });
+        } else {
+            // Optimistic create — execute immediately OUTSIDE startTransition
+            if (onOptimisticCreate) {
+                const tempBoard: KanbanBoard = {
+                    id: `temp-${Date.now()}`,
+                    name: values.name,
+                    description: values.description || null,
+                    color: values.color || "#84cc16",
+                    organization_id: organizationId,
+                    project_id: projectId || null,
+                    icon: null,
+                    is_template: false,
+                    is_archived: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    created_by: null,
+                };
+                onOptimisticCreate(tempBoard);
+            }
+
+            startTransition(async () => {
+                try {
+                    const resultBoard = await createBoard({
                         name: values.name,
                         description: values.description,
                         organization_id: organizationId,
@@ -71,95 +102,51 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                         color: values.color,
                     });
                     toast.success("Panel creado");
+                    onSuccess?.(resultBoard);
+                } catch (error) {
+                    console.error(error);
+                    onRollback?.();
+                    toast.error("Error al crear el panel");
                 }
-
-                onSuccess?.(resultBoard);
-            } catch (error) {
-                console.error(error);
-                toast.error(isEditing ? "Error al actualizar" : "Error al crear el panel");
-            }
-        });
+            });
+        }
     }
 
-    const selectedColor = form.watch("color");
-
     return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nombre del Panel</FormLabel>
-                            <FormControl>
-                                <Input
-                                    placeholder="Ej: Sprint 1, Roadmap Q1, Ideas..."
-                                    autoFocus
-                                    {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col max-h-full min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+                <TextField
+                    label="Nombre del Panel"
+                    value={form.watch("name") || ""}
+                    onChange={(val) => form.setValue("name", val)}
+                    placeholder="Ej: Sprint 1, Roadmap Q1, Ideas..."
+                    autoFocus
+                    error={form.formState.errors.name?.message}
                 />
 
-                <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Descripción</FormLabel>
-                            <FormControl>
-                                <Textarea
-                                    placeholder="¿Para qué es este tablero? (opcional)"
-                                    className="resize-none"
-                                    rows={2}
-                                    {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+                <NotesField
+                    label="Descripción"
+                    value={form.watch("description") || ""}
+                    onChange={(val) => form.setValue("description", val)}
+                    placeholder="¿Para qué es este tablero? (opcional)"
+                    rows={2}
                 />
 
-                <FormField
-                    control={form.control}
-                    name="color"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Color del Panel</FormLabel>
-                            <FormDescription>
-                                Este color aparecerá en la lista de paneles
-                            </FormDescription>
-                            <div className="flex flex-wrap gap-3 p-1 mt-2">
-                                {DEFAULT_LIST_COLORS.map((color) => (
-                                    <button
-                                        key={color}
-                                        type="button"
-                                        className={cn(
-                                            "w-8 h-8 rounded-lg transition-all",
-                                            "hover:scale-110 hover:shadow-md",
-                                            selectedColor === color && "ring-2 ring-offset-2 ring-primary scale-110"
-                                        )}
-                                        style={{ backgroundColor: color }}
-                                        onClick={() => field.onChange(color)}
-                                    />
-                                ))}
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+                <ColorField
+                    label="Color del Panel"
+                    value={form.watch("color")}
+                    onChange={(val) => form.setValue("color", val)}
+                    colors={DEFAULT_LIST_COLORS}
+                    allowNone={false}
                 />
+            </div>
 
-                <FormFooter
-                    className="-mx-4 -mb-4 mt-6"
-                    onCancel={closeModal}
-                    isLoading={isPending}
-                    submitLabel={isEditing ? "Guardar Cambios" : "Crear Panel"}
-                />
-            </form>
-        </Form>
+            <FormFooter
+                className="-mx-4 -mb-4 mt-6"
+                onCancel={closeModal}
+                isLoading={isPending}
+                submitLabel={isEditing ? "Guardar Cambios" : "Crear Panel"}
+            />
+        </form>
     );
 }
-

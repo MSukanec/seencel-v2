@@ -69,7 +69,7 @@ export function KanbanColumn({
             ref={innerRef}
             {...draggableProps}
             className={cn(
-                "flex flex-col bg-card rounded-xl w-full h-full",
+                "flex flex-col bg-card rounded-xl w-full max-h-full",
                 "border shadow-sm",
                 isDragOver && "border-primary/50 ring-2 ring-primary/20",
             )}
@@ -200,20 +200,13 @@ export function KanbanColumn({
 
                             {/* Empty State visual helper if needed, but placeholder handles height */}
                             {activeCards.length === 0 && (
-                                <div
-                                    className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground"
+                                <button
+                                    onClick={onAddCard}
+                                    className="w-full h-12 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors cursor-pointer"
                                 >
-                                    <p className="text-sm">Sin tarjetas</p>
-                                    <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="text-xs mt-1"
-                                        onClick={onAddCard}
-                                    >
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Agregar tarjeta
-                                    </Button>
-                                </div>
+                                    <Plus className="h-4 w-4" />
+                                    Agregar tarjeta
+                                </button>
                             )}
                         </div>
                     )}

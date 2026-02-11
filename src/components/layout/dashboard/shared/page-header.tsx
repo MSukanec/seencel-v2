@@ -91,7 +91,7 @@ export function PageHeader({
             {/* DESKTOP LAYOUT (Hidden on Mobile) */}
             <div className="hidden md:block">
                 {/* Row 1: Title + Tabs + Actions */}
-                <div className="px-8 h-14 flex items-center justify-between gap-4">
+                <div className="px-8 h-[50px] flex items-center justify-between gap-4">
                     {/* Left: Page Title & Icon & Tabs */}
                     <div className="flex items-center gap-6 h-full">
                         <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export function PageHeader({
                             ) : ActiveIcon ? (
                                 <ActiveIcon className="h-5 w-5 text-primary" />
                             ) : null}
-                            <h1 className="text-lg font-semibold tracking-tight text-foreground">
+                            <h1 className="text-base font-semibold tracking-tight text-foreground">
                                 {activeItem?.title || titleItem?.label}
                             </h1>
                         </div>
@@ -117,19 +117,19 @@ export function PageHeader({
                                 "[&_[role=tablist]]:!bg-transparent [&_[role=tablist]]:!p-0 [&_[role=tablist]]:!gap-0 [&_[role=tablist]]:!h-full",
                                 // TabTrigger - Base
                                 "[&_[role=tab]]:!relative [&_[role=tab]]:!h-full [&_[role=tab]]:!rounded-none [&_[role=tab]]:!bg-transparent",
-                                "[&_[role=tab]]:!px-6 [&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none [&_[role=tab]]:!border-b [&_[role=tab]]:!border-transparent",
+                                "[&_[role=tab]]:!px-6 [&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none [&_[role=tab]]:!border-none",
+                                "[&_[role=tab]]:!cursor-pointer",
                                 // TabTrigger - Active
                                 "[&_[role=tab][data-state=active]]:!text-primary [&_[role=tab][data-state=active]]:!bg-transparent",
-                                "[&_[role=tab][data-state=active]]:!shadow-none [&_[role=tab][data-state=active]]:!border-primary",
-                                // Pseudo-elements (Gradient & Underline Animation)
-                                // We use standard CSS generation for these as they are additive, but we ensure positioning is correct
-                                "[&_[role=tab]]:after:absolute [&_[role=tab]]:after:bottom-0 [&_[role=tab]]:after:left-0 [&_[role=tab]]:after:right-0",
-                                "[&_[role=tab]]:after:h-[1px] [&_[role=tab]]:after:scale-x-0 [&_[role=tab]]:after:bg-primary",
+                                "[&_[role=tab][data-state=active]]:!shadow-none",
+                                // Pseudo-elements: Line on TOP + gradient going DOWN (short)
+                                "[&_[role=tab]]:after:absolute [&_[role=tab]]:after:top-0 [&_[role=tab]]:after:left-0 [&_[role=tab]]:after:right-0",
+                                "[&_[role=tab]]:after:h-[2px] [&_[role=tab]]:after:scale-x-0 [&_[role=tab]]:after:bg-primary",
                                 "[&_[role=tab]]:after:transition-transform [&_[role=tab]]:after:duration-300",
                                 "[&_[role=tab][data-state=active]]:after:scale-x-100",
-                                // Gradient
-                                "[&_[role=tab]]:before:absolute [&_[role=tab]]:before:inset-0",
-                                "[&_[role=tab]]:before:bg-gradient-to-t [&_[role=tab]]:before:from-primary/10 [&_[role=tab]]:before:to-transparent",
+                                // Gradient: from top to bottom, short (60% height)
+                                "[&_[role=tab]]:before:absolute [&_[role=tab]]:before:top-0 [&_[role=tab]]:before:left-0 [&_[role=tab]]:before:right-0 [&_[role=tab]]:before:h-[60%]",
+                                "[&_[role=tab]]:before:bg-gradient-to-b [&_[role=tab]]:before:from-primary/10 [&_[role=tab]]:before:to-transparent",
                                 "[&_[role=tab]]:before:opacity-0 [&_[role=tab]]:before:transition-opacity [&_[role=tab]]:before:duration-300",
                                 "[&_[role=tab][data-state=active]]:before:opacity-100"
                             )}>
@@ -164,7 +164,7 @@ export function PageHeader({
                 {/* Row 2: Toolbar Portal Target - Auto-hides when empty */}
                 <div
                     id="toolbar-portal-root"
-                    className="px-8 py-2 empty:hidden empty:p-0"
+                    className="px-8 py-1.5 empty:hidden empty:p-0"
                 />
 
                 {children}

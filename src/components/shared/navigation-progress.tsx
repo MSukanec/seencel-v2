@@ -5,8 +5,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 /**
- * Global navigation progress bar that shows when navigating between pages.
- * Provides instant visual feedback that something is happening.
+ * Global navigation progress bar — ultra-thin, fast, and subtle.
+ * Shows a brief flash of progress at the top during page transitions.
+ * Designed to complement (not compete with) loading.tsx skeletons.
  */
 export function NavigationProgress() {
     const pathname = usePathname();
@@ -16,21 +17,15 @@ export function NavigationProgress() {
 
     // Track navigation start
     React.useEffect(() => {
-        const handleStart = () => {
-            setIsNavigating(true);
-            setProgress(0);
-        };
-
-        // Listen for click events on links
         const handleClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             const link = target.closest('a[href]') as HTMLAnchorElement;
 
             if (link && link.href && !link.target && !e.ctrlKey && !e.metaKey) {
                 const url = new URL(link.href);
-                // Only trigger for internal navigation
                 if (url.origin === window.location.origin && url.pathname !== pathname) {
-                    handleStart();
+                    setIsNavigating(true);
+                    setProgress(0);
                 }
             }
         };
@@ -39,19 +34,17 @@ export function NavigationProgress() {
         return () => document.removeEventListener('click', handleClick, true);
     }, [pathname]);
 
-    // Progress animation while navigating
+    // Fast progress animation — reaches 80% quickly then holds briefly
     React.useEffect(() => {
         if (!isNavigating) return;
 
         const interval = setInterval(() => {
             setProgress(prev => {
-                // Slow down as we approach 90%
-                if (prev >= 90) return prev;
-                if (prev >= 70) return prev + 0.5;
-                if (prev >= 50) return prev + 1;
-                return prev + 3;
+                if (prev >= 85) return prev;
+                if (prev >= 60) return prev + 2;
+                return prev + 8;
             });
-        }, 50);
+        }, 40);
 
         return () => clearInterval(interval);
     }, [isNavigating]);
@@ -63,7 +56,7 @@ export function NavigationProgress() {
             const timeout = setTimeout(() => {
                 setIsNavigating(false);
                 setProgress(0);
-            }, 200);
+            }, 150);
             return () => clearTimeout(timeout);
         }
     }, [pathname, searchParams]);
@@ -71,11 +64,11 @@ export function NavigationProgress() {
     if (!isNavigating && progress === 0) return null;
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-[9999] h-0.5 bg-transparent">
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-[2px] bg-transparent pointer-events-none">
             <div
                 className={cn(
-                    "h-full bg-primary transition-all duration-200 ease-out",
-                    progress === 100 && "opacity-0"
+                    "h-full bg-primary/70 transition-all duration-150 ease-out",
+                    progress === 100 && "opacity-0 transition-opacity duration-300"
                 )}
                 style={{ width: `${progress}%` }}
             />

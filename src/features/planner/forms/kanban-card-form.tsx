@@ -3,15 +3,10 @@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTransition, useState } from "react";
+import { useTransition, useCallback } from "react";
 import { toast } from "sonner";
-import { Loader2, Upload, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { compressImage } from "@/lib/client-image-compression";
-import { getStorageUrl } from "@/lib/storage-utils";
 import { parseDateFromDB, formatDateForDB } from "@/lib/timezone-data";
 
-import { Button } from "@/components/ui/button";
 import {
     Form,
     FormControl,
@@ -20,8 +15,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -30,6 +23,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { FormFooter } from "@/components/shared/forms/form-footer";
+import { DateField, NotesField, TextField, UploadField, AssignedToField } from "@/components/shared/forms/fields";
+import type { UploadedFile } from "@/hooks/use-file-upload";
 import { useModal } from "@/stores/modal-store";
 import { createCard, updateCard } from "@/features/planner/actions";
 import { PRIORITY_CONFIG, KanbanPriority, KanbanCard, KanbanMember } from "@/features/planner/types";
@@ -75,9 +70,11 @@ interface KanbanCardFormProps {
     onOptimisticCreate?: (tempCard: KanbanCard) => void;
     onOptimisticUpdate?: (card: KanbanCard) => void;
     onRollback?: () => void;
+    /** Whether the organization can invite members (Teams plan) */
+    isTeamsEnabled?: boolean;
 }
 
-export function KanbanCardForm({ boardId, listId, projectId, projects = [], members = [], initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanCardFormProps) {
+export function KanbanCardForm({ boardId, listId, projectId, projects = [], members = [], initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback, isTeamsEnabled = false }: KanbanCardFormProps) {
     const [isPending, startTransition] = useTransition();
     const { closeModal } = useModal();
 
@@ -96,100 +93,89 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
         },
     });
 
-    const [isUploading, setIsUploading] = useState(false);
+    // Convert cover_image_url string to UploadedFile for UploadField
+    const coverUrl = form.watch('cover_image_url');
+    const coverValue: UploadedFile | null = coverUrl
+        ? { id: 'existing-cover', url: coverUrl, path: '', name: 'Portada', type: 'image/jpeg', size: 0, bucket: 'kanban-covers' }
+        : null;
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setIsUploading(true);
-        try {
-            // Compress
-            const compressedFile = await compressImage(file, 'project-cover');
-
-            // Upload
-            const supabase = createClient();
-            const fileName = `${boardId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('kanban-covers')
-                .upload(fileName, compressedFile as File);
-
-            if (uploadError) throw uploadError;
-
-            // Get URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('kanban-covers')
-                .getPublicUrl(fileName);
-
-            form.setValue('cover_image_url', publicUrl);
-            toast.success("Portada subida");
-        } catch (error) {
-            console.error(error);
-            toast.error("Error al subir imagen");
-        } finally {
-            setIsUploading(false);
-        }
-    };
+    const handleCoverChange = useCallback((file: UploadedFile | UploadedFile[] | null) => {
+        // Defer to avoid "Cannot update component while rendering" error
+        queueMicrotask(() => {
+            if (file && !Array.isArray(file)) {
+                form.setValue('cover_image_url', file.url);
+            } else {
+                form.setValue('cover_image_url', null);
+            }
+        });
+    }, [form]);
 
 
     async function onSubmit(values: FormValues) {
-        startTransition(async () => {
-            try {
-                const selectedProjectId = values.project_id === "none" ? null : (values.project_id || null);
+        const selectedProjectId = values.project_id === "none" ? null : (values.project_id || null);
 
-                const cardData = {
-                    title: values.title,
-                    description: values.description || null,
-                    priority: values.priority as KanbanPriority,
-                    due_date: values.due_date || null,
-                    start_date: values.start_date || null,
-                    estimated_hours: values.estimated_hours || null,
-                    assigned_to: (values.assigned_to === "none" ? null : values.assigned_to) || null,
-                    cover_image_url: values.cover_image_url || null,
-                };
+        const cardData = {
+            title: values.title,
+            description: values.description || null,
+            priority: values.priority as KanbanPriority,
+            due_date: values.due_date || null,
+            start_date: values.start_date || null,
+            estimated_hours: null,
+            assigned_to: (values.assigned_to === "none" ? null : values.assigned_to) || null,
+            cover_image_url: values.cover_image_url || null,
+        };
 
-                if (initialData) {
-                    // Optimistic update
-                    const optimisticCard: KanbanCard = {
-                        ...initialData,
-                        ...cardData,
-                    };
-                    onOptimisticUpdate?.(optimisticCard);
-                    closeModal();
+        if (initialData) {
+            // Optimistic update - execute immediately
+            const optimisticCard: KanbanCard = {
+                ...initialData,
+                ...cardData,
+            };
+            onOptimisticUpdate?.(optimisticCard);
+            closeModal();
 
+            startTransition(async () => {
+                try {
                     const result = await updateCard(initialData.id, cardData);
                     toast.success("Tarjeta actualizada");
                     onSuccess?.(result);
-                } else {
-                    // Create with temporary ID for optimistic UI
-                    const tempId = `temp-${Date.now()}`;
-                    const tempCard: KanbanCard = {
-                        id: tempId,
-                        list_id: listId,
-                        board_id: boardId,
-                        title: cardData.title,
-                        description: cardData.description,
-                        position: 9999,
-                        priority: cardData.priority,
-                        due_date: cardData.due_date,
-                        start_date: cardData.start_date,
-                        is_completed: false,
-                        completed_at: null,
-                        is_archived: false,
-                        cover_color: null,
-                        cover_image_url: cardData.cover_image_url || null,
-                        estimated_hours: cardData.estimated_hours,
-                        actual_hours: null,
-                        assigned_to: cardData.assigned_to,
-                        created_at: new Date().toISOString(),
-                        updated_at: null,
-                        created_by: null,
-                        project_id: selectedProjectId,
-                    };
-                    onOptimisticCreate?.(tempCard);
-                    closeModal();
+                } catch (error) {
+                    console.error(error);
+                    onRollback?.();
+                    toast.error("Error al actualizar la tarjeta");
+                }
+            });
+        } else {
+            // Optimistic create - execute immediately
+            const tempId = `temp-${Date.now()}`;
+            const tempCard: KanbanCard = {
+                id: tempId,
+                list_id: listId,
+                board_id: boardId,
+                title: cardData.title,
+                description: cardData.description,
+                position: 9999,
+                priority: cardData.priority,
+                due_date: cardData.due_date,
+                start_date: cardData.start_date,
+                is_completed: false,
+                completed_at: null,
+                is_archived: false,
+                cover_color: null,
+                cover_image_url: cardData.cover_image_url || null,
+                estimated_hours: cardData.estimated_hours,
+                actual_hours: null,
+                assigned_to: cardData.assigned_to,
+                created_at: new Date().toISOString(),
+                updated_at: null,
+                created_by: null,
+                project_id: selectedProjectId,
+            };
+            onOptimisticCreate?.(tempCard);
+            closeModal();
 
+            startTransition(async () => {
+                try {
                     const result = await createCard({
                         board_id: boardId,
                         list_id: listId,
@@ -198,64 +184,19 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
                     });
                     toast.success("Tarjeta creada");
                     onSuccess?.(result);
+                } catch (error) {
+                    console.error(error);
+                    onRollback?.();
+                    toast.error("Error al crear la tarjeta");
                 }
-            } catch (error) {
-                console.error(error);
-                onRollback?.();
-                toast.error(initialData ? "Error al actualizar la tarjeta" : "Error al crear la tarjeta");
-            }
-        });
+            });
+        }
     }
 
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
                 <div className="flex-1 overflow-y-auto space-y-4">
-                    {/* Cover Image Section */}
-                    <div className="space-y-2">
-                        <FormLabel>Portada</FormLabel>
-                        <div className="flex items-center gap-4">
-                            {form.watch('cover_image_url') ? (
-                                <div className="relative w-full h-32 rounded-lg overflow-hidden border group">
-                                    <img
-                                        src={form.watch('cover_image_url') || ""}
-                                        alt="Cover"
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => form.setValue('cover_image_url', null)}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center w-full h-24 border-2 border-dashed rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors">
-                                    <label className="flex flex-col items-center cursor-pointer p-4 w-full">
-                                        {isUploading ? (
-                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                        ) : (
-                                            <>
-                                                <Upload className="h-6 w-6 text-muted-foreground mb-1" />
-                                                <span className="text-xs text-muted-foreground">Subir imagen</span>
-                                            </>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={handleImageUpload}
-                                            disabled={isUploading}
-                                        />
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
                     {/* Project Selector - Only visible when accessing from organization (not project) */}
                     {!projectId && (
                         <FormField
@@ -288,83 +229,17 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
                         />
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control as any}
-                            name="title"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Título</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="¿Qué hay que hacer?"
-                                            autoFocus
-                                            {...field}
-                                            value={field.value ?? ""}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control as any}
-                            name="assigned_to"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Asignado a</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value || "none"}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Sin asignar" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="none">Sin asignar</SelectItem>
-                                            {members.map((member) => (
-                                                <SelectItem key={member.id} value={member.id}>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-4 w-4 rounded-full bg-muted overflow-hidden">
-                                                            {member.avatar_url && (
-                                                                <img src={member.avatar_url} alt="" className="h-full w-full object-cover" />
-                                                            )}
-                                                        </div>
-                                                        {member.full_name || "Usuario"}
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-
-                    <FormField
-                        control={form.control as any}
-                        name="description"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Descripción</FormLabel>
-                                <FormControl>
-                                    <Textarea
-                                        placeholder="Detalles adicionales (opcional)"
-                                        className="resize-none"
-                                        rows={3}
-                                        {...field}
-                                        value={field.value ?? ""}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+                    {/* Título */}
+                    <TextField
+                        label="Título"
+                        value={form.watch("title") || ""}
+                        onChange={(val) => form.setValue("title", val)}
+                        placeholder="¿Qué hay que hacer?"
+                        autoFocus
+                        required
                     />
 
+                    {/* Prioridad / Asignado a */}
                     <div className="grid grid-cols-2 gap-4">
                         <FormField
                             control={form.control as any}
@@ -396,63 +271,51 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
                             )}
                         />
 
-                        <FormField
-                            control={form.control as any}
-                            name="start_date"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Fecha inicio</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="date"
-                                            {...field}
-                                            value={field.value ?? ""}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control as any}
-                            name="due_date"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Fecha límite</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="date"
-                                            {...field}
-                                            value={field.value ?? ""}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control as any}
-                            name="estimated_hours"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Estimación (hs)</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="number"
-                                            step="0.5"
-                                            min="0"
-                                            placeholder="0"
-                                            {...field}
-                                            value={field.value ?? ""}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
+                        <AssignedToField
+                            value={form.watch("assigned_to")}
+                            onChange={(val) => form.setValue("assigned_to", val)}
+                            members={members}
+                            isTeamsEnabled={isTeamsEnabled}
                         />
                     </div>
+
+                    {/* Fecha inicio / Fecha límite */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <DateField
+                            label="Fecha inicio"
+                            value={form.watch("start_date") ? parseDateFromDB(form.watch("start_date")!) ?? undefined : undefined}
+                            onChange={(date) => form.setValue("start_date", date ? formatDateForDB(date) : null)}
+                            required={false}
+                        />
+
+                        <DateField
+                            label="Fecha límite"
+                            value={form.watch("due_date") ? parseDateFromDB(form.watch("due_date")!) ?? undefined : undefined}
+                            onChange={(date) => form.setValue("due_date", date ? formatDateForDB(date) : null)}
+                            required={false}
+                        />
+                    </div>
+
+                    {/* Descripción */}
+                    <NotesField
+                        label="Descripción"
+                        value={form.watch("description") || ""}
+                        onChange={(val) => form.setValue("description", val || null)}
+                        placeholder="Detalles adicionales (opcional)"
+                        rows={3}
+                    />
+
+                    {/* Portada */}
+                    <UploadField
+                        label="Portada"
+                        mode="single-image"
+                        value={coverValue}
+                        onChange={handleCoverChange}
+                        bucket="kanban-covers"
+                        folderPath={`${boardId}`}
+                        compressionPreset="project-cover"
+                        required={false}
+                    />
                 </div>
 
                 <div className="flex items-center gap-2 mt-6">

@@ -600,7 +600,7 @@ export function MaterialsCatalogView({
                 description: parentId
                     ? "Crear una subcategoría dentro de la categoría seleccionada"
                     : "Crear una nueva categoría de materiales",
-                size: "sm"
+                size: "md"
             }
         );
     };
@@ -622,7 +622,7 @@ export function MaterialsCatalogView({
             {
                 title: "Editar Categoría",
                 description: "Modifica el nombre de la categoría",
-                size: "sm"
+                size: "md"
             }
         );
     };

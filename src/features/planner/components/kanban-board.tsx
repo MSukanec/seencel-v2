@@ -5,7 +5,8 @@ import { KanbanBoard as KanbanBoardType, KanbanCard, KanbanLabel, KanbanList, Ka
 import { Project } from "@/types/project";
 import { KanbanColumn } from "./kanban-column";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutGrid } from "lucide-react";
+import { Plus, LayoutGrid, Columns3 } from "lucide-react";
+import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useState, useCallback, useEffect } from "react";
 import { useModal } from "@/stores/modal-store";
 import { KanbanCardForm } from "../forms/kanban-card-form";
@@ -26,6 +27,8 @@ interface KanbanBoardProps {
     searchQuery?: string;
     selectedPriorities?: string[];
     selectedLabels?: string[];
+    /** Whether the organization can invite members (Teams plan) */
+    isTeamsEnabled?: boolean;
 }
 
 export function KanbanBoard({
@@ -36,7 +39,8 @@ export function KanbanBoard({
     projects = [],
     searchQuery = "",
     selectedPriorities = [],
-    selectedLabels = []
+    selectedLabels = [],
+    isTeamsEnabled = false
 }: KanbanBoardProps) {
     const { openModal, closeModal } = useModal();
     const router = useRouter();
@@ -184,6 +188,7 @@ export function KanbanBoard({
                 projectId={board.project_id}
                 projects={projects}
                 members={members}
+                isTeamsEnabled={isTeamsEnabled}
                 onOptimisticCreate={addOptimisticCard}
                 onRollback={() => setOrderedLists(lists)}
             />,
@@ -234,7 +239,7 @@ export function KanbanBoard({
             {
                 title: "Nueva Columna",
                 description: "Agrega una nueva columna al panel",
-                size: "sm"
+                size: "md"
             }
         );
     }, [board.id, openModal, addOptimisticList]);
@@ -254,7 +259,7 @@ export function KanbanBoard({
             {
                 title: "Editar Columna",
                 description: `Modifica los detalles de ${list.name}`,
-                size: "sm"
+                size: "md"
             }
         );
     }, [board.id, openModal, lists, updateOptimisticList]);
@@ -302,6 +307,7 @@ export function KanbanBoard({
             <MoveListModal
                 listId={list.id}
                 currentBoardId={board.id}
+                organizationId={board.organization_id}
                 onSuccess={() => {
                     // Optimistic: remove list from current board
                     removeOptimisticList(list.id);
@@ -311,7 +317,7 @@ export function KanbanBoard({
             {
                 title: "Mover columna",
                 description: `Mover la columna "${list.name}" a otro panel`,
-                size: "sm"
+                size: "md"
             }
         );
     }, [board.id, openModal, closeModal, removeOptimisticList]);
@@ -326,6 +332,7 @@ export function KanbanBoard({
                 projects={projects}
                 initialData={card}
                 members={members}
+                isTeamsEnabled={isTeamsEnabled}
                 onOptimisticUpdate={updateOptimisticCard}
                 onRollback={() => setOrderedLists(lists)}
             />,
@@ -339,79 +346,75 @@ export function KanbanBoard({
 
     return (
         <div className="flex flex-col h-full">
-            <DragDropContext onDragEnd={onDragEnd}>
-                {/* Mobile: Full-bleed snap carousel. Desktop: Normal horizontal scroll */}
-                <div className="flex-1 overflow-x-auto overflow-y-hidden no-scrollbar md:scrollbar-default">
-                    <Droppable droppableId="board" type="list" direction="horizontal">
-                        {(provided) => (
-                            <div
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className="flex h-full gap-3 md:gap-4 px-[10vw] md:px-8 py-4 snap-x snap-mandatory md:snap-none scroll-smooth"
-                            >
-                                {/* Columns */}
-                                {orderedLists.map((list, index) => (
-                                    <Draggable key={list.id} draggableId={list.id} index={index}>
-                                        {(provided, snapshot) => (
-                                            <div
-                                                ref={provided.innerRef}
-                                                {...provided.draggableProps}
-                                                className="shrink-0 w-[80vw] md:w-[320px] snap-center h-full"
-                                            >
-                                                <KanbanColumn
-                                                    draggableProps={{}}
-                                                    dragHandleProps={provided.dragHandleProps}
-                                                    isDragOver={snapshot.isDragging}
-                                                    list={list}
-                                                    cards={filterCards(list.cards || [])}
-                                                    members={members}
-                                                    onAddCard={() => handleAddCard(list.id)}
-                                                    onCardClick={handleCardClick}
-                                                    onEditList={() => handleEditList(list)}
-                                                    onDeleteList={() => handleDeleteList(list)}
-                                                    onMoveList={() => handleMoveList(list)}
-                                                />
-                                            </div>
-                                        )}
-                                    </Draggable>
-                                ))}
-                                {provided.placeholder}
+            {orderedLists.length === 0 ? (
+                /* Empty State - No columns yet, centered */
+                <div className="flex-1 flex items-center justify-center p-8">
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={Columns3}
+                        viewName="Columnas"
+                        featureDescription="Las columnas te permiten organizar tus tarjetas en diferentes estados o categorías. Creá columnas como 'Por hacer', 'En progreso' y 'Listo' para gestionar el flujo de trabajo de tu equipo."
+                        onAction={handleAddList}
+                        actionLabel="Crear primera columna"
+                        docsPath="/docs/agenda/kanban"
+                    />
+                </div>
+            ) : (
+                <DragDropContext onDragEnd={onDragEnd}>
+                    {/* Mobile: Full-bleed snap carousel. Desktop: Normal horizontal scroll */}
+                    <div className="flex-1 overflow-x-auto overflow-y-hidden no-scrollbar md:scrollbar-default">
+                        <Droppable droppableId="board" type="list" direction="horizontal">
+                            {(provided) => (
+                                <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className="flex h-full gap-3 md:gap-4 px-[10vw] md:px-8 py-4 snap-x snap-mandatory md:snap-none scroll-smooth"
+                                >
+                                    {/* Columns */}
+                                    {orderedLists.map((list, index) => (
+                                        <Draggable key={list.id} draggableId={list.id} index={index}>
+                                            {(provided, snapshot) => (
+                                                <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    className="shrink-0 w-[80vw] md:w-[320px] snap-center h-full"
+                                                >
+                                                    <KanbanColumn
+                                                        draggableProps={{}}
+                                                        dragHandleProps={provided.dragHandleProps}
+                                                        isDragOver={snapshot.isDragging}
+                                                        list={list}
+                                                        cards={filterCards(list.cards || [])}
+                                                        members={members}
+                                                        onAddCard={() => handleAddCard(list.id)}
+                                                        onCardClick={handleCardClick}
+                                                        onEditList={() => handleEditList(list)}
+                                                        onDeleteList={() => handleDeleteList(list)}
+                                                        onMoveList={() => handleMoveList(list)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
 
-                                {/* Add Column Button (end of board) */}
-                                <div className="shrink-0 w-[80vw] md:w-[280px] snap-center">
-                                    <Button
-                                        variant="outline"
-                                        className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground hover:border-primary/50"
-                                        onClick={handleAddList}
-                                    >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Agregar columna
-                                    </Button>
-                                </div>
-
-                                {/* Empty State */}
-                                {orderedLists.length === 0 && (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
-                                        <div className="rounded-full bg-muted p-4 mb-4">
-                                            <LayoutGrid className="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                        <h3 className="text-lg font-semibold mb-1">
-                                            Panel vacío
-                                        </h3>
-                                        <p className="text-muted-foreground text-sm mb-4 max-w-xs">
-                                            Comienza agregando columnas para organizar tus tarjetas
-                                        </p>
-                                        <Button onClick={handleAddList}>
+                                    {/* Add Column Button */}
+                                    <div className="shrink-0 w-[80vw] md:w-[280px] snap-center">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full h-12 border-dashed border-2 text-muted-foreground hover:text-foreground hover:border-primary/50"
+                                            onClick={handleAddList}
+                                        >
                                             <Plus className="h-4 w-4 mr-2" />
-                                            Crear primera columna
+                                            Agregar columna
                                         </Button>
                                     </div>
-                                )}
-                            </div>
-                        )}
-                    </Droppable>
-                </div>
-            </DragDropContext>
+                                </div>
+                            )}
+                        </Droppable>
+                    </div>
+                </DragDropContext>
+            )}
         </div>
     );
 }

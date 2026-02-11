@@ -214,7 +214,13 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                 <div className="flex-1 overflow-hidden p-0">
                     <PlannerListView
                         events={filteredEvents}
+                        totalEvents={optimisticEvents.length}
                         onEventClick={(e) => openEventForm(undefined, e)}
+                        onCreateEvent={handleNewEvent}
+                        onResetFilters={() => {
+                            setSearchQuery("");
+                            setTypeFilter(new Set());
+                        }}
                     />
                 </div>
             </div>

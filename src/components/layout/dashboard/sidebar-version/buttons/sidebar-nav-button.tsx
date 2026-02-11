@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 // ============================================================================
 // Used for page navigation within contexts (Finanzas, Catálogo, etc.)
 // Shows: Icon (16x16) + Title (single line, left-aligned)
+// Tooltip is handled externally by SidebarTooltip component.
 // ============================================================================
 
 interface SidebarNavButtonProps {
@@ -36,7 +37,15 @@ export function SidebarNavButton({
     disabled,
     isLocked
 }: SidebarNavButtonProps) {
+    const router = useRouter();
     const lockedClass = isLocked ? "opacity-40 grayscale text-muted-foreground" : "";
+
+    // Prefetch on hover for faster navigation
+    const handleMouseEnter = React.useCallback(() => {
+        if (href && !disabled) {
+            router.prefetch(href as any);
+        }
+    }, [href, disabled, router]);
 
     const content = (
         <div
@@ -52,7 +61,6 @@ export function SidebarNavButton({
             {/* Icon - 16x16 */}
             <div className={cn(
                 "w-8 h-8 flex items-center justify-center shrink-0",
-                // Icon inherits color (muted -> foreground on hover), or forces foreground if active
                 isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
                 lockedClass
             )}>
@@ -82,10 +90,10 @@ export function SidebarNavButton({
         return <div className="w-full">{content}</div>;
     }
 
-    // If href is provided, wrap in Link
+    // If href is provided, wrap in Link with prefetch on hover
     if (href) {
         return (
-            <Link href={href as any} onClick={onClick} className="w-full block">
+            <Link href={href as any} onClick={onClick} onMouseEnter={handleMouseEnter} className="w-full block">
                 {content}
             </Link>
         );
@@ -98,4 +106,3 @@ export function SidebarNavButton({
         </button>
     );
 }
-
