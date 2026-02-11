@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
     ExternalLink,
     Film,
     File,
+    FolderOpen,
     Grid,
     List
 } from "lucide-react";
@@ -20,9 +21,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { FileItem } from "../types";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
+import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { parseDateFromDB } from "@/lib/timezone-data";
 
 // ============================================================================
-// FILE GALLERY COMPONENT
+// FILE GALLERY VIEW
 // ============================================================================
 
 interface FileGalleryProps {
@@ -31,9 +35,18 @@ interface FileGalleryProps {
 }
 
 export function FileGallery({ files, onRefresh }: FileGalleryProps) {
-    const [filter, setFilter] = useState("all");
+    const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Debounced search (300ms)
+    const debouncedSearch = useCallback((value: string) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            setSearchQuery(value);
+        }, 300);
+    }, []);
 
     const filteredFiles = files.filter((item) => {
         // Text search
@@ -44,10 +57,15 @@ export function FileGallery({ files, onRefresh }: FileGalleryProps) {
             }
         }
 
-        // Type filter
-        if (filter === "all") return true;
-        if (filter === "images") return item.media_files.file_type === 'image';
-        if (filter === "docs") return item.media_files.file_type !== 'image' && item.media_files.file_type !== 'video';
+        // Type filter (FacetedFilter uses Set — empty means "all")
+        if (selectedTypes.size > 0) {
+            const fileType = item.media_files.file_type;
+            if (selectedTypes.has("images") && fileType === 'image') return true;
+            if (selectedTypes.has("docs") && fileType !== 'image' && fileType !== 'video') return true;
+            if (selectedTypes.has("videos") && fileType === 'video') return true;
+            return false;
+        }
+
         return true;
     });
 
@@ -72,11 +90,44 @@ export function FileGallery({ files, onRefresh }: FileGalleryProps) {
         return `${supabaseUrl}/storage/v1/object/public/${file.bucket}/${file.file_path}`;
     };
 
-    const filterOptions = [
-        { label: "Todos", value: "all", icon: File },
+    const formatFileDate = (dateStr: string | null | undefined) => {
+        if (!dateStr) return '';
+        const date = parseDateFromDB(dateStr);
+        if (!date) return '';
+        return date.toLocaleDateString();
+    };
+
+    // FacetedFilter options for file types
+    const typeFilterOptions = [
         { label: "Imágenes", value: "images", icon: ImageIcon },
         { label: "Documentos", value: "docs", icon: FileText },
+        { label: "Videos", value: "videos", icon: Film },
     ];
+
+    // ToolbarTabs options for view mode (Grid / List)
+    const viewModeOptions = [
+        { label: "Grilla", value: "grid", icon: Grid },
+        { label: "Lista", value: "list", icon: List },
+    ];
+
+    const handleTypeSelect = (value: string) => {
+        setSelectedTypes((prev) => {
+            const next = new Set(prev);
+            if (next.has(value)) {
+                next.delete(value);
+            } else {
+                next.add(value);
+            }
+            return next;
+        });
+    };
+
+    const hasFilters = searchQuery !== "" || selectedTypes.size > 0;
+
+    const handleResetFilters = () => {
+        setSearchQuery("");
+        setSelectedTypes(new Set());
+    };
 
     return (
         <div className="h-full flex flex-col">
@@ -84,44 +135,48 @@ export function FileGallery({ files, onRefresh }: FileGalleryProps) {
             <Toolbar
                 portalToHeader
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
+                onSearchChange={debouncedSearch}
                 searchPlaceholder="Buscar archivos..."
                 leftActions={
                     <div className="flex items-center gap-2">
                         <ToolbarTabs
-                            value={filter}
-                            onValueChange={setFilter}
-                            options={filterOptions}
+                            value={viewMode}
+                            onValueChange={(v) => setViewMode(v as "grid" | "list")}
+                            options={viewModeOptions}
                         />
-                        <div className="flex items-center gap-1 bg-muted/50 rounded-md p-0.5 ml-2">
-                            <Button
-                                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setViewMode('grid')}
-                            >
-                                <Grid className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setViewMode('list')}
-                            >
-                                <List className="h-4 w-4" />
-                            </Button>
-                        </div>
+                        <FacetedFilter
+                            title="Tipo"
+                            options={typeFilterOptions}
+                            selectedValues={selectedTypes}
+                            onSelect={handleTypeSelect}
+                            onClear={() => setSelectedTypes(new Set())}
+                        />
                     </div>
                 }
             />
 
             {/* Content */}
             <ScrollArea className="flex-1">
-                {filteredFiles.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground border-2 border-dashed rounded-xl bg-muted/5 mx-4 my-6">
-                        <ImageIcon className="h-12 w-12 mb-4 opacity-50" />
-                        <p className="text-lg font-medium">No hay archivos en esta categoría</p>
-                        <p className="text-sm">Sube archivos para empezar a construir tu galería.</p>
+                {/* Empty state: no files at all */}
+                {files.length === 0 ? (
+                    <div className="flex items-center justify-center h-[400px]">
+                        <ViewEmptyState
+                            mode="empty"
+                            icon={FolderOpen}
+                            viewName="Archivos"
+                            featureDescription="Los archivos son todos los documentos, imágenes y recursos que subís a tu organización. Acá vas a encontrar todo lo que tu equipo comparte."
+                        />
+                    </div>
+                ) : filteredFiles.length === 0 ? (
+                    /* No results from filters/search */
+                    <div className="flex items-center justify-center h-[400px]">
+                        <ViewEmptyState
+                            mode="no-results"
+                            icon={FolderOpen}
+                            viewName="archivos"
+                            filterContext="con esos filtros"
+                            onResetFilters={handleResetFilters}
+                        />
                     </div>
                 ) : (
                     <div className={viewMode === 'grid'
@@ -146,7 +201,7 @@ export function FileGallery({ files, onRefresh }: FileGalleryProps) {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium truncate">{file.file_name}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {[formatSize(file.file_size), file.created_at && new Date(file.created_at).toLocaleDateString()].filter(Boolean).join(' • ')}
+                                                {[formatSize(file.file_size), formatFileDate(file.created_at)].filter(Boolean).join(' • ')}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -205,7 +260,7 @@ export function FileGallery({ files, onRefresh }: FileGalleryProps) {
                                                     {file.file_name}
                                                 </h3>
                                                 <p className="text-xs text-muted-foreground mt-1">
-                                                    {[formatSize(file.file_size), file.created_at && new Date(file.created_at).toLocaleDateString()].filter(Boolean).join(' • ')}
+                                                    {[formatSize(file.file_size), formatFileDate(file.created_at)].filter(Boolean).join(' • ')}
                                                 </p>
                                             </div>
                                             <DropdownMenu>
@@ -215,7 +270,6 @@ export function FileGallery({ files, onRefresh }: FileGalleryProps) {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>Ver detalles</DropdownMenuItem>
                                                     <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
