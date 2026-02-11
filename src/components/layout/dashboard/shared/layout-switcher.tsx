@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { SidebarLayout } from "../sidebar-version/sidebar-layout";
+import { SidebarLayout } from "../sidebar/sidebar-layout";
 import { GlobalDrawer } from "./drawer/global-drawer";
 import { UserProfile } from "@/types/user";
 

@@ -20,8 +20,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ArrowLeft, Hammer, Sparkles, Mail } from "lucide-react";
-import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
+import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Hammer, Sparkles, Mail } from "lucide-react";
+import { useSidebarNavigation, NavItem } from "@/hooks/use-sidebar-navigation";
 import { useLayoutStore, useActiveProjectId } from "@/stores/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -30,15 +30,51 @@ import { useTheme } from "next-themes";
 import { useUser } from "@/stores/user-store";
 import { useOrganization } from "@/stores/organization-store";
 
-// Types for drill-down navigation
+// ─── Types ───────────────────────────────────────────────────────────────────
 type NavigationLevel = 'main' | 'context';
 type ContextId = string | null;
+
+/** A group of nav items: either top-level (no header) or a named section */
+interface NavGroup {
+    header: string | null;
+    items: NavItem[];
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Split flat NavItem[] (with sectionHeader markers) into logical groups */
+function groupNavItems(items: NavItem[]): NavGroup[] {
+    const groups: NavGroup[] = [];
+    let currentGroup: NavGroup = { header: null, items: [] };
+
+    for (const item of items) {
+        if (item.sectionHeader) {
+            // Push the previous group if it has items
+            if (currentGroup.items.length > 0) {
+                groups.push(currentGroup);
+            }
+            // Start a new named section
+            currentGroup = { header: item.sectionHeader, items: [item] };
+        } else {
+            currentGroup.items.push(item);
+        }
+    }
+
+    // Push the last group
+    if (currentGroup.items.length > 0) {
+        groups.push(currentGroup);
+    }
+
+    return groups;
+}
 
 export function MobileNav() {
     const [open, setOpen] = React.useState(false);
     const [level, setLevel] = React.useState<NavigationLevel>('main');
     const [activeContextId, setActiveContextId] = React.useState<ContextId>(null);
     const [isAnimating, setIsAnimating] = React.useState(false);
+    // Which accordion section is open (by header name), null = all closed
+    const [openAccordion, setOpenAccordion] = React.useState<string | null>(null);
 
     const user = useUser();
     const { activeOrgId } = useOrganization();
@@ -57,10 +93,10 @@ export function MobileNav() {
     // Reset navigation when sheet closes
     React.useEffect(() => {
         if (!open) {
-            // Small delay to allow close animation
             const timer = setTimeout(() => {
                 setLevel('main');
                 setActiveContextId(null);
+                setOpenAccordion(null);
             }, 300);
             return () => clearTimeout(timer);
         }
@@ -77,6 +113,7 @@ export function MobileNav() {
         setIsAnimating(true);
         setActiveContextId(contextId);
         setLevel('context');
+        setOpenAccordion(null);
         setTimeout(() => setIsAnimating(false), 300);
     };
 
@@ -87,7 +124,13 @@ export function MobileNav() {
         setTimeout(() => {
             setActiveContextId(null);
             setIsAnimating(false);
+            setOpenAccordion(null);
         }, 300);
+    };
+
+    // Toggle accordion — close current if clicking the same, else open new one
+    const toggleAccordion = (header: string) => {
+        setOpenAccordion(prev => prev === header ? null : header);
     };
 
     // Build context list including project if active
@@ -101,11 +144,9 @@ export function MobileNav() {
             status?: string;
         }> = [];
 
-        // Add organization first
         const orgContext = contexts.find(c => c.id === 'organization');
         if (orgContext) list.push(orgContext);
 
-        // Add project if active
         if (activeProjectId) {
             list.push({
                 id: 'project',
@@ -114,7 +155,6 @@ export function MobileNav() {
             });
         }
 
-        // Add remaining contexts
         contexts.forEach(ctx => {
             if (ctx.id !== 'organization') {
                 list.push(ctx);
@@ -127,6 +167,52 @@ export function MobileNav() {
     // Get current context data
     const currentContext = allContexts.find(c => c.id === activeContextId);
     const currentItems = activeContextId ? getNavItems(activeContextId as any) : [];
+    const currentGroups = React.useMemo(() => groupNavItems(currentItems), [currentItems]);
+
+    // Auto-open accordion if user is currently on a page within that section
+    React.useEffect(() => {
+        if (level === 'context' && currentGroups.length > 0) {
+            for (const group of currentGroups) {
+                if (group.header && group.items.some(item => pathname === item.href)) {
+                    setOpenAccordion(group.header);
+                    return;
+                }
+            }
+        }
+    }, [level, activeContextId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ─── Render item link ────────────────────────────────────────────────────
+    const renderNavLink = (item: NavItem, idx: number) => {
+        const isActive = pathname === item.href;
+        const Icon = item.icon;
+
+        return (
+            <Link
+                key={idx}
+                href={item.href as any}
+                onClick={() => {
+                    setOpen(false);
+                    actions.setActiveContext(activeContextId as any);
+                }}
+                className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] transition-all group",
+                    isActive
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "hover:bg-muted/60 text-foreground/70 hover:text-foreground"
+                )}
+            >
+                <div className={cn(
+                    "flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
+                    isActive
+                        ? "bg-primary/15"
+                        : "bg-muted/40 group-hover:bg-muted/60"
+                )}>
+                    <Icon className="h-4 w-4" />
+                </div>
+                <span>{item.title}</span>
+            </Link>
+        );
+    };
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -149,7 +235,6 @@ export function MobileNav() {
                             >
                                 <ArrowLeft className="h-4 w-4" />
                             </button>
-                            {/* Current Context Display - Name only, no icon */}
                             {currentContext && (
                                 <span className="font-semibold text-foreground flex-1">{currentContext.label}</span>
                             )}
@@ -164,7 +249,7 @@ export function MobileNav() {
 
                 {/* Navigation container with slide animation */}
                 <div className="flex-1 relative overflow-hidden">
-                    {/* Main Level - Context List */}
+                    {/* ═══ Main Level - Context List ═══ */}
                     <div
                         className={cn(
                             "absolute inset-0 bg-background transition-transform duration-300 ease-out",
@@ -195,7 +280,6 @@ export function MobileNav() {
                                     <span className="flex-1">Hub</span>
                                 </Link>
 
-                                {/* Divider */}
                                 <div className="h-px bg-border/50 my-2 mx-3" />
 
                                 {/* Contexts - Drill down navigation */}
@@ -245,7 +329,7 @@ export function MobileNav() {
                         </div>
                     </div>
 
-                    {/* Context Level - Navigation Items */}
+                    {/* ═══ Context Level - Grouped Navigation Items with Accordions ═══ */}
                     <div
                         className={cn(
                             "absolute inset-0 bg-background transition-transform duration-300 ease-out",
@@ -254,42 +338,62 @@ export function MobileNav() {
                     >
                         <div className="h-full overflow-y-auto">
                             {currentContext && (
-                                <>
-                                    {/* Navigation Items - No header here, it's now in the main header */}
-                                    <nav className="p-2 space-y-0.5">
-                                        {currentItems.map((item, idx) => {
-                                            const isActive = pathname === item.href;
-                                            const Icon = item.icon;
-
+                                <nav className="p-2 space-y-0.5">
+                                    {currentGroups.map((group, groupIdx) => {
+                                        // Top-level items (no section header) → render as direct links
+                                        if (!group.header) {
                                             return (
-                                                <Link
-                                                    key={idx}
-                                                    href={item.href as any}
-                                                    onClick={() => {
-                                                        setOpen(false);
-                                                        actions.setActiveContext(activeContextId as any);
-                                                    }}
+                                                <div key={`group-${groupIdx}`} className="space-y-0.5">
+                                                    {group.items.map((item, idx) => renderNavLink(item, idx))}
+                                                </div>
+                                            );
+                                        }
+
+                                        // Named section → render as collapsible accordion
+                                        const isOpen = openAccordion === group.header;
+                                        const hasActiveItem = group.items.some(item => pathname === item.href);
+
+                                        return (
+                                            <div key={`group-${groupIdx}`}>
+                                                {/* Separator before each accordion section */}
+                                                <div className="h-px bg-border/40 my-2 mx-3" />
+
+                                                {/* Accordion trigger */}
+                                                <button
+                                                    onClick={() => toggleAccordion(group.header!)}
                                                     className={cn(
-                                                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] transition-all group",
-                                                        isActive
-                                                            ? "bg-primary/10 text-primary font-medium"
-                                                            : "hover:bg-muted/60 text-foreground/70 hover:text-foreground"
+                                                        "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all",
+                                                        isOpen || hasActiveItem
+                                                            ? "text-foreground/80"
+                                                            : "text-muted-foreground hover:text-foreground/70"
                                                     )}
                                                 >
-                                                    <div className={cn(
-                                                        "flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
-                                                        isActive
-                                                            ? "bg-primary/15"
-                                                            : "bg-muted/40 group-hover:bg-muted/60"
-                                                    )}>
-                                                        <Icon className="h-4 w-4" />
+                                                    <span>{group.header}</span>
+                                                    <ChevronDown
+                                                        className={cn(
+                                                            "h-3.5 w-3.5 transition-transform duration-200",
+                                                            isOpen ? "rotate-180" : "rotate-0"
+                                                        )}
+                                                    />
+                                                </button>
+
+                                                {/* Accordion content with smooth height animation */}
+                                                <div
+                                                    className={cn(
+                                                        "overflow-hidden transition-all duration-200 ease-out",
+                                                        isOpen
+                                                            ? "max-h-[500px] opacity-100"
+                                                            : "max-h-0 opacity-0"
+                                                    )}
+                                                >
+                                                    <div className="space-y-0.5 pb-1">
+                                                        {group.items.map((item, idx) => renderNavLink(item, idx))}
                                                     </div>
-                                                    <span>{item.title}</span>
-                                                </Link>
-                                            );
-                                        })}
-                                    </nav>
-                                </>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </nav>
                             )}
                         </div>
                     </div>
@@ -298,7 +402,6 @@ export function MobileNav() {
                 {/* Footer: User Profile Only */}
                 <div className="border-t p-2 mt-auto bg-background/80 backdrop-blur-xl">
                     <div className="flex items-center justify-end">
-                        {/* User Avatar with Dropdown - SAME OPTIONS AS DESKTOP */}
                         {user ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -316,7 +419,6 @@ export function MobileNav() {
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                                    {/* User Info Header */}
                                     <DropdownMenuLabel className="font-normal">
                                         <div className="flex flex-col space-y-1">
                                             <p className="text-sm font-medium leading-none">{user.full_name || "User"}</p>
@@ -327,7 +429,6 @@ export function MobileNav() {
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
 
-                                    {/* 1. Configuración */}
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings" onClick={() => setOpen(false)}>
                                             <Settings className="mr-2 h-4 w-4" />
@@ -337,7 +438,6 @@ export function MobileNav() {
 
                                     <DropdownMenuSeparator />
 
-                                    {/* 2. Feedback */}
                                     <DropdownMenuItem onClick={() => setOpen(false)}>
                                         <Sparkles className="mr-2 h-4 w-4" />
                                         Feedback
@@ -345,7 +445,6 @@ export function MobileNav() {
 
                                     <DropdownMenuSeparator />
 
-                                    {/* 3. Home */}
                                     <DropdownMenuItem asChild>
                                         <Link href="/" onClick={() => setOpen(false)}>
                                             <Home className="mr-2 h-4 w-4" />
@@ -353,7 +452,6 @@ export function MobileNav() {
                                         </Link>
                                     </DropdownMenuItem>
 
-                                    {/* 4. Contacto */}
                                     <DropdownMenuItem asChild>
                                         <Link href="/contact" onClick={() => setOpen(false)}>
                                             <Mail className="mr-2 h-4 w-4" />
@@ -363,7 +461,6 @@ export function MobileNav() {
 
                                     <DropdownMenuSeparator />
 
-                                    {/* 5. Theme Toggle */}
                                     {mounted && (
                                         <div className="flex items-center justify-between px-2 py-2">
                                             <span className="text-sm text-muted-foreground">Tema</span>
@@ -407,7 +504,6 @@ export function MobileNav() {
 
                                     <DropdownMenuSeparator />
 
-                                    {/* 6. Logout */}
                                     <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                                         <LogOut className="mr-2 h-4 w-4" />
                                         Cerrar Sesión

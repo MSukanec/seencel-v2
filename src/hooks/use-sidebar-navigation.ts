@@ -230,6 +230,16 @@ export function useSidebarNavigation() {
                         icon: Info,
                         sectionHeader: 'Gestión'
                     }),
+                    getItemStatus('sidebar_project_clients', {
+                        title: 'Compromisos y Pagos',
+                        href: activeProjectId ? `${projectBase}/clients` : '/organization/projects',
+                        icon: Banknote,
+                    }),
+                    getItemStatus('sidebar_project_portal', {
+                        title: 'Portal de Clientes',
+                        href: activeProjectId ? `${projectBase}/portal` : '/organization/projects',
+                        icon: Monitor
+                    }),
                     getItemStatus('sidebar_project_health', {
                         title: 'Salud',
                         href: activeProjectId ? `${projectBase}/health` : '/organization/projects',
@@ -260,17 +270,6 @@ export function useSidebarNavigation() {
                         title: tSidebar('items.sitelog'),
                         href: activeProjectId ? `${projectBase}/sitelog` : '/organization/projects',
                         icon: FileText
-                    }),
-                    getItemStatus('sidebar_project_clients', {
-                        title: 'Compromisos y Pagos',
-                        href: activeProjectId ? `${projectBase}/clients` : '/organization/projects',
-                        icon: Banknote,
-                        sectionHeader: 'Clientes'
-                    }),
-                    getItemStatus('sidebar_project_portal', {
-                        title: 'Portal de Clientes',
-                        href: activeProjectId ? `${projectBase}/portal` : '/organization/projects',
-                        icon: Monitor
                     }),
                 ];
                 return projectItems.filter((i): i is NavItem => i !== null);

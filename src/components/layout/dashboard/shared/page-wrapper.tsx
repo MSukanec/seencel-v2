@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { PageHeader, BreadcrumbItem } from "./page-header"
-import { MobileHeader } from "../mega-menu-version/mobile-header"
+import { MobileHeader } from "../mobile/mobile-header"
 
 interface PageWrapperProps {
     /** Type of page: dashboard (no header) or page (with header) */

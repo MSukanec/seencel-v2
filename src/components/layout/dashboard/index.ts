@@ -1,5 +1,5 @@
-// Dashboard Layout - Re-exports for both layout modes
+// Dashboard Layout - Re-exports for all layout modes
 export * from "./shared";
-export * from "./mega-menu-version";
-export * from "./sidebar-version";
-
+export * from "./mega-menu";
+export * from "./sidebar";
+export * from "./mobile";

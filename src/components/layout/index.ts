@@ -4,18 +4,17 @@
 // Public layout components
 export * from "./public";
 
-// Dashboard layout components (both sidebar and mega-menu modes)
+// Dashboard layout components
 export * from "./dashboard";
 
 // Explicit exports for backward compatibility
-export { Header } from "./dashboard/mega-menu-version/header";
-export { HeaderPortal } from "./dashboard/mega-menu-version/header-portal";
+export { Header } from "./dashboard/mega-menu/header";
+export { HeaderPortal } from "./dashboard/mega-menu/header-portal";
 export { LayoutSwitcher } from "./dashboard/shared/layout-switcher";
 export { PageWrapper } from "./dashboard/shared/page-wrapper";
 export { ContentLayout } from "./dashboard/shared/content-layout";
-export { SidebarLayout } from "./dashboard/sidebar-version/sidebar-layout";
+export { SidebarLayout } from "./dashboard/sidebar/sidebar-layout";
 
 // Shared dashboard components
 export { GlobalDrawer } from "./dashboard/shared/drawer/global-drawer";
 export { HeaderTitleUpdater } from "./dashboard/shared/header-title-updater";
-
