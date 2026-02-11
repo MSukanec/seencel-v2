@@ -6,6 +6,7 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { useModal } from "@/stores/modal-store";
+import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { useRouter } from "next/navigation";
 import { PaymentsDataTable } from "../components/tables/payments-data-table";
 import { PaymentForm } from "../components/forms/clients-payment-form";
@@ -178,8 +179,14 @@ export function ClientsPaymentsView({
     };
 
     const handleImport = () => {
-        // TODO: Open import modal
-        console.log("Import clicked", paymentsImportConfig);
+        openModal(
+            <BulkImportModal config={paymentsImportConfig} organizationId={orgId} />,
+            {
+                size: "2xl",
+                title: "Importar Pagos de Clientes",
+                description: "Importa pagos masivamente desde Excel o CSV."
+            }
+        );
     };
 
     const handleExport = () => {
