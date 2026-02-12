@@ -28,3 +28,4 @@ export { SwitchField, type SwitchFieldProps } from "./switch-field";
 export { ColorField, type ColorFieldProps } from "./color-field";
 export { UploadField, type UploadFieldProps } from "./upload-field";
 export { AssignedToField, type AssignedToFieldProps, type AssignableMember } from "./assigned-to-field";
+export { ActiveProjectField, type ActiveProjectFieldProps, type ActiveProject } from "./active-project-field";

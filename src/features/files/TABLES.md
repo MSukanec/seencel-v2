@@ -1,6 +1,59 @@
 # Tablas para ARCHIVOS Y MEDIA:
 
-# Tabla media_files:
+#Tabla MEDIA_FILE_FOLDERS:
+
+create table public.media_file_folders (
+  id uuid not null default gen_random_uuid (),
+  organization_id uuid not null,
+  project_id uuid null,
+  name text not null,
+  parent_id uuid null,
+  created_by uuid null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  is_deleted boolean not null default false,
+  deleted_at timestamp with time zone null,
+  updated_by uuid null,
+  constraint media_file_folders_pkey primary key (id),
+  constraint media_file_folders_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint media_file_folders_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint media_file_folders_parent_id_fkey foreign KEY (parent_id) references media_file_folders (id) on delete CASCADE,
+  constraint media_file_folders_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint media_file_folders_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null
+) TABLESPACE pg_default;
+
+create index IF not exists idx_media_file_folders_organization_id on public.media_file_folders using btree (organization_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_media_file_folders_parent_id on public.media_file_folders using btree (parent_id) TABLESPACE pg_default
+where
+  (is_deleted = false);
+
+create index IF not exists idx_media_file_folders_project_id on public.media_file_folders using btree (project_id) TABLESPACE pg_default
+where
+  (
+    (is_deleted = false)
+    and (project_id is not null)
+  );
+
+create trigger media_file_folders_set_updated_at BEFORE
+update on media_file_folders for EACH row
+execute FUNCTION update_timestamp ();
+
+create trigger on_media_file_folder_audit
+after INSERT
+or DELETE
+or
+update on media_file_folders for EACH row
+execute FUNCTION log_media_file_folder_activity ();
+
+create trigger set_updated_by_media_file_folders BEFORE INSERT
+or
+update on media_file_folders for EACH row
+execute FUNCTION handle_updated_by ();
+
+# Tabla MEDIA_FILES:
 
 create table public.media_files (
   id uuid not null default gen_random_uuid (),
@@ -38,7 +91,7 @@ create trigger trigger_cleanup_media_file_hard_delete
 after DELETE on media_files for EACH row
 execute FUNCTION cleanup_media_file_storage ();
 
-# Tabla media_links:
+# Tabla MEDIA_LINKS:
 
 create table public.media_links (
   id uuid not null default gen_random_uuid (),
@@ -69,10 +122,12 @@ create table public.media_links (
   pin_id uuid null,
   updated_by uuid null,
   subcontract_payment_id uuid null,
+  folder_id uuid null,
   constraint media_links_pkey primary key (id),
   constraint media_links_client_payment_fkey foreign KEY (client_payment_id) references client_payments (id) on delete CASCADE,
   constraint media_links_contact_fkey foreign KEY (contact_id) references contacts (id) on delete CASCADE,
   constraint media_links_course_fkey foreign KEY (course_id) references courses (id) on delete CASCADE,
+  constraint media_links_folder_id_fkey foreign KEY (folder_id) references media_file_folders (id) on delete set null,
   constraint media_links_forum_thread_fkey foreign KEY (forum_thread_id) references forum_threads (id) on delete CASCADE,
   constraint media_links_general_cost_payment_id_fkey foreign KEY (general_cost_payment_id) references general_costs_payments (id) on delete CASCADE,
   constraint media_links_material_payment_id_fkey foreign KEY (material_payment_id) references material_payments (id) on delete set null,
@@ -192,12 +247,9 @@ create index IF not exists idx_media_links_subcontract_payment on public.media_l
 where
   (subcontract_payment_id is not null);
 
-create trigger on_media_link_audit
-after INSERT
-or DELETE
-or
-update on media_links for EACH row
-execute FUNCTION log_media_link_activity ();
+create index IF not exists idx_media_links_folder on public.media_links using btree (folder_id) TABLESPACE pg_default
+where
+  (folder_id is not null);
 
 create trigger set_updated_by_media_links BEFORE INSERT
 or

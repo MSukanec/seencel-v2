@@ -73,7 +73,8 @@ export function useFileUpload({
         setCompletedFiles(prev => {
             const next = updater(prev);
             completedFilesRef.current = next;
-            onFilesChange?.(next);
+            // Defer callback to avoid setState-during-render cascade
+            queueMicrotask(() => onFilesChange?.(next));
             return next;
         });
     }, [onFilesChange]);
@@ -141,13 +142,9 @@ export function useFileUpload({
 
             updateUploadState(uploadState.id, { status: "completed", progress: 100, result });
 
-            // Add to completed files
+            // Add to completed files and immediately remove from active uploads
             updateCompleted(prev => [...prev, result]);
-
-            // Remove from active uploads after brief delay
-            setTimeout(() => {
-                setActiveUploads(prev => prev.filter(u => u.id !== uploadState.id));
-            }, 800);
+            setActiveUploads(prev => prev.filter(u => u.id !== uploadState.id));
 
             return result;
         } catch (error: any) {
@@ -213,9 +210,22 @@ export function useFileUpload({
     }, []);
 
     /**
-     * Clear all files
+     * Clear all files and remove uploaded ones from storage
      */
     const clearAll = useCallback(() => {
+        // Remove uploaded files from storage (best-effort, don't block)
+        const filesToClean = completedFilesRef.current;
+        if (filesToClean.length > 0) {
+            const supabase = createClient();
+            // Group by bucket for efficient deletion
+            const byBucket = filesToClean.reduce((acc, f) => {
+                (acc[f.bucket] ??= []).push(f.path);
+                return acc;
+            }, {} as Record<string, string[]>);
+            for (const [bkt, paths] of Object.entries(byBucket)) {
+                supabase.storage.from(bkt).remove(paths).catch(console.error);
+            }
+        }
         setActiveUploads([]);
         updateCompleted(() => []);
     }, [updateCompleted]);

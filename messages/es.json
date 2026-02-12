@@ -9,7 +9,7 @@
     "Sidebar": {
         "tools": {
             "kanban": "Kanban",
-            "files": "Archivos y Media"
+            "files": "Documentación"
         },
         "construction": "CONSTRUCCION",
         "items": {
@@ -279,7 +279,7 @@
             "items": {
                 "overview": "Visión General",
                 "basicData": "Datos Básicos",
-                "filesMedia": "Archivos y Media",
+                "filesMedia": "Documentación",
                 "finance": "Finanzas",
                 "moodboard": "Moodboard",
                 "computationBudget": "Cómputo y Presupuesto",
@@ -916,7 +916,7 @@
             },
             "data_retention": {
                 "question": "¿Qué sucede con mis datos si cancelo?",
-                "answer": "Al pasar al plan Gratis, conservás acceso a tus datos pero con las limitaciones del plan gratuito. Tus proyectos, contactos y registros permanecen almacenados. Si en el futuro decidís volver a un plan de pago, toda tu información estará disponible tal como la dejaste."
+                "answer": "Al pasar al plan Esencial, conservás acceso a tus datos pero con las limitaciones del plan gratuito. Tus proyectos, contactos y registros permanecen almacenados. Si en el futuro decidís volver a un plan de pago, toda tu información estará disponible tal como la dejaste."
             },
             "billing_cycle": {
                 "question": "¿Cómo funciona el ciclo de facturación?",
@@ -924,7 +924,7 @@
             },
             "user_roles": {
                 "question": "¿Cómo funcionan los miembros y roles?",
-                "answer": "El plan Gratis incluye 1 miembro. Los planes Pro y Teams incluyen una cantidad base de miembros, y en Teams podés comprar asientos adicionales según lo necesites. Todos los planes de pago permiten asignar roles con permisos específicos (Admin, Miembro, etc.) para controlar qué puede hacer cada persona en tu organización."
+                "answer": "El plan Esencial incluye 1 miembro. Los planes Pro y Teams incluyen una cantidad base de miembros, y en Teams podés comprar asientos adicionales según lo necesites. Todos los planes de pago permiten asignar roles con permisos específicos (Admin, Miembro, etc.) para controlar qué puede hacer cada persona en tu organización."
             },
             "enterprise": {
                 "question": "¿Tienen soluciones para grandes empresas?",
@@ -1687,14 +1687,14 @@
         }
     },
     "Planner": {
-        "title": "Agenda",
+        "title": "Planificador",
         "tabs": {
             "calendar": "Calendario",
             "kanban": "Panel de Tareas"
         }
     },
     "Files": {
-        "title": "Archivos"
+        "title": "Documentación"
     },
     "Subcontracts": {
         "title": "Subcontratos",

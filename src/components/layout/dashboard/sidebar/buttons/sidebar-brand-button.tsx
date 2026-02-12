@@ -59,6 +59,7 @@ export interface Project {
     color?: string | null;
     custom_color_hex?: string | null;
     use_custom_color?: boolean;
+    status?: string | null;
 }
 
 interface SidebarBrandButtonProps {
@@ -291,7 +292,7 @@ export function SidebarBrandButton({
                 <div>
                     <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         <Briefcase className="h-3 w-3" />
-                        Proyectos
+                        Proyectos activos
                     </div>
                     <ScrollArea className="max-h-[200px]">
                         {projects.length === 0 ? (
@@ -299,28 +300,30 @@ export function SidebarBrandButton({
                                 No hay proyectos
                             </div>
                         ) : (
-                            projects.map((project) => {
-                                const isActiveProject = mode === "project" && currentProject?.id === project.id;
-                                return (
-                                    <button
-                                        key={project.id}
-                                        onClick={() => {
-                                            onProjectChange?.(project.id);
-                                            setOpen(false);
-                                        }}
-                                        className={cn(
-                                            "flex items-center gap-2 w-full px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors",
-                                            isActiveProject && "bg-secondary"
-                                        )}
-                                    >
-                                        {renderProjectAvatar(project, "sm")}
-                                        <span className="truncate flex-1 text-left">{project.name}</span>
-                                        {isActiveProject && (
-                                            <Check className="h-4 w-4 text-primary shrink-0" />
-                                        )}
-                                    </button>
-                                );
-                            })
+                            projects
+                                .filter(p => !p.status || p.status === 'active') // Show only active projects (or legacy with no status)
+                                .map((project) => {
+                                    const isActiveProject = mode === "project" && currentProject?.id === project.id;
+                                    return (
+                                        <button
+                                            key={project.id}
+                                            onClick={() => {
+                                                onProjectChange?.(project.id);
+                                                setOpen(false);
+                                            }}
+                                            className={cn(
+                                                "flex items-center gap-2 w-full px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors",
+                                                isActiveProject && "bg-secondary"
+                                            )}
+                                        >
+                                            {renderProjectAvatar(project, "sm")}
+                                            <span className="truncate flex-1 text-left">{project.name}</span>
+                                            {isActiveProject && (
+                                                <Check className="h-4 w-4 text-primary shrink-0" />
+                                            )}
+                                        </button>
+                                    );
+                                })
                         )}
                     </ScrollArea>
 

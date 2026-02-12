@@ -72,7 +72,7 @@ export function BillingSettingsView({ subscription, billingCycles = [], organiza
     };
 
     const displayName = getPlanDisplayName(subscription?.plan?.name || '');
-    const isFree = displayName === 'Gratis' || subscription?.amount === 0;
+    const isFree = displayName === 'Esencial' || subscription?.amount === 0;
 
     return (
         <ContentLayout variant="wide">

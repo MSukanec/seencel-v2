@@ -87,7 +87,7 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay
-                    title="Error al cargar la agenda"
+                    title="Error al cargar el planificador"
                     message={error instanceof Error ? error.message : "Error desconocido"}
                     retryLabel="Reintentar"
                 />

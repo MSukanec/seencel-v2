@@ -4,7 +4,7 @@ description: Workflow for managing Plan Features and Limitations
 
 # Plan Features & Limitations
 
-Este workflow define cómo gestionar las funcionalidades y límites de los planes (Free, Pro, Teams).
+Este workflow define cómo gestionar las funcionalidades y límites de los planes (Essential, Pro, Teams).
 
 ---
 
@@ -12,14 +12,13 @@ Este workflow define cómo gestionar las funcionalidades y límites de los plane
 
 Almacenados en columna `features` de tabla `plans`.
 
-### FREE (`slug = 'free'`)
+### FREE (`slug = 'essential'`)
 
 ```json
 {
   "webhooks": false,
   "api_access": false,
   "export_excel": true,
-  "max_projects": 4,
   "support_level": "community",
   "max_org_boards": 1,
   "max_storage_mb": 1024,
@@ -30,10 +29,10 @@ Almacenados en columna `features` de tabla `plans`.
   "export_pdf_custom": false,
   "can_invite_members": false,
   "max_project_boards": 1,
+  "max_active_projects": 2,
   "custom_pdf_templates": false,
   "custom_portal_branding": false,
-  "custom_insight_thresholds": false,
-  "custom_dashboard": false
+  "custom_insight_thresholds": false
 }
 ```
 
@@ -44,17 +43,17 @@ Almacenados en columna `features` de tabla `plans`.
   "webhooks": false,
   "api_access": true,
   "export_excel": true,
-  "max_projects": 50,
   "support_level": "priority",
   "max_org_boards": 5,
   "max_storage_mb": 51200,
   "seats_included": 1,
   "analytics_level": "advanced",
   "custom_dashboard": true,
-  "max_file_size_mb": 500,
+  "max_file_size_mb": 250,
   "export_pdf_custom": true,
   "can_invite_members": false,
   "max_project_boards": 5,
+  "max_active_projects": 5,
   "custom_pdf_templates": true,
   "custom_portal_branding": true,
   "custom_insight_thresholds": true
@@ -68,7 +67,6 @@ Almacenados en columna `features` de tabla `plans`.
   "webhooks": true,
   "api_access": true,
   "export_excel": true,
-  "max_projects": 999,
   "support_level": "dedicated",
   "max_org_boards": 999,
   "max_storage_mb": 512000,
@@ -79,6 +77,7 @@ Almacenados en columna `features` de tabla `plans`.
   "export_pdf_custom": true,
   "can_invite_members": true,
   "max_project_boards": 999,
+  "max_active_projects": 15,
   "custom_pdf_templates": true,
   "custom_portal_branding": true,
   "custom_insight_thresholds": true

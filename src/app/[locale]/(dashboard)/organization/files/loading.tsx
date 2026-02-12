@@ -3,11 +3,11 @@ import { PageSkeleton } from "@/components/shared/page-skeleton";
 export default function Loading() {
     return (
         <PageSkeleton
-            title="Archivos"
+            title="Documentación"
             messages={[
-                "Reuniendo tus documentos…",
-                "Organizando archivos del equipo…",
-                "Preparando tu biblioteca…",
+                "Reuniendo tu documentación…",
+                "Organizando documentos del equipo…",
+                "Preparando tu biblioteca de documentos…",
             ]}
         />
     );

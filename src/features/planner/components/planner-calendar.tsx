@@ -206,7 +206,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                             onValueChange={(v) => setViewMode(v as 'month' | 'list')}
                             options={[
                                 { label: "Mes", value: "month", icon: CalendarIcon },
-                                { label: "Agenda", value: "list", icon: List },
+                                { label: "Planificador", value: "list", icon: List },
                             ]}
                         />
                     }
@@ -255,7 +255,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                         onValueChange={(v) => setViewMode(v as 'month' | 'list')}
                         options={[
                             { label: "Mes", value: "month", icon: CalendarIcon },
-                            { label: "Agenda", value: "list", icon: List },
+                            { label: "Planificador", value: "list", icon: List },
                         ]}
                     />
                 }

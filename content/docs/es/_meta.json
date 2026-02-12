@@ -3,6 +3,7 @@
         "organizacion",
         "primeros-pasos",
         "agenda",
+        "archivos",
         "materiales",
         "tareas",
         "ejecucion-de-obra",
@@ -22,6 +23,10 @@
         "agenda": {
             "title": "Agenda",
             "icon": "calendar"
+        },
+        "archivos": {
+            "title": "Archivos",
+            "icon": "folder-open"
         },
         "materiales": {
             "title": "Materiales",

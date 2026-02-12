@@ -2,15 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { useModal } from "@/stores/modal-store";
-import {
-    createProjectModality,
-    updateProjectModality,
-} from "@/features/projects/actions";
 
 interface ProjectsModalityFormProps {
     organizationId: string;
@@ -18,17 +13,16 @@ interface ProjectsModalityFormProps {
         id: string;
         name: string;
     } | null;
-    onSuccess: (data: { id: string; name: string; is_system: boolean; organization_id: string | null }) => void;
+    /** Called with form data. The VIEW handles server calls + optimistic updates. */
+    onSubmit: (data: { name: string }) => void;
 }
 
-export function ProjectsModalityForm({ organizationId, initialData, onSuccess }: ProjectsModalityFormProps) {
+export function ProjectsModalityForm({ organizationId, initialData, onSubmit }: ProjectsModalityFormProps) {
     const t = useTranslations("Project.settings.modalities.modal");
     const { closeModal, setBeforeClose } = useModal();
     const [name, setName] = useState(initialData?.name || "");
-    const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const isEditing = !!initialData;
     const isDirty = name.trim() !== (initialData?.name || "");
 
     useEffect(() => {
@@ -42,39 +36,17 @@ export function ProjectsModalityForm({ organizationId, initialData, onSuccess }:
         return () => setBeforeClose(undefined);
     }, [isDirty, setBeforeClose, t]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!name.trim()) {
             setError(t("requiredError") || "El nombre es obligatorio");
             return;
         }
-        setError(null);
 
-        setIsSaving(true);
-        try {
-            if (isEditing && initialData) {
-                const result = await updateProjectModality(initialData.id, organizationId, name.trim());
-                if (result.error) {
-                    toast.error(result.error);
-                } else if (result.data) {
-                    onSuccess(result.data);
-                    closeModal();
-                }
-            } else {
-                const result = await createProjectModality(organizationId, name.trim());
-                if (result.error) {
-                    toast.error(result.error);
-                } else if (result.data) {
-                    onSuccess(result.data);
-                    closeModal();
-                }
-            }
-        } catch (e) {
-            toast.error("Ocurrió un error inesperado");
-        } finally {
-            setIsSaving(false);
-        }
+        // Delegate to view → close immediately (optimistic)
+        onSubmit({ name: name.trim() });
+        closeModal();
     };
 
     return (
@@ -102,8 +74,7 @@ export function ProjectsModalityForm({ organizationId, initialData, onSuccess }:
             <FormFooter
                 onCancel={closeModal}
                 cancelLabel={t("cancel")}
-                submitLabel={isSaving ? t("saving") : t("save")}
-                isLoading={isSaving}
+                submitLabel={t("save")}
                 submitDisabled={!name.trim()}
                 className="-mx-4 -mb-4 mt-6"
             />

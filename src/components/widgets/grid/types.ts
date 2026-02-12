@@ -62,6 +62,8 @@ export interface WidgetDefinition {
     }) => React.ReactNode;
     /** Optional link to the full page for this widget's data */
     href?: string;
+    /** If true, the widget is not yet available and shows a "Coming Soon" badge */
+    comingSoon?: boolean;
 
     /** @deprecated Use defaultSpan instead */
     defaultSize?: WidgetSize;

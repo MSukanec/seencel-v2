@@ -1,9 +1,10 @@
 "use client";
 
 import { Table } from "@tanstack/react-table";
-import { Search, X, Plus, MoreHorizontal, LayoutTemplate, Lock, BookOpen } from "lucide-react";
+import { Search, X, Plus, MoreHorizontal, LayoutTemplate, Lock, BookOpen, Trash2, CheckSquare } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
@@ -69,6 +70,12 @@ export interface ToolbarProps<TData> {
     selectedCount?: number;
     /** Callback to clear selection (for generic bulk mode) */
     onClearSelection?: () => void;
+    /** Callback to select all items (for generic bulk mode) */
+    onSelectAll?: () => void;
+    /** Total count of selectable items (for "Seleccionar todo (N)" button) */
+    totalCount?: number;
+    /** Primary bulk delete handler for mobile FAB override */
+    onBulkDelete?: () => void;
     className?: string;
 
     // Mobile-specific
@@ -97,6 +104,9 @@ export function Toolbar<TData>({
     bulkActions,
     selectedCount,
     onClearSelection,
+    onSelectAll,
+    totalCount,
+    onBulkDelete,
     filterContent,
     className,
     mobileShowSearch = true,
@@ -139,120 +149,194 @@ export function Toolbar<TData>({
     const primaryAction = actions && actions.length > 0 ? actions[0] : null;
     const hasMultipleActions = actions && actions.length > 1;
 
-    // Bulk actions content (for both table and generic modes)
-    const bulkActionsContent = isSelectionMode && bulkActions ? (
-        table ? (
-            <DataTableBulkActions table={table}>
-                {bulkActions}
-            </DataTableBulkActions>
-        ) : (
-            <div className="flex items-center justify-between gap-4 w-full min-h-[2.25rem]">
-                <div className="flex items-center gap-2">
-                    <ToolbarButton
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={onClearSelection}
-                    >
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Cancelar selección</span>
-                    </ToolbarButton>
-                    <div className="text-sm font-medium">
-                        {totalSelectedCount} seleccionad{totalSelectedCount === 1 ? "o" : "os"}
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {bulkActions}
+    // Framer Motion slide variants for toolbar transition
+    const slideVariants = {
+        enter: (direction: number) => ({ x: direction > 0 ? 40 : -40, opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (direction: number) => ({ x: direction > 0 ? -40 : 40, opacity: 0 }),
+    };
+    const slideTransition = { type: "tween" as const, ease: "easeInOut" as const, duration: 0.2 };
+
+    // Bulk actions content for TABLE mode only (legacy)
+    const tableBulkContent = isSelectionMode && bulkActions && table ? (
+        <DataTableBulkActions table={table}>
+            {bulkActions}
+        </DataTableBulkActions>
+    ) : null;
+
+    // Generic selection bar content (for non-table modes)
+    const genericSelectionBar = (
+        <motion.div
+            key="selection-bar"
+            custom={1}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={slideTransition}
+            className="flex items-center justify-between gap-4 w-full min-h-[2.25rem]"
+        >
+            <div className="flex items-center gap-2">
+                <ToolbarButton
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={onClearSelection}
+                >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Cancelar selección</span>
+                </ToolbarButton>
+                <div className="text-sm font-medium">
+                    {totalSelectedCount} seleccionad{totalSelectedCount === 1 ? "o" : "os"}
                 </div>
             </div>
-        )
-    ) : null;
+            <div className="flex items-center gap-2">
+                {onSelectAll && totalCount != null && totalCount > 0 && (
+                    <ToolbarButton
+                        variant="outline"
+                        size="sm"
+                        onClick={onSelectAll}
+                        className="gap-1.5"
+                    >
+                        <CheckSquare className="h-3.5 w-3.5" />
+                        Seleccionar todo ({totalCount})
+                    </ToolbarButton>
+                )}
+                {bulkActions}
+            </div>
+        </motion.div>
+    );
+
+    // Normal toolbar content
+    const normalToolbarContent = (
+        <motion.div
+            key="normal-toolbar"
+            custom={-1}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={slideTransition}
+            className="flex flex-1 items-center justify-between gap-4 w-full"
+        >
+            {/* Left side: Actions + Filters + Search */}
+            <div className="flex flex-1 items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade max-w-full">
+                {leftActions}
+
+                {/* Table Faceted Filters */}
+                {table && facetedFilters?.map((filter) => (
+                    table.getColumn(filter.columnId) && (
+                        <DataTableFacetedFilter
+                            key={filter.columnId}
+                            column={table.getColumn(filter.columnId)}
+                            title={filter.title}
+                            options={filter.options}
+                        />
+                    )
+                ))}
+
+                {/* Generic Filter Content */}
+                {filterContent}
+
+                {/* Global Search */}
+                <ToolbarSearch
+                    placeholder={searchPlaceholder}
+                    value={searchValue}
+                    onChange={onSearch}
+                    className="shrink-0"
+                />
+
+                {/* Filter indicator */}
+                {isFiltered && (
+                    <ToolbarButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            onSearch("");
+                            table?.resetColumnFilters();
+                        }}
+                        className="h-8 px-2 lg:px-3"
+                    >
+                        Limpiar filtros
+                        <X className="ml-2 h-4 w-4" />
+                    </ToolbarButton>
+                )}
+            </div>
+
+            {/* Right side: Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+                {/* Auto-injected docs button (icon-only) */}
+                {showDocsButton && docsSlug && (
+                    <ToolbarButton
+                        variant="outline"
+                        size="icon"
+                        asChild
+                        className="h-8 w-8"
+                    >
+                        <Link href={`/${locale}/docs/${docsSlug}`} target="_blank">
+                            <BookOpen className="h-4 w-4" />
+                            <span className="sr-only">Documentación</span>
+                        </Link>
+                    </ToolbarButton>
+                )}
+                {/* Custom toolbar buttons (e.g., Personalizar) */}
+                {children}
+                {/* Primary + secondary actions as SplitButton */}
+                {actions && actions.length > 0 && (
+                    <ToolbarSplitButton
+                        mainAction={actions[0]}
+                        secondaryActions={actions.slice(1)}
+                    />
+                )}
+            </div>
+        </motion.div>
+    );
 
     // Desktop Toolbar Content
     const desktopToolbar = (
         <div className={cn("hidden md:flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4", className)}>
-            {/* If in selection mode, show bulk actions instead of normal toolbar */}
-            {bulkActionsContent ? (
-                bulkActionsContent
+            {/* Table mode: legacy static bulk actions */}
+            {tableBulkContent ? (
+                tableBulkContent
             ) : (
-                <>
-                    {/* Left side: Actions + Filters + Search */}
-                    <div className="flex flex-1 items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade max-w-full">
-                        {leftActions}
-
-                        {/* Table Faceted Filters */}
-                        {table && facetedFilters?.map((filter) => (
-                            table.getColumn(filter.columnId) && (
-                                <DataTableFacetedFilter
-                                    key={filter.columnId}
-                                    column={table.getColumn(filter.columnId)}
-                                    title={filter.title}
-                                    options={filter.options}
-                                />
-                            )
-                        ))}
-
-                        {/* Generic Filter Content */}
-                        {filterContent}
-
-                        {/* Global Search - Moved to Right as requested */}
-                        <ToolbarSearch
-                            placeholder={searchPlaceholder}
-                            value={searchValue}
-                            onChange={onSearch}
-                            className="shrink-0"
-                        />
-
-                        {/* Filter indicator */}
-                        {isFiltered && (
-                            <ToolbarButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    onSearch("");
-                                    table?.resetColumnFilters();
-                                }}
-                                className="h-8 px-2 lg:px-3"
-                            >
-                                Limpiar filtros
-                                <X className="ml-2 h-4 w-4" />
-                            </ToolbarButton>
-                        )}
-                    </div>
-
-                    {/* Right side: Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                        {/* Auto-injected docs button (icon-only) */}
-                        {showDocsButton && docsSlug && (
-                            <ToolbarButton
-                                variant="outline"
-                                size="icon"
-                                asChild
-                                className="h-8 w-8"
-                            >
-                                <Link href={`/${locale}/docs/${docsSlug}`} target="_blank">
-                                    <BookOpen className="h-4 w-4" />
-                                    <span className="sr-only">Documentación</span>
-                                </Link>
-                            </ToolbarButton>
-                        )}
-                        {/* Custom toolbar buttons (e.g., Personalizar) */}
-                        {children}
-                        {/* Primary + secondary actions as SplitButton */}
-                        {actions && actions.length > 0 && (
-                            <ToolbarSplitButton
-                                mainAction={actions[0]}
-                                secondaryActions={actions.slice(1)}
-                            />
-                        )}
-                    </div>
-                </>
+                <AnimatePresence mode="wait" custom={isSelectionMode ? 1 : -1}>
+                    {isSelectionMode && !table
+                        ? genericSelectionBar
+                        : normalToolbarContent
+                    }
+                </AnimatePresence>
             )}
         </div>
     );
 
     // Mobile Action Button Renderer
     const renderMobileActionButton = () => {
+        // Selection mode: show red delete FAB
+        if (isSelectionMode && !table && onBulkDelete) {
+            return (
+                <button
+                    onClick={onBulkDelete}
+                    className={cn(
+                        "pointer-events-auto",
+                        "w-14 h-14 rounded-full",
+                        "bg-destructive text-destructive-foreground",
+                        "flex items-center justify-center",
+                        "shadow-lg shadow-destructive/30",
+                        "active:scale-95 transition-all duration-200",
+                        "relative"
+                    )}
+                >
+                    <Trash2 className="h-6 w-6" />
+                    {/* Badge with count */}
+                    {totalSelectedCount > 0 && (
+                        <div className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-white text-destructive text-xs font-bold flex items-center justify-center shadow-md">
+                            {totalSelectedCount}
+                        </div>
+                    )}
+                </button>
+            );
+        }
+
         // Option 1: Legacy Children - don't render anything in mobile if using legacy children
         if (!actions && children) return null;
 

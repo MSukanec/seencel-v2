@@ -117,7 +117,7 @@ export const routing = defineRouting({
         // ===== Organization Files =====
         '/organization/files': {
             en: '/organization/files',
-            es: '/organizacion/archivos'
+            es: '/organizacion/documentacion'
         },
 
         // ===== Organization Quotes =====
@@ -171,7 +171,7 @@ export const routing = defineRouting({
         },
         '/project/[projectId]/files': {
             en: '/project/[projectId]/files',
-            es: '/proyecto/[projectId]/archivos'
+            es: '/proyecto/[projectId]/documentacion'
         },
         '/project/[projectId]/health': {
             en: '/project/[projectId]/health',

@@ -10,7 +10,6 @@ create table public.organizations (
   is_active boolean not null default true,
   updated_at timestamp with time zone not null default now(),
   plan_id uuid null,
-  is_system boolean null default false,
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
   owner_id uuid null,

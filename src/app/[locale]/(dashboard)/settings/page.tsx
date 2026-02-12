@@ -7,17 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Shield, User, Building, Settings2, Check, Crown, Users, Sparkles, CreditCard } from "lucide-react";
+import { Bell, Shield, User, Building, Settings2, CreditCard } from "lucide-react";
 import { getTranslations } from 'next-intl/server';
 import { getUserOrganizations } from "@/features/organization/queries";
-import { SwitchOrganizationButton } from "@/features/organization/components/switch-organization-button";
 import { CreateOrganizationButton } from "@/features/organization/components/create-organization-button";
+import { OrganizationsList } from "@/features/organization/components/organizations-list";
 import { getUserProfile } from "@/features/users/queries";
 import { ProfileForm } from "@/features/users/components/profile-form";
 import { PreferencesView } from "@/features/users/views/preferences-view";
 import { getUserTimezone } from "@/features/users/queries";
-import { getStorageUrl } from "@/lib/storage-utils";
-import { AvatarStack } from "@/components/ui/avatar-stack";
+
 import { AvatarManager } from "@/features/users/components/avatar-manager";
 import { HeaderTitleUpdater } from "@/components/layout";
 import { getCountries } from "@/features/countries/queries";
@@ -31,7 +30,8 @@ import { ContentLayout } from "@/components/layout";
 interface Organization {
     id: string;
     name: string;
-    logo_path?: string;
+    logo_path?: string | null;
+    owner_id?: string | null;
     slug?: string;
     role?: string;
     plans?: {
@@ -46,18 +46,7 @@ interface Organization {
     }[];
 }
 
-// Helper to get plan badge variant and icon
-function getPlanBadgeInfo(planSlug?: string | null) {
-    switch (planSlug?.toLowerCase()) {
-        case 'pro':
-            return { variant: 'plan-pro' as const, icon: <Crown className="h-3 w-3" />, label: 'Pro' };
-        case 'teams':
-            return { variant: 'plan-teams' as const, icon: <Users className="h-3 w-3" />, label: 'Teams' };
-        case 'free':
-        default:
-            return { variant: 'plan-free' as const, icon: <Sparkles className="h-3 w-3" />, label: 'Free' };
-    }
-}
+
 
 export default async function SettingsPage({
     searchParams,
@@ -65,14 +54,14 @@ export default async function SettingsPage({
     searchParams: { [key: string]: string | string[] | undefined };
 }) {
     const t = await getTranslations('Settings');
-    const { organizations, activeOrgId } = (await getUserOrganizations()) as unknown as { organizations: Organization[], activeOrgId: string | null };
+    const { organizations, activeOrgId, currentUserId } = (await getUserOrganizations()) as unknown as { organizations: Organization[], activeOrgId: string | null, currentUserId: string };
     const { profile } = await getUserProfile();
     const countries = await getCountries();
     const { profile: billingProfile } = await getBillingProfile();
     const { notifications } = await getUserNotifications();
     const userTimezone = await getUserTimezone();
 
-    const currentOrgId = activeOrgId || organizations[0]?.id || "";
+
 
     // Initials logic
     const initials = profile?.full_name
@@ -170,55 +159,11 @@ export default async function SettingsPage({
                                             <Button variant="outline">{t('Organization.notFoundCreate')}</Button>
                                         </div>
                                     ) : (
-                                        <div className="grid gap-4">
-                                            {organizations.map((org) => {
-                                                const logoPath = org.logo_path
-                                                    ? (org.logo_path.startsWith('organizations/') ? org.logo_path : `organizations/${org.logo_path}`)
-                                                    : null;
-                                                const logoUrl = getStorageUrl(logoPath, 'public-assets');
-
-                                                return (
-                                                    <div key={org.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-all">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center overflow-hidden ${logoUrl ? '' : 'bg-primary/10'}`}>
-                                                                {logoUrl ? (
-                                                                    <img src={logoUrl} alt={org.name} className="h-full w-full object-cover" />
-                                                                ) : (
-                                                                    <Building className="h-5 w-5 text-primary" />
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <h4 className="font-semibold">{org.name}</h4>
-                                                                    {(() => {
-                                                                        const planInfo = getPlanBadgeInfo(org.plans?.slug);
-                                                                        return (
-                                                                            <Badge variant={planInfo.variant} icon={planInfo.icon} className="text-[10px] px-1.5 py-0">
-                                                                                {planInfo.label}
-                                                                            </Badge>
-                                                                        );
-                                                                    })()}
-                                                                </div>
-                                                                <div className="mt-1">
-                                                                    <AvatarStack members={org.members || []} max={4} size={8} />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {org.id === currentOrgId ? (
-                                                            <Badge variant="success" icon={<Check className="h-3 w-3" />} className="px-3 py-1">
-                                                                {t('Organization.current')}
-                                                            </Badge>
-                                                        ) : (
-                                                            <SwitchOrganizationButton
-                                                                organizationId={org.id}
-                                                                currentOrgId={currentOrgId}
-                                                                label={t('Organization.switch')}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                        <OrganizationsList
+                                            organizations={organizations}
+                                            activeOrgId={activeOrgId}
+                                            currentUserId={currentUserId}
+                                        />
                                     )}
                                 </CardContent>
                             </Card>

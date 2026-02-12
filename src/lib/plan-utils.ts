@@ -9,7 +9,8 @@
  * TEAMS → Equipos
  */
 const PLAN_NAME_MAP: Record<string, string> = {
-    'free': 'Gratis',
+    'free': 'Esencial',
+    'essential': 'Esencial',
     'pro': 'Profesional',
     'teams': 'Equipos',
     'enterprise': 'Empresa',

@@ -320,7 +320,7 @@ export function KanbanDashboard({
                                 featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas. Podés asignar responsables, definir fechas límite y prioridades para coordinar el trabajo con tu equipo de forma visual."
                                 onAction={handleCreateBoard}
                                 actionLabel="Nuevo Panel"
-                                docsPath="/docs/agenda/kanban"
+                                docsPath="/docs/planificador/kanban"
                             />
                         </div>
                     ) : activeBoardData ? (

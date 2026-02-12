@@ -72,11 +72,11 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                 <ViewEmptyState
                     mode="empty"
                     icon={CalendarIcon}
-                    viewName="Agenda"
-                    featureDescription="La agenda te permite organizar eventos, reuniones, visitas a obra y fechas importantes. Creá eventos con horarios, colores y descripciones para tener una vista completa de tu calendario."
+                    viewName="Planificador"
+                    featureDescription="El planificador te permite organizar eventos, reuniones, visitas a obra y fechas importantes. Creá eventos con horarios, colores y descripciones para tener una vista completa de tu calendario."
                     onAction={onCreateEvent}
                     actionLabel="Nuevo Evento"
-                    docsPath="/docs/agenda/kanban"
+                    docsPath="/docs/planificador/kanban"
                 />
             );
         }

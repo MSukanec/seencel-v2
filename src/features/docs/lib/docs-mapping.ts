@@ -40,9 +40,13 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization': { slug: 'organizacion/introduccion', exactOnly: true },
     '/organizacion': { slug: 'organizacion/introduccion', exactOnly: true },
 
-    // Planner (Agenda)
+    // Planner (Planificador)
     '/organization/planner': { slug: 'agenda/introduccion' },
     '/organizacion/planificador': { slug: 'agenda/introduccion' },
+
+    // Files (Archivos)
+    '/organization/files': { slug: 'archivos/introduccion' },
+    '/organizacion/archivos': { slug: 'archivos/introduccion' },
 
     // Add more feature -> docs mappings here as documentation is created
 };

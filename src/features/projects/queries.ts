@@ -48,13 +48,11 @@ export async function getOrganizationProjects(organizationId: string) {
 export async function getSidebarProjects(organizationId: string) {
     const supabase = await createClient();
 
-    // Query projects table directly to ensure we get color fields
-    // which might be missing from the view
+    // Use projects_view which joins project_settings for color fields
     const { data, error } = await supabase
-        .from('projects')
-        .select('id, name, organization_id, color, custom_color_hex, use_custom_color, image_url, image_path:image_url')
+        .from('projects_view')
+        .select('id, name, status, organization_id, color, custom_color_hex, use_custom_color, image_url')
         .eq('organization_id', organizationId)
-        .eq('is_deleted', false)
         .order('last_active_at', { ascending: false, nullsFirst: false });
 
     if (error) {

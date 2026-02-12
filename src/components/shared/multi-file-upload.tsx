@@ -19,6 +19,8 @@ export interface UploadedFile {
     type: string;
     size: number;
     bucket: string;
+    /** Local blob preview URL — used for display when bucket is private */
+    previewUrl?: string;
 }
 
 export interface MultiFileUploadRef {
@@ -120,7 +122,8 @@ const MultiFileUpload = forwardRef<MultiFileUploadRef, MultiFileUploadProps>(({
                 bucket: bucket,
                 name: uploadState.file.name,
                 type: uploadState.file.type,
-                size: uploadState.file.size
+                size: uploadState.file.size,
+                previewUrl: uploadState.preview, // preserve blob URL for private buckets
             };
 
             // Update local completed state
@@ -310,11 +313,12 @@ const MultiFileUpload = forwardRef<MultiFileUploadRef, MultiFileUploadProps>(({
                             <div className="h-12 w-12 shrink-0 relative rounded-md overflow-hidden bg-muted border flex items-center justify-center">
                                 {file.type.startsWith('image/') ? (
                                     <Image
-                                        src={file.url}
+                                        src={file.previewUrl || file.url}
                                         alt={file.name}
                                         fill
                                         className="object-cover"
                                         sizes="48px"
+                                        unoptimized={!!file.previewUrl}
                                     />
                                 ) : (
                                     getFileIcon(file.type)

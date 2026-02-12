@@ -47,10 +47,10 @@ export function RecentProjectsWidget({ size, initialData }: WidgetProps) {
                 </div>
                 <div>
                     <h3 className="text-sm font-semibold leading-none">
-                        Proyectos Recientes
+                        Proyectos Activos Recientes
                     </h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Últimos proyectos activos
+                        Tus proyectos activos más recientes
                     </p>
                 </div>
             </div>

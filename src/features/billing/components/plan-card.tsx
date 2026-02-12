@@ -27,6 +27,7 @@ export interface PlanPurchaseFlags {
 
 const PRICE_MAP: Record<string, { monthly: number; annual: number }> = {
     free: { monthly: 0, annual: 0 },
+    essential: { monthly: 0, annual: 0 },
     pro: { monthly: 20, annual: 16 },
     teams: { monthly: 30, annual: 24 },
 };
@@ -119,7 +120,7 @@ const getPrice = (planName: string, billingPeriod: "monthly" | "annual"): number
 };
 
 const formatPrice = (amount: number) => {
-    if (!amount) return "Gratis";
+    if (!amount) return "Esencial";
     return `US$ ${amount}`;
 };
 
@@ -137,8 +138,8 @@ const getCardFeatures = (plan: Plan): Array<{ icon: LucideIcon; label: string; v
         },
         {
             icon: FolderOpen,
-            label: "Proyectos",
-            value: isUnlimited(features.max_projects) ? "Ilimitados" : `${features.max_projects} proyectos`,
+            label: "Proyectos activos",
+            value: isUnlimited(features.max_active_projects) ? "Ilimitados" : `${features.max_active_projects} proyectos`,
         },
         {
             icon: HardDrive,

@@ -14,12 +14,13 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { FormGroup } from "@/components/ui/form-group";
 import { FactoryLabel } from "./field-wrapper";
 import { useFileUpload, type UploadedFile, type FileUploadState } from "@/hooks/use-file-upload";
 import type { ImagePreset } from "@/lib/client-image-compression";
 import { cn } from "@/lib/utils";
+import { extractColorsFromImage } from "@/features/customization/lib/color-extraction";
 import {
     UploadCloud,
     X,
@@ -35,6 +36,14 @@ import { Progress } from "@/components/ui/progress";
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/** Color palette extracted from an image */
+export interface ImagePalette {
+    primary: string;
+    secondary: string;
+    background: string;
+    accent: string;
+}
 
 export interface UploadFieldProps {
     /** Field label */
@@ -67,8 +76,24 @@ export interface UploadFieldProps {
     className?: string;
     /** Help text below the field */
     helpText?: string;
+    /** Tooltip shown next to label with ? icon */
+    tooltip?: React.ReactNode;
     /** Custom dropzone label */
     dropzoneLabel?: string;
+    /** Upgrade hint shown below dropzone — the component is plan-agnostic */
+    upgradeHint?: {
+        message: string;
+        onClick: () => void;
+    };
+    /** Called when a file is rejected for being too large — lets the consumer handle UX */
+    onFileTooLarge?: (fileName: string, fileSizeMB: number, maxSizeMB: number) => void;
+    /** Ref to expose cleanup function — call to remove uploaded files from storage on cancel */
+    cleanupRef?: React.MutableRefObject<(() => void) | null>;
+    /**
+     * Called when a color palette is extracted from the dropped image.
+     * Only fires for image files. Extraction runs in parallel with upload.
+     */
+    onPaletteExtracted?: (palette: ImagePalette) => void;
 }
 
 // Default accepted types per mode
@@ -113,6 +138,11 @@ export function UploadField({
     className,
     helpText,
     dropzoneLabel,
+    upgradeHint,
+    onFileTooLarge,
+    cleanupRef,
+    onPaletteExtracted,
+    tooltip,
 }: UploadFieldProps) {
     const resolvedMaxSize = maxSizeMB ?? DEFAULT_MAX_SIZE[mode];
     const resolvedAccept = acceptedTypes ?? DEFAULT_ACCEPT[mode];
@@ -137,6 +167,7 @@ export function UploadField({
         addFiles,
         removeFile,
         initFiles,
+        clearAll,
         isUploading,
     } = useFileUpload({
         bucket,
@@ -145,6 +176,16 @@ export function UploadField({
         compressionPreset,
         onFilesChange: handleFilesChange,
     });
+
+    // Expose cleanup function to parent via ref
+    useEffect(() => {
+        if (cleanupRef) {
+            cleanupRef.current = clearAll;
+        }
+        return () => {
+            if (cleanupRef) cleanupRef.current = null;
+        };
+    }, [cleanupRef, clearAll]);
 
     // Sync initial value with hook
     useEffect(() => {
@@ -162,10 +203,44 @@ export function UploadField({
         } else {
             addFiles(acceptedFiles);
         }
-    }, [isSingle, addFiles]);
+
+        // Extract color palette from first image file (fire-and-forget)
+        if (onPaletteExtracted) {
+            const imageFile = acceptedFiles.find(f => f.type.startsWith("image/"));
+            if (imageFile) {
+                extractColorsFromImage(imageFile, 4)
+                    .then(colors => {
+                        if (colors.length >= 4) {
+                            onPaletteExtracted({
+                                primary: colors[0].hex,
+                                secondary: colors[1].hex,
+                                background: colors.reduce((lightest, c) =>
+                                    c.oklch.l > lightest.oklch.l ? c : lightest
+                                ).hex,
+                                accent: colors.reduce((darkest, c) =>
+                                    c.oklch.l < darkest.oklch.l ? c : darkest
+                                ).hex,
+                            });
+                        }
+                    })
+                    .catch(e => console.warn("Could not extract palette:", e));
+            }
+        }
+    }, [isSingle, addFiles, onPaletteExtracted]);
+
+    const onDropRejected = useCallback((rejections: FileRejection[]) => {
+        for (const rejection of rejections) {
+            const isTooLarge = rejection.errors.some(e => e.code === "file-too-large");
+            if (isTooLarge && onFileTooLarge) {
+                const fileSizeMB = Math.round(rejection.file.size / (1024 * 1024) * 10) / 10;
+                onFileTooLarge(rejection.file.name, fileSizeMB, resolvedMaxSize);
+            }
+        }
+    }, [onFileTooLarge, resolvedMaxSize]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
+        onDropRejected,
         maxSize: resolvedMaxSize * 1024 * 1024,
         accept: resolvedAccept,
         multiple: !isSingle,
@@ -200,6 +275,7 @@ export function UploadField({
             className={className}
             error={error}
             helpText={helpText}
+            tooltip={tooltip}
         >
             <div className="space-y-3">
                 {/* ============================================ */}
@@ -227,6 +303,20 @@ export function UploadField({
                             <p className="text-xs text-muted-foreground/70 mt-0.5">
                                 {dropzoneSubtext} (máx. {resolvedMaxSize}MB)
                             </p>
+                            {upgradeHint && (
+                                <p className="text-xs text-primary/70 mt-1.5">
+                                    <button
+                                        type="button"
+                                        className="hover:text-primary underline underline-offset-2 transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            upgradeHint.onClick();
+                                        }}
+                                    >
+                                        {upgradeHint.message}
+                                    </button>
+                                </p>
+                            )}
                         </div>
                     </div>
                 )}

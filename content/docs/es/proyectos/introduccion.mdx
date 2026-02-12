@@ -1,0 +1,114 @@
+---
+title: ¿Qué es un Proyecto?
+description: Guía completa sobre la gestión de proyectos de construcción en SEENCEL
+---
+
+# ¿Qué es un Proyecto?
+
+Un **Proyecto** en SEENCEL representa una obra o emprendimiento de construcción. Es la unidad principal de organización: dentro de cada proyecto se gestionan tareas, materiales, equipos, presupuestos, finanzas y equipo de trabajo.
+
+## Campos de un Proyecto
+
+### Información Principal
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Nombre** | Nombre del proyecto. Ej: "Torre Norte Edificio Central" | ✅ |
+| **Código** | Código interno para identificación rápida. Ej: "PRY-001" | No |
+| **Estado** | Estado actual del proyecto (ver detalle abajo) | ✅ |
+| **Tipo** | Clasificación del proyecto (configurables por organización) | No |
+| **Modalidad** | Tipo de contrato o modalidad de ejecución | No |
+
+### Estado del Proyecto
+
+El estado define en qué etapa se encuentra tu proyecto. Es un campo clave porque **la cantidad de proyectos activos simultáneamente depende de tu plan contratado**.
+
+| Estado | Significado | ¿Cuenta para el límite? |
+|--------|-------------|:-----------------------:|
+| **Activo** | Proyecto en ejecución, se está trabajando activamente | ✅ Sí |
+| **Planificación** | Proyecto en etapa de diseño o pre-obra, aún no comenzó | ✅ Sí |
+| **Completado** | Proyecto finalizado, la obra se terminó | ❌ No |
+| **Inactivo** | Proyecto pausado o archivado temporalmente | ❌ No |
+
+<Callout type="important" title="Límite de Proyectos Activos">
+Cada plan de SEENCEL tiene un límite de proyectos activos simultáneos. Los proyectos en estado **Completado** o **Inactivo** no cuentan para este límite. Si necesitás liberar espacio, marcá como Completado o Inactivo los proyectos que ya no estés trabajando.
+</Callout>
+
+### Información Visual
+
+| Campo | Descripción |
+|-------|-------------|
+| **Imagen** | Foto o render representativo. Se usa como portada en las tarjetas del proyecto. En planes pagos, los colores extraídos de la imagen también personalizan la interfaz del proyecto |
+| **Color** | Color identificador para badges y tarjetas |
+
+### Datos del Proyecto
+
+| Campo | Descripción |
+|-------|-------------|
+| **Ubicación** | Dirección o coordenadas de la obra |
+| **Fecha Estimada de Inicio** | Cuándo se planea comenzar la obra |
+| **Fecha Estimada de Fin** | Cuándo se planea terminar la obra |
+
+---
+
+## Tipos y Modalidades
+
+### Tipos de Proyecto
+Los tipos son categorías que definen la naturaleza del proyecto. Se configuran desde la pestaña **Configuración** de la página de Proyectos.
+
+**Ejemplos:** Obra nueva, Remodelación, Ampliación, Demolición.
+
+### Modalidades de Proyecto
+Las modalidades definen cómo se ejecuta el proyecto. También se configuran desde **Configuración**.
+
+**Ejemplos:** Administración directa, Llave en mano, Por contrata.
+
+<Callout type="tip" title="Configuración Personalizable">
+Tanto los tipos como las modalidades son completamente personalizables por cada organización. Podés crear, editar y eliminar los que necesites.
+</Callout>
+
+---
+
+## ¿Qué puedo hacer dentro de un Proyecto?
+
+Una vez creado, cada proyecto tiene su propio espacio de trabajo con:
+
+| Módulo | Descripción |
+|--------|-------------|
+| **Detalles** | Información general, ubicación, datos del proyecto |
+| **Tareas de Obra** | Gestión de tareas de construcción asignadas al proyecto |
+| **Materiales** | Pedidos, compras y pagos de materiales |
+| **Mano de Obra** | Gestión del personal asignado |
+| **Equipos** | Control de maquinaria y herramientas |
+| **Finanzas** | Movimientos financieros del proyecto |
+| **Presupuestos** | Cotizaciones y presupuestos |
+| **Subcontratos** | Gestión de subcontratistas |
+| **Planificación** | Gantt y cronograma de obra |
+| **Bitácora** | Registro diario de avance y novedades |
+
+---
+
+## Flujo de Trabajo Típico
+
+1. **Crear el Proyecto** — Definí nombre, tipo, modalidad y fechas estimadas
+2. **Cargar Imagen** — Subí una foto o render representativo
+3. **Configurar Equipos** — Asigná los miembros que participarán
+4. **Planificar Tareas** — Creá las tareas de construcción necesarias
+5. **Gestionar Materiales** — Generá pedidos y controlá compras
+6. **Seguir el Avance** — Usá la bitácora y el dashboard de proyecto
+
+---
+
+## Vista de Proyectos
+
+La página principal muestra todos los proyectos de tu organización con dos modalidades de vista:
+
+- **Grid**: Tarjetas visuales con la imagen del proyecto
+- **Tabla**: Vista en lista con columnas detalladas
+
+Podés filtrar por nombre usando la barra de búsqueda y cambiar entre vistas con los botones de la toolbar.
+
+<Callout type="info" title="Límite según tu Plan">
+Dependiendo de tu plan, hay un límite en la cantidad de proyectos **activos** simultáneamente. Completá o desactivá los proyectos terminados para liberar espacio, o actualizá a PRO para proyectos activos ilimitados.
+</Callout>
+

@@ -183,11 +183,11 @@ Para cada página, seguir este flujo:
 
 ### Organización
 1. ~~Visión General (`/organization`)~~ ✅
-2. ~~Agenda / Planner (`/organization/planner`)~~ ✅
-3. Archivos (`/organization/files`)
+2. ~~Planificación (`/organization/planner`)~~ ✅
+3. ~~Documentación (`/organization/files`)~~ ✅
 4. Presupuestos (`/organization/quotes`)
 5. Finanzas (`/organization/finance`)
-6. Proyectos (`/organization/projects`)
+6. **🔄 Proyectos (`/organization/projects`)**
 7. Identidad (`/organization/identity`)
 8. Catálogo Técnico (`/organization/catalog`)
 9. Contactos (`/organization/contacts`)
@@ -199,8 +199,8 @@ Para cada página, seguir este flujo:
 
 ### Proyecto
 15. Visión General del Proyecto
-16. Agenda del Proyecto
-17. Archivos del Proyecto
+16. Planificación del Proyecto
+17. ~~Documentación del Proyecto~~  ✅
 18. Presupuestos del Proyecto
 19. Finanzas del Proyecto
 20. Información

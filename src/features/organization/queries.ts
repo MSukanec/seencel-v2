@@ -288,6 +288,7 @@ export async function getUserOrganizations() {
                 id,
                 name,
                 logo_path,
+                owner_id,
                 plans:plan_id (
                     id,
                     name,
@@ -356,12 +357,11 @@ export async function getUserOrganizations() {
             id: org.id,
             name: org.name,
             logo_path: org.logo_path || null,
-            image_path: org.image_path || null, // Keep for legacy compat if types demand it, though we removed it from select
-            image_bucket: null,
+            owner_id: org.owner_id || null,
             slug: org.name.toLowerCase().replace(/\s+/g, '-'),
             role: 'member',
             updated_at: lastAccessMap.get(org.id) || 0,
-            plans: org.plans || null, // Include plan data
+            plans: org.plans || null,
             members: theseMembers.map((mem: any) => ({
                 name: mem.user?.full_name || mem.user?.email || 'User',
                 image: mem.user?.avatar_url || null,
@@ -389,7 +389,8 @@ export async function getUserOrganizations() {
 
     return {
         organizations,
-        activeOrgId
+        activeOrgId,
+        currentUserId: publicUserId,
     };
 }
 

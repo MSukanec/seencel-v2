@@ -263,15 +263,10 @@ export function MaterialsCatalogView({
 
     // Bulk actions content for Toolbar
     const bulkActionsContent = (
-        <>
-            <Button variant="outline" size="sm" onClick={multiSelect.selectAll} className="gap-2">
-                Seleccionar todo ({filteredMaterials.length})
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteModalOpen(true)} className="gap-2">
-                <Trash2 className="h-4 w-4" />
-                Eliminar
-            </Button>
-        </>
+        <Button variant="destructive" size="sm" onClick={() => setBulkDeleteModalOpen(true)} className="gap-2">
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+        </Button>
     );
 
     // Filter by editability: in org mode, only show editable (org) materials in admin actions
@@ -736,6 +731,9 @@ export function MaterialsCatalogView({
                     ]}
                     selectedCount={multiSelect.selectedCount}
                     onClearSelection={multiSelect.clearSelection}
+                    onSelectAll={multiSelect.selectAll}
+                    totalCount={filteredMaterials.length}
+                    onBulkDelete={() => setBulkDeleteModalOpen(true)}
                     bulkActions={bulkActionsContent}
                 />
 

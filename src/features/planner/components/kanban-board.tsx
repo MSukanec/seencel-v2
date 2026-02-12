@@ -356,7 +356,7 @@ export function KanbanBoard({
                         featureDescription="Las columnas te permiten organizar tus tarjetas en diferentes estados o categorías. Creá columnas como 'Por hacer', 'En progreso' y 'Listo' para gestionar el flujo de trabajo de tu equipo."
                         onAction={handleAddList}
                         actionLabel="Crear primera columna"
-                        docsPath="/docs/agenda/kanban"
+                        docsPath="/docs/planificador/kanban"
                     />
                 </div>
             ) : (

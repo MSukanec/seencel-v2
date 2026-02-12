@@ -13,7 +13,7 @@ import { useTheme } from "next-themes";
 import { useRouter } from "@/i18n/routing";
 
 // ============================================================================
-// ORG PULSE WIDGET — Hero Card with Map Background
+// ORG HERO WIDGET — Hero Card with Map Background
 // ============================================================================
 // Shows: Logo + Name + Plan Badge + Quick Stats over a Google Map with
 // project markers auto-fitted. Falls back to gradient if no coordinates.
@@ -62,7 +62,7 @@ interface ProjectLocation {
     imageUrl: string | null;
 }
 
-interface OrgPulseData {
+interface OrgHeroData {
     name: string;
     logoPath: string | null;
     planName: string | null;
@@ -84,7 +84,7 @@ function getPlanBadgeConfig(planSlug?: string | null) {
             return { icon: Users, label: 'Equipos', bg: 'bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-300', iconColor: 'text-purple-400' };
         case 'free':
         default:
-            return { icon: Sparkles, label: 'Gratis', bg: 'bg-lime-500/20', border: 'border-lime-500/30', text: 'text-lime-300', iconColor: 'text-lime-400' };
+            return { icon: Sparkles, label: 'Esencial', bg: 'bg-lime-500/20', border: 'border-lime-500/30', text: 'text-lime-300', iconColor: 'text-lime-400' };
     }
 }
 
@@ -101,7 +101,7 @@ function buildLogoUrl(logoPath: string | null): string | null {
 
 
 // Map background component
-function PulseMapBackground({ locations, onNavigate }: { locations: ProjectLocation[]; onNavigate: (projectId: string) => void }) {
+function HeroMapBackground({ locations, onNavigate }: { locations: ProjectLocation[]; onNavigate: (projectId: string) => void }) {
     const { resolvedTheme } = useTheme();
     const mapRef = useRef<google.maps.Map | null>(null);
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
@@ -117,12 +117,12 @@ function PulseMapBackground({ locations, onNavigate }: { locations: ProjectLocat
             locations.forEach((loc) => {
                 bounds.extend({ lat: loc.lat, lng: loc.lng });
             });
-            map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+            map.fitBounds(bounds, { top: 10, right: 10, bottom: 80, left: 10 });
 
             // Prevent zooming too close for single marker
             const listener = google.maps.event.addListener(map, "idle", () => {
                 const zoom = map.getZoom();
-                if (zoom && zoom > 12) map.setZoom(12);
+                if (zoom && zoom > 15) map.setZoom(15);
                 google.maps.event.removeListener(listener);
             });
         },
@@ -190,7 +190,7 @@ function PulseMapBackground({ locations, onNavigate }: { locations: ProjectLocat
                                 </div>
                             )}
                             {/* Avatar — subtle, theme-aware */}
-                            <div className="w-7 h-7 rounded-full border border-border/60 shadow-sm overflow-hidden transition-all duration-200 hover:scale-125 hover:shadow-lg hover:border-border relative opacity-80 hover:opacity-100">
+                            <div className="w-[34px] h-[34px] rounded-full border border-border/60 shadow-sm overflow-hidden transition-all duration-200 hover:scale-125 hover:shadow-lg hover:border-border relative opacity-80 hover:opacity-100">
                                 {loc.imageUrl ? (
                                     <img
                                         src={loc.imageUrl}
@@ -231,8 +231,8 @@ function GradientBackground() {
     );
 }
 
-export function OrgPulseWidget({ initialData }: WidgetProps) {
-    const [data, setData] = useState<OrgPulseData | null>(initialData ?? null);
+export function OrgHeroWidget({ initialData }: WidgetProps) {
+    const [data, setData] = useState<OrgHeroData | null>(initialData ?? null);
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
     const hasLocations = data && data.projectLocations && data.projectLocations.length > 0;
@@ -246,7 +246,7 @@ export function OrgPulseWidget({ initialData }: WidgetProps) {
     useEffect(() => {
         if (data) return;
 
-        async function fetchPulseData() {
+        async function fetchHeroData() {
             try {
                 const supabase = createClient();
 
@@ -334,11 +334,11 @@ export function OrgPulseWidget({ initialData }: WidgetProps) {
                     members: membersForStack,
                 });
             } catch (error) {
-                console.error("Error fetching pulse data:", error);
+                console.error("Error fetching hero data:", error);
             }
         }
 
-        fetchPulseData();
+        fetchHeroData();
     }, [data]);
 
     // Loading skeleton
@@ -381,7 +381,7 @@ export function OrgPulseWidget({ initialData }: WidgetProps) {
             <div className="absolute inset-0">
                 {showMap ? (
                     <>
-                        <PulseMapBackground locations={data.projectLocations} onNavigate={handleNavigateToProject} />
+                        <HeroMapBackground locations={data.projectLocations} onNavigate={handleNavigateToProject} />
                         {/* Subtle hint when no project locations */}
                         {!hasLocations && (
                             <div className="absolute bottom-3 right-4 z-10 pointer-events-none">

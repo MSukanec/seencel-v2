@@ -169,10 +169,20 @@ create table public.project_settings (
   work_days integer[] not null default '{1,2,3,4,5}'::integer[],
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
+  use_palette_theme boolean not null default false,
+  use_custom_color boolean not null default false,
+  custom_color_h integer null,
+  custom_color_hex text null,
   constraint project_settings_pkey primary key (id),
   constraint project_settings_project_id_unique unique (project_id),
   constraint project_settings_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
-  constraint project_settings_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE
+  constraint project_settings_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE,
+  constraint project_settings_custom_color_h_check check (
+    (
+      (custom_color_h >= 0)
+      and (custom_color_h <= 360)
+    )
+  )
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_project_settings_project_id on public.project_settings using btree (project_id) TABLESPACE pg_default;
@@ -195,9 +205,6 @@ create table public.projects (
   updated_at timestamp with time zone not null default now(),
   created_by uuid null,
   color text null,
-  use_custom_color boolean not null default false,
-  custom_color_h integer null,
-  custom_color_hex text null,
   code text null,
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
@@ -207,20 +214,15 @@ create table public.projects (
   project_type_id uuid null,
   project_modality_id uuid null,
   updated_by uuid null,
+  image_palette jsonb null,
   constraint projects_pkey primary key (id),
   constraint projects_id_key unique (id),
-  constraint projects_updated_by_fkey foreign KEY (updated_by) references organization_members (id),
-  constraint projects_project_type_id_fkey foreign KEY (project_type_id) references project_types (id) on delete set null,
-  constraint projects_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint projects_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
   constraint projects_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint projects_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
   constraint projects_project_modality_id_fkey foreign KEY (project_modality_id) references project_modalities (id) on delete set null,
-  constraint projects_name_not_blank_chk check ((btrim(name) <> ''::text)),
-  constraint projects_custom_color_h_check check (
-    (
-      (custom_color_h >= 0)
-      and (custom_color_h <= 360)
-    )
-  )
+  constraint projects_project_type_id_fkey foreign KEY (project_type_id) references project_types (id) on delete set null,
+  constraint projects_name_not_blank_chk check ((btrim(name) <> ''::text))
 ) TABLESPACE pg_default;
 
 create index IF not exists projects_org_idx on public.projects using btree (organization_id) TABLESPACE pg_default;
@@ -260,7 +262,8 @@ create trigger projects_set_updated_at BEFORE
 update on projects for EACH row
 execute FUNCTION set_timestamp ();
 
-create trigger set_updated_by_projects BEFORE
+create trigger set_updated_by_projects BEFORE INSERT
+or
 update on projects for EACH row
 execute FUNCTION handle_updated_by ();
 
@@ -281,13 +284,15 @@ select
   p.organization_id,
   p.created_by,
   p.color,
-  p.use_custom_color,
-  p.custom_color_h,
-  p.custom_color_hex,
   p.is_over_limit,
   p.image_url,
+  p.image_palette,
   p.project_type_id,
   p.project_modality_id,
+  COALESCE(pst.use_custom_color, false) as use_custom_color,
+  pst.custom_color_h,
+  pst.custom_color_hex,
+  COALESCE(pst.use_palette_theme, false) as use_palette_theme,
   pd.is_public,
   pd.city,
   pd.country,
@@ -298,10 +303,10 @@ select
 from
   projects p
   left join project_data pd on pd.project_id = p.id
+  left join project_settings pst on pst.project_id = p.id
   left join project_types pt on pt.id = p.project_type_id
   and pt.is_deleted = false
   left join project_modalities pm on pm.id = p.project_modality_id
   and pm.is_deleted = false
 where
   p.is_deleted = false;
-

@@ -17,17 +17,14 @@ import {
     Trash2,
     Settings,
     ExternalLink,
-    X,
 } from "lucide-react";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-    getSortedGroups,
-    WIDGET_GROUP_LABELS,
-} from "@/components/widgets/registry";
+import { useModal } from "@/stores/modal-store";
+import { WidgetSelectorForm } from "@/components/widgets/forms/widget-selector-form";
 
 // react-grid-layout styles
 import "react-grid-layout/css/styles.css";
@@ -264,82 +261,38 @@ function WidgetWrapper({
 }
 
 // ============================================================================
-// ADD WIDGET CARD
+// ADD WIDGET BUTTON (opens modal)
 // ============================================================================
 
-function AddWidgetCard({
+function AddWidgetButton({
     onAdd,
     usedIds,
-    registry
+    registry,
 }: {
     onAdd: (id: string) => void;
     usedIds: string[];
     registry: Record<string, WidgetDefinition>;
 }) {
-    const [isOpen, setIsOpen] = useState(false);
+    const { openModal } = useModal();
 
-    const grouped = useMemo(() => {
-        const groups: Record<string, WidgetDefinition[]> = {};
-        Object.values(registry).forEach(def => {
-            if (!groups[def.group]) groups[def.group] = [];
-            groups[def.group].push(def);
-        });
-        return groups;
-    }, [registry]);
-
-    const sortedGroupKeys = useMemo(() => getSortedGroups(Object.keys(grouped)), [grouped]);
-
-    if (isOpen) {
-        return (
-            <div className="rounded-xl border-2 border-dashed border-border/60 bg-card/50 p-4 overflow-auto max-h-[400px]">
-                <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium">Agregar Widget</p>
-                    <button onClick={() => setIsOpen(false)} className="p-1 rounded-md hover:bg-muted cursor-pointer">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-                <div className="space-y-4">
-                    {sortedGroupKeys.map(group => (
-                        <div key={group}>
-                            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                                {WIDGET_GROUP_LABELS[group] || group}
-                            </p>
-                            <div className="space-y-1">
-                                {grouped[group].map(def => {
-                                    const isUsed = !def.configurable && usedIds.includes(def.id);
-                                    return (
-                                        <button
-                                            key={def.id}
-                                            onClick={() => {
-                                                onAdd(def.id);
-                                                setIsOpen(false);
-                                            }}
-                                            disabled={isUsed}
-                                            className={cn(
-                                                "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
-                                                isUsed
-                                                    ? "opacity-40 cursor-not-allowed"
-                                                    : "hover:bg-primary/10 hover:text-primary"
-                                            )}
-                                        >
-                                            <span className="font-medium">{def.name}</span>
-                                            {def.description && (
-                                                <p className="text-xs text-muted-foreground mt-0.5">{def.description}</p>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
+    const handleOpen = () => {
+        openModal(
+            <WidgetSelectorForm
+                registry={registry}
+                usedIds={usedIds}
+                onAdd={onAdd}
+            />,
+            {
+                title: "Agregar Widget",
+                description: "Elegí un widget para agregar al dashboard.",
+                size: "md",
+            }
         );
-    }
+    };
 
     return (
         <button
-            onClick={() => setIsOpen(true)}
+            onClick={handleOpen}
             className={cn(
                 "rounded-xl border-2 border-dashed border-border/50",
                 "flex flex-col items-center justify-center gap-2 p-6",
@@ -348,7 +301,7 @@ function AddWidgetCard({
             )}
         >
             <Plus className="w-6 h-6" />
-            <span className="text-sm font-medium">Agregar</span>
+            <span className="text-sm font-medium">Agregar Widget</span>
         </button>
     );
 }
@@ -474,13 +427,53 @@ export function DashboardWidgetGrid({
         if (!def) return;
 
         setItems(prev => {
+            const w = def.defaultSpan.w;
+            const h = def.defaultSpan.h;
+            const cols = 4; // lg breakpoint columns
+
+            // Build an occupancy grid to find the first available slot
             const maxY = prev.reduce((max, item) => Math.max(max, item.y + item.h), 0);
+            const scanRows = maxY + h + 1; // scan existing rows + room for a new one
+
+            // Create occupancy matrix [row][col] — true = occupied
+            const occupied: boolean[][] = Array.from({ length: scanRows }, () => Array(cols).fill(false));
+            for (const item of prev) {
+                for (let row = item.y; row < item.y + item.h; row++) {
+                    for (let col = item.x; col < item.x + item.w; col++) {
+                        if (row < scanRows && col < cols) {
+                            occupied[row][col] = true;
+                        }
+                    }
+                }
+            }
+
+            // Find first position where the widget fits (scan top-to-bottom, left-to-right)
+            let bestX = 0;
+            let bestY = maxY; // fallback: bottom
+            outer:
+            for (let row = 0; row <= scanRows - h; row++) {
+                for (let col = 0; col <= cols - w; col++) {
+                    // Check if the entire w×h block is free
+                    let fits = true;
+                    for (let dy = 0; dy < h && fits; dy++) {
+                        for (let dx = 0; dx < w && fits; dx++) {
+                            if (occupied[row + dy][col + dx]) fits = false;
+                        }
+                    }
+                    if (fits) {
+                        bestX = col;
+                        bestY = row;
+                        break outer;
+                    }
+                }
+            }
+
             const newItem: WidgetLayoutItem = {
                 id: def.id,
-                x: 0,
-                y: maxY,
-                w: def.defaultSpan.w,
-                h: def.defaultSpan.h,
+                x: bestX,
+                y: bestY,
+                w,
+                h,
                 ...(def.defaultConfig ? { config: { ...def.defaultConfig } } : {}),
             };
             const newItems = [...prev, newItem];
@@ -582,7 +575,7 @@ export function DashboardWidgetGrid({
             {/* Add Widget — outside the grid, only in edit mode */}
             {isEditing && (
                 <div className="mt-4">
-                    <AddWidgetCard
+                    <AddWidgetButton
                         onAdd={handleAdd}
                         usedIds={items.map(i => i.id)}
                         registry={registry}

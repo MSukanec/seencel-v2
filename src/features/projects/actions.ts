@@ -133,30 +133,35 @@ export async function createProject(formData: FormData) {
     const imagePaletteRaw = formData.get("image_palette")?.toString();
     const imagePalette = imagePaletteRaw ? JSON.parse(imagePaletteRaw) : null;
 
-    // Color Handling
+    // Color (identity — stays in projects)
     const color = formData.get("color")?.toString() || null;
+
+    // Color customization (goes to project_settings)
     const useCustomColor = formData.get("use_custom_color") === 'true';
     const customColorH = formData.get("custom_color_h") ? parseInt(formData.get("custom_color_h")!.toString()) : null;
+    const customColorHex = formData.get("custom_color_hex")?.toString() || color;
+    const usePaletteTheme = formData.get("use_palette_theme") === 'true';
 
     // Type and Modality
     const typeId = formData.get("project_type_id")?.toString() || null;
     const modalityId = formData.get("project_modality_id")?.toString() || null;
 
-    // Prepare Insert Data (Projects Table)
+    // Validate name
+    const projectName = formData.get("name")?.toString()?.trim();
+    if (!projectName) return { error: "El nombre del proyecto es obligatorio." };
+
+    // Prepare Insert Data (Projects Table — identity only)
     const projectData = {
-        name: formData.get("name")?.toString() || "New Project",
-        status: formData.get("status")?.toString() || "Activo",
+        name: projectName,
+        status: formData.get("status")?.toString() || "active",
         organization_id: organizationId,
         project_type_id: typeId,
         project_modality_id: modalityId,
         color: color,
-        use_custom_color: useCustomColor,
-        custom_color_h: customColorH,
-        custom_color_hex: color,
         image_url: imageUrl,
         image_palette: imagePalette,
         created_by: memberData.id,
-        last_active_at: new Date().toISOString() // Set initial activity
+        last_active_at: new Date().toISOString()
     };
 
     const { data: newProject, error: insertError } = await supabase
@@ -170,7 +175,7 @@ export async function createProject(formData: FormData) {
         return { error: sanitizeError(insertError) };
     }
 
-    // Insert empty project_data (Types/Modalities removed from here)
+    // Insert project_data
     const { error: dataError } = await supabase
         .from('project_data')
         .insert({
@@ -182,6 +187,23 @@ export async function createProject(formData: FormData) {
     if (dataError) {
         console.error("Create Project Data Error:", dataError);
         // Non-critical
+    }
+
+    // Insert project_settings (color customization lives here)
+    const { error: settingsError } = await supabase
+        .from('project_settings')
+        .insert({
+            project_id: newProject.id,
+            organization_id: organizationId,
+            use_custom_color: useCustomColor,
+            custom_color_h: customColorH,
+            custom_color_hex: customColorHex,
+            use_palette_theme: usePaletteTheme,
+        });
+
+    if (settingsError) {
+        console.error("Create Project Settings Error:", settingsError);
+        // Non-critical — defaults will apply
     }
 
     // Auto-activate the new project
@@ -200,6 +222,8 @@ export async function updateProject(formData: FormData) {
     const projectId = formData.get("id")?.toString();
     if (!projectId) throw new Error("Project ID is required.");
 
+    const organizationId = formData.get("organization_id")?.toString();
+
     // Fields for 'projects' table
     const projectFields: Record<string, any> = {};
     const name = formData.get("name");
@@ -207,6 +231,20 @@ export async function updateProject(formData: FormData) {
 
     const status = formData.get("status");
     if (status) projectFields.status = status;
+
+    // 🚨 Validate active project limit when changing status to 'active'
+    if (status === 'active' && organizationId) {
+        const limitCheck = await checkActiveProjectLimit(organizationId, projectId);
+        if (limitCheck && !limitCheck.allowed) {
+            return {
+                error: "ACTIVE_LIMIT_REACHED",
+                limitInfo: {
+                    currentCount: limitCheck.current_active_count,
+                    maxAllowed: limitCheck.max_allowed,
+                }
+            };
+        }
+    }
 
     const typeId = formData.get("project_type_id");
     if (typeId) projectFields.project_type_id = typeId;
@@ -217,14 +255,7 @@ export async function updateProject(formData: FormData) {
     const color = formData.get("color");
     if (color) {
         projectFields.color = color;
-        projectFields.custom_color_hex = color;
     }
-
-    const useCustomColor = formData.get("use_custom_color");
-    if (useCustomColor !== null) projectFields.use_custom_color = useCustomColor === 'true';
-
-    const customColorH = formData.get("custom_color_h");
-    if (customColorH) projectFields.custom_color_h = parseInt(customColorH.toString());
 
     // Image URL (Client Upload)
     const imageUrl = formData.get("image_url")?.toString();
@@ -237,6 +268,22 @@ export async function updateProject(formData: FormData) {
     if (imagePaletteRaw) {
         projectFields.image_palette = JSON.parse(imagePaletteRaw);
     }
+
+    // Fields for 'project_settings' table (color customization)
+    const settingsFields: Record<string, any> = {};
+
+    const useCustomColor = formData.get("use_custom_color");
+    if (useCustomColor !== null) settingsFields.use_custom_color = useCustomColor === 'true';
+
+    const customColorH = formData.get("custom_color_h");
+    if (customColorH) settingsFields.custom_color_h = parseInt(customColorH.toString());
+
+    const customColorHex = formData.get("custom_color_hex");
+    if (customColorHex) settingsFields.custom_color_hex = customColorHex.toString();
+    else if (color) settingsFields.custom_color_hex = color.toString();
+
+    const usePaletteTheme = formData.get("use_palette_theme");
+    if (usePaletteTheme !== null) settingsFields.use_palette_theme = usePaletteTheme === 'true';
 
 
     // Fields for 'project_data' table
@@ -337,7 +384,6 @@ export async function updateProject(formData: FormData) {
 
         // 2. Upsert project_data
         if (Object.keys(dataFields).length > 0) {
-            // Fetch org_id first to be safe
             const { data: currentProject } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
             if (!currentProject) throw new Error("Project not found");
 
@@ -353,12 +399,97 @@ export async function updateProject(formData: FormData) {
             if (dataError) throw dataError;
         }
 
+        // 3. Upsert project_settings (color customization)
+        if (Object.keys(settingsFields).length > 0) {
+            const { data: currentProject } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
+            if (!currentProject) throw new Error("Project not found");
+
+            const { error: settingsError } = await supabase
+                .from("project_settings")
+                .upsert({
+                    project_id: projectId,
+                    organization_id: currentProject.organization_id,
+                    ...settingsFields,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'project_id' });
+
+            if (settingsError) throw settingsError;
+        }
+
         revalidatePath(`/project/${projectId}`);
         revalidatePath(`/project/${projectId}/details`);
         revalidatePath(`/organization/projects`);
         return { success: true };
     } catch (e: any) {
         console.error("Update Project Error:", e);
+        return { error: sanitizeError(e) };
+    }
+}
+
+// ============================================================================
+// ACTIVE PROJECT LIMIT CHECK
+// ============================================================================
+
+/**
+ * Calls the SQL function check_active_project_limit to verify if
+ * the organization can activate another project.
+ */
+export async function checkActiveProjectLimit(
+    organizationId: string,
+    excludedProjectId?: string
+): Promise<{ allowed: boolean; current_active_count: number; max_allowed: number } | null> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.rpc('check_active_project_limit', {
+        p_organization_id: organizationId,
+        p_excluded_project_id: excludedProjectId || null,
+    });
+
+    if (error) {
+        console.error('Error checking active project limit:', error);
+        return null; // Fail open — don't block the user if the check fails
+    }
+
+    return data as { allowed: boolean; current_active_count: number; max_allowed: number };
+}
+
+// ============================================================================
+// SWAP PROJECT STATUS (Interchange)
+// ============================================================================
+
+/**
+ * Swaps the status of two projects: deactivates one and activates another.
+ * Used when the user is at the active project limit and wants to activate
+ * a different project.
+ */
+export async function swapProjectStatus(
+    projectToActivateId: string,
+    projectToDeactivateId: string,
+    deactivateToStatus: string = 'completed'
+) {
+    const supabase = await createClient();
+
+    try {
+        // 1. Deactivate the chosen project
+        const { error: deactivateError } = await supabase
+            .from('projects')
+            .update({ status: deactivateToStatus })
+            .eq('id', projectToDeactivateId);
+
+        if (deactivateError) throw deactivateError;
+
+        // 2. Activate the desired project
+        const { error: activateError } = await supabase
+            .from('projects')
+            .update({ status: 'active' })
+            .eq('id', projectToActivateId);
+
+        if (activateError) throw activateError;
+
+        revalidatePath('/organization/projects');
+        return { success: true };
+    } catch (e: any) {
+        console.error('Error swapping project status:', e);
         return { error: sanitizeError(e) };
     }
 }

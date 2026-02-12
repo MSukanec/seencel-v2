@@ -141,6 +141,7 @@ export async function getRecentProjects(
             .select("*")
             .eq("organization_id", orgId)
             .eq("is_deleted", false)
+            .eq("status", "active")
             .order("last_active_at", { ascending: false, nullsFirst: false })
             .limit(limit);
 
@@ -352,6 +353,192 @@ export async function getFinancialSummary(
 }
 
 // ============================================================================
+// STORAGE OVERVIEW (returned to client)
+// ============================================================================
+
+export interface StorageOverviewData {
+    totalBytes: number;
+    fileCount: number;
+    folderCount: number;
+    maxStorageMb: number;
+    byType: { type: string; count: number; bytes: number }[];
+}
+
+/**
+ * Fetches storage stats for the StorageOverviewWidget.
+ * Autonomous: resolves orgId from user preferences.
+ */
+export async function getStorageOverviewData(): Promise<StorageOverviewData> {
+    try {
+        const orgId = await getActiveOrganizationId();
+        if (!orgId) return { totalBytes: 0, fileCount: 0, folderCount: 0, maxStorageMb: 500, byType: [] };
+
+        const supabase = await createClient();
+
+        const [filesResult, foldersResult, planResult] = await Promise.all([
+            supabase
+                .from('media_files')
+                .select('file_type, file_size')
+                .eq('organization_id', orgId)
+                .eq('is_deleted', false),
+            supabase
+                .from('media_file_folders')
+                .select('id', { count: 'exact', head: true })
+                .eq('organization_id', orgId),
+            supabase
+                .from('plan_features')
+                .select('max_storage_mb')
+                .eq('plan_id', (
+                    await supabase.from('organizations').select('plan_id').eq('id', orgId).single()
+                ).data?.plan_id || '')
+                .single(),
+        ]);
+
+        const files = filesResult.data || [];
+        let totalBytes = 0;
+        const typeAgg: Record<string, { count: number; bytes: number }> = {};
+        for (const row of files) {
+            const size = Number(row.file_size) || 0;
+            totalBytes += size;
+            const type = row.file_type || 'other';
+            if (!typeAgg[type]) typeAgg[type] = { count: 0, bytes: 0 };
+            typeAgg[type].count++;
+            typeAgg[type].bytes += size;
+        }
+
+        return {
+            totalBytes,
+            fileCount: files.length,
+            folderCount: foldersResult.count || 0,
+            maxStorageMb: planResult.data?.max_storage_mb ?? 500,
+            byType: Object.entries(typeAgg)
+                .map(([type, agg]) => ({ type, ...agg }))
+                .sort((a, b) => b.bytes - a.bytes),
+        };
+    } catch (error) {
+        console.error('[getStorageOverviewData] Error:', error);
+        return { totalBytes: 0, fileCount: 0, folderCount: 0, maxStorageMb: 500, byType: [] };
+    }
+}
+
+// ============================================================================
+// RECENT FILES (for RecentFilesWidget / Mini Gallery)
+// ============================================================================
+
+export interface RecentFileItem {
+    id: string;
+    file_name: string;
+    file_type: string;
+    file_size: number;
+    url: string;
+    signed_url?: string;
+    created_at: string;
+    project_id?: string | null;
+}
+
+/**
+ * Fetches recent files for the RecentFilesWidget.
+ * Supports filtering by file type category and scope (organization or project).
+ * @param fileType 'all' | 'image' | 'video' | 'pdf' | 'document'
+ * @param scope 'organization' | projectId (UUID)
+ * @param limit Max files to return
+ */
+export async function getRecentFiles(
+    fileType: string = 'all',
+    scope: string = 'organization',
+    limit: number = 12
+): Promise<RecentFileItem[]> {
+    try {
+        const orgId = await getActiveOrganizationId();
+        if (!orgId) return [];
+
+        const supabase = await createClient();
+
+        let query = supabase
+            .from('media_links')
+            .select(`
+                id,
+                project_id,
+                media_files!inner (
+                    id,
+                    file_name,
+                    file_type,
+                    file_size,
+                    bucket,
+                    file_path,
+                    created_at
+                )
+            `)
+            .eq('organization_id', orgId)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        // Filter by project scope
+        if (scope !== 'organization' && scope !== 'all') {
+            query = query.eq('project_id', scope);
+        }
+
+        // Filter by file type category
+        if (fileType !== 'all') {
+            switch (fileType) {
+                case 'image':
+                    query = query.eq('media_files.file_type', 'image');
+                    break;
+                case 'video':
+                    query = query.eq('media_files.file_type', 'video');
+                    break;
+                case 'pdf':
+                    query = query.eq('media_files.file_type', 'pdf');
+                    break;
+                case 'document':
+                    query = query.not('media_files.file_type', 'eq', 'image')
+                        .not('media_files.file_type', 'eq', 'video')
+                        .not('media_files.file_type', 'eq', 'pdf');
+                    break;
+            }
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            console.error('[getRecentFiles] Error:', error);
+            return [];
+        }
+        if (!data || data.length === 0) return [];
+
+        // Generate signed URLs
+        const items: RecentFileItem[] = await Promise.all(
+            data.map(async (row: any) => {
+                const mf = row.media_files;
+                let signedUrl: string | undefined;
+                try {
+                    const { data: signedData } = await supabase
+                        .storage
+                        .from(mf.bucket)
+                        .createSignedUrl(mf.file_path, 3600);
+                    signedUrl = signedData?.signedUrl;
+                } catch { /* ignore */ }
+
+                return {
+                    id: mf.id,
+                    file_name: mf.file_name,
+                    file_type: mf.file_type,
+                    file_size: mf.file_size,
+                    url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${mf.bucket}/${mf.file_path}`,
+                    signed_url: signedUrl,
+                    created_at: mf.created_at,
+                    project_id: row.project_id,
+                };
+            })
+        );
+
+        return items;
+    } catch (error) {
+        console.error('[getRecentFiles] Error:', error);
+        return [];
+    }
+}
+
+// ============================================================================
 // PREFETCH ALL ORG WIDGET DATA (Server-side, single auth)
 // ============================================================================
 // Called from page.tsx to fetch all widget data in parallel on the server.
@@ -363,7 +550,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
     const now = new Date().toISOString();
     const today = now.split('T')[0];
 
-    const [activityResult, projectsResult, orgResult, membersResult, projectCountResult, projectLocationsResult, membersAvatarResult, calendarResult, kanbanResult, financialResult, prefsResult, teamMembersResult] = await Promise.all([
+    const [activityResult, projectsResult, orgResult, membersResult, projectCountResult, projectLocationsResult, membersAvatarResult, calendarResult, kanbanResult, financialResult, prefsResult, teamMembersResult, storageFilesResult, storageFoldersResult] = await Promise.all([
         // Activity feed (scope: organization, no filter)
         supabase
             .from("organization_activity_logs_view")
@@ -378,6 +565,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
             .select("*")
             .eq("organization_id", orgId)
             .eq("is_deleted", false)
+            .eq("status", "active")
             .order("last_active_at", { ascending: false, nullsFirst: false })
             .limit(2),
 
@@ -462,6 +650,19 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
             .eq('organization_id', orgId)
             .eq('is_active', true)
             .limit(10),
+
+        // Storage: file sizes and types for storage overview widget
+        supabase
+            .from('media_files')
+            .select('file_type, file_size')
+            .eq('organization_id', orgId)
+            .eq('is_deleted', false),
+
+        // Storage: folder count
+        supabase
+            .from('media_file_folders')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', orgId),
     ]);
 
     // Build project locations (filter out deleted projects)
@@ -547,6 +748,34 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         payment_date: m.payment_date || null,
     }));
 
+    // Build storage overview data
+    const storageFiles = storageFilesResult.data || [];
+    let storageTotalBytes = 0;
+    const storageTypeAgg: Record<string, { count: number; bytes: number }> = {};
+    for (const row of storageFiles) {
+        const size = Number(row.file_size) || 0;
+        storageTotalBytes += size;
+        const type = row.file_type || 'other';
+        if (!storageTypeAgg[type]) storageTypeAgg[type] = { count: 0, bytes: 0 };
+        storageTypeAgg[type].count++;
+        storageTypeAgg[type].bytes += size;
+    }
+
+    // Get max_storage_mb from plan (orgData already has plan info)
+    const planSlug = orgData?.plans?.slug || 'free';
+    let maxStorageMb = 500; // default
+    const { data: planFeaturesData } = await supabase
+        .from('plans')
+        .select('plan_features(max_storage_mb)')
+        .eq('slug', planSlug)
+        .single();
+    if (planFeaturesData?.plan_features) {
+        const pf = Array.isArray(planFeaturesData.plan_features)
+            ? (planFeaturesData.plan_features as any)[0]
+            : planFeaturesData.plan_features;
+        maxStorageMb = pf?.max_storage_mb ?? 500;
+    }
+
     return {
         activity_kpi: (activityResult.data || []) as ActivityFeedItem[],
         org_recent_projects: (projectsResult.data || []) as RecentProject[],
@@ -567,6 +796,15 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
             if (!b.last_active_at) return -1;
             return new Date(b.last_active_at).getTime() - new Date(a.last_active_at).getTime();
         }),
+        org_storage_overview: {
+            totalBytes: storageTotalBytes,
+            fileCount: storageFiles.length,
+            folderCount: storageFoldersResult.count || 0,
+            maxStorageMb,
+            byType: Object.entries(storageTypeAgg)
+                .map(([type, agg]) => ({ type, ...agg }))
+                .sort((a, b) => b.bytes - a.bytes),
+        } as StorageOverviewData,
     };
 }
 

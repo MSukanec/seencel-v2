@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface PlanFeatures {
     can_invite_members: boolean;
-    max_projects: number;
+    max_active_projects: number;
     max_storage_mb: number;
     max_file_size_mb: number;
     export_pdf_custom: boolean;
@@ -130,7 +130,7 @@ export async function getPlanBySlug(slug: string): Promise<Plan | null> {
 
 /**
  * Gets the plan features for a specific organization.
- * Used to check feature limits (max_projects, max_members, etc.)
+ * Used to check feature limits (max_active_projects, max_members, etc.)
  */
 export async function getOrganizationPlanFeatures(organizationId: string): Promise<PlanFeatures | null> {
     const supabase = await createClient();
@@ -152,7 +152,20 @@ export async function getOrganizationPlanFeatures(organizationId: string): Promi
 
     // Extract features from the nested plan object
     const planData = data.plan as any;
-    return planData?.features || null;
+    const rawFeatures = planData?.features;
+    if (!rawFeatures) return null;
+
+    // features may come as a JSON string (text column) or parsed object (jsonb column)
+    if (typeof rawFeatures === 'string') {
+        try {
+            return JSON.parse(rawFeatures) as PlanFeatures;
+        } catch {
+            console.error("Error parsing plan features JSON:", rawFeatures);
+            return null;
+        }
+    }
+
+    return rawFeatures as PlanFeatures;
 }
 
 /**

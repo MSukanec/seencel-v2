@@ -178,8 +178,8 @@ export function useSidebarNavigation() {
             case 'organization':
                 const orgItems = [
                     getItemStatus('sidebar_org_overview', { title: tMega('Organization.items.overview'), href: '/organization', icon: LayoutDashboard }),
-                    getItemStatus('sidebar_org_planner', { title: 'Agenda', href: '/organization/planner', icon: CalendarDays }),
-                    getItemStatus('sidebar_org_files', { title: 'Archivos', href: '/organization/files', icon: FolderOpen }),
+                    getItemStatus('sidebar_org_planner', { title: 'Planificador', href: '/organization/planner', icon: CalendarDays }),
+                    getItemStatus('sidebar_org_files', { title: 'Documentación', href: '/organization/files', icon: FolderOpen }),
                     getItemStatus('sidebar_org_quotes', { title: 'Presupuestos', href: '/organization/quotes', icon: FileText }),
                     getItemStatus('sidebar_org_finance', { title: 'Finanzas', href: '/organization/finance', icon: DollarSign }),
                     getItemStatus('sidebar_org_projects', { title: 'Proyectos', href: '/organization/projects', icon: Building, sectionHeader: 'Mi Organización' }),
@@ -205,12 +205,12 @@ export function useSidebarNavigation() {
                         icon: LayoutDashboard
                     }),
                     getItemStatus('sidebar_project_planner', {
-                        title: 'Agenda',
+                        title: 'Planificador',
                         href: activeProjectId ? `${projectBase}/planner` : '/organization/projects',
                         icon: CalendarDays
                     }),
                     getItemStatus('sidebar_project_files', {
-                        title: 'Archivos',
+                        title: 'Documentación',
                         href: activeProjectId ? `${projectBase}/files` : '/organization/projects',
                         icon: FolderOpen
                     }),

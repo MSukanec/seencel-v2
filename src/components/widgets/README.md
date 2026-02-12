@@ -23,7 +23,7 @@ components/
 ├── widgets/                        ← Widgets por dominio + Registry
 │   ├── registry.tsx                ← Registro central + layouts por defecto
 │   ├── organization/               ← Widgets de organización
-│   │   ├── org-pulse-widget.tsx    ← Hero card: logo, mapa, badges, miembros
+│   │   ├── org-hero-widget.tsx     ← Hero card: logo, mapa, badges, miembros
 │   │   └── recent-projects-widget.tsx ← Proyectos activos recientes
 │   ├── finance/                    ← Widgets financieros
 │   │   ├── income-kpi-widget.tsx

@@ -230,7 +230,6 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                             <DropdownMenuContent align="end" className="w-40">
                                 {onEdit && (
                                     <DropdownMenuItem onClick={(e) => {
-                                        e.preventDefault();
                                         e.stopPropagation();
                                         onEdit(project);
                                     }}>
@@ -241,7 +240,6 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                                 {onDelete && (
                                     <DropdownMenuItem
                                         onClick={(e) => {
-                                            e.preventDefault();
                                             e.stopPropagation();
                                             onDelete(project);
                                         }}

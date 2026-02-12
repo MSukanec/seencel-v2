@@ -33,7 +33,9 @@ import { TeamMembersWidget } from "@/components/widgets/general/team-members-wid
 // Organization Widgets (Org-specific)
 // ============================================================================
 import { RecentProjectsWidget } from "@/components/widgets/organization/recent-projects-widget";
-import { OrgPulseWidget } from "@/components/widgets/organization/org-pulse-widget";
+import { OrgHeroWidget } from "@/components/widgets/organization/org-overview-widget";
+import { StorageOverviewWidget } from "@/components/widgets/files/storage-overview-widget";
+import { RecentFilesWidget } from "@/components/widgets/files/recent-files-widget";
 
 // ============================================================================
 // GLOBAL WIDGET REGISTRY
@@ -43,6 +45,7 @@ import { OrgPulseWidget } from "@/components/widgets/organization/org-pulse-widg
 export const WIDGET_GROUP_LABELS: Record<string, string> = {
     general: 'General',
     organization: 'Organización',
+    documentation: 'Documentación',
     finance: 'Finanzas',
     planner: 'Planificador',
     projects: 'Proyectos',
@@ -77,7 +80,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 1, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'financial',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_expense_total': {
         id: 'finance_expense_total',
@@ -87,7 +91,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 1, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'financial',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_balance_net': {
         id: 'finance_balance_net',
@@ -97,7 +102,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 1, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'financial',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_evolution_chart': {
         id: 'finance_evolution_chart',
@@ -107,7 +113,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 4, h: 1 },
         minSpan: { w: 2, h: 1 },
         category: 'analytics',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_summary_combined': {
         id: 'finance_summary_combined',
@@ -117,7 +124,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 4, h: 1 },
         minSpan: { w: 2, h: 1 },
         category: 'analytics',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_wallet_allocation': {
         id: 'finance_wallet_allocation',
@@ -127,7 +135,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 2, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'financial',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_recent_activity_list': {
         id: 'finance_recent_activity_list',
@@ -137,7 +146,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 2, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'operational',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_quick_actions': {
         id: 'finance_quick_actions',
@@ -147,7 +157,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 1, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'operational',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_exchange_rate': {
         id: 'finance_exchange_rate',
@@ -157,7 +168,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 1, h: 1 },
         minSpan: { w: 1, h: 1 },
         category: 'financial',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
     'finance_balance_summary': {
         id: 'finance_balance_summary',
@@ -167,7 +179,8 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         defaultSpan: { w: 4, h: 1 },
         minSpan: { w: 2, h: 1 },
         category: 'financial',
-        group: 'finance'
+        group: 'finance',
+        comingSoon: true,
     },
 
     // ── General (Parametric) ────────────────────────────────
@@ -283,7 +296,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         id: 'org_pulse',
         name: 'Identidad',
         description: 'Logo, nombre, plan y estadísticas rápidas de la organización',
-        component: OrgPulseWidget,
+        component: OrgHeroWidget,
         defaultSpan: { w: 4, h: 2 },
         minSpan: { w: 2, h: 1 },
         category: 'general',
@@ -300,6 +313,68 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         category: 'general',
         group: 'organization',
         href: '/organization/settings',
+    },
+
+    'org_storage_overview': {
+        id: 'org_storage_overview',
+        name: 'Almacenamiento',
+        description: 'Uso de almacenamiento, archivos y distribución por tipo',
+        component: StorageOverviewWidget,
+        defaultSpan: { w: 2, h: 1 },
+        minSpan: { w: 1, h: 1 },
+        category: 'general',
+        group: 'documentation',
+        href: '/organization/files',
+    },
+
+    'recent_files_gallery': {
+        id: 'recent_files_gallery',
+        name: 'Galería de Archivos',
+        description: 'Mini galería con los archivos más recientes',
+        component: RecentFilesWidget,
+        defaultSpan: { w: 2, h: 2 },
+        minSpan: { w: 1, h: 1 },
+        category: 'general',
+        group: 'documentation',
+        configurable: true,
+        defaultConfig: { fileType: 'all', scope: 'organization' },
+        href: '/organization/files',
+        configPanel: ({ config, onConfigChange }: { config: Record<string, any>; onConfigChange: (c: Record<string, any>) => void }) => (
+            <div className="space-y-3">
+                <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Tipo de archivo</label>
+                    <Select
+                        value={config.fileType || 'all'}
+                        onValueChange={(value: string) => onConfigChange({ ...config, fileType: value })}
+                    >
+                        <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            <SelectItem value="image">Fotos</SelectItem>
+                            <SelectItem value="video">Videos</SelectItem>
+                            <SelectItem value="pdf">PDFs</SelectItem>
+                            <SelectItem value="document">Documentos</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Alcance</label>
+                    <Select
+                        value={config.scope || 'organization'}
+                        onValueChange={(value: string) => onConfigChange({ ...config, scope: value })}
+                    >
+                        <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="organization">Toda la organización</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+        ),
     },
 };
 
@@ -328,6 +403,6 @@ export const DEFAULT_ORG_LAYOUT: WidgetLayoutItem[] = [
     { id: 'org_pulse', x: 0, y: 0, w: 4, h: 2 },
     { id: 'org_recent_projects', x: 0, y: 2, w: 1, h: 2 },
     { id: 'upcoming_events', x: 1, y: 2, w: 1, h: 2, config: { scope: 'all' } },
-    { id: 'team_members', x: 2, y: 2, w: 1, h: 2 },
+    { id: 'recent_files_gallery', x: 2, y: 2, w: 1, h: 2, config: { fileType: 'all', scope: 'organization' } },
     { id: 'activity_kpi', x: 3, y: 2, w: 1, h: 2, config: { scope: 'organization' } },
 ];

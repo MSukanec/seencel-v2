@@ -37,10 +37,17 @@ export default async function ProjectFilesPage({ params }: PageProps) {
     try {
         const files = await getFiles(project.organization_id, projectId);
 
+        const pageTitle = (
+            <span className="flex items-center gap-2">
+                Archivos
+                <span className="text-muted-foreground font-normal text-sm">· {project.name}</span>
+            </span>
+        );
+
         return (
             <PageWrapper
                 type="page"
-                title="Archivos"
+                title={pageTitle}
                 icon={<FolderOpen />}
             >
                 <ContentLayout variant="wide">

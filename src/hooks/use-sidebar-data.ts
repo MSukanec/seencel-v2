@@ -146,6 +146,7 @@ export function useSidebarData(): SidebarData {
                     color: p.color,
                     custom_color_hex: p.custom_color_hex,
                     use_custom_color: p.use_custom_color,
+                    status: p.status,
                 }));
 
                 // Find the last active project
@@ -205,6 +206,7 @@ export function useSidebarData(): SidebarData {
                                 color: updatedProject.color,
                                 custom_color_hex: updatedProject.custom_color_hex,
                                 use_custom_color: updatedProject.use_custom_color,
+                                status: updatedProject.status,
                             }
                             : p
                     ));
@@ -219,6 +221,7 @@ export function useSidebarData(): SidebarData {
                                 color: updatedProject.color,
                                 custom_color_hex: updatedProject.custom_color_hex,
                                 use_custom_color: updatedProject.use_custom_color,
+                                status: updatedProject.status,
                             };
                         }
                         return prev;

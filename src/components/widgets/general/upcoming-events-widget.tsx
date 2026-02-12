@@ -196,7 +196,7 @@ export function UpcomingEventsWidget({ config, initialData }: WidgetProps) {
                         title="Sin eventos próximos"
                         description="Los eventos de calendario y tareas con fecha aparecerán aquí"
                         href="/organization/planner"
-                        actionLabel="Ir a Agenda"
+                        actionLabel="Ir al Planificador"
                     />
                 ) : (
                     <div className="space-y-3 pt-2">
