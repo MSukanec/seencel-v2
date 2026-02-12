@@ -95,7 +95,7 @@ export function BentoCard({
         >
             {/* === HEADER === */}
             {!headerless && title && (
-                <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+                <div className="flex items-center gap-2 px-4 pt-3 pb-2 border-b border-border/50">
                     {icon && (
                         <div className="shrink-0 p-1.5 rounded-lg bg-primary/10 text-primary">
                             {icon}

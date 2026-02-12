@@ -11,7 +11,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Building, Trash2, Crown, Users, Sparkles, Check } from "lucide-react";
+import { MoreVertical, Building, Trash2, Building2, Users, Sparkles, Check, Zap } from "lucide-react";
 import { getStorageUrl } from "@/lib/storage-utils";
 
 // ============================================================================
@@ -58,13 +58,15 @@ export interface OrganizationListItemProps {
 
 function getPlanBadgeInfo(planSlug?: string | null) {
     switch (planSlug?.toLowerCase()) {
+        case 'enterprise':
+            return { variant: 'plan-enterprise' as const, icon: <Building2 className="h-3 w-3" />, label: 'Empresa' };
         case 'pro':
-            return { variant: 'plan-pro' as const, icon: <Crown className="h-3 w-3" />, label: 'Pro' };
+            return { variant: 'plan-pro' as const, icon: <Zap className="h-3 w-3" />, label: 'Profesional' };
         case 'teams':
-            return { variant: 'plan-teams' as const, icon: <Users className="h-3 w-3" />, label: 'Teams' };
+            return { variant: 'plan-teams' as const, icon: <Users className="h-3 w-3" />, label: 'Equipos' };
         case 'free':
         default:
-            return { variant: 'plan-free' as const, icon: <Sparkles className="h-3 w-3" />, label: 'Free' };
+            return { variant: 'plan-free' as const, icon: <Sparkles className="h-3 w-3" />, label: 'Esencial' };
     }
 }
 

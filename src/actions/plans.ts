@@ -18,6 +18,7 @@ export interface PlanFeatures {
     max_org_boards?: number;
     max_project_boards?: number;
     custom_dashboard?: boolean;
+    max_external_advisors?: number;
 }
 
 export interface Plan {

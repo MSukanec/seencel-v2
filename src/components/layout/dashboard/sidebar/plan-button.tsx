@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/stores/organization-store";
 import { useOrganizationStore } from "@/stores/organization-store";
-import { Crown, Sparkles, Users } from "lucide-react";
+import { Zap, Sparkles, Users, Building2 } from "lucide-react";
 import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,26 +24,17 @@ interface SidebarPlanButtonProps {
 // Plan styling based on plan name
 const getPlanStyle = (name: string) => {
     const lower = name.toLowerCase();
+    if (lower.includes("enterprise") || lower.includes("empresa")) {
+        return { icon: Building2, cssVar: "var(--plan-enterprise)" };
+    }
     if (lower.includes("team")) {
-        return {
-            icon: Users,
-            iconColor: "text-purple-500",
-            hoverBg: "hover:bg-purple-500/20",
-        };
+        return { icon: Users, cssVar: "var(--plan-teams)" };
     }
     if (lower.includes("pro")) {
-        return {
-            icon: Crown,
-            iconColor: "text-indigo-500",
-            hoverBg: "hover:bg-indigo-500/20",
-        };
+        return { icon: Zap, cssVar: "var(--plan-pro)" };
     }
     // Free / Default
-    return {
-        icon: Sparkles,
-        iconColor: "text-lime-500",
-        hoverBg: "hover:bg-lime-500/20",
-    };
+    return { icon: Sparkles, cssVar: "var(--plan-free)" };
 };
 
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
@@ -97,38 +88,23 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
     const styles = getPlanStyle(currentPlan.name);
     const Icon = styles.icon;
 
-    // Content - icon glows for founders
-    const content = (
-        <div
-            className={cn(
-                "group relative flex items-center w-full rounded-lg transition-colors duration-0",
-                "text-muted-foreground hover:text-foreground",
-                "p-0 min-h-[32px]",
-                styles.hoverBg
-            )}
-        >
-            {/* Icon */}
-            <div className={cn(
-                "w-8 h-8 flex items-center justify-center shrink-0",
-                styles.iconColor
-            )}>
-                <Icon className="h-4 w-4 transition-all" />
-            </div>
-
-            {/* Label */}
-            <span className={cn(
-                "text-[13px] font-medium truncate transition-opacity duration-200 ease-in-out text-left",
-                isExpanded ? "flex-1 opacity-100 ml-2" : "w-0 opacity-0 ml-0",
-                styles.iconColor
-            )}>
-                {getPlanDisplayName(currentPlan.name)}
-            </span>
-        </div>
-    );
-
+    // Compact tag — full width but visually distinct from nav items
     return (
         <Link href="/pricing" className="w-full block">
-            {content}
+            <div
+                className={cn(
+                    "flex items-center gap-1.5 rounded-md border border-white/10 hover:border-white/20 transition-colors",
+                    isExpanded ? "px-2.5 py-1.5" : "justify-center p-1.5"
+                )}
+                style={{ backgroundColor: `color-mix(in oklch, ${styles.cssVar}, transparent 70%)` }}
+            >
+                <Icon className={cn("shrink-0 text-white/70", isExpanded ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                {isExpanded && (
+                    <span className="text-[11px] font-medium text-white/60 tracking-wide uppercase truncate">
+                        {getPlanDisplayName(currentPlan.name)}
+                    </span>
+                )}
+            </div>
         </Link>
     );
 }

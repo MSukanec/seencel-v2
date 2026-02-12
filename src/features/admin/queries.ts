@@ -56,53 +56,36 @@ export interface AdminOrganization {
     id: string;
     name: string;
     logo_path: string | null;
-    last_activity_at?: string | Date;
     created_at: string | null;
+    updated_at: string | null;
+    is_active: boolean;
+    is_deleted: boolean;
+    is_demo: boolean;
     settings: { is_founder?: boolean; founder_since?: string } | null;
-    owner: {
-        full_name: string | null;
-        email: string;
-    } | null;
-    plan: {
-        name: string;
-    } | null;
-    members: { count: number }[];
+    purchased_seats: number;
+    owner_name: string | null;
+    owner_email: string | null;
+    plan_name: string | null;
+    plan_slug: string | null;
+    member_count: number;
+    project_count: number;
+    last_activity_at: string | null;
 }
 
 export async function getAdminOrganizations(): Promise<AdminOrganization[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('organizations')
-        .select(`
-            id,
-            name,
-            logo_path,
-            created_at,
-            settings,
-            owner:users!owner_id (
-                full_name,
-                email
-            ),
-            plan:plans (
-                name
-            ),
-            members:organization_members!organization_members_organization_id_fkey(count)
-        `);
+        .from('admin_organizations_view')
+        .select('*')
+        .order('last_activity_at', { ascending: false, nullsFirst: false });
 
     if (error) {
         console.error("Error fetching admin organizations. Code:", error.code, "Message:", error.message, "Details:", error.details);
         return [];
     }
 
-    const typedData = data as unknown as AdminOrganization[];
-
-    // Sort by created_at descending (Newest first)
-    return typedData.sort((a, b) => {
-        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return timeB - timeA;
-    });
+    return (data || []) as unknown as AdminOrganization[];
 }
 
 export interface DashboardData {

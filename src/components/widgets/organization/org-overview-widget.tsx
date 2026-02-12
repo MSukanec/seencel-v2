@@ -79,12 +79,12 @@ interface OrgHeroData {
 function getPlanBadgeConfig(planSlug?: string | null) {
     switch (planSlug?.toLowerCase()) {
         case 'pro':
-            return { icon: Crown, label: 'Profesional', bg: 'bg-indigo-500/20', border: 'border-indigo-500/30', text: 'text-indigo-300', iconColor: 'text-indigo-400' };
+            return { icon: Crown, label: 'Profesional', bg: 'bg-stone-500/20', border: 'border-stone-500/30', text: 'text-stone-300', iconColor: 'text-stone-400' };
         case 'teams':
-            return { icon: Users, label: 'Equipos', bg: 'bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-300', iconColor: 'text-purple-400' };
+            return { icon: Users, label: 'Equipos', bg: 'bg-slate-500/20', border: 'border-slate-500/30', text: 'text-slate-300', iconColor: 'text-slate-400' };
         case 'free':
         default:
-            return { icon: Sparkles, label: 'Esencial', bg: 'bg-lime-500/20', border: 'border-lime-500/30', text: 'text-lime-300', iconColor: 'text-lime-400' };
+            return { icon: Sparkles, label: 'Esencial', bg: 'bg-zinc-400/20', border: 'border-zinc-400/30', text: 'text-zinc-300', iconColor: 'text-zinc-400' };
     }
 }
 
@@ -441,9 +441,18 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
                             })()}
                             {/* Founder Badge — platinum */}
                             {data.isFounder && (
-                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-300/20 border border-slate-400/30 backdrop-blur-sm">
-                                    <Medal className="w-3 h-3 text-slate-300" />
-                                    <span className="text-[11px] font-semibold text-slate-200 uppercase tracking-wider">
+                                <div
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-sm border"
+                                    style={{
+                                        backgroundColor: 'color-mix(in srgb, var(--plan-founder) 20%, transparent)',
+                                        borderColor: 'color-mix(in srgb, var(--plan-founder) 30%, transparent)',
+                                    }}
+                                >
+                                    <Medal className="w-3 h-3" style={{ color: 'var(--plan-founder)' }} />
+                                    <span
+                                        className="text-[11px] font-semibold uppercase tracking-wider"
+                                        style={{ color: 'var(--plan-founder)' }}
+                                    >
                                         Fundadora
                                     </span>
                                 </div>

@@ -2,16 +2,15 @@
 
 import { Project } from "@/types/project";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MapPin, Calendar, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { MapPin, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -25,87 +24,31 @@ interface ProjectCardProps {
 }
 
 /**
- * ProjectCard - A beautiful card component for displaying project information
- * Features a hero image with gradient overlay, project name, and key metadata badges
+ * ProjectCard — Silestone-inspired card where the image palette INFUSES the
+ * entire card: footer background, badge colors, gradient overlay, swatch bar.
+ * Each card should look dramatically different, like marble swatch samples.
  */
 export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCardProps) {
     const locale = useLocale();
     const t = useTranslations('Project.status');
     const { actions } = useLayoutStore();
 
-    /**
-     * Adjusts color lightness to ensure good contrast on dark backgrounds.
-     * Converts hex to HSL, ensures minimum lightness, then converts back.
-     */
-    const ensureContrast = (hexColor: string, minLightness = 55): string => {
-        // Skip if not a hex color
-        if (!hexColor?.startsWith('#')) return hexColor;
-
-        // Convert hex to RGB
-        const hex = hexColor.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16) / 255;
-        const g = parseInt(hex.substring(2, 4), 16) / 255;
-        const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-        // Convert RGB to HSL
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        let h = 0, s = 0;
-        const l = (max + min) / 2;
-
-        if (max !== min) {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch (max) {
-                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                case g: h = ((b - r) / d + 2) / 6; break;
-                case b: h = ((r - g) / d + 4) / 6; break;
-            }
-        }
-
-        // Adjust lightness if too dark (for dark mode contrast)
-        const currentL = l * 100;
-        if (currentL >= minLightness) return hexColor; // Already bright enough
-
-        const newL = minLightness / 100;
-
-        // Convert HSL back to RGB
-        const hue2rgb = (p: number, q: number, t: number) => {
-            if (t < 0) t += 1;
-            if (t > 1) t -= 1;
-            if (t < 1 / 6) return p + (q - p) * 6 * t;
-            if (t < 1 / 2) return q;
-            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-            return p;
-        };
-
-        const q = newL < 0.5 ? newL * (1 + s) : newL + s - newL * s;
-        const p = 2 * newL - q;
-        const newR = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
-        const newG = Math.round(hue2rgb(p, q, h) * 255);
-        const newB = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
-
-        return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-    };
-
-    // Get accent color for the card - prioritize extracted palette
     const palette = project.image_palette;
-    const rawAccentColor = palette?.primary
-        || (project.use_custom_color && project.custom_color_hex)
-        || project.color
-        || "hsl(var(--primary))";
+    const hasPalette = !!(palette && (palette.primary || palette.secondary || palette.background || palette.accent));
 
-    // Ensure the color has enough contrast for dark mode
-    const accentColor = ensureContrast(rawAccentColor, 50);
+    // Project dot color — always the project's own color
+    const dotColor = (project.use_custom_color && project.custom_color_hex)
+        || project.color
+        || null;
 
     const location = [project.city, project.country].filter(Boolean).join(", ");
 
-    // Construct image URL from bucket + path, or use direct image_url
+    // Construct image URL
     const imageUrl = project.image_bucket && project.image_path
         ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${project.image_bucket}/${project.image_path}`
         : project.image_url;
 
-    // Get translated status using next-intl
+    // Translated status
     const statusKey = (project.status?.toLowerCase() || 'active') as string;
     const statusLabel = t(statusKey) || project.status;
 
@@ -115,10 +58,44 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
     };
 
     const handleCardClick = () => {
-        // Update store immediately when card is clicked
         actions.setActiveContext("project");
         actions.setActiveProjectId(project.id);
     };
+
+    // ── Palette-driven design tokens ──────────────────────────────────────────
+    // IMPORTANT: Palette colors from images are often LIGHT (sky, white walls).
+    // We mix them with dark bases to tint without breaking the dark theme.
+    const swatchColors = hasPalette
+        ? [palette.primary, palette.secondary, palette.accent, palette.background].filter(Boolean)
+        : [];
+
+    // Footer bg: palette tints a dark base (70% dark, 30% palette)
+    const footerBg = hasPalette && palette.background
+        ? `color-mix(in oklch, ${palette.background} 30%, #1a1a1a)`
+        : undefined;
+
+    // Badge styling: palette.primary darkened for bg, lightened for text
+    const badgeBg = hasPalette && palette.primary
+        ? `color-mix(in oklch, ${palette.primary} 20%, #1a1a1a)`
+        : "rgba(255,255,255,0.08)";
+    const badgeColor = hasPalette && palette.primary
+        ? `color-mix(in oklch, ${palette.primary} 60%, white)`
+        : undefined;
+
+    // Hero gradient: dark base tinted with palette
+    const gradientOverlay = hasPalette && palette.background
+        ? [
+            `linear-gradient(to top,`,
+            `color-mix(in oklch, ${palette.background} 35%, #0a0a0a) 0%,`,
+            `color-mix(in oklch, ${palette.background} 20%, rgba(0,0,0,0.7)) 30%,`,
+            `transparent 70%)`,
+        ].join(" ")
+        : "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 35%, transparent 70%)";
+
+    // Card border: subtle palette tint
+    const cardBorder = hasPalette && palette.primary
+        ? `1px solid color-mix(in oklch, ${palette.primary} 25%, transparent)`
+        : undefined;
 
     return (
         <Link
@@ -126,65 +103,93 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
             className="block group"
             onClick={handleCardClick}
         >
-            <Card className={cn(
-                "relative overflow-hidden rounded-xl border-0 shadow-lg",
-                "transition-all duration-300 ease-out",
-                "hover:shadow-2xl hover:scale-[1.02] hover:-translate-y-1",
-                "bg-card",
-                className
-            )}>
-                {/* Hero Image Section - 1.5x taller (h-80) */}
-                <div className="relative h-80 w-full overflow-hidden">
+            <Card
+                className={cn(
+                    "relative overflow-hidden rounded-xl shadow-lg",
+                    "transition-all duration-300 ease-out",
+                    "hover:shadow-2xl hover:scale-[1.02] hover:-translate-y-1",
+                    !hasPalette && "border-0 bg-card",
+                    hasPalette && "border-0",
+                    className
+                )}
+                style={{
+                    border: cardBorder,
+                }}
+            >
+                {/* Hero Image Section */}
+                <div className="relative h-72 w-full overflow-hidden">
                     {imageUrl ? (
                         <Image
                             src={imageUrl}
                             alt={project.name}
                             fill
                             unoptimized
-                            className="object-cover"
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                     ) : (
-                        <div
-                            className="absolute inset-0 flex items-center justify-center"
-                            style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 15%, var(--background))` }}
-                        >
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
                             <ImageOff className="h-12 w-12 text-muted-foreground/30" />
                         </div>
                     )}
 
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    {/* Gradient Overlay — heavily tinted with palette */}
+                    <div
+                        className="absolute inset-0"
+                        style={{ background: gradientOverlay }}
+                    />
 
-                    {/* Project Name - Bottom of Image */}
+                    {/* Project Name + Color Dot */}
                     <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-lg font-bold text-white leading-tight line-clamp-2 drop-shadow-lg">
-                            {project.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            {dotColor && (
+                                <span
+                                    className="w-3 h-3 rounded-full shrink-0 ring-1 ring-white/30 shadow-lg"
+                                    style={{ backgroundColor: dotColor }}
+                                />
+                            )}
+                            <h3 className="text-lg font-bold text-white leading-tight line-clamp-2 drop-shadow-lg">
+                                {project.name}
+                            </h3>
+                        </div>
                         {location && (
-                            <p className="text-xs text-white/70 mt-1 flex items-center gap-1">
+                            <p className={cn(
+                                "text-xs text-white/70 mt-1 flex items-center gap-1",
+                                dotColor && "ml-5"
+                            )}>
                                 <MapPin className="h-3 w-3" />
                                 {location}
                             </p>
                         )}
                     </div>
-
-                    {/* Accent Color Bar */}
-                    <div
-                        className="absolute bottom-0 left-0 right-0 h-1"
-                        style={{ backgroundColor: accentColor }}
-                    />
                 </div>
 
-                {/* Footer Section */}
-                <div className="p-4 flex items-center justify-between">
-                    {/* Info Chips - Status badge first, then type/modality/date */}
+                {/* ── Palette Swatch Bar ─────────────────────────── */}
+                {swatchColors.length > 0 && (
+                    <div className="flex h-2">
+                        {swatchColors.map((color, i) => (
+                            <div
+                                key={i}
+                                className="flex-1"
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* ── Footer — palette-infused ──────────────────── */}
+                <div
+                    className="p-4 flex items-center justify-between"
+                    style={{
+                        backgroundColor: footerBg,
+                    }}
+                >
                     <div className="flex flex-wrap gap-2 flex-1">
-                        {/* Status Badge - Uses accent color */}
+                        {/* Status Badge — palette-tinted */}
                         <div
                             className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1"
                             style={{
-                                backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-                                color: accentColor,
+                                backgroundColor: badgeBg,
+                                color: badgeColor,
                             }}
                         >
                             <span>{statusLabel}</span>
@@ -193,8 +198,8 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                             <div
                                 className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
                                 style={{
-                                    backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-                                    color: accentColor,
+                                    backgroundColor: badgeBg,
+                                    color: badgeColor,
                                 }}
                             >
                                 <Building2 className="h-3 w-3" />
@@ -205,8 +210,8 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                             <div
                                 className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
                                 style={{
-                                    backgroundColor: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-                                    color: accentColor,
+                                    backgroundColor: badgeBg,
+                                    color: badgeColor,
                                 }}
                             >
                                 <Hammer className="h-3 w-3" />
@@ -215,7 +220,7 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                         )}
                     </div>
 
-                    {/* Action Menu - Always Visible */}
+                    {/* Action Menu */}
                     {(onEdit || onDelete) && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={handleActionClick}>

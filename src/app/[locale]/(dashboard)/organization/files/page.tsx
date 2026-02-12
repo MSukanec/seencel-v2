@@ -61,12 +61,14 @@ export default async function OrganizationFilesPage() {
                 icon={<FolderOpen />}
             >
                 <ContentLayout variant="wide">
-                    <StorageOverviewWidget
-                        stats={storageStats}
-                        maxStorageMb={maxStorageMb}
-                        folderCount={folders.length}
-                    />
-                    <div className="mt-4">
+                    {files.length > 0 && (
+                        <StorageOverviewWidget
+                            stats={storageStats}
+                            maxStorageMb={maxStorageMb}
+                            folderCount={folders.length}
+                        />
+                    )}
+                    <div className={files.length > 0 ? "mt-4" : "flex-1 flex flex-col min-h-0 h-full"}>
                         <FileGallery
                             files={files}
                             folders={folders}

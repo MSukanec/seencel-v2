@@ -104,10 +104,13 @@ export function useSidebarData(): SidebarData {
                 (payload) => {
                     // Update local state when organization changes
                     const newData = payload.new as any;
+                    // Add cache-buster to force image reload
+                    const logoUrl = buildLogoUrl(newData.logo_path);
+                    const cacheBustedLogo = logoUrl ? `${logoUrl}?t=${Date.now()}` : null;
                     setCurrentOrg((prev) => ({
                         ...prev!,
                         name: newData.name,
-                        logo_path: buildLogoUrl(newData.logo_path),
+                        logo_path: cacheBustedLogo,
                         isFounder: newData.settings?.is_founder === true,
                     }));
                 }
@@ -182,50 +185,80 @@ export function useSidebarData(): SidebarData {
 
         fetchProjectsAndPreferences();
 
-        // Realtime subscription for project changes (image, name, color updates)
+        // Realtime subscription for project changes (INSERT, UPDATE, DELETE)
         const channel = supabase
             .channel(`projects-sidebar-${orgId}`)
             .on(
                 'postgres_changes',
                 {
-                    event: 'UPDATE',
+                    event: '*',
                     schema: 'public',
                     table: 'projects',
                     filter: `organization_id=eq.${orgId}`,
                 },
                 (payload) => {
-                    const updatedProject = payload.new as any;
+                    const eventType = payload.eventType;
 
-                    // Update projects list with new data
-                    setProjects(prev => prev.map(p =>
-                        p.id === updatedProject.id
-                            ? {
-                                ...p,
-                                name: updatedProject.name,
-                                image_path: updatedProject.image_path || updatedProject.image_url,
-                                color: updatedProject.color,
-                                custom_color_hex: updatedProject.custom_color_hex,
-                                use_custom_color: updatedProject.use_custom_color,
-                                status: updatedProject.status,
-                            }
-                            : p
-                    ));
+                    if (eventType === 'INSERT') {
+                        const newProject = payload.new as any;
+                        const mapped: Project = {
+                            id: newProject.id,
+                            name: newProject.name,
+                            image_path: newProject.image_path || newProject.image_url,
+                            color: newProject.color,
+                            custom_color_hex: newProject.custom_color_hex,
+                            use_custom_color: newProject.use_custom_color,
+                            status: newProject.status,
+                        };
+                        // Add to the end of the list
+                        setProjects(prev => [...prev, mapped]);
+                    }
 
-                    // Also update current project if it's the one that changed
-                    setCurrentProject(prev => {
-                        if (prev && prev.id === updatedProject.id) {
-                            return {
-                                id: prev.id,
-                                name: updatedProject.name,
-                                image_path: updatedProject.image_path || updatedProject.image_url,
-                                color: updatedProject.color,
-                                custom_color_hex: updatedProject.custom_color_hex,
-                                use_custom_color: updatedProject.use_custom_color,
-                                status: updatedProject.status,
-                            };
+                    if (eventType === 'DELETE') {
+                        const deletedId = (payload.old as any)?.id;
+                        if (deletedId) {
+                            setProjects(prev => prev.filter(p => p.id !== deletedId));
+                            // Clear current project if it was deleted
+                            setCurrentProject(prev =>
+                                prev?.id === deletedId ? null : prev
+                            );
                         }
-                        return prev;
-                    });
+                    }
+
+                    if (eventType === 'UPDATE') {
+                        const updatedProject = payload.new as any;
+
+                        // Update projects list with new data
+                        setProjects(prev => prev.map(p =>
+                            p.id === updatedProject.id
+                                ? {
+                                    ...p,
+                                    name: updatedProject.name,
+                                    image_path: updatedProject.image_path || updatedProject.image_url,
+                                    color: updatedProject.color,
+                                    custom_color_hex: updatedProject.custom_color_hex,
+                                    use_custom_color: updatedProject.use_custom_color,
+                                    status: updatedProject.status,
+                                }
+                                : p
+                        ));
+
+                        // Also update current project if it's the one that changed
+                        setCurrentProject(prev => {
+                            if (prev && prev.id === updatedProject.id) {
+                                return {
+                                    id: prev.id,
+                                    name: updatedProject.name,
+                                    image_path: updatedProject.image_path || updatedProject.image_url,
+                                    color: updatedProject.color,
+                                    custom_color_hex: updatedProject.custom_color_hex,
+                                    use_custom_color: updatedProject.use_custom_color,
+                                    status: updatedProject.status,
+                                };
+                            }
+                            return prev;
+                        });
+                    }
                 }
             )
             .subscribe();

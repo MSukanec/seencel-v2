@@ -558,15 +558,19 @@ export function SidebarContent({
                         )}
                     </ScrollArea>
 
+                    {/* Plan indicator — above the divider */}
+                    {!isMobile && (
+                        <div className="px-2 pb-1">
+                            <SidebarPlanButton isExpanded={isExpanded} />
+                        </div>
+                    )}
+
                     {/* Mode Toggle (bottom, desktop only) */}
                     {!isMobile && (
                         <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
                             {/* SidebarNavButton for toggle REMOVED */}
 
                             {/* Feedback Button REMOVED - Moved to User Menu */}
-
-                            {/* Plan Status Button */}
-                            <SidebarPlanButton isExpanded={isExpanded} />
 
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />

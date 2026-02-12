@@ -31,11 +31,13 @@ const badgeVariants = cva(
         "plan-free":
           "border-lime-300 bg-lime-50 text-lime-700 dark:border-lime-800 dark:bg-lime-900/30 dark:text-lime-400",
         "plan-pro":
-          "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
+          "border-stone-300 bg-stone-50 text-stone-700 dark:border-stone-700 dark:bg-stone-900/30 dark:text-stone-400",
         "plan-teams":
-          "border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+          "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
         "founder":
           "border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+        "plan-enterprise":
+          "border-zinc-400 bg-zinc-100 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300",
       },
     },
     defaultVariants: {

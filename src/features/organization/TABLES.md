@@ -1,5 +1,59 @@
 # Tablas en DB para ORGANIZATIONS:
 
+# Vista ADMIN_ORGANIZATIONS_VIEW:
+
+create view public.admin_organizations_view as
+select
+  o.id,
+  o.name,
+  o.logo_path,
+  o.created_at,
+  o.updated_at,
+  o.is_active,
+  o.is_deleted,
+  o.is_demo,
+  o.settings,
+  o.purchased_seats,
+  ow.full_name as owner_name,
+  ow.email as owner_email,
+  pl.name as plan_name,
+  pl.slug as plan_slug,
+  COALESCE(mc.member_count, 0) as member_count,
+  COALESCE(pc.project_count, 0) as project_count,
+  al.last_activity_at
+from
+  organizations o
+  left join users ow on ow.id = o.owner_id
+  left join plans pl on pl.id = o.plan_id
+  left join lateral (
+    select
+      count(*)::integer as member_count
+    from
+      organization_members om
+    where
+      om.organization_id = o.id
+      and om.is_active = true
+  ) mc on true
+  left join lateral (
+    select
+      count(*)::integer as project_count
+    from
+      projects p
+    where
+      p.organization_id = o.id
+      and p.is_deleted = false
+  ) pc on true
+  left join lateral (
+    select
+      max(oal.created_at) as last_activity_at
+    from
+      organization_activity_logs oal
+    where
+      oal.organization_id = o.id
+  ) al on true
+where
+  o.is_deleted = false;
+
 # Tabla ORGANIZATIONS:
 
 create table public.organizations (

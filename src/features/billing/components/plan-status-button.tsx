@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Crown, Sparkles, Users, User, Loader2 } from "lucide-react";
+import { Building2, Sparkles, Users, Zap, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
+import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function PlanStatusButton() {
@@ -41,25 +42,34 @@ export function PlanStatusButton() {
         loadPlanData();
     }, []);
 
-    // Helper to get matching styles (copied from PlansComparison for consistency)
+    // Helper to get matching styles
     const getPlanStyle = (name: string) => {
         const lower = name.toLowerCase();
+        if (lower.includes("enterprise") || lower.includes("empresa")) {
+            return {
+                icon: Building2,
+                gradient: "from-zinc-700 to-zinc-800",
+                bg: "bg-zinc-100 dark:bg-zinc-800/50",
+                text: "text-zinc-700 dark:text-zinc-300",
+                border: "border-zinc-400 dark:border-zinc-600",
+            };
+        }
         if (lower.includes("team")) {
             return {
                 icon: Users,
-                gradient: "from-purple-500 to-violet-600",
-                bg: "bg-purple-100 dark:bg-purple-900/30",
-                text: "text-purple-600 dark:text-purple-400",
-                border: "border-purple-200 dark:border-purple-800",
+                gradient: "from-slate-500 to-slate-600",
+                bg: "bg-slate-100 dark:bg-slate-900/30",
+                text: "text-slate-600 dark:text-slate-400",
+                border: "border-slate-300 dark:border-slate-700",
             };
         }
         if (lower.includes("pro")) {
             return {
-                icon: Crown,
-                gradient: "from-indigo-500 to-blue-600",
-                bg: "bg-indigo-100 dark:bg-indigo-900/30",
-                text: "text-indigo-600 dark:text-indigo-400",
-                border: "border-indigo-200 dark:border-indigo-800",
+                icon: Zap,
+                gradient: "from-stone-500 to-stone-600",
+                bg: "bg-stone-100 dark:bg-stone-900/30",
+                text: "text-stone-600 dark:text-stone-400",
+                border: "border-stone-300 dark:border-stone-700",
             };
         }
         // Free / Default
@@ -95,7 +105,7 @@ export function PlanStatusButton() {
                 )}
             >
                 <Icon className="h-3.5 w-3.5" />
-                <span>{currentPlan.name}</span>
+                <span>{getPlanDisplayName(currentPlan.name)}</span>
             </Button>
         </Link>
     );

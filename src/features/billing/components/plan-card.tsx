@@ -4,7 +4,7 @@ import { Plan } from "@/actions/plans";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Crown, Users, FolderOpen, HardDrive, BarChart3, Wrench, Clock, Lock } from "lucide-react";
+import { Check, Sparkles, Zap, Users, UserCheck, Medal, FolderOpen, HardDrive, BarChart3, Wrench, Clock, Lock, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
@@ -34,37 +34,48 @@ const PRICE_MAP: Record<string, { monthly: number; annual: number }> = {
 
 export const getPlanIcon = (name: string): LucideIcon => {
     const lower = name.toLowerCase();
+    if (lower.includes("enterprise") || lower.includes("empresa")) return Building2;
     if (lower.includes("team")) return Users;
-    if (lower.includes("pro")) return Crown;
+    if (lower.includes("pro")) return Zap;
     return Sparkles;
 };
 
 export const getPlanGradient = (name: string) => {
     const lower = name.toLowerCase();
+    if (lower.includes("enterprise") || lower.includes("empresa")) {
+        return {
+            gradient: "from-zinc-700 to-zinc-800",
+            bg: "bg-zinc-800",
+            text: "text-zinc-600 dark:text-zinc-300",
+            border: "border-zinc-500/50 dark:border-zinc-600/50",
+            lightBg: "bg-zinc-100 dark:bg-zinc-900/30",
+        };
+    }
     if (lower.includes("team")) {
         return {
-            gradient: "from-purple-500 to-violet-600",
-            bg: "bg-purple-500",
-            text: "text-purple-600 dark:text-purple-400",
-            border: "border-purple-300 dark:border-purple-700",
-            lightBg: "bg-purple-50 dark:bg-purple-900/30",
+            gradient: "from-slate-500 to-slate-600",
+            bg: "bg-slate-500",
+            text: "text-slate-600 dark:text-slate-400",
+            border: "border-slate-400/40 dark:border-slate-600/50",
+            lightBg: "bg-slate-50 dark:bg-slate-900/20",
         };
     }
     if (lower.includes("pro")) {
         return {
-            gradient: "from-indigo-500 to-blue-600",
-            bg: "bg-indigo-500",
-            text: "text-indigo-600 dark:text-indigo-400",
-            border: "border-indigo-300 dark:border-indigo-700",
-            lightBg: "bg-indigo-50 dark:bg-indigo-900/30",
+            gradient: "from-stone-500 to-stone-600",
+            bg: "bg-stone-500",
+            text: "text-stone-600 dark:text-stone-400",
+            border: "border-stone-400/50 dark:border-stone-600/50",
+            lightBg: "bg-stone-50 dark:bg-stone-900/20",
         };
     }
+    // Essential / Free — neutral gray
     return {
-        gradient: "from-lime-500 to-green-500",
-        bg: "bg-lime-500",
-        text: "text-lime-600 dark:text-lime-400",
-        border: "border-lime-300 dark:border-lime-700",
-        lightBg: "bg-lime-50 dark:bg-lime-900/30",
+        gradient: "from-zinc-400 to-zinc-500",
+        bg: "bg-zinc-500",
+        text: "text-zinc-600 dark:text-zinc-400",
+        border: "border-zinc-300 dark:border-zinc-700",
+        lightBg: "bg-zinc-50 dark:bg-zinc-900/20",
     };
 };
 
@@ -98,9 +109,9 @@ export const PLAN_STATUS_CONFIG: Record<string, PlanStatusOverride> = {
         buttonColor: "border-muted text-muted-foreground",
     },
     founders: {
-        icon: Crown,
+        icon: Medal,
         label: "Solo Fundadores",
-        buttonColor: "border-amber-500/50 text-amber-500 hover:bg-amber-500/10",
+        buttonColor: "border-zinc-400/50 text-zinc-400 hover:bg-zinc-400/10",
     },
 };
 
@@ -124,17 +135,25 @@ const formatPrice = (amount: number) => {
     return `US$ ${amount}`;
 };
 
-const getCardFeatures = (plan: Plan): Array<{ icon: LucideIcon; label: string; value: string }> => {
+const getCardFeatures = (plan: Plan, billingPeriod: "monthly" | "annual"): Array<{ icon: LucideIcon; label: string; value: string }> => {
     const features = plan.features;
     if (!features) return [];
 
     const isUnlimited = (val: number) => val >= 999;
+    const seatPrice = getPrice(plan.name, billingPeriod);
 
     return [
         {
             icon: Users,
             label: "Miembros",
-            value: features.can_invite_members ? "Ilimitados (por asiento)" : "Solo tú",
+            value: features.can_invite_members ? `Ilimitados (US$ ${seatPrice} / asiento)` : "Solo tú",
+        },
+        {
+            icon: UserCheck,
+            label: "Asesores externos",
+            value: features.max_external_advisors != null && features.max_external_advisors > 0
+                ? (features.max_external_advisors >= 999 ? "Ilimitados" : `${features.max_external_advisors}`)
+                : "No incluido",
         },
         {
             icon: FolderOpen,
@@ -193,7 +212,7 @@ export function PlanCard({
     const PlanIcon = getPlanIcon(plan.name);
     const planColors = getPlanGradient(plan.name);
     const price = getPrice(plan.name, billingPeriod);
-    const features = getCardFeatures(plan);
+    const features = getCardFeatures(plan, billingPeriod);
 
     return (
         <Card
@@ -202,8 +221,8 @@ export function PlanCard({
                 isPopular && `border-2 shadow-lg ring-2 ${planColors.border} ring-current/20`,
             )}
         >
-            {/* Gradient accent bar */}
-            <div className={cn("h-1.5 w-full bg-gradient-to-r", planColors.gradient)} />
+            {/* Accent bar */}
+            <div className={cn("h-1 w-full bg-gradient-to-r", planColors.gradient)} />
 
             {/* Badges container */}
             <div className="absolute top-4 right-4 flex flex-col gap-1 items-end">
@@ -214,25 +233,25 @@ export function PlanCard({
                 )}
             </div>
 
-            <CardHeader className="pt-6">
-                <div className="flex items-center gap-3 mb-2">
+            <CardHeader className="pt-4 pb-2">
+                <div className="flex items-center gap-3 mb-1">
                     <div className={cn(
-                        "p-2 rounded-lg bg-gradient-to-br",
+                        "p-1.5 rounded-lg bg-gradient-to-br",
                         planColors.gradient,
                         "text-white"
                     )}>
-                        <PlanIcon className="h-5 w-5" />
+                        <PlanIcon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-xl">{getPlanDisplayName(plan.name)}</CardTitle>
+                    <CardTitle className="text-lg">{getPlanDisplayName(plan.name)}</CardTitle>
                 </div>
-                <CardDescription>
+                <CardDescription className="text-xs">
                     {plan.billing_type === "per_user" ? "Por usuario / mes" : "Tarifa plana"}
                 </CardDescription>
             </CardHeader>
 
-            <CardContent>
-                <div className="mb-6">
-                    <span className="text-4xl font-bold">
+            <CardContent className="pt-0">
+                <div className="mb-4">
+                    <span className="text-3xl font-bold">
                         {formatPrice(price)}
                     </span>
                     {price > 0 && (
@@ -241,12 +260,12 @@ export function PlanCard({
                 </div>
 
                 {/* Feature list */}
-                <ul className="space-y-3 text-sm">
+                <ul className="space-y-2 text-sm">
                     {features.map((feature) => {
                         const FeatureIcon = feature.icon;
                         return (
-                            <li key={feature.label} className="flex items-center gap-3">
-                                <FeatureIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <li key={feature.label} className="flex items-center gap-2.5">
+                                <FeatureIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 <span>
                                     <span className="text-muted-foreground">{feature.label}:</span>{" "}
                                     <span className="font-medium">{feature.value}</span>

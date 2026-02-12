@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { Plan } from "@/actions/plans";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Building2, ArrowRight } from "lucide-react";
+import { Link } from "@/i18n/routing";
 import { PlanCard, PLAN_STATUS_CONFIG } from "./plan-card";
 import type { PlanFlagStatus, PlanPurchaseFlags } from "./plan-card";
 
@@ -13,9 +17,10 @@ import type { PlanFlagStatus, PlanPurchaseFlags } from "./plan-card";
 
 export const getPlanTier = (name: string): number => {
     const lower = name.toLowerCase();
-    if (lower === 'free') return 0;
+    if (lower === 'free' || lower === 'essential') return 0;
     if (lower === 'pro') return 1;
     if (lower === 'teams') return 2;
+    if (lower === 'enterprise') return 3;
     return 0;
 };
 
@@ -62,7 +67,7 @@ export function PlanCardsGrid({
     // Determine plan status from feature flags
     const getPlanStatus = (planName: string): PlanFlagStatus => {
         const lower = planName.toLowerCase();
-        if (lower.includes("free")) return 'active';
+        if (lower.includes("free") || lower.includes("essential")) return 'active';
         if (lower.includes("pro")) return purchaseFlags.pro;
         if (lower.includes("team")) return purchaseFlags.teams;
         return 'active';
@@ -108,6 +113,10 @@ export function PlanCardsGrid({
     const currentTier = currentPlan ? getPlanTier(currentPlan.name) : 0;
     const isLoggedIn = !!currentPlanId || isDashboard;
 
+    // Separate Enterprise from regular plans
+    const regularPlans = plans.filter(p => !p.name.toLowerCase().includes('enterprise'));
+    const enterprisePlan = plans.find(p => p.name.toLowerCase().includes('enterprise'));
+
     return (
         <div>
             {/* Billing Toggle */}
@@ -143,9 +152,9 @@ export function PlanCardsGrid({
                 </div>
             )}
 
-            {/* Plan Cards Grid */}
+            {/* Plan Cards Grid — Regular plans only */}
             <div className="grid gap-8 md:grid-cols-3">
-                {plans.map((plan, index) => {
+                {regularPlans.map((plan, index) => {
                     const isCurrentPlan = currentPlanId === plan.id;
                     const isPopular = index === 1;
                     const thisTier = getPlanTier(plan.name);
@@ -188,6 +197,48 @@ export function PlanCardsGrid({
                     );
                 })}
             </div>
+
+            {/* Enterprise Card — Full width, corporate dark aesthetic */}
+            {enterprisePlan && (
+                <Card
+                    className="mt-8 bg-zinc-900 dark:bg-zinc-950 border-zinc-700/50 dark:border-zinc-800"
+                >
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-lg bg-zinc-800 dark:bg-zinc-900 border border-zinc-600/30">
+                                    <Building2 className="h-5 w-5 text-zinc-300" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-lg text-zinc-100">Empresa</CardTitle>
+                                    <CardDescription className="text-sm text-zinc-400">
+                                        Para organizaciones con necesidades avanzadas de personalización, seguridad e integraciones.
+                                    </CardDescription>
+                                </div>
+                            </div>
+                            <Link href="/contact">
+                                <Button
+                                    variant="outline"
+                                    className="border-zinc-600 text-zinc-200 hover:bg-zinc-800 hover:text-white gap-2"
+                                >
+                                    Contactar Ventas
+                                    <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </Link>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm text-zinc-400">
+                            <span>✓ Proyectos ilimitados</span>
+                            <span>✓ Asesores externos ilimitados</span>
+                            <span>✓ Herramientas a medida</span>
+                            <span>✓ Soporte dedicado</span>
+                            <span>✓ Onboarding asistido</span>
+                            <span>✓ API y Webhooks</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

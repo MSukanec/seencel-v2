@@ -5,7 +5,7 @@ import { Plan, PlanFeatures } from "@/actions/plans";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Crown, FileText, Plug2, Headphones, Shield } from "lucide-react";
+import { Check, Sparkles, Medal, FileText, Plug2, Headphones, Shield, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
@@ -49,6 +49,7 @@ const FEATURE_MODULES = [
         description: "Todo lo esencial para gestionar tu organización.",
         features: [
             { key: "members", label: "Invitar miembros", featureKey: "can_invite_members" },
+            { key: "external_advisors", label: "Asesores externos", featureKey: "max_external_advisors" },
             { key: "projects", label: "Proyectos activos", featureKey: "max_active_projects" },
             { key: "storage", label: "Almacenamiento", featureKey: "max_storage_mb" },
             { key: "file_size", label: "Tamaño máximo de archivo", featureKey: "max_file_size_mb" },
@@ -100,6 +101,9 @@ export function PlansComparison({
 }: PlansComparisonProps) {
     const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
     const [selectedPlanIndex, setSelectedPlanIndex] = useState(1); // Default to Pro (middle plan)
+
+    // Filter Enterprise from comparison views — it has its own full-width card
+    const comparisonPlans = plans.filter(p => !p.name.toLowerCase().includes('enterprise'));
 
     // Get the status of a plan from feature flags
     const getPlanStatus = (planName: string): PlanFlagStatus => {
@@ -243,50 +247,31 @@ export function PlansComparison({
                 </div>
             </div>
 
-            {/* Founders Card - Only shows for Annual */}
+            {/* Founders — Exclusive, entire bar is clickable */}
             {billingPeriod === "annual" && (
-                <Card className="mb-8 border-amber-400/50 bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-900/10 dark:to-orange-900/10 dark:border-amber-700/50">
-                    <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white">
-                                    <Crown className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <CardTitle className="text-lg">Programa de Fundadores</CardTitle>
-                                        <Badge variant="outline" className="border-amber-400 text-amber-600 dark:text-amber-400">
-                                            Oferta Limitada
-                                        </Badge>
-                                    </div>
-                                    <CardDescription>
-                                        Suscripción <span className="font-semibold text-foreground">ANUAL</span> con 8 beneficios exclusivos de por vida
-                                    </CardDescription>
-                                </div>
-                            </div>
-                            <Link href="/founders">
-                                <Button variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
-                                    Desde $16/mes →
-                                </Button>
-                            </Link>
+                <Link href="/founders" className="block mb-8">
+                    <div
+                        className="flex items-center justify-between gap-4 px-6 py-5 rounded-xl border cursor-pointer transition-all hover:opacity-80"
+                        style={{
+                            borderColor: 'color-mix(in srgb, var(--plan-founder) 30%, transparent)',
+                            background: 'color-mix(in srgb, var(--plan-founder) 5%, transparent)',
+                        }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Medal className="h-4 w-4 shrink-0" style={{ color: 'var(--plan-founder)' }} />
+                            <span className="text-sm font-medium">Programa de Fundadores</span>
+                            <span className="text-muted-foreground/40 hidden sm:inline">·</span>
+                            <span className="text-sm text-muted-foreground hidden sm:inline">Suscripción anual con 8 beneficios exclusivos de por vida</span>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid md:grid-cols-2 gap-x-8 gap-y-2">
-                            {FOUNDERS_BENEFITS.map((benefit, index) => (
-                                <div key={index} className="flex items-center gap-2 text-sm">
-                                    <Check className="h-4 w-4 text-amber-500 shrink-0" />
-                                    <span>{benefit}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
-                            <p className="text-sm text-muted-foreground">
-                                ¿Preguntas? <Link href="/contact" className="text-amber-600 hover:underline">Contacta con nuestro equipo</Link>
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <span
+                            className="text-sm shrink-0 flex items-center gap-1.5 hover:underline"
+                            style={{ color: 'var(--plan-founder)' }}
+                        >
+                            Conocer más
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                    </div>
+                </Link>
             )}
 
             {/* Plan Cards - Using reusable PlanCardsGrid */}
@@ -311,7 +296,7 @@ export function PlansComparison({
                     {/* Mobile: Tab selector */}
                     <div className="md:hidden flex items-center justify-between py-3 px-2">
                         <div className="flex gap-1">
-                            {plans.map((plan, index) => (
+                            {comparisonPlans.map((plan, index) => (
                                 <button
                                     key={plan.id}
                                     onClick={() => setSelectedPlanIndex(index)}
@@ -326,8 +311,8 @@ export function PlansComparison({
                                 </button>
                             ))}
                         </div>
-                        {plans[selectedPlanIndex] && (() => {
-                            const selectedPlan = plans[selectedPlanIndex];
+                        {comparisonPlans[selectedPlanIndex] && (() => {
+                            const selectedPlan = comparisonPlans[selectedPlanIndex];
                             const thisTier = getPlanTier(selectedPlan.name);
                             const curPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
                             const curTier = curPlan ? getPlanTier(curPlan.name) : 0;
@@ -398,7 +383,7 @@ export function PlansComparison({
                         <div className="text-sm font-medium text-muted-foreground">
                             Características
                         </div>
-                        {plans.map((plan) => {
+                        {comparisonPlans.map((plan) => {
                             const planStatus = getPlanStatus(plan.name);
                             const isCurrentPlan = currentPlanId === plan.id;
                             const isPro = plan.name.toLowerCase().includes("pro");
@@ -509,10 +494,10 @@ export function PlansComparison({
                                             <span className="text-sm font-medium">
                                                 {feature.label}
                                             </span>
-                                            {plans[selectedPlanIndex] && (
+                                            {comparisonPlans[selectedPlanIndex] && (
                                                 <span className="text-sm text-right">
                                                     {(() => {
-                                                        const value = getDynamicFeatureValue(plans[selectedPlanIndex], feature.featureKey);
+                                                        const value = getDynamicFeatureValue(comparisonPlans[selectedPlanIndex], feature.featureKey);
                                                         return typeof value === "boolean" ? (
                                                             value ? (
                                                                 <Check className="h-5 w-5 text-primary" />
@@ -532,7 +517,7 @@ export function PlansComparison({
                                             <div className="text-sm font-medium">
                                                 {feature.label}
                                             </div>
-                                            {plans.map((plan) => {
+                                            {comparisonPlans.map((plan) => {
                                                 const value = getDynamicFeatureValue(plan, feature.featureKey);
                                                 return (
                                                     <div key={plan.id} className="text-center text-sm">
