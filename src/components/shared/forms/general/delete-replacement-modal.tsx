@@ -16,12 +16,16 @@ interface Option {
 interface DeleteReplacementModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (replacementId: string | null) => Promise<void>;
+    onConfirm: (replacementId: string | null, deleteChildren?: boolean) => Promise<void>;
     itemToDelete: Option | null;
     replacementOptions: Option[];
     entityLabel: string; // e.g., "tipo de proyecto"
     title?: string;
     description?: string;
+    /** Show "Delete with children" option (for hierarchical items) */
+    showDeleteWithChildren?: boolean;
+    /** Label for children (e.g., "sub-rubros") */
+    childrenLabel?: string;
 }
 
 export function DeleteReplacementModal({
@@ -32,9 +36,11 @@ export function DeleteReplacementModal({
     replacementOptions,
     entityLabel,
     title,
-    description
+    description,
+    showDeleteWithChildren = false,
+    childrenLabel = "sub-elementos",
 }: DeleteReplacementModalProps) {
-    const [action, setAction] = useState<"delete" | "replace">("delete");
+    const [action, setAction] = useState<"delete" | "replace" | "delete-children">("delete");
     const [replacementId, setReplacementId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -43,7 +49,10 @@ export function DeleteReplacementModal({
 
         setIsProcessing(true);
         try {
-            await onConfirm(action === "replace" ? replacementId : null);
+            await onConfirm(
+                action === "replace" ? replacementId : null,
+                action === "delete-children"
+            );
             onClose();
         } catch (error) {
             console.error("Error confirming delete/replace:", error);
@@ -125,6 +134,23 @@ export function DeleteReplacementModal({
                                 </div>
                             </div>
                         </div>
+
+                        {showDeleteWithChildren && (
+                            <div
+                                className="flex items-start space-x-3 p-3 rounded-md border border-transparent hover:border-destructive/30 hover:bg-destructive/5 transition-colors cursor-pointer"
+                                onClick={() => setAction("delete-children")}
+                            >
+                                <RadioGroupItem value="delete-children" id="opt-delete-children" className="mt-1" />
+                                <div className="space-y-1">
+                                    <Label htmlFor="opt-delete-children" className="font-semibold cursor-pointer pointer-events-none">
+                                        Eliminar con {childrenLabel}
+                                    </Label>
+                                    <p className="text-sm text-muted-foreground pointer-events-none">
+                                        Se eliminará este {entityLabel} y todos sus {childrenLabel} de forma permanente.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </RadioGroup>
                 </div>
 
@@ -137,7 +163,14 @@ export function DeleteReplacementModal({
                         onClick={handleConfirm}
                         disabled={isProcessing || (action === "replace" && !replacementId)}
                     >
-                        {isProcessing ? "Procesando..." : (action === "replace" ? "Reemplazar y Eliminar" : "Eliminar")}
+                        {isProcessing
+                            ? "Procesando..."
+                            : action === "replace"
+                                ? "Reemplazar y Eliminar"
+                                : action === "delete-children"
+                                    ? "Eliminar Todo"
+                                    : "Eliminar"
+                        }
                     </Button>
                 </DialogFooter>
             </DialogContent>

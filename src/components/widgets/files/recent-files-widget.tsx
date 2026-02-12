@@ -34,6 +34,7 @@ const MAX_ITEMS = 36;
 
 const FILE_TYPE_LABELS: Record<string, string> = {
     all: "Archivos",
+    media: "Fotos y Videos",
     image: "Fotos",
     video: "Videos",
     pdf: "PDFs",

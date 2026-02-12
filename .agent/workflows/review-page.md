@@ -187,7 +187,7 @@ Para cada página, seguir este flujo:
 3. ~~Documentación (`/organization/files`)~~ ✅
 4. Presupuestos (`/organization/quotes`)
 5. Finanzas (`/organization/finance`)
-6. **🔄 Proyectos (`/organization/projects`)**
+6. ~~Proyectos (`/organization/projects`)~~ ✅
 7. Identidad (`/organization/identity`)
 8. Catálogo Técnico (`/organization/catalog`)
 9. Contactos (`/organization/contacts`)

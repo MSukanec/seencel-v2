@@ -6,6 +6,7 @@
         "archivos",
         "materiales",
         "tareas",
+        "rubros",
         "ejecucion-de-obra",
         "equipo",
         "finanzas",
@@ -35,6 +36,10 @@
         "tareas": {
             "title": "Tareas",
             "icon": "clipboard-list"
+        },
+        "rubros": {
+            "title": "Rubros",
+            "icon": "folder-tree"
         },
         "ejecucion-de-obra": {
             "title": "Ejecución de Obra",

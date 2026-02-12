@@ -9,7 +9,8 @@ import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-a
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { Plus, Banknote, Upload, FileSpreadsheet, Trash2 } from "lucide-react";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
+import { Plus, Banknote, Trash2 } from "lucide-react";
 import { useModal } from "@/stores/modal-store";
 import { SubcontractPaymentForm } from "../forms/subcontract-payment-form";
 import { deleteSubcontractPaymentAction, bulkDeleteSubcontractPaymentsAction } from "@/features/subcontracts/actions";
@@ -315,12 +316,11 @@ export function SubcontractsPaymentsView({
                             icon: Plus,
                             onClick: handleNewPayment
                         },
-                        {
-                            label: "Importar",
-                            icon: FileSpreadsheet,
-                            onClick: handleOpenImport,
-                            variant: "secondary"
-                        }
+                        ...getStandardToolbarActions({
+                            onImport: handleOpenImport,
+                            onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                        }),
                     ]}
                 />
                 <div className="flex-1 flex items-center justify-center">
@@ -347,12 +347,11 @@ export function SubcontractsPaymentsView({
                         icon: Plus,
                         onClick: handleNewPayment
                     },
-                    {
-                        label: "Importar",
-                        icon: FileSpreadsheet,
-                        onClick: handleOpenImport,
-                        variant: "secondary"
-                    }
+                    ...getStandardToolbarActions({
+                        onImport: handleOpenImport,
+                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                    }),
                 ]}
             />
             <DataTable

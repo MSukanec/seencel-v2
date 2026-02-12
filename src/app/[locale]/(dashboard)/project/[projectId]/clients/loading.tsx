@@ -6,7 +6,7 @@ export default function Loading() {
             title="Clientes"
             messages={[
                 "Reuniendo datos del cliente…",
-                "Preparando compromisos y pagos…",
+                "Preparando clientes…",
                 "Conectando el proyecto con su cliente…",
             ]}
         />

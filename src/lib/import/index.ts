@@ -23,6 +23,7 @@ export { importSubcontractPaymentsBatch } from "./subcontracts-import";
 export { importMaterialPaymentsBatch, importMaterialsCatalogBatch } from "./materials-import";
 export { importTasksCatalogBatch } from "./tasks-import";
 export { importAITasksBatch } from "./ai-tasks-import";
+export { importDivisionsBatch } from "./divisions-import";
 
 // Re-export utilities from related files
 export * from "./utils";

@@ -1,21 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { FormGroup } from "@/components/ui/form-group";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { TextField, SelectField } from "@/components/shared/forms/fields";
+import type { SelectOption, FilterTab } from "@/components/shared/forms/fields";
 import { toast } from "sonner";
+import { useRouter } from "@/i18n/routing";
 import { createTask, updateTask } from "../actions";
 import { Task, Unit, TaskDivision } from "../types";
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type DivisionSource = "own" | "system";
 
 interface TasksFormProps {
     mode: "create" | "edit";
@@ -29,14 +27,92 @@ interface TasksFormProps {
     onSuccess?: () => void;
 }
 
-export function TasksForm({ mode, initialData, organizationId, units, divisions, isAdminMode = false, defaultDivisionId, onCancel, onSuccess }: TasksFormProps) {
-    const [isPublished, setIsPublished] = useState(initialData?.is_published ?? false);
+// ============================================================================
+// Constants
+// ============================================================================
+
+const DIVISION_FILTER_TABS: FilterTab[] = [
+    { key: "own", label: "Propios" },
+    { key: "system", label: "Sistema" },
+];
+
+// ============================================================================
+// Component
+// ============================================================================
+
+export function TasksForm({
+    mode,
+    initialData,
+    organizationId,
+    units,
+    divisions,
+    isAdminMode = false,
+    defaultDivisionId,
+    onCancel,
+    onSuccess,
+}: TasksFormProps) {
+    const router = useRouter();
+
+    // Form state
+    const [name, setName] = useState(initialData?.name || initialData?.custom_name || "");
+    const [code, setCode] = useState(initialData?.code || "");
+    const [unitId, setUnitId] = useState(initialData?.unit_id || "");
+    const [divisionId, setDivisionId] = useState(
+        initialData?.task_division_id || defaultDivisionId || ""
+    );
+
+    // Division source — detect from initial data or default to own if they exist
+    const initialSource = useMemo<DivisionSource>(() => {
+        if (initialData?.task_division_id) {
+            const div = divisions.find(d => d.id === initialData.task_division_id);
+            if (div?.is_system) return "system";
+        }
+        const hasOwn = divisions.some(d => !d.is_system && !d.parent_id);
+        return hasOwn ? "own" : "system";
+    }, [initialData, divisions]);
+
+    const [divisionSource, setDivisionSource] = useState<DivisionSource>(initialSource);
+
+    // ── Derived data ────────────────────────────────────────────────────
+
+    // Division options filtered by source
+    const divisionOptions = useMemo<SelectOption[]>(() => {
+        return divisions
+            .filter(d => !d.parent_id)
+            .filter(d => isAdminMode ? true : (divisionSource === "system" ? d.is_system : !d.is_system))
+            .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+            .map(d => ({
+                value: d.id,
+                label: d.order != null ? `${d.order}. ${d.name}` : d.name,
+            }));
+    }, [divisions, divisionSource, isAdminMode]);
+
+    // Unit options filtered by task-applicable
+    const unitOptions = useMemo<SelectOption[]>(() => {
+        return units
+            .filter(u => u.applicable_to?.includes("task"))
+            .map(u => ({
+                value: u.id,
+                label: `${u.name} (${u.symbol})`,
+            }));
+    }, [units]);
+
+    // ── Handlers ────────────────────────────────────────────────────────
+
+    const handleSourceChange = (key: string) => {
+        setDivisionSource(key as DivisionSource);
+        setDivisionId(""); // Clear selection when switching source
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         const formData = new FormData(e.currentTarget);
-        formData.set("is_published", isPublished.toString());
+
+        formData.set("name", name.trim());
+        formData.set("code", code.trim());
+        if (unitId) formData.set("unit_id", unitId);
+        if (divisionId) formData.set("task_division_id", divisionId);
 
         if (mode === "edit" && initialData?.id) {
             formData.append("id", initialData.id);
@@ -48,9 +124,10 @@ export function TasksForm({ mode, initialData, organizationId, units, divisions,
 
         // 🔄 BACKGROUND: Submit to server
         try {
-            const result = mode === "create"
-                ? await createTask(formData)
-                : await updateTask(formData);
+            const result =
+                mode === "create"
+                    ? await createTask(formData)
+                    : await updateTask(formData);
 
             if (result.error) {
                 toast.error(result.error);
@@ -61,91 +138,81 @@ export function TasksForm({ mode, initialData, organizationId, units, divisions,
         }
     };
 
-    // Determine default division value
-    const defaultDivisionValue = initialData?.task_division_id || defaultDivisionId || undefined;
+    // ── Render ───────────────────────────────────────────────────────────
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            {/* Hidden fields for admin mode */}
+            {/* Hidden fields */}
             {isAdminMode && (
                 <>
                     <input type="hidden" name="is_system" value="true" />
                     <input type="hidden" name="is_admin_mode" value="true" />
-                    {/* Don't send organization_id for system tasks */}
                 </>
             )}
             {!isAdminMode && (
                 <input type="hidden" name="organization_id" value={organizationId} />
             )}
+            <input type="hidden" name="is_published" value={String(initialData?.is_published ?? false)} />
+
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                    {/* Nombre: full width */}
+                    {/* División / Rubro — FIRST */}
                     <div className="md:col-span-2">
-                        <FormGroup label="Nombre de la Tarea" htmlFor="name">
-                            <Input
-                                id="name"
-                                name="name"
-                                placeholder="Ej: Colocación de mampostería"
-                                defaultValue={initialData?.name || initialData?.custom_name || ""}
-                                required
-                            />
-                        </FormGroup>
+                        <SelectField
+                            label="Rubro / División"
+                            value={divisionId}
+                            onChange={setDivisionId}
+                            options={divisionOptions}
+                            placeholder="Sin rubro / división"
+                            searchable
+                            searchPlaceholder="Buscar rubro..."
+                            clearable
+                            filterTabs={!isAdminMode ? DIVISION_FILTER_TABS : undefined}
+                            activeFilterTab={divisionSource}
+                            onFilterTabChange={handleSourceChange}
+                            emptyState={{
+                                message: divisionSource === "own"
+                                    ? "No tenés rubros propios."
+                                    : "No hay rubros del sistema.",
+                                linkText: divisionSource === "own" ? "Ir a Catálogo Técnico > Rubros" : undefined,
+                                onLinkClick: divisionSource === "own" ? () => {
+                                    onCancel?.();
+                                    router.push("/organization/catalog");
+                                } : undefined,
+                            }}
+                        />
                     </div>
 
-                    {/* Código: 1 col */}
-                    <div>
-                        <FormGroup label="Código" htmlFor="code">
-                            <Input
-                                id="code"
-                                name="code"
-                                placeholder="Ej: ALB-001"
-                                defaultValue={initialData?.code || ""}
-                            />
-                        </FormGroup>
-                    </div>
-
-                    {/* Unidad: 1 col */}
-                    <div>
-                        <FormGroup label="Unidad de Medida" htmlFor="unit_id">
-                            <Select name="unit_id" defaultValue={initialData?.unit_id} required>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar unidad..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {units
-                                        .filter((u) => u.applicable_to?.includes('task'))
-                                        .map((unit) => (
-                                            <SelectItem key={unit.id} value={unit.id}>
-                                                {unit.name} ({unit.symbol})
-                                            </SelectItem>
-                                        ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
-                    </div>
-
-                    {/* División: full width */}
+                    {/* Nombre — full width */}
                     <div className="md:col-span-2">
-                        <FormGroup label="División / Rubro" htmlFor="task_division_id">
-                            <Select name="task_division_id" defaultValue={defaultDivisionValue}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Sin división" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {divisions
-                                        .filter((d) => !d.parent_id)
-                                        .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
-                                        .map((division) => (
-                                            <SelectItem key={division.id} value={division.id}>
-                                                {division.order != null ? `${division.order}. ` : ""}{division.name}
-                                            </SelectItem>
-                                        ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <TextField
+                            label="Nombre de la Tarea"
+                            value={name}
+                            onChange={setName}
+                            placeholder="Ej: Colocación de mampostería"
+                            required
+                            autoFocus
+                        />
                     </div>
 
+                    {/* Código — 1 col */}
+                    <TextField
+                        label="Código"
+                        value={code}
+                        onChange={setCode}
+                        placeholder="Ej: ALB-001"
+                        required={false}
+                    />
+
+                    {/* Unidad — 1 col */}
+                    <SelectField
+                        label="Unidad de Medida"
+                        value={unitId}
+                        onChange={setUnitId}
+                        options={unitOptions}
+                        placeholder="Seleccionar unidad..."
+                        required
+                    />
                 </div>
             </div>
 

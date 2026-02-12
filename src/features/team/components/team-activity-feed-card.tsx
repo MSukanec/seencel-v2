@@ -75,7 +75,7 @@ export function TeamActivityFeedCard({ activity, className }: ActivityFeedCardPr
             contentClassName="p-0"
             headerAction={
                 <Link
-                    href="/organization/settings"
+                    href="/organization/team"
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                     Ver Todo

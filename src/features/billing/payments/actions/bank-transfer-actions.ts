@@ -214,8 +214,8 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     revalidatePath("/checkout");
     revalidatePath("/");
-    revalidatePath("/[locale]/organization/settings", "page");
-    revalidatePath("/[locale]/(dashboard)/organization/settings", "page");
+    revalidatePath("/[locale]/organization/team", "page");
+    revalidatePath("/[locale]/(dashboard)/organization/team", "page");
     return { success: true, data };
 }
 

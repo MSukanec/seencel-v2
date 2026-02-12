@@ -51,7 +51,7 @@ interface Organization {
 export default async function SettingsPage({
     searchParams,
 }: {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const t = await getTranslations('Settings');
     const { organizations, activeOrgId, currentUserId } = (await getUserOrganizations()) as unknown as { organizations: Organization[], activeOrgId: string | null, currentUserId: string };
@@ -68,7 +68,8 @@ export default async function SettingsPage({
         ? profile.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
         : "US";
 
-    const defaultTab = typeof searchParams.tab === 'string' ? searchParams.tab : 'profile';
+    const resolvedSearchParams = await searchParams;
+    const defaultTab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab : 'profile';
 
     return (
         <PageWrapper type="page" title={t('title')}>

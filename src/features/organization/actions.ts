@@ -29,7 +29,7 @@ export async function updateInsightConfig(organizationId: string, newConfig: any
 
     if (error) throw new Error(sanitizeError(error));
 
-    revalidatePath('/dashboard/organization/settings');
+    revalidatePath('/dashboard/organization/team');
     return { success: true };
 }
 

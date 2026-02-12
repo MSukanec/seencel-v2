@@ -72,7 +72,7 @@ export function PaymentsDataTable({
                     valueField: 'id',
                     fetchOptions: async () => clients.map(c => ({
                         id: c.id,
-                        label: c.contact_full_name || 'Sin nombre'
+                        label: c.contact_full_name || c.contact_company_name || 'Sin nombre'
                     })),
                 }
             },

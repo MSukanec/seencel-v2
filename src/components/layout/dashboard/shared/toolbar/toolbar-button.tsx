@@ -47,6 +47,9 @@ export interface ToolbarAction {
     icon?: React.ComponentType<{ className?: string }>
     variant?: VariantProps<typeof buttonVariants>["variant"]
     disabled?: boolean
+    /** If true, this action remains enabled even when the project is inactive (read-only).
+     *  By default, ALL actions are disabled in inactive projects. */
+    allowInReadOnly?: boolean
     /** Optional feature guard for plan-gated actions */
     featureGuard?: {
         /** Whether the feature is enabled (user has access) */

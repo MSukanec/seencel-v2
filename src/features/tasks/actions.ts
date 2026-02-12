@@ -249,26 +249,127 @@ export async function deleteTasksBulk(ids: string[], isAdminMode: boolean = fals
     return { success: true, deletedCount: ids.length, error: null };
 }
 
+// ============================================
+// UPDATE TASKS BULK (edit common fields)
+// ============================================
+export async function updateTasksBulk(
+    ids: string[],
+    updates: { task_division_id?: string | null; unit_id?: string | null },
+    isAdminMode: boolean = false
+) {
+    if (ids.length === 0) return { success: true, updatedCount: 0, error: null };
+
+    // Only include fields that were explicitly provided
+    const payload: Record<string, unknown> = {};
+    if ("task_division_id" in updates) payload.task_division_id = updates.task_division_id;
+    if ("unit_id" in updates) payload.unit_id = updates.unit_id;
+
+    if (Object.keys(payload).length === 0) {
+        return { error: "No se seleccionaron campos para actualizar" };
+    }
+
+    const supabase = isAdminMode ? createServiceClient() : await createClient();
+
+    let query = supabase
+        .from("tasks")
+        .update(payload)
+        .in("id", ids);
+
+    // Safety: only update the correct type of task
+    if (isAdminMode) {
+        query = query.eq("is_system", true);
+    } else {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) {
+            return { error: "No hay organización activa" };
+        }
+        query = query.eq("organization_id", activeOrgId).eq("is_system", false);
+    }
+
+    const { error } = await query;
+
+    if (error) {
+        console.error("Error bulk updating tasks:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { success: true, updatedCount: ids.length, error: null };
+}
+
 
 
 // ============================================================================
-// TASK DIVISIONS CRUD (Admin Only)
+// TASK DIVISIONS CRUD (Admin + Org Users)
 // ============================================================================
 
 /**
- * Create a new task division (admin only - uses service client)
+ * Create a new task division
+ * - Admin mode: creates system division (is_system=true, organization_id=null)
+ * - User mode: creates org division (is_system=false, organization_id=orgId)
  */
 export async function createTaskDivision(formData: FormData) {
     const supabase = await createClient();
+    const isAdminMode = formData.get("is_admin_mode") === "true";
 
     const name = formData.get("name") as string;
     const description = formData.get("description") as string | null;
     const code = formData.get("code") as string | null;
-    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
     const parent_id = formData.get("parent_id") as string | null;
 
     if (!name?.trim()) {
         return { error: "El nombre es requerido" };
+    }
+
+    // Determine ownership
+    let organization_id: string | null = null;
+    let is_system = true;
+
+    if (!isAdminMode) {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) {
+            return { error: "No hay organización activa" };
+        }
+        organization_id = activeOrgId;
+        is_system = false;
+    }
+
+    // Calculate next order position among siblings at the same level
+    let nextOrder = 1;
+    let siblingsQuery = supabase
+        .from("task_divisions")
+        .select("order")
+        .is("parent_id", parent_id || null)
+        .order("order", { ascending: false, nullsFirst: false })
+        .limit(1);
+
+    // Handle null organization_id (system/admin mode)
+    if (organization_id) {
+        siblingsQuery = siblingsQuery.eq("organization_id", organization_id);
+    } else {
+        siblingsQuery = siblingsQuery.is("organization_id", null);
+    }
+
+    const { data: siblings } = await siblingsQuery;
+
+    if (siblings && siblings.length > 0 && siblings[0].order != null) {
+        nextOrder = siblings[0].order + 1;
+    } else {
+        // Count existing siblings to determine position
+        let countQuery = supabase
+            .from("task_divisions")
+            .select("id", { count: "exact", head: true })
+            .is("parent_id", parent_id || null);
+
+        if (organization_id) {
+            countQuery = countQuery.eq("organization_id", organization_id);
+        } else {
+            countQuery = countQuery.is("organization_id", null);
+        }
+
+        const { count } = await countQuery;
+        nextOrder = (count ?? 0) + 1;
     }
 
     const { data, error } = await supabase
@@ -277,8 +378,10 @@ export async function createTaskDivision(formData: FormData) {
             name: name.trim(),
             description: description?.trim() || null,
             code: code?.trim() || null,
-            order,
+            order: nextOrder,
             parent_id: parent_id || null,
+            organization_id,
+            is_system,
         })
         .select()
         .single();
@@ -294,7 +397,8 @@ export async function createTaskDivision(formData: FormData) {
 }
 
 /**
- * Update a task division (admin only)
+ * Update a task division
+ * RLS handles permission checks (admin for system, org member for org divisions)
  */
 export async function updateTaskDivision(formData: FormData) {
     const supabase = await createClient();
@@ -338,47 +442,89 @@ export async function updateTaskDivision(formData: FormData) {
 }
 
 /**
- * Delete a task division with optional replacement
+ * Delete a task division with optional replacement or cascade delete children
  * If replacementId is provided, all tasks are reassigned before deletion
+ * If deleteChildren is true, all descendant divisions are also soft-deleted
  */
 export async function deleteTaskDivision(
     divisionId: string,
-    replacementId: string | null = null
+    replacementId: string | null = null,
+    deleteChildren: boolean = false
 ) {
     const supabase = await createClient();
 
-    // If replacement ID provided, reassign all tasks first
-    if (replacementId) {
-        const { error: reassignError } = await supabase
-            .from("tasks")
-            .update({ task_division_id: replacementId })
-            .eq("task_division_id", divisionId);
+    // Collect all division IDs to delete (self + descendants if deleteChildren)
+    let idsToDelete = [divisionId];
 
-        if (reassignError) {
-            console.error("Error reassigning tasks:", reassignError);
-            return { error: sanitizeError(reassignError) };
-        }
-    } else {
-        // Set tasks to null division
-        const { error: nullifyError } = await supabase
-            .from("tasks")
-            .update({ task_division_id: null })
-            .eq("task_division_id", divisionId);
+    if (deleteChildren) {
+        // Recursively find all descendant divisions
+        const collectDescendants = async (parentIds: string[]): Promise<string[]> => {
+            const { data: children } = await supabase
+                .from("task_divisions")
+                .select("id")
+                .in("parent_id", parentIds)
+                .eq("is_deleted", false);
 
-        if (nullifyError) {
-            console.error("Error nullifying task divisions:", nullifyError);
-            return { error: sanitizeError(nullifyError) };
+            if (!children || children.length === 0) return [];
+
+            const childIds = children.map(c => c.id);
+            const deeperIds = await collectDescendants(childIds);
+            return [...childIds, ...deeperIds];
+        };
+
+        const descendantIds = await collectDescendants([divisionId]);
+        idsToDelete = [divisionId, ...descendantIds];
+    }
+
+    // Handle task reassignment for all divisions being deleted
+    for (const id of idsToDelete) {
+        if (replacementId && !deleteChildren) {
+            // Only reassign for the main division when replacing
+            const { error: reassignError } = await supabase
+                .from("tasks")
+                .update({ task_division_id: replacementId })
+                .eq("task_division_id", id);
+
+            if (reassignError) {
+                console.error("Error reassigning tasks:", reassignError);
+                return { error: sanitizeError(reassignError) };
+            }
+        } else {
+            // Set tasks to null division
+            const { error: nullifyError } = await supabase
+                .from("tasks")
+                .update({ task_division_id: null })
+                .eq("task_division_id", id);
+
+            if (nullifyError) {
+                console.error("Error nullifying task divisions:", nullifyError);
+                return { error: sanitizeError(nullifyError) };
+            }
         }
     }
 
-    // Soft delete the division
+    // Also orphan any child divisions that aren't being deleted
+    if (!deleteChildren) {
+        const { error: orphanError } = await supabase
+            .from("task_divisions")
+            .update({ parent_id: null })
+            .eq("parent_id", divisionId)
+            .eq("is_deleted", false);
+
+        if (orphanError) {
+            console.error("Error orphaning child divisions:", orphanError);
+            return { error: sanitizeError(orphanError) };
+        }
+    }
+
+    // Soft delete all targeted divisions
     const { error } = await supabase
         .from("task_divisions")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
         })
-        .eq("id", divisionId);
+        .in("id", idsToDelete);
 
     if (error) {
         console.error("Error deleting task division:", error);

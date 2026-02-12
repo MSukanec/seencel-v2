@@ -45,8 +45,8 @@ export function PageSkeleton({
                     <Image
                         src="/logo.png"
                         alt="Seencel"
-                        width={48}
-                        height={48}
+                        width={72}
+                        height={72}
                         className="opacity-30 animate-pulse"
                         priority
                     />
@@ -57,7 +57,7 @@ export function PageSkeleton({
                     <p
                         key={messageIndex}
                         className={cn(
-                            "text-base text-muted-foreground/50 font-light tracking-wide",
+                            "text-lg text-foreground/70 font-light tracking-wide",
                             "animate-in fade-in slide-in-from-bottom-2 duration-500"
                         )}
                     >

@@ -7,12 +7,13 @@ import { getUnitsForOrganization, getUnitCategories } from "@/features/units/que
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
 import { getCurrencies } from "@/features/billing/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
+import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
 import { LaborTypesView } from "@/features/labor/views/labor-types-view";
 import { UnitsCatalogView } from "@/features/units/views/units-catalog-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { Wrench, ClipboardList, Package, HardHat, Ruler } from "lucide-react";
+import { Wrench, ClipboardList, Package, HardHat, Ruler, FolderTree } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -79,7 +80,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
         ] = await Promise.all([
             getTasksGroupedByDivision(activeOrgId),
             getUnits(),
-            getTaskDivisions(),
+            getTaskDivisions(activeOrgId),
             getTaskActions(),
             getTaskElements(),
             getMaterialsForOrganization(activeOrgId),
@@ -96,6 +97,14 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
         // Get default currency (first one or USD)
         const defaultCurrencyId = currencies[0]?.id || '';
 
+        // Calculate task counts by division for the Rubros view
+        const taskCounts: Record<string, number> = {};
+        groupedTasks.forEach(group => {
+            if (group.division) {
+                taskCounts[group.division.id] = group.tasks.length;
+            }
+        });
+
         const activeTab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab : 'tasks';
 
         return (
@@ -109,6 +118,10 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                             <TabsTrigger value="tasks" className={tabTriggerClass}>
                                 <ClipboardList className="h-4 w-4 mr-2" />
                                 Tareas
+                            </TabsTrigger>
+                            <TabsTrigger value="divisions" className={tabTriggerClass}>
+                                <FolderTree className="h-4 w-4 mr-2" />
+                                Rubros
                             </TabsTrigger>
                             <TabsTrigger value="materials" className={tabTriggerClass}>
                                 <Package className="h-4 w-4 mr-2" />
@@ -134,6 +147,15 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                                 divisions={divisionsResult.data}
                                 kinds={actionsResult.data}
                                 elements={elementsResult.data}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+                    <TabsContent value="divisions" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <TasksDivisionsView
+                                divisions={divisionsResult.data}
+                                taskCounts={taskCounts}
+                                organizationId={activeOrgId}
                             />
                         </ContentLayout>
                     </TabsContent>

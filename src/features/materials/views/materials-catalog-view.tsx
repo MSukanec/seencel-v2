@@ -19,13 +19,12 @@ import {
     Pencil,
     Trash2,
     Wrench,
-    Upload,
     LayoutGrid,
-    History,
     Monitor,
     Building2,
 } from "lucide-react";
 import { ImportConfig } from "@/lib/import";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { ImportHistoryModal } from "@/components/shared/import/import-history-modal";
 import { createImportBatch, importMaterialsCatalogBatch, revertImportBatch } from "@/lib/import";
@@ -630,8 +629,14 @@ export function MaterialsCatalogView({
     const handleConfirmDeleteCategory = async (replacementId: string | null) => {
         if (!categoryToDelete) return;
 
+        const deletedId = categoryToDelete.id;
+
+        // Close modal immediately for responsive UX
+        setCategoryDeleteModalOpen(false);
+        setCategoryToDelete(null);
+
         try {
-            const result = await deleteMaterialCategory(categoryToDelete.id);
+            const result = await deleteMaterialCategory(deletedId);
             if (result.error) {
                 toast.error(result.error);
             } else {
@@ -718,16 +723,12 @@ export function MaterialsCatalogView({
                             icon: Plus,
                             onClick: handleCreateMaterial,
                         },
-                        {
-                            label: "Importar",
-                            icon: Upload,
-                            onClick: handleImport,
-                        },
-                        {
-                            label: "Ver historial",
-                            icon: History,
-                            onClick: handleImportHistory,
-                        },
+                        ...getStandardToolbarActions({
+                            onImport: handleImport,
+                            onImportHistory: handleImportHistory,
+                            onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                        }),
                     ]}
                     selectedCount={multiSelect.selectedCount}
                     onClearSelection={multiSelect.clearSelection}

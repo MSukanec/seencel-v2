@@ -6,6 +6,7 @@ import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
+import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarPlanButton } from "./plan-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -16,6 +17,10 @@ import {
     Building,
     EyeOff,
     Check,
+    Bell,
+    CalendarDays,
+    Users,
+    ClipboardList,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
@@ -62,7 +67,7 @@ export function SidebarContent({
     const router = useRouter();
     const nativeRouter = useNextRouter();
     const { activeContext, sidebarMode, actions } = useLayoutStore();
-    const { contexts, contextRoutes, getNavItems } = useSidebarNavigation();
+    const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
 
     // Get org/project data from hook
     const {
@@ -129,15 +134,14 @@ export function SidebarContent({
         return "Fijar";                                            // next: docked
     };
 
-    // Get nav items for specific contexts
-    const orgNavItems = getNavItems("organization");
-    const projectNavItems = getNavItems("project");
+    // Get unified nav groups for accordion rendering
+    const navGroups = getNavGroups("organization");
 
     // 1. Sync Context based on URL (Navigation)
     React.useEffect(() => {
-        // Project Context
+        // Project Context → unified under organization
         if (pathname.includes('/project/')) {
-            if (activeContext !== 'project') actions.setActiveContext('project');
+            if (activeContext !== 'organization') actions.setActiveContext('organization');
             return;
         }
 
@@ -179,8 +183,8 @@ export function SidebarContent({
         if (projectMatch) {
             const urlProjectId = projectMatch[1];
 
-            // Sync Drill State to Project
-            setDrillState(prev => prev !== 'project' ? 'project' : prev);
+            // Sync Drill State to Organization (unified sidebar)
+            setDrillState(prev => prev !== 'organization' ? 'organization' : prev);
 
             // Sync Project Selection
             if (urlProjectId && currentProject?.id !== urlProjectId) {
@@ -236,11 +240,6 @@ export function SidebarContent({
 
         const button = (
             <React.Fragment key={idx}>
-                {item.sectionHeader && isExpanded && (
-                    <div className="px-2 pb-1 pt-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        {item.sectionHeader}
-                    </div>
-                )}
                 <SidebarNavButton
                     icon={item.icon}
                     label={item.title}
@@ -327,49 +326,19 @@ export function SidebarContent({
                 )}
 
                 <div className="flex flex-col w-full h-full overflow-hidden">
-                    {/* Top Brand Section */}
-                    <div className="w-full flex items-center mb-2 px-2">
-                        <SidebarBrandButton
-                            mode={drillState === "home" || drillState === "learnings" || drillState === "community" || drillState === "admin" ? "home" : drillState === "project" ? "project" : "organization"}
-                            isExpanded={isExpanded}
-                            currentOrg={currentOrg}
-                            currentProject={currentProject}
-                            projects={projects}
-                            onOrgClick={() => {
-                                setSlideDirection("left");
-                                setDrillState("organization");
-                                actions.setActiveContext("organization");
-
-                                // Navigate to organization dashboard to resolve context conflict
-                                // Extract locale from current URL (e.g., /es/project/... -> es)
-                                const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-                                const locale = localeMatch ? localeMatch[1] : 'es';
-                                nativeRouter.push(`/${locale}/organization`);
-                            }}
-                            onProjectChange={(projectId) => {
-                                // OPTIMIZED NAVIGATION:
-                                // We do NOT update state here manually to avoid blocking the main thread.
-                                // We immediately navigate and let the URL change drive the state via useEffect.
-
-                                // 1. Save preference (Fire and forget, non-blocking)
-                                saveProjectPreference(projectId);
-
-                                // 2. Navigate immediately
-                                // Extract locale from current URL
-                                const localeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-                                const locale = localeMatch ? localeMatch[1] : 'es';
-
-                                const projectPathMatch = pathname.match(/\/project\/[^/]+\/?(.*)$/);
-                                if (projectPathMatch) {
-                                    // On a project page, navigate to same sub-page in new project
-                                    const subPage = projectPathMatch[1] || '';
-                                    nativeRouter.push(`/${locale}/project/${projectId}${subPage ? `/${subPage}` : ''}`);
-                                } else {
-                                    // On organization page, navigate to project overview
-                                    nativeRouter.push(`/${locale}/project/${projectId}`);
-                                }
-                            }}
-                        />
+                    {/* Top Brand Section — SEENCEL + Plan Badge inline */}
+                    <div className="w-full flex items-center gap-1.5 mb-2 px-2">
+                        <div className="flex-1 min-w-0">
+                            <SidebarBrandButton
+                                mode="home"
+                                isExpanded={isExpanded}
+                            />
+                        </div>
+                        {!isMobile && (
+                            <div className="shrink-0">
+                                <SidebarPlanButton isExpanded={true} />
+                            </div>
+                        )}
                     </div>
 
                     {/* Separator */}
@@ -459,46 +428,59 @@ export function SidebarContent({
                         {/* ============================================================ */}
                         {drillState === "organization" && (
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
-                                {/* Back Button */}
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver al Hub"
+
+                                {/* Quick Access Row */}
+                                <div className={cn(
+                                    "rounded-lg",
+                                    "bg-sidebar-accent/30",
+                                    "border border-sidebar-border/40",
+                                    "p-1.5 mb-0.5"
+                                )}>
+                                    <div className="grid grid-cols-4 gap-1">
+                                        {/* Notifications — uses the full component with popover */}
+                                        <SidebarTooltip label="Notificaciones" isExpanded={false}>
+                                            <SidebarNotificationsButton variant="quick-access" />
+                                        </SidebarTooltip>
+
+                                        {[
+                                            { icon: CalendarDays, label: 'Planificador', href: '/organization/planner' },
+                                            { icon: Users, label: 'Equipo', href: '/organization/team' },
+                                            { icon: ClipboardList, label: 'Tareas', href: '/organization/projects' },
+                                        ].map((item) => (
+                                            <SidebarTooltip key={item.label} label={item.label} isExpanded={false}>
+                                                <button
+                                                    onClick={() => {
+                                                        router.push(item.href as any);
+                                                        onLinkClick?.();
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150",
+                                                        "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                                                        pathname === item.href && "text-primary bg-primary/10"
+                                                    )}
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                </button>
+                                            </SidebarTooltip>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Unified Nav Items with Accordion */}
+                                <SidebarAccordionGroups
+                                    groups={navGroups}
+                                    renderItem={renderNavItem}
                                     isExpanded={isExpanded}
-                                    onClick={handleBack}
+                                    activePath={pathname}
                                 />
-
-                                {/* Separator */}
-                                <div className="w-full h-px bg-border/30 my-1" />
-
-                                {/* Organization Nav Items */}
-                                {orgNavItems.map(renderNavItem)}
                             </nav>
                         )}
 
-                        {/* PROJECT STATE */}
-                        {drillState === "project" && (
-                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="project">
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver al Hub"
-                                    isExpanded={isExpanded}
-                                    onClick={handleBack}
-                                />
-                                <div className="w-full h-px bg-border/30 my-1" />
-                                {projectNavItems.map(renderNavItem)}
-                            </nav>
-                        )}
+
 
                         {/* LEARNINGS STATE */}
                         {drillState === "learnings" && (
                             <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="learnings">
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver al Hub"
-                                    isExpanded={isExpanded}
-                                    onClick={handleBack}
-                                />
-                                <div className="w-full h-px bg-border/30 my-1" />
                                 {getNavItems("learnings").map((item, idx) => (
                                     <SidebarNavButton
                                         key={idx}
@@ -516,13 +498,6 @@ export function SidebarContent({
                         {/* COMMUNITY STATE */}
                         {drillState === "community" && (
                             <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="community">
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver al Hub"
-                                    isExpanded={isExpanded}
-                                    onClick={handleBack}
-                                />
-                                <div className="w-full h-px bg-border/30 my-1" />
                                 {isExpanded && (
                                     <div className="px-3 py-2 text-sm font-semibold text-primary">
                                         Comunidad
@@ -535,13 +510,6 @@ export function SidebarContent({
                         {/* ADMIN STATE */}
                         {drillState === "admin" && (
                             <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
-                                <SidebarNavButton
-                                    icon={ArrowLeft}
-                                    label="Volver al Hub"
-                                    isExpanded={isExpanded}
-                                    onClick={handleBack}
-                                />
-                                <div className="w-full h-px bg-border/30 my-1" />
 
                                 {getNavItems("admin").map((item, idx) => (
                                     <SidebarNavButton
@@ -558,12 +526,6 @@ export function SidebarContent({
                         )}
                     </ScrollArea>
 
-                    {/* Plan indicator — above the divider */}
-                    {!isMobile && (
-                        <div className="px-2 pb-1">
-                            <SidebarPlanButton isExpanded={isExpanded} />
-                        </div>
-                    )}
 
                     {/* Mode Toggle (bottom, desktop only) */}
                     {!isMobile && (
@@ -574,9 +536,6 @@ export function SidebarContent({
 
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />
-
-                            {/* Notifications Button */}
-                            <SidebarNotificationsButton isExpanded={isExpanded} />
 
                             {/* User Avatar Button */}
                             <SidebarAvatarButton

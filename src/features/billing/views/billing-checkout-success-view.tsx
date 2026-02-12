@@ -309,11 +309,11 @@ export function BillingCheckoutSuccessView() {
                             </>
                         ) : isSeats ? (
                             <>
-                                <Button size="lg" className="flex-1 h-12 text-base font-medium" onClick={() => handleNavigate('/organization/settings?tab=members')}>
+                                <Button size="lg" className="flex-1 h-12 text-base font-medium" onClick={() => handleNavigate('/organization/team?tab=members')}>
                                     <Users className="w-5 h-5 mr-2" />
                                     {t("success.seats.ctaPrimary")}
                                 </Button>
-                                <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => handleNavigate('/organization/settings?tab=billing')}>
+                                <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => handleNavigate('/organization/team?tab=billing')}>
                                     <Receipt className="w-5 h-5 mr-2" />
                                     {t("success.seats.ctaSecondary")}
                                 </Button>
@@ -324,7 +324,7 @@ export function BillingCheckoutSuccessView() {
                                     <Rocket className="w-5 h-5 mr-2" />
                                     {t(`success.${category}.ctaPrimary`)}
                                 </Button>
-                                <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => handleNavigate('/organization/settings?tab=billing')}>
+                                <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => handleNavigate('/organization/team?tab=billing')}>
                                     <Receipt className="w-5 h-5 mr-2" />
                                     {t(`success.${category}.ctaSecondary`)}
                                 </Button>

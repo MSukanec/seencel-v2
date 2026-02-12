@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 
 // ============================================================================
 // useMultiSelect Hook
@@ -47,6 +47,14 @@ export function useMultiSelect<T>({
 }: UseMultiSelectOptions<T>): UseMultiSelectReturn<T> {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+    // Keep a ref to the current selection so callbacks don't need it as a dependency.
+    // This makes toggle/isSelected/etc referencially stable → memo'd children don't re-render.
+    const selectedRef = useRef(selectedIds);
+    selectedRef.current = selectedIds;
+
+    const onSelectionChangeRef = useRef(onSelectionChange);
+    onSelectionChangeRef.current = onSelectionChange;
+
     // Build a map for quick item lookup
     const itemMap = useMemo(() => {
         const map = new Map<string, T>();
@@ -56,50 +64,57 @@ export function useMultiSelect<T>({
         return map;
     }, [items, getItemId]);
 
-    // Helper to update selection and notify
+    // Keep items ref for selectAll
+    const itemsRef = useRef(items);
+    itemsRef.current = items;
+    const getItemIdRef = useRef(getItemId);
+    getItemIdRef.current = getItemId;
+
+    // Helper to update selection and notify — stable via ref
     const updateSelection = useCallback((newSelection: Set<string>) => {
         setSelectedIds(newSelection);
-        onSelectionChange?.(newSelection);
-    }, [onSelectionChange]);
+        onSelectionChangeRef.current?.(newSelection);
+    }, []);
 
+    // All callbacks are stable (no deps on selectedIds) → memo'd children stay memoized
     const isSelected = useCallback((id: string) => {
-        return selectedIds.has(id);
-    }, [selectedIds]);
+        return selectedRef.current.has(id);
+    }, []);
 
     const toggle = useCallback((id: string) => {
-        const newSelection = new Set(selectedIds);
+        const newSelection = new Set(selectedRef.current);
         if (newSelection.has(id)) {
             newSelection.delete(id);
         } else {
             newSelection.add(id);
         }
         updateSelection(newSelection);
-    }, [selectedIds, updateSelection]);
+    }, [updateSelection]);
 
     const select = useCallback((id: string) => {
         updateSelection(new Set([id]));
     }, [updateSelection]);
 
     const selectMany = useCallback((ids: string[]) => {
-        const newSelection = new Set(selectedIds);
+        const newSelection = new Set(selectedRef.current);
         ids.forEach(id => newSelection.add(id));
         updateSelection(newSelection);
-    }, [selectedIds, updateSelection]);
+    }, [updateSelection]);
 
     const selectAll = useCallback(() => {
-        const allIds = items.map(getItemId);
+        const allIds = itemsRef.current.map(getItemIdRef.current);
         updateSelection(new Set(allIds));
-    }, [items, getItemId, updateSelection]);
+    }, [updateSelection]);
 
     const clearSelection = useCallback(() => {
         updateSelection(new Set());
     }, [updateSelection]);
 
     const getSelectedItems = useCallback(() => {
-        return Array.from(selectedIds)
+        return Array.from(selectedRef.current)
             .map(id => itemMap.get(id))
             .filter((item): item is T => item !== undefined);
-    }, [selectedIds, itemMap]);
+    }, [itemMap]);
 
     const hasSelection = selectedIds.size > 0;
     const allSelected = items.length > 0 && selectedIds.size === items.length;

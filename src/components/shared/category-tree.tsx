@@ -189,34 +189,47 @@ export function CategoryTree({
 
     // Handle drag end
     const handleDragEnd = (result: DropResult) => {
-        const { destination, source } = result;
+        const { destination, source, type } = result;
 
         // Dropped outside or same position
-        if (!destination || destination.index === source.index) {
+        if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
             return;
         }
 
-        // Only handle root-level reordering for now
-        const rootItems = localItems.filter(item => !item.parent_id);
-        const childItems = localItems.filter(item => item.parent_id);
+        // Determine parent context from droppableId
+        const parentId = type === "root" ? null : type;
 
-        // Reorder root items
-        const reorderedRoots = Array.from(rootItems);
-        const [movedItem] = reorderedRoots.splice(source.index, 1);
-        reorderedRoots.splice(destination.index, 0, movedItem);
+        // Get siblings at this level
+        const siblings = parentId
+            ? localItems.filter(item => item.parent_id === parentId)
+            : localItems.filter(item => !item.parent_id);
+        const otherItems = parentId
+            ? localItems.filter(item => item.parent_id !== parentId)
+            : localItems.filter(item => item.parent_id);
 
-        // Update order field for optimistic UI
-        const updatedRoots = reorderedRoots.map((item, index) => ({
+        // Sort siblings by current order for correct index mapping
+        const sortedSiblings = [...siblings].sort((a, b) => {
+            const orderA = a.order ?? 999999;
+            const orderB = b.order ?? 999999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.name || "").localeCompare(b.name || "");
+        });
+
+        // Reorder
+        const [movedItem] = sortedSiblings.splice(source.index, 1);
+        sortedSiblings.splice(destination.index, 0, movedItem);
+
+        // Update order field
+        const updatedSiblings = sortedSiblings.map((item, index) => ({
             ...item,
             order: index + 1
         }));
 
-        // Combine with child items
-        setLocalItems([...updatedRoots, ...childItems]);
+        setLocalItems([...otherItems, ...updatedSiblings]);
 
         // Call parent's onReorder with new order
         if (onReorder) {
-            onReorder(updatedRoots.map(item => item.id));
+            onReorder(updatedSiblings.map(item => item.id));
         }
     };
 
@@ -254,8 +267,8 @@ export function CategoryTree({
                 >
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                            {/* Drag Handle (only for root items with drag enabled) */}
-                            {enableDragDrop && depth === 0 && provided?.dragHandleProps && (
+                            {/* Drag Handle (all depths when drag enabled) */}
+                            {enableDragDrop && provided?.dragHandleProps && (
                                 <div
                                     {...provided.dragHandleProps}
                                     className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
@@ -385,7 +398,25 @@ export function CategoryTree({
                 </Card>
 
                 {/* Children */}
-                {isExpanded && node.children.map(child => renderNode(child, depth + 1))}
+                {isExpanded && enableDragDrop && onReorder && node.children.length > 0 ? (
+                    <Droppable droppableId={`children-${node.id}`} type={node.id}>
+                        {(childProvided) => (
+                            <div
+                                ref={childProvided.innerRef}
+                                {...childProvided.droppableProps}
+                            >
+                                {node.children.map((child, childIndex) => (
+                                    <Draggable key={child.id} draggableId={child.id} index={childIndex}>
+                                        {(childDragProvided, childSnapshot) => renderNode(child, depth + 1, childDragProvided, childSnapshot)}
+                                    </Draggable>
+                                ))}
+                                {childProvided.placeholder}
+                            </div>
+                        )}
+                    </Droppable>
+                ) : (
+                    isExpanded && node.children.map(child => renderNode(child, depth + 1))
+                )}
             </div>
         );
     };
@@ -407,7 +438,7 @@ export function CategoryTree({
     if (enableDragDrop && onReorder) {
         return (
             <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="category-tree" type="category">
+                <Droppable droppableId="category-tree" type="root">
                     {(provided) => (
                         <div
                             ref={provided.innerRef}

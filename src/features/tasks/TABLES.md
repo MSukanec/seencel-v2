@@ -63,13 +63,54 @@ create table public.task_divisions (
   parent_id uuid null,
   is_deleted boolean not null default false,
   deleted_at timestamp with time zone null,
+  organization_id uuid null,
+  is_system boolean not null default true,
+  created_by uuid null,
+  updated_by uuid null,
+  import_batch_id uuid null,
   constraint task_rubros_pkey primary key (id),
-  constraint task_divisions_parent_id_fkey foreign KEY (parent_id) references task_divisions (id) on delete set null
+  constraint task_divisions_import_batch_id_fkey foreign KEY (import_batch_id) references import_batches (id) on delete set null,
+  constraint task_divisions_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint task_divisions_created_by_fkey foreign KEY (created_by) references organization_members (id) on delete set null,
+  constraint task_divisions_updated_by_fkey foreign KEY (updated_by) references organization_members (id) on delete set null,
+  constraint task_divisions_parent_id_fkey foreign KEY (parent_id) references task_divisions (id) on delete set null,
+  constraint task_divisions_system_org_consistency_chk check (
+    (
+      (
+        (is_system = true)
+        and (organization_id is null)
+      )
+      or (
+        (is_system = false)
+        and (organization_id is not null)
+      )
+    )
+  )
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_task_divisions_not_deleted on public.task_divisions using btree (is_deleted) TABLESPACE pg_default
 where
   (is_deleted = false);
+
+create index IF not exists idx_task_divisions_org on public.task_divisions using btree (organization_id) TABLESPACE pg_default
+where
+  (organization_id is not null);
+
+create index IF not exists idx_task_divisions_import_batch_id on public.task_divisions using btree (import_batch_id) TABLESPACE pg_default
+where
+  (import_batch_id is not null);
+
+create trigger on_task_division_audit
+after INSERT
+or DELETE
+or
+update on task_divisions for EACH row
+execute FUNCTION log_task_division_activity ();
+
+create trigger set_updated_by_task_divisions BEFORE INSERT
+or
+update on task_divisions for EACH row
+execute FUNCTION handle_updated_by ();
 
 create trigger task_divisions_set_updated_at BEFORE
 update on task_divisions for EACH row

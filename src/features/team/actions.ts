@@ -161,7 +161,7 @@ export async function sendInvitationAction(
     });
 
     // 10. Revalidate
-    revalidatePath('/organization/settings', 'page');
+    revalidatePath('/organization/team', 'page');
 
     return { success: true };
 }
@@ -634,7 +634,7 @@ export async function updateMemberRoleAction(
         return { success: false, error: "Error al actualizar el rol" };
     }
 
-    revalidatePath('/organization/settings', 'page');
+    revalidatePath('/organization/team', 'page');
 
     return { success: true, memberName: targetMember.user_full_name };
 }
@@ -722,7 +722,7 @@ export async function removeMemberAction(
         return { success: false, error: "Error al eliminar miembro" };
     }
 
-    revalidatePath('/organization/settings', 'page');
+    revalidatePath('/organization/team', 'page');
 
     return { success: true, memberName: targetMember.user_full_name };
 }

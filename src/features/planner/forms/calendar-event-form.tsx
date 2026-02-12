@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { DateField, NotesField, TimeField, TextField, SwitchField } from "@/components/shared/forms/fields";
+import { ActiveProjectField, type ActiveProject } from "@/components/shared/forms/fields/active-project-field";
 
 import { CalendarEvent, EVENT_COLORS } from "@/features/planner/types";
 import { createCalendarEvent, updateCalendarEvent } from "@/features/planner/actions";
@@ -240,32 +241,21 @@ export function CalendarEventForm({
 
                     {/* Project + Color (inline) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormGroup label="Proyecto (Opcional)">
-                            <Select
-                                value={form.watch("project_id") || "none"}
-                                onValueChange={(val) => form.setValue("project_id", val === "none" ? null : val)}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar proyecto..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">Sin proyecto (Global)</SelectItem>
-                                    {projects?.map((project) => (
-                                        <SelectItem key={project.id} value={project.id}>
-                                            <div className="flex items-center gap-2">
-                                                {project.custom_color_hex && (
-                                                    <div
-                                                        className="w-2 h-2 rounded-full"
-                                                        style={{ backgroundColor: project.custom_color_hex }}
-                                                    />
-                                                )}
-                                                {project.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <ActiveProjectField
+                            value={form.watch("project_id") || ""}
+                            onChange={(val) => form.setValue("project_id", val || null)}
+                            projects={(projects || []).map(p => ({
+                                id: p.id,
+                                name: p.name,
+                                color: p.custom_color_hex || null,
+                                image_url: p.image_url || null,
+                            }))}
+                            label="Proyecto (Opcional)"
+                            required={false}
+                            allowNone
+                            noneLabel="Sin proyecto (Global)"
+                            placeholder="Seleccionar proyecto..."
+                        />
 
                         <FormGroup label="Color">
                             <Select

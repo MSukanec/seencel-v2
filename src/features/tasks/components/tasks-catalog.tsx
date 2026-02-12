@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "@/i18n/routing";
 import { ClipboardList } from "lucide-react";
 import { toast } from "sonner";
@@ -130,15 +130,15 @@ export function TaskCatalog({
         });
     }, [allTasks, selectedDivisionId, externalSearchQuery, originFilter, divisionOrderMap]);
 
-    // Handlers
-    const handleViewTask = (task: TaskView) => {
+    // Handlers — stable refs for memo'd children
+    const handleViewTask = useCallback((task: TaskView) => {
         const pathname = isAdminMode
             ? '/admin/catalog/task/[taskId]'
             : '/organization/catalog/task/[taskId]';
         router.push({ pathname, params: { taskId: task.id } } as any);
-    };
+    }, [isAdminMode, router]);
 
-    const handleEditTask = (task: TaskView) => {
+    const handleEditTask = useCallback((task: TaskView) => {
         openModal(
             <TasksForm
                 mode="edit"
@@ -159,12 +159,12 @@ export function TaskCatalog({
                 size: "lg"
             }
         );
-    };
+    }, [orgId, units, divisions, isAdminMode, openModal, closeModal, router]);
 
-    const handleDeleteClick = (task: TaskView) => {
+    const handleDeleteClick = useCallback((task: TaskView) => {
         setTaskToDelete(task);
         setDeleteDialogOpen(true);
-    };
+    }, []);
 
     const handleConfirmDelete = async () => {
         if (!taskToDelete) return;

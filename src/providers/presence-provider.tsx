@@ -91,7 +91,7 @@ function deriveViewName(pathname: string): string {
         '/organization/quotes': 'Presupuestos',
         '/organization/reports': 'Reportes',
         '/organization/files': 'Archivos',
-        '/organization/settings': 'Configuración',
+        '/organization/team': 'Equipo',
         '/organization/advanced': 'Avanzado',
 
         // ── Academy ──

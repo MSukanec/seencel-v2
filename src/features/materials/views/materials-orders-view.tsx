@@ -3,13 +3,14 @@
 import { useTransition, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
-import { ClipboardList, Plus, MoreHorizontal, Send, CheckCircle, XCircle, Eye, Upload, Download } from "lucide-react";
+import { ClipboardList, Plus, MoreHorizontal, Send, CheckCircle, XCircle, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -300,16 +301,11 @@ export function MaterialsOrdersView({
                         onClick: handleNewOrder,
                         variant: "default"
                     },
-                    {
-                        label: "Importar",
-                        icon: Upload,
-                        onClick: handleImport
-                    },
-                    {
-                        label: "Exportar",
-                        icon: Download,
-                        onClick: handleExport
-                    }
+                    ...getStandardToolbarActions({
+                        onImport: handleImport,
+                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                    }),
                 ]}
             />
 

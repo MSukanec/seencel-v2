@@ -77,7 +77,7 @@ export default async function AdminCatalogPage() {
         ] = await Promise.all([
             getTasksGroupedByDivision("__SYSTEM__"), // Special flag for system-only tasks
             getUnits(),
-            getTaskDivisions(), // No org filter - get all divisions
+            getTaskDivisions("__SYSTEM__"), // Only system divisions in admin
             getTaskParameters(), // Get all parameters with options
             getTaskActions(), // Get all actions for parametric tasks
             getAllElements(), // Get all elements for sidebar

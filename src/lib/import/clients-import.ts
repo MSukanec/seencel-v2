@@ -34,13 +34,20 @@ export async function importPaymentsBatch(
     // 1. Get project clients for name lookup
     const { data: projectClients } = await supabase
         .from('project_clients_view')
-        .select('id, contact_full_name')
+        .select('id, contact_full_name, contact_company_name')
         .eq('project_id', projectId);
 
     const clientMap = new Map<string, string>();
+    const clientIdSet = new Set<string>();
     projectClients?.forEach((c: any) => {
+        clientIdSet.add(c.id);
+        // Index by full_name (personas)
         if (c.contact_full_name) {
             clientMap.set(c.contact_full_name.toLowerCase().trim(), c.id);
+        }
+        // Index by company_name (empresas)
+        if (c.contact_company_name) {
+            clientMap.set(c.contact_company_name.toLowerCase().trim(), c.id);
         }
     });
 
@@ -70,25 +77,48 @@ export async function importPaymentsBatch(
     const records = payments
         .map((payment, index) => {
             // Resolve client_id
-            const clientName = String(payment.client_name || '').toLowerCase().trim();
-            const client_id = clientMap.get(clientName);
+            // Check if value is already a UUID (resolved by conflict step via applyResolutions)
+            const rawClientValue = String(payment.client_name || '').trim();
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawClientValue);
+
+            let client_id: string | undefined;
+            if (isUUID && clientIdSet.has(rawClientValue)) {
+                // Already resolved to a valid client ID
+                client_id = rawClientValue;
+            } else {
+                // Lookup by name (lowercase)
+                client_id = clientMap.get(rawClientValue.toLowerCase());
+            }
+
             if (!client_id) {
                 errors.push({ row: index + 1, error: `Cliente no encontrado: "${payment.client_name}"` });
                 return null;
             }
 
             // Resolve currency_id
-            const currencyCode = String(payment.currency_code || 'ARS').toUpperCase();
-            const currency_id = currencyMap.get(currencyCode);
+            const rawCurrency = String(payment.currency_code || 'ARS').trim();
+            const isCurrencyUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCurrency);
+            let currency_id: string | undefined;
+            if (isCurrencyUUID) {
+                currency_id = rawCurrency;
+            } else {
+                currency_id = currencyMap.get(rawCurrency.toUpperCase());
+            }
             if (!currency_id) {
-                errors.push({ row: index + 1, error: `Moneda no encontrada: "${currencyCode}"` });
+                errors.push({ row: index + 1, error: `Moneda no encontrada: "${rawCurrency}"` });
                 return null;
             }
 
             // Resolve wallet_id (optional)
             let wallet_id = null;
             if (payment.wallet_name) {
-                wallet_id = walletMap.get(String(payment.wallet_name).toLowerCase().trim());
+                const rawWallet = String(payment.wallet_name).trim();
+                const isWalletUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawWallet);
+                if (isWalletUUID) {
+                    wallet_id = rawWallet;
+                } else {
+                    wallet_id = walletMap.get(rawWallet.toLowerCase());
+                }
             }
             // If no wallet specified or not found, use first wallet
             if (!wallet_id && wallets && wallets.length > 0) {

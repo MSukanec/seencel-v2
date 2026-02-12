@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Plus, Upload, Download } from "lucide-react";
+import { Banknote, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { useModal } from "@/stores/modal-store";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
@@ -74,7 +76,7 @@ export function ClientsPaymentsView({
                     valueField: 'id',
                     fetchOptions: async () => clients.map(c => ({
                         id: c.id,
-                        label: c.contact_full_name || 'Sin nombre'
+                        label: c.contact_full_name || c.contact_company_name || 'Sin nombre'
                     })),
                 }
             },
@@ -220,16 +222,11 @@ export function ClientsPaymentsView({
                             onClick: handleNewPayment,
                             variant: "default"
                         },
-                        {
-                            label: "Importar",
-                            icon: Upload,
-                            onClick: handleImport
-                        },
-                        {
-                            label: "Exportar",
-                            icon: Download,
-                            onClick: handleExport
-                        }
+                        ...getStandardToolbarActions({
+                            onImport: handleImport,
+                            onExportCSV: handleExport,
+                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                        }),
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
@@ -294,16 +291,11 @@ export function ClientsPaymentsView({
                         onClick: handleNewPayment,
                         variant: "default"
                     },
-                    {
-                        label: "Importar",
-                        icon: Upload,
-                        onClick: handleImport
-                    },
-                    {
-                        label: "Exportar",
-                        icon: Download,
-                        onClick: handleExport
-                    }
+                    ...getStandardToolbarActions({
+                        onImport: handleImport,
+                        onExportCSV: handleExport,
+                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                    }),
                 ]}
             />
             <PaymentsDataTable

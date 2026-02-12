@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { DateField, NotesField, TextField, UploadField, AssignedToField } from "@/components/shared/forms/fields";
+import { ActiveProjectField } from "@/components/shared/forms/fields/active-project-field";
 import type { UploadedFile } from "@/hooks/use-file-upload";
 import { useModal } from "@/stores/modal-store";
 import { createCard, updateCard } from "@/features/planner/actions";
@@ -199,33 +200,20 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
                 <div className="flex-1 overflow-y-auto space-y-4">
                     {/* Project Selector - Only visible when accessing from organization (not project) */}
                     {!projectId && (
-                        <FormField
-                            control={form.control as any}
-                            name="project_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Proyecto</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value || "none"}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Sin proyecto" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="none">Sin proyecto</SelectItem>
-                                            {projects.map((project) => (
-                                                <SelectItem key={project.id} value={project.id}>
-                                                    {project.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
+                        <ActiveProjectField
+                            value={form.watch("project_id") === "none" ? "" : (form.watch("project_id") || "")}
+                            onChange={(val) => form.setValue("project_id", val || "none")}
+                            projects={projects.map(p => ({
+                                id: p.id,
+                                name: p.name,
+                                color: p.custom_color_hex || null,
+                                image_url: p.image_url || null,
+                            }))}
+                            label="Proyecto"
+                            required={false}
+                            allowNone
+                            noneLabel="Sin proyecto"
+                            placeholder="Seleccionar proyecto..."
                         />
                     )}
 

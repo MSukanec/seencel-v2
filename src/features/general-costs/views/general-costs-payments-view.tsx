@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Receipt, DollarSign, TrendingDown, Loader2, Upload, Download } from "lucide-react";
+import { Plus, Receipt, DollarSign, TrendingDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { GeneralCost, GeneralCostPaymentView } from "@/features/general-costs/types";
@@ -16,6 +16,7 @@ import { createDateColumn, createTextColumn, createMoneyColumn } from "@/compone
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { useModal } from "@/stores/modal-store";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { ImportConfig, createImportBatch, revertImportBatch } from "@/lib/import";
@@ -378,9 +379,11 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                     portalToHeader
                     actions={[
                         { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() },
-                        { label: "Importar", icon: Upload, onClick: handleImport },
-                        { label: "Exportar CSV", icon: Download, onClick: handleExportCSV },
-                        { label: "Exportar Excel", icon: Download, onClick: handleExportExcel },
+                        ...getStandardToolbarActions({
+                            onImport: handleImport,
+                            onExportCSV: handleExportCSV,
+                            onExportExcel: handleExportExcel,
+                        }),
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
@@ -410,9 +413,11 @@ export function GeneralCostsPaymentsView({ data, concepts, wallets, currencies, 
                 portalToHeader
                 actions={[
                     { label: "Nuevo Pago", icon: Plus, onClick: () => handleOpenForm() },
-                    { label: "Importar", icon: Upload, onClick: handleImport },
-                    { label: "Exportar CSV", icon: Download, onClick: handleExportCSV },
-                    { label: "Exportar Excel", icon: Download, onClick: handleExportExcel },
+                    ...getStandardToolbarActions({
+                        onImport: handleImport,
+                        onExportCSV: handleExportCSV,
+                        onExportExcel: handleExportExcel,
+                    }),
                 ]}
             />
             <div className="space-y-6">

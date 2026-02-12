@@ -439,7 +439,7 @@ export interface RecentFileItem {
 /**
  * Fetches recent files for the RecentFilesWidget.
  * Supports filtering by file type category and scope (organization or project).
- * @param fileType 'all' | 'image' | 'video' | 'pdf' | 'document'
+ * @param fileType 'all' | 'media' | 'image' | 'video' | 'pdf' | 'document'
  * @param scope 'organization' | projectId (UUID)
  * @param limit Max files to return
  */
@@ -481,6 +481,9 @@ export async function getRecentFiles(
         // Filter by file type category
         if (fileType !== 'all') {
             switch (fileType) {
+                case 'media':
+                    query = query.in('media_files.file_type', ['image', 'video']);
+                    break;
                 case 'image':
                     query = query.eq('media_files.file_type', 'image');
                     break;

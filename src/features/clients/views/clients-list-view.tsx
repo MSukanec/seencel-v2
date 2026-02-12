@@ -226,7 +226,7 @@ export function ClientsListView({
                         mode="empty"
                         icon={Users}
                         viewName="Clientes"
-                        featureDescription="Agregá el primer cliente a este proyecto para comenzar a gestionar compromisos y pagos."
+                        featureDescription="Agregá el primer cliente a este proyecto para comenzar a gestionar sus compromisos, pagos y facturación."
                         onAction={handleCreate}
                         actionLabel="Agregar Cliente"
                     />

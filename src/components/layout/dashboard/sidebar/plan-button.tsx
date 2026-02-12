@@ -100,7 +100,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
             >
                 <Icon className={cn("shrink-0 text-white/70", isExpanded ? "h-3.5 w-3.5" : "h-4 w-4")} />
                 {isExpanded && (
-                    <span className="text-[11px] font-medium text-white/60 tracking-wide uppercase truncate">
+                    <span className="text-[10px] font-medium text-white/60 tracking-wide truncate">
                         {getPlanDisplayName(currentPlan.name)}
                     </span>
                 )}

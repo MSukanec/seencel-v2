@@ -24,9 +24,9 @@ import { Contact } from "@/types/contact";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { ToolbarAction } from "@/components/layout/dashboard/shared/toolbar/toolbar-button";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { exportTableToCsv, exportTableToExcel } from "@/lib/data-table-export-utils";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
-import { Upload, FileSpreadsheet, FileText } from "lucide-react";
 
 interface ContactsDataTableProps {
     organizationId: string;
@@ -362,21 +362,11 @@ export function ContactsDataTable({ organizationId, contacts, contactTypes, view
                         icon: Plus,
                         onClick: handleOpenCreate,
                     },
-                    {
-                        label: "Importar",
-                        icon: Upload,
-                        onClick: handleOpenImport
-                    },
-                    {
-                        label: "Exportar CSV",
-                        icon: FileText,
-                        onClick: () => exportTableToCsv(table, "contactos.csv")
-                    },
-                    {
-                        label: "Exportar Excel",
-                        icon: FileSpreadsheet,
-                        onClick: () => exportTableToExcel(table, "contactos.csv")
-                    }
+                    ...getStandardToolbarActions({
+                        onImport: handleOpenImport,
+                        onExportCSV: () => exportTableToCsv(table, "contactos.csv"),
+                        onExportExcel: () => exportTableToExcel(table, "contactos.xlsx"),
+                    }),
                 ]}
                 initialSorting={[{ id: "full_name", desc: false }]}
                 gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4"

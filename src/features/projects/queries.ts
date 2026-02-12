@@ -45,6 +45,29 @@ export async function getOrganizationProjects(organizationId: string) {
     return data as Project[];
 }
 
+/**
+ * Returns only ACTIVE projects for use in form selectors.
+ * Used by ActiveProjectField and any form that needs to assign a project.
+ */
+export async function getActiveOrganizationProjects(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('projects_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .eq('status', 'active')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching active projects:', error);
+        return [];
+    }
+
+    return data as Project[];
+}
+
 export async function getSidebarProjects(organizationId: string) {
     const supabase = await createClient();
 
@@ -53,6 +76,7 @@ export async function getSidebarProjects(organizationId: string) {
         .from('projects_view')
         .select('id, name, status, organization_id, color, custom_color_hex, use_custom_color, image_url')
         .eq('organization_id', organizationId)
+        .neq('status', 'completed')
         .order('last_active_at', { ascending: false, nullsFirst: false });
 
     if (error) {

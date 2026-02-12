@@ -113,7 +113,7 @@ export function BentoCard({
             {/* === BODY === */}
             <div className={cn(
                 "flex-1 min-h-0 px-4",
-                !headerless && title ? "pb-3" : "py-3"
+                "py-3"
             )}>
                 {children}
             </div>

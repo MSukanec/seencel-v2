@@ -51,8 +51,12 @@ export interface TaskDivision {
     color?: string;
     description?: string;
     organization_id?: string | null;
+    is_system?: boolean;
     order?: number | null;
     parent_id?: string | null;
+    created_by?: string | null;
+    updated_by?: string | null;
+    import_batch_id?: string | null;
 }
 
 export interface Unit {

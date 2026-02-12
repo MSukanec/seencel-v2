@@ -69,9 +69,9 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         ? [palette.primary, palette.secondary, palette.accent, palette.background].filter(Boolean)
         : [];
 
-    // Footer bg: palette tints a dark base (70% dark, 30% palette)
-    const footerBg = hasPalette && palette.background
-        ? `color-mix(in oklch, ${palette.background} 30%, #1a1a1a)`
+    // Footer bg: palette tints a dark base — uses accent (3rd swatch = most characteristic)
+    const footerBg = hasPalette && palette.accent
+        ? `color-mix(in oklch, ${palette.accent} 30%, #1a1a1a)`
         : undefined;
 
     // Badge styling: palette.primary darkened for bg, lightened for text
@@ -82,12 +82,12 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         ? `color-mix(in oklch, ${palette.primary} 60%, white)`
         : undefined;
 
-    // Hero gradient: dark base tinted with palette
-    const gradientOverlay = hasPalette && palette.background
+    // Hero gradient: dark base tinted with accent (3rd swatch = most characteristic color)
+    const gradientOverlay = hasPalette && palette.accent
         ? [
             `linear-gradient(to top,`,
-            `color-mix(in oklch, ${palette.background} 35%, #0a0a0a) 0%,`,
-            `color-mix(in oklch, ${palette.background} 20%, rgba(0,0,0,0.7)) 30%,`,
+            `color-mix(in oklch, ${palette.accent} 35%, #0a0a0a) 0%,`,
+            `color-mix(in oklch, ${palette.accent} 20%, rgba(0,0,0,0.7)) 30%,`,
             `transparent 70%)`,
         ].join(" ")
         : "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 35%, transparent 70%)";

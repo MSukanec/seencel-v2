@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ColumnDef } from "@tanstack/react-table";
 import { Project } from "@/types/project";
-import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { parseDateFromDB } from "@/lib/timezone-data";
 import { useRouter } from "@/i18n/routing";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useModal } from "@/stores/modal-store";
@@ -21,12 +13,7 @@ import {
     LayoutGrid,
     List,
     Plus,
-    FolderSearch,
     Building,
-    Activity,
-    CheckCircle,
-    Clock,
-    CircleOff
 } from "lucide-react";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 
@@ -34,6 +21,7 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { ProjectCard } from "@/features/projects/components/project-card";
+import { ProjectListItem } from "@/components/shared/list-item/items/project-list-item";
 import { ProjectsProjectForm } from "../forms/projects-project-form";
 import { ProjectType, ProjectModality } from "@/types/project";
 import { deleteProject } from "@/features/projects/actions";
@@ -50,7 +38,7 @@ interface ProjectsListViewProps {
     projectModalities?: ProjectModality[];
 }
 
-type ViewMode = "grid" | "table";
+type ViewMode = "grid" | "list";
 
 export function ProjectsListView({ projects, organizationId, lastActiveProjectId, maxActiveProjects = -1, projectTypes = [], projectModalities = [] }: ProjectsListViewProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -161,113 +149,15 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
         }
     };
 
-    // === STATUS BADGE HELPER ===
-
-    const getStatusBadgeProps = (status: string) => {
-        const statusKey = status?.toLowerCase() || 'active';
-        const statusConfig: Record<string, { variant: "success" | "info" | "warning" | "system" | "secondary"; icon: typeof Activity; label: string }> = {
-            active: { variant: "success", icon: Activity, label: "Activo" },
-            completed: { variant: "info", icon: CheckCircle, label: "Completado" },
-            planning: { variant: "warning", icon: Clock, label: "Planificación" },
-            inactive: { variant: "system", icon: CircleOff, label: "Inactivo" },
-        };
-        return statusConfig[statusKey] || { variant: "secondary" as const, icon: Activity, label: status };
-    };
-
-    // === COLUMNS ===
-
-    const columns: ColumnDef<Project>[] = [
-        {
-            accessorKey: "name",
-            header: ({ column }) => (
-                <DataTableColumnHeader column={column} title="Proyecto" />
-            ),
-            cell: ({ row }) => {
-                const project = row.original;
-                return (
-                    <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="h-10 w-10 rounded-lg shrink-0">
-                            <AvatarImage src={project.image_url || undefined} />
-                            <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-sm font-semibold">
-                                {project.name?.charAt(0)?.toUpperCase() || "P"}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate">{project.name}</p>
-                        </div>
-                    </div>
-                );
-            },
-        },
-        {
-            accessorKey: "status",
-            header: ({ column }) => (
-                <DataTableColumnHeader column={column} title="Estado" />
-            ),
-            cell: ({ row }) => {
-                const { variant, icon: Icon, label } = getStatusBadgeProps(row.original.status);
-                return <Badge variant={variant} icon={<Icon className="h-3.5 w-3.5" />}>{label}</Badge>;
-            },
-            filterFn: (row, id, value) => {
-                return value.includes(row.getValue(id));
-            },
-        },
-        {
-            accessorKey: "project_type_name",
-            header: ({ column }) => (
-                <DataTableColumnHeader column={column} title="Tipo" />
-            ),
-            cell: ({ row }) => (
-                <Badge variant="outline" className="font-normal">
-                    {row.original.project_type_name || "Sin tipo"}
-                </Badge>
-            ),
-            filterFn: (row, id, value) => {
-                return value.includes(row.getValue(id));
-            },
-        },
-        {
-            accessorKey: "project_modality_name",
-            header: ({ column }) => (
-                <DataTableColumnHeader column={column} title="Modalidad" />
-            ),
-            cell: ({ row }) => (
-                <span className="text-muted-foreground">
-                    {row.original.project_modality_name || "-"}
-                </span>
-            ),
-            filterFn: (row, id, value) => {
-                return value.includes(row.getValue(id));
-            },
-        },
-        {
-            accessorKey: "created_at",
-            header: ({ column }) => (
-                <DataTableColumnHeader column={column} title="Creado" />
-            ),
-            cell: ({ row }) => {
-                const date = row.original.created_at;
-                if (!date) return "-";
-                const parsed = parseDateFromDB(date);
-                if (!parsed) return "-";
-                return (
-                    <span className="text-muted-foreground text-sm">
-                        {format(parsed, "dd MMM yyyy", { locale: es })}
-                    </span>
-                );
-            },
-        },
-    ];
-
     // === VIEW TOGGLE ===
 
     const viewToggle = (
         <ToolbarTabs
             value={viewMode}
-            onValueChange={(v) => setViewMode(v as "grid" | "table")}
+            onValueChange={(v) => setViewMode(v as "grid" | "list")}
             options={[
                 { value: "grid", label: "Tarjetas", icon: LayoutGrid },
-                { value: "table", label: "Tabla", icon: List },
+                { value: "list", label: "Lista", icon: List },
             ]}
         />
     );
@@ -346,28 +236,31 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
                         onResetFilters={() => setSearchQuery("")}
                     />
                 </div>
+            ) : viewMode === "list" ? (
+                /* List View — ProjectListItem */
+                <div className="space-y-2 px-4 md:px-0 overflow-y-auto">
+                    {filteredProjects.map(project => (
+                        <ProjectListItem
+                            key={project.id}
+                            project={project}
+                            onClick={() => handleNavigateToProject(project)}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                        />
+                    ))}
+                </div>
             ) : (
-                /* DataTable */
-                <DataTable
-                    columns={columns}
-                    data={optimisticProjects}
-                    onRowClick={handleNavigateToProject}
-                    pageSize={50}
-                    viewMode={viewMode}
-                    enableRowActions={true}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    globalFilter={searchQuery}
-                    onGlobalFilterChange={setSearchQuery}
-                    renderGridItem={(project: Project) => (
+                /* Grid View — ProjectCard */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredProjects.map(project => (
                         <ProjectCard
+                            key={project.id}
                             project={project}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
                         />
-                    )}
-                    gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                />
+                    ))}
+                </div>
             )}
 
             {/* Delete Confirmation Dialog */}

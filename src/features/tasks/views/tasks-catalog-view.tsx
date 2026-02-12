@@ -2,14 +2,16 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "@/i18n/routing";
-import { Plus, Monitor, Building2, ClipboardList, Upload, History, Trash2 } from "lucide-react";
+import { Plus, Monitor, Building2, ClipboardList, Trash2, Pencil } from "lucide-react";
 
 import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement } from "@/features/tasks/types";
 import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
 import { TasksForm, TasksTypeSelector, TaskCreationType, TasksParametricForm } from "@/features/tasks/forms";
+import { TasksBulkEditForm } from "@/features/tasks/forms/tasks-bulk-edit-form";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { Button } from "@/components/ui/button";
 import {
     AlertDialog,
@@ -126,10 +128,31 @@ export function TasksCatalogView({
         }
     };
 
+    const handleBulkEdit = () => {
+        const ids = Array.from(multiSelect.selectedIds);
+        openModal(
+            <TasksBulkEditForm
+                taskIds={ids}
+                units={units}
+                divisions={divisions}
+                isAdminMode={isAdminMode}
+            />,
+            {
+                title: `Editar ${ids.length} tarea${ids.length > 1 ? "s" : ""} en masa`,
+                description: "Solo los campos que modifiques se aplicarán a todas las tareas seleccionadas.",
+                size: "md"
+            }
+        );
+    };
+
     const bulkActionsContent = (
         <>
             <Button variant="outline" size="sm" onClick={multiSelect.selectAll} className="gap-2">
                 Seleccionar todo ({allTasks.length})
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleBulkEdit} className="gap-2">
+                <Pencil className="h-4 w-4" />
+                Editar en Masa
             </Button>
             <Button variant="destructive" size="sm" onClick={() => setBulkDeleteModalOpen(true)} className="gap-2">
                 <Trash2 className="h-4 w-4" />
@@ -279,6 +302,7 @@ export function TasksCatalogView({
             <TasksTypeSelector
                 onSelect={handleTypeSelected}
                 onCancel={closeModal}
+                isAdmin={isAdminMode}
             />,
             {
                 title: "Crear Nueva Tarea",
@@ -396,16 +420,12 @@ export function TasksCatalogView({
                             icon: Plus,
                             onClick: handleCreateTask,
                         },
-                        {
-                            label: "Importar",
-                            icon: Upload,
-                            onClick: handleImport,
-                        },
-                        {
-                            label: "Ver historial",
-                            icon: History,
-                            onClick: handleImportHistory,
-                        },
+                        ...getStandardToolbarActions({
+                            onImport: handleImport,
+                            onImportHistory: handleImportHistory,
+                            onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                            onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                        }),
                     ]}
                 />
                 <div className="h-full flex items-center justify-center">
@@ -446,16 +466,12 @@ export function TasksCatalogView({
                         icon: Plus,
                         onClick: handleCreateTask,
                     },
-                    {
-                        label: "Importar",
-                        icon: Upload,
-                        onClick: handleImport,
-                    },
-                    {
-                        label: "Ver historial",
-                        icon: History,
-                        onClick: handleImportHistory,
-                    },
+                    ...getStandardToolbarActions({
+                        onImport: handleImport,
+                        onImportHistory: handleImportHistory,
+                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                    }),
                 ]}
                 selectedCount={multiSelect.selectedCount}
                 onClearSelection={multiSelect.clearSelection}

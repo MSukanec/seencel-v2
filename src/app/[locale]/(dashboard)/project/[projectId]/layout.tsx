@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getProjectById, getLastActiveProject } from "@/features/projects/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getLocale } from "next-intl/server";
+import { ProjectStatusProvider } from "@/features/projects/context/project-status-context";
+import { InactiveProjectBanner } from "@/components/shared/inactive-project-banner";
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -44,6 +46,11 @@ export default async function ProjectLayout({ children, params }: LayoutProps) {
         }
     }
 
-    // Project belongs to current org, render children
-    return children;
+    // Project belongs to current org, render children with status context
+    return (
+        <ProjectStatusProvider projectId={projectId} projectStatus={project.status}>
+            <InactiveProjectBanner />
+            {children}
+        </ProjectStatusProvider>
+    );
 }

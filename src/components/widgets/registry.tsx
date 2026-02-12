@@ -312,7 +312,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         minSpan: { w: 1, h: 1 },
         category: 'general',
         group: 'organization',
-        href: '/organization/settings',
+        href: '/organization/team',
     },
 
     'org_storage_overview': {
@@ -337,7 +337,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
         category: 'general',
         group: 'documentation',
         configurable: true,
-        defaultConfig: { fileType: 'all', scope: 'organization' },
+        defaultConfig: { fileType: 'media', scope: 'organization' },
         href: '/organization/files',
         configPanel: ({ config, onConfigChange }: { config: Record<string, any>; onConfigChange: (c: Record<string, any>) => void }) => (
             <div className="space-y-3">
@@ -352,8 +352,9 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="image">Fotos</SelectItem>
-                            <SelectItem value="video">Videos</SelectItem>
+                            <SelectItem value="media">Fotos y Videos</SelectItem>
+                            <SelectItem value="image">Solo Fotos</SelectItem>
+                            <SelectItem value="video">Solo Videos</SelectItem>
                             <SelectItem value="pdf">PDFs</SelectItem>
                             <SelectItem value="document">Documentos</SelectItem>
                         </SelectContent>
@@ -403,6 +404,6 @@ export const DEFAULT_ORG_LAYOUT: WidgetLayoutItem[] = [
     { id: 'org_pulse', x: 0, y: 0, w: 4, h: 2 },
     { id: 'org_recent_projects', x: 0, y: 2, w: 1, h: 2 },
     { id: 'upcoming_events', x: 1, y: 2, w: 1, h: 2, config: { scope: 'all' } },
-    { id: 'recent_files_gallery', x: 2, y: 2, w: 1, h: 2, config: { fileType: 'all', scope: 'organization' } },
+    { id: 'recent_files_gallery', x: 2, y: 2, w: 1, h: 2, config: { fileType: 'media', scope: 'organization' } },
     { id: 'activity_kpi', x: 3, y: 2, w: 1, h: 2, config: { scope: 'organization' } },
 ];

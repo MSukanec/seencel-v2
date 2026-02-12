@@ -34,11 +34,14 @@ import { useUser } from "@/stores/user-store";
 interface SidebarNotificationsButtonProps {
     isExpanded?: boolean;
     className?: string;
+    /** 'sidebar' = original expandable button, 'quick-access' = compact icon-only */
+    variant?: 'sidebar' | 'quick-access';
 }
 
 export function SidebarNotificationsButton({
     isExpanded = false,
-    className
+    className,
+    variant = 'sidebar',
 }: SidebarNotificationsButtonProps) {
     const t = useTranslations('Settings.Notifications');
     const locale = useLocale();
@@ -119,7 +122,23 @@ export function SidebarNotificationsButton({
         });
     };
 
-    const buttonContent = (
+    const isQuickAccess = variant === 'quick-access';
+
+    const buttonContent = isQuickAccess ? (
+        <button
+            className={cn(
+                "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150 relative",
+                "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                open && "text-primary bg-primary/10",
+                className
+            )}
+        >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600 ring-2 ring-sidebar animate-pulse" />
+            )}
+        </button>
+    ) : (
         <button
             className={cn(
                 "group relative flex items-center w-full rounded-lg transition-colors duration-0",
@@ -165,7 +184,7 @@ export function SidebarNotificationsButton({
 
             <PopoverContent
                 className="w-80 p-0"
-                side="top"
+                side={isQuickAccess ? "bottom" : "top"}
                 align="start"
                 sideOffset={8}
             >

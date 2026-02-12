@@ -16,7 +16,8 @@ import {
     Users,
     HardHat,
     Calendar,
-    FolderOpen
+    FolderOpen,
+    FolderTree
 } from "lucide-react";
 import { useState } from "react";
 import type { DocTreeItem } from "../types";
@@ -36,6 +37,7 @@ const iconMap: Record<string, React.ElementType> = {
     "hard-hat": HardHat,
     calendar: Calendar,
     "folder-open": FolderOpen,
+    "folder-tree": FolderTree,
 };
 
 export function DocsSidebar({ tree }: DocsSidebarProps) {

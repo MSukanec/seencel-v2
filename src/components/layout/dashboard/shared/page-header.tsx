@@ -4,12 +4,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname } from "next/navigation";
-import { useModal } from "@/stores/modal-store";
-import { FeedbackForm } from "@/components/shared/forms/feedback-form";
-import { Button } from "@/components/ui/button";
-import { useTranslations } from "next-intl";
-import { MessageSquarePlus } from "lucide-react";
 import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
+import { HeaderOrgProjectSelector } from "@/components/layout/dashboard/shared/header-org-project-selector";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -47,23 +43,6 @@ export function PageHeader({
 }: PageHeaderProps) {
     const pathname = usePathname();
     const { contexts, getNavItems } = useSidebarNavigation();
-    const { openModal, closeModal } = useModal();
-    const t = useTranslations('Feedback');
-
-    // Open feedback modal handler
-    const handleOpenFeedback = () => {
-        openModal(
-            <FeedbackForm
-                onSuccess={closeModal}
-                onCancel={closeModal}
-            />,
-            {
-                title: t('title') || "Enviar Comentarios",
-                description: t('modalDescription') || "Envíanos tus comentarios o reporta un problema.",
-                size: 'md'
-            }
-        );
-    };
 
 
     // Helper to find the matching item in all contexts
@@ -120,16 +99,16 @@ export function PageHeader({
                                 "[&_[role=tab]]:!px-6 [&_[role=tab]]:!text-muted-foreground [&_[role=tab]]:!shadow-none [&_[role=tab]]:!border-none",
                                 "[&_[role=tab]]:!cursor-pointer",
                                 // TabTrigger - Active
-                                "[&_[role=tab][data-state=active]]:!text-primary [&_[role=tab][data-state=active]]:!bg-transparent",
+                                "[&_[role=tab][data-state=active]]:!text-foreground [&_[role=tab][data-state=active]]:!bg-transparent",
                                 "[&_[role=tab][data-state=active]]:!shadow-none",
                                 // Pseudo-elements: Line on TOP + gradient going DOWN (short)
                                 "[&_[role=tab]]:after:absolute [&_[role=tab]]:after:top-0 [&_[role=tab]]:after:left-0 [&_[role=tab]]:after:right-0",
-                                "[&_[role=tab]]:after:h-[2px] [&_[role=tab]]:after:scale-x-0 [&_[role=tab]]:after:bg-primary",
+                                "[&_[role=tab]]:after:h-[2px] [&_[role=tab]]:after:scale-x-0 [&_[role=tab]]:after:bg-primary/80",
                                 "[&_[role=tab]]:after:transition-transform [&_[role=tab]]:after:duration-300",
                                 "[&_[role=tab][data-state=active]]:after:scale-x-100",
                                 // Gradient: from top to bottom, short (60% height)
                                 "[&_[role=tab]]:before:absolute [&_[role=tab]]:before:top-0 [&_[role=tab]]:before:left-0 [&_[role=tab]]:before:right-0 [&_[role=tab]]:before:h-[60%]",
-                                "[&_[role=tab]]:before:bg-gradient-to-b [&_[role=tab]]:before:from-primary/10 [&_[role=tab]]:before:to-transparent",
+                                "[&_[role=tab]]:before:bg-gradient-to-b [&_[role=tab]]:before:from-primary/20 [&_[role=tab]]:before:to-transparent",
                                 "[&_[role=tab]]:before:opacity-0 [&_[role=tab]]:before:transition-opacity [&_[role=tab]]:before:duration-300",
                                 "[&_[role=tab][data-state=active]]:before:opacity-100"
                             )}>
@@ -140,21 +119,11 @@ export function PageHeader({
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
-                        {/* Only show currency selector and feedback in org/project routes */}
+                        {/* Org/Project selector + Currency selector */}
                         {(pathname.includes('/organization') || pathname.includes('/organizacion') || pathname.includes('/project') || pathname.includes('/proyecto')) && (
                             <>
+                                <HeaderOrgProjectSelector />
                                 <CurrencyModeSelector />
-                                {!hideFeedback && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleOpenFeedback}
-                                        className="h-8 gap-2 px-3 text-xs font-medium"
-                                    >
-                                        <MessageSquarePlus className="h-4 w-4" />
-                                        Reportar problema
-                                    </Button>
-                                )}
                             </>
                         )}
                         {actions}

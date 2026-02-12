@@ -12,6 +12,7 @@ import { DataTableFacetedFilter } from "./toolbar-faceted-filter";
 import { FacetedFilter } from "./toolbar-faceted-filter"; // Generic filter for non-table use
 import { ToolbarButton, ToolbarSplitButton, ToolbarAction } from "./toolbar-button";
 import { ToolbarSearch } from "./toolbar-search";
+import { useProjectStatusSafe } from "@/features/projects/context/project-status-context";
 import { getDocsSlugForPath } from "@/features/docs/lib/docs-mapping";
 
 // Note: Removed DataTableViewOptions as requested by user.
@@ -125,6 +126,19 @@ export function Toolbar<TData>({
     const locale = useLocale();
     const docsSlug = showDocsButton ? getDocsSlugForPath(pathname) : null;
 
+    // Project status (null outside project context — safe)
+    const projectStatus = useProjectStatusSafe();
+    const isProjectReadOnly = projectStatus?.isReadOnly ?? false;
+
+    // Auto-disable ALL actions in inactive projects (opt-out with allowInReadOnly)
+    const resolvedActions = React.useMemo(() => {
+        if (!actions) return undefined;
+        return actions.map(action => ({
+            ...action,
+            disabled: action.disabled || (isProjectReadOnly && !action.allowInReadOnly),
+        }));
+    }, [actions, isProjectReadOnly]);
+
     // Mount state for Portal (avoid SSR hydration issues)
     React.useEffect(() => {
         setMounted(true);
@@ -146,8 +160,8 @@ export function Toolbar<TData>({
 
     // Resolve Main Action for Mobile
     // If 'actions' provided, use the first one as primary. If 'children', we can't easily extract logic.
-    const primaryAction = actions && actions.length > 0 ? actions[0] : null;
-    const hasMultipleActions = actions && actions.length > 1;
+    const primaryAction = resolvedActions && resolvedActions.length > 0 ? resolvedActions[0] : null;
+    const hasMultipleActions = resolvedActions && resolvedActions.length > 1;
 
     // Framer Motion slide variants for toolbar transition
     const slideVariants = {
@@ -282,10 +296,10 @@ export function Toolbar<TData>({
                 {/* Custom toolbar buttons (e.g., Personalizar) */}
                 {children}
                 {/* Primary + secondary actions as SplitButton */}
-                {actions && actions.length > 0 && (
+                {resolvedActions && resolvedActions.length > 0 && (
                     <ToolbarSplitButton
-                        mainAction={actions[0]}
-                        secondaryActions={actions.slice(1)}
+                        mainAction={resolvedActions[0]}
+                        secondaryActions={resolvedActions.slice(1)}
                     />
                 )}
             </div>
@@ -338,7 +352,7 @@ export function Toolbar<TData>({
         }
 
         // Option 1: Legacy Children - don't render anything in mobile if using legacy children
-        if (!actions && children) return null;
+        if (!resolvedActions && children) return null;
 
         // Option 2: No actions
         if (!primaryAction) return null;
@@ -429,14 +443,14 @@ export function Toolbar<TData>({
                         {primaryAction.label}
                         {isLocked && <Lock className="ml-auto h-3 w-3" style={{ color: 'var(--plan-pro)' }} />}
                     </DropdownMenuItem>
-                    {actions.slice(1).map((action, idx) => {
+                    {resolvedActions!.slice(1).map((action, idx) => {
                         const actionLocked = action.featureGuard && !action.featureGuard.isEnabled;
                         return (
                             <DropdownMenuItem
                                 key={idx}
                                 onClick={actionLocked ? undefined : action.onClick}
                                 className={actionLocked ? "opacity-50" : ""}
-                                disabled={actionLocked}
+                                disabled={action.disabled || !!actionLocked}
                             >
                                 {action.icon && <action.icon className="mr-2 h-4 w-4" />}
                                 {action.label}

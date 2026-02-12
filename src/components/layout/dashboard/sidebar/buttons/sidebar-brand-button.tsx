@@ -200,7 +200,7 @@ export function SidebarBrandButton({
         <button
             className={cn(
                 "group relative flex items-center w-full rounded-lg transition-all duration-200",
-                "hover:bg-secondary/50 text-muted-foreground hover:text-foreground",
+                "hover:bg-secondary/50 text-muted-foreground hover:text-foreground cursor-pointer",
                 "p-0 h-8",
                 open && "bg-secondary/50",
                 className
@@ -227,9 +227,9 @@ export function SidebarBrandButton({
             <span className={cn(
                 "font-bold tracking-tight text-foreground/90 whitespace-nowrap overflow-hidden transition-all duration-150 ease-in-out truncate text-left",
                 isHome ? "text-lg" : "text-sm font-semibold",
-                isExpanded ? "flex-1 opacity-100 pl-2" : "w-0 opacity-0 pl-0"
+                isExpanded ? "flex-1 opacity-100 pl-1" : "w-0 opacity-0 pl-0"
             )}>
-                {isHome ? "SEENCEL" : isProject ? currentProject?.name : currentOrg?.name}
+                {isHome ? "Seencel" : isProject ? currentProject?.name : currentOrg?.name}
             </span>
 
             {/* Chevron - Only for org/project modes */}
@@ -247,7 +247,7 @@ export function SidebarBrandButton({
     // In home mode, just return the button wrapped in Link
     if (isHome) {
         return (
-            <Link href="/organization" className="flex items-center w-full">
+            <Link href="/hub" className="flex items-center w-full">
                 {buttonContent}
             </Link>
         );

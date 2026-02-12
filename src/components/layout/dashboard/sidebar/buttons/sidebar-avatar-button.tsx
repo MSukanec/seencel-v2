@@ -163,13 +163,13 @@ export function SidebarAvatarButton({
 
                     <Separator className="my-1" />
 
-                    {/* 2. Feedback */}
+                    {/* 2. Reportar un Problema */}
                     <button
                         onClick={handleFeedbackClick}
                         className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors w-full text-left"
                     >
                         <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        Feedback
+                        Reportar un Problema
                     </button>
 
                     <Separator className="my-1" />

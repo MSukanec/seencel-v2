@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Banknote, Upload, Download, TrendingDown, DollarSign, Receipt } from "lucide-react";
+import { Plus, Banknote, TrendingDown, DollarSign, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 import { MaterialPaymentView, OrganizationFinancialData, MaterialPurchase, MaterialType } from "../types";
@@ -11,6 +11,7 @@ import { MaterialPaymentForm } from "../forms/material-payment-form";
 
 import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { createDateColumn, createTextColumn, createMoneyColumn } from "@/components/shared/data-table/columns";
@@ -377,16 +378,11 @@ export function MaterialsPaymentsView({
                         onClick: handleNewPayment,
                         variant: "default"
                     },
-                    {
-                        label: "Importar",
-                        icon: Upload,
-                        onClick: handleImport
-                    },
-                    {
-                        label: "Exportar",
-                        icon: Download,
-                        onClick: handleExport
-                    }
+                    ...getStandardToolbarActions({
+                        onImport: handleImport,
+                        onExportCSV: () => toast.info("Exportar CSV: próximamente"),
+                        onExportExcel: () => toast.info("Exportar Excel: próximamente"),
+                    }),
                 ]}
             />
 

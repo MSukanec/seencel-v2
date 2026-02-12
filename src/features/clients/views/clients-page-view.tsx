@@ -134,7 +134,7 @@ export function ClientsPageClient({
         <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <PageWrapper
                 type="page"
-                title="Compromisos y Pagos"
+                title="Clientes"
                 tabs={tabs}
                 icon={<Banknote />}
             >

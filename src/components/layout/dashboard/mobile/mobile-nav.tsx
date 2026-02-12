@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Lock, Home, Settings, LogOut, Sun, Moon, Monitor, ChevronRight, ChevronDown, ArrowLeft, Hammer, Sparkles, Mail } from "lucide-react";
-import { useSidebarNavigation, NavItem } from "@/hooks/use-sidebar-navigation";
+import { useSidebarNavigation, NavItem, NavGroup } from "@/hooks/use-sidebar-navigation";
 import { useLayoutStore, useActiveProjectId } from "@/stores/layout-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -33,40 +33,6 @@ import { useOrganization } from "@/stores/organization-store";
 // ─── Types ───────────────────────────────────────────────────────────────────
 type NavigationLevel = 'main' | 'context';
 type ContextId = string | null;
-
-/** A group of nav items: either top-level (no header) or a named section */
-interface NavGroup {
-    header: string | null;
-    items: NavItem[];
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/** Split flat NavItem[] (with sectionHeader markers) into logical groups */
-function groupNavItems(items: NavItem[]): NavGroup[] {
-    const groups: NavGroup[] = [];
-    let currentGroup: NavGroup = { header: null, items: [] };
-
-    for (const item of items) {
-        if (item.sectionHeader) {
-            // Push the previous group if it has items
-            if (currentGroup.items.length > 0) {
-                groups.push(currentGroup);
-            }
-            // Start a new named section
-            currentGroup = { header: item.sectionHeader, items: [item] };
-        } else {
-            currentGroup.items.push(item);
-        }
-    }
-
-    // Push the last group
-    if (currentGroup.items.length > 0) {
-        groups.push(currentGroup);
-    }
-
-    return groups;
-}
 
 export function MobileNav() {
     const [open, setOpen] = React.useState(false);
@@ -80,7 +46,7 @@ export function MobileNav() {
     const { activeOrgId } = useOrganization();
     const pathname = usePathname();
     const router = useRouter();
-    const { contexts, getNavItems } = useSidebarNavigation();
+    const { contexts, getNavItems, getNavGroups } = useSidebarNavigation();
     const { actions } = useLayoutStore();
     const activeProjectId = useActiveProjectId();
     const { theme, setTheme } = useTheme();
@@ -167,14 +133,20 @@ export function MobileNav() {
     // Get current context data
     const currentContext = allContexts.find(c => c.id === activeContextId);
     const currentItems = activeContextId ? getNavItems(activeContextId as any) : [];
-    const currentGroups = React.useMemo(() => groupNavItems(currentItems), [currentItems]);
+    const currentGroups: NavGroup[] = React.useMemo(() => {
+        if (activeContextId === 'organization' || activeContextId === 'project') {
+            return getNavGroups(activeContextId);
+        }
+        // For other contexts, wrap all items in a single standalone group
+        return [{ id: 'all', label: '', items: currentItems, standalone: true }];
+    }, [activeContextId, currentItems, getNavGroups]);
 
     // Auto-open accordion if user is currently on a page within that section
     React.useEffect(() => {
         if (level === 'context' && currentGroups.length > 0) {
             for (const group of currentGroups) {
-                if (group.header && group.items.some(item => pathname === item.href)) {
-                    setOpenAccordion(group.header);
+                if (group.label && !group.standalone && group.items.some(item => pathname === item.href)) {
+                    setOpenAccordion(group.id);
                     return;
                 }
             }
@@ -340,8 +312,8 @@ export function MobileNav() {
                             {currentContext && (
                                 <nav className="p-2 space-y-0.5">
                                     {currentGroups.map((group, groupIdx) => {
-                                        // Top-level items (no section header) → render as direct links
-                                        if (!group.header) {
+                                        // Standalone items (no section header) → render as direct links
+                                        if (group.standalone || !group.label) {
                                             return (
                                                 <div key={`group-${groupIdx}`} className="space-y-0.5">
                                                     {group.items.map((item, idx) => renderNavLink(item, idx))}
@@ -350,7 +322,7 @@ export function MobileNav() {
                                         }
 
                                         // Named section → render as collapsible accordion
-                                        const isOpen = openAccordion === group.header;
+                                        const isOpen = openAccordion === group.id;
                                         const hasActiveItem = group.items.some(item => pathname === item.href);
 
                                         return (
@@ -360,7 +332,7 @@ export function MobileNav() {
 
                                                 {/* Accordion trigger */}
                                                 <button
-                                                    onClick={() => toggleAccordion(group.header!)}
+                                                    onClick={() => toggleAccordion(group.id)}
                                                     className={cn(
                                                         "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all",
                                                         isOpen || hasActiveItem
@@ -368,7 +340,7 @@ export function MobileNav() {
                                                             : "text-muted-foreground hover:text-foreground/70"
                                                     )}
                                                 >
-                                                    <span>{group.header}</span>
+                                                    <span>{group.label}</span>
                                                     <ChevronDown
                                                         className={cn(
                                                             "h-3.5 w-3.5 transition-transform duration-200",

@@ -96,17 +96,28 @@ export async function getTasksGroupedByDivision(organizationId: string): Promise
 }
 
 /**
- * Get all task divisions (system table - visible to all)
+ * Get task divisions (system + org-specific)
+ * @param organizationId - If provided, returns system divisions + org divisions.
+ *                         If "__SYSTEM__" or omitted, returns all (admin mode).
  */
-export async function getTaskDivisions() {
+export async function getTaskDivisions(organizationId?: string) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('task_divisions')
         .select('*')
         .eq('is_deleted', false)
         .order('order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true });
+
+    // Filter by org: show system + org-specific
+    if (organizationId && organizationId !== "__SYSTEM__") {
+        query = query.or(`is_system.eq.true,organization_id.eq.${organizationId}`);
+    } else if (organizationId === "__SYSTEM__") {
+        query = query.eq('is_system', true);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching divisions:", error);

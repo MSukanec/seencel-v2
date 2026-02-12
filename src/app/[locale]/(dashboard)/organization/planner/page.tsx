@@ -1,6 +1,6 @@
 import { getBoards, getBoardWithData, getCalendarEvents } from "@/features/planner/queries";
 import { getDashboardData } from "@/features/organization/queries";
-import { getOrganizationProjects } from "@/features/projects/queries";
+import { getActiveOrganizationProjects } from "@/features/projects/queries";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { redirect } from "next/navigation";
 import { PlannerPageView } from "@/features/planner/views/planner-page";
@@ -42,7 +42,7 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
         const [boards, calendarEvents, projects, planFeatures] = await Promise.all([
             getBoards(organizationId, null),
             getCalendarEvents(organizationId, { projectId: null }),
-            getOrganizationProjects(organizationId),
+            getActiveOrganizationProjects(organizationId),
             getOrganizationPlanFeatures(organizationId)
         ]);
 
