@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getStorageUrl } from "@/lib/storage-utils";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
-import { useLayoutStore } from "@/stores/layout-store";
+import { useLayoutStore, useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 
 // Preset colors for projects
 const PROJECT_COLORS: Record<string, string> = {
@@ -59,8 +59,10 @@ export function HeaderOrgProjectSelector() {
     const pathname = usePathname();
 
     // Get data from the same hook used by sidebar
-    const { currentOrg, currentProject, projects, saveProjectPreference } = useSidebarData();
+    const { currentOrg, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useSidebarData();
     const showProjectAvatar = useLayoutStore(s => s.sidebarProjectAvatars);
+    const activeProjectId = useActiveProjectId();
+    const { setActiveProjectId } = useLayoutActions();
 
     // Only show in org/project routes
     const isOrgOrProject = pathname.includes('/organization') || pathname.includes('/organizacion') ||
@@ -68,15 +70,24 @@ export function HeaderOrgProjectSelector() {
 
     if (!isOrgOrProject || !currentOrg) return null;
 
-    const isOnProjectPage = pathname.includes('/project/');
     const activeProjects = (projects || []).filter((p: ProjectLike) => !p.status || p.status === 'active');
+    const selectedProject = activeProjectId
+        ? activeProjects.find(p => p.id === activeProjectId) || null
+        : null;
 
     const logoSrc = currentOrg?.logo_path
         ? (currentOrg.logo_path.startsWith('http') ? currentOrg.logo_path : getStorageUrl(currentOrg.logo_path, 'public-assets'))
         : null;
 
-    const handleProjectChange = (projectId: string) => {
+    const handleSelectOrg = () => {
+        setActiveProjectId(null);
+        setOpen(false);
+    };
+
+    const handleSelectProject = (projectId: string) => {
+        setActiveProjectId(projectId);
         saveProjectPreference(projectId);
+        sidebarProjectChange(projectId);
         setOpen(false);
     };
 
@@ -116,6 +127,9 @@ export function HeaderOrgProjectSelector() {
                         open && "bg-secondary/80"
                     )}
                 >
+                    {/* Context label */}
+                    <span className="text-xs text-muted-foreground/70 mr-0.5">Contexto:</span>
+
                     {/* Org avatar */}
                     <div className="relative">
                         <Avatar className="h-5 w-5 rounded">
@@ -129,21 +143,10 @@ export function HeaderOrgProjectSelector() {
                         )}
                     </div>
 
-                    {/* Org name */}
-                    <span className="text-sm font-medium truncate max-w-[120px]">
-                        {currentOrg.name}
+                    {/* Active selection name */}
+                    <span className="text-sm font-medium whitespace-nowrap">
+                        {selectedProject ? selectedProject.name : currentOrg.name}
                     </span>
-
-                    {/* Project indicator (if on a project page) */}
-                    {isOnProjectPage && currentProject && (
-                        <>
-                            <span className="text-muted-foreground/50">›</span>
-                            {renderProjectAvatar(currentProject as ProjectLike, "xs")}
-                            <span className="text-sm truncate max-w-[100px] text-muted-foreground">
-                                {currentProject.name}
-                            </span>
-                        </>
-                    )}
 
                     <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 </button>
@@ -155,19 +158,26 @@ export function HeaderOrgProjectSelector() {
                 sideOffset={8}
                 className="w-[240px] p-2"
             >
-                {/* Organization info */}
-                <div className="flex items-center gap-2 px-2 py-2 mb-1">
+                {/* Organization option — clickeable */}
+                <button
+                    onClick={handleSelectOrg}
+                    className={cn(
+                        "flex items-center gap-2 w-full px-2 py-2 mb-1 rounded-md hover:bg-secondary transition-colors",
+                        !activeProjectId && "bg-secondary"
+                    )}
+                >
                     <Avatar className="h-5 w-5 rounded">
                         {logoSrc && <AvatarImage src={logoSrc} alt={currentOrg.name} />}
                         <AvatarFallback className="text-[8px] rounded bg-primary/10 text-primary font-semibold">
                             {getInitials(currentOrg.name)}
                         </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex flex-col min-w-0 flex-1 text-left">
                         <span className="text-xs text-muted-foreground">Organización</span>
                         <span className="text-sm font-medium truncate">{currentOrg.name}</span>
                     </div>
-                </div>
+                    {!activeProjectId && <Check className="h-4 w-4 text-primary shrink-0" />}
+                </button>
 
                 {/* Projects Section */}
                 <div>
@@ -182,11 +192,11 @@ export function HeaderOrgProjectSelector() {
                             </div>
                         ) : (
                             activeProjects.map((project: ProjectLike) => {
-                                const isActive = currentProject?.id === project.id;
+                                const isActive = activeProjectId === project.id;
                                 return (
                                     <button
                                         key={project.id}
-                                        onClick={() => handleProjectChange(project.id)}
+                                        onClick={() => handleSelectProject(project.id)}
                                         className={cn(
                                             "flex items-center gap-2 w-full px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors",
                                             isActive && "bg-secondary"

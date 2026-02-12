@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Crown, Building2, Users, Sparkles, Medal, MapPin } from "lucide-react";
+import { Crown, Users, Sparkles, Medal, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarStack } from "@/components/ui/avatar-stack";
@@ -10,19 +10,22 @@ import { createClient } from "@/lib/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GoogleMap, useLoadScript, OverlayView } from "@react-google-maps/api";
 import { useTheme } from "next-themes";
-import { useRouter } from "@/i18n/routing";
+import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 
 // ============================================================================
-// ORG HERO WIDGET — Hero Card with Map Background
+// OVERVIEW HERO WIDGET — Context-Aware with Smooth Map Transitions
 // ============================================================================
-// Shows: Logo + Name + Plan Badge + Quick Stats over a Google Map with
-// project markers auto-fitted. Falls back to gradient if no coordinates.
-// Size: wide (col-span-full, 4 columns)
+// Reads activeProjectId from layout-store:
+//   - null → Org mode: shows org logo, name, plan, all project markers
+//   - string → Project mode: shows project cover, name, zoomed to project
+//
+// UX: Clicking a project marker in org mode → smooth map zoom → context switch
+//      No skeleton flash, no widget remount — pure CSS + Maps API transitions
 // ============================================================================
 
 const libraries: ("places")[] = ["places"];
 
-// Ultra-dark map style — very dark tones, no need for overlay gradient
+// Ultra-dark map style
 const darkMapStyle = [
     { elementType: "geometry", stylers: [{ color: "#1a1a1c" }] },
     { elementType: "labels", stylers: [{ visibility: "off" }] },
@@ -37,7 +40,7 @@ const darkMapStyle = [
     { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#1e1e20" }] },
 ];
 
-// Ultra-minimal light map style — neutral grey tones
+// Ultra-minimal light map style
 const lightMapStyle = [
     { elementType: "geometry", stylers: [{ color: "#f2f2f2" }] },
     { elementType: "labels", stylers: [{ visibility: "off" }] },
@@ -62,20 +65,20 @@ interface ProjectLocation {
     imageUrl: string | null;
 }
 
-interface OrgHeroData {
+interface HeroData {
     name: string;
-    logoPath: string | null;
+    avatarUrl: string | null;
     planName: string | null;
     planSlug: string | null;
     isFounder: boolean;
     memberCount: number;
     projectCount: number;
-    recentActivityCount: number;
     projectLocations: ProjectLocation[];
     members: { name: string; image: string | null; email?: string }[];
+    isProjectMode: boolean;
 }
 
-// Plan badge config — colors match CSS variables in globals.css
+// Plan badge config
 function getPlanBadgeConfig(planSlug?: string | null) {
     switch (planSlug?.toLowerCase()) {
         case 'pro':
@@ -99,19 +102,36 @@ function buildLogoUrl(logoPath: string | null): string | null {
 }
 
 
-
-// Map background component
-function HeroMapBackground({ locations, onNavigate }: { locations: ProjectLocation[]; onNavigate: (projectId: string) => void }) {
+// ── MAP BACKGROUND ──────────────────────────────────────────────────────────
+// Receives a shared mapRef so the parent can animate pan/zoom
+function HeroMapBackground({
+    locations,
+    mapRef,
+    onMapReady,
+    hoveredProject,
+    onHover,
+    onLeave,
+    onMarkerClick,
+}: {
+    locations: ProjectLocation[];
+    mapRef: React.MutableRefObject<google.maps.Map | null>;
+    onMapReady: () => void;
+    hoveredProject: string | null;
+    onHover: (id: string) => void;
+    onLeave: () => void;
+    onMarkerClick: (loc: ProjectLocation) => void;
+}) {
     const { resolvedTheme } = useTheme();
-    const mapRef = useRef<google.maps.Map | null>(null);
-    const [hoveredProject, setHoveredProject] = useState<string | null>(null);
     const currentMapStyle = resolvedTheme === "dark" ? darkMapStyle : lightMapStyle;
     const defaultCenter = useMemo(() => ({ lat: 0, lng: 0 }), []);
 
     const onMapLoad = useCallback(
         (map: google.maps.Map) => {
             mapRef.current = map;
-            if (locations.length === 0) return;
+            if (locations.length === 0) {
+                onMapReady();
+                return;
+            }
 
             const bounds = new google.maps.LatLngBounds();
             locations.forEach((loc) => {
@@ -124,9 +144,10 @@ function HeroMapBackground({ locations, onNavigate }: { locations: ProjectLocati
                 const zoom = map.getZoom();
                 if (zoom && zoom > 15) map.setZoom(15);
                 google.maps.event.removeListener(listener);
+                onMapReady();
             });
         },
-        [locations]
+        [locations, mapRef, onMapReady]
     );
 
     return (
@@ -166,9 +187,9 @@ function HeroMapBackground({ locations, onNavigate }: { locations: ProjectLocati
                         <div
                             className="relative group cursor-pointer"
                             style={{ transform: "translate(-50%, -50%)" }}
-                            onMouseEnter={() => setHoveredProject(loc.id)}
-                            onMouseLeave={() => setHoveredProject(null)}
-                            onClick={() => onNavigate(loc.id)}
+                            onMouseEnter={() => onHover(loc.id)}
+                            onMouseLeave={onLeave}
+                            onClick={() => onMarkerClick(loc)}
                         >
                             {/* Tooltip */}
                             {hoveredProject === loc.id && (
@@ -189,7 +210,7 @@ function HeroMapBackground({ locations, onNavigate }: { locations: ProjectLocati
                                     </div>
                                 </div>
                             )}
-                            {/* Avatar — subtle, theme-aware */}
+                            {/* Avatar marker */}
                             <div className="w-[34px] h-[34px] rounded-full border border-border/60 shadow-sm overflow-hidden transition-all duration-200 hover:scale-125 hover:shadow-lg hover:border-border relative opacity-80 hover:opacity-100">
                                 {loc.imageUrl ? (
                                     <img
@@ -211,7 +232,7 @@ function HeroMapBackground({ locations, onNavigate }: { locations: ProjectLocati
     );
 }
 
-// Grid pattern fallback (when no map or no coordinates)
+// Grid pattern fallback
 function GradientBackground() {
     return (
         <div className="absolute inset-0 overflow-hidden bg-muted/30">
@@ -231,18 +252,110 @@ function GradientBackground() {
     );
 }
 
-export function OrgHeroWidget({ initialData }: WidgetProps) {
-    const [data, setData] = useState<OrgHeroData | null>(initialData ?? null);
+
+// ── MAIN WIDGET ─────────────────────────────────────────────────────────────
+export function OverviewHeroWidget({ initialData }: WidgetProps) {
+    const activeProjectId = useActiveProjectId();
+    const { setActiveProjectId } = useLayoutActions();
+    const [data, setData] = useState<HeroData | null>(initialData ?? null);
+    const [prevProjectId, setPrevProjectId] = useState<string | null>(activeProjectId);
+    const [hoveredProject, setHoveredProject] = useState<string | null>(null);
+    // Transitioning = map is animating zoom, overlay is fading
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [pendingProjectSwitch, setPendingProjectSwitch] = useState<ProjectLocation | null>(null);
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-    const hasLocations = data && data.projectLocations && data.projectLocations.length > 0;
+    const mapRef = useRef<google.maps.Map | null>(null);
 
     const { isLoaded } = useLoadScript({
         googleMapsApiKey: apiKey,
         libraries,
     });
 
-    // Client-side fallback fetch
+    // ── SMOOTH ZOOM TRANSITION ──
+    // When a marker is clicked in org mode: zoom in → switch context
+    const handleMarkerClick = useCallback((loc: ProjectLocation) => {
+        const map = mapRef.current;
+        if (!map || isTransitioning) return;
+
+        // Already in project mode? Clicking the marker does nothing special
+        if (activeProjectId) return;
+
+        // Start transition: fade overlay, zoom map
+        setIsTransitioning(true);
+        setPendingProjectSwitch(loc);
+
+        // Smooth pan + zoom to project location
+        map.panTo({ lat: loc.lat, lng: loc.lng });
+
+        // Zoom in gradually for a cinematic effect
+        const currentZoom = map.getZoom() || 3;
+        const targetZoom = 14;
+        const steps = 3;
+        const delay = 200;
+
+        let step = 0;
+        const zoomInterval = setInterval(() => {
+            step++;
+            const progress = step / steps;
+            const newZoom = currentZoom + (targetZoom - currentZoom) * progress;
+            map.setZoom(Math.round(newZoom));
+
+            if (step >= steps) {
+                clearInterval(zoomInterval);
+                // After zoom completes, switch context
+                setTimeout(() => {
+                    setActiveProjectId(loc.id);
+                    setIsTransitioning(false);
+                    setPendingProjectSwitch(null);
+                }, 400);
+            }
+        }, delay);
+    }, [activeProjectId, isTransitioning, setActiveProjectId]);
+
+    const handleMapReady = useCallback(() => {
+        // Map is loaded and fitted
+    }, []);
+
+    // ── CONTEXT CHANGE HANDLER ──
+    // When activeProjectId changes externally (from header selector):
+    // Fetch new data but DON'T show skeleton if we have existing data
+    useEffect(() => {
+        if (activeProjectId !== prevProjectId) {
+            setPrevProjectId(activeProjectId);
+
+            // If we already have data, update in-place (no skeleton)
+            // The map will animate via panTo in the next render
+            if (data) {
+                // Find the project in our existing locations (from org data)
+                if (activeProjectId && data.projectLocations) {
+                    const targetLoc = data.projectLocations.find(l => l.id === activeProjectId);
+                    if (targetLoc) {
+                        // Animate map to project
+                        const map = mapRef.current;
+                        if (map) {
+                            map.panTo({ lat: targetLoc.lat, lng: targetLoc.lng });
+                            map.setZoom(14);
+                        }
+                    }
+                } else if (!activeProjectId && mapRef.current && data.projectLocations?.length > 0) {
+                    // Switching back to org — zoom out to show all
+                    const bounds = new google.maps.LatLngBounds();
+                    data.projectLocations.forEach(loc => {
+                        bounds.extend({ lat: loc.lat, lng: loc.lng });
+                    });
+                    mapRef.current.fitBounds(bounds, { top: 10, right: 10, bottom: 80, left: 10 });
+                }
+
+                // Trigger data re-fetch in background (won't show skeleton)
+                setData(null);
+            } else {
+                setData(null);
+            }
+        }
+    }, [activeProjectId, prevProjectId, data]);
+
+    // ── DATA FETCH ──
     useEffect(() => {
         if (data) return;
 
@@ -265,6 +378,69 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
                 const orgId = pref?.last_organization_id;
                 if (!orgId) return;
 
+                // ── PROJECT MODE ──
+                if (activeProjectId) {
+                    const [projectResult, locationResult, membersAvatarResult] = await Promise.all([
+                        supabase
+                            .from("projects")
+                            .select("id, name, image_url, status")
+                            .eq("id", activeProjectId)
+                            .single(),
+                        supabase
+                            .from("project_data")
+                            .select("lat, lng, city, country, address")
+                            .eq("project_id", activeProjectId)
+                            .single(),
+                        supabase
+                            .from("organization_members")
+                            .select("users(full_name, avatar_url, email)")
+                            .eq("organization_id", orgId)
+                            .eq("is_active", true)
+                            .limit(8),
+                    ]);
+
+                    const project = projectResult.data as any;
+                    const locData = locationResult.data as any;
+
+                    const projectLocations: ProjectLocation[] = [];
+                    if (locData && locData.lat && locData.lng) {
+                        projectLocations.push({
+                            id: project?.id || activeProjectId,
+                            name: project?.name || "Proyecto",
+                            status: project?.status || "active",
+                            lat: Number(locData.lat),
+                            lng: Number(locData.lng),
+                            city: locData.city,
+                            country: locData.country,
+                            address: locData.address || null,
+                            imageUrl: project?.image_url || null,
+                        });
+                    }
+
+                    const membersForStack = (membersAvatarResult?.data || [])
+                        .filter((m: any) => m.users)
+                        .map((m: any) => ({
+                            name: m.users.full_name || "Member",
+                            image: m.users.avatar_url || null,
+                            email: m.users.email || undefined,
+                        }));
+
+                    setData({
+                        name: project?.name || "Proyecto",
+                        avatarUrl: project?.image_url || null,
+                        planName: null,
+                        planSlug: null,
+                        isFounder: false,
+                        memberCount: 0,
+                        projectCount: 0,
+                        projectLocations,
+                        members: membersForStack,
+                        isProjectMode: true,
+                    });
+                    return;
+                }
+
+                // ── ORGANIZATION MODE ──
                 const [orgResult, membersResult, projectCountResult, locationsResult, membersAvatarResult] = await Promise.all([
                     supabase
                         .from("organizations")
@@ -323,15 +499,15 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
 
                 setData({
                     name: orgData?.name || "Organización",
-                    logoPath: orgData?.logo_path || null,
+                    avatarUrl: buildLogoUrl(orgData?.logo_path || null),
                     planName: orgData?.plans?.name || null,
                     planSlug: orgData?.plans?.slug || null,
                     isFounder: (orgData?.settings as any)?.is_founder === true,
                     memberCount: membersResult.count || 0,
                     projectCount: projectCountResult.count || 0,
-                    recentActivityCount: 0,
                     projectLocations,
                     members: membersForStack,
+                    isProjectMode: false,
                 });
             } catch (error) {
                 console.error("Error fetching hero data:", error);
@@ -339,9 +515,10 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
         }
 
         fetchHeroData();
-    }, [data]);
+    }, [data, activeProjectId]);
 
-    // Loading skeleton
+    // ── LOADING SKELETON ──
+    // All hooks are above, safe to early return
     if (!data) {
         return (
             <div className="h-full w-full rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 p-6">
@@ -356,8 +533,15 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
         );
     }
 
-    const logoUrl = buildLogoUrl(data.logoPath);
-    const initials = data.name
+    // ── DERIVED STATE ──
+    const hasLocations = data.projectLocations && data.projectLocations.length > 0;
+
+    // During transition, show the pending project info instead of org info
+    const displayName = pendingProjectSwitch ? pendingProjectSwitch.name : data.name;
+    const displayAvatar = pendingProjectSwitch ? pendingProjectSwitch.imageUrl : data.avatarUrl;
+    const isProjectView = data.isProjectMode || !!pendingProjectSwitch;
+
+    const initials = displayName
         .split(" ")
         .map((w) => w[0])
         .join("")
@@ -365,10 +549,6 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
         .toUpperCase();
 
     const showMap = isLoaded && apiKey;
-    const router = useRouter();
-    const handleNavigateToProject = useCallback((projectId: string) => {
-        router.push(`/project/${projectId}` as any);
-    }, [router]);
 
     return (
         <div
@@ -377,16 +557,26 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
                 "border border-white/[0.08]",
             )}
         >
-            {/* Background: Map (world view if no projects) or Grid fallback */}
+            {/* Background: Map or Grid fallback */}
             <div className="absolute inset-0">
                 {showMap ? (
                     <>
-                        <HeroMapBackground locations={data.projectLocations} onNavigate={handleNavigateToProject} />
-                        {/* Subtle hint when no project locations */}
+                        <HeroMapBackground
+                            locations={data.projectLocations}
+                            mapRef={mapRef}
+                            onMapReady={handleMapReady}
+                            hoveredProject={hoveredProject}
+                            onHover={setHoveredProject}
+                            onLeave={() => setHoveredProject(null)}
+                            onMarkerClick={handleMarkerClick}
+                        />
                         {!hasLocations && (
                             <div className="absolute bottom-3 right-4 z-10 pointer-events-none">
                                 <p className="text-[10px] text-muted-foreground/40 italic">
-                                    Tus proyectos aparecerán aquí
+                                    {data.isProjectMode
+                                        ? "Este proyecto no tiene ubicación"
+                                        : "Tus proyectos aparecerán aquí"
+                                    }
                                 </p>
                             </div>
                         )}
@@ -407,42 +597,59 @@ export function OrgHeroWidget({ initialData }: WidgetProps) {
                 .gm-style > div > div > a { display: none !important; }
             `}</style>
 
-            {/* Content — aligned bottom-left, pointer-events-none to let map markers receive hover/click */}
-            <div className="relative z-10 h-full flex items-end p-6 gap-6 pointer-events-none">
-                {/* Logo + Name + Plan + Members */}
+            {/* Content overlay — with transition animations */}
+            <div
+                className={cn(
+                    "relative z-10 h-full flex items-end p-6 gap-6 pointer-events-none",
+                    "transition-opacity duration-500",
+                    isTransitioning && "opacity-0"
+                )}
+            >
                 <div className="flex items-center gap-4 min-w-0 pointer-events-auto">
-                    <Avatar className="h-16 w-16 rounded-full border-2 border-white/20 shadow-lg shadow-black/20 shrink-0">
-                        <AvatarImage src={logoUrl || undefined} alt={data.name} className="object-cover" />
-                        <AvatarFallback className="rounded-full bg-white/15 text-white font-bold text-lg">
+                    {/* Avatar — round for org, square for project */}
+                    <Avatar className={cn(
+                        "h-16 w-16 border-2 border-white/20 shadow-lg shadow-black/20 shrink-0",
+                        "transition-all duration-500",
+                        isProjectView ? "rounded-xl" : "rounded-full"
+                    )}>
+                        <AvatarImage src={displayAvatar || undefined} alt={displayName} className="object-cover" />
+                        <AvatarFallback className={cn(
+                            "bg-white/15 text-white font-bold text-lg",
+                            isProjectView ? "rounded-xl" : "rounded-full"
+                        )}>
                             {initials}
                         </AvatarFallback>
                     </Avatar>
 
                     <div className="flex flex-col gap-1.5 min-w-0">
                         <h2 className="text-xl font-bold text-white truncate leading-tight drop-shadow-md">
-                            {data.name}
+                            {displayName}
                         </h2>
                         <div className="flex items-center gap-1.5">
-                            {/* Plan Badge */}
-                            {(() => {
-                                const plan = getPlanBadgeConfig(data.planSlug || data.planName);
-                                const PlanIcon = plan.icon;
-                                return (
-                                    <div className={cn(
-                                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full backdrop-blur-sm border",
-                                        plan.bg, plan.border
-                                    )}>
-                                        <PlanIcon className={cn("w-3 h-3", plan.iconColor)} />
-                                        <span className={cn("text-[11px] font-semibold uppercase tracking-wider", plan.text)}>
-                                            {plan.label}
-                                        </span>
-                                    </div>
-                                );
-                            })()}
-                            {/* Founder Badge — platinum */}
-                            {data.isFounder && (
+                            {/* Plan Badge — only in Org mode, fade out during transition */}
+                            {!isProjectView && (
+                                <div className="transition-opacity duration-300">
+                                    {(() => {
+                                        const plan = getPlanBadgeConfig(data.planSlug || data.planName);
+                                        const PlanIcon = plan.icon;
+                                        return (
+                                            <div className={cn(
+                                                "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full backdrop-blur-sm border",
+                                                plan.bg, plan.border
+                                            )}>
+                                                <PlanIcon className={cn("w-3 h-3", plan.iconColor)} />
+                                                <span className={cn("text-[11px] font-semibold uppercase tracking-wider", plan.text)}>
+                                                    {plan.label}
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                            {/* Founder Badge — only in Org mode */}
+                            {!isProjectView && data.isFounder && (
                                 <div
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-sm border"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-sm border transition-opacity duration-300"
                                     style={{
                                         backgroundColor: 'color-mix(in srgb, var(--plan-founder) 20%, transparent)',
                                         borderColor: 'color-mix(in srgb, var(--plan-founder) 30%, transparent)',

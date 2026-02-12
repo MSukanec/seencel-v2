@@ -129,6 +129,40 @@ export const routing = defineRouting({
             es: '/organizacion/gastos-generales'
         },
 
+        // ===== Organization Pages (migrated from /project/) =====
+        '/organization/construction-tasks': {
+            en: '/organization/construction-tasks',
+            es: '/organizacion/tareas-obra'
+        },
+        '/organization/materials': {
+            en: '/organization/materials',
+            es: '/organizacion/materiales'
+        },
+        '/organization/labor': {
+            en: '/organization/labor',
+            es: '/organizacion/mano-de-obra'
+        },
+        '/organization/subcontracts': {
+            en: '/organization/subcontracts',
+            es: '/organizacion/subcontratos'
+        },
+        '/organization/clients': {
+            en: '/organization/clients',
+            es: '/organizacion/clientes'
+        },
+        '/organization/portal': {
+            en: '/organization/portal',
+            es: '/organizacion/portal'
+        },
+        '/organization/health': {
+            en: '/organization/health',
+            es: '/organizacion/salud'
+        },
+        '/organization/sitelog': {
+            en: '/organization/sitelog',
+            es: '/organizacion/bitacora'
+        },
+
         // ===== Project Routes =====
         '/project/[projectId]': {
             en: '/project/[projectId]',

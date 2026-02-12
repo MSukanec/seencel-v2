@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActiveProjectId } from "@/stores/layout-store";
 import {
     LayoutDashboard,
     Building,
@@ -16,7 +15,6 @@ import {
     HardHat,
     Video,
     Monitor,
-    Info,
     Wrench,
     MapPin,
     Sparkles,
@@ -85,7 +83,6 @@ export const contextRoutes: Record<NavigationContext, string> = {
 };
 
 export function useSidebarNavigation() {
-    const activeProjectId = useActiveProjectId();
     const tMega = useTranslations('MegaMenu');
     const tSidebar = useTranslations('Sidebar');
     const { statuses, isAdmin, isBetaTester } = useFeatureFlags();
@@ -182,21 +179,15 @@ export function useSidebarNavigation() {
 
 
     const getNavGroups = (ctx: 'organization' | 'project'): NavGroup[] => {
-        // Unified sidebar — both contexts return the same groups
-        const projectBase = activeProjectId
-            ? `/project/${activeProjectId}`
-            : '/organization/projects';
-        const ph = (sub: string) => activeProjectId ? `${projectBase}/${sub}` : '/organization/projects';
-
+        // Unified sidebar — all routes under /organization
         return [
-            // Visión General (standalone, both ORG and PRO)
+            // Visión General (standalone)
             {
                 id: 'principal',
                 label: '',
                 standalone: true,
                 items: [
-                    getItemStatus('sidebar_org_overview', { title: 'Visión General ORG', href: '/organization', icon: LayoutDashboard }),
-                    getItemStatus('sidebar_project_overview', { title: 'Visión General PRO', href: projectBase, icon: LayoutDashboard }),
+                    getItemStatus('sidebar_org_overview', { title: 'Visión General', href: '/organization', icon: LayoutDashboard }),
                 ].filter((i): i is NavItem => i !== null),
             },
             // Gestión
@@ -205,17 +196,14 @@ export function useSidebarNavigation() {
                 label: 'Gestión',
                 defaultOpen: true,
                 items: [
-
                     getItemStatus('sidebar_org_projects', { title: 'Proyectos', href: '/organization/projects', icon: Building }),
                     getItemStatus('sidebar_org_identity', { title: 'Identidad y Marca', href: '/organization/identity', icon: Building }),
-                    getItemStatus('sidebar_project_details', { title: 'Información', href: ph('details'), icon: Info }),
                     getItemStatus('sidebar_org_files', { title: 'Documentación', href: '/organization/files', icon: FolderOpen }),
                     getItemStatus('sidebar_org_contacts', { title: 'Contactos', href: '/organization/contacts', icon: Users }),
                     getItemStatus('sidebar_org_quotes', { title: 'Presupuestos', href: '/organization/quotes', icon: FileText }),
                     getItemStatus('sidebar_org_catalog', { title: 'Catálogo Técnico', href: '/organization/catalog', icon: Wrench }),
                     getItemStatus('sidebar_org_reports', { title: 'Informes', href: '/organization/reports', icon: FileChartColumn }),
                     getItemStatus('sidebar_org_advanced', { title: 'Avanzado', href: '/organization/advanced', icon: Sparkles }),
-
                 ].filter((i): i is NavItem => i !== null),
             },
             // Finanzas
@@ -226,8 +214,8 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_org_finance', { title: 'Finanzas', href: '/organization/finance', icon: DollarSign }),
                     getItemStatus('sidebar_org_capital', { title: 'Capital', href: '/organization/capital', icon: Landmark }),
                     getItemStatus('sidebar_org_general_costs', { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard }),
-                    getItemStatus('sidebar_project_clients', { title: 'Clientes', href: ph('clients'), icon: Banknote }),
-                    getItemStatus('sidebar_project_portal', { title: 'Portal de Clientes', href: ph('portal'), icon: Monitor }),
+                    getItemStatus('sidebar_project_clients', { title: 'Clientes', href: '/organization/clients', icon: Banknote }),
+                    getItemStatus('sidebar_project_portal', { title: 'Portal de Clientes', href: '/organization/portal', icon: Monitor }),
                 ].filter((i): i is NavItem => i !== null),
             },
             // Construcción
@@ -235,12 +223,12 @@ export function useSidebarNavigation() {
                 id: 'construccion',
                 label: 'Construcción',
                 items: [
-                    getItemStatus('sidebar_project_health', { title: 'Salud', href: ph('health'), icon: HeartPulse }),
-                    getItemStatus('sidebar_project_tasks', { title: 'Tareas', href: ph('construction-tasks'), icon: ClipboardList }),
-                    getItemStatus('sidebar_project_materials', { title: 'Materiales', href: ph('materials'), icon: Package }),
-                    getItemStatus('sidebar_project_labor', { title: 'Mano de Obra', href: ph('labor'), icon: HardHat }),
-                    getItemStatus('sidebar_project_subcontracts', { title: 'Subcontratos', href: ph('subcontracts'), icon: Handshake }),
-                    getItemStatus('sidebar_project_sitelog', { title: tSidebar('items.sitelog'), href: ph('sitelog'), icon: FileText }),
+                    getItemStatus('sidebar_project_health', { title: 'Salud', href: '/organization/health', icon: HeartPulse }),
+                    getItemStatus('sidebar_project_tasks', { title: 'Tareas', href: '/organization/construction-tasks', icon: ClipboardList }),
+                    getItemStatus('sidebar_project_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
+                    getItemStatus('sidebar_project_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
+                    getItemStatus('sidebar_project_subcontracts', { title: 'Subcontratos', href: '/organization/subcontracts', icon: Handshake }),
+                    getItemStatus('sidebar_project_sitelog', { title: tSidebar('items.sitelog'), href: '/organization/sitelog', icon: FileText }),
                 ].filter((i): i is NavItem => i !== null),
             },
         ];
