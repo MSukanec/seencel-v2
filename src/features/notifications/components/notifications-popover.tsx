@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Check, Clock, MailOpen } from "lucide-react";
+import { Bell, BellRing, Check, Clock, Download, MailOpen, Share, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es, enUS } from "date-fns/locale";
@@ -22,6 +22,8 @@ import { UserNotification } from "@/features/notifications/queries";
 import { fetchUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/features/notifications/actions";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/stores/user-store";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 interface NotificationsPopoverProps {
     initialNotifications?: UserNotification[];
@@ -32,6 +34,10 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
     const locale = useLocale();
     const router = useRouter();
     const user = useUser();
+
+    // Push notifications & PWA install hooks
+    const push = usePushNotifications();
+    const pwa = usePwaInstall();
 
     // State
     const [open, setOpen] = React.useState(false);
@@ -142,6 +148,68 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
                     )}
                 </div>
                 <Separator />
+
+                {/* 🔔 Push activation banner */}
+                {push.isSupported && !push.isSubscribed && push.permission !== 'denied' && pwa.isInstalled && (
+                    <div className="p-3 bg-primary/5 border-b">
+                        <div className="flex items-center gap-2 mb-2">
+                            <BellRing className="h-4 w-4 text-primary" />
+                            <p className="text-xs font-medium">Activar notificaciones</p>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mb-2">
+                            Recibí alertas en tiempo real, incluso con la app cerrada.
+                        </p>
+                        <Button
+                            size="sm"
+                            className="w-full h-7 text-xs"
+                            onClick={async () => {
+                                const ok = await push.subscribe();
+                                if (ok) toast.success('Notificaciones push activadas');
+                                else if (push.permission === 'denied') toast.error('Permiso denegado. Activalo desde la configuración del sistema.');
+                            }}
+                            disabled={push.isLoading}
+                        >
+                            {push.isLoading ? 'Activando...' : 'Activar push'}
+                        </Button>
+                    </div>
+                )}
+
+                {/* 📱 PWA install banner */}
+                {!pwa.isInstalled && (
+                    <div className="p-3 bg-accent/50 border-b">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Smartphone className="h-4 w-4 text-primary" />
+                            <p className="text-xs font-medium">Instalá Seencel</p>
+                        </div>
+                        {pwa.isIOS ? (
+                            <>
+                                <p className="text-[11px] text-muted-foreground mb-1">
+                                    Para recibir notificaciones en iOS:
+                                </p>
+                                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                    <span>1. Tocá</span>
+                                    <Share className="h-3 w-3 inline" />
+                                    <span>2. &quot;Agregar a inicio&quot;</span>
+                                </div>
+                            </>
+                        ) : pwa.isInstallable ? (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full h-7 text-xs"
+                                onClick={() => pwa.promptInstall()}
+                            >
+                                <Download className="mr-1 h-3 w-3" />
+                                Instalar app
+                            </Button>
+                        ) : (
+                            <p className="text-[11px] text-muted-foreground">
+                                Instalá la app desde el menú de tu navegador para recibir notificaciones push.
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 <ScrollArea className="h-[300px]">
                     {notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">

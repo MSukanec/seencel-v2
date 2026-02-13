@@ -80,3 +80,68 @@ self.addEventListener('message', (event) => {
         self.skipWaiting();
     }
 });
+
+// ============================================================================
+// WEB PUSH NOTIFICATIONS
+// ============================================================================
+
+// Push event - show notification when received from server
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
+
+    let data;
+    try {
+        data = event.data.json();
+    } catch (e) {
+        data = {
+            title: 'Seencel',
+            body: event.data.text(),
+        };
+    }
+
+    const title = data.title || 'Seencel';
+    const options = {
+        body: data.body || '',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-96x96.png',
+        vibrate: [100, 50, 100],
+        tag: data.tag || 'seencel-notification',
+        renotify: true,
+        data: {
+            url: data.data?.url || '/',
+            notificationId: data.data?.notification_id,
+        },
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+
+    // Update app badge count
+    if ('setAppBadge' in navigator) {
+        // We don't know the exact count here, so just set a generic badge
+        navigator.setAppBadge().catch(() => { });
+    }
+});
+
+// Notification click - open/focus the app
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const urlToOpen = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            // If a window is already open, focus it and navigate
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    client.focus();
+                    client.navigate(urlToOpen);
+                    return;
+                }
+            }
+            // Otherwise open a new window
+            return self.clients.openWindow(urlToOpen);
+        })
+    );
+});
