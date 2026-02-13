@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FormGroup } from "@/components/ui/form-group";
-import { Input } from "@/components/ui/input";
+import { useRouter } from "@/i18n/routing";
+import { useModal } from "@/stores/modal-store";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencyField, AmountField } from "@/components/shared/forms/fields";
 import { upsertLaborPrice } from "../actions";
 import { LaborTypeWithPrice } from "../types";
 import { toast } from "sonner";
@@ -25,12 +25,10 @@ export interface LaborPriceFormProps {
     organizationId: string;
     currencies: Currency[];
     defaultCurrencyId: string;
-    onSuccess?: () => void;
-    onCancel?: () => void;
 }
 
 // ============================================================================
-// Component
+// Component (Semi-Autónomo)
 // ============================================================================
 
 export function LaborPriceForm({
@@ -38,9 +36,9 @@ export function LaborPriceForm({
     organizationId,
     currencies,
     defaultCurrencyId,
-    onSuccess,
-    onCancel,
 }: LaborPriceFormProps) {
+    const router = useRouter();
+    const { closeModal } = useModal();
     const [isLoading, setIsLoading] = useState(false);
     const [price, setPrice] = useState<string>(
         laborType.current_price?.toString() || ""
@@ -49,7 +47,10 @@ export function LaborPriceForm({
         laborType.currency_id || defaultCurrencyId
     );
 
-    const selectedCurrency = currencies.find(c => c.id === currencyId);
+    // Callbacks internos (patrón semi-autónomo)
+    const handleCancel = () => {
+        closeModal();
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,22 +63,27 @@ export function LaborPriceForm({
 
         setIsLoading(true);
         try {
-            const result = await upsertLaborPrice({
-                organization_id: organizationId,
-                labor_type_id: laborType.id,
-                unit_price: numericPrice,
-                currency_id: currencyId,
-            });
-
-            if (result.success) {
-                onSuccess?.();
-            } else {
-                toast.error(result.error || "Error al guardar precio");
-            }
+            // Close modal immediately for optimistic UX
+            closeModal();
+            toast.promise(
+                upsertLaborPrice({
+                    organization_id: organizationId,
+                    labor_type_id: laborType.id,
+                    unit_price: numericPrice,
+                    currency_id: currencyId,
+                }).then(result => {
+                    if (!result.success) throw new Error(result.error || "Error al guardar precio");
+                    router.refresh();
+                    return result;
+                }),
+                {
+                    loading: "Guardando precio...",
+                    success: "Precio guardado correctamente",
+                    error: (err) => err.message || "Error inesperado",
+                }
+            );
         } catch (error) {
             toast.error("Error inesperado");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -96,39 +102,19 @@ export function LaborPriceForm({
                     </div>
 
                     {/* Currency Selector */}
-                    <FormGroup label="Moneda">
-                        <Select value={currencyId} onValueChange={setCurrencyId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar moneda" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {currencies.map((currency) => (
-                                    <SelectItem key={currency.id} value={currency.id}>
-                                        {currency.code} - {currency.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <CurrencyField
+                        value={currencyId}
+                        onChange={setCurrencyId}
+                        currencies={currencies}
+                    />
 
                     {/* Price Input */}
-                    <FormGroup label={`Precio por ${laborType.unit_name || 'unidad'}`}>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                                {selectedCurrency?.symbol || '$'}
-                            </span>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={price}
-                                onChange={(e) => setPrice(e.target.value)}
-                                className="pl-8 font-mono"
-                                placeholder="0.00"
-                                autoFocus
-                            />
-                        </div>
-                    </FormGroup>
+                    <AmountField
+                        value={price}
+                        onChange={setPrice}
+                        label={`Precio por ${laborType.unit_name || 'unidad'}`}
+                        placeholder="0.00"
+                    />
                 </div>
             </div>
 
@@ -136,7 +122,7 @@ export function LaborPriceForm({
                 className="-mx-4 -mb-4 mt-6"
                 isLoading={isLoading}
                 submitLabel="Guardar Precio"
-                onCancel={onCancel}
+                onCancel={handleCancel}
             />
         </form>
     );

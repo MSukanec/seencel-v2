@@ -25,14 +25,13 @@ import {
     Plus,
     Trash2,
     MoreHorizontal,
-    Ruler,
     Globe,
     Hammer,
     HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskRecipeView, TaskRecipeMaterial, TaskRecipeLabor, RecipeResources } from "@/features/tasks/types";
-import { PricePulsePopover, FreshnessDot, type PricePulseData } from "@/components/shared/price-pulse-popover";
+import { PricePulsePopover, FreshnessDot, ResourcePriceDisplay, type PricePulseData } from "@/components/shared/price-pulse-popover";
 
 // ============================================================================
 // Types
@@ -58,12 +57,24 @@ export interface MaterialPriceInfo {
     unitSymbol?: string | null;
 }
 
+/** Price info for a labor type */
+export interface LaborPriceInfo {
+    unitPrice: number;
+    currencyId: string | null;
+    laborName: string;
+    laborTypeId: string;
+    organizationId: string;
+    priceValidFrom?: string | null;
+    unitSymbol?: string | null;
+}
+
 export interface RecipeListItemProps {
     data: RecipeListItemData;
     /** Whether to start expanded */
     defaultOpen?: boolean;
     /** Material price lookup: material_id → { effectiveUnitPrice, currencyId } */
     materialPriceMap?: Map<string, MaterialPriceInfo>;
+    laborPriceMap?: Map<string, LaborPriceInfo>;
     /** Unit name of the task (e.g. M2) — shown in the grand total */
     taskUnitName?: string;
     /** Callback to add a resource — opens unified resource form */
@@ -94,6 +105,7 @@ export const RecipeListItem = memo(function RecipeListItem({
     data,
     defaultOpen = false,
     materialPriceMap,
+    laborPriceMap,
     taskUnitName,
     onAddResource,
     onUpdateMaterialQuantity,
@@ -177,18 +189,24 @@ export const RecipeListItem = memo(function RecipeListItem({
 
                         {/* Grand Total next to chevron */}
                         {(() => {
-                            const grandTotal = resources.materials.reduce((sum, item) => {
+                            const materialsTotal = resources.materials.reduce((sum, item) => {
                                 const priceInfo = materialPriceMap?.get(item.material_id);
                                 if (!priceInfo) return sum;
                                 const totalQty = item.total_quantity ?? item.quantity * (1 + (item.waste_percentage || 0) / 100);
                                 return sum + totalQty * priceInfo.effectiveUnitPrice;
                             }, 0);
+                            const laborTotal = resources.labor.reduce((sum, item) => {
+                                const priceInfo = laborPriceMap?.get(item.labor_type_id);
+                                if (!priceInfo) return sum;
+                                return sum + item.quantity * priceInfo.unitPrice;
+                            }, 0);
+                            const grandTotal = materialsTotal + laborTotal;
                             return grandTotal > 0 ? (
-                                <span className="shrink-0 font-mono text-base font-bold text-foreground">
-                                    Total: ${grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    {taskUnitName && (
-                                        <span className="text-muted-foreground font-normal text-sm"> / {taskUnitName}</span>
-                                    )}
+                                <span className="text-sm font-semibold text-foreground mr-1">
+                                    Total: ${grandTotal.toLocaleString("es-AR", {
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0,
+                                    })}
                                 </span>
                             ) : null;
                         })()}
@@ -260,27 +278,42 @@ export const RecipeListItem = memo(function RecipeListItem({
                             {/* ============================== */}
                             {/* Labor Section */}
                             {/* ============================== */}
-                            {resources.labor.length > 0 && (
-                                <ResourceSection
-                                    title="Mano de Obra"
-                                    icon={<HardHat className="h-3.5 w-3.5" />}
-                                    count={resources.labor.length}
-                                >
-                                    {resources.labor.map((item) => (
-                                        <LaborResourceRow
-                                            key={item.id}
-                                            name={item.labor_name || "Mano de obra"}
-                                            unitSymbol={item.unit_symbol || item.unit_name}
-                                            quantity={item.quantity}
-                                            notes={item.notes}
-                                            isOptional={item.is_optional}
-                                            isOwn={isOwn}
-                                            onUpdateQuantity={(qty) => onUpdateLaborQuantity?.(item.id, qty)}
-                                            onRemove={() => onRemoveLabor?.(item.id)}
-                                        />
-                                    ))}
-                                </ResourceSection>
-                            )}
+                            {resources.labor.length > 0 && (() => {
+                                // Calculate total cost for labor section
+                                const laborTotalCost = resources.labor.reduce((sum, item) => {
+                                    const priceInfo = laborPriceMap?.get(item.labor_type_id);
+                                    if (!priceInfo) return sum;
+                                    return sum + item.quantity * priceInfo.unitPrice;
+                                }, 0);
+
+                                return (
+                                    <ResourceSection
+                                        title="Mano de Obra"
+                                        icon={<HardHat className="h-3.5 w-3.5" />}
+                                        count={resources.labor.length}
+                                        totalCost={laborTotalCost > 0 ? laborTotalCost : undefined}
+                                    >
+                                        {resources.labor.map((item) => {
+                                            const priceInfo = laborPriceMap?.get(item.labor_type_id);
+                                            return (
+                                                <LaborResourceRow
+                                                    key={item.id}
+                                                    name={item.labor_name || "Mano de obra"}
+                                                    unitSymbol={item.unit_symbol || item.unit_name}
+                                                    quantity={item.quantity}
+                                                    unitPrice={priceInfo?.unitPrice}
+                                                    priceValidFrom={priceInfo?.priceValidFrom}
+                                                    notes={item.notes}
+                                                    isOptional={item.is_optional}
+                                                    isOwn={isOwn}
+                                                    onUpdateQuantity={(qty) => onUpdateLaborQuantity?.(item.id, qty)}
+                                                    onRemove={() => onRemoveLabor?.(item.id)}
+                                                />
+                                            );
+                                        })}
+                                    </ResourceSection>
+                                );
+                            })()}
                         </div>
                     ) : (
                         /* No resources yet — only show add row */
@@ -513,34 +546,26 @@ function MaterialResourceRow({
                     {displayTotal.toFixed(2)}
                 </span>
             </div>
-            {/* × Price = Subtotal — clickable with Price Pulse */}
+            {/* × Price = Subtotal — uses ResourcePriceDisplay for the price part */}
             <div className="w-48 shrink-0">
                 {effectiveUnitPrice != null ? (
-                    pricePulseData && isOwn ? (
-                        <PricePulsePopover data={pricePulseData} onPriceUpdated={onPriceUpdated}>
-                            <button
-                                type="button"
-                                className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
-                            >
-                                <FreshnessDot validFrom={priceInfo?.priceValidFrom} />
-                                <span>
-                                    × ${effectiveUnitPrice.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                    {" = "}
-                                    <span className="font-semibold text-foreground">
-                                        ${subtotal!.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    </span>
-                                </span>
-                            </button>
-                        </PricePulsePopover>
-                    ) : (
-                        <span className="font-mono text-sm text-muted-foreground">
-                            × ${effectiveUnitPrice.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                    <span className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
+                        <ResourcePriceDisplay
+                            price={effectiveUnitPrice}
+                            priceValidFrom={priceInfo?.priceValidFrom}
+                            pricePulseData={pricePulseData && isOwn ? pricePulseData : null}
+                            onPriceUpdated={onPriceUpdated}
+                            className="text-sm"
+                        />
+                        <span>
+                            {" × "}
+                            {displayTotal.toFixed(2)}
                             {" = "}
                             <span className="font-semibold text-foreground">
                                 ${subtotal!.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </span>
                         </span>
-                    )
+                    </span>
                 ) : (
                     <span className="text-sm text-muted-foreground/50">sin precio</span>
                 )}
@@ -577,12 +602,14 @@ function MaterialResourceRow({
 }
 
 /**
- * LaborResourceRow — Simpler row for labor (no waste percentage)
+ * LaborResourceRow — Labor row with price × qty = subtotal (no waste)
  */
 function LaborResourceRow({
     name,
     unitSymbol,
     quantity,
+    unitPrice,
+    priceValidFrom,
     notes,
     isOptional,
     isOwn,
@@ -592,16 +619,20 @@ function LaborResourceRow({
     name: string;
     unitSymbol?: string | null;
     quantity: number;
+    unitPrice?: number;
+    priceValidFrom?: string | null;
     notes?: string | null;
     isOptional: boolean;
     isOwn: boolean;
     onUpdateQuantity: (qty: number) => void;
     onRemove: () => void;
 }) {
+    const subtotal = unitPrice != null ? quantity * unitPrice : null;
+
     return (
-        <div className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center hover:bg-muted/20 transition-colors">
-            {/* Name */}
-            <div className="col-span-5">
+        <div className="flex items-center gap-2 px-4 py-2.5 hover:bg-muted/20 transition-colors">
+            {/* Name — takes remaining space */}
+            <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">
                     {name}
                 </p>
@@ -611,39 +642,62 @@ function LaborResourceRow({
                     </p>
                 )}
             </div>
-            {/* Unit */}
-            <div className="col-span-2 text-right">
-                <Badge variant="outline" className="text-sm gap-1">
-                    <Ruler className="h-3 w-3" />
-                    {unitSymbol || "—"}
-                </Badge>
-            </div>
-            {/* Quantity */}
-            <div className="col-span-3">
+            {/* Quantity (with label prefix and unit suffix) */}
+            <div className="w-40 shrink-0">
                 {isOwn ? (
-                    <Input
-                        type="number"
-                        value={quantity || ""}
-                        onChange={(e) => {
-                            const newQty = parseFloat(e.target.value);
-                            if (!isNaN(newQty) && newQty > 0) {
-                                onUpdateQuantity(newQty);
-                            }
-                        }}
-                        className="h-7 w-full text-sm text-right"
-                        min="0.001"
-                        step="0.001"
-                    />
+                    <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                            Cant.
+                        </span>
+                        <Input
+                            type="number"
+                            value={quantity || ""}
+                            onChange={(e) => {
+                                const newQty = parseFloat(e.target.value);
+                                if (!isNaN(newQty) && newQty > 0) {
+                                    onUpdateQuantity(newQty);
+                                }
+                            }}
+                            className="h-8 w-full text-sm text-right pl-11 pr-7"
+                            min="0.001"
+                            step="0.001"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground pointer-events-none font-medium uppercase">
+                            {unitSymbol || ""}
+                        </span>
+                    </div>
                 ) : (
-                    <span className="font-mono text-sm text-right block">
-                        {quantity}
+                    <span className="font-mono text-sm">
+                        {quantity} <span className="text-muted-foreground text-[9px] uppercase">{unitSymbol}</span>
                     </span>
                 )}
             </div>
-            {/* Optional + Actions menu */}
-            <div className="col-span-2 flex items-center justify-end gap-1">
+            {/* × Price = Subtotal */}
+            <div className="w-48 shrink-0">
+                {unitPrice != null ? (
+                    <span className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
+                        <ResourcePriceDisplay
+                            price={unitPrice}
+                            priceValidFrom={priceValidFrom}
+                            className="text-sm"
+                        />
+                        <span>
+                            {" × "}
+                            {quantity}
+                            {" = "}
+                            <span className="font-semibold text-foreground">
+                                ${subtotal!.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </span>
+                        </span>
+                    </span>
+                ) : (
+                    <span className="text-sm text-muted-foreground/50">sin precio</span>
+                )}
+            </div>
+            {/* Optional badge + Actions menu */}
+            <div className="shrink-0 flex items-center gap-1">
                 {isOptional && (
-                    <Badge variant="secondary" className="text-sm">
+                    <Badge variant="secondary" className="text-[10px]">
                         Opc
                     </Badge>
                 )}

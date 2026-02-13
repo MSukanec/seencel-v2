@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, memo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { ContentLayout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
@@ -772,6 +772,7 @@ export function MaterialsCatalogView({
                                 material={material}
                                 canEdit={canEdit(material)}
                                 isAdminMode={isAdminMode}
+                                organizationId={orgId}
                                 selected={multiSelect.isSelected(material.id)}
                                 onToggleSelect={multiSelect.toggle}
                                 onEdit={handleEditMaterial}

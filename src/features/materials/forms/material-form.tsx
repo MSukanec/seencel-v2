@@ -2,22 +2,20 @@
 
 import { useState, useMemo } from "react";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { FormGroup } from "@/components/ui/form-group";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { createMaterial, updateMaterial, upsertMaterialPrice } from "@/features/materials/actions";
 import { useModal } from "@/stores/modal-store";
 import { useFormData } from "@/stores/organization-store";
-import { CurrencyField, AmountField, ContactField } from "@/components/shared/forms/fields";
+import {
+    TextField,
+    NotesField,
+    SelectField,
+    CurrencyField,
+    AmountField,
+    ContactField,
+    type SelectOption,
+} from "@/components/shared/forms/fields";
 
 // ============================================================================
 // Types
@@ -98,10 +96,23 @@ export function MaterialForm({
     const isEditing = mode === "edit";
 
     // Filter units for material dropdowns (only those applicable to materials)
-    const materialUnits = useMemo(() =>
-        units.filter(u => u.applicable_to?.includes('material')),
+    const materialUnitOptions = useMemo<SelectOption[]>(() =>
+        units.filter(u => u.applicable_to?.includes('material'))
+            .map(u => ({ value: u.id, label: `${u.name}${u.symbol ? ` (${u.symbol})` : ''}` })),
         [units]
     );
+
+    // Category options
+    const categoryOptions = useMemo<SelectOption[]>(() =>
+        categories.map(c => ({ value: c.id, label: c.name })),
+        [categories]
+    );
+
+    // Material type options
+    const materialTypeOptions: SelectOption[] = [
+        { value: "material", label: "Material" },
+        { value: "consumable", label: "Consumible / Insumo" },
+    ];
 
     // Get currencies from organization store (already hydrated in layout)
     const { currencies, getPrimaryCurrency } = useFormData();
@@ -114,6 +125,14 @@ export function MaterialForm({
     const [currencyId, setCurrencyId] = useState<string>(
         initialData?.org_price_currency_id || defaultCurrencyId || ""
     );
+
+    // Core field state
+    const [materialName, setMaterialName] = useState(initialData?.name || "");
+    const [code, setCode] = useState(initialData?.code || "");
+    const [description, setDescription] = useState(initialData?.description || "");
+    const [materialType, setMaterialType] = useState(initialData?.material_type || "material");
+    const [categoryId, setCategoryId] = useState(initialData?.category_id || "");
+    const [unitId, setUnitId] = useState(initialData?.unit_id || "");
 
     // Provider state
     const [providerId, setProviderId] = useState<string>(
@@ -132,25 +151,32 @@ export function MaterialForm({
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const formData = new FormData(e.currentTarget);
+        // Build FormData from controlled state (shared fields don't have native name attrs)
+        const formData = new FormData();
+        formData.set("name", materialName.trim());
+        formData.set("code", code.trim());
+        formData.set("description", description.trim());
+        formData.set("material_type", materialType);
+        if (categoryId) formData.set("category_id", categoryId);
+        if (unitId) formData.set("unit_id", unitId);
 
-        // Build optimistic data object from form
+        // Build optimistic data object
         const optimisticData: Partial<Material> = {
             id: isEditing && initialData?.id ? initialData.id : `temp-${Date.now()}`,
-            name: formData.get("name") as string,
-            code: formData.get("code") as string || null,
-            description: formData.get("description") as string || null,
-            material_type: formData.get("material_type") as string || "material",
-            category_id: formData.get("category_id") as string || null,
-            unit_id: formData.get("unit_id") as string || null,
+            name: materialName.trim(),
+            code: code.trim() || null,
+            description: description.trim() || null,
+            material_type: materialType,
+            category_id: categoryId || null,
+            unit_id: unitId || null,
             default_provider_id: providerId || null,
             default_sale_unit_id: saleUnitId || null,
             default_sale_unit_quantity: saleUnitQuantity ? parseFloat(saleUnitQuantity) : null,
             organization_id: isAdminMode ? null : organizationId,
             is_system: isAdminMode,
             // Include display fields for immediate UI update
-            unit_name: units.find(u => u.id === formData.get("unit_id"))?.name || null,
-            category_name: categories.find(c => c.id === formData.get("category_id"))?.name || null,
+            unit_name: units.find(u => u.id === unitId)?.name || null,
+            category_name: categories.find(c => c.id === categoryId)?.name || null,
             org_unit_price: unitPrice ? parseFloat(unitPrice) : null,
             org_price_currency_id: currencyId || null,
         } as Material;
@@ -226,91 +252,58 @@ export function MaterialForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     {/* Row 1: Tipo + Código */}
-                    <FormGroup label="Tipo" htmlFor="material_type" required>
-                        <Select name="material_type" defaultValue={initialData?.material_type || "material"}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="material">Material</SelectItem>
-                                <SelectItem value="consumable">Consumible / Insumo</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <SelectField
+                        label="Tipo"
+                        value={materialType}
+                        onChange={setMaterialType}
+                        options={materialTypeOptions}
+                        required
+                    />
 
-                    <FormGroup label="Código" htmlFor="code">
-                        <Input
-                            id="code"
-                            name="code"
-                            placeholder="Ej: MAT-001"
-                            defaultValue={initialData?.code || ""}
-                        />
-                    </FormGroup>
+                    <TextField
+                        label="Código"
+                        value={code}
+                        onChange={setCode}
+                        placeholder="Ej: MAT-001"
+                    />
 
                     {/* Row 2: Nombre (full width) */}
                     <div className="md:col-span-2">
-                        <FormGroup label="Nombre del Material" htmlFor="name" required>
-                            <Input
-                                id="name"
-                                name="name"
-                                placeholder="Ej: Cemento Portland"
-                                defaultValue={initialData?.name || ""}
-                                required
-                            />
-                        </FormGroup>
+                        <TextField
+                            label="Nombre del Material"
+                            value={materialName}
+                            onChange={setMaterialName}
+                            placeholder="Ej: Cemento Portland"
+                            required
+                        />
                     </div>
 
                     {/* Row 3: Categoría + Unidad */}
-                    <FormGroup label="Categoría" htmlFor="category_id">
-                        <Select name="category_id" defaultValue={initialData?.category_id || undefined}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Sin categoría" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories.map((category) => (
-                                    <SelectItem key={category.id} value={category.id}>
-                                        {category.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <SelectField
+                        label="Categoría"
+                        value={categoryId}
+                        onChange={setCategoryId}
+                        options={categoryOptions}
+                        placeholder="Sin categoría"
+                        clearable
+                    />
 
-                    <FormGroup
+                    <SelectField
                         label="Unidad de Medida"
-                        htmlFor="unit_id"
-                        tooltip={
-                            <span>
-                                Unidad base para medir este material (ej: kg, m³, litro).{" "}
-                                <a href="?tab=units">Gestionar unidades</a>
-                            </span>
-                        }
-                    >
-                        <Select name="unit_id" defaultValue={initialData?.unit_id || undefined}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar unidad..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {materialUnits.map((unit) => (
-                                    <SelectItem key={unit.id} value={unit.id}>
-                                        {unit.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                        value={unitId}
+                        onChange={setUnitId}
+                        options={materialUnitOptions}
+                        placeholder="Seleccionar unidad..."
+                    />
 
                     {/* Row 4: Descripción (full width) */}
                     <div className="md:col-span-2">
-                        <FormGroup label="Descripción" htmlFor="description">
-                            <Textarea
-                                id="description"
-                                name="description"
-                                placeholder="Descripción detallada del material (opcional)"
-                                defaultValue={initialData?.description || ""}
-                                className="min-h-[80px]"
-                            />
-                        </FormGroup>
+                        <NotesField
+                            label="Descripción"
+                            value={description}
+                            onChange={setDescription}
+                            placeholder="Descripción detallada del material (opcional)"
+                        />
                     </div>
 
                     {/* Supplier & Price Section - Only for org materials */}
@@ -327,12 +320,7 @@ export function MaterialForm({
                                     onChange={setProviderId}
                                     contacts={providers}
                                     label="Proveedor por defecto"
-                                    tooltip={
-                                        <span>
-                                            Proveedor habitual de este material. Los proveedores se crean desde la sección de Contactos.{" "}
-                                            <a href="../contacts" target="_blank">Gestionar contactos</a>
-                                        </span>
-                                    }
+                                    tooltip="Proveedor habitual de este material."
                                     placeholder="Seleccionar proveedor (opcional)"
                                     noneLabel="Sin proveedor asignado"
                                     searchPlaceholder="Buscar proveedor..."
@@ -341,45 +329,21 @@ export function MaterialForm({
                             </div>
 
                             {/* Row 6: Unidad de Venta + Cantidad por Unidad */}
-                            <FormGroup
+                            <SelectField
                                 label="Unidad de Venta"
-                                htmlFor="sale_unit_id"
-                                tooltip={
-                                    <span>
-                                        Formato de empaque o presentación comercial (ej: bolsa, bidón, camión).{" "}
-                                        <a href="?tab=units">Gestionar unidades</a>
-                                    </span>
-                                }
-                            >
-                                <Select value={saleUnitId} onValueChange={setSaleUnitId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Ej: Bolsa, Camión..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {materialUnits.map((unit) => (
-                                            <SelectItem key={unit.id} value={unit.id}>
-                                                {unit.name} {unit.symbol ? `(${unit.symbol})` : ""}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </FormGroup>
+                                value={saleUnitId}
+                                onChange={setSaleUnitId}
+                                options={materialUnitOptions}
+                                placeholder="Ej: Bolsa, Camión..."
+                                clearable
+                            />
 
-                            <FormGroup
+                            <AmountField
+                                value={saleUnitQuantity}
+                                onChange={setSaleUnitQuantity}
                                 label="Cantidad por Unidad"
-                                htmlFor="sale_unit_quantity"
-                                tooltip="Cantidad de la unidad de medida que contiene cada unidad de venta. Ej: si el material es en kg y se vende en bolsas de 25kg, poné 25."
-                            >
-                                <Input
-                                    id="sale_unit_quantity"
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={saleUnitQuantity}
-                                    onChange={(e) => setSaleUnitQuantity(e.target.value)}
-                                    placeholder="Ej: 25"
-                                />
-                            </FormGroup>
+                                placeholder="Ej: 25"
+                            />
 
 
                             {/* Row 7: Moneda + Precio */}

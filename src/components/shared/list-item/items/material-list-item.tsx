@@ -11,7 +11,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Shield } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Shield, Package } from "lucide-react";
+import { ResourcePriceDisplay, type PricePulseData } from "@/components/shared/price-pulse-popover";
 
 // ============================================================================
 // Types
@@ -52,12 +53,16 @@ export interface MaterialListItemProps {
     selected?: boolean;
     /** Whether we're in admin mode (shows org info) */
     isAdminMode?: boolean;
+    /** Organization ID for price editing */
+    organizationId?: string;
     /** Callback when selection is toggled */
     onToggleSelect?: (id: string) => void;
     /** Callback when edit is clicked - uses any to allow extended types */
     onEdit?: (material: any) => void;
     /** Callback when delete is clicked - uses any to allow extended types */
     onDelete?: (material: any) => void;
+    /** Callback when price is updated */
+    onPriceUpdated?: (materialId: string, newPrice: number) => void;
 }
 
 // ============================================================================
@@ -69,38 +74,38 @@ export const MaterialListItem = memo(function MaterialListItem({
     canEdit = false,
     selected = false,
     isAdminMode = false,
+    organizationId,
     onToggleSelect,
     onEdit,
-    onDelete
+    onDelete,
+    onPriceUpdated,
 }: MaterialListItemProps) {
-    // Format price if available
-    const formattedPrice = material.org_unit_price
-        ? new Intl.NumberFormat('es-AR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(material.org_unit_price)
-        : null;
-
-    // Format price date if available
-    const formattedPriceDate = material.org_price_valid_from
-        ? new Intl.DateTimeFormat('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: '2-digit'
-        }).format(new Date(material.org_price_valid_from))
-        : null;
-
-    // Currency symbol based on currency_id
-    // Using a simple heuristic: if currency contains "usd" or "dolar" in common currency IDs, use USD
-    // For ARS or default, use $
-    const currencySymbol = material.org_price_currency_id
-        ? (material.org_price_currency_id.toLowerCase().includes('usd') ? 'USD ' : '$')
-        : '$';
-
     // Memoize the toggle handler to avoid creating new function on each render
     const handleToggle = useCallback(() => {
         onToggleSelect?.(material.id);
     }, [onToggleSelect, material.id]);
+
+    // Sale unit display
+    const saleUnitDisplay = material.sale_unit_name || material.sale_unit_symbol;
+    const saleUnitFull = saleUnitDisplay
+        ? `${saleUnitDisplay}${material.default_sale_unit_quantity ? ` ${material.default_sale_unit_quantity} ${material.unit_symbol || ''}` : ''}`
+        : material.unit_symbol || material.unit_name || null;
+
+    // Build PricePulse data for popover
+    const pricePulseData: PricePulseData | null =
+        material.org_unit_price != null && organizationId && material.org_price_currency_id
+            ? {
+                materialId: material.id,
+                materialName: material.name,
+                materialCode: material.code,
+                organizationId,
+                currencyId: material.org_price_currency_id,
+                effectiveUnitPrice: material.org_unit_price,
+                priceValidFrom: material.org_price_valid_from,
+                unitSymbol: material.unit_symbol,
+                icon: Package,
+            }
+            : null;
 
     return (
         <ListItem variant="card" selected={selected}>
@@ -116,20 +121,17 @@ export const MaterialListItem = memo(function MaterialListItem({
             <ListItem.ColorStrip color={material.is_system ? "system" : "indigo"} />
 
             <ListItem.Content>
+                {/* Line 1: Name + (unit symbol) */}
                 <ListItem.Title className="text-base">
-                    {material.code && (
-                        <span className="text-muted-foreground font-mono text-sm mr-2">
-                            [{material.code}]
+                    {material.name}
+                    {material.unit_symbol && (
+                        <span className="text-muted-foreground font-normal text-sm ml-2">
+                            ({material.unit_symbol})
                         </span>
                     )}
-                    {material.name}
                 </ListItem.Title>
+                {/* Line 2: Badges */}
                 <ListItem.Badges>
-                    {material.unit_symbol && (
-                        <Badge variant="secondary" className="text-xs">
-                            {material.unit_symbol}
-                        </Badge>
-                    )}
                     {material.category_name && (
                         <Badge variant="secondary" className="text-xs">
                             {material.category_name}
@@ -159,27 +161,20 @@ export const MaterialListItem = memo(function MaterialListItem({
                 </ListItem.Badges>
             </ListItem.Content>
 
-            {/* Sale unit and price display - before actions */}
-            <div className="flex flex-col items-end text-sm mr-2 min-w-[100px]">
-                {/* Sale unit info: "Lata 1 KG" */}
-                {(material.sale_unit_name || material.sale_unit_symbol) && (
+            {/* Right side: Price + Unit below */}
+            <div className="flex flex-col items-end mr-2 min-w-[100px]" onClick={(e) => e.stopPropagation()}>
+                {/* Price with semaphore */}
+                <ResourcePriceDisplay
+                    price={material.org_unit_price}
+                    priceValidFrom={material.org_price_valid_from}
+                    pricePulseData={pricePulseData}
+                    onPriceUpdated={onPriceUpdated}
+                />
+                {/* Unit of sale below */}
+                {saleUnitFull && (
                     <span className="text-xs text-muted-foreground">
-                        {material.sale_unit_name || material.sale_unit_symbol}
-                        {material.default_sale_unit_quantity && (
-                            <> {material.default_sale_unit_quantity} {material.unit_symbol || ''}</>
-                        )}
+                        {saleUnitFull}
                     </span>
-                )}
-                {/* Price with currency symbol */}
-                {formattedPrice && (
-                    <>
-                        <span className="font-medium">
-                            {currencySymbol}{formattedPrice}
-                        </span>
-                        {formattedPriceDate && (
-                            <span className="text-xs text-muted-foreground">{formattedPriceDate}</span>
-                        )}
-                    </>
                 )}
             </div>
 

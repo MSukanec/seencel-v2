@@ -1,6 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import { TaskView, TasksByDivision, TaskDivision, Unit, TaskParameter, TaskAction, TaskElement } from "./types";
 
+// ============================================================================
+// Types for task costs
+// ============================================================================
+
+export interface TaskCostSummary {
+    task_id: string;
+    organization_id: string;
+    unit_cost: number | null;
+    mat_unit_cost: number | null;
+    lab_unit_cost: number | null;
+    recipe_count: number;
+    min_cost: number | null;
+    max_cost: number | null;
+    oldest_price_date: string | null;
+}
+
 /**
  * Get all tasks for an organization (includes system tasks + org custom tasks)
  * Reads from tasks_view which has pre-joined unit and division names
@@ -13,7 +29,7 @@ export async function getOrganizationTasks(organizationId: string) {
         .from('tasks_view')
         .select('*')
         .eq('is_deleted', false)
-        .order('code', { ascending: true, nullsFirst: false });
+        .order('name', { ascending: true });
 
     // Special flag for admin mode - only system tasks
     if (organizationId === "__SYSTEM__") {
@@ -47,6 +63,7 @@ export async function getOrganizationTasks(organizationId: string) {
         deleted_at: null,
         // From view joins
         unit_name: t.unit_name,
+        unit_symbol: t.unit_symbol,
         division_name: t.division_name,
         division_color: undefined, // Not in DB yet
     }));
@@ -187,6 +204,7 @@ export async function getTaskById(taskId: string): Promise<TaskView | null> {
         is_deleted: data.is_deleted ?? false,
         deleted_at: null,
         unit_name: data.unit_name,
+        unit_symbol: data.unit_symbol,
         division_name: data.division_name,
         division_color: undefined,
     };
@@ -557,4 +575,39 @@ export async function getDivisionById(divisionId: string) {
     }
 
     return { data, error: null };
+}
+
+/**
+ * Get cost summaries for all tasks in an organization from task_costs_view.
+ * Returns a Map keyed by task_id for O(1) lookup.
+ */
+export async function getTaskCosts(organizationId: string): Promise<Map<string, TaskCostSummary>> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('task_costs_view')
+        .select('*')
+        .eq('organization_id', organizationId);
+
+    if (error) {
+        console.error("Error fetching task costs:", error);
+        return new Map();
+    }
+
+    const map = new Map<string, TaskCostSummary>();
+    for (const row of data || []) {
+        map.set(row.task_id, {
+            task_id: row.task_id,
+            organization_id: row.organization_id,
+            unit_cost: row.unit_cost,
+            mat_unit_cost: row.mat_unit_cost,
+            lab_unit_cost: row.lab_unit_cost,
+            recipe_count: row.recipe_count ?? 0,
+            min_cost: row.min_cost,
+            max_cost: row.max_cost,
+            oldest_price_date: row.oldest_price_date ?? null,
+        });
+    }
+
+    return map;
 }

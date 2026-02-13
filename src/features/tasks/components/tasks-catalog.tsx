@@ -113,20 +113,17 @@ export function TaskCatalog({
             );
         }
 
-        // Sort by division order, then by code/name
+        // Sort by division order, then by name
         return [...tasks].sort((a, b) => {
             // First by division order
             const orderA = a.task_division_id ? (divisionOrderMap[a.task_division_id] ?? 999999) : 999999;
             const orderB = b.task_division_id ? (divisionOrderMap[b.task_division_id] ?? 999999) : 999999;
             if (orderA !== orderB) return orderA - orderB;
 
-            // Then by code (if available)
-            if (a.code && b.code) return a.code.localeCompare(b.code);
-            if (a.code) return -1;
-            if (b.code) return 1;
-
-            // Finally by name
-            return (a.name || a.custom_name || "").localeCompare(b.name || b.custom_name || "");
+            // Then by name alphabetically
+            const nameA = a.name || a.custom_name || "";
+            const nameB = b.name || b.custom_name || "";
+            return nameA.localeCompare(nameB);
         });
     }, [allTasks, selectedDivisionId, externalSearchQuery, originFilter, divisionOrderMap]);
 

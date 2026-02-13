@@ -59,10 +59,17 @@ export function TasksCatalogView({
     const [searchQuery, setSearchQuery] = useState("");
     const [originFilter, setOriginFilter] = useState<Set<string>>(new Set());
 
-    // Flatten all tasks to count total
-    const allTasks = useMemo(() => {
+    // Flatten all tasks for filtering / counting
+    const serverTasks = useMemo(() => {
         return groupedTasks.flatMap(g => g.tasks);
     }, [groupedTasks]);
+
+    // Optimistic deletes tracking
+    const [optimisticDeleteIds, setOptimisticDeleteIds] = useState<Set<string>>(new Set());
+    const allTasks = useMemo(() => {
+        if (optimisticDeleteIds.size === 0) return serverTasks;
+        return serverTasks.filter(t => !optimisticDeleteIds.has(t.id));
+    }, [serverTasks, optimisticDeleteIds]);
 
     // Calculate facet counts for origin filter
     const originFacets = useMemo(() => {
@@ -112,18 +119,35 @@ export function TasksCatalogView({
         const ids = Array.from(multiSelect.selectedIds);
         const count = ids.length;
 
+        // Optimistic: remove immediately from UI
+        setOptimisticDeleteIds(prev => {
+            const next = new Set(prev);
+            ids.forEach(id => next.add(id));
+            return next;
+        });
         multiSelect.clearSelection();
         setBulkDeleteModalOpen(false);
 
         try {
             const result = await deleteTasksBulk(ids, isAdminMode);
             if (result.error) {
+                // Rollback
+                setOptimisticDeleteIds(prev => {
+                    const next = new Set(prev);
+                    ids.forEach(id => next.delete(id));
+                    return next;
+                });
                 toast.error(result.error);
             } else {
                 toast.success(`${count} tarea${count > 1 ? 's' : ''} eliminada${count > 1 ? 's' : ''}`);
-                router.refresh();
             }
         } catch (error) {
+            // Rollback
+            setOptimisticDeleteIds(prev => {
+                const next = new Set(prev);
+                ids.forEach(id => next.delete(id));
+                return next;
+            });
             toast.error("Error al eliminar tareas");
         }
     };

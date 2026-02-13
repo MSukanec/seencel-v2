@@ -85,7 +85,7 @@ export async function getLaborTypes(): Promise<LaborType[]> {
 
 /**
  * Get labor types with prices for a specific organization
- * Uses labor_view which joins labor_types with labor_prices
+ * Uses labor_prices table to fetch current prices with valid_from
  */
 export async function getLaborTypesWithPrices(organizationId: string): Promise<LaborTypeWithPrice[]> {
     const supabase = await createClient();
@@ -101,6 +101,7 @@ export async function getLaborTypesWithPrices(organizationId: string): Promise<L
             labor_type_id,
             unit_price,
             currency_id,
+            valid_from,
             currencies (code, symbol)
         `)
         .eq('organization_id', organizationId)
@@ -111,13 +112,14 @@ export async function getLaborTypesWithPrices(organizationId: string): Promise<L
     }
 
     // Map prices by labor_type_id for quick lookup
-    const priceMap = new Map<string, { unit_price: number; currency_id: string; code: string; symbol: string }>();
+    const priceMap = new Map<string, { unit_price: number; currency_id: string; code: string; symbol: string; valid_from: string | null }>();
     (prices || []).forEach((p: any) => {
         priceMap.set(p.labor_type_id, {
             unit_price: p.unit_price,
             currency_id: p.currency_id,
             code: p.currencies?.code || '',
             symbol: p.currencies?.symbol || '',
+            valid_from: p.valid_from ?? null,
         });
     });
 
@@ -130,6 +132,7 @@ export async function getLaborTypesWithPrices(organizationId: string): Promise<L
             currency_id: price?.currency_id ?? null,
             currency_code: price?.code ?? null,
             currency_symbol: price?.symbol ?? null,
+            price_valid_from: price?.valid_from ?? null,
         };
     });
 }
@@ -173,7 +176,6 @@ export async function upsertLaborPrice(input: {
     revalidatePath('/organization/catalog', 'page');
     return { success: true };
 }
-
 
 interface CreateLaborCategoryInput {
     organization_id: string;

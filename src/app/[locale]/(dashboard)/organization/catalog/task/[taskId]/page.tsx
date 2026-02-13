@@ -12,7 +12,7 @@ import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detai
 import { getTaskById, getTaskDivisions, getUnits } from "@/features/tasks/queries";
 import { getTaskRecipes, getRecipeResources } from "@/features/tasks/actions";
 import { getMaterialsForOrganization } from "@/features/materials/queries";
-import { getLaborTypes } from "@/features/labor/actions";
+import { getLaborTypesWithPrices } from "@/features/labor/actions";
 
 // ============================================================================
 // Metadata
@@ -66,7 +66,7 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
             getTaskDivisions(),
             getUnits(),
             getMaterialsForOrganization(activeOrgId),
-            getLaborTypes(),
+            getLaborTypesWithPrices(activeOrgId),
         ]);
 
         // Load resources for each recipe in parallel

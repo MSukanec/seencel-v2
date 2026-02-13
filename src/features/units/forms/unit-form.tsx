@@ -6,7 +6,7 @@ import { useRouter } from "@/i18n/routing";
 import { useModal } from "@/stores/modal-store";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { Input } from "@/components/ui/input";
+import { TextField } from "@/components/shared/forms/fields";
 import {
     Select,
     SelectContent,
@@ -132,16 +132,14 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
             <div className="flex-1 overflow-y-auto">
                 <div className="space-y-4">
                     {/* Nombre - Full width */}
-                    <FormGroup label="Nombre" htmlFor="name" required>
-                        <Input
-                            id="name"
-                            name="name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Ej: Metro Cuadrado"
-                            autoFocus
-                        />
-                    </FormGroup>
+                    <TextField
+                        label="Nombre"
+                        value={name}
+                        onChange={setName}
+                        placeholder="Ej: Metro Cuadrado"
+                        required
+                        autoFocus
+                    />
 
                     {/* Categoría y Símbolo - 2 columnas */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -160,15 +158,12 @@ export function UnitForm({ organizationId, categories, initialData, defaultAppli
                             </Select>
                         </FormGroup>
 
-                        <FormGroup label="Símbolo" htmlFor="symbol">
-                            <Input
-                                id="symbol"
-                                name="symbol"
-                                value={symbol}
-                                onChange={(e) => setSymbol(e.target.value)}
-                                placeholder="Ej: m²"
-                            />
-                        </FormGroup>
+                        <TextField
+                            label="Símbolo"
+                            value={symbol}
+                            onChange={setSymbol}
+                            placeholder="Ej: m²"
+                        />
                     </div>
 
                     {/* Uso - Toggle Group multi-select */}

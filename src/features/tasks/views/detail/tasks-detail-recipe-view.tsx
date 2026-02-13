@@ -19,7 +19,7 @@ import {
 import { TasksRecipeForm } from "@/features/tasks/forms/tasks-recipe-form";
 import { TasksRecipeResourceForm } from "@/features/tasks/forms/tasks-recipe-resource-form";
 import type { TaskView, TaskRecipeView, RecipeResources } from "@/features/tasks/types";
-import type { RecipeListItemData, MaterialPriceInfo } from "@/components/shared/list-item/items/recipe-list-item";
+import type { RecipeListItemData, MaterialPriceInfo, LaborPriceInfo } from "@/components/shared/list-item/items/recipe-list-item";
 
 // ============================================================================
 // Types
@@ -37,7 +37,7 @@ export interface TasksDetailRecipeViewProps {
     /** Catalog materials for the org — needed for material form Combobox + pricing */
     catalogMaterials?: CatalogMaterialOption[];
     /** Catalog labor types — needed for labor form Combobox */
-    catalogLaborTypes?: { id: string; name: string; unit_id?: string | null; unit_name?: string | null; unit_symbol?: string | null; category_name?: string | null; level_name?: string | null; role_name?: string | null }[];
+    catalogLaborTypes?: { id: string; name: string; unit_id?: string | null; unit_name?: string | null; unit_symbol?: string | null; category_name?: string | null; level_name?: string | null; role_name?: string | null; current_price?: number | null; currency_id?: string | null; currency_symbol?: string | null; price_valid_from?: string | null }[];
 }
 
 /** Material option from catalog — includes pricing for cost calculations */
@@ -306,6 +306,28 @@ export function TasksDetailRecipeView({
     }, [catalogMaterials, organizationId]);
 
     // ========================================================================
+    // Labor Price Map — for cost calculations
+    // ========================================================================
+
+    const laborPriceMap = useMemo(() => {
+        const map = new Map<string, LaborPriceInfo>();
+        for (const lt of catalogLaborTypes) {
+            if (lt.current_price != null && lt.current_price > 0) {
+                map.set(lt.id, {
+                    unitPrice: lt.current_price,
+                    currencyId: lt.currency_id ?? null,
+                    laborName: lt.name,
+                    laborTypeId: lt.id,
+                    organizationId: organizationId,
+                    priceValidFrom: lt.price_valid_from,
+                    unitSymbol: lt.unit_symbol,
+                });
+            }
+        }
+        return map;
+    }, [catalogLaborTypes, organizationId]);
+
+    // ========================================================================
     // Build list item data
     // ========================================================================
 
@@ -378,6 +400,7 @@ export function TasksDetailRecipeView({
                         data={data}
                         defaultOpen={index === 0 && data.isOwn}
                         materialPriceMap={materialPriceMap}
+                        laborPriceMap={laborPriceMap}
                         taskUnitName={task.unit_name}
                         onAddResource={handleAddResource}
                         onUpdateMaterialQuantity={handleUpdateMaterialQuantity}

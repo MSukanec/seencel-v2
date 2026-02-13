@@ -14,7 +14,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { getStandardToolbarActions } from "@/lib/toolbar-actions";
 import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { createImportBatch, revertImportBatch, importDivisionsBatch, ImportConfig } from "@/lib/import";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 import { Badge } from "@/components/ui/badge";
 

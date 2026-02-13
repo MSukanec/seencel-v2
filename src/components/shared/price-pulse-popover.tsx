@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, type LucideIcon } from "lucide-react";
 import { upsertMaterialPrice } from "@/features/materials/actions";
 import { toast } from "sonner";
 import { parseDateFromDB } from "@/lib/timezone-data";
@@ -26,15 +26,17 @@ export interface PricePulseData {
     /** ISO date string from material_prices.valid_from */
     priceValidFrom?: string | null;
     unitSymbol?: string | null;
+    /** Icon to show in the popover header */
+    icon?: LucideIcon;
 }
 
 type FreshnessLevel = "fresh" | "aging" | "stale";
 
 // ============================================================================
-// Helpers
+// Helpers (exported for reuse)
 // ============================================================================
 
-function getFreshness(validFrom: string | null | undefined): {
+export function getFreshness(validFrom: string | null | undefined): {
     level: FreshnessLevel;
     daysAgo: number;
     label: string;
@@ -65,7 +67,7 @@ function getFreshness(validFrom: string | null | undefined): {
     return { level: "stale", daysAgo, label, dateLabel };
 }
 
-const FRESHNESS_COLORS: Record<FreshnessLevel, { dot: string; text: string; pulse: string }> = {
+export const FRESHNESS_COLORS: Record<FreshnessLevel, { dot: string; text: string; pulse: string }> = {
     fresh: {
         dot: "bg-emerald-500",
         text: "text-emerald-600 dark:text-emerald-400",
@@ -84,7 +86,7 @@ const FRESHNESS_COLORS: Record<FreshnessLevel, { dot: string; text: string; puls
 };
 
 // ============================================================================
-// Component
+// PricePulsePopover — clickable popover to view/edit price
 // ============================================================================
 
 export function PricePulsePopover({
@@ -102,6 +104,8 @@ export function PricePulsePopover({
 
     const { level, label, dateLabel } = getFreshness(data.priceValidFrom);
     const colors = FRESHNESS_COLORS[level];
+
+    const Icon = data.icon;
 
     const handleSave = useCallback(async () => {
         const price = parseFloat(newPrice);
@@ -137,12 +141,15 @@ export function PricePulsePopover({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>{children}</PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
-                {/* Header */}
-                <div className="px-4 pt-4 pb-3 border-b">
-                    <p className="font-semibold text-sm truncate">{data.materialName}</p>
-                    {data.materialCode && (
-                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{data.materialCode}</p>
-                    )}
+                {/* Header with icon */}
+                <div className="px-4 pt-4 pb-3 border-b flex items-center gap-2">
+                    {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{data.materialName}</p>
+                        {data.materialCode && (
+                            <p className="text-xs text-muted-foreground font-mono mt-0.5">{data.materialCode}</p>
+                        )}
+                    </div>
                 </div>
 
                 {/* Body */}
@@ -184,13 +191,11 @@ export function PricePulsePopover({
                         </div>
                     </div>
 
-                    {/* Warning */}
-                    <div className="flex items-start gap-2 p-2.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
-                            Este precio es <strong>global</strong>. Modificarlo afecta a todas las recetas que usen este material.
-                        </p>
-                    </div>
+                    {/* Warning — simple text, not a card */}
+                    <p className="text-[11px] text-muted-foreground leading-relaxed flex items-start gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        Este precio es <strong>global</strong>. Modificarlo afecta a todas las recetas que usen este recurso.
+                    </p>
                 </div>
 
                 {/* Footer */}
@@ -218,7 +223,7 @@ export function PricePulsePopover({
 }
 
 // ============================================================================
-// Freshness Dot — standalone indicator for the row
+// FreshnessDot — standalone indicator
 // ============================================================================
 
 export function FreshnessDot({ validFrom }: { validFrom?: string | null }) {
@@ -231,4 +236,104 @@ export function FreshnessDot({ validFrom }: { validFrom?: string | null }) {
             title={level === "fresh" ? "Precio actualizado" : level === "aging" ? "Precio desactualizado" : "Precio obsoleto"}
         />
     );
+}
+
+// ============================================================================
+// ResourcePriceDisplay — reusable: semaphore dot + formatted price
+// Wraps PricePulsePopover when editable. Shows "Sin precio" otherwise.
+// ============================================================================
+
+export interface ResourcePriceDisplayProps {
+    /** Price value (null = no price set) */
+    price: number | null | undefined;
+    /** Currency symbol (default: "$") */
+    currencySymbol?: string;
+    /** Unit symbol to show in the popover (e.g. "KG") */
+    unitSymbol?: string | null;
+    /** Unit name for label (e.g. "por Hora") */
+    unitName?: string | null;
+    /** Date the price was last updated (ISO string) */
+    priceValidFrom?: string | null;
+    /** PricePulse data for the popover — if provided, price is clickable/editable */
+    pricePulseData?: PricePulseData | null;
+    /** Callback when price is updated */
+    onPriceUpdated?: (materialId: string, newPrice: number) => void;
+    /** Generic click handler — makes the price clickable without needing pricePulseData */
+    onClick?: () => void;
+    /** Additional className for the container */
+    className?: string;
+}
+
+export function ResourcePriceDisplay({
+    price,
+    currencySymbol = "$",
+    unitSymbol,
+    unitName,
+    priceValidFrom,
+    pricePulseData,
+    onPriceUpdated,
+    onClick,
+    className,
+}: ResourcePriceDisplayProps) {
+    const hasPrice = price !== null && price !== undefined && price > 0;
+
+    if (!hasPrice) {
+        return (
+            <span className={cn("text-xs text-muted-foreground", className)}>
+                Sin precio
+            </span>
+        );
+    }
+
+    const formattedPrice = new Intl.NumberFormat("es-AR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(price!);
+
+    const isClickable = !!pricePulseData || !!onClick;
+
+    const priceContent = (
+        <span className={cn(
+            "flex items-center gap-1.5",
+            isClickable && "cursor-pointer hover:opacity-80 transition-opacity",
+        )}>
+            {priceValidFrom !== undefined && <FreshnessDot validFrom={priceValidFrom} />}
+            <span className={cn("font-medium text-lg", className)}>
+                {currencySymbol}{formattedPrice}
+            </span>
+        </span>
+    );
+
+    // Editable popover for materials
+    if (pricePulseData) {
+        return (
+            <PricePulsePopover data={pricePulseData} onPriceUpdated={onPriceUpdated}>
+                <button
+                    type="button"
+                    className="text-left"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {priceContent}
+                </button>
+            </PricePulsePopover>
+        );
+    }
+
+    // Generic click handler (e.g. open modal for labor)
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                className="text-left"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                }}
+            >
+                {priceContent}
+            </button>
+        );
+    }
+
+    return priceContent;
 }

@@ -1,23 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { ListItem } from "@/components/ui/list-item";
+import { useState, useMemo } from "react";
+import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { HardHat, MoreHorizontal, Pencil, DollarSign } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { LaborListItem } from "@/components/shared/list-item";
+import { ContextSidebar } from "@/stores/sidebar-store";
+import { HardHat } from "lucide-react";
 import { useModal } from "@/stores/modal-store";
 import { LaborTypeWithPrice } from "../types";
 import { LaborPriceForm } from "../forms/labor-price-form";
-import { toast } from "sonner";
+import { LaborCategoriesSidebar, type LaborCategoryItem } from "../components/labor-categories-sidebar";
 
 // ============================================================================
 // Types
@@ -47,20 +40,57 @@ export function LaborTypesView({
     orgId,
     defaultCurrencyId,
 }: LaborTypesViewProps) {
-    const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-    // Filter labor types by search
-    const filteredTypes = laborTypes.filter(lt => {
-        const query = searchQuery.toLowerCase();
-        return (
-            lt.name?.toLowerCase().includes(query) ||
-            lt.category_name?.toLowerCase().includes(query) ||
-            lt.level_name?.toLowerCase().includes(query) ||
-            lt.role_name?.toLowerCase().includes(query)
-        );
-    });
+    // Extract unique categories from labor types
+    const categories: LaborCategoryItem[] = useMemo(() => {
+        const categoryMap = new Map<string, string>();
+        laborTypes.forEach(lt => {
+            if (lt.labor_category_id && lt.category_name) {
+                categoryMap.set(lt.labor_category_id, lt.category_name);
+            }
+        });
+        return Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [laborTypes]);
+
+    // Count labor types per category
+    const laborCounts: Record<string, number> = useMemo(() => {
+        const counts: Record<string, number> = {};
+        laborTypes.forEach(lt => {
+            const catId = lt.labor_category_id || "sin-categoria";
+            counts[catId] = (counts[catId] || 0) + 1;
+        });
+        return counts;
+    }, [laborTypes]);
+
+    // Filter labor types by search AND category
+    const filteredTypes = useMemo(() => {
+        return laborTypes.filter(lt => {
+            // Category filter
+            if (selectedCategoryId) {
+                if (selectedCategoryId === "sin-categoria") {
+                    if (lt.labor_category_id) return false;
+                } else {
+                    if (lt.labor_category_id !== selectedCategoryId) return false;
+                }
+            }
+
+            // Search filter
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                return (
+                    lt.name?.toLowerCase().includes(query) ||
+                    lt.category_name?.toLowerCase().includes(query) ||
+                    lt.level_name?.toLowerCase().includes(query) ||
+                    lt.role_name?.toLowerCase().includes(query)
+                );
+            }
+
+            return true;
+        });
+    }, [laborTypes, searchQuery, selectedCategoryId]);
 
     // Handler to open price edit modal
     const handleEditPrice = (laborType: LaborTypeWithPrice) => {
@@ -70,11 +100,6 @@ export function LaborTypesView({
                 organizationId={orgId}
                 currencies={currencies}
                 defaultCurrencyId={laborType.currency_id || defaultCurrencyId}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                    toast.success("Precio actualizado");
-                }}
             />,
             {
                 title: "Establecer Precio",
@@ -82,6 +107,12 @@ export function LaborTypesView({
                 size: "md"
             }
         );
+    };
+
+    // Reset filters
+    const handleResetFilters = () => {
+        setSearchQuery("");
+        setSelectedCategoryId(null);
     };
 
     // EmptyState for no types
@@ -99,7 +130,7 @@ export function LaborTypesView({
                         mode="empty"
                         icon={HardHat}
                         viewName="Tipos de Mano de Obra"
-                        featureDescription="No hay tipos de mano de obra disponibles en el sistema."
+                        featureDescription="Los tipos de mano de obra representan las distintas especialidades y roles laborales que intervienen en tus proyectos de construcción. Desde aquí podés establecer los precios por unidad para cada tipo, que luego se usan en las recetas de las tareas."
                     />
                 </div>
             </>
@@ -108,95 +139,48 @@ export function LaborTypesView({
 
     return (
         <>
-            <Toolbar
-                portalToHeader
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                searchPlaceholder="Buscar por nombre, categoría, nivel o rol..."
-            />
+            {/* Categories Sidebar */}
+            <ContextSidebar title="Categorías">
+                <LaborCategoriesSidebar
+                    categories={categories}
+                    laborCounts={laborCounts}
+                    selectedCategoryId={selectedCategoryId}
+                    onSelectCategory={setSelectedCategoryId}
+                    totalLabor={laborTypes.length}
+                />
+            </ContextSidebar>
 
-            <div className="space-y-2">
-                {filteredTypes.length === 0 ? (
-                    <div className="py-12 flex items-center justify-center">
-                        <ViewEmptyState
-                            mode="no-results"
-                            icon={HardHat}
-                            viewName="tipos de mano de obra"
-                            filterContext="con esa búsqueda"
-                            onResetFilters={() => setSearchQuery("")}
-                        />
-                    </div>
-                ) : (
-                    filteredTypes.map((laborType) => {
-                        const hasPrice = laborType.current_price !== null;
+            {/* Main content */}
+            <ContentLayout variant="wide">
+                <Toolbar
+                    portalToHeader
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    searchPlaceholder="Buscar por nombre, categoría, nivel o rol..."
+                />
 
-                        return (
-                            <ListItem key={laborType.id} variant="card">
-                                <ListItem.Content>
-                                    <ListItem.Title suffix={laborType.unit_symbol ? `(${laborType.unit_symbol})` : undefined}>
-                                        {laborType.name}
-                                    </ListItem.Title>
-                                    <ListItem.Badges>
-                                        {laborType.category_name && (
-                                            <Badge variant="secondary" className="text-xs">
-                                                {laborType.category_name}
-                                            </Badge>
-                                        )}
-                                        {laborType.level_name && (
-                                            <Badge variant="secondary" className="text-xs">
-                                                {laborType.level_name}
-                                            </Badge>
-                                        )}
-                                        {laborType.role_name && (
-                                            <Badge variant="secondary" className="text-xs">
-                                                {laborType.role_name}
-                                            </Badge>
-                                        )}
-                                    </ListItem.Badges>
-                                </ListItem.Content>
-
-                                <ListItem.Trailing>
-                                    {hasPrice ? (
-                                        <>
-                                            <ListItem.Value>
-                                                {laborType.currency_symbol}{' '}
-                                                {laborType.current_price?.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                            </ListItem.Value>
-                                            <ListItem.ValueSubtext>
-                                                por {laborType.unit_name}
-                                            </ListItem.ValueSubtext>
-                                        </>
-                                    ) : (
-                                        <Badge variant="outline" className="text-xs text-muted-foreground">
-                                            Sin precio
-                                        </Badge>
-                                    )}
-                                </ListItem.Trailing>
-
-                                <ListItem.Actions>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleEditPrice(laborType)}>
-                                                {hasPrice ? (
-                                                    <><Pencil className="mr-2 h-4 w-4" /> Editar precio</>
-                                                ) : (
-                                                    <><DollarSign className="mr-2 h-4 w-4" /> Establecer precio</>
-                                                )}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </ListItem.Actions>
-                            </ListItem>
-                        );
-                    })
-                )}
-            </div>
+                <div className="space-y-2">
+                    {filteredTypes.length === 0 ? (
+                        <div className="py-12 flex items-center justify-center">
+                            <ViewEmptyState
+                                mode="no-results"
+                                icon={HardHat}
+                                viewName="tipos de mano de obra"
+                                filterContext="con esos filtros"
+                                onResetFilters={handleResetFilters}
+                            />
+                        </div>
+                    ) : (
+                        filteredTypes.map((laborType) => (
+                            <LaborListItem
+                                key={laborType.id}
+                                laborType={laborType}
+                                onEditPrice={handleEditPrice}
+                            />
+                        ))
+                    )}
+                </div>
+            </ContentLayout>
         </>
     );
 }
-

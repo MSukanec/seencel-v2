@@ -12,7 +12,7 @@ import { getTaskById, getUnits, getTaskDivisions } from "@/features/tasks/querie
 import { getTaskRecipes, getRecipeResources } from "@/features/tasks/actions";
 import { getAdminOrganizations } from "@/features/admin/queries";
 import { getMaterialsForOrganization } from "@/features/materials/queries";
-import { getLaborTypes } from "@/features/labor/actions";
+import { getLaborTypesWithPrices } from "@/features/labor/actions";
 
 // ============================================================================
 // Metadata
@@ -69,7 +69,7 @@ export default async function AdminTaskDetailPage({ params, searchParams }: Task
         const [recipes, catalogMaterials, catalogLaborTypes] = await Promise.all([
             getTaskRecipes(taskId),
             taskOrgId ? getMaterialsForOrganization(taskOrgId) : Promise.resolve([]),
-            getLaborTypes(),
+            taskOrgId ? getLaborTypesWithPrices(taskOrgId) : Promise.resolve([]),
         ]);
 
         // Load resources for each recipe in parallel

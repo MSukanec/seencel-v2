@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskActions, getTaskElements } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskActions, getTaskElements, getTaskCosts } from "@/features/tasks/queries";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
 import { getUnitsForOrganization, getUnitCategories } from "@/features/units/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
@@ -76,7 +76,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             currencies,
             providers,
             catalogUnits,
-            unitCategories
+            unitCategories,
+            taskCostsMap
         ] = await Promise.all([
             getTasksGroupedByDivision(activeOrgId),
             getUnits(),
@@ -91,7 +92,8 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             getCurrencies(),
             getProvidersForProject(activeOrgId),
             getUnitsForOrganization(activeOrgId),
-            getUnitCategories()
+            getUnitCategories(),
+            getTaskCosts(activeOrgId)
         ]);
 
         // Get default currency (first one or USD)
@@ -104,6 +106,20 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                 taskCounts[group.division.id] = group.tasks.length;
             }
         });
+
+        // Enrich tasks with cost data from task_costs_view
+        const enrichedGroupedTasks = groupedTasks.map(group => ({
+            ...group,
+            tasks: group.tasks.map(task => {
+                const cost = taskCostsMap.get(task.id);
+                return {
+                    ...task,
+                    total_price: cost?.unit_cost ?? null,
+                    price_valid_from: cost?.oldest_price_date ?? null,
+                    recipe_count: cost?.recipe_count ?? 0,
+                };
+            }),
+        }));
 
         const activeTab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab : 'tasks';
 
@@ -141,7 +157,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                     <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <TasksCatalogView
-                                groupedTasks={groupedTasks}
+                                groupedTasks={enrichedGroupedTasks}
                                 orgId={activeOrgId}
                                 units={taskUnitsResult.data}
                                 divisions={divisionsResult.data}
@@ -171,14 +187,12 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                         />
                     </TabsContent>
                     <TabsContent value="labor" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <LaborTypesView
-                                laborTypes={laborTypesWithPrices}
-                                currencies={currencies}
-                                orgId={activeOrgId}
-                                defaultCurrencyId={defaultCurrencyId}
-                            />
-                        </ContentLayout>
+                        <LaborTypesView
+                            laborTypes={laborTypesWithPrices}
+                            currencies={currencies}
+                            orgId={activeOrgId}
+                            defaultCurrencyId={defaultCurrencyId}
+                        />
                     </TabsContent>
                     <TabsContent value="units" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">

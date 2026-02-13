@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { ListItem } from "@/components/ui/list-item";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
@@ -275,16 +275,27 @@ export function UnitsCatalogView({
             <div className="space-y-2">
                 {filteredUnits.length === 0 ? (
                     <div className="flex items-center justify-center py-12">
-                        <ViewEmptyState
-                            mode="no-results"
-                            icon={Ruler}
-                            viewName="unidades"
-                            filterContext={searchQuery ? "con ese criterio de búsqueda" : "en esta categoría"}
-                            onResetFilters={() => {
-                                setSearchQuery("");
-                                setSelectedCategoryId(null);
-                            }}
-                        />
+                        {searchQuery || selectedCategoryId ? (
+                            <ViewEmptyState
+                                mode="no-results"
+                                icon={Ruler}
+                                viewName="unidades"
+                                filterContext={searchQuery ? "con ese criterio de búsqueda" : "en esta categoría"}
+                                onResetFilters={() => {
+                                    setSearchQuery("");
+                                    setSelectedCategoryId(null);
+                                }}
+                            />
+                        ) : (
+                            <ViewEmptyState
+                                mode="empty"
+                                icon={Ruler}
+                                viewName="Unidades de Medida"
+                                featureDescription="Las unidades de medida definen cómo se cuantifican tareas, materiales y mano de obra en tus proyectos. Podés crear unidades personalizadas para tu organización o usar las del sistema."
+                                onAction={handleCreateUnit}
+                                actionLabel="Nueva Unidad"
+                            />
+                        )}
                     </div>
                 ) : (
                     filteredUnits.map((unit) => (

@@ -20,13 +20,109 @@ execute FUNCTION set_timestamp ();
 # Vista TASK_COSTS_VIEW:
 
 create view public.task_costs_view as
+with
+  recipe_material_costs as (
+    select
+      trm.recipe_id,
+      tr.task_id,
+      tr.organization_id,
+      sum(
+        trm.total_quantity * COALESCE(mp.unit_price, 0::numeric)
+      ) as mat_cost
+    from
+      task_recipe_materials trm
+      join task_recipes tr on tr.id = trm.recipe_id
+      and tr.is_deleted = false
+      left join lateral (
+        select
+          mp_inner.unit_price
+        from
+          material_prices mp_inner
+        where
+          mp_inner.material_id = trm.material_id
+          and mp_inner.organization_id = tr.organization_id
+          and mp_inner.valid_from <= CURRENT_DATE
+          and (
+            mp_inner.valid_to is null
+            or mp_inner.valid_to >= CURRENT_DATE
+          )
+        order by
+          mp_inner.valid_from desc
+        limit
+          1
+      ) mp on true
+    where
+      trm.is_deleted = false
+    group by
+      trm.recipe_id,
+      tr.task_id,
+      tr.organization_id
+  ),
+  recipe_labor_costs as (
+    select
+      trl.recipe_id,
+      tr.task_id,
+      tr.organization_id,
+      sum(
+        trl.quantity * COALESCE(lp.unit_price, 0::numeric)
+      ) as lab_cost
+    from
+      task_recipe_labor trl
+      join task_recipes tr on tr.id = trl.recipe_id
+      and tr.is_deleted = false
+      left join lateral (
+        select
+          lp_inner.unit_price
+        from
+          labor_prices lp_inner
+        where
+          lp_inner.labor_type_id = trl.labor_type_id
+          and lp_inner.organization_id = tr.organization_id
+          and (
+            lp_inner.valid_to is null
+            or lp_inner.valid_to >= CURRENT_DATE
+          )
+        order by
+          lp_inner.valid_from desc
+        limit
+          1
+      ) lp on true
+    where
+      trl.is_deleted = false
+    group by
+      trl.recipe_id,
+      tr.task_id,
+      tr.organization_id
+  ),
+  recipe_totals as (
+    select
+      tr.id as recipe_id,
+      tr.task_id,
+      tr.organization_id,
+      COALESCE(rmc.mat_cost, 0::numeric) as mat_cost,
+      COALESCE(rlc.lab_cost, 0::numeric) as lab_cost,
+      COALESCE(rmc.mat_cost, 0::numeric) + COALESCE(rlc.lab_cost, 0::numeric) as total_cost
+    from
+      task_recipes tr
+      left join recipe_material_costs rmc on rmc.recipe_id = tr.id
+      left join recipe_labor_costs rlc on rlc.recipe_id = tr.id
+    where
+      tr.is_deleted = false
+  )
 select
-  t.id as task_id,
-  0::numeric(14, 4) as unit_cost,
-  null::numeric(14, 4) as mat_unit_cost,
-  null::numeric(14, 4) as lab_unit_cost
+  rt.task_id,
+  rt.organization_id,
+  round(avg(rt.total_cost), 2)::numeric(14, 4) as unit_cost,
+  round(avg(rt.mat_cost), 2)::numeric(14, 4) as mat_unit_cost,
+  round(avg(rt.lab_cost), 2)::numeric(14, 4) as lab_unit_cost,
+  count(rt.recipe_id)::integer as recipe_count,
+  round(min(rt.total_cost), 2)::numeric(14, 4) as min_cost,
+  round(max(rt.total_cost), 2)::numeric(14, 4) as max_cost
 from
-  tasks t;
+  recipe_totals rt
+group by
+  rt.task_id,
+  rt.organization_id;
 
 # Tabla TASK_DIVISION_ELEMENTS:
 
@@ -685,6 +781,7 @@ select
   t.created_by,
   t.updated_by,
   u.name as unit_name,
+  u.symbol as unit_symbol,
   d.name as division_name,
   ta.name as action_name,
   ta.short_code as action_short_code,

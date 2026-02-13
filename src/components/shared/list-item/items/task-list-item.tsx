@@ -10,7 +10,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Shield } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ResourcePriceDisplay } from "@/components/shared/price-pulse-popover";
 
 // ============================================================================
 // Types
@@ -23,6 +24,7 @@ export interface TaskListItemData {
     code: string | null;
     description: string | null;
     unit_name?: string | null;
+    unit_symbol?: string | null;
     division_name?: string | null;
     is_system: boolean;
     is_published: boolean;
@@ -32,6 +34,10 @@ export interface TaskListItemData {
     is_parametric?: boolean;
     action_name?: string | null;
     element_name?: string | null;
+    // Optional: price info (from recipes)
+    total_price?: number | null;
+    currency_symbol?: string | null;
+    price_valid_from?: string | null;
 }
 
 export interface TaskListItemProps {
@@ -70,6 +76,7 @@ export const TaskListItem = memo(function TaskListItem({
     // System tasks are NEVER editable — they are immutable by design
     const isEditable = canEdit ?? !task.is_system;
     const displayName = task.name || task.custom_name || "Sin nombre";
+    const unitDisplay = task.unit_symbol || task.unit_name || null;
 
     const handleToggle = useCallback(() => {
         onToggleSelect?.(task.id);
@@ -97,25 +104,27 @@ export const TaskListItem = memo(function TaskListItem({
             <ListItem.ColorStrip color={task.is_system ? "system" : "indigo"} />
 
             <ListItem.Content>
+                {/* Line 1: Name + (unit symbol) */}
                 <ListItem.Title className="text-base">
-                    {task.code && (
-                        <span className="text-muted-foreground font-mono text-sm mr-2">
-                            [{task.code}]
+                    {displayName}
+                    {unitDisplay && (
+                        <span className="text-muted-foreground font-normal text-sm ml-2">
+                            ({unitDisplay})
                         </span>
                     )}
-                    {displayName}
                 </ListItem.Title>
+                {/* Line 2: Code + Badges */}
                 <ListItem.Badges>
-                    {/* Unit badge */}
-                    {task.unit_name && (
-                        <Badge variant="secondary" className="text-xs">
-                            {task.unit_name}
-                        </Badge>
-                    )}
                     {/* Division (Rubro) badge */}
                     {task.division_name && (
                         <Badge variant="secondary" className="text-xs">
                             {task.division_name}
+                        </Badge>
+                    )}
+                    {/* Code badge */}
+                    {task.code && (
+                        <Badge variant="secondary" className="text-xs">
+                            {task.code}
                         </Badge>
                     )}
                     {/* Element badge (parametric tasks) */}
@@ -130,17 +139,6 @@ export const TaskListItem = memo(function TaskListItem({
                             {task.action_name}
                         </Badge>
                     )}
-                    {/* System badge — always visible for system tasks */}
-                    {task.is_system ? (
-                        <Badge variant="outline" className="text-xs gap-1 border-amber-500/30 text-amber-500">
-                            <Shield className="h-3 w-3" />
-                            Sistema
-                        </Badge>
-                    ) : (
-                        <Badge variant="secondary" className="text-xs">
-                            Propia
-                        </Badge>
-                    )}
                     {/* Draft badge */}
                     {!task.is_published && (
                         <Badge variant="secondary" className="text-xs text-muted-foreground">
@@ -149,6 +147,20 @@ export const TaskListItem = memo(function TaskListItem({
                     )}
                 </ListItem.Badges>
             </ListItem.Content>
+
+            {/* Right side: Price + Unit below */}
+            <div className="flex flex-col items-end mr-2 min-w-[100px]">
+                <ResourcePriceDisplay
+                    price={task.total_price}
+                    currencySymbol={task.currency_symbol || "$"}
+                    priceValidFrom={task.price_valid_from}
+                />
+                {unitDisplay && (
+                    <span className="text-xs text-muted-foreground">
+                        {task.unit_name || unitDisplay}
+                    </span>
+                )}
+            </div>
 
             {/* Actions dropdown */}
             {isEditable && (onEdit || onDelete) && (

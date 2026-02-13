@@ -103,6 +103,7 @@ export interface LaborTypeWithPrice extends LaborType {
     currency_id: string | null;
     currency_code: string | null;
     currency_symbol: string | null;
+    price_valid_from: string | null;
 }
 
 // Extended type with joined data for views

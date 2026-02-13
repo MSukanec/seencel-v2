@@ -30,6 +30,7 @@ export interface Task {
 // Extended task with joined data for display (matches tasks_view)
 export interface TaskView extends Task {
     unit_name?: string;
+    unit_symbol?: string;
     division_name?: string;
     division_color?: string;
     // Parametric fields
@@ -42,6 +43,10 @@ export interface TaskView extends Task {
     action_name?: string | null;
     action_short_code?: string | null;
     element_name?: string | null;
+    // Cost info (from task_costs_view, enriched by page)
+    total_price?: number | null;
+    price_valid_from?: string | null;
+    recipe_count?: number;
 }
 
 export interface TaskDivision {
