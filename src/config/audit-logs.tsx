@@ -65,9 +65,9 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
         icon: Users,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
-    'contact_types': {
-        label: 'un tipo de contacto',
-        singularLabel: 'tipo de contacto',
+    'contact_categories': {
+        label: 'una categoría de contacto',
+        singularLabel: 'categoría de contacto',
         icon: Tag,
         color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
     },
@@ -489,4 +489,57 @@ export const actionConfigs: Record<string, ActionConfig> = {
 export const getActionVerb = (action: string): string => {
     const parts = action.split('_');
     return parts[0] || action;
+};
+
+// ============================================================================
+// MODULE ROUTES — Maps target_table → dashboard route for deep linking
+// ============================================================================
+// Used by ActivityWidget to navigate to the relevant page on click.
+// Only tables that have a corresponding dashboard page are mapped.
+// ============================================================================
+
+export const moduleRoutes: Record<string, string> = {
+    'projects': '/organization',
+    'project_data': '/organization',
+    'tasks': '/organization/tasks',
+    'construction_tasks': '/organization/tasks',
+    'materials': '/organization/catalog',
+    'material_categories': '/organization/catalog',
+    'material_purchases': '/organization/materials',
+    'material_payments': '/organization/materials',
+    'general_costs': '/organization/general-costs',
+    'general_costs_payments': '/organization/general-costs',
+    'general_cost_categories': '/organization/general-costs',
+    'financial_movements': '/organization/finance',
+    'client_payments': '/organization/clients',
+    'clients': '/organization/clients',
+    'client_commitments': '/organization/clients',
+    'contacts': '/organization/contacts',
+    'subcontracts': '/organization/subcontracts',
+    'subcontract_payments': '/organization/subcontracts',
+    'quotes': '/organization/quotes',
+    'quote_items': '/organization/quotes',
+    'change_orders': '/organization/quotes',
+    'kanban_boards': '/organization/planner',
+    'kanban_cards': '/organization/planner',
+    'kanban_lists': '/organization/planner',
+    'calendar_events': '/organization/planner',
+    'site_logs': '/organization/site-logs',
+    'site_log_types': '/organization/site-logs',
+    'organization_members': '/organization/team',
+    'organization_invitations': '/organization/team',
+    'design_documents': '/organization/files',
+    'media_files': '/organization/files',
+    'media_links': '/organization/files',
+    'capital_contributions': '/organization/capital',
+    'capital_participants': '/organization/capital',
+    'equipment': '/organization/catalog',
+    'equipment_categories': '/organization/catalog',
+    'labor_categories': '/organization/catalog',
+    'labor_levels': '/organization/catalog',
+    'labor_roles': '/organization/catalog',
+    'labor_types': '/organization/catalog',
+    'units': '/organization/catalog',
+    'wallets': '/organization/finance',
+    'currencies': '/organization/finance',
 };

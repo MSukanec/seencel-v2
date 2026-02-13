@@ -58,8 +58,8 @@ export function HeaderOrgProjectSelector() {
     const [open, setOpen] = React.useState(false);
     const pathname = usePathname();
 
-    // Get data from the same hook used by sidebar
-    const { currentOrg, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useSidebarData();
+    // Get org/project data
+    const { currentOrg, currentProject, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useSidebarData();
     const showProjectAvatar = useLayoutStore(s => s.sidebarProjectAvatars);
     const activeProjectId = useActiveProjectId();
     const { setActiveProjectId } = useLayoutActions();
@@ -67,6 +67,20 @@ export function HeaderOrgProjectSelector() {
     // Only show in org/project routes
     const isOrgOrProject = pathname.includes('/organization') || pathname.includes('/organizacion') ||
         pathname.includes('/project') || pathname.includes('/proyecto');
+
+    // Sync project selection when navigating to /project/[id] via URL
+    React.useEffect(() => {
+        const projectMatch = pathname.match(/\/project\/([^/]+)/);
+        if (projectMatch) {
+            const urlProjectId = projectMatch[1];
+            if (urlProjectId && currentProject?.id !== urlProjectId) {
+                const projectInList = projects.find((p: any) => p.id === urlProjectId);
+                if (projectInList) {
+                    sidebarProjectChange(urlProjectId);
+                }
+            }
+        }
+    }, [pathname, currentProject?.id, projects, sidebarProjectChange]);
 
     if (!isOrgOrProject || !currentOrg) return null;
 

@@ -3,7 +3,17 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useOrganization } from "@/stores/organization-store";
-import { Project } from "@/components/layout/dashboard/sidebar/buttons";
+
+// Project type used by the org/project selector
+interface Project {
+    id: string;
+    name: string;
+    image_path?: string | null;
+    color?: string | null;
+    custom_color_hex?: string | null;
+    use_custom_color?: boolean;
+    status?: string | null;
+}
 
 // Extended Organization type with founder info
 interface Organization {

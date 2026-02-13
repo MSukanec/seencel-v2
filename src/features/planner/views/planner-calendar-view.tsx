@@ -14,14 +14,12 @@ import { Project } from "@/types/project";
 
 interface PlannerCalendarViewProps {
     organizationId: string;
-    projectId?: string | null;
     events: CalendarEvent[];
     projects?: Project[];
 }
 
 export function PlannerCalendarView({
     organizationId,
-    projectId,
     events,
     projects
 }: PlannerCalendarViewProps) {
@@ -29,7 +27,6 @@ export function PlannerCalendarView({
         <div className="h-full relative flex flex-col">
             <PlannerCalendar
                 organizationId={organizationId}
-                projectId={projectId}
                 events={events}
                 projects={projects}
             />

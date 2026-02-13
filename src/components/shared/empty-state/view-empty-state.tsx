@@ -1,6 +1,6 @@
 "use client";
 
-import { LucideIcon, BookOpen, RotateCcw, Plus } from "lucide-react";
+import { LucideIcon, BookOpen, RotateCcw, Plus, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,9 @@ interface ViewEmptyStateProps {
      * Mode determines which variant to display:
      * - "empty": No data exists (initial state)
      * - "no-results": Filters applied but no matches
+     * - "context-empty": Data exists in org but not in the selected project
      */
-    mode: "empty" | "no-results";
+    mode: "empty" | "no-results" | "context-empty";
 
     /** Icon representing the page/feature */
     icon: LucideIcon;
@@ -28,12 +29,12 @@ interface ViewEmptyStateProps {
     featureDescription?: React.ReactNode;
 
     /**
-     * Only for mode="empty": Primary action callback
+     * Only for mode="empty" and "context-empty": Primary action callback
      */
     onAction?: () => void;
 
     /**
-     * Only for mode="empty": Label for the action button
+     * Only for mode="empty" and "context-empty": Label for the action button
      */
     actionLabel?: string;
 
@@ -47,7 +48,7 @@ interface ViewEmptyStateProps {
      * Should be a route defined in i18n/routing.ts (e.g., "/docs/materiales")
      * Opens in a new tab by default
      */
-    docsPath?: "/docs/materiales" | "/docs/contactos" | "/docs/finanzas" | "/docs/tareas" | "/docs/mano-de-obra" | string;
+    docsPath?: "/docs/materiales" | "/docs/contactos" | "/docs/finanzas" | "/docs/tareas" | "/docs/mano-de-obra" | "/docs/documentacion/introduccion" | string;
 
     /**
      * Only for mode="no-results": Callback to reset filters
@@ -59,6 +60,16 @@ interface ViewEmptyStateProps {
      */
     filterContext?: string;
 
+    /**
+     * Only for mode="context-empty": Name of the active project
+     */
+    projectName?: string;
+
+    /**
+     * Only for mode="context-empty": Callback to switch to org context (clear project filter)
+     */
+    onSwitchToOrg?: () => void;
+
     /** Show "Coming Soon" badge */
     comingSoon?: boolean;
 
@@ -68,9 +79,10 @@ interface ViewEmptyStateProps {
 /**
  * ViewEmptyState - Standardized empty state component
  * 
- * Two modes:
+ * Three modes:
  * 1. "empty" - When no data exists in the view (onboarding state)
  * 2. "no-results" - When filters don't find matches
+ * 3. "context-empty" - When data exists in org but not in the selected project
  * 
  * @example
  * // Empty view (no data)
@@ -92,6 +104,18 @@ interface ViewEmptyStateProps {
  *   viewName="Materiales"
  *   onResetFilters={handleReset}
  * />
+ * 
+ * @example
+ * // Context empty (project has no data)
+ * <ViewEmptyState
+ *   mode="context-empty"
+ *   icon={FolderOpen}
+ *   viewName="documentos"
+ *   projectName="Centro de Día Caldén"
+ *   onAction={handleCreate}
+ *   actionLabel="Subir Documento"
+ *   onSwitchToOrg={() => setActiveProjectId(null)}
+ * />
  */
 export function ViewEmptyState({
     mode,
@@ -104,20 +128,29 @@ export function ViewEmptyState({
     docsPath,
     onResetFilters,
     filterContext,
+    projectName,
+    onSwitchToOrg,
     comingSoon = false,
     className,
 }: ViewEmptyStateProps) {
     const isEmptyMode = mode === "empty";
+    const isContextEmpty = mode === "context-empty";
 
     // Titles
-    const title = isEmptyMode ? viewName : "Sin resultados";
+    const title = isEmptyMode
+        ? viewName
+        : isContextEmpty
+            ? `No hay ${viewName.toLowerCase()} en ${projectName || "este proyecto"}`
+            : "Sin resultados";
 
     // Descriptions
     const description = isEmptyMode
         ? featureDescription
-        : filterContext
-            ? `No se encontraron ${viewName.toLowerCase()} ${filterContext}.`
-            : `No se encontraron ${viewName.toLowerCase()} con los filtros aplicados.`;
+        : isContextEmpty
+            ? `Este proyecto aún no tiene ${viewName.toLowerCase()} vinculados. Podés crear uno nuevo o ver todos los ${viewName.toLowerCase()} de la organización.`
+            : filterContext
+                ? `No se encontraron ${viewName.toLowerCase()} ${filterContext}.`
+                : `No se encontraron ${viewName.toLowerCase()} con los filtros aplicados.`;
 
     return (
         <div
@@ -199,6 +232,24 @@ export function ViewEmptyState({
                             </Button>
                         )}
                     </>
+                ) : isContextEmpty ? (
+                    <>
+                        {/* Primary Action (create in this project) */}
+                        {onAction && actionLabel && (
+                            <Button onClick={onAction}>
+                                <ActionIcon className="mr-2 h-4 w-4" />
+                                {actionLabel}
+                            </Button>
+                        )}
+
+                        {/* Switch to Org context */}
+                        {onSwitchToOrg && (
+                            <Button variant="outline" onClick={onSwitchToOrg}>
+                                <ArrowRight className="mr-2 h-4 w-4" />
+                                Ver todos
+                            </Button>
+                        )}
+                    </>
                 ) : (
                     /* Reset Filters */
                     onResetFilters && (
@@ -214,3 +265,4 @@ export function ViewEmptyState({
 }
 
 export default ViewEmptyState;
+

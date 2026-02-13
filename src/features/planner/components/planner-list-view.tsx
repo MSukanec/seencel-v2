@@ -20,9 +20,11 @@ interface PlannerListViewProps {
     onCreateEvent?: () => void;
     /** Callback to reset filters */
     onResetFilters?: () => void;
+    /** Optimistic delete callback */
+    onOptimisticDeleteEvent?: (eventId: string) => void;
 }
 
-export function PlannerListView({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters }: PlannerListViewProps) {
+export function PlannerListView({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters, onOptimisticDeleteEvent }: PlannerListViewProps) {
     // Group events by date category
     const groupedEvents = React.useMemo(() => {
         const sorted = [...events].sort((a, b) =>
@@ -181,6 +183,7 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                                         <PlannerEventActions
                                             event={event}
                                             onEdit={() => onEventClick?.(event)}
+                                            onOptimisticDelete={onOptimisticDeleteEvent}
                                             className="h-8 w-8 rounded-full hover:bg-muted"
                                         />
                                     </div>

@@ -1,31 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createContact, updateContact } from "@/actions/contacts";
-import { ContactWithRelations, ContactType } from "@/types/contact";
+import { ContactWithRelations, ContactCategory, ContactType } from "@/types/contact";
 import { useModal } from "@/stores/modal-store";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { TextField, NotesField, SegmentedField } from "@/components/shared/forms/fields";
+import { FormGroup } from "@/components/ui/form-group";
+import { FactoryLabel } from "@/components/shared/forms/fields/field-wrapper";
+import { Label } from "@/components/ui/label";
+import { User, Building2, ChevronDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Combobox } from "@/components/ui/combobox";
 
 import { ContactAvatarManager } from "@/features/contact/components/contact-avatar-manager";
 
-interface ContactFormProps {
-    organizationId: string;
-    contactTypes: ContactType[];
-    initialData?: ContactWithRelations;
-    onSuccess?: () => void;
+const CONTACT_TYPE_OPTIONS = [
+    { value: "person" as const, label: "Persona", icon: User },
+    { value: "company" as const, label: "Empresa", icon: Building2 },
+];
+
+/** Simplified company contact for the combobox */
+export interface CompanyOption {
+    id: string;
+    name: string;
 }
 
-export function ContactForm({ organizationId, contactTypes, initialData, onSuccess }: ContactFormProps) {
+interface ContactFormProps {
+    organizationId: string;
+    contactCategories: ContactCategory[];
+    /** Available company contacts for linking */
+    companyContacts?: CompanyOption[];
+    initialData?: ContactWithRelations;
+    /** 🚀 Optimistic callback: parent handles server call + optimistic UI */
+    onOptimisticSubmit?: (data: any, categoryIds: string[]) => void;
+}
+
+export function ContactForm({ organizationId, contactCategories, companyContacts = [], initialData, onOptimisticSubmit }: ContactFormProps) {
     const { closeModal } = useModal();
-    const [isLoading, setIsLoading] = useState(false);
+    const [contactType, setContactType] = useState<ContactType>(initialData?.contact_type || "person");
+    const [showMore, setShowMore] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -34,59 +50,93 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
         email: initialData?.email || "",
         phone: initialData?.phone || "",
         company_name: initialData?.company_name || "",
+        company_id: initialData?.company_id || "",
+        national_id: initialData?.national_id || "",
         location: initialData?.location || "",
         notes: initialData?.notes || "",
         image_url: initialData?.image_url || "",
-        typeIds: initialData?.contact_types ? initialData.contact_types.map(t => t.id) : [] as string[]
+        categoryIds: initialData?.contact_categories ? initialData.contact_categories.map(c => c.id) : [] as string[]
     });
 
-    const toggleType = (typeId: string) => {
+    const isPerson = contactType === "person";
+
+    // Filter out current contact from company options (avoid self-reference)
+    const availableCompanies = useMemo(() => {
+        return companyContacts.filter(c => c.id !== initialData?.id);
+    }, [companyContacts, initialData?.id]);
+
+    // Combobox options for company selection
+    const companyOptions = useMemo(() => {
+        return availableCompanies.map(c => ({
+            value: c.id,
+            label: c.name,
+            fallback: c.name.substring(0, 2).toUpperCase(),
+        }));
+    }, [availableCompanies]);
+
+    const toggleCategory = (categoryId: string) => {
         setFormData(prev => {
-            const exists = prev.typeIds.includes(typeId);
-            if (exists) return { ...prev, typeIds: prev.typeIds.filter(id => id !== typeId) };
-            return { ...prev, typeIds: [...prev.typeIds, typeId] };
+            const exists = prev.categoryIds.includes(categoryId);
+            if (exists) return { ...prev, categoryIds: prev.categoryIds.filter(id => id !== categoryId) };
+            return { ...prev, categoryIds: [...prev.categoryIds, categoryId] };
         });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-
-        try {
-            const dataToSave = {
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                full_name: `${formData.first_name} ${formData.last_name}`.trim(),
-                email: formData.email.trim() || null,
-                phone: formData.phone || null,
-                company_name: formData.company_name || null,
-                location: formData.location || null,
-                notes: formData.notes || null,
-                image_url: formData.image_url || null,
-            };
-
-            if (initialData) {
-                await updateContact(initialData.id, dataToSave, formData.typeIds);
-                toast.success("Contacto actualizado correctamente");
-            } else {
-                await createContact(organizationId, dataToSave, formData.typeIds);
-                toast.success("Contacto creado correctamente");
-            }
-
-            if (onSuccess) onSuccess();
-            closeModal();
-
-        } catch (error) {
-            console.error("Failed to save contact", error);
-            toast.error("Error al guardar el contacto");
-        } finally {
-            setIsLoading(false);
+    const handleContactTypeChange = (type: ContactType) => {
+        setContactType(type);
+        if (type === "company") {
+            setFormData(prev => ({ ...prev, last_name: "", company_name: "", company_id: "" }));
         }
     };
 
+    const handleCompanySelect = (companyId: string) => {
+        if (companyId === formData.company_id) {
+            // Deselect
+            setFormData(prev => ({ ...prev, company_id: "", company_name: "" }));
+        } else {
+            const company = availableCompanies.find(c => c.id === companyId);
+            setFormData(prev => ({
+                ...prev,
+                company_id: companyId,
+                company_name: company?.name || "",
+            }));
+        }
+    };
+
+    const handleClearCompany = () => {
+        setFormData(prev => ({ ...prev, company_id: "", company_name: "" }));
+    };
+
+    // 🚀 OPTIMISTIC: Build payload and delegate to parent — no server call here
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const fullName = isPerson
+            ? `${formData.first_name} ${formData.last_name}`.trim()
+            : formData.first_name.trim();
+
+        const dataToSave = {
+            contact_type: contactType,
+            first_name: formData.first_name,
+            last_name: isPerson ? formData.last_name : null,
+            full_name: fullName,
+            email: formData.email.trim() || null,
+            phone: formData.phone || null,
+            company_id: isPerson && formData.company_id ? formData.company_id : null,
+            company_name: isPerson ? (formData.company_name || null) : null,
+            national_id: formData.national_id.trim() || null,
+            location: formData.location || null,
+            notes: formData.notes || null,
+            image_url: formData.image_url || null,
+        };
+
+        // Delegate to parent — parent handles optimistic update + server call
+        onOptimisticSubmit?.(dataToSave, formData.categoryIds);
+    };
+
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-full min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
 
                 {/* Avatar Section */}
                 <div className="flex justify-center pb-2">
@@ -97,110 +147,181 @@ export function ContactForm({ organizationId, contactTypes, initialData, onSucce
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="first_name">Nombre</Label>
-                        <Input
-                            id="first_name"
-                            value={formData.first_name}
-                            onChange={e => setFormData({ ...formData, first_name: e.target.value })}
-                            placeholder="Ej. Juan"
-                            required
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="last_name">Apellido</Label>
-                        <Input
-                            id="last_name"
-                            value={formData.last_name}
-                            onChange={e => setFormData({ ...formData, last_name: e.target.value })}
-                            placeholder="Ej. Pérez"
-                        />
-                    </div>
-                </div>
+                {/* Contact Type Toggle - Below Avatar, Full Width */}
+                <SegmentedField
+                    value={contactType}
+                    onChange={handleContactTypeChange}
+                    options={CONTACT_TYPE_OPTIONS}
+                />
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={e => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="juan@ejemplo.com"
+                {/* Name Fields */}
+                {isPerson ? (
+                    <div className="grid grid-cols-2 gap-4">
+                        <TextField
+                            label="Nombre"
+                            value={formData.first_name}
+                            onChange={(val) => setFormData({ ...formData, first_name: val })}
+                            placeholder="Ej. Juan"
+                            required={true}
+                            autoFocus
+                        />
+                        <TextField
+                            label="Apellido"
+                            value={formData.last_name}
+                            onChange={(val) => setFormData({ ...formData, last_name: val })}
+                            placeholder="Ej. Pérez"
+                            required={false}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono</Label>
+                ) : (
+                    <TextField
+                        label="Nombre de la Empresa"
+                        value={formData.first_name}
+                        onChange={(val) => setFormData({ ...formData, first_name: val })}
+                        placeholder="Ej. Constructora ABC"
+                        required={true}
+                        autoFocus
+                    />
+                )}
+
+                {/* Contact Info */}
+                <div className="grid grid-cols-2 gap-4">
+                    <TextField
+                        label="Email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(val) => setFormData({ ...formData, email: val })}
+                        placeholder={isPerson ? "juan@ejemplo.com" : "info@empresa.com"}
+                        required={false}
+                    />
+                    <FormGroup label={<FactoryLabel label="Teléfono" />} required={false}>
                         <PhoneInput
-                            id="phone"
                             defaultCountry="AR"
                             value={formData.phone}
                             onChange={(value) => setFormData({ ...formData, phone: value || "" })}
                             placeholder="+54 9 11..."
                         />
-                    </div>
+                    </FormGroup>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="company">Empresa</Label>
-                        <Input
-                            id="company"
-                            value={formData.company_name}
-                            onChange={e => setFormData({ ...formData, company_name: e.target.value })}
-                            placeholder="Nombre de la empresa"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="location">Ubicación</Label>
-                        <Input
-                            id="location"
-                            value={formData.location}
-                            onChange={e => setFormData({ ...formData, location: e.target.value })}
-                            placeholder="Ciudad, País"
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label>Etiquetas / Tipos</Label>
-                    <div className="flex flex-wrap gap-2 border rounded-md p-3 bg-muted/20">
-                        {contactTypes.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">No hay tipos disponibles.</p>
-                        ) : (
-                            contactTypes.map(type => (
-                                <div key={type.id} className="flex items-center space-x-2 bg-background border px-2 py-1 rounded-sm">
-                                    <Checkbox
-                                        id={`type-${type.id}`}
-                                        checked={formData.typeIds.includes(type.id)}
-                                        onCheckedChange={() => toggleType(type.id)}
+                {/* Company field (only for person) */}
+                {isPerson && (
+                    <FormGroup label={<FactoryLabel label="Empresa" />} required={false}>
+                        {companyContacts.length > 0 ? (
+                            <div className="space-y-2">
+                                {formData.company_id ? (
+                                    /* Linked company - show selected with clear button */
+                                    <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-muted/30">
+                                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <span className="text-sm flex-1 truncate">
+                                            {availableCompanies.find(c => c.id === formData.company_id)?.name || formData.company_name}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={handleClearCompany}
+                                            className="text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    /* Combobox to select or type */
+                                    <Combobox
+                                        value={formData.company_id}
+                                        onValueChange={handleCompanySelect}
+                                        options={companyOptions}
+                                        placeholder="Seleccionar empresa..."
+                                        searchPlaceholder="Buscar empresa..."
+                                        emptyMessage="No hay empresas registradas"
                                     />
-                                    <Label htmlFor={`type-${type.id}`} className="text-sm font-normal cursor-pointer">
-                                        {type.name}
-                                    </Label>
-                                </div>
-                            ))
+                                )}
+                                {!formData.company_id && (
+                                    <input
+                                        type="text"
+                                        value={formData.company_name}
+                                        onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                                        placeholder="O escribí el nombre manualmente"
+                                        className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none h-9 dark:bg-input/30"
+                                    />
+                                )}
+                            </div>
+                        ) : (
+                            /* No company contacts - simple text field */
+                            <input
+                                type="text"
+                                value={formData.company_name}
+                                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                                placeholder="Nombre de la empresa"
+                                className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none h-9 dark:bg-input/30"
+                            />
                         )}
-                    </div>
-                </div>
+                    </FormGroup>
+                )}
 
-                <div className="space-y-2">
-                    <Label htmlFor="notes">Notas</Label>
-                    <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                        className="min-h-[100px]"
-                        placeholder="Información adicional..."
-                    />
-                </div>
+                {/* Collapsible: Additional Fields */}
+                <Collapsible open={showMore} onOpenChange={setShowMore}>
+                    <CollapsibleTrigger asChild>
+                        <button
+                            type="button"
+                            className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full py-2"
+                        >
+                            <ChevronDown className={cn(
+                                "h-4 w-4 transition-transform",
+                                showMore && "rotate-180"
+                            )} />
+                            {showMore ? "Ver menos" : "Ver más campos"}
+                        </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-1">
+                        {/* Categories */}
+                        <FormGroup label={<FactoryLabel label="Categorías" />} required={false}>
+                            <div className="flex flex-wrap gap-2 border rounded-md p-3 bg-muted/20">
+                                {contactCategories.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground">No hay categorías disponibles.</p>
+                                ) : (
+                                    contactCategories.map(category => (
+                                        <div key={category.id} className="flex items-center space-x-2 bg-background border px-2 py-1 rounded-sm">
+                                            <Checkbox
+                                                id={`category-${category.id}`}
+                                                checked={formData.categoryIds.includes(category.id)}
+                                                onCheckedChange={() => toggleCategory(category.id)}
+                                            />
+                                            <Label htmlFor={`category-${category.id}`} className="text-sm font-normal cursor-pointer">
+                                                {category.name}
+                                            </Label>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </FormGroup>
+
+                        <TextField
+                            label={isPerson ? "Documento / ID" : "ID Fiscal"}
+                            value={formData.national_id}
+                            onChange={(val) => setFormData({ ...formData, national_id: val })}
+                            placeholder={isPerson ? "Ej. DNI, CUIT, Pasaporte..." : "Ej. CUIT, RFC, NIT, EIN..."}
+                            required={false}
+                        />
+                        <TextField
+                            label="Ubicación"
+                            value={formData.location}
+                            onChange={(val) => setFormData({ ...formData, location: val })}
+                            placeholder="Ciudad, País"
+                            required={false}
+                        />
+                        <NotesField
+                            value={formData.notes}
+                            onChange={(val) => setFormData({ ...formData, notes: val })}
+                            placeholder="Información adicional..."
+                            rows={4}
+                        />
+                    </CollapsibleContent>
+                </Collapsible>
+
             </div>
 
             <FormFooter
                 onCancel={closeModal}
-                isLoading={isLoading}
                 submitLabel={initialData ? "Guardar Cambios" : "Crear Contacto"}
                 className="-mx-4 -mb-4 mt-6"
             />

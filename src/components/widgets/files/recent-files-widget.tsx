@@ -8,6 +8,7 @@ import { BentoCard } from "@/components/widgets/grid/bento-card";
 import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import type { WidgetProps } from "@/components/widgets/grid/types";
 import { getRecentFiles, type RecentFileItem } from "@/actions/widget-actions";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 // ============================================================================
 // RECENT FILES WIDGET (Mini Gallery)
@@ -100,7 +101,11 @@ function useAdaptiveGrid() {
 
 export function RecentFilesWidget({ config, initialData }: WidgetProps) {
     const fileType = config?.fileType || "all";
-    const scope = config?.scope || "organization";
+    const configScope = config?.scope || "organization";
+    const activeProjectId = useActiveProjectId();
+
+    // Use activeProjectId as scope override when a project is selected
+    const effectiveScope = activeProjectId || configScope;
 
     const [files, setFiles] = useState<RecentFileItem[] | null>(
         initialData ?? null
@@ -108,14 +113,15 @@ export function RecentFilesWidget({ config, initialData }: WidgetProps) {
     const isFirstRender = useRef(true);
     const { containerRef, cols, rows, ready } = useAdaptiveGrid();
 
-    // Fetch on mount (if no initialData) and re-fetch when config changes
+    // Fetch on mount + re-fetch when config or project context changes
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
-            if (initialData) return;
+            if (!activeProjectId && initialData) return;
         }
-        getRecentFiles(fileType, scope, MAX_ITEMS).then(setFiles);
-    }, [fileType, scope, initialData]);
+        setFiles(null);
+        getRecentFiles(fileType, effectiveScope, MAX_ITEMS).then(setFiles);
+    }, [fileType, effectiveScope, initialData, activeProjectId]);
 
     const subtitle = FILE_TYPE_LABELS[fileType] || "Archivos";
     const visibleCount = cols * rows;
@@ -157,7 +163,10 @@ export function RecentFilesWidget({ config, initialData }: WidgetProps) {
                     <WidgetEmptyState
                         icon={FolderOpen}
                         title={`Sin ${subtitle.toLowerCase()}`}
-                        description="Subí archivos para verlos aquí"
+                        description={activeProjectId
+                            ? "No hay archivos subidos para este proyecto"
+                            : "Subí archivos para verlos aquí"
+                        }
                         href="/organization/files"
                         actionLabel="Ir a Documentación"
                     />

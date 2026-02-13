@@ -34,12 +34,13 @@ interface KanbanCardItemProps {
     members?: KanbanMember[];
     onClick?: () => void;
     isDragging?: boolean;
+    /** Optimistic delete callback — removes card from parent list instantly */
+    onOptimisticDelete?: (cardId: string) => void;
 }
 
-export function KanbanCardItem({ card, members = [], onClick, isDragging }: KanbanCardItemProps) {
+export function KanbanCardItem({ card, members = [], onClick, isDragging, onOptimisticDelete }: KanbanCardItemProps) {
     const [isPending, startTransition] = useTransition();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
 
     // 🚀 OPTIMISTIC UI: Instant archive/restore visual feedback
     const [optimisticCard, setOptimisticCard] = useOptimistic(
@@ -78,15 +79,16 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging }: Kanb
     };
 
     const confirmDelete = async () => {
-        setIsDeleting(true);
+        // Optimistic: remove from UI immediately
+        setShowDeleteDialog(false);
+        onOptimisticDelete?.(card.id);
+
         try {
             await deleteCard(card.id);
             toast.success("Tarjeta eliminada");
-            setShowDeleteDialog(false);
         } catch (error) {
             toast.error("Error al eliminar la tarjeta");
-        } finally {
-            setIsDeleting(false);
+            // Parent will rollback via revalidation
         }
     };
     return (
@@ -286,7 +288,6 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging }: Kanb
                 onConfirm={confirmDelete}
                 title="Eliminar Tarjeta"
                 description={`¿Estás seguro de eliminar la tarjeta "${card.title}"? Esta acción no se puede deshacer.`}
-                isDeleting={isDeleting}
             />
         </>
     );

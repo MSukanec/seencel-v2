@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { useMultiSelect } from "@/hooks/use-multi-select";
 import { useModal } from "@/stores/modal-store";
+import { useActiveProjectId, useLayoutStore } from "@/stores/layout-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +58,6 @@ import {
     MessageCircle,
     Building2,
     MoreHorizontal,
-    FolderKanban,
 } from "lucide-react";
 import { FileItem, Folder } from "../types";
 import { FileListItem } from "@/components/shared/list-item";
@@ -599,10 +599,10 @@ interface FileGalleryProps {
 export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb = 50, onRefresh, projects = [] }: FileGalleryProps) {
     const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
     const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
-    const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
     const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
     const [viewMode, setViewMode] = useState<ViewMode>("explore");
     const [searchQuery, setSearchQuery] = useState("");
+    const activeProjectId = useActiveProjectId();
     const [lightboxIndex, setLightboxIndex] = useState(-1);
     const [deleteTarget, setDeleteTarget] = useState<FileItem | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -670,18 +670,13 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
                 if (fileDate > endOfTo) return false;
             }
         }
-        // Project filter
-        if (selectedProjects.size > 0) {
+        // Project context filter (automatic from header selector)
+        if (activeProjectId) {
             const pid = item.project_id;
-            if (selectedProjects.has("__org__")) {
-                // "Organización" selected — show files without project
-                if (pid && !selectedProjects.has(pid)) return false;
-            } else {
-                if (!pid || !selectedProjects.has(pid)) return false;
-            }
+            if (pid !== activeProjectId) return false;
         }
         return true;
-    }), [optimisticFiles, searchQuery, selectedTypes, selectedModules, selectedProjects, dateRange]);
+    }), [optimisticFiles, searchQuery, selectedTypes, selectedModules, activeProjectId, dateRange]);
 
     // Compute available modules from data
     const moduleFilterOptions = useMemo(() => {
@@ -720,27 +715,7 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
         return map;
     }, [projects]);
 
-    // Project filter options (dynamic from actual file data)
-    const projectFilterOptions = useMemo(() => {
-        const projectCounts = new Map<string, number>();
-        let orgCount = 0;
-        for (const item of optimisticFiles) {
-            if (item.project_id) {
-                projectCounts.set(item.project_id, (projectCounts.get(item.project_id) || 0) + 1);
-            } else {
-                orgCount++;
-            }
-        }
-        const options: { label: string; value: string; icon?: any }[] = [];
-        if (orgCount > 0) {
-            options.push({ label: "Organización", value: "__org__", icon: Building2 });
-        }
-        for (const [pid, count] of projectCounts.entries()) {
-            const name = projectNameMap[pid] || "Proyecto";
-            options.push({ label: name, value: pid, icon: FolderKanban });
-        }
-        return options;
-    }, [optimisticFiles, projectNameMap]);
+
 
     // Multi-select (on filteredFiles)
     const multiSelect = useMultiSelect({
@@ -817,22 +792,12 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
         });
     };
 
-    const handleProjectSelect = (value: string) => {
-        setSelectedProjects((prev) => {
-            const next = new Set(prev);
-            if (next.has(value)) next.delete(value);
-            else next.add(value);
-            return next;
-        });
-    };
-
-    const hasFilters = searchQuery !== "" || selectedTypes.size > 0 || selectedModules.size > 0 || selectedProjects.size > 0 || !!dateRange;
+    const hasFilters = searchQuery !== "" || selectedTypes.size > 0 || selectedModules.size > 0 || !!dateRange;
 
     const handleResetFilters = () => {
         setSearchQuery("");
         setSelectedTypes(new Set());
         setSelectedModules(new Set());
-        setSelectedProjects(new Set());
         setDateRange(undefined);
     };
 
@@ -920,22 +885,13 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
                             value={dateRange}
                             onChange={setDateRange}
                         />
-                        {projectFilterOptions.length > 1 && (
-                            <FacetedFilter
-                                title="Scope"
-                                options={projectFilterOptions}
-                                selectedValues={selectedProjects}
-                                onSelect={handleProjectSelect}
-                                onClear={() => setSelectedProjects(new Set())}
-                            />
-                        )}
                     </div>
                 }
             />
 
             {/* Content */}
             <div className="flex-1 flex flex-col min-h-0">
-                {/* Empty state: no files at all */}
+                {/* Empty state: no files at all (org-wide) */}
                 {optimisticFiles.length === 0 ? (
                     <ViewEmptyState
                         mode="empty"
@@ -947,7 +903,20 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
                         actionIcon={Upload}
                         docsPath="/docs/documentacion/introduccion"
                     />
+                ) : filteredFiles.length === 0 && activeProjectId && !hasFilters ? (
+                    /* Context empty: project has no files but org does */
+                    <ViewEmptyState
+                        mode="context-empty"
+                        icon={FolderOpen}
+                        viewName="documentos"
+                        projectName={projectNameMap[activeProjectId] || "este proyecto"}
+                        onAction={handleUpload}
+                        actionLabel="Subir Documento"
+                        actionIcon={Upload}
+                        onSwitchToOrg={() => useLayoutStore.getState().actions.setActiveProjectId(null)}
+                    />
                 ) : filteredFiles.length === 0 ? (
+                    /* No results: manual filters returned nothing */
                     <ViewEmptyState
                         mode="no-results"
                         icon={FolderOpen}

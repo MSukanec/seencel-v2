@@ -40,8 +40,8 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
 
         // Fetch data in parallel
         const [boards, calendarEvents, projects, planFeatures] = await Promise.all([
-            getBoards(organizationId, null),
-            getCalendarEvents(organizationId, { projectId: null }),
+            getBoards(organizationId),
+            getCalendarEvents(organizationId),
             getActiveOrganizationProjects(organizationId),
             getOrganizationPlanFeatures(organizationId)
         ]);
@@ -75,7 +75,7 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
                 activeBoardId={activeBoardId}
                 activeBoardData={activeBoardData}
                 organizationId={organizationId}
-                projectId={null}
+
                 baseUrl="/organization/planner"
                 calendarEvents={calendarEvents}
                 projects={projects}

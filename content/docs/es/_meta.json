@@ -4,6 +4,7 @@
         "primeros-pasos",
         "agenda",
         "archivos",
+        "contactos",
         "materiales",
         "tareas",
         "rubros",
@@ -52,6 +53,10 @@
         "finanzas": {
             "title": "Finanzas",
             "icon": "dollar-sign"
+        },
+        "contactos": {
+            "title": "Contactos",
+            "icon": "users"
         },
         "proyectos": {
             "title": "Proyectos",

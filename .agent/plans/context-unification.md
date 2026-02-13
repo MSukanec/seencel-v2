@@ -21,27 +21,27 @@
 ## Orden de Ejecución
 
 ### Bloque 0: Infraestructura
-- [ ] Crear `useProjectFilterStore` (Zustand)
-- [ ] Refactorizar `HeaderOrgProjectSelector` → escribe en el store + opción "Organización"
-- [ ] Actualizar sidebar → todas las rutas apuntan a `/organization/...`
-- [ ] Actualizar `routing.ts` → agregar nuevas rutas, mantener viejas temporalmente
+- [x] Crear `useProjectFilterStore` (Zustand) — ya existe como `useActiveProjectId` en `layout-store.ts` ✅
+- [x] Refactorizar `HeaderOrgProjectSelector` → escribe en el store + opción "Organización" ✅
+- [x] Actualizar sidebar → todas las rutas apuntan a `/organization/...` ✅
+- [x] Actualizar `routing.ts` → agregar nuevas rutas, mantener viejas temporalmente ✅
 
 ### Bloque 1: Páginas YA REVISADAS (agregar soporte de filtro)
-- [ ] 1. Visión General ORG (`/organization`) — unificar con Overview Proyecto
-- [ ] 2. Planificación (`/organization/planner`) — unificar con Planner Proyecto
-- [ ] 3. Documentación (`/organization/files`) — unificar con Files Proyecto
-- [ ] 4. Proyectos (`/organization/projects`) — no necesita filtro, ya es org-only
+- [x] 1. Visión General ORG (`/organization`) — widgets ya responden al contexto, eliminada overview proyecto ✅
+- [x] 2. Planificación (`/organization/planner`) — unificado con Planner Proyecto ✅
+- [x] 3. Documentación (`/organization/files`) — unificado, filtro por `activeProjectId`, eliminada Files Proyecto ✅
+- [x] 4. Proyectos (`/organization/projects`) — org-only, no necesita filtro, contexto se ignora ✅
 
 ### Bloque 2: Páginas ORG no revisadas aún
 - [ ] 5. Presupuestos (`/organization/quotes`) — unificar con Quotes Proyecto
 - [ ] 6. Finanzas (`/organization/finance`) — unificar con Finance Proyecto
 - [ ] 7. Identidad (`/organization/identity`) — org-only, no necesita filtro
-- [ ] 8. Catálogo Técnico (`/organization/catalog`) — org-only, no necesita filtro
-- [ ] 9. Contactos (`/organization/contacts`) — org-only, no necesita filtro
+- [x] 8. Catálogo Técnico (`/organization/catalog`) — org-only, contexto se ignora ✅
+- [x] 9. Contactos (`/organization/contacts`) — org-only, contexto se ignora ✅
 - [ ] 10. Capital (`/organization/capital`) — org-only, no necesita filtro
 - [ ] 11. Gastos Generales (`/organization/general-costs`) — evaluar
-- [ ] 12. Informes (`/organization/reports`) — evaluar
-- [ ] 13. Avanzado (`/organization/advanced`) — org-only
+- [x] 12. Informes (`/organization/reports`) — org-only, contexto se ignora ✅
+- [x] 13. Avanzado (`/organization/advanced`) — org-only, contexto se ignora ✅
 
 ### Bloque 3: Páginas a CREAR (vienen de /project/)
 - [ ] 14. Tareas de Construcción (`/organization/construction-tasks`) [NEW]
@@ -106,4 +106,4 @@ El header selector:
 
 ---
 
-*Última actualización: 2026-02-12*
+*Última actualización: 2026-02-13*

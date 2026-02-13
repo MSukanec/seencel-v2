@@ -130,8 +130,35 @@ export async function getPlanBySlug(slug: string): Promise<Plan | null> {
 }
 
 /**
+ * Default features for plans with no explicit feature limits (e.g., Enterprise).
+ * All booleans are true, all numeric limits are -1 (unlimited).
+ * -1 is already the convention used across the codebase for "no limit".
+ */
+const UNLIMITED_FEATURES: PlanFeatures = {
+    can_invite_members: true,
+    max_active_projects: -1,
+    max_storage_mb: -1,
+    max_file_size_mb: -1,
+    export_pdf_custom: true,
+    custom_pdf_templates: true,
+    export_excel: true,
+    analytics_level: "custom",
+    api_access: true,
+    webhooks: true,
+    support_level: "dedicated",
+    custom_portal_branding: true,
+    max_org_boards: -1,
+    max_project_boards: -1,
+    custom_dashboard: true,
+    max_external_advisors: -1,
+};
+
+/**
  * Gets the plan features for a specific organization.
  * Used to check feature limits (max_active_projects, max_members, etc.)
+ * 
+ * If the plan has no features defined (e.g., Enterprise with empty JSON),
+ * returns UNLIMITED_FEATURES so nothing is blocked.
  */
 export async function getOrganizationPlanFeatures(organizationId: string): Promise<PlanFeatures | null> {
     const supabase = await createClient();
@@ -154,12 +181,21 @@ export async function getOrganizationPlanFeatures(organizationId: string): Promi
     // Extract features from the nested plan object
     const planData = data.plan as any;
     const rawFeatures = planData?.features;
-    if (!rawFeatures) return null;
+
+    // If features is null, undefined, or empty object → plan has no limits (Enterprise)
+    if (!rawFeatures || (typeof rawFeatures === 'object' && Object.keys(rawFeatures).length === 0)) {
+        return UNLIMITED_FEATURES;
+    }
 
     // features may come as a JSON string (text column) or parsed object (jsonb column)
     if (typeof rawFeatures === 'string') {
         try {
-            return JSON.parse(rawFeatures) as PlanFeatures;
+            const parsed = JSON.parse(rawFeatures) as PlanFeatures;
+            // If parsed result is empty object, treat as unlimited
+            if (Object.keys(parsed).length === 0) {
+                return UNLIMITED_FEATURES;
+            }
+            return parsed;
         } catch {
             console.error("Error parsing plan features JSON:", rawFeatures);
             return null;

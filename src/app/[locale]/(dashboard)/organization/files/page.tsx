@@ -68,7 +68,7 @@ export default async function OrganizationFilesPage() {
                             folderCount={folders.length}
                         />
                     )}
-                    <div className={files.length > 0 ? "mt-4" : "flex-1 flex flex-col min-h-0 h-full"}>
+                    <div className={`flex-1 flex flex-col min-h-0${files.length > 0 ? " mt-4" : ""}`}>
                         <FileGallery
                             files={files}
                             folders={folders}

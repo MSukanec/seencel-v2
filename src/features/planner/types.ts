@@ -305,6 +305,7 @@ export interface CreateCalendarEventInput {
 
 export interface UpdateCalendarEventInput {
     title?: string;
+    project_id?: string | null;
     description?: string | null;
     location?: string | null;
     color?: string | null;

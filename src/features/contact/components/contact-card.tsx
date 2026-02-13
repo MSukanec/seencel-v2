@@ -8,12 +8,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContactWithRelations } from "@/types/contact";
-import { Building2, Mail, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, PhoneCall, Trash2 } from "lucide-react";
+import { Building2, Mail, MapPin, MessageCircle, MoreHorizontal, Paperclip, Pencil, Phone, PhoneCall, Trash2, User } from "lucide-react";
 
 interface ContactCardProps {
     contact: ContactWithRelations;
     onEdit: (contact: ContactWithRelations) => void;
     onDelete: (contact: ContactWithRelations) => void;
+    onAttachFiles?: (contact: ContactWithRelations) => void;
 }
 
 // Helper to format phone for WhatsApp (remove spaces, dashes, etc)
@@ -21,7 +22,7 @@ function formatPhoneForWhatsApp(phone: string): string {
     return phone.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
 }
 
-export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
+export function ContactCard({ contact, onEdit, onDelete, onAttachFiles }: ContactCardProps) {
     const avatarUrl = contact.resolved_avatar_url || contact.image_url;
 
     return (
@@ -40,6 +41,12 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
                             <Pencil className="mr-2 h-4 w-4" />
                             Editar
                         </DropdownMenuItem>
+                        {onAttachFiles && (
+                            <DropdownMenuItem onClick={() => onAttachFiles(contact)}>
+                                <Paperclip className="mr-2 h-4 w-4" />
+                                Adjuntar archivos
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                             onClick={() => onDelete(contact)}
                             className="text-destructive focus:text-destructive"
@@ -76,7 +83,11 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
                 <Avatar className="h-24 w-24 border-2 border-border/10 shadow-sm rounded-full">
                     <AvatarImage src={avatarUrl || undefined} className="object-cover" />
                     <AvatarFallback className="text-2xl font-medium bg-muted text-muted-foreground/70">
-                        {contact.first_name?.[0]}{contact.last_name?.[0]}
+                        {contact.contact_type === 'company' ? (
+                            <Building2 className="h-10 w-10" />
+                        ) : (
+                            <>{contact.first_name?.[0]}{contact.last_name?.[0]}</>
+                        )}
                     </AvatarFallback>
                 </Avatar>
             </div>
@@ -86,10 +97,10 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
                 <h3 className="font-semibold text-lg leading-tight line-clamp-1 w-full px-2" title={contact.full_name || undefined}>
                     {contact.full_name || "Sin nombre"}
                 </h3>
-                {contact.company_name ? (
+                {contact.contact_type === 'person' && contact.resolved_company_name ? (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                         <Building2 className="h-3 w-3" />
-                        <span className="line-clamp-1">{contact.company_name}</span>
+                        <span className="line-clamp-1">{contact.resolved_company_name}</span>
                     </div>
                 ) : (
                     <div className="h-5 mt-1" /> /* Spacer for alignment */
@@ -98,13 +109,13 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
 
             {/* Tags Slot - Moved here below name */}
             <div className="h-6 w-full flex items-center justify-center overflow-hidden mb-2">
-                {contact.contact_types && contact.contact_types.length > 0 ? (
+                {contact.contact_categories && contact.contact_categories.length > 0 ? (
                     <div className="flex gap-1 justify-center">
                         <Badge variant="secondary" className="text-xs h-5 px-2 font-normal bg-secondary/50 text-secondary-foreground/80">
-                            {contact.contact_types[0].name}
+                            {contact.contact_categories[0].name}
                         </Badge>
-                        {contact.contact_types.length > 1 && (
-                            <span className="text-xs text-muted-foreground self-center">+{contact.contact_types.length - 1}</span>
+                        {contact.contact_categories.length > 1 && (
+                            <span className="text-xs text-muted-foreground self-center">+{contact.contact_categories.length - 1}</span>
                         )}
                     </div>
                 ) : (

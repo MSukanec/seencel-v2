@@ -152,6 +152,7 @@ export function CalendarEventForm({
                 const optimisticEvent: CalendarEvent = {
                     ...initialData,
                     title: values.title,
+                    project_id: values.project_id || null,
                     description: values.description || null,
                     location: values.location || null,
                     color: values.color,
@@ -164,6 +165,7 @@ export function CalendarEventForm({
 
                 const result = await updateCalendarEvent(initialData.id, {
                     title: values.title,
+                    project_id: values.project_id || null,
                     description: values.description || null,
                     location: values.location || null,
                     color: values.color,

@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, List } from 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useModal } from "@/stores/modal-store";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 import { CalendarEvent } from "@/features/planner/types";
 import { CalendarEventForm } from "../forms/calendar-event-form";
@@ -39,7 +40,6 @@ function hexToRgba(hex: string, alpha: number) {
 
 interface PlannerCalendarProps {
     organizationId: string;
-    projectId?: string | null;
     events: CalendarEvent[];
     onRefresh?: () => void;
     projects?: Project[];
@@ -47,7 +47,8 @@ interface PlannerCalendarProps {
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-export function PlannerCalendar({ organizationId, projectId, events, onRefresh, projects }: PlannerCalendarProps) {
+export function PlannerCalendar({ organizationId, events, onRefresh, projects }: PlannerCalendarProps) {
+    const activeProjectId = useActiveProjectId();
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [searchQuery, setSearchQuery] = React.useState("");
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -90,7 +91,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
         openModal(
             <CalendarEventForm
                 organizationId={organizationId}
-                projectId={projectId}
+                projectId={activeProjectId}
                 initialData={event}
                 defaultDate={defaultDate}
                 projects={projects}
@@ -136,6 +137,11 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
     // Filter Events
     const filteredEvents = React.useMemo(() => {
         return optimisticEvents.filter(event => {
+            // Project context filter
+            if (activeProjectId && event.project_id && event.project_id !== activeProjectId) {
+                return false;
+            }
+
             // Text Search
             const searchLower = searchQuery.toLowerCase();
             const matchesSearch = !searchQuery ||
@@ -154,7 +160,7 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
 
             return true;
         });
-    }, [optimisticEvents, searchQuery, typeFilter]);
+    }, [optimisticEvents, searchQuery, typeFilter, activeProjectId]);
 
     // Calendar Generation Logic - Dynamic rows based on month
     const monthStart = startOfMonth(currentDate);
@@ -220,6 +226,9 @@ export function PlannerCalendar({ organizationId, projectId, events, onRefresh, 
                         onResetFilters={() => {
                             setSearchQuery("");
                             setTypeFilter(new Set());
+                        }}
+                        onOptimisticDeleteEvent={(eventId) => {
+                            setOptimisticEvents(prev => prev.filter(e => e.id !== eventId));
                         }}
                     />
                 </div>

@@ -9,6 +9,7 @@ import { Plus, LayoutGrid, Columns3 } from "lucide-react";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useState, useCallback, useEffect } from "react";
 import { useModal } from "@/stores/modal-store";
+import { useActiveProjectId } from "@/stores/layout-store";
 import { KanbanCardForm } from "../forms/kanban-card-form";
 import { KanbanListForm } from "../forms/kanban-list-form";
 import { MoveListModal } from "./move-list-modal";
@@ -44,6 +45,7 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
     const { openModal, closeModal } = useModal();
     const router = useRouter();
+    const activeProjectId = useActiveProjectId();
     const [orderedLists, setOrderedLists] = useState(lists);
 
     useEffect(() => {
@@ -129,9 +131,14 @@ export function KanbanBoard({
         }
     };
 
-    // Filter cards based on search, priorities, and labels
+    // Filter cards based on search, priorities, labels, and project context
     const filterCards = (cards: KanbanCard[]) => {
         return cards.filter(card => {
+            // Project context filter
+            if (activeProjectId && card.project_id && card.project_id !== activeProjectId) {
+                return false;
+            }
+
             // Text Search
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
@@ -185,7 +192,7 @@ export function KanbanBoard({
             <KanbanCardForm
                 boardId={board.id}
                 listId={listId}
-                projectId={board.project_id}
+                projectId={activeProjectId || board.project_id}
                 projects={projects}
                 members={members}
                 isTeamsEnabled={isTeamsEnabled}
@@ -301,6 +308,16 @@ export function KanbanBoard({
         );
     }, [openModal, closeModal, removeOptimisticList, lists]);
 
+    // 🚀 OPTIMISTIC DELETE CARD: Remove card from UI instantly
+    const handleOptimisticDeleteCard = useCallback((cardId: string) => {
+        setOrderedLists(prev =>
+            prev.map(list => ({
+                ...list,
+                cards: (list.cards || []).filter(c => c.id !== cardId)
+            }))
+        );
+    }, []);
+
     // Handle move list to another board (optimistic: remove from current view)
     const handleMoveList = useCallback((list: KanbanList) => {
         openModal(
@@ -328,7 +345,7 @@ export function KanbanBoard({
             <KanbanCardForm
                 boardId={board.id}
                 listId={card.list_id}
-                projectId={board.project_id}
+                projectId={activeProjectId || board.project_id}
                 projects={projects}
                 initialData={card}
                 members={members}
@@ -391,6 +408,7 @@ export function KanbanBoard({
                                                         onEditList={() => handleEditList(list)}
                                                         onDeleteList={() => handleDeleteList(list)}
                                                         onMoveList={() => handleMoveList(list)}
+                                                        onOptimisticDeleteCard={handleOptimisticDeleteCard}
                                                     />
                                                 </div>
                                             )}

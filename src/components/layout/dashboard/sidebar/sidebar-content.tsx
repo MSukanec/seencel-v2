@@ -24,7 +24,6 @@ import {
     LayoutDashboard,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
-import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Medal } from "lucide-react";
 import {
@@ -70,14 +69,7 @@ export function SidebarContent({
     const { activeContext, sidebarMode, actions } = useLayoutStore();
     const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
 
-    // Get org/project data from hook
-    const {
-        projects,
-        currentOrg,
-        currentProject,
-        handleProjectChange,
-        saveProjectPreference
-    } = useSidebarData();
+
 
     const isMobile = mode === "mobile";
     const isExpanded = propIsExpanded ?? isMobile;
@@ -178,24 +170,7 @@ export function SidebarContent({
 
     }, [pathname, actions, activeContext]);
 
-    // 2. Sync Project Data (Specific to Project Context)
-    React.useEffect(() => {
-        const projectMatch = pathname.match(/\/project\/([^/]+)/);
-        if (projectMatch) {
-            const urlProjectId = projectMatch[1];
 
-            // Sync Drill State to Organization (unified sidebar)
-            setDrillState(prev => prev !== 'organization' ? 'organization' : prev);
-
-            // Sync Project Selection
-            if (urlProjectId && currentProject?.id !== urlProjectId) {
-                const projectInList = projects.find(p => p.id === urlProjectId);
-                if (projectInList) {
-                    handleProjectChange(urlProjectId);
-                }
-            }
-        }
-    }, [pathname, currentProject?.id, projects, handleProjectChange]);
 
     // Slide animation classes
     const slideClass = cn(
@@ -330,7 +305,6 @@ export function SidebarContent({
                     <div className="w-full flex items-center gap-1.5 mb-2 px-2">
                         <div className="flex-1 min-w-0">
                             <SidebarBrandButton
-                                mode="home"
                                 isExpanded={isExpanded}
                             />
                         </div>

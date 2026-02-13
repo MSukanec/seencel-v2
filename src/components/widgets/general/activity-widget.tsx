@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { WidgetProps } from "@/components/widgets/grid/types";
-import { Activity } from "lucide-react";
+import { Activity, Loader2 } from "lucide-react";
 import { getActivityFeedItems, type ActivityFeedItem } from "@/actions/widget-actions";
-import { moduleConfigs, actionConfigs, getActionVerb } from "@/config/audit-logs";
+import { moduleConfigs, actionConfigs, getActionVerb, moduleRoutes } from "@/config/audit-logs";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,9 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useActiveProjectId } from "@/stores/layout-store";
+import { useLayoutActions } from "@/stores/layout-store";
+import { useRouter } from "@/i18n/routing";
 
 // ============================================================================
 // ACTIVITY WIDGET (Feed-style, Parametric, Autonomous)
@@ -32,7 +35,15 @@ function getDetailText(item: ActivityFeedItem): string {
     return metadata.name || metadata.title || metadata.description || "";
 }
 
-function ActivityItemRow({ item }: { item: ActivityFeedItem }) {
+function ActivityItemRow({
+    item,
+    isNavigating,
+    onNavigate,
+}: {
+    item: ActivityFeedItem;
+    isNavigating: boolean;
+    onNavigate?: (item: ActivityFeedItem) => void;
+}) {
     const verb = getActionVerb(item.action);
     const actionCfg = actionConfigs[verb];
     const moduleCfg = moduleConfigs[item.target_table];
@@ -47,13 +58,20 @@ function ActivityItemRow({ item }: { item: ActivityFeedItem }) {
         .slice(0, 2)
         .toUpperCase();
 
-    // Build description: "Creó Material > Cemento Portland"
     const description = detail
         ? `${actionLabel} ${moduleLabel} › ${detail}`
         : `${actionLabel} ${moduleLabel}`;
 
+    const hasRoute = !!moduleRoutes[item.target_table];
+
     return (
-        <div className="flex items-center gap-3 py-2 flex-1">
+        <div
+            className={`flex items-center gap-3 py-2 flex-1 ${hasRoute
+                    ? 'cursor-pointer hover:bg-muted/50 rounded-md px-1 -mx-1 transition-colors'
+                    : ''
+                } ${isNavigating ? 'opacity-60' : ''}`}
+            onClick={() => hasRoute && !isNavigating && onNavigate?.(item)}
+        >
             {/* Avatar with tooltip */}
             <TooltipProvider delayDuration={200}>
                 <Tooltip>
@@ -61,7 +79,11 @@ function ActivityItemRow({ item }: { item: ActivityFeedItem }) {
                         <Avatar className="h-9 w-9 shrink-0">
                             <AvatarImage src={item.avatar_url || undefined} />
                             <AvatarFallback className="text-xs bg-muted">
-                                {initials}
+                                {isNavigating ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    initials
+                                )}
                             </AvatarFallback>
                         </Avatar>
                     </TooltipTrigger>
@@ -83,6 +105,11 @@ function ActivityItemRow({ item }: { item: ActivityFeedItem }) {
                     })}
                 </p>
             </div>
+
+            {/* Loading spinner for navigating item */}
+            {isNavigating && (
+                <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin shrink-0" />
+            )}
         </div>
     );
 }
@@ -105,22 +132,60 @@ function ActivityFeedSkeleton() {
 
 export function ActivityWidget({ size, config, initialData }: WidgetProps) {
     const scope = config?.scope || "organization";
+    const activeProjectId = useActiveProjectId();
+    const { setActiveProjectId } = useLayoutActions();
+    const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const [navigatingId, setNavigatingId] = useState<string | null>(null);
+
     const [items, setItems] = useState<ActivityFeedItem[] | null>(
         initialData ?? null
     );
 
-    // Only fetch client-side if no initialData was provided (fallback for dynamic adds)
+    // Fetch on mount + re-fetch when project context changes
     useEffect(() => {
-        if (initialData) return;
+        if (!activeProjectId && initialData) return;
+
         let cancelled = false;
         setItems(null);
-        getActivityFeedItems(scope, 5).then((data) => {
+        getActivityFeedItems(scope, 5, activeProjectId).then((data) => {
             if (!cancelled) setItems(data);
         });
         return () => {
             cancelled = true;
         };
-    }, [scope, initialData]);
+    }, [scope, activeProjectId, initialData]);
+
+    // Deep linking: navigate with startTransition for non-blocking UI
+    const handleNavigate = (item: ActivityFeedItem) => {
+        const route = moduleRoutes[item.target_table];
+        if (!route) return;
+
+        // Set project context if available in metadata
+        const metadataProjectId = item.metadata?.project_id;
+        if (metadataProjectId) {
+            setActiveProjectId(metadataProjectId);
+        }
+
+        // Show immediate visual feedback
+        setNavigatingId(item.id);
+
+        // Navigate with startTransition so UI stays responsive
+        startTransition(() => {
+            router.push(route as any);
+        });
+    };
+
+    // Clear navigating state when transition ends
+    useEffect(() => {
+        if (!isPending) {
+            setNavigatingId(null);
+        }
+    }, [isPending]);
+
+    const title = activeProjectId
+        ? "Actividad del Proyecto"
+        : (SCOPE_TITLES[scope] || "Actividad");
 
     return (
         <div className="h-full flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
@@ -131,7 +196,7 @@ export function ActivityWidget({ size, config, initialData }: WidgetProps) {
                 </div>
                 <div>
                     <h3 className="text-sm font-semibold leading-none">
-                        {SCOPE_TITLES[scope] || "Actividad"}
+                        {title}
                     </h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                         Actividad reciente
@@ -147,14 +212,22 @@ export function ActivityWidget({ size, config, initialData }: WidgetProps) {
                     <WidgetEmptyState
                         icon={Activity}
                         title="Sin actividad"
-                        description="Las acciones de tu equipo aparecerán aquí"
+                        description={activeProjectId
+                            ? "No hay actividad registrada para este proyecto"
+                            : "Las acciones de tu equipo aparecerán aquí"
+                        }
                         href="/organization?view=activity"
                         actionLabel="Ver actividad"
                     />
                 ) : (
                     <div className="flex flex-col h-full divide-y divide-border/30">
                         {items.map((item) => (
-                            <ActivityItemRow key={item.id} item={item} />
+                            <ActivityItemRow
+                                key={item.id}
+                                item={item}
+                                isNavigating={navigatingId === item.id}
+                                onNavigate={handleNavigate}
+                            />
                         ))}
                     </div>
                 )}

@@ -28,8 +28,7 @@ interface PlannerPageViewProps {
     activeBoardId: string | null;
     activeBoardData: any | null;
     organizationId: string;
-    projectId?: string | null;
-    /** Base URL for navigation (e.g., "/organization/planner" or "/project/123/planner") */
+    /** Base URL for navigation (e.g., "/organization/planner") */
     baseUrl: string;
     /** Calendar events for the calendar view */
     calendarEvents: CalendarEvent[];
@@ -45,7 +44,6 @@ export function PlannerPageView({
     activeBoardId,
     activeBoardData,
     organizationId,
-    projectId,
     baseUrl,
     calendarEvents,
     projects,
@@ -86,7 +84,6 @@ export function PlannerPageView({
                     <ContentLayout variant="wide">
                         <PlannerCalendarView
                             organizationId={organizationId}
-                            projectId={projectId}
                             events={calendarEvents}
                             projects={projects}
                         />
@@ -99,7 +96,6 @@ export function PlannerPageView({
                             activeBoardId={activeBoardId}
                             activeBoardData={activeBoardData}
                             organizationId={organizationId}
-                            projectId={projectId}
                             projects={projects}
                             baseUrl={baseUrl}
                             maxBoards={maxBoards}

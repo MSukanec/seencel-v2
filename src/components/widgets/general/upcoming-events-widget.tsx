@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { cn } from "@/lib/utils";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 // ============================================================================
 // UPCOMING EVENTS WIDGET (Calendar + Kanban, Parametric, Autonomous)
@@ -146,22 +147,25 @@ function UpcomingEventsSkeleton() {
 
 export function UpcomingEventsWidget({ config, initialData }: WidgetProps) {
     const scope = config?.scope || "all";
+    const activeProjectId = useActiveProjectId();
     const [items, setItems] = useState<UpcomingEventItem[] | null>(
         initialData ?? null
     );
 
-    // Only fetch client-side if no initialData was provided
+    // Fetch on mount + re-fetch when project context changes
     useEffect(() => {
-        if (initialData) return;
+        // Skip initial fetch only when no project is active and initialData exists
+        if (!activeProjectId && initialData) return;
+
         let cancelled = false;
         setItems(null);
-        getUpcomingEvents(scope, 8).then((data) => {
+        getUpcomingEvents(scope, 8, activeProjectId).then((data) => {
             if (!cancelled) setItems(data);
         });
         return () => {
             cancelled = true;
         };
-    }, [scope, initialData]);
+    }, [scope, activeProjectId, initialData]);
 
     // Group items by date
     const groups = useMemo(() => {
@@ -178,7 +182,7 @@ export function UpcomingEventsWidget({ config, initialData }: WidgetProps) {
                 </div>
                 <div>
                     <h3 className="text-sm font-semibold leading-none">
-                        {SCOPE_TITLES[scope] || "Próximos Eventos"}
+                        {activeProjectId ? "Eventos del Proyecto" : (SCOPE_TITLES[scope] || "Próximos Eventos")}
                     </h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                         Fechas y vencimientos
@@ -194,7 +198,10 @@ export function UpcomingEventsWidget({ config, initialData }: WidgetProps) {
                     <WidgetEmptyState
                         icon={Calendar}
                         title="Sin eventos próximos"
-                        description="Los eventos de calendario y tareas con fecha aparecerán aquí"
+                        description={activeProjectId
+                            ? "No hay eventos ni tareas pendientes para este proyecto"
+                            : "Los eventos de calendario y tareas con fecha aparecerán aquí"
+                        }
                         href="/organization/planner"
                         actionLabel="Ir al Planificador"
                     />

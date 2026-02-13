@@ -42,8 +42,8 @@ const PermissionTranslations: Record<string, string> = {
     // Contacts
     'contacts.view': 'Ver Contactos',
     'contacts.manage': 'Gestionar Contactos',
-    'contact_types.view': 'Ver Tipos de Contacto',
-    'contact_types.manage': 'Gestionar Tipos de Contacto',
+    'contact_categories.view': 'Ver Categorías de Contacto',
+    'contact_categories.manage': 'Gestionar Categorías de Contacto',
 
     // Projects
     'projects.view': 'Ver Proyectos',

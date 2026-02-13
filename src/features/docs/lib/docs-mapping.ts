@@ -48,6 +48,10 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/files': { slug: 'archivos/introduccion' },
     '/organizacion/archivos': { slug: 'archivos/introduccion' },
 
+    // Contacts (Contactos)
+    '/organization/contacts': { slug: 'contactos/introduccion' },
+    '/organizacion/contactos': { slug: 'contactos/introduccion' },
+
     // Add more feature -> docs mappings here as documentation is created
 };
 

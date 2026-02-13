@@ -1,6 +1,5 @@
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
-import { cn } from "@/lib/utils";
-import { getContactTypes, getOrganizationContacts, getContactsSummary } from "@/actions/contacts";
+import { getContactCategories, getOrganizationContacts } from "@/actions/contacts";
 import {
     Tabs,
     TabsList,
@@ -22,10 +21,11 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 export async function generateMetadata({
     params
 }: {
-    params: { locale: string }
+    params: Promise<{ locale: string }>
 }): Promise<Metadata> {
+    const { locale } = await params;
     const t = await getTranslations({
-        locale: params.locale,
+        locale,
         namespace: 'Contacts'
     });
 
@@ -46,10 +46,9 @@ export default async function ContactsPage() {
     const t = await getTranslations('Contacts');
 
     try {
-        const [contacts, types, summary] = await Promise.all([
+        const [contacts, categories] = await Promise.all([
             getOrganizationContacts(organizationId),
-            getContactTypes(organizationId),
-            getContactsSummary(organizationId)
+            getContactCategories(organizationId)
         ]);
 
         return (
@@ -69,22 +68,21 @@ export default async function ContactsPage() {
                         </TabsList>
                     }
                 >
-                    <TabsContent value="list" className="m-0 h-full focus-visible:outline-none">
+                    <TabsContent value="list" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <ContactsListView
                                 organizationId={organizationId}
                                 initialContacts={contacts}
-                                contactTypes={types}
-                                summary={summary}
+                                contactCategories={categories}
                             />
                         </ContentLayout>
                     </TabsContent>
 
-                    <TabsContent value="settings" className="m-0 h-full focus-visible:outline-none">
+                    <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <ContactsSettingsView
                                 organizationId={organizationId}
-                                initialTypes={types}
+                                initialCategories={categories}
                             />
                         </ContentLayout>
                     </TabsContent>

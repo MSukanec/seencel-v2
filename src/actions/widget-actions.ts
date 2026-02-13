@@ -46,7 +46,8 @@ export interface ActivityFeedItem {
  */
 export async function getActivityFeedItems(
     scope: string,
-    limit: number = 5
+    limit: number = 5,
+    projectId?: string | null
 ): Promise<ActivityFeedItem[]> {
     try {
         const orgId = await getActiveOrganizationId();
@@ -62,6 +63,11 @@ export async function getActivityFeedItems(
             .eq("organization_id", orgId)
             .order("created_at", { ascending: false })
             .limit(limit);
+
+        // Filter by project if active (requires metadata->>'project_id' in audit triggers)
+        if (projectId) {
+            query = query.eq('metadata->>project_id', projectId);
+        }
 
         // Filter by relevant tables depending on scope
         switch (scope) {
@@ -179,7 +185,8 @@ export interface UpcomingEventItem {
  */
 export async function getUpcomingEvents(
     scope: string = 'all',
-    limit: number = 8
+    limit: number = 8,
+    projectId?: string | null
 ): Promise<UpcomingEventItem[]> {
     try {
         const orgId = await getActiveOrganizationId();
@@ -193,7 +200,7 @@ export async function getUpcomingEvents(
 
         // Calendar events
         if (scope === 'all' || scope === 'calendar') {
-            const { data: events } = await supabase
+            let calQuery = supabase
                 .from('calendar_events')
                 .select('id, title, start_at, color, is_all_day, status, projects(name)')
                 .eq('organization_id', orgId)
@@ -202,6 +209,12 @@ export async function getUpcomingEvents(
                 .gte('start_at', now)
                 .order('start_at', { ascending: true })
                 .limit(limit);
+
+            if (projectId) {
+                calQuery = calQuery.eq('project_id', projectId);
+            }
+
+            const { data: events } = await calQuery;
 
             if (events) {
                 for (const e of events) {
@@ -221,9 +234,9 @@ export async function getUpcomingEvents(
 
         // Kanban cards with due_date
         if (scope === 'all' || scope === 'kanban') {
-            const { data: cards } = await supabase
+            let kanbanQuery = supabase
                 .from('kanban_cards')
-                .select('id, title, due_date, priority, is_completed, kanban_boards!inner(organization_id, name)')
+                .select('id, title, due_date, priority, is_completed, kanban_boards!inner(organization_id, name, project_id)')
                 .eq('kanban_boards.organization_id', orgId)
                 .eq('is_completed', false)
                 .eq('is_archived', false)
@@ -231,6 +244,12 @@ export async function getUpcomingEvents(
                 .gte('due_date', today)
                 .order('due_date', { ascending: true })
                 .limit(limit);
+
+            if (projectId) {
+                kanbanQuery = kanbanQuery.eq('kanban_boards.project_id', projectId);
+            }
+
+            const { data: cards } = await kanbanQuery;
 
             if (cards) {
                 for (const c of cards) {

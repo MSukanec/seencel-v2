@@ -35,6 +35,7 @@ interface KanbanColumnProps {
     onDeleteList?: () => void;
     onMoveList?: () => void;
     onCardClick?: (card: KanbanCard) => void;
+    onOptimisticDeleteCard?: (cardId: string) => void;
     isDragOver?: boolean;
     innerRef?: (element: HTMLElement | null) => void;
     draggableProps?: any;
@@ -50,6 +51,7 @@ export function KanbanColumn({
     onDeleteList,
     onMoveList,
     onCardClick,
+    onOptimisticDeleteCard,
     isDragOver,
     innerRef,
     draggableProps,
@@ -190,6 +192,7 @@ export function KanbanColumn({
                                                     members={members}
                                                     onClick={() => onCardClick?.(card)}
                                                     isDragging={snapshot.isDragging}
+                                                    onOptimisticDelete={onOptimisticDeleteCard}
                                                 />
                                             </div>
                                         )}
@@ -239,6 +242,7 @@ export function KanbanColumn({
                                     card={card}
                                     members={members}
                                     onClick={() => onCardClick?.(card)}
+                                    onOptimisticDelete={onOptimisticDeleteCard}
                                 />
                             ))}
                         </div>

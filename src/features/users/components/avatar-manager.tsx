@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useRef, useTransition } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { useTransition } from "react"
+import { ImageUploader } from "@/components/shared/image-uploader"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -11,7 +10,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Camera, ImagePlus, Loader2, Trash2, RotateCcw } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Camera, ImagePlus, Trash2, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { uploadAvatar, removeAvatar, restoreProviderAvatar } from "../actions"
 import { useTranslations } from "next-intl"
@@ -22,44 +22,11 @@ interface AvatarManagerProps {
     initials: string
 }
 
+const AVATAR_INPUT_ID = "user-avatar-upload-input";
+
 export function AvatarManager({ avatarUrl, fullName, initials }: AvatarManagerProps) {
-    const t = useTranslations('Settings.Profile.Avatar') // Assuming new keys I'll add
+    const t = useTranslations('Settings.Profile.Avatar')
     const [isPending, startTransition] = useTransition()
-    const inputRef = useRef<HTMLInputElement>(null)
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error(t('errorSize'))
-            return
-        }
-
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const promise = new Promise((resolve, reject) => {
-            startTransition(async () => {
-                try {
-                    const result = await uploadAvatar(formData)
-                    if (result.success) {
-                        resolve(true)
-                    } else {
-                        reject(new Error(result.error || t('errorUpload')))
-                    }
-                } catch (error) {
-                    reject(error)
-                }
-            })
-        })
-
-        toast.promise(promise, {
-            loading: t('uploading'),
-            success: t('successUpload'),
-            error: t('errorUpload'),
-        })
-    }
 
     const handleDelete = () => {
         const promise = new Promise((resolve, reject) => {
@@ -99,23 +66,29 @@ export function AvatarManager({ avatarUrl, fullName, initials }: AvatarManagerPr
         })
     }
 
+    const triggerFileInput = () => {
+        document.getElementById(AVATAR_INPUT_ID)?.click()
+    }
+
     return (
         <div className="flex items-center gap-x-8">
-            <div className="relative group">
-                <Avatar className="h-24 w-24 border-2 border-border shadow-sm">
-                    {/* Optimistic UI: If pending, show global spinner overlay? Or relies on toast/revalidate */}
-                    <AvatarImage src={avatarUrl || ""} alt={fullName || "User"} className="object-cover" />
-                    <AvatarFallback className="text-2xl font-semibold bg-muted text-muted-foreground">
-                        {initials}
-                    </AvatarFallback>
-
-                    {isPending && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full z-10">
-                            <Loader2 className="h-8 w-8 text-white animate-spin" />
-                        </div>
-                    )}
-                </Avatar>
-            </div>
+            <ImageUploader
+                currentImageUrl={avatarUrl}
+                fallback={initials}
+                inputId={AVATAR_INPUT_ID}
+                onUpload={async (file) => {
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    const result = await uploadAvatar(formData)
+                    return {
+                        success: result.success ?? false,
+                        url: result.avatar_url ?? undefined,
+                        error: result.error ?? undefined,
+                    }
+                }}
+                compressionPreset="avatar"
+                disabled={isPending}
+            />
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -128,7 +101,7 @@ export function AvatarManager({ avatarUrl, fullName, initials }: AvatarManagerPr
                     <DropdownMenuLabel>{t('label')}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem onClick={() => inputRef.current?.click()}>
+                    <DropdownMenuItem onClick={triggerFileInput}>
                         <ImagePlus className="mr-2 h-4 w-4" />
                         {t('upload')}
                     </DropdownMenuItem>
@@ -149,16 +122,6 @@ export function AvatarManager({ avatarUrl, fullName, initials }: AvatarManagerPr
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Hidden Input */}
-            <input
-                type="file"
-                ref={inputRef}
-                onChange={handleFileChange}
-                accept="image/png, image/jpeg, image/webp"
-                className="hidden"
-            />
         </div>
     )
 }
-

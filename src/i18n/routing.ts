@@ -164,10 +164,6 @@ export const routing = defineRouting({
         },
 
         // ===== Project Routes =====
-        '/project/[projectId]': {
-            en: '/project/[projectId]',
-            es: '/proyecto/[projectId]'
-        },
         '/project/[projectId]/details': {
             en: '/project/[projectId]/details',
             es: '/proyecto/[projectId]/detalles'
@@ -195,14 +191,6 @@ export const routing = defineRouting({
         '/project/[projectId]/finance': {
             en: '/project/[projectId]/finance',
             es: '/proyecto/[projectId]/finanzas'
-        },
-        '/project/[projectId]/planner': {
-            en: '/project/[projectId]/planner',
-            es: '/proyecto/[projectId]/planificador'
-        },
-        '/project/[projectId]/files': {
-            en: '/project/[projectId]/files',
-            es: '/proyecto/[projectId]/documentacion'
         },
         '/project/[projectId]/health': {
             en: '/project/[projectId]/health',

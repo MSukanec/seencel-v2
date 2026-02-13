@@ -9,5 +9,4 @@ export { SidebarNotificationsButton } from "./sidebar-notifications-button";
 export { SidebarAdminButton } from "./sidebar-admin-button";
 export { SidebarFeedbackButton } from "./sidebar-feedback-button";
 export { SidebarBrandButton } from "./sidebar-brand-button";
-export type { Organization, Project } from "./sidebar-brand-button";
 

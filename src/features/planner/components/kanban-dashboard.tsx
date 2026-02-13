@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { KanbanBoard, PRIORITY_CONFIG } from "@/features/planner/types";
 import { Project } from "@/types/project";
-import { useLayoutStore } from "@/stores/layout-store";
+import { useActiveProjectId } from "@/stores/layout-store";
 import { KanbanBoard as KanbanBoardComponent } from "@/features/planner/components/kanban-board";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
@@ -31,9 +31,8 @@ interface KanbanDashboardProps {
     activeBoardId: string | null;
     activeBoardData: any | null; // Full board data with lists/cards
     organizationId: string;
-    projectId?: string | null;
     projects?: Project[];
-    /** Base URL for navigation (e.g., "/organization/kanban" or "/project/123/kanban") */
+    /** Base URL for navigation (e.g., "/organization/planner") */
     baseUrl: string;
     /** Max boards allowed by plan (-1 = unlimited) */
     maxBoards?: number;
@@ -46,7 +45,6 @@ export function KanbanDashboard({
     activeBoardId,
     activeBoardData,
     organizationId,
-    projectId,
     projects = [],
     baseUrl,
     maxBoards = -1,
@@ -54,7 +52,7 @@ export function KanbanDashboard({
 }: KanbanDashboardProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
-    const { actions } = useLayoutStore();
+    const activeProjectId = useActiveProjectId();
     const [isSwitching, setIsSwitching] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [deleteBoardId, setDeleteBoardId] = useState<string | null>(null);
@@ -64,16 +62,18 @@ export function KanbanDashboard({
         clearTimeout(searchTimerRef.current);
         searchTimerRef.current = setTimeout(() => setSearchQuery(value), 300);
     }, []);
-    // Optimistic state for boards
+    // Optimistic state for boards (all boards from server)
     const [optimisticBoards, setOptimisticBoards] = useState(initialBoards);
     // Local override for active board (used during optimistic create)
     const [overrideActiveBoardId, setOverrideActiveBoardId] = useState<string | null>(null);
     const resolvedActiveBoardId = overrideActiveBoardId ?? activeBoardId;
 
-    // Set active context to organization
-    useEffect(() => {
-        actions.setActiveContext('organization');
-    }, [actions]);
+    // Filter boards by active project context
+    // - No project selected: show ALL boards (org + project)
+    // - Project selected: show boards of that project + org-level boards (shared)
+    const filteredBoards = activeProjectId
+        ? optimisticBoards.filter(b => b.project_id === activeProjectId || b.project_id === null)
+        : optimisticBoards;
 
     // Sync loading state with board switching
     useEffect(() => {
@@ -87,7 +87,7 @@ export function KanbanDashboard({
         setOptimisticBoards(initialBoards);
     }, [initialBoards]);
 
-    // Plan limits
+    // Plan limits (based on total boards, not filtered)
     const isUnlimited = maxBoards === -1;
     const canCreateBoard = isUnlimited || optimisticBoards.length < maxBoards;
 
@@ -101,6 +101,7 @@ export function KanbanDashboard({
         openModal(
             <KanbanBoardForm
                 organizationId={organizationId}
+                projectId={activeProjectId}
                 onOptimisticCreate={(tempBoard: KanbanBoard) => {
                     // Instantly add board to list, set as active, and close modal
                     setOptimisticBoards(prev => [...prev, tempBoard]);
@@ -229,7 +230,7 @@ export function KanbanDashboard({
                     searchPlaceholder="Buscar tarjetas..."
                     leftActions={
                         <div className="flex items-center gap-1">
-                            {optimisticBoards.map((board) => (
+                            {filteredBoards.map((board) => (
                                 <div key={board.id} className="group relative flex items-center">
                                     <button
                                         onClick={() => handleBoardSwitch(board.id)}
@@ -310,17 +311,19 @@ export function KanbanDashboard({
                         </div>
                     ) : null}
 
-                    {optimisticBoards.length === 0 ? (
-                        // Empty State - No boards exist
+                    {filteredBoards.length === 0 ? (
+                        // Empty State - No boards for current context
                         <div className="h-full flex items-center justify-center p-8">
                             <ViewEmptyState
-                                mode="empty"
+                                mode={optimisticBoards.length === 0 ? "empty" : "no-results"}
                                 icon={LayoutDashboard}
                                 viewName="Panel de Tareas"
                                 featureDescription="El panel de tareas es tu espacio para organizar ideas, pendientes y cosas por hacer. Creá columnas que representen estados (por hacer, en progreso, listo) y arrastrá tarjetas entre ellas. Podés asignar responsables, definir fechas límite y prioridades para coordinar el trabajo con tu equipo de forma visual."
                                 onAction={handleCreateBoard}
                                 actionLabel="Nuevo Panel"
                                 docsPath="/docs/planificador/kanban"
+                                filterContext="en este proyecto"
+                                onResetFilters={undefined}
                             />
                         </div>
                     ) : activeBoardData ? (

@@ -30,3 +30,4 @@ export { UploadField, type UploadFieldProps } from "./upload-field";
 export { AssignedToField, type AssignedToFieldProps, type AssignableMember } from "./assigned-to-field";
 export { ActiveProjectField, type ActiveProjectFieldProps, type ActiveProject } from "./active-project-field";
 export { SelectField, type SelectFieldProps, type SelectOption, type SelectGroup, type FilterTab, type SelectEmptyState } from "./select-field";
+export { SegmentedField, type SegmentedFieldProps, type SegmentedOption } from "./segmented-field";

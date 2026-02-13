@@ -190,7 +190,7 @@ Para cada página, seguir este flujo:
 6. ~~Proyectos (`/organization/projects`)~~ ✅
 7. Identidad (`/organization/identity`)
 8. Catálogo Técnico (`/organization/catalog`)
-9. Contactos (`/organization/contacts`)
+9. ~~Contactos (`/organization/contacts`)~~ ✅
 10. Capital (`/organization/capital`)
 11. Gastos Generales (`/organization/general-costs`)
 12. Informes (`/organization/reports`)

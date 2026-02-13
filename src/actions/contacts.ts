@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { Contact, ContactWithRelations, ContactType } from "@/types/contact";
+import { Contact, ContactWithRelations, ContactCategory } from "@/types/contact";
 import { revalidatePath } from "next/cache";
 import { completeOnboardingStep } from "@/features/onboarding/actions";
 
@@ -10,9 +10,8 @@ import { completeOnboardingStep } from "@/features/onboarding/actions";
 export async function getOrganizationContacts(organizationId: string): Promise<ContactWithRelations[]> {
     const supabase = await createClient();
 
-    // Using the view 'contacts_with_relations_view' as defined in schema
     const { data, error } = await supabase
-        .from('contacts_with_relations_view')
+        .from('contacts_view')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false) // Filter out deleted contacts
@@ -51,15 +50,13 @@ function getStorageUrl(path: string | null, bucket: string = 'avatars') {
     return `${baseUrl}/storage/v1/object/public/${bucket}/${path}`;
 }
 
-export async function createContact(organizationId: string, contact: Partial<Contact>, typeIds: string[] = []) {
+export async function createContact(organizationId: string, contact: Partial<Contact>, categoryIds: string[] = []) {
     const supabase = await createClient();
 
     // Prepare payload
     const payload = {
         ...contact,
         organization_id: organizationId,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
-        updated_by: (await supabase.auth.getUser()).data.user?.id
     };
 
     // Convert relative path to full URL if needed
@@ -79,20 +76,20 @@ export async function createContact(organizationId: string, contact: Partial<Con
         throw new Error("Failed to create contact");
     }
 
-    // 2. Link Types if provided
-    if (typeIds.length > 0) {
-        const links = typeIds.map(typeId => ({
+    // 2. Link Categories if provided
+    if (categoryIds.length > 0) {
+        const links = categoryIds.map(categoryId => ({
             contact_id: newContact.id,
-            contact_type_id: typeId,
+            contact_category_id: categoryId,
             organization_id: organizationId
         }));
 
         const { error: linkError } = await supabase
-            .from('contact_type_links')
+            .from('contact_category_links')
             .insert(links);
 
         if (linkError) {
-            console.error("Error linking contact types:", linkError);
+            console.error("Error linking contact categories:", linkError);
             // We don't throw here to avoid failing the whole operation if just tagging fails, but good to note.
         }
     }
@@ -105,12 +102,11 @@ export async function createContact(organizationId: string, contact: Partial<Con
     return newContact;
 }
 
-export async function updateContact(contactId: string, updates: Partial<Contact>, typeIds?: string[]) {
+export async function updateContact(contactId: string, updates: Partial<Contact>, categoryIds?: string[]) {
     const supabase = await createClient();
 
     const payload = {
         ...updates,
-        updated_by: (await supabase.auth.getUser()).data.user?.id
     };
 
     // Convert relative path to full URL if needed
@@ -129,16 +125,16 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
         throw new Error(`Failed to update contact: ${error.message} (${error.details || ''})`);
     }
 
-    // 2. Update Types if provided (replace all)
-    if (typeIds) {
+    // 2. Update Categories if provided (replace all)
+    if (categoryIds) {
         // Remove existing links
         await supabase
-            .from('contact_type_links')
+            .from('contact_category_links')
             .delete()
             .eq('contact_id', contactId);
 
         // Add new links
-        if (typeIds.length > 0) {
+        if (categoryIds.length > 0) {
             // Need org_id, fetch from contact if not available context, but usually we pass it or allow DB to handle if optional?
             // Schema says organization_id is foreign key on links. 
             // We need to fetch the contact's org_id to be safe, or pass it. 
@@ -146,18 +142,18 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
             const { data: contact } = await supabase.from('contacts').select('organization_id').eq('id', contactId).single();
 
             if (contact) {
-                // Deduplicate typeIds to prevent unique constraint violations in the same batch
-                const uniqueTypeIds = Array.from(new Set(typeIds));
-                const links = uniqueTypeIds.map(typeId => ({
+                // Deduplicate categoryIds to prevent unique constraint violations in the same batch
+                const uniqueCategoryIds = Array.from(new Set(categoryIds));
+                const links = uniqueCategoryIds.map(categoryId => ({
                     contact_id: contactId,
-                    contact_type_id: typeId,
+                    contact_category_id: categoryId,
                     organization_id: contact.organization_id
                 }));
                 console.log("Inserting links:", links);
-                const { error: insertError } = await supabase.from('contact_type_links').insert(links);
+                const { error: insertError } = await supabase.from('contact_category_links').insert(links);
                 if (insertError) {
                     console.error("Error inserting links:", insertError);
-                    throw new Error("Failed to link contact types: " + insertError.message);
+                    throw new Error("Failed to link contact categories: " + insertError.message);
                 }
             }
         }
@@ -174,7 +170,7 @@ export async function deleteContact(contactId: string, replacementId?: string) {
     if (replacementId) {
         // Future: Add migrations here if contacts are FK'd from other tables
         // Example: Update project_data.client_id from contactId to replacementId
-        // For now, contact_type_links uses CASCADE so no migration needed there
+        // For now, contact_category_links uses CASCADE so no migration needed there
 
         // Placeholder for future FK migrations:
         // await supabase.from('some_table').update({ contact_id: replacementId }).eq('contact_id', contactId);
@@ -186,46 +182,45 @@ export async function deleteContact(contactId: string, replacementId?: string) {
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
-            updated_by: (await supabase.auth.getUser()).data.user?.id
         })
         .eq('id', contactId);
 
     if (error) {
-        console.error("Error deleting contact:", error);
-        throw new Error("Failed to delete contact");
+        console.error("Error deleting contact:", JSON.stringify(error, null, 2));
+        throw new Error(`Failed to delete contact: ${error.message} | code: ${error.code} | details: ${error.details} | hint: ${error.hint}`);
     }
 
     revalidatePath(`/organization/contacts`);
 }
 
-// --- CONTACT TYPES ---
+// --- CONTACT CATEGORIES ---
 
-export async function getContactTypes(organizationId: string): Promise<ContactType[]> {
+export async function getContactCategories(organizationId: string): Promise<ContactCategory[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contact_types')
+        .from('contact_categories')
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
         .order('name');
 
     if (error) {
-        console.error("Error fetching contact types:", error);
+        console.error("Error fetching contact categories:", error);
         return [];
     }
 
-    return data as ContactType[];
+    return data as ContactCategory[];
 }
 
 // Update actions to return data for UI state updates, and support replacement logic
-export async function createContactType(organizationId: string, name: string) {
+export async function createContactCategory(organizationId: string, name: string) {
     const supabase = await createClient();
 
     // 1. Get Auth User
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-        console.error("Error getting user for createContactType:", authError);
+        console.error("Error getting user for createContactCategory:", authError);
         throw new Error("Authentication failed");
     }
 
@@ -255,7 +250,7 @@ export async function createContactType(organizationId: string, name: string) {
     }
 
     const { data, error } = await supabase
-        .from('contact_types')
+        .from('contact_categories')
         .insert({
             organization_id: organizationId,
             name,
@@ -266,59 +261,55 @@ export async function createContactType(organizationId: string, name: string) {
         .single();
 
     if (error) {
-        console.error("Error creating contact type:", error);
-        throw new Error(`Failed to create contact type: ${error.message} (${error.details || ''})`);
+        console.error("Error creating contact category:", error);
+        throw new Error(`Failed to create contact category: ${error.message} (${error.details || ''})`);
     }
 
     revalidatePath(`/organization/contacts`);
-    revalidatePath(`/organization/contacts/settings`); // Assuming there might be a settings page
     return data;
 }
 
-export async function updateContactType(id: string, name: string) {
+export async function updateContactCategory(id: string, name: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('contact_types')
-        .update({
-            name,
-            updated_by: (await supabase.auth.getUser()).data.user?.id
-        })
+        .from('contact_categories')
+        .update({ name })
         .eq('id', id);
 
     if (error) {
-        console.error("Error updating contact type:", error);
-        throw new Error("Failed to update contact type");
+        console.error("Error updating contact category:", error);
+        throw new Error("Failed to update contact category");
     }
 
     revalidatePath(`/organization/contacts`);
 }
 
-export async function deleteContactType(id: string, replacementId?: string) {
+export async function deleteContactCategory(id: string, replacementId?: string) {
     const supabase = await createClient();
 
     // 1. Reassign if replacement requested
     if (replacementId) {
-        // Find links with the old type
+        // Find links with the old category
         const { data: linksToMigrate } = await supabase
-            .from('contact_type_links')
+            .from('contact_category_links')
             .select('*')
-            .eq('contact_type_id', id);
+            .eq('contact_category_id', id);
 
         if (linksToMigrate && linksToMigrate.length > 0) {
             // We need to insert new links for these contacts with replacementId
-            // BUT ensure we don't violate unique(contact_id, contact_type_id)
+            // BUT ensure we don't violate unique(contact_id, contact_category_id)
             // Postgres INSERT ON CONFLICT DO NOTHING is perfect here.
 
             const newLinks = linksToMigrate.map(link => ({
                 contact_id: link.contact_id,
-                contact_type_id: replacementId,
+                contact_category_id: replacementId,
                 organization_id: link.organization_id
             }));
 
             const { error: moveError } = await supabase
-                .from('contact_type_links')
-                .upsert(newLinks, { onConflict: 'contact_id, contact_type_id', ignoreDuplicates: true });
+                .from('contact_category_links')
+                .upsert(newLinks, { onConflict: 'contact_id, contact_category_id', ignoreDuplicates: true });
 
             if (moveError) {
                 console.error("Error migrating links:", moveError);
@@ -330,17 +321,16 @@ export async function deleteContactType(id: string, replacementId?: string) {
 
     // 2. Soft Delete
     const { error } = await supabase
-        .from('contact_types')
+        .from('contact_categories')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
-            updated_by: (await supabase.auth.getUser()).data.user?.id
         })
         .eq('id', id);
 
     if (error) {
-        console.error("Error deleting contact type:", error);
-        throw new Error("Failed to delete contact type");
+        console.error("Error deleting contact category:", error);
+        throw new Error("Failed to delete contact category");
     }
 
     revalidatePath(`/organization/contacts`);
@@ -377,26 +367,26 @@ export async function uploadContactAvatar(formData: FormData) {
     return { success: true, path: filePath };
 }
 
-export async function getContactsByTypes(organizationId: string, types: string[]): Promise<Contact[]> {
+export async function getContactsByCategories(organizationId: string, categories: string[]): Promise<Contact[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
         .from('contacts')
         .select(`
             *,
-            contact_type_links!inner (
-                contact_types!inner (
+            contact_category_links!inner (
+                contact_categories!inner (
                     name
                 )
             )
         `)
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
-        .in('contact_type_links.contact_types.name', types)
+        .in('contact_category_links.contact_categories.name', categories)
         .order('full_name', { ascending: true });
 
     if (error) {
-        console.error("Error fetching contacts by types:", error);
+        console.error("Error fetching contacts by categories:", error);
         return [];
     }
 
@@ -404,11 +394,10 @@ export async function getContactsByTypes(organizationId: string, types: string[]
     const uniqueContactsMap = new Map();
     data.forEach((item: any) => {
         if (!uniqueContactsMap.has(item.id)) {
-            const { contact_type_links, ...contact } = item;
+            const { contact_category_links, ...contact } = item;
             uniqueContactsMap.set(item.id, contact as Contact);
         }
     });
 
     return Array.from(uniqueContactsMap.values());
 }
-

@@ -1,0 +1,14 @@
+{
+    "order": [
+        "introduccion",
+        "categorias"
+    ],
+    "items": {
+        "introduccion": {
+            "title": "Introducción"
+        },
+        "categorias": {
+            "title": "Categorías"
+        }
+    }
+}
