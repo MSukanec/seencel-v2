@@ -21,6 +21,7 @@ import {
     CalendarDays,
     Users,
     ClipboardList,
+    LayoutDashboard,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { useSidebarData } from "@/hooks/use-sidebar-data";
@@ -326,7 +327,6 @@ export function SidebarContent({
                 )}
 
                 <div className="flex flex-col w-full h-full overflow-hidden">
-                    {/* Top Brand Section — SEENCEL + Plan Badge inline */}
                     <div className="w-full flex items-center gap-1.5 mb-2 px-2">
                         <div className="flex-1 min-w-0">
                             <SidebarBrandButton
@@ -334,11 +334,6 @@ export function SidebarContent({
                                 isExpanded={isExpanded}
                             />
                         </div>
-                        {!isMobile && (
-                            <div className="shrink-0">
-                                <SidebarPlanButton isExpanded={true} />
-                            </div>
-                        )}
                     </div>
 
                     {/* Separator */}
@@ -430,12 +425,18 @@ export function SidebarContent({
                             <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="organization">
 
                                 {/* Quick Access Row */}
-                                <div className={cn(
-                                    "rounded-lg",
-                                    "bg-sidebar-accent/30",
-                                    "border border-sidebar-border/40",
-                                    "p-1.5 mb-0.5"
-                                )}>
+                                <div
+                                    className={cn(
+                                        "rounded-lg",
+                                        "bg-sidebar-accent/30",
+                                        "border border-sidebar-border/40",
+                                        "p-1.5 mb-0.5"
+                                    )}
+                                    style={{
+                                        boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
+                                    }}
+                                >
+                                    {/* Quick access icons */}
                                     <div className="grid grid-cols-4 gap-1">
                                         {/* Notifications — uses the full component with popover */}
                                         <SidebarTooltip label="Notificaciones" isExpanded={false}>
@@ -454,7 +455,7 @@ export function SidebarContent({
                                                         onLinkClick?.();
                                                     }}
                                                     className={cn(
-                                                        "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150",
+                                                        "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150 cursor-pointer",
                                                         "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
                                                         pathname === item.href && "text-primary bg-primary/10"
                                                     )}
@@ -464,11 +465,22 @@ export function SidebarContent({
                                             </SidebarTooltip>
                                         ))}
                                     </div>
+                                    {/* Visión General — below quick access, same style as nav buttons */}
+                                    <div className="mt-1">
+                                        <SidebarNavButton
+                                            icon={LayoutDashboard}
+                                            label="Visión General"
+                                            href="/organization"
+                                            isActive={pathname === '/organization'}
+                                            isExpanded={true}
+                                            onClick={onLinkClick}
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Unified Nav Items with Accordion */}
+                                {/* Unified Nav Items with Accordion (exclude standalone 'principal' group) */}
                                 <SidebarAccordionGroups
-                                    groups={navGroups}
+                                    groups={navGroups.filter(g => g.id !== 'principal')}
                                     renderItem={renderNavItem}
                                     isExpanded={isExpanded}
                                     activePath={pathname}
@@ -530,9 +542,8 @@ export function SidebarContent({
                     {/* Mode Toggle (bottom, desktop only) */}
                     {!isMobile && (
                         <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
-                            {/* SidebarNavButton for toggle REMOVED */}
-
-                            {/* Feedback Button REMOVED - Moved to User Menu */}
+                            {/* Plan Badge — full width */}
+                            <SidebarPlanButton isExpanded={isExpanded} />
 
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />

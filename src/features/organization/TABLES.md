@@ -6,7 +6,7 @@ create view public.admin_organizations_view as
 select
   o.id,
   o.name,
-  o.logo_path,
+  o.logo_url,
   o.created_at,
   o.updated_at,
   o.is_active,
@@ -69,7 +69,7 @@ create table public.organizations (
   owner_id uuid null,
   settings jsonb null default '{}'::jsonb,
   is_demo boolean not null default false,
-  logo_path text null,
+  logo_url text null,
   updated_by uuid null,
   purchased_seats integer null default 0,
   constraint organizations_pkey primary key (id),

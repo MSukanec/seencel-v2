@@ -68,7 +68,7 @@ export interface MaterialWithDetails extends Material {
     org_price_valid_from?: string | null;
     // Organization info (admin mode)
     organization_name?: string | null;
-    organization_logo_path?: string | null;
+    organization_logo_url?: string | null;
 }
 
 // Category hierarchy node

@@ -88,18 +88,14 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
     let organizationLogo: string | null = null;
     const { data: invitationWithOrg } = await supabase
         .from('organization_invitations')
-        .select('organization_id, organizations!inner(logo_path)')
+        .select('organization_id, organizations!inner(logo_url)')
         .eq('token', token)
         .single();
 
     if (invitationWithOrg?.organizations) {
-        const org = invitationWithOrg.organizations as unknown as { logo_path: string | null };
-        if (org.logo_path) {
-            // Build full storage URL
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            organizationLogo = org.logo_path.startsWith('http')
-                ? org.logo_path
-                : `${supabaseUrl}/storage/v1/object/public/public-assets/${org.logo_path}`;
+        const org = invitationWithOrg.organizations as unknown as { logo_url: string | null };
+        if (org.logo_url) {
+            organizationLogo = org.logo_url;
         }
     }
 

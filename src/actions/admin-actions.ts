@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { OrganizationActivityLog } from "@/types/organization";
-import { getStorageUrl } from "@/lib/storage-utils";
 
 // Extended type for admin view (includes organization name and logo)
 export interface AdminActivityLog extends OrganizationActivityLog {
@@ -35,24 +34,17 @@ export async function getAllActivityLogs(limit: number = 200): Promise<AdminActi
     const orgIds = [...new Set(logs.map(l => l.organization_id))];
     const { data: orgs } = await supabase
         .from('organizations')
-        .select('id, name, logo_path')
+        .select('id, name, logo_url')
         .in('id', orgIds);
 
     // Create a map for quick lookup
     const orgMap = new Map((orgs || []).map(o => [o.id, o]));
 
-    // Helper to build logo URL from path (same pattern as organizations-table.tsx)
-    const buildLogoUrl = (logoPath: string | null): string | null => {
-        if (!logoPath) return null;
-        const path = logoPath.startsWith('organizations/') ? logoPath : `organizations/${logoPath}`;
-        return getStorageUrl(path, 'public-assets');
-    };
-
     // Transform the data
     return logs.map(log => ({
         ...log,
         organization_name: orgMap.get(log.organization_id)?.name || null,
-        organization_logo_url: buildLogoUrl(orgMap.get(log.organization_id)?.logo_path || null)
+        organization_logo_url: orgMap.get(log.organization_id)?.logo_url || null
     })) as AdminActivityLog[];
 }
 

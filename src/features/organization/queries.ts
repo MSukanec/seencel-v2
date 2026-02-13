@@ -48,7 +48,7 @@ export async function getDashboardData() {
                 organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
-                    logo_path,
+                    logo_url,
                     settings,
                     organization_data (
                         description,
@@ -81,7 +81,7 @@ export async function getDashboardData() {
                 .select(`
                     id, 
                     name, 
-                    logo_path,
+                    logo_url,
                     settings,
                     organization_data (
                         description,
@@ -119,7 +119,7 @@ export async function getDashboardData() {
                 organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
-                    logo_path,
+                    logo_url,
                     settings,
                     organization_data (
                         description,
@@ -156,7 +156,7 @@ export async function getDashboardData() {
                 .select(`
                     id, 
                     name, 
-                    logo_path,
+                    logo_url,
                     settings,
                     organization_data (
                         description,
@@ -287,7 +287,7 @@ export async function getUserOrganizations() {
             organizations:organizations!organization_members_organization_id_fkey (
                 id,
                 name,
-                logo_path,
+                logo_url,
                 owner_id,
                 plans:plan_id (
                     id,
@@ -356,7 +356,7 @@ export async function getUserOrganizations() {
         return {
             id: org.id,
             name: org.name,
-            logo_path: org.logo_path || null,
+            logo_url: org.logo_url || null,
             owner_id: org.owner_id || null,
             slug: org.name.toLowerCase().replace(/\s+/g, '-'),
             role: 'member',

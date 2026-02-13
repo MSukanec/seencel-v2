@@ -75,9 +75,7 @@ export function HeaderOrgProjectSelector() {
         ? activeProjects.find(p => p.id === activeProjectId) || null
         : null;
 
-    const logoSrc = currentOrg?.logo_path
-        ? (currentOrg.logo_path.startsWith('http') ? currentOrg.logo_path : getStorageUrl(currentOrg.logo_path, 'public-assets'))
-        : null;
+    const logoSrc = currentOrg?.logo_url || null;
 
     const handleSelectOrg = () => {
         setActiveProjectId(null);

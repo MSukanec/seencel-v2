@@ -82,9 +82,12 @@ export function SidebarAccordionGroups({
                         value={group.id}
                         className={cn(
                             "rounded-lg",
-                            "bg-sidebar-accent/30",
+                            "bg-sidebar-accent/50",
                             "border border-sidebar-border/40",
                         )}
+                        style={{
+                            boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
+                        }}
                     >
                         {/* Accordion trigger */}
                         <AccordionPrimitive.Header className="flex">

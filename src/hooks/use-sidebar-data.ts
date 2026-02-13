@@ -9,7 +9,7 @@ import { Project } from "@/components/layout/dashboard/sidebar/buttons";
 interface Organization {
     id: string;
     name: string;
-    logo_path?: string | null;
+    logo_url?: string | null;
     isFounder?: boolean;
 }
 import { fetchProjectsAction } from "@/features/projects/actions";
@@ -24,21 +24,7 @@ interface SidebarData {
     saveProjectPreference: (projectId: string) => void;
 }
 
-// Helper to build the full logo URL from logo_path
-function buildLogoUrl(logoPath: string | null | undefined): string | null {
-    if (!logoPath) return null;
 
-    // If it already starts with http, return as is
-    if (logoPath.startsWith('http')) return logoPath;
-
-    // Build the full URL from storage
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const path = logoPath.startsWith('organizations/')
-        ? logoPath
-        : `organizations/${logoPath}`;
-
-    return `${supabaseUrl}/storage/v1/object/public/public-assets/${path}`;
-}
 
 /**
  * Hook to get current organization and projects for the sidebar
@@ -71,7 +57,7 @@ export function useSidebarData(): SidebarData {
             try {
                 const { data } = await supabase
                     .from('organizations')
-                    .select('id, name, logo_path, settings')
+                    .select('id, name, logo_url, settings')
                     .eq('id', orgId)
                     .single();
 
@@ -79,7 +65,7 @@ export function useSidebarData(): SidebarData {
                     setCurrentOrg({
                         id: data.id,
                         name: data.name,
-                        logo_path: buildLogoUrl(data.logo_path),
+                        logo_url: data.logo_url || null,
                         isFounder: (data.settings as any)?.is_founder === true,
                     });
                 }
@@ -105,12 +91,12 @@ export function useSidebarData(): SidebarData {
                     // Update local state when organization changes
                     const newData = payload.new as any;
                     // Add cache-buster to force image reload
-                    const logoUrl = buildLogoUrl(newData.logo_path);
+                    const logoUrl = newData.logo_url || null;
                     const cacheBustedLogo = logoUrl ? `${logoUrl}?t=${Date.now()}` : null;
                     setCurrentOrg((prev) => ({
                         ...prev!,
                         name: newData.name,
-                        logo_path: cacheBustedLogo,
+                        logo_url: cacheBustedLogo,
                         isFounder: newData.settings?.is_founder === true,
                     }));
                 }

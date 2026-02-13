@@ -21,7 +21,7 @@ import { getStorageUrl } from "@/lib/storage-utils";
 export interface OrganizationListItemData {
     id: string;
     name: string;
-    logo_path?: string | null;
+    logo_url?: string | null;
     plans?: {
         id: string;
         name: string;
@@ -83,10 +83,7 @@ export const OrganizationListItem = memo(function OrganizationListItem({
     onSwitch,
     onDelete,
 }: OrganizationListItemProps) {
-    const logoPath = organization.logo_path
-        ? (organization.logo_path.startsWith('organizations/') ? organization.logo_path : `organizations/${organization.logo_path}`)
-        : null;
-    const logoUrl = getStorageUrl(logoPath, 'public-assets');
+    const logoUrl = organization.logo_url || null;
     const planInfo = getPlanBadgeInfo(organization.plans?.slug);
 
     // Solo el dueño puede eliminar, y nunca la org activa

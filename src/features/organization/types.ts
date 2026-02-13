@@ -27,7 +27,7 @@ export interface OrganizationData {
 export interface Organization {
     id: string;
     name: string;
-    logo_path: string | null;
+    logo_url: string | null;
     settings: Record<string, unknown> | null;
     organization_data: OrganizationData | null;
 }

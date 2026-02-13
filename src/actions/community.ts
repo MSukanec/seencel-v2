@@ -39,7 +39,7 @@ export async function getPublicProjects(): Promise<PublicProject[]> {
             organization:organizations!inner(
                 id,
                 name,
-                logo_path,
+                logo_url,
                 plan_id,
                 plan:plans(slug)
             ),
@@ -87,7 +87,7 @@ export async function getPublicProjects(): Promise<PublicProject[]> {
                 city: pd?.city || null,
                 country: pd?.country || null,
                 org_name: org?.name || 'Unknown',
-                org_logo: org?.logo_path || null,
+                org_logo: org?.logo_url || null,
                 project_type_name: pt?.name || null,
             };
         })

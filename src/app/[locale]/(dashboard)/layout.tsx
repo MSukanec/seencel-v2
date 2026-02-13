@@ -77,14 +77,12 @@ export default async function DashboardLayout({
             if (inv.organization_id) {
                 const { data: orgData } = await supabase
                     .from('organizations')
-                    .select('name, logo_path')
+                    .select('name, logo_url')
                     .eq('id', inv.organization_id)
                     .single();
                 if (orgData) {
                     orgName = orgData.name || orgName;
-                    logoUrl = orgData.logo_path
-                        ? getStorageUrl(orgData.logo_path, 'public-assets')
-                        : null;
+                    logoUrl = orgData.logo_url || null;
                 }
             }
 

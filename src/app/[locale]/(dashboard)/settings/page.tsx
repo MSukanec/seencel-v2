@@ -30,7 +30,7 @@ import { ContentLayout } from "@/components/layout";
 interface Organization {
     id: string;
     name: string;
-    logo_path?: string | null;
+    logo_url?: string | null;
     owner_id?: string | null;
     slug?: string;
     role?: string;

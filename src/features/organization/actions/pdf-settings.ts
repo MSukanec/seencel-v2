@@ -93,7 +93,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
             .select(`
                 name,
                 plan_id,
-                logo_path,
+                logo_url,
                 plans ( slug, features )
             `)
             .eq('id', orgId)
@@ -119,10 +119,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
     const isPro = !planSlug.includes('free') && !planSlug.includes('basic');
     const canCreateCustomTemplates = planFeatures.custom_pdf_templates === true;
 
-    const logoPath = orgRes.data?.logo_path;
-    const logoUrl = logoPath
-        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${logoPath}`
-        : null;
+    const logoUrl = orgRes.data?.logo_url || null;
 
     // Prepare Demo Data
     const demoData = orgDataRes.data ? {

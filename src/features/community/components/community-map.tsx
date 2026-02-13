@@ -106,10 +106,9 @@ function MapWithMarkers({ projects }: CommunityMapProps) {
         });
     }, [projects]);
 
-    // Get logo URL for marker
-    const getLogoUrl = (logoPath: string | null) => {
-        if (!logoPath) return "/logo.png";
-        return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${logoPath}`;
+    // Get logo URL for marker (org_logo already contains full URL from DB)
+    const getLogoUrl = (logoUrl: string | null) => {
+        return logoUrl || "/logo.png";
     };
 
     return (

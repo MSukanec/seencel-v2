@@ -48,7 +48,7 @@ const PROJECT_COLORS: Record<string, string> = {
 export interface Organization {
     id: string;
     name: string;
-    logo_path?: string | null;
+    logo_url?: string | null;  // Full URL from DB via hook
     isFounder?: boolean;
 }
 
@@ -140,10 +140,8 @@ export function SidebarBrandButton({
         const textSize = size === "sm" ? "text-[8px]" : "text-[10px]";
         const showFounderBadge = org?.isFounder && size === "md";
 
-        // Resolve relative logo_path to full URL
-        const logoSrc = org?.logo_path
-            ? (org.logo_path.startsWith('http') ? org.logo_path : getStorageUrl(org.logo_path, 'public-assets'))
-            : null;
+        // logo_url now contains the full URL from the hook (use-sidebar-data resolves it)
+        const logoSrc = org?.logo_url || null;
 
         return (
             <div className="relative">

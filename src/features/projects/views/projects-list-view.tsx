@@ -118,8 +118,7 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
 
     const handleNavigateToProject = (project: Project) => {
         actions.setActiveProjectId(project.id);
-        actions.setActiveContext('project');
-        router.push(`/project/${project.id}` as any);
+        actions.setActiveContext('organization');
     };
 
     const handleDelete = (project: Project) => {

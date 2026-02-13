@@ -7,8 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WidgetEmptyState } from "@/components/widgets/grid/widget-empty-state";
 import { MapPin, ImageOff, FolderKanban } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useLocale } from "next-intl";
 import { useLayoutStore } from "@/stores/layout-store";
 
 // ============================================================================
@@ -22,7 +20,6 @@ export function RecentProjectsWidget({ size, initialData }: WidgetProps) {
     const [projects, setProjects] = useState<RecentProject[] | null>(
         initialData ?? null
     );
-    const locale = useLocale();
     const { actions } = useLayoutStore();
 
     // Only fetch client-side if no initialData was provided (fallback for dynamic adds)
@@ -34,7 +31,7 @@ export function RecentProjectsWidget({ size, initialData }: WidgetProps) {
     }, [initialData]);
 
     const handleClick = (projectId: string) => {
-        actions.setActiveContext("project");
+        actions.setActiveContext("organization");
         actions.setActiveProjectId(projectId);
     };
 
@@ -73,7 +70,6 @@ export function RecentProjectsWidget({ size, initialData }: WidgetProps) {
                             <ProjectHeroCard
                                 key={project.id}
                                 project={project}
-                                locale={locale}
                                 onClick={() => handleClick(project.id)}
                             />
                         ))}
@@ -90,11 +86,9 @@ export function RecentProjectsWidget({ size, initialData }: WidgetProps) {
 
 function ProjectHeroCard({
     project,
-    locale,
     onClick,
 }: {
     project: RecentProject;
-    locale: string;
     onClick: () => void;
 }) {
     const imageUrl = project.image_bucket && project.image_path
@@ -109,10 +103,12 @@ function ProjectHeroCard({
     const location = [project.city, project.country].filter(Boolean).join(", ");
 
     return (
-        <Link
-            href={`/${locale}/project/${project.id}`}
-            className="block group flex-1"
+        <div
+            role="button"
+            tabIndex={0}
+            className="block group flex-1 cursor-pointer"
             onClick={onClick}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
         >
             <div className="relative w-full h-full min-h-[100px] rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.01]">
                 {/* Image or Fallback */}
@@ -155,7 +151,7 @@ function ProjectHeroCard({
                     style={{ backgroundColor: accentColor as string }}
                 />
             </div>
-        </Link>
+        </div>
     );
 }
 

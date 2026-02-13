@@ -55,7 +55,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 export interface AdminOrganization {
     id: string;
     name: string;
-    logo_path: string | null;
+    logo_url: string | null;
     created_at: string | null;
     updated_at: string | null;
     is_active: boolean;
@@ -299,7 +299,7 @@ export interface SystemMaterial {
     // Organization info (for admin "Todos" scope)
     organization_id: string | null;
     organization_name: string | null;
-    organization_logo_path: string | null;
+    organization_logo_url: string | null;
 }
 
 export interface MaterialCategory {
@@ -354,7 +354,7 @@ export async function getSystemMaterials(): Promise<SystemMaterial[]> {
         created_at: m.created_at,
         organization_id: null,
         organization_name: null,
-        organization_logo_path: null,
+        organization_logo_url: null,
     }));
 }
 
@@ -378,7 +378,7 @@ export async function getAllMaterialsAdmin(): Promise<SystemMaterial[]> {
             organization_id,
             units!materials_unit_id_fkey (name),
             material_categories (name),
-            organizations (name, logo_path)
+            organizations (name, logo_url)
         `)
         .eq('is_deleted', false)
         .order('name', { ascending: true });
@@ -401,7 +401,7 @@ export async function getAllMaterialsAdmin(): Promise<SystemMaterial[]> {
         created_at: m.created_at,
         organization_id: m.organization_id || null,
         organization_name: m.organizations?.name || null,
-        organization_logo_path: m.organizations?.logo_path || null,
+        organization_logo_url: m.organizations?.logo_url || null,
     }));
 }
 

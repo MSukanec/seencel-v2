@@ -89,11 +89,8 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
     // Determine styles based on theme
     const currentMapStyle = resolvedTheme === 'dark' ? darkMapStyle : lightMapStyle;
 
-    // Custom Marker Image URL
-    // Custom Marker Image URL - Corrected to use logo_path from organizations table
-    const logoUrl = organization.logo_path
-        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${organization.logo_path}`
-        : "/logo.png";
+    // Custom Marker Image URL - uses logo_url (full URL from DB)
+    const logoUrl = organization.logo_url || "/logo.png";
 
     // Map State
     const [center, setCenter] = useState({

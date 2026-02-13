@@ -1,41 +1,23 @@
 "use client";
 
-import * as React from "react";
-import { useEffect, useState } from "react";
-import { Link } from "@/i18n/routing";
-import { cn } from "@/lib/utils";
-import { useOrganization } from "@/stores/organization-store";
-import { useOrganizationStore } from "@/stores/organization-store";
-import { Zap, Sparkles, Users, Building2 } from "lucide-react";
-import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
-import { getPlanDisplayName } from "@/lib/plan-utils";
-import { Skeleton } from "@/components/ui/skeleton";
-
 // ============================================================================
 // SIDEBAR PLAN BUTTON
 // ============================================================================
-// Shows current plan in sidebar
+// Shows current plan in sidebar. Uses the unified PlanBadge component directly.
 // ============================================================================
+
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useOrganization } from "@/stores/organization-store";
+import { useOrganizationStore } from "@/stores/organization-store";
+import { getPlans, getCurrentOrganizationPlanId, Plan } from "@/actions/plans";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PlanBadge } from "@/components/shared/plan-badge";
 
 interface SidebarPlanButtonProps {
     isExpanded?: boolean;
 }
-
-// Plan styling based on plan name
-const getPlanStyle = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes("enterprise") || lower.includes("empresa")) {
-        return { icon: Building2, cssVar: "var(--plan-enterprise)" };
-    }
-    if (lower.includes("team")) {
-        return { icon: Users, cssVar: "var(--plan-teams)" };
-    }
-    if (lower.includes("pro")) {
-        return { icon: Zap, cssVar: "var(--plan-pro)" };
-    }
-    // Free / Default
-    return { icon: Sparkles, cssVar: "var(--plan-free)" };
-};
 
 export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps) {
     const { activeOrgId, isFounder } = useOrganization();
@@ -69,7 +51,7 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
         }
 
         loadPlanData();
-    }, [activeOrgId, isFounder, planVersion]); // Re-fetch when plan is invalidated
+    }, [activeOrgId, isFounder, planVersion]);
 
     // Loading skeleton
     if (loading) {
@@ -85,28 +67,12 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
 
     if (!currentPlan) return null;
 
-    const styles = getPlanStyle(currentPlan.name);
-    const Icon = styles.icon;
-
-    // Compact tag — full width but visually distinct from nav items
     return (
-        <Link href="/pricing" className="w-full block">
-            <div
-                className={cn(
-                    "flex items-center gap-1.5 rounded-md border border-white/10 hover:border-white/20 transition-colors",
-                    isExpanded ? "px-2.5 py-1.5" : "justify-center p-1.5"
-                )}
-                style={{ backgroundColor: `color-mix(in oklch, ${styles.cssVar}, transparent 70%)` }}
-            >
-                <Icon className={cn("shrink-0 text-white/70", isExpanded ? "h-3.5 w-3.5" : "h-4 w-4")} />
-                {isExpanded && (
-                    <span className="text-[10px] font-medium text-white/60 tracking-wide truncate">
-                        {getPlanDisplayName(currentPlan.name)}
-                    </span>
-                )}
-            </div>
-        </Link>
+        <PlanBadge
+            planSlug={currentPlan.slug || currentPlan.name}
+            variant="glass"
+            showLabel={isExpanded}
+            className="w-full py-1.5"
+        />
     );
 }
-
-

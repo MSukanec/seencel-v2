@@ -40,7 +40,7 @@ export interface MaterialListItemData {
     org_price_valid_from?: string | null;
     // Organization info (admin mode)
     organization_name?: string | null;
-    organization_logo_path?: string | null;
+    organization_logo_url?: string | null;
 }
 
 export interface MaterialListItemProps {
@@ -145,8 +145,8 @@ export const MaterialListItem = memo(function MaterialListItem({
                         ) : material.organization_name ? (
                             <Badge variant="outline" className="text-xs gap-1.5 pl-1">
                                 <Avatar className="h-4 w-4">
-                                    {material.organization_logo_path && (
-                                        <AvatarImage src={material.organization_logo_path} alt={material.organization_name} />
+                                    {material.organization_logo_url && (
+                                        <AvatarImage src={material.organization_logo_url} alt={material.organization_name} />
                                     )}
                                     <AvatarFallback className="text-[8px]">
                                         {material.organization_name.charAt(0).toUpperCase()}

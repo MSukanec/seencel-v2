@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MapPin, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useLayoutStore } from "@/stores/layout-store";
 
 interface ProjectCardProps {
@@ -29,7 +28,6 @@ interface ProjectCardProps {
  * Each card should look dramatically different, like marble swatch samples.
  */
 export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCardProps) {
-    const locale = useLocale();
     const t = useTranslations('Project.status');
     const { actions } = useLayoutStore();
 
@@ -58,7 +56,7 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
     };
 
     const handleCardClick = () => {
-        actions.setActiveContext("project");
+        actions.setActiveContext("organization");
         actions.setActiveProjectId(project.id);
     };
 
@@ -98,10 +96,12 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         : undefined;
 
     return (
-        <Link
-            href={`/${locale}/project/${project.id}`}
-            className="block group"
+        <div
+            role="button"
+            tabIndex={0}
+            className="block group cursor-pointer"
             onClick={handleCardClick}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
         >
             <Card
                 className={cn(
@@ -259,6 +259,6 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                     )}
                 </div>
             </Card>
-        </Link>
+        </div>
     );
 }

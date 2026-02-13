@@ -30,15 +30,6 @@ export async function uploadOrganizationLogo(formData: FormData) {
         });
 
         // 3. Upload to 'public-assets' bucket
-        // Path format: 'organizations/org-uuid-timestamp.webp'
-        // Note: The bucket is 'public-assets'.
-        // Inside it, we want 'organizations/' folder usually.
-        // But some implementations might put 'organizations/' in the path.
-        // Based on SettingsPage logic: `organizations/${org.logo_path}` implies logo_path is just the filename usually?
-        // Wait, line 216 queries.ts: `logo_path`. 
-        // Line 168 SettingsPage: `logoPath.startsWith('organizations/') ? ...`
-        // So let's store it as 'organizations/filename.webp' in the bucket, and save 'organizations/filename.webp' to DB.
-
         const fileName = `logo-${Date.now()}.${extension}`;
         const filePath = `organizations/${fileName}`;
 
@@ -51,25 +42,20 @@ export async function uploadOrganizationLogo(formData: FormData) {
 
         if (uploadError) throw uploadError;
 
-        // 4. Update Organization Record with logo_path
-        // We store the path relative to the bucket? Or just the filename?
-        // Looking at SettingsPage again: `const logoPath = org.logo_path ? (org.logo_path.startsWith('organizations/') ? ...`
-        // It seems flexible. Let's store the full path inside the bucket: 'organizations/filename.webp'
+        // 4. Build full public URL and save directly to DB
+        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
 
         const { error: updateError } = await supabase
             .from('organizations')
-            .update({ logo_path: filePath }) // CHANGED: logo_url -> logo_path
+            .update({ logo_url: publicUrl })
             .eq('id', organizationId);
 
         if (updateError) throw updateError;
 
         // 5. Return Success
-        // Use getStorageUrl logic to return the full URL for immediate UI update
-        const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
-
         revalidatePath('/organization/identity');
-        revalidatePath('/hub'); // Refresh sidebar org selector
-        revalidatePath('/', 'layout'); // Refresh entire layout for sidebar
+        revalidatePath('/hub');
+        revalidatePath('/', 'layout');
         return { success: true, logoUrl: publicUrl };
 
     } catch (error: any) {

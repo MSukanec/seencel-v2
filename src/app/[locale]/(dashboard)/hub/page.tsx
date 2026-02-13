@@ -41,7 +41,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
     // Derived data
     const activeOrg = organizations.find(o => o.id === activeOrgId);
     const activeOrgName = activeOrg?.name;
-    const activeOrgLogo = activeOrg?.logo_path || null;
+    const activeOrgLogo = activeOrg?.logo_url || null;
 
     return (
         <PageWrapper type="dashboard">

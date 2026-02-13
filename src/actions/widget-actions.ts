@@ -508,31 +508,55 @@ export async function getRecentFiles(
         }
         if (!data || data.length === 0) return [];
 
-        // Generate signed URLs
-        const items: RecentFileItem[] = await Promise.all(
-            data.map(async (row: any) => {
-                const mf = row.media_files;
-                let signedUrl: string | undefined;
-                try {
-                    const { data: signedData } = await supabase
-                        .storage
-                        .from(mf.bucket)
-                        .createSignedUrl(mf.file_path, 3600);
-                    signedUrl = signedData?.signedUrl;
-                } catch { /* ignore */ }
+        // Separate files by bucket type for URL generation
+        const publicBuckets = ['public-assets', 'social-assets'];
+        const privateFiles = data.filter((row: any) => !publicBuckets.includes(row.media_files.bucket));
+        const publicFiles = data.filter((row: any) => publicBuckets.includes(row.media_files.bucket));
 
-                return {
-                    id: mf.id,
-                    file_name: mf.file_name,
-                    file_type: mf.file_type,
-                    file_size: mf.file_size,
-                    url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${mf.bucket}/${mf.file_path}`,
-                    signed_url: signedUrl,
-                    created_at: mf.created_at,
-                    project_id: row.project_id,
-                };
-            })
-        );
+        // Generate signed URLs for private bucket files (batch)
+        const signedUrlMap = new Map<string, string>();
+        if (privateFiles.length > 0) {
+            // Group by bucket for batch signing
+            const byBucket = new Map<string, { path: string; id: string }[]>();
+            privateFiles.forEach((row: any) => {
+                const mf = row.media_files;
+                if (!byBucket.has(mf.bucket)) byBucket.set(mf.bucket, []);
+                byBucket.get(mf.bucket)!.push({ path: mf.file_path, id: mf.id });
+            });
+
+            for (const [bucket, files] of byBucket) {
+                const { data: signedData } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrls(files.map(f => f.path), 3600); // 1 hour
+
+                if (signedData) {
+                    signedData.forEach((signed, i) => {
+                        if (signed.signedUrl) {
+                            signedUrlMap.set(files[i].id, signed.signedUrl);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Build items
+        const items: RecentFileItem[] = data.map((row: any) => {
+            const mf = row.media_files;
+            const isPublicBucket = publicBuckets.includes(mf.bucket);
+            const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${mf.bucket}/${mf.file_path}`;
+            const fileUrl = isPublicBucket ? publicUrl : (signedUrlMap.get(mf.id) || publicUrl);
+
+            return {
+                id: mf.id,
+                file_name: mf.file_name,
+                file_type: mf.file_type,
+                file_size: mf.file_size,
+                url: fileUrl,
+                signed_url: fileUrl,
+                created_at: mf.created_at,
+                project_id: row.project_id,
+            };
+        });
 
         return items;
     } catch (error) {
@@ -575,7 +599,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         // Org info (name, logo, plan, settings) for pulse widget
         supabase
             .from("organizations")
-            .select("name, logo_path, settings, plans(name, slug)")
+            .select("name, logo_url, settings, plans(name, slug)")
             .eq("id", orgId)
             .single(),
 
@@ -695,11 +719,11 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
             email: m.users.email || undefined,
         }));
 
-    // Build pulse data
+    // Build pulse data (must match HeroData interface in overview-widget.tsx)
     const orgData = orgResult.data as any;
     const pulseData = {
         name: orgData?.name || "Organización",
-        logoPath: orgData?.logo_path || null,
+        avatarUrl: orgData?.logo_url || null,
         planName: orgData?.plans?.name || null,
         planSlug: orgData?.plans?.slug || null,
         isFounder: (orgData?.settings as any)?.is_founder === true,
@@ -708,6 +732,10 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         recentActivityCount: activityResult.data?.length || 0,
         projectLocations,
         members: membersForStack,
+        isProjectMode: false,
+        projectStatus: null,
+        projectTypeName: null,
+        projectModalityName: null,
     };
 
     // Build upcoming events (unified calendar + kanban)

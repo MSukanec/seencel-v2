@@ -86,10 +86,7 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
             header: "Organización",
             cell: ({ row }) => {
                 const org = row.original;
-                const logoPath = org.logo_path
-                    ? (org.logo_path.startsWith('organizations/') ? org.logo_path : `organizations/${org.logo_path}`)
-                    : null;
-                const logoUrl = getStorageUrl(logoPath, 'public-assets');
+                const logoUrl = org.logo_url;
 
                 return (
                     <div className="flex items-center gap-3">

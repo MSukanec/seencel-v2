@@ -34,10 +34,7 @@ export function OrganizationDetailsForm({ organization }: { organization: any })
     const orgDataRaw = organization.organization_data;
     const orgData = Array.isArray(orgDataRaw) ? orgDataRaw[0] : orgDataRaw || {};
 
-    const logoPath = organization.logo_path
-        ? (organization.logo_path.startsWith('organizations/') ? organization.logo_path : `organizations/${organization.logo_path}`)
-        : null;
-    const logoUrl = getStorageUrl(logoPath, 'public-assets');
+    const logoUrl = organization.logo_url || null;
 
     // Helper to sanitize phone value to E.164 format (must start with +)
     const sanitizePhoneValue = (phone: string | undefined): string => {
