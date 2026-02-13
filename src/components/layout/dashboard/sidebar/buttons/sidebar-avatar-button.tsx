@@ -153,7 +153,7 @@ export function SidebarAvatarButton({
                 <div className="flex flex-col gap-0.5">
                     {/* 1. Configuración */}
                     <Link
-                        href="/settings"
+                        href="/profile"
                         onClick={handleClose}
                         className="flex items-center gap-3 px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors"
                     >

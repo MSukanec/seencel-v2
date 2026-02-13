@@ -24,6 +24,8 @@ export interface PlanConfig {
     cssVar: string;
     labelEs: string;
     labelEn: string;
+    shortLabelEs: string;
+    shortLabelEn: string;
 }
 
 const PLAN_CONFIG: Record<string, PlanConfig> = {
@@ -32,36 +34,48 @@ const PLAN_CONFIG: Record<string, PlanConfig> = {
         cssVar: "var(--plan-free)",
         labelEs: "Plan Esencial",
         labelEn: "Essential Plan",
+        shortLabelEs: "Esencial",
+        shortLabelEn: "Essential",
     },
     essential: {
         icon: Sparkles,
         cssVar: "var(--plan-free)",
         labelEs: "Plan Esencial",
         labelEn: "Essential Plan",
+        shortLabelEs: "Esencial",
+        shortLabelEn: "Essential",
     },
     pro: {
         icon: Zap,
         cssVar: "var(--plan-pro)",
         labelEs: "Plan Profesional",
         labelEn: "Professional Plan",
+        shortLabelEs: "Profesional",
+        shortLabelEn: "Professional",
     },
     teams: {
         icon: Users,
         cssVar: "var(--plan-teams)",
         labelEs: "Plan Equipos",
         labelEn: "Teams Plan",
+        shortLabelEs: "Equipos",
+        shortLabelEn: "Teams",
     },
     enterprise: {
         icon: Building2,
         cssVar: "var(--plan-enterprise)",
         labelEs: "Plan Empresarial",
         labelEn: "Enterprise Plan",
+        shortLabelEs: "Empresa",
+        shortLabelEn: "Enterprise",
     },
     founder: {
         icon: Medal,
         cssVar: "var(--plan-founder)",
         labelEs: "Fundadora",
         labelEn: "Founder",
+        shortLabelEs: "Fundadora",
+        shortLabelEn: "Founder",
     },
 };
 
@@ -105,6 +119,8 @@ interface PlanBadgeProps {
     showLabel?: boolean;
     /** Whether to link to pricing */
     linkToPricing?: boolean;
+    /** Use short label (e.g. "Esencial" instead of "Plan Esencial") */
+    compact?: boolean;
 }
 
 export function PlanBadge({
@@ -115,10 +131,13 @@ export function PlanBadge({
     showIcon = true,
     showLabel = true,
     linkToPricing = true,
+    compact = false,
 }: PlanBadgeProps) {
     const config = getPlanConfig(planSlug);
     const Icon = config.icon;
-    const label = locale === "en" ? config.labelEn : config.labelEs;
+    const label = compact
+        ? (locale === "en" ? config.shortLabelEn : config.shortLabelEs)
+        : (locale === "en" ? config.labelEn : config.labelEs);
 
     const content = (
         <div

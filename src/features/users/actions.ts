@@ -89,7 +89,6 @@ export async function updateUserProfile(formData: FormData) {
         throw new Error("Failed to update extra profile details");
     }
 
-    revalidatePath('/settings');
     revalidatePath('/profile');
     return { success: true };
 }
@@ -136,7 +135,7 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
         throw new Error("Failed to update preferences");
     }
 
-    revalidatePath('/settings');
+    revalidatePath('/profile');
     revalidatePath('/', 'layout');
 
     return { success: true };
@@ -211,7 +210,7 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
             throw new Error(`Profile update failed: ${updateError.message}`);
         }
 
-        revalidatePath('/settings');
+        revalidatePath('/profile');
         return { success: true, avatar_url: publicUrl };
     } catch (error) {
         console.error("Critical Upload Error:", error);
@@ -235,7 +234,7 @@ export async function removeAvatar() {
         .eq('id', userId);
 
     if (error) throw new Error(`Failed to remove avatar: ${sanitizeError(error)}`);
-    revalidatePath('/settings');
+    revalidatePath('/profile');
     return { success: true };
 }
 
@@ -259,6 +258,6 @@ export async function restoreProviderAvatar() {
         .eq('id', userId);
 
     if (error) throw new Error(`Failed to restore avatar: ${sanitizeError(error)}`);
-    revalidatePath('/settings');
+    revalidatePath('/profile');
     return { success: true, avatar_url: providerAvatar };
 }

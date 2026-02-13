@@ -402,7 +402,7 @@ export function MobileNav() {
                                     <DropdownMenuSeparator />
 
                                     <DropdownMenuItem asChild>
-                                        <Link href="/settings" onClick={() => setOpen(false)}>
+                                        <Link href="/profile" onClick={() => setOpen(false)}>
                                             <Settings className="mr-2 h-4 w-4" />
                                             Configuración
                                         </Link>

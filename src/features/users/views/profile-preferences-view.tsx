@@ -1,21 +1,25 @@
-
 "use client";
 
-import { useState } from "react";
+// ============================================================================
+// PROFILE PREFERENCES VIEW
+// ============================================================================
+// Vista de preferencias usando SettingsSection layout.
+// Secciones: Idioma + Zona Horaria + Tema.
+// ============================================================================
+
+import { useState, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations, useLocale } from "next-intl";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Monitor, PanelLeft, Clock } from "lucide-react";
+import { Languages, Clock, Palette, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLayoutStore } from "@/stores/layout-store";
 import { useRouter, usePathname } from "@/i18n/routing";
-import { useTransition } from "react";
 import { updateUserPreferences } from "@/features/users/actions";
 import { TIMEZONES, detectBrowserTimezone } from "@/lib/timezone-data";
+import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { toast } from "sonner";
 
 interface PreferencesViewProps {
@@ -24,17 +28,13 @@ interface PreferencesViewProps {
 
 export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
     const { setTheme, theme } = useTheme();
-    const { actions } = useLayoutStore();
     const t = useTranslations("Settings");
     const locale = useLocale();
     const router = useRouter();
     const pathname = usePathname();
     const [isPending, startTransition] = useTransition();
-
-    // Timezone state - use saved value or fallback to browser detection
     const [timezone, setTimezone] = useState<string>(initialTimezone || detectBrowserTimezone());
 
-    // Handle Language Change
     const onLanguageChange = (newLocale: string) => {
         startTransition(async () => {
             await updateUserPreferences({ language: newLocale as 'en' | 'es' });
@@ -42,7 +42,6 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
         });
     };
 
-    // Handle Theme Change
     const onThemeChange = (newTheme: string) => {
         setTheme(newTheme);
         if (newTheme === 'light' || newTheme === 'dark') {
@@ -50,7 +49,6 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
         }
     };
 
-    // Handle Timezone Change
     const onTimezoneChange = async (newTimezone: string) => {
         setTimezone(newTimezone);
         try {
@@ -62,49 +60,36 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{t('Preferences.appearance.title')}</CardTitle>
-                <CardDescription>{t('Preferences.appearance.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {/* LANGUAGE */}
-                <div className="flex items-center justify-between gap-8">
-                    <div className="space-y-1 flex-1">
-                        <Label className="text-base">{t('Preferences.language.title')}</Label>
-                        <p className="text-sm text-muted-foreground">
-                            {t('Preferences.language.description')}
-                        </p>
-                    </div>
+        <ContentLayout variant="settings">
+            <SettingsSectionContainer>
+                {/* ── Idioma ── */}
+                <SettingsSection
+                    icon={Languages}
+                    title={t('Preferences.language.title')}
+                    description={t('Preferences.language.description')}
+                >
                     <Select defaultValue={locale} onValueChange={onLanguageChange} disabled={isPending}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full md:w-[240px]">
                             <SelectValue placeholder={t('Preferences.language.placeholder')} />
                         </SelectTrigger>
-                        <SelectContent align="end">
+                        <SelectContent>
                             <SelectItem value="en">{t('Preferences.language.options.en')}</SelectItem>
                             <SelectItem value="es">{t('Preferences.language.options.es')}</SelectItem>
                         </SelectContent>
                     </Select>
-                </div>
+                </SettingsSection>
 
-                <Separator />
-
-                {/* TIMEZONE */}
-                <div className="flex items-center justify-between gap-8">
-                    <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <Label className="text-base">Zona Horaria</Label>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                            Configura tu zona horaria para mostrar fechas y horas correctamente.
-                        </p>
-                    </div>
+                {/* ── Zona Horaria ── */}
+                <SettingsSection
+                    icon={Clock}
+                    title="Zona Horaria"
+                    description="Configura tu zona horaria para que las fechas y horas se muestren correctamente según tu ubicación."
+                >
                     <Select value={timezone} onValueChange={onTimezoneChange}>
-                        <SelectTrigger className="w-[240px]">
+                        <SelectTrigger className="w-full md:w-[300px]">
                             <SelectValue placeholder="Seleccionar zona horaria" />
                         </SelectTrigger>
-                        <SelectContent align="end" className="max-h-[300px]">
+                        <SelectContent className="max-h-[300px]">
                             {TIMEZONES.map((tz) => (
                                 <SelectItem key={tz.value} value={tz.value}>
                                     {tz.label}
@@ -112,19 +97,15 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
                             ))}
                         </SelectContent>
                     </Select>
-                </div>
+                </SettingsSection>
 
-                <Separator />
-
-                {/* THEME */}
-                <div className="space-y-4">
-                    <div className="space-y-1">
-                        <Label className="text-base">{t('Preferences.theme.title')}</Label>
-                        <p className="text-sm text-muted-foreground">
-                            {t('Preferences.theme.description')}
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-8">
+                {/* ── Tema ── */}
+                <SettingsSection
+                    icon={Palette}
+                    title={t('Preferences.theme.title')}
+                    description={t('Preferences.theme.description')}
+                >
+                    <div className="grid grid-cols-3 gap-6">
                         <ThemePreview
                             label={t('Preferences.theme.options.system')}
                             value="system"
@@ -147,44 +128,15 @@ export function PreferencesView({ initialTimezone }: PreferencesViewProps) {
                             type="dark"
                         />
                     </div>
-                </div>
-            </CardContent>
-
-            <Separator className="my-6" />
-
-            <CardContent className="space-y-6 pt-0">
-                {/* SIDEBAR SETTINGS */}
-                <div className="space-y-4">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <PanelLeft className="h-4 w-4 text-muted-foreground" />
-                            <Label className="text-base">Barra Lateral</Label>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                            Personaliza el comportamiento y apariencia de la barra lateral.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <Label className="text-base">Avatares de Proyecto</Label>
-                            <p className="text-sm text-muted-foreground">
-                                Mostrar imagen de portada en el selector de proyectos.
-                            </p>
-                        </div>
-                        <Switch
-                            checked={useLayoutStore(s => s.sidebarProjectAvatars)}
-                            onCheckedChange={(checked) => {
-                                actions.setSidebarProjectAvatars(checked);
-                                updateUserPreferences({ sidebar_project_avatars: checked });
-                            }}
-                        />
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+                </SettingsSection>
+            </SettingsSectionContainer>
+        </ContentLayout>
     );
 }
+
+// ============================================================================
+// Theme Preview (internal)
+// ============================================================================
 
 function ThemePreview({
     label,

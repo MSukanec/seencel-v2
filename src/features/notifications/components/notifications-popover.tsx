@@ -279,7 +279,7 @@ export function NotificationsPopover({ initialNotifications = [] }: Notification
                 <div className="p-2 border-t bg-muted/30">
                     <Button variant="ghost" className="w-full h-8 text-xs text-muted-foreground" onClick={() => {
                         setOpen(false);
-                        router.push('/settings?tab=notifications' as any);
+                        router.push('/profile?tab=notifications' as any);
                     }}>
                         Ver todas
                     </Button>

@@ -18,13 +18,13 @@ export const routing = defineRouting({
             en: '/organization',
             es: '/organizacion'
         },
-        '/settings': {
-            en: '/settings',
-            es: '/configuracion'
-        },
         '/profile': {
             en: '/profile',
             es: '/perfil'
+        },
+        '/notifications': {
+            en: '/notifications',
+            es: '/notificaciones'
         },
         '/organization/projects': {
             en: '/organization/projects',

@@ -14,7 +14,7 @@ import { CreateOrganizationButton } from "@/features/organization/components/cre
 import { OrganizationsList } from "@/features/organization/components/organizations-list";
 import { getUserProfile } from "@/features/users/queries";
 import { ProfileForm } from "@/features/users/components/profile-form";
-import { PreferencesView } from "@/features/users/views/preferences-view";
+import { PreferencesView } from "@/features/users/views/profile-preferences-view";
 import { getUserTimezone } from "@/features/users/queries";
 
 import { AvatarManager } from "@/features/users/components/avatar-manager";

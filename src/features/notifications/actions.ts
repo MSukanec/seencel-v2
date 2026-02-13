@@ -41,7 +41,7 @@ export async function markNotificationAsRead(notificationId: string) {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath('/[locale]/settings', 'page');
+    revalidatePath('/[locale]/notifications', 'page');
     return { success: true };
 }
 
@@ -76,7 +76,7 @@ export async function markAllNotificationsAsRead() {
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath('/[locale]/settings', 'page');
+    revalidatePath('/[locale]/notifications', 'page');
     return { success: true };
 }
 

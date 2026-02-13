@@ -114,7 +114,7 @@ export function PublicMobileNav({ user }: PublicMobileNavProps) {
                     <div className="mt-auto pb-8 flex flex-col gap-4">
                         {user ? (
                             // Logged In State: User Card only (acts as link to settings/profile if desired, currently static identity)
-                            <Link href="/settings" onClick={() => setOpen(false)}>
+                            <Link href="/profile" onClick={() => setOpen(false)}>
                                 <div className="flex items-center gap-4 px-4 py-4 bg-muted/30 rounded-2xl border border-border/50 active:scale-[0.98] transition-transform">
                                     <Avatar className="h-10 w-10">
                                         <AvatarImage src={user.avatar_url || ""} />

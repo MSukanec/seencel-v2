@@ -74,7 +74,7 @@ function deriveViewName(pathname: string): string {
         '': 'Hub',
         '/': 'Hub',
         '/hub': 'Hub',
-        '/settings': 'Preferencias',
+        '/profile': 'Mi Perfil',
         '/maintenance': 'Mantenimiento',
         '/docs': 'Documentación',
 

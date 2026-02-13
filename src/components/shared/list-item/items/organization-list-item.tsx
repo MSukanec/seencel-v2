@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import { ListItem } from "../list-item-base";
+import { PlanBadge } from "@/components/shared/plan-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AvatarStack } from "@/components/ui/avatar-stack";
@@ -11,7 +12,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Building, Trash2, Building2, Users, Sparkles, Check, Zap } from "lucide-react";
+import { MoreVertical, Building, Trash2, Check } from "lucide-react";
 import { getStorageUrl } from "@/lib/storage-utils";
 
 // ============================================================================
@@ -52,23 +53,6 @@ export interface OrganizationListItemProps {
     onDelete?: (org: OrganizationListItemData) => void;
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function getPlanBadgeInfo(planSlug?: string | null) {
-    switch (planSlug?.toLowerCase()) {
-        case 'enterprise':
-            return { variant: 'plan-enterprise' as const, icon: <Building2 className="h-3 w-3" />, label: 'Empresa' };
-        case 'pro':
-            return { variant: 'plan-pro' as const, icon: <Zap className="h-3 w-3" />, label: 'Profesional' };
-        case 'teams':
-            return { variant: 'plan-teams' as const, icon: <Users className="h-3 w-3" />, label: 'Equipos' };
-        case 'free':
-        default:
-            return { variant: 'plan-free' as const, icon: <Sparkles className="h-3 w-3" />, label: 'Esencial' };
-    }
-}
 
 // ============================================================================
 // Component
@@ -84,7 +68,6 @@ export const OrganizationListItem = memo(function OrganizationListItem({
     onDelete,
 }: OrganizationListItemProps) {
     const logoUrl = organization.logo_url || null;
-    const planInfo = getPlanBadgeInfo(organization.plans?.slug);
 
     // Solo el dueño puede eliminar, y nunca la org activa
     const canDelete = isOwner && !isActive && !!onDelete;
@@ -106,9 +89,13 @@ export const OrganizationListItem = memo(function OrganizationListItem({
             <ListItem.Content>
                 <ListItem.Title>
                     {organization.name}
-                    <Badge variant={planInfo.variant} icon={planInfo.icon} className="text-[10px] px-1.5 py-0 ml-2 align-middle">
-                        {planInfo.label}
-                    </Badge>
+                    <PlanBadge
+                        planSlug={organization.plans?.slug}
+                        variant="glass"
+                        linkToPricing={false}
+                        compact
+                        className="ml-2 align-middle"
+                    />
                 </ListItem.Title>
                 <div className="mt-1">
                     <AvatarStack members={organization.members || []} max={4} size={8} />
