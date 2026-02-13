@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import {
     Tooltip,
     TooltipContent,
+    TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -53,23 +54,25 @@ export function SidebarInstallButton({ isExpanded = false }: SidebarInstallButto
     // Collapsed: just the icon with tooltip
     if (!isExpanded) {
         return (
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        onClick={isInstallable ? handleInstall : undefined}
-                        className={cn(
-                            "flex items-center justify-center w-8 h-8 rounded-lg",
-                            "text-primary/80 hover:text-primary hover:bg-primary/10",
-                            "transition-colors"
-                        )}
-                    >
-                        <Download className="h-4 w-4" />
-                    </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                    Instalar Seencel
-                </TooltipContent>
-            </Tooltip>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={isInstallable ? handleInstall : undefined}
+                            className={cn(
+                                "flex items-center justify-center w-8 h-8 rounded-lg",
+                                "text-primary/80 hover:text-primary hover:bg-primary/10",
+                                "transition-colors"
+                            )}
+                        >
+                            <Download className="h-4 w-4" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                        Instalar Seencel
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         );
     }
 
