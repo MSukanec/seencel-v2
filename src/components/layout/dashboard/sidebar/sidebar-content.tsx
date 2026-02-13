@@ -8,6 +8,7 @@ import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarPlanButton } from "./plan-button";
+import { SidebarInstallButton } from "./install-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     PanelLeft,
@@ -512,6 +513,13 @@ export function SidebarContent({
                         )}
                     </ScrollArea>
 
+
+                    {/* PWA Install prompt (above plan section) */}
+                    {!isMobile && (
+                        <div className="px-2 pb-1">
+                            <SidebarInstallButton isExpanded={isExpanded} />
+                        </div>
+                    )}
 
                     {/* Mode Toggle (bottom, desktop only) */}
                     {!isMobile && (

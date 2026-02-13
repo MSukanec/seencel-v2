@@ -2,17 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 
-// Configure VAPID
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!;
-const PUSH_API_SECRET = process.env.PUSH_API_SECRET!;
+let vapidConfigured = false;
 
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+function ensureVapidConfigured() {
+    if (vapidConfigured) return true;
+
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+
+    if (!publicKey || !privateKey) {
+        console.error("[Push] VAPID keys not configured");
+        return false;
+    }
+
     webpush.setVapidDetails(
         "mailto:soporte@seencel.com",
-        VAPID_PUBLIC_KEY,
-        VAPID_PRIVATE_KEY
+        publicKey,
+        privateKey
     );
+    vapidConfigured = true;
+    return true;
 }
 
 /**
@@ -24,8 +33,14 @@ export async function POST(request: NextRequest) {
     try {
         // Validate API secret
         const authHeader = request.headers.get("Authorization");
-        if (!authHeader || authHeader !== `Bearer ${PUSH_API_SECRET}`) {
+        const apiSecret = process.env.PUSH_API_SECRET;
+        if (!authHeader || !apiSecret || authHeader !== `Bearer ${apiSecret}`) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Lazy VAPID config
+        if (!ensureVapidConfigured()) {
+            return NextResponse.json({ error: "VAPID not configured" }, { status: 500 });
         }
 
         const body = await request.json();
