@@ -39,6 +39,7 @@ interface OrganizationState {
     activeOrgId: string | null;
     preferences: OrganizationPreferences | null;
     isFounder: boolean;
+    planSlug: string | null;
 
     // Lists for forms
     wallets: Wallet[];
@@ -98,6 +99,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     activeOrgId: null,
     preferences: null,
     isFounder: false,
+    planSlug: null,
     wallets: [],
     projects: [],
     clients: [],
@@ -146,8 +148,22 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
 
     setCurrentExchangeRate: (rate) => set({ currentExchangeRate: rate }),
 
-    // Increment planVersion to force plan-button refetch
-    invalidatePlan: () => set((state) => ({ planVersion: state.planVersion + 1 })),
+    // Refetch store data (including planSlug) after plan changes
+    invalidatePlan: () => {
+        set((state) => ({ planVersion: state.planVersion + 1 }));
+        const orgId = get().activeOrgId;
+        if (orgId) {
+            // Dynamically import to avoid circular dependency
+            import('@/actions/organization-store-actions').then(({ fetchOrganizationStoreData }) => {
+                fetchOrganizationStoreData(orgId).then((data) => {
+                    set({
+                        isFounder: data.isFounder,
+                        planSlug: data.planSlug,
+                    });
+                });
+            });
+        }
+    },
 
     // Admin impersonation
     setImpersonating: (orgName: string) => set({ isImpersonating: true, impersonationOrgName: orgName }),
@@ -260,6 +276,7 @@ export function OrganizationStoreHydrator({
                         activeOrgId,
                         preferences: data.preferences as any,
                         isFounder: data.isFounder,
+                        planSlug: data.planSlug,
                         wallets: data.wallets,
                         projects: data.projects,
                         clients: data.clients,
@@ -295,13 +312,14 @@ export function useOrganization() {
     const activeOrgId = useOrganizationStore(state => state.activeOrgId);
     const preferences = useOrganizationStore(state => state.preferences);
     const isFounder = useOrganizationStore(state => state.isFounder);
+    const planSlug = useOrganizationStore(state => state.planSlug);
     const wallets = useOrganizationStore(state => state.wallets);
     const projects = useOrganizationStore(state => state.projects);
     const clients = useOrganizationStore(state => state.clients);
     const isImpersonating = useOrganizationStore(state => state.isImpersonating);
     const impersonationOrgName = useOrganizationStore(state => state.impersonationOrgName);
 
-    return { activeOrgId, preferences, isFounder, wallets, projects, clients, isImpersonating, impersonationOrgName };
+    return { activeOrgId, preferences, isFounder, planSlug, wallets, projects, clients, isImpersonating, impersonationOrgName };
 }
 
 /**

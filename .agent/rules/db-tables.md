@@ -7,6 +7,8 @@ description: Checklist OBLIGATORIO de columnas, RLS, auditoría y soft delete qu
 
 Esta regla define los elementos **OBLIGATORIOS** que toda tabla nueva debe incluir antes de considerarse completa.
 
+> 📖 **ANTES de crear o modificar tablas**, consultar `DB/SCHEMA.md` para verificar el estado real de la base de datos (columnas, FKs, triggers, RLS, índices). Se genera con `npm run db:schema`.
+
 ---
 
 ## 1. Columnas Obligatorias (🚨 TODA TABLA)

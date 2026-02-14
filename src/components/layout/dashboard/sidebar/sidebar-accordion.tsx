@@ -87,6 +87,8 @@ export function SidebarAccordionGroups({
                         )}
                         style={{
                             boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
+                            borderLeftColor: "var(--plan-border, rgba(255,255,255,0.06))",
+                            borderLeftWidth: "2px",
                         }}
                     >
                         {/* Accordion trigger */}

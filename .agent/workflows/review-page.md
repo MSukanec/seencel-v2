@@ -18,7 +18,8 @@ El objetivo es verificar que la página cumple con TODOS los estándares de Seen
    - Leer el skill `seencel-architecture` → `C:\Users\Usuario\.gemini\antigravity\skills\seencel-architecture\SKILL.md`
 
 2. **Leer la documentación del feature**:
-   - Leer `features/<feature>/TABLES.md` para entender el esquema de datos
+   - Leer `DB/SCHEMA.md` para verificar estructura real de tablas, FKs, triggers y RLS del feature
+   - Leer `features/<feature>/TABLES.md` para contexto adicional del esquema
    - Leer `features/<feature>/README.md` si existe, para contexto funcional
 
 3. **Abrir la página en el browser** para ver el estado visual actual
@@ -111,9 +112,12 @@ Para cada página, verificar los siguientes puntos en orden. NO pasar al siguien
 
 ### 11. SEGURIDAD Y RLS
 
+> 📖 Consultar `DB/SCHEMA.md` (sección "RLS Policies") para verificar que las políticas existen.
+
 - [ ] Las queries del server leen datos a través de vistas o queries con filtro `organization_id`
 - [ ] No hay queries sin filtro de organización (evitar data leakage)
 - [ ] Las acciones (mutations) validan ownership o membership antes de operar
+- [ ] Las tablas involucradas tienen RLS habilitado (verificar en `DB/SCHEMA.md`)
 
 ### 12. DOCUMENTACIÓN DEL FEATURE
 

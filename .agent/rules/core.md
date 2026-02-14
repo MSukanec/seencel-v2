@@ -23,7 +23,10 @@ Los siguientes archivos son documentación de referencia y NUNCA deben ser modif
 
 **/features/*/TABLES.md
 
+DB/SCHEMA.md (auto-generado por `npm run db:schema`)
+
 Estos archivos solo los actualiza el usuario manualmente luego de ejecutar migraciones reales en Supabase.
+`DB/SCHEMA.md` se regenera con `npm run db:schema` — el agente puede pedirle al usuario que lo ejecute si necesita datos actualizados.
 
 3. Cambios de Base de Datos (DB)
 
@@ -41,7 +44,9 @@ El usuario es el único responsable de:
 
 ejecutar esos scripts en Supabase
 
-luego actualizar los TABLES.md
+luego actualizar los TABLES.md (y ejecutar `npm run db:schema` para regenerar el schema)
+
+📖 CONSULTAR SCHEMA: Para conocer la estructura actual de la base de datos (tablas, columnas, FKs, funciones, triggers, RLS, vistas, enums, índices), el agente DEBE leer `DB/SCHEMA.md`. Este archivo es la fuente de verdad del estado real de la base de datos.
 
 4. Supabase es la fuente de verdad
 
@@ -146,7 +151,9 @@ Si un nombre no se puede explicar a un humano, está mal.
 
 Antes de modificar o crear algo en un feature:
 
-Leer features/<feature>/TABLES.md para entender el esquema real.
+Leer `DB/SCHEMA.md` para consultar la estructura real de las tablas involucradas (columnas, FKs, RLS, triggers).
+
+Leer features/<feature>/TABLES.md para contexto adicional del esquema.
 
 Leer features/<feature>/README.md si existe, para contexto funcional.
 

@@ -85,13 +85,10 @@ Una vez creado el trigger SQL:
 ## 🛠 Mantenimiento
 
 ### Ver todas las notificaciones activas
-Como son triggers, están en la base de datos.
-```sql
-SELECT event_object_table, trigger_name 
-FROM information_schema.triggers 
-WHERE trigger_schema = 'public' 
-AND trigger_name LIKE '%notify%';
-```
+Como son triggers, están documentados en `DB/SCHEMA.md` (sección "Triggers").
+Buscar triggers con nombre `*notify*` en esa sección.
+
+Para regenerar el schema actualizado: `npm run db:schema`
 
 ### Desactivar una notificación
 Solo borra el trigger.

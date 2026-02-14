@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database schema (auto-generated, contains sensitive structure)
+DB/SCHEMA.md

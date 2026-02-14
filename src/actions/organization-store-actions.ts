@@ -26,10 +26,10 @@ export async function fetchOrganizationStoreData(orgId: string) {
             .eq('organization_id', orgId)
             .maybeSingle(),
 
-        // 2. Organization settings (isFounder)
+        // 2. Organization settings (isFounder) + plan slug
         supabase
             .from('organizations')
-            .select('settings')
+            .select('settings, plan:plans!plan_id(slug, name)')
             .eq('id', orgId)
             .single(),
 
@@ -67,6 +67,8 @@ export async function fetchOrganizationStoreData(orgId: string) {
 
     const preferences = prefsResult.data;
     const isFounder = (orgResult.data?.settings as any)?.is_founder === true;
+    const planData = orgResult.data?.plan as any;
+    const planSlug: string | null = planData?.slug || planData?.name || null;
 
     // Format currencies
     const effectiveDefaultId = preferences?.default_currency_id
@@ -121,6 +123,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         clients,
         preferences: preferences ? { ...preferences } : null,
         isFounder,
+        planSlug,
         decimalPlaces: preferences?.currency_decimal_places ?? 2,
         kpiCompactFormat: preferences?.kpi_compact_format ?? false,
         defaultCurrencyId: preferences?.default_currency_id || currencies[0]?.id,

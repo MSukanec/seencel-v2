@@ -8,6 +8,8 @@ import { useRouter as useNextRouter } from "next/navigation";
 import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarPlanButton } from "./plan-button";
+import { getPlanAccentVars } from "@/components/shared/plan-badge";
+import { useOrganization } from "@/stores/organization-store";
 import { SidebarInstallButton } from "./install-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -69,6 +71,8 @@ export function SidebarContent({
     const nativeRouter = useNextRouter();
     const { activeContext, sidebarMode, actions } = useLayoutStore();
     const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
+    const { planSlug } = useOrganization();
+    const planAccentVars = React.useMemo(() => getPlanAccentVars(planSlug), [planSlug]);
 
 
 
@@ -252,6 +256,7 @@ export function SidebarContent({
                     "flex flex-col h-full py-2 bg-sidebar border-r border-sidebar-border transition-all duration-150 ease-in-out relative",
                     widthClass
                 )}
+                style={planAccentVars as React.CSSProperties}
             >
                 {/* SIDEBAR MODE POPOVER */}
                 {!isMobile && (
@@ -524,11 +529,11 @@ export function SidebarContent({
                     {/* Mode Toggle (bottom, desktop only) */}
                     {!isMobile && (
                         <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
-                            {/* Plan Badge — full width */}
-                            <SidebarPlanButton isExpanded={isExpanded} />
-
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />
+
+                            {/* Plan Badge — full width */}
+                            <SidebarPlanButton isExpanded={isExpanded} />
 
                             {/* User Avatar Button */}
                             <SidebarAvatarButton
