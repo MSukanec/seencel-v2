@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Plan } from "@/actions/plans";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Building2, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/routing";
+import { getPlanConfig } from "@/components/shared/plan-badge";
 import { PlanCard, PLAN_STATUS_CONFIG } from "./plan-card";
 import type { PlanFlagStatus, PlanPurchaseFlags } from "./plan-card";
 
@@ -166,12 +166,17 @@ export function PlanCardsGrid({
                     let ctaDisabledLabel: string | undefined;
                     let statusOverride = undefined;
 
-                    if (isCurrentPlan || (isFree && isLoggedIn)) {
+                    if (isCurrentPlan) {
                         ctaDisabled = true;
                         ctaDisabledLabel = "Plan Actual";
                     } else if (isLoggedIn && thisTier < currentTier) {
+                        // Any plan below current tier (including free) → "Incluido"
                         ctaDisabled = true;
                         ctaDisabledLabel = "Incluido en tu plan";
+                    } else if (isFree && isLoggedIn && currentTier === 0) {
+                        // Free plan when user is on free → "Plan Actual"
+                        ctaDisabled = true;
+                        ctaDisabledLabel = "Plan Actual";
                     } else if (status !== 'active' && !canInteract(plan.name)) {
                         statusOverride = PLAN_STATUS_CONFIG[status];
                     } else if (status !== 'active' && isAdmin) {
@@ -198,47 +203,157 @@ export function PlanCardsGrid({
                 })}
             </div>
 
-            {/* Enterprise Card — Full width, corporate dark aesthetic */}
+            {/* Enterprise Card — Full width, obsidian material */}
             {enterprisePlan && (
-                <Card
-                    className="mt-8 bg-zinc-900 dark:bg-zinc-950 border-zinc-700/50 dark:border-zinc-800"
-                >
-                    <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-lg bg-zinc-800 dark:bg-zinc-900 border border-zinc-600/30">
-                                    <Building2 className="h-5 w-5 text-zinc-300" />
-                                </div>
-                                <div>
-                                    <CardTitle className="text-lg text-zinc-100">Empresa</CardTitle>
-                                    <CardDescription className="text-sm text-zinc-400">
-                                        Para organizaciones con necesidades avanzadas de personalización, seguridad e integraciones.
-                                    </CardDescription>
-                                </div>
-                            </div>
-                            <Link href="/contact">
-                                <Button
-                                    variant="outline"
-                                    className="border-zinc-600 text-zinc-200 hover:bg-zinc-800 hover:text-white gap-2"
-                                >
-                                    Contactar Ventas
-                                    <ArrowRight className="h-4 w-4" />
-                                </Button>
-                            </Link>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm text-zinc-400">
-                            <span>✓ Proyectos ilimitados</span>
-                            <span>✓ Asesores externos ilimitados</span>
-                            <span>✓ Herramientas a medida</span>
-                            <span>✓ Soporte dedicado</span>
-                            <span>✓ Onboarding asistido</span>
-                            <span>✓ API y Webhooks</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                <EnterpriseCard plan={enterprisePlan} />
             )}
+        </div>
+    );
+}
+
+// ============================================================
+// Enterprise Card — Full-width obsidian material with border sheen
+// ============================================================
+
+const ENTERPRISE_MAT = {
+    surface: "linear-gradient(175deg, #1a1a20, #16161c, #1c1c22)",
+    borderColor: "rgba(160,160,210,0.18)",
+    lightColor: "rgba(180,170,220,0.12)",
+    hoverShape: "ellipse 300px 100px",
+    hoverIntensity: 0.7,
+    textHighlight: "#a0a0b8",
+    sheenDuration: 6,
+    sheenColor: "rgba(180,170,220,0.35)",
+    sheenColorDim: "rgba(180,170,220,0.12)",
+    sheenColorFaint: "rgba(180,170,220,0.06)",
+};
+
+const ENTERPRISE_FEATURES = [
+    "Proyectos ilimitados",
+    "Asesores externos ilimitados",
+    "Herramientas a medida",
+    "Soporte dedicado",
+    "Onboarding asistido",
+    "API y Webhooks",
+];
+
+function EnterpriseCard({ plan }: { plan: Plan }) {
+    const plateRef = useRef<HTMLDivElement>(null);
+    const lightRef = useRef<HTMLDivElement>(null);
+    const config = getPlanConfig(plan.name);
+    const Mark = config.mark;
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!plateRef.current || !lightRef.current) return;
+        const rect = plateRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        lightRef.current.style.background = `radial-gradient(${ENTERPRISE_MAT.hoverShape} at ${x}px ${y}px, ${ENTERPRISE_MAT.lightColor}, transparent)`;
+        lightRef.current.style.opacity = String(ENTERPRISE_MAT.hoverIntensity);
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+        if (lightRef.current) lightRef.current.style.opacity = "0";
+    }, []);
+
+    return (
+        <div
+            ref={plateRef}
+            className="relative mt-8 overflow-hidden rounded-xl"
+            style={{
+                background: ENTERPRISE_MAT.surface,
+                border: `1px solid ${ENTERPRISE_MAT.borderColor}`,
+                boxShadow: "0 2px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+        >
+            {/* ── Border sheens — all 4 edges ── */}
+            <div
+                className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
+                style={{
+                    background: `linear-gradient(90deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColor} 46%, ${ENTERPRISE_MAT.sheenColorDim} 54%, transparent 90%, transparent 100%)`,
+                    animation: `plan-reflection ${ENTERPRISE_MAT.sheenDuration}s linear infinite`,
+                }}
+            />
+            <div
+                className="absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
+                style={{
+                    background: `linear-gradient(90deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColorDim} 46%, ${ENTERPRISE_MAT.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
+                    animation: `plan-reflection ${ENTERPRISE_MAT.sheenDuration * 1.3}s linear infinite`,
+                    animationDelay: `${ENTERPRISE_MAT.sheenDuration * 0.5}s`,
+                }}
+            />
+            <div
+                className="absolute top-0 bottom-0 left-0 w-[1px] pointer-events-none z-[3]"
+                style={{
+                    background: `linear-gradient(180deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColorDim} 46%, ${ENTERPRISE_MAT.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
+                    animation: `plan-border-reflection ${ENTERPRISE_MAT.sheenDuration * 1.5}s linear infinite`,
+                    animationDelay: `${ENTERPRISE_MAT.sheenDuration * 0.3}s`,
+                }}
+            />
+            <div
+                className="absolute top-0 bottom-0 right-0 w-[1px] pointer-events-none z-[3]"
+                style={{
+                    background: `linear-gradient(180deg, transparent 0%, transparent 10%, ${ENTERPRISE_MAT.sheenColorDim} 46%, ${ENTERPRISE_MAT.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
+                    animation: `plan-border-reflection ${ENTERPRISE_MAT.sheenDuration * 1.5}s linear infinite`,
+                    animationDelay: `${ENTERPRISE_MAT.sheenDuration * 0.8}s`,
+                }}
+            />
+
+            {/* ── Mouse-following light ── */}
+            <div
+                ref={lightRef}
+                className="absolute inset-0 pointer-events-none z-[2] transition-opacity duration-300"
+                style={{ opacity: 0 }}
+            />
+
+            {/* ── Content ── */}
+            <div className="relative z-[5] px-6 py-5 flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                    <div
+                        className="p-2.5 rounded-lg"
+                        style={{
+                            background: "linear-gradient(135deg, #232328, #28283a)",
+                            border: `1px solid ${ENTERPRISE_MAT.borderColor}`,
+                        }}
+                    >
+                        <Mark color={ENTERPRISE_MAT.textHighlight} />
+                    </div>
+                    <div>
+                        <span className="text-lg font-semibold text-foreground">Empresa</span>
+                        <p className="text-sm text-muted-foreground/60">
+                            Para organizaciones con necesidades avanzadas de personalización, seguridad e integraciones.
+                        </p>
+                    </div>
+                </div>
+                <Link href="/contact" className="relative z-10">
+                    <Button
+                        variant="outline"
+                        className="gap-2 cursor-pointer"
+                        style={{
+                            borderColor: ENTERPRISE_MAT.borderColor,
+                            color: ENTERPRISE_MAT.textHighlight,
+                            background: "rgba(255,255,255,0.03)",
+                        }}
+                    >
+                        Contactar Ventas
+                        <ArrowRight className="h-4 w-4" />
+                    </Button>
+                </Link>
+            </div>
+
+            {/* ── Feature chips ── */}
+            <div className="relative z-[5] px-6 pb-5">
+                <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm" style={{ color: ENTERPRISE_MAT.textHighlight, opacity: 0.7 }}>
+                    {ENTERPRISE_FEATURES.map((f) => (
+                        <span key={f} className="flex items-center gap-1.5">
+                            <Check className="h-3.5 w-3.5" />
+                            {f}
+                        </span>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

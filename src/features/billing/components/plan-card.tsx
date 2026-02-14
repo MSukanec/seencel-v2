@@ -1,7 +1,7 @@
 "use client";
 
+import React from "react";
 import { Plan } from "@/actions/plans";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Sparkles, Zap, Users, UserCheck, Medal, FolderOpen, HardDrive, BarChart3, Wrench, Clock, Lock, Building2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
 import type { LucideIcon } from "lucide-react";
+import { getPlanConfig, resolvePlanSlug } from "@/components/shared/plan-badge";
 
 // ============================================================
 // Shared plan types
@@ -40,44 +41,98 @@ export const getPlanIcon = (name: string): LucideIcon => {
     return Sparkles;
 };
 
-export const getPlanGradient = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes("enterprise") || lower.includes("empresa")) {
-        return {
-            gradient: "from-zinc-700 to-zinc-800",
-            bg: "bg-zinc-800",
-            text: "text-zinc-600 dark:text-zinc-300",
-            border: "border-zinc-500/50 dark:border-zinc-600/50",
-            lightBg: "bg-zinc-100 dark:bg-zinc-900/30",
-        };
-    }
-    if (lower.includes("team")) {
-        return {
-            gradient: "from-slate-500 to-slate-600",
-            bg: "bg-slate-500",
-            text: "text-slate-600 dark:text-slate-400",
-            border: "border-slate-400/40 dark:border-slate-600/50",
-            lightBg: "bg-slate-50 dark:bg-slate-900/20",
-        };
-    }
-    if (lower.includes("pro")) {
-        return {
-            gradient: "from-stone-500 to-stone-600",
-            bg: "bg-stone-500",
-            text: "text-stone-600 dark:text-stone-400",
-            border: "border-stone-400/50 dark:border-stone-600/50",
-            lightBg: "bg-stone-50 dark:bg-stone-900/20",
-        };
-    }
-    // Essential / Free — neutral gray
-    return {
-        gradient: "from-zinc-400 to-zinc-500",
-        bg: "bg-zinc-500",
-        text: "text-zinc-600 dark:text-zinc-400",
-        border: "border-zinc-300 dark:border-zinc-700",
-        lightBg: "bg-zinc-50 dark:bg-zinc-900/20",
-    };
+// ============================================================
+// Card material system — derived from PlanBadge materials
+// ============================================================
+
+interface CardMaterial {
+    surface: string;
+    borderColor: string;
+    lightColor: string;
+    hoverShape: string;
+    hoverIntensity: number;
+    accentColor: string;
+    iconBg: string;
+    textHighlight: string;
+    /** Whether to show border sheen reflection */
+    hasSheen: boolean;
+    /** Duration of border sheen animation in seconds — lower = more frequent */
+    sheenDuration: number;
+    /** Sheen color — bright (top border highlight) */
+    sheenColor: string;
+    /** Sheen color — dim (secondary borders) */
+    sheenColorDim: string;
+    /** Sheen color — faint (tertiary borders) */
+    sheenColorFaint: string;
+}
+
+const CARD_MATERIALS: Record<string, CardMaterial> = {
+    essential: {
+        surface: "#2a2a2a",
+        borderColor: "rgba(255,255,255,0.06)",
+        lightColor: "rgba(255,255,255,0.06)",
+        hoverShape: "circle 200px",
+        hoverIntensity: 1.0,
+        accentColor: "rgba(255,255,255,0.04)",
+        iconBg: "#3a3a3a",
+        textHighlight: "#a0a0a0",
+        hasSheen: false,
+        sheenDuration: 0,
+        sheenColor: "rgba(255,255,255,0.20)",
+        sheenColorDim: "rgba(255,255,255,0.08)",
+        sheenColorFaint: "rgba(255,255,255,0.03)",
+    },
+    pro: {
+        surface: "#222630",
+        borderColor: "rgba(120,140,200,0.15)",
+        lightColor: "rgba(140,160,220,0.08)",
+        hoverShape: "circle 180px",
+        hoverIntensity: 0.9,
+        accentColor: "rgba(120,140,200,0.08)",
+        iconBg: "linear-gradient(135deg, #2a2e3a, #323850)",
+        textHighlight: "#8898b8",
+        hasSheen: true,
+        sheenDuration: 12,       // base speed
+        sheenColor: "rgba(140,160,220,0.30)",
+        sheenColorDim: "rgba(140,160,220,0.10)",
+        sheenColorFaint: "rgba(140,160,220,0.04)",
+    },
+    teams: {
+        surface: "#262030",
+        borderColor: "rgba(150,120,200,0.15)",
+        lightColor: "rgba(160,135,220,0.10)",
+        hoverShape: "circle 160px",
+        hoverIntensity: 0.85,
+        accentColor: "rgba(150,120,200,0.08)",
+        iconBg: "linear-gradient(135deg, #2e2838, #3a2e48)",
+        textHighlight: "#9878b8",
+        hasSheen: true,
+        sheenDuration: 8,        // 1.5x more frequent
+        sheenColor: "rgba(160,135,220,0.30)",
+        sheenColorDim: "rgba(160,135,220,0.10)",
+        sheenColorFaint: "rgba(160,135,220,0.04)",
+    },
+    enterprise: {
+        surface: "linear-gradient(175deg, #1a1a20, #16161c, #1c1c22)",
+        borderColor: "rgba(160,160,210,0.18)",
+        lightColor: "rgba(180,170,220,0.12)",
+        hoverShape: "ellipse 200px 80px",
+        hoverIntensity: 0.7,
+        accentColor: "rgba(160,155,210,0.10)",
+        iconBg: "linear-gradient(135deg, #232328, #28283a)",
+        textHighlight: "#a0a0b8",
+        hasSheen: true,
+        sheenDuration: 6,        // 2x more frequent
+        sheenColor: "rgba(180,170,220,0.35)",
+        sheenColorDim: "rgba(180,170,220,0.12)",
+        sheenColorFaint: "rgba(180,170,220,0.06)",
+    },
 };
+
+function getCardMaterial(planName: string): CardMaterial {
+    const slug = resolvePlanSlug(planName);
+    return CARD_MATERIALS[slug] || CARD_MATERIALS.essential;
+}
 
 // ============================================================
 // Status override config for non-active plans
@@ -130,11 +185,6 @@ const getPrice = (planName: string, billingPeriod: "monthly" | "annual"): number
     return billingPeriod === "annual" ? prices.annual : prices.monthly;
 };
 
-const formatPrice = (amount: number) => {
-    if (!amount) return "Esencial";
-    return `US$ ${amount}`;
-};
-
 const getCardFeatures = (plan: Plan, billingPeriod: "monthly" | "annual"): Array<{ icon: LucideIcon; label: string; value: string }> => {
     const features = plan.features;
     if (!features) return [];
@@ -174,7 +224,7 @@ const getCardFeatures = (plan: Plan, billingPeriod: "monthly" | "annual"): Array
 };
 
 // ============================================================
-// PlanCard component
+// PlanCard component — metallic material design
 // ============================================================
 
 export interface PlanCardProps {
@@ -209,76 +259,195 @@ export function PlanCard({
     isAdmin = false,
     showDetailsLink = false,
 }: PlanCardProps) {
-    const PlanIcon = getPlanIcon(plan.name);
-    const planColors = getPlanGradient(plan.name);
+    const mat = getCardMaterial(plan.name);
     const price = getPrice(plan.name, billingPeriod);
     const features = getCardFeatures(plan, billingPeriod);
+    const config = getPlanConfig(plan.name);
+    const Mark = config.mark;
+
+    // Refs for mouse tracking
+    const plateRef = React.useRef<HTMLDivElement>(null);
+    const lightRef = React.useRef<HTMLDivElement>(null);
+
+    const handleMouseMove = React.useCallback((e: React.MouseEvent) => {
+        if (!plateRef.current || !lightRef.current) return;
+        const rect = plateRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        lightRef.current.style.background = `radial-gradient(${mat.hoverShape} at ${x}px ${y}px, ${mat.lightColor}, transparent)`;
+        lightRef.current.style.opacity = String(mat.hoverIntensity);
+    }, [mat]);
+
+    const handleMouseLeave = React.useCallback(() => {
+        if (lightRef.current) {
+            lightRef.current.style.opacity = "0";
+        }
+    }, []);
 
     return (
-        <Card
+        <div
+            ref={plateRef}
             className={cn(
-                "relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
-                isPopular && `border-2 shadow-lg ring-2 ${planColors.border} ring-current/20`,
+                "relative overflow-hidden rounded-xl transition-all duration-300 hover:-translate-y-1",
+                "flex flex-col",
+                isPopular && "ring-1 ring-current/10",
             )}
+            style={{
+                background: mat.surface,
+                border: `1px solid ${mat.borderColor}`,
+                boxShadow: `0 2px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)`,
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
         >
-            {/* Accent bar */}
-            <div className={cn("h-1 w-full bg-gradient-to-r", planColors.gradient)} />
+            {/* ── Border sheen — reflection running along the top edge ── */}
+            {mat.hasSheen && (
+                <div
+                    className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
+                    style={{
+                        background:
+                            `linear-gradient(90deg, transparent 0%, transparent 10%, ${mat.sheenColor} 46%, ${mat.sheenColorDim} 54%, transparent 90%, transparent 100%)`,
+                        animation: `plan-reflection ${mat.sheenDuration}s linear infinite`,
+                    }}
+                />
+            )}
 
-            {/* Badges container */}
-            <div className="absolute top-4 right-4 flex flex-col gap-1 items-end">
-                {isPopular && !isCurrentPlan && (
-                    <Badge className={cn("text-white", planColors.bg)}>
+            {/* ── Border sheen — bottom edge (mirror, dimmer) ── */}
+            {mat.hasSheen && (
+                <div
+                    className="absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none z-[3]"
+                    style={{
+                        background:
+                            `linear-gradient(90deg, transparent 0%, transparent 10%, ${mat.sheenColorDim} 46%, ${mat.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
+                        animation: `plan-reflection ${mat.sheenDuration * 1.3}s linear infinite`,
+                        animationDelay: `${mat.sheenDuration * 0.5}s`,
+                    }}
+                />
+            )}
+
+            {/* ── Border sheen — left edge (vertical) ── */}
+            {mat.hasSheen && (
+                <div
+                    className="absolute top-0 bottom-0 left-0 w-[1px] pointer-events-none z-[3]"
+                    style={{
+                        background:
+                            `linear-gradient(180deg, transparent 0%, transparent 10%, ${mat.sheenColorDim} 46%, ${mat.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
+                        animation: `plan-border-reflection ${mat.sheenDuration * 1.5}s linear infinite`,
+                        animationDelay: `${mat.sheenDuration * 0.3}s`,
+                    }}
+                />
+            )}
+
+            {/* ── Border sheen — right edge (vertical) ── */}
+            {mat.hasSheen && (
+                <div
+                    className="absolute top-0 bottom-0 right-0 w-[1px] pointer-events-none z-[3]"
+                    style={{
+                        background:
+                            `linear-gradient(180deg, transparent 0%, transparent 10%, ${mat.sheenColorDim} 46%, ${mat.sheenColorFaint} 54%, transparent 90%, transparent 100%)`,
+                        animation: `plan-border-reflection ${mat.sheenDuration * 1.5}s linear infinite`,
+                        animationDelay: `${mat.sheenDuration * 0.8}s`,
+                    }}
+                />
+            )}
+
+            {/* ── Mouse-following light ── */}
+            <div
+                ref={lightRef}
+                className="absolute inset-0 pointer-events-none z-[2] transition-opacity duration-300"
+                style={{ opacity: 0 }}
+            />
+
+            {/* ── Popular badge ── */}
+            {isPopular && !isCurrentPlan && (
+                <div className="absolute top-4 right-4 z-10">
+                    <Badge
+                        className="text-xs border-0"
+                        style={{
+                            background: mat.accentColor,
+                            color: mat.textHighlight,
+                            backdropFilter: "blur(4px)",
+                        }}
+                    >
                         Popular
                     </Badge>
+                </div>
+            )}
+
+            {/* ── Header ── */}
+            <div className="relative z-[5] pt-5 px-5 pb-2">
+                <div className="flex items-center gap-3 mb-1.5">
+                    <div
+                        className="p-1.5 rounded-lg"
+                        style={{ background: typeof mat.iconBg === 'string' ? mat.iconBg : mat.iconBg }}
+                    >
+                        <Mark color={mat.textHighlight} />
+                    </div>
+                    <span className="text-base font-semibold text-foreground">
+                        {getPlanDisplayName(plan.name)}
+                    </span>
+                </div>
+                <p className="text-xs text-muted-foreground/60">
+                    {plan.billing_type === "per_user" ? "Por usuario / mes" : "Tarifa plana"}
+                </p>
+            </div>
+
+            {/* ── Price ── */}
+            <div className="relative z-[5] px-5 pb-4">
+                {price === 0 ? (
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold" style={{ color: mat.textHighlight }}>
+                            Gratis
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold" style={{ color: mat.textHighlight }}>
+                            US$ {price}
+                        </span>
+                        <span className="text-muted-foreground/60 text-sm">/ mes</span>
+                    </div>
                 )}
             </div>
 
-            <CardHeader className="pt-4 pb-2">
-                <div className="flex items-center gap-3 mb-1">
-                    <div className={cn(
-                        "p-1.5 rounded-lg bg-gradient-to-br",
-                        planColors.gradient,
-                        "text-white"
-                    )}>
-                        <PlanIcon className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg">{getPlanDisplayName(plan.name)}</CardTitle>
-                </div>
-                <CardDescription className="text-xs">
-                    {plan.billing_type === "per_user" ? "Por usuario / mes" : "Tarifa plana"}
-                </CardDescription>
-            </CardHeader>
+            {/* ── Divider ── */}
+            <div
+                className="mx-5 h-px"
+                style={{
+                    background: `linear-gradient(90deg, transparent, ${mat.borderColor}, transparent)`,
+                }}
+            />
 
-            <CardContent className="pt-0">
-                <div className="mb-4">
-                    <span className="text-3xl font-bold">
-                        {formatPrice(price)}
-                    </span>
-                    {price > 0 && (
-                        <span className="text-muted-foreground ml-1 text-sm">/ mes</span>
-                    )}
-                </div>
-
-                {/* Feature list */}
-                <ul className="space-y-2 text-sm">
+            {/* ── Feature list ── */}
+            <div className="relative z-[5] flex-1 px-5 py-4">
+                <ul className="space-y-2.5 text-sm">
                     {features.map((feature) => {
                         const FeatureIcon = feature.icon;
                         return (
                             <li key={feature.label} className="flex items-center gap-2.5">
-                                <FeatureIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <FeatureIcon className="h-3.5 w-3.5 shrink-0" style={{ color: mat.textHighlight, opacity: 0.5 }} />
                                 <span>
-                                    <span className="text-muted-foreground">{feature.label}:</span>{" "}
-                                    <span className="font-medium">{feature.value}</span>
+                                    <span className="text-muted-foreground/70">{feature.label}:</span>{" "}
+                                    <span className="font-medium text-foreground/90">{feature.value}</span>
                                 </span>
                             </li>
                         );
                     })}
                 </ul>
-            </CardContent>
+            </div>
 
-            <CardFooter className="flex-col gap-2">
+            {/* ── Footer ── */}
+            <div className="relative z-[5] px-5 pb-5 pt-2 flex flex-col gap-2">
                 {ctaDisabled ? (
-                    <Button className="w-full" variant="outline" disabled>
+                    <Button
+                        className="w-full border-0"
+                        variant="outline"
+                        disabled
+                        style={{
+                            background: "rgba(255,255,255,0.04)",
+                            color: "rgba(255,255,255,0.5)",
+                        }}
+                    >
                         <Check className="h-4 w-4 mr-2" />
                         {ctaDisabledLabel || "Plan Actual"}
                     </Button>
@@ -312,11 +481,15 @@ export function PlanCard({
                 ) : (
                     <Link href={ctaHref as "/checkout"} className="w-full">
                         <Button
-                            className={cn(
-                                "w-full",
-                                isPopular && `${planColors.bg} hover:opacity-90 text-white border-0`
-                            )}
-                            variant={isPopular ? "default" : "outline"}
+                            className="w-full border-0"
+                            variant="outline"
+                            style={{
+                                background: isPopular
+                                    ? `linear-gradient(135deg, ${mat.textHighlight}20, ${mat.textHighlight}30)`
+                                    : "rgba(255,255,255,0.06)",
+                                color: isPopular ? mat.textHighlight : "rgba(255,255,255,0.7)",
+                                borderColor: isPopular ? `${mat.textHighlight}40` : "transparent",
+                            }}
                         >
                             {ctaLabel}
                         </Button>
@@ -325,12 +498,12 @@ export function PlanCard({
 
                 {showDetailsLink && (
                     <Link href="/pricing" className="w-full">
-                        <Button variant="ghost" className="w-full text-muted-foreground" size="sm">
+                        <Button variant="ghost" className="w-full text-muted-foreground/50 hover:text-muted-foreground" size="sm">
                             Ver detalles
                         </Button>
                     </Link>
                 )}
-            </CardFooter>
-        </Card>
+            </div>
+        </div>
     );
 }

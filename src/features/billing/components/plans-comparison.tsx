@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { getPlanDisplayName } from "@/lib/plan-utils";
 import { Link } from "@/i18n/routing";
 import { PlanCardsGrid, getPlanTier } from "./plan-cards-grid";
-import { getPlanGradient, PLAN_STATUS_CONFIG, type PlanFlagStatus, type PlanPurchaseFlags } from "./plan-card";
+import { PLAN_STATUS_CONFIG, type PlanFlagStatus, type PlanPurchaseFlags } from "./plan-card";
 
 // Re-export plan types for backward compatibility
 export type { PlanFlagStatus, PlanPurchaseFlags };
@@ -89,7 +89,7 @@ const FEATURE_MODULES = [
     },
 ];
 
-// getPlanIcon and getPlanGradient are now exported from plan-card.tsx
+// getPlanIcon is now exported from plan-card.tsx
 
 export function PlansComparison({
     plans,
@@ -251,25 +251,39 @@ export function PlansComparison({
             {billingPeriod === "annual" && (
                 <Link href="/founders" className="block mb-8">
                     <div
-                        className="flex items-center justify-between gap-4 px-6 py-5 rounded-xl border cursor-pointer transition-all hover:opacity-80"
+                        className="rounded-xl border cursor-pointer transition-all hover:opacity-80 overflow-hidden"
                         style={{
                             borderColor: 'color-mix(in srgb, var(--plan-founder) 30%, transparent)',
                             background: 'color-mix(in srgb, var(--plan-founder) 5%, transparent)',
                         }}
                     >
-                        <div className="flex items-center gap-3">
-                            <Medal className="h-4 w-4 shrink-0" style={{ color: 'var(--plan-founder)' }} />
-                            <span className="text-sm font-medium">Programa de Fundadores</span>
-                            <span className="text-muted-foreground/40 hidden sm:inline">·</span>
-                            <span className="text-sm text-muted-foreground hidden sm:inline">Suscripción anual con 8 beneficios exclusivos de por vida</span>
+                        {/* Header row */}
+                        <div className="flex items-center justify-between gap-4 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <Medal className="h-4 w-4 shrink-0" style={{ color: 'var(--plan-founder)' }} />
+                                <span className="text-sm font-medium">Incluye Programa de Fundadores</span>
+                                <span className="text-muted-foreground/40 hidden sm:inline">·</span>
+                                <span className="text-sm text-muted-foreground hidden sm:inline">Suscripción anual con beneficios exclusivos de por vida</span>
+                            </div>
+                            <span
+                                className="text-sm shrink-0 flex items-center gap-1.5 hover:underline"
+                                style={{ color: 'var(--plan-founder)' }}
+                            >
+                                Conocer más
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </span>
                         </div>
-                        <span
-                            className="text-sm shrink-0 flex items-center gap-1.5 hover:underline"
-                            style={{ color: 'var(--plan-founder)' }}
+                        {/* Benefits grid */}
+                        <div
+                            className="px-6 pb-4 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1.5"
                         >
-                            Conocer más
-                            <ArrowRight className="h-3.5 w-3.5" />
-                        </span>
+                            {FOUNDERS_BENEFITS.map((benefit) => (
+                                <span key={benefit} className="flex items-start gap-2 text-xs text-muted-foreground/70">
+                                    <Check className="h-3 w-3 shrink-0 mt-0.5" style={{ color: 'var(--plan-founder)', opacity: 0.6 }} />
+                                    {benefit}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </Link>
             )}
@@ -366,10 +380,7 @@ export function PlansComparison({
                                 <Link href={getCheckoutUrl(selectedPlan) as "/checkout"}>
                                     <Button
                                         size="sm"
-                                        className={cn(
-                                            getPlanGradient(selectedPlan.name).bg,
-                                            "text-white hover:opacity-90"
-                                        )}
+                                        className="text-white hover:opacity-90"
                                     >
                                         {isDashboard ? "Mejorar" : "Empezar"}
                                     </Button>
@@ -445,10 +456,7 @@ export function PlansComparison({
                                             <Button
                                                 size="sm"
                                                 variant={isPro ? "default" : "outline"}
-                                                className={cn(
-                                                    "w-full max-w-[140px]",
-                                                    isPro && `${getPlanGradient(plan.name).bg} hover:opacity-90 text-white`
-                                                )}
+                                                className="w-full max-w-[140px]"
                                             >
                                                 {getCtaLabel(plan, true)}
                                             </Button>

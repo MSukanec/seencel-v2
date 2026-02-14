@@ -423,21 +423,25 @@ export function SidebarContent({
                                             <SidebarNotificationsButton variant="quick-access" />
                                         </SidebarTooltip>
 
-                                        {[
+                                        {([
                                             { icon: CalendarDays, label: 'Planificador', href: '/organization/planner' },
                                             { icon: Users, label: 'Equipo', href: '/organization/team' },
-                                            { icon: ClipboardList, label: 'Tareas', href: '/organization/projects' },
-                                        ].map((item) => (
+                                            { icon: ClipboardList, label: 'Tareas', href: '', disabled: true },
+                                        ] as { icon: typeof CalendarDays; label: string; href: string; disabled?: boolean }[]).map((item) => (
                                             <SidebarTooltip key={item.label} label={item.label} isExpanded={false}>
                                                 <button
                                                     onClick={() => {
+                                                        if (item.disabled) return;
                                                         router.push(item.href as any);
                                                         onLinkClick?.();
                                                     }}
+                                                    disabled={item.disabled}
                                                     className={cn(
-                                                        "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150 cursor-pointer",
-                                                        "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
-                                                        pathname === item.href && "text-primary bg-primary/10"
+                                                        "flex items-center justify-center h-8 w-full rounded-lg transition-all duration-150",
+                                                        item.disabled
+                                                            ? "text-muted-foreground/40 cursor-not-allowed opacity-50"
+                                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80 cursor-pointer",
+                                                        !item.disabled && pathname === item.href && "text-primary bg-primary/10"
                                                     )}
                                                 >
                                                     <item.icon className="h-4 w-4" />
@@ -528,12 +532,15 @@ export function SidebarContent({
 
                     {/* Mode Toggle (bottom, desktop only) */}
                     {!isMobile && (
-                        <div className="mt-auto pt-2 border-t border-sidebar-border/50 px-2 space-y-1">
+                        <div className="mt-auto pt-3 border-t border-sidebar-border/50 px-2 space-y-2">
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />
 
                             {/* Plan Badge — full width */}
                             <SidebarPlanButton isExpanded={isExpanded} />
+
+                            {/* Subtle separator */}
+                            <div className="border-t border-sidebar-border/30" />
 
                             {/* User Avatar Button */}
                             <SidebarAvatarButton

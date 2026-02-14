@@ -568,12 +568,8 @@ export function OverviewHeroWidget({ initialData }: WidgetProps) {
                             {!data.isProjectMode && (
                                 <PlanBadge
                                     planSlug={data.planSlug || data.planName}
-                                    variant="glass"
+                                    compact
                                 />
-                            )}
-                            {/* Founder Badge */}
-                            {!data.isProjectMode && data.isFounder && (
-                                <FounderBadge variant="glass" />
                             )}
                             {/* Project Badges — Status, Type, Modality */}
                             {data.isProjectMode && data.projectStatus && (

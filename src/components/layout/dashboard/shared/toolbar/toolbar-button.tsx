@@ -86,7 +86,7 @@ function ToolbarSplitButton({
             variant={mainAction.variant || "default"}
             onClick={mainAction.onClick}
             disabled={mainAction.disabled || isGuarded}
-            className={!secondaryActions || secondaryActions.length === 0 ? className : "rounded-r-none border-r border-r-primary-foreground/20 focus:z-10"}
+            className={!secondaryActions || secondaryActions.length === 0 ? className : "rounded-r-sm focus:z-10"}
         >
             {Icon && <Icon className="mr-2 h-4 w-4" />}
             {mainAction.label}
@@ -112,7 +112,7 @@ function ToolbarSplitButton({
 
     // Render Split Button
     return (
-        <div className={cn("flex items-center rounded-md shadow-sm", className)}>
+        <div className={cn("flex items-center gap-0.5", className)}>
             {/* Main Action Part - Wrapped in FeatureGuard if needed */}
             {GuardedMainButton}
 
@@ -121,7 +121,7 @@ function ToolbarSplitButton({
                 <DropdownMenuTrigger asChild>
                     <ToolbarButton
                         variant={mainAction.variant || "default"}
-                        className="rounded-l-none px-2 focus:z-10"
+                        className="rounded-l-sm px-2 focus:z-10"
                         disabled={mainAction.disabled}
                     >
                         {useMoreIcon ? (

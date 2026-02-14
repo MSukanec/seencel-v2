@@ -105,7 +105,7 @@
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.744 0.16 126.36);
+  --primary: oklch(0.38 0.01 260);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -116,14 +116,14 @@
   --destructive: oklch(54.392% 0.19137 24.073);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.744 0.16 126.36);
+  --ring: oklch(0.50 0.02 270);
   /* ============================================
      CHART COLOR PALETTE
      Vibrant, harmonious colors for data visualization.
      Inspired by modern dashboard designs (purple→pink→orange→yellow→cyan).
      Order matters: used sequentially in multi-series charts.
      ============================================ */
-  --chart-1: oklch(0.744 0.16 126.36);
+  --chart-1: oklch(0.55 0.12 270);
   /* Primary - Brand color */
   --chart-2: #EC4899;
   /* Pink - Secondary */
@@ -160,7 +160,7 @@
   /* Sidebar */
   --sidebar: oklch(0.97 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.744 0.16 126.36);
+  --sidebar-primary: oklch(0.42 0.02 270);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
@@ -179,7 +179,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: #242424;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #998f86;
+  --primary: oklch(0.55 0.01 260);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -190,7 +190,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.744 0.16 126.36);
+  --ring: oklch(0.62 0.02 270);
   /* Sidebar */
   --sidebar: #303030;
   --sidebar-foreground: oklch(0.985 0 0);
@@ -231,6 +231,104 @@
   body[style*="overflow: hidden"] {
     padding-right: 0 !important;
   }
+}
+
+/* ============================================
+   PRIMARY BUTTON — Brushed metal plate
+   Same visual DNA as the PlanBadge: dark metallic
+   surface, bevel light/dark edges, raised, with
+   the plan-reflection sheen on the top edge.
+   ============================================ */
+
+[data-slot="button"][data-variant="default"] {
+  position: relative;
+  overflow: hidden;
+  /* — Surface: dark steel gradient — */
+  background: linear-gradient(175deg, #3a3a42 0%, #32323a 50%, #383840 100%);
+  /* — Bevel: bright inset top, dark inset bottom — */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.20),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  /* — Subtle border for definition — */
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  /* — Brushed texture overlay — */
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.008) 2px,
+      rgba(255, 255, 255, 0.008) 3px),
+    linear-gradient(175deg, #3a3a42 0%, #32323a 50%, #383840 100%);
+}
+
+/* — Sheen: plan-reflection flash on top border — */
+[data-slot="button"][data-variant="default"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      transparent 10%,
+      rgba(200, 200, 230, 0.45) 46%,
+      rgba(200, 200, 230, 0.12) 54%,
+      transparent 90%,
+      transparent 100%);
+  animation: plan-reflection 12s linear infinite;
+}
+
+[data-slot="button"][data-variant="default"]:hover {
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.012) 2px,
+      rgba(255, 255, 255, 0.012) 3px),
+    linear-gradient(175deg, #42424a 0%, #3a3a42 50%, #404048 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    0 2px 6px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* ── Light mode: lighter steel ── */
+:root [data-slot="button"][data-variant="default"] {
+  background: linear-gradient(175deg, #505060 0%, #484856 50%, #52525e 100%);
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 3px),
+    linear-gradient(175deg, #505060 0%, #484856 50%, #52525e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root [data-slot="button"][data-variant="default"]:hover {
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 3px),
+    linear-gradient(175deg, #585868 0%, #50505e 50%, #5a5a66 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* ============================================

@@ -91,9 +91,8 @@ export const OrganizationListItem = memo(function OrganizationListItem({
                     {organization.name}
                     <PlanBadge
                         planSlug={organization.plans?.slug}
-                        variant="glass"
                         linkToPricing={false}
-                        compact
+                        micro
                         className="ml-2 align-middle"
                     />
                 </ListItem.Title>

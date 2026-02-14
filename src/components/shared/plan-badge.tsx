@@ -108,7 +108,7 @@ export function getPlanConfig(slugOrName?: string | null): PlanConfig {
     return PLAN_CONFIG.free;
 }
 
-function resolvePlanSlug(slugOrName?: string | null): PlanSlug {
+export function resolvePlanSlug(slugOrName?: string | null): PlanSlug {
     if (!slugOrName) return "free";
     const lower = slugOrName.toLowerCase().trim();
     if (lower in PLAN_CONFIG) return lower as PlanSlug;
@@ -139,14 +139,14 @@ const PLAN_ACCENTS: Record<PlanSlug, Record<string, string>> = {
         "--plan-border": "rgba(255,255,255,0.08)",
     },
     pro: {
-        "--plan-accent": "rgba(180,190,220,0.08)",
-        "--plan-glow": "0 0 10px rgba(180,190,220,0.06)",
-        "--plan-border": "rgba(180,195,230,0.25)",
+        "--plan-accent": "rgba(120,140,200,0.08)",
+        "--plan-glow": "0 0 10px rgba(120,140,200,0.06)",
+        "--plan-border": "rgba(120,145,210,0.25)",
     },
     teams: {
-        "--plan-accent": "rgba(210,180,100,0.08)",
-        "--plan-glow": "0 0 10px rgba(210,180,100,0.06)",
-        "--plan-border": "rgba(215,185,100,0.25)",
+        "--plan-accent": "rgba(150,120,200,0.08)",
+        "--plan-glow": "0 0 10px rgba(150,120,200,0.06)",
+        "--plan-border": "rgba(155,125,210,0.25)",
     },
     enterprise: {
         "--plan-accent": "rgba(160,155,210,0.10)",
@@ -243,48 +243,48 @@ const MATERIALS: Record<PlanSlug, Material> = {
         hoverIntensity: 1.3,
     },
 
-    // ── SILVER PLATE — cool polished silver, first real upgrade ──
+    // ── DARK STEEL BLUE — subtle navy, first real upgrade ──
     pro: {
-        surface: "linear-gradient(175deg, #484848, #3e3e3e)",
-        bevelLight: "rgba(220,220,230,0.08)",
-        bevelDark: "rgba(0,0,0,0.35)",
-        dropShadow: "0 1px 3px rgba(0,0,0,0.18)",
-        border: "rgba(200,200,210,0.08)",
-        engrave: "#555",
-        markColor: "#a8a8b0",
-        cutFill: "linear-gradient(160deg, #b0b0b8 0%, #888890 40%, #c0c0c8 60%, #969698 100%)",
-        founderCutFill: "linear-gradient(160deg, #959598 0%, #78787e 50%, #a5a5a8 100%)",
+        surface: "linear-gradient(175deg, #2a2e3a, #252933)",
+        bevelLight: "rgba(140,160,220,0.08)",
+        bevelDark: "rgba(0,0,0,0.38)",
+        dropShadow: "0 1px 3px rgba(0,0,0,0.20)",
+        border: "rgba(120,140,200,0.10)",
+        engrave: "#3a4050",
+        markColor: "#7888a8",
+        cutFill: "linear-gradient(160deg, #8898b8 0%, #6878a0 40%, #98a8c0 60%, #7888a8 100%)",
+        founderCutFill: "linear-gradient(160deg, #788898 0%, #5a6a88 50%, #8898a8 100%)",
         cutDepth: "0 1px 1px rgba(0 0 0 / 0.55)",
-        brushTexture: "repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(200,200,220,0.010) 2px, rgba(200,200,220,0.010) 3px)",
+        brushTexture: "repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(120,140,200,0.012) 2px, rgba(120,140,200,0.012) 3px)",
         hasSheen: true,
         isDominant: false,
-        lightColor: "rgba(200,210,230,0.10)",
+        lightColor: "rgba(140,160,220,0.10)",
         letterSpacing: "0.10em",
         innerGlow: null,
         hoverShape: "circle 80px",
         hoverIntensity: 1.0,
     },
 
-    // ── GOLD — warm gold surface, premium tier ──
+    // ── DARK PLUM — subtle violet, premium tier ──
     teams: {
-        surface: "linear-gradient(175deg, #443820, #3a3018)",
-        bevelLight: "rgba(210,175,100,0.10)",
-        bevelDark: "rgba(0,0,0,0.45)",
+        surface: "linear-gradient(175deg, #2e2838, #282232)",
+        bevelLight: "rgba(160,130,210,0.08)",
+        bevelDark: "rgba(0,0,0,0.42)",
         dropShadow: "0 1px 4px rgba(0,0,0,0.25)",
-        border: "rgba(200,165,90,0.12)",
-        engrave: "#6a5530",
-        markColor: "#c8a848",
-        cutFill: "linear-gradient(160deg, #d4b060 0%, #a88030 25%, #e0c470 50%, #b89038 75%, #d0a850 100%)",
-        founderCutFill: "linear-gradient(160deg, #b89845 0%, #8a6828 50%, #c8a855 100%)",
+        border: "rgba(150,120,200,0.10)",
+        engrave: "#423858",
+        markColor: "#9878b8",
+        cutFill: "linear-gradient(160deg, #b090d0 0%, #8868a8 25%, #c0a0e0 50%, #9878b0 75%, #b088c8 100%)",
+        founderCutFill: "linear-gradient(160deg, #9878a8 0%, #705888 50%, #a888b8 100%)",
         cutDepth: "0 1px 1px rgba(0 0 0 / 0.55)",
-        brushTexture: "repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(210,175,100,0.010) 2px, rgba(210,175,100,0.010) 3px)",
+        brushTexture: "repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(150,120,200,0.012) 2px, rgba(150,120,200,0.012) 3px)",
         hasSheen: true,
         isDominant: false,
-        lightColor: "rgba(230,210,170,0.12)",
+        lightColor: "rgba(160,135,220,0.12)",
         letterSpacing: "0.10em",
         innerGlow: null,
         hoverShape: "circle 60px",
-        hoverIntensity: 0.8,
+        hoverIntensity: 0.85,
     },
 
     // ── OBSIDIAN — polished volcanic glass, glassy reflections ──
@@ -349,6 +349,8 @@ interface PlanBadgeProps {
     compact?: boolean;
     /** Shows "FOUNDER" engraved below plan name */
     isFounder?: boolean;
+    /** Ultra-small version: just surface color + plan name, no decorations */
+    micro?: boolean;
 }
 
 export function PlanBadge({
@@ -359,12 +361,46 @@ export function PlanBadge({
     linkToPricing = true,
     compact = false,
     isFounder = false,
+    micro = false,
 }: PlanBadgeProps) {
     const slug = resolvePlanSlug(planSlug);
     const config = getPlanConfig(planSlug);
     const mat = MATERIALS[slug];
     const Mark = config.mark;
     const label = compact ? config.shortLabel : config.label;
+
+    // ── Micro variant: ultra-small, no decorations ──
+    if (micro) {
+        const microBadge = (
+            <span
+                className={cn(
+                    "inline-flex items-center rounded px-1.5 py-0.5",
+                    className,
+                )}
+                style={{
+                    background: mat.surface,
+                    border: `1px solid ${mat.border}`,
+                }}
+            >
+                <span
+                    className="uppercase font-semibold leading-none"
+                    style={{
+                        fontSize: "9px",
+                        letterSpacing: "0.06em",
+                        backgroundImage: mat.cutFill,
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                        WebkitTextFillColor: "transparent",
+                    }}
+                >
+                    {config.shortLabel}
+                </span>
+            </span>
+        );
+        if (!linkToPricing) return microBadge;
+        return <Link href="/pricing" className="no-underline">{microBadge}</Link>;
+    }
 
     // Mouse-as-light: affects both surface glow and text engraving
     const plateRef = React.useRef<HTMLDivElement>(null);
@@ -406,11 +442,14 @@ export function PlanBadge({
         <div
             ref={plateRef}
             className={cn(
-                "relative inline-flex items-center gap-2 overflow-hidden",
+                "relative inline-flex items-center overflow-hidden",
+                compact ? "gap-1.5" : "gap-2",
                 "rounded-md",
-                mat.isDominant
-                    ? "px-7 py-3"
-                    : (showLabel ? "px-6 py-2" : "px-2 py-2"),
+                compact
+                    ? (showLabel ? "px-3 py-1" : "px-1.5 py-1")
+                    : mat.isDominant
+                        ? "px-7 py-3"
+                        : (showLabel ? "px-6 py-2" : "px-2 py-2"),
                 linkToPricing && "cursor-pointer",
                 className,
             )}
@@ -429,7 +468,7 @@ export function PlanBadge({
             onMouseLeave={handleMouseLeave}
         >
             {/* ── Mounting screws (4 corners) ── */}
-            {showLabel && (
+            {showLabel && !compact && (
                 <>
                     <Screw className="absolute top-1.5 left-1.5" color={mat.engrave} />
                     <Screw className="absolute top-1.5 right-1.5" color={mat.engrave} />
@@ -464,7 +503,7 @@ export function PlanBadge({
                 style={{ opacity: 0 }}
             />
 
-            {/* ── Engraved mark ── */}
+            {/* ── Icon zone: Engraved Mark ── */}
             {showIcon && (
                 <div className="relative z-10 shrink-0">
                     <Mark color={mat.markColor} />
@@ -478,7 +517,7 @@ export function PlanBadge({
                     <span
                         className={cn(
                             "uppercase leading-none",
-                            mat.isDominant ? "text-[13px] font-bold" : "text-xs font-semibold",
+                            compact ? "text-[10px] font-semibold" : mat.isDominant ? "text-[13px] font-bold" : "text-xs font-semibold",
                         )}
                         style={{
                             backgroundImage: mat.cutFill,
