@@ -12,6 +12,7 @@ import { getOverviewHeroData } from "@/actions/widget-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GoogleMap, useLoadScript, OverlayView } from "@react-google-maps/api";
 import { useTheme } from "next-themes";
+import { MAP_TYPE_ID, getMapContainerClass } from "@/lib/map-config";
 import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 
 // ============================================================================
@@ -28,31 +29,7 @@ import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 
 const libraries: ("places")[] = ["places"];
 
-const darkMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#1a1a1c" }] },
-    { elementType: "labels", stylers: [{ visibility: "off" }] },
-    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#2a2a2c" }] },
-    { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#3a3a3c" }] },
-    { featureType: "poi", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2e" }] },
-    { featureType: "road", elementType: "geometry.stroke", stylers: [{ visibility: "off" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#333335" }] },
-    { featureType: "transit", stylers: [{ visibility: "off" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#111113" }] },
-    { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#1e1e20" }] },
-];
-
-const lightMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#f2f2f2" }] },
-    { elementType: "labels", stylers: [{ visibility: "off" }] },
-    { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "off" }] },
-    { featureType: "poi", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#e5e5e5" }] },
-    { featureType: "road", elementType: "geometry.stroke", stylers: [{ visibility: "off" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
-    { featureType: "transit", stylers: [{ visibility: "off" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#d0d0d0" }] },
-];
+// Map styling is centralized in @/lib/map-config
 
 interface ProjectLocation {
     id: string;
@@ -106,7 +83,8 @@ function HeroMapBackground({
     onMarkerClick: (loc: ProjectLocation) => void;
 }) {
     const { resolvedTheme } = useTheme();
-    const currentMapStyle = resolvedTheme === "dark" ? darkMapStyle : lightMapStyle;
+    const isDark = resolvedTheme === "dark";
+    const mapClass = getMapContainerClass(isDark);
     const defaultCenter = useMemo(() => ({ lat: 0, lng: 0 }), []);
 
     const onMapLoad = useCallback(
@@ -134,77 +112,78 @@ function HeroMapBackground({
     );
 
     return (
-        <GoogleMap
-            zoom={3}
-            center={defaultCenter}
-            mapContainerClassName="w-full h-full"
-            onLoad={onMapLoad}
-            options={{
-                disableDefaultUI: true,
-                zoomControl: false,
-                scrollwheel: false,
-                draggable: false,
-                disableDoubleClickZoom: true,
-                gestureHandling: "none",
-                keyboardShortcuts: false,
-                styles: currentMapStyle,
-                clickableIcons: false,
-                backgroundColor: "transparent",
-            }}
-        >
-            {locations.map((loc) => {
-                const initials = loc.name
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase();
+        <div className={`w-full h-full ${mapClass}`}>
+            <GoogleMap
+                zoom={3}
+                center={defaultCenter}
+                mapContainerClassName="w-full h-full"
+                onLoad={onMapLoad}
+                options={{
+                    mapTypeId: MAP_TYPE_ID,
+                    disableDefaultUI: true,
+                    zoomControl: false,
+                    scrollwheel: false,
+                    draggable: false,
+                    disableDoubleClickZoom: true,
+                    gestureHandling: "none",
+                    keyboardShortcuts: false,
+                    clickableIcons: false,
+                }}
+            >
+                {locations.map((loc) => {
+                    const initials = loc.name
+                        .split(" ")
+                        .map((w) => w[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
 
-                return (
-                    <OverlayView
-                        key={loc.id}
-                        position={{ lat: loc.lat, lng: loc.lng }}
-                        mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                    >
-                        <div
-                            className="relative group cursor-pointer"
-                            style={{ transform: "translate(-50%, -50%)" }}
-                            onMouseEnter={() => onHover(loc.id)}
-                            onMouseLeave={onLeave}
-                            onClick={() => onMarkerClick(loc)}
+                    return (
+                        <OverlayView
+                            key={loc.id}
+                            position={{ lat: loc.lat, lng: loc.lng }}
+                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                         >
-                            {hoveredProject === loc.id && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap z-50 pointer-events-none">
-                                    <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg shadow-xl px-3 py-2">
-                                        <p className="text-sm font-semibold text-popover-foreground">{loc.name}</p>
-                                        {(loc.address || loc.city || loc.country) && (
-                                            <div className="flex items-center gap-1 mt-0.5">
-                                                <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
-                                                <p className="text-xs text-muted-foreground">
-                                                    {loc.address || [loc.city, loc.country].filter(Boolean).join(", ")}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px]">
-                                        <div className="w-2 h-2 bg-popover/95 border-r border-b border-border/50 rotate-45" />
-                                    </div>
-                                </div>
-                            )}
-                            <div className="w-[34px] h-[34px] rounded-full border border-border/60 shadow-sm overflow-hidden transition-all duration-200 hover:scale-125 hover:shadow-lg hover:border-border relative opacity-80 hover:opacity-100">
-                                {loc.imageUrl ? (
-                                    <img src={loc.imageUrl} alt={loc.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                                        <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
+                            <div
+                                className="relative group cursor-pointer"
+                                style={{ transform: "translate(-50%, -50%)" }}
+                                onMouseEnter={() => onHover(loc.id)}
+                                onMouseLeave={onLeave}
+                                onClick={() => onMarkerClick(loc)}
+                            >
+                                {hoveredProject === loc.id && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap z-50 pointer-events-none">
+                                        <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg shadow-xl px-3 py-2">
+                                            <p className="text-sm font-semibold text-popover-foreground">{loc.name}</p>
+                                            {(loc.address || loc.city || loc.country) && (
+                                                <div className="flex items-center gap-1 mt-0.5">
+                                                    <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {loc.address || [loc.city, loc.country].filter(Boolean).join(", ")}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px]">
+                                            <div className="w-2 h-2 bg-popover/95 border-r border-b border-border/50 rotate-45" />
+                                        </div>
                                     </div>
                                 )}
+                                <div className="w-[34px] h-[34px] rounded-full border border-border/60 shadow-sm overflow-hidden transition-all duration-200 hover:scale-125 hover:shadow-lg hover:border-border relative opacity-80 hover:opacity-100">
+                                    {loc.imageUrl ? (
+                                        <img src={loc.imageUrl} alt={loc.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                                            <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </OverlayView>
-                );
-            })}
-        </GoogleMap>
+                        </OverlayView>
+                    );
+                })}
+            </GoogleMap>
+        </div>
     );
 }
 

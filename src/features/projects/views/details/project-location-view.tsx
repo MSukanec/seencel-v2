@@ -8,60 +8,18 @@ import usePlacesAutocomplete, {
 } from "use-places-autocomplete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TextField } from "@/components/shared/forms/fields";
 import { Loader2, MapPin, Search } from "lucide-react";
+import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { updateProject } from "@/features/projects/actions";
 
 // Define libraries array outside component to prevent re-renders
 const libraries: ("places")[] = ["places"];
 
-// Map Styles matching Organization Map
-const darkMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#212121" }] },
-    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
-    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#757575" }] },
-    { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-    { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
-    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
-    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#181818" }] },
-    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { featureType: "poi.park", elementType: "labels.text.stroke", stylers: [{ color: "#1b1b1b" }] },
-    { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2c" }] },
-    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
-    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#373737" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
-    { featureType: "road.highway.controlled_access", elementType: "geometry", stylers: [{ color: "#4e4e4e" }] },
-    { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d3d3d" }] }
-];
-
-const lightMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-    { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
-    { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
-    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-    { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
-    { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-    { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
-    { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-];
+// CSS filter applied to map container for dark desaturated hybrid look
+import { MAP_TYPE_ID, getMapContainerClass } from "@/lib/map-config";
 
 export function ProjectLocationView({ project }: { project: any }) {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -79,15 +37,11 @@ export function ProjectLocationView({ project }: { project: any }) {
 
 function MapInterface({ project }: { project: any }) {
     const [isPending, startTransition] = useTransition();
-    const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
     const { resolvedTheme } = useTheme();
 
-    // Access nested data. Note: One-to-one relation usually returns an object if simple or array if not.
-    // Assuming getProjectById returns { ...project, project_data: { ... } } or similar
-    // Based on previous code, let's robustly check.
     const projectData = project.project_data || {};
-
-    const currentMapStyle = resolvedTheme === 'dark' ? darkMapStyle : lightMapStyle;
+    const isDark = resolvedTheme === 'dark';
+    const mapClass = getMapContainerClass(isDark);
 
     const [center, setCenter] = useState({
         lat: projectData.lat ? Number(projectData.lat) : (project.lat ? Number(project.lat) : -34.6037),
@@ -161,7 +115,6 @@ function MapInterface({ project }: { project: any }) {
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage(null);
 
         const formData = new FormData();
         Object.entries(formValues).forEach(([key, val]) => {
@@ -173,25 +126,30 @@ function MapInterface({ project }: { project: any }) {
         startTransition(async () => {
             const result = await updateProject(formData);
             if (result?.error) {
-                setMessage({ text: result.error, type: 'error' });
+                toast.error(result.error);
             } else {
-                setMessage({ text: "Ubicación actualizada correctamente.", type: 'success' });
+                toast.success("Ubicación actualizada correctamente");
             }
         });
     };
 
+    // Helper to update a single field in formValues
+    const updateField = (field: keyof typeof formValues) => (value: string) => {
+        setFormValues(prev => ({ ...prev, [field]: value }));
+    };
+
     return (
         <div className="relative w-full h-full min-h-[600px] overflow-hidden rounded-none border-0">
-            {/* Background Map - Full Screen intent */}
-            <div className="absolute inset-0 z-0">
+            {/* Background Map - Full Screen with hybrid + desaturated overlay */}
+            <div className={`absolute inset-0 z-0 ${mapClass}`}>
                 <GoogleMap
                     zoom={zoom}
                     center={center}
                     mapContainerClassName="w-full h-full"
                     options={{
+                        mapTypeId: MAP_TYPE_ID,
                         disableDefaultUI: true,
                         zoomControl: true,
-                        styles: currentMapStyle,
                         clickableIcons: false,
                     }}
                     onClick={(e) => {
@@ -208,7 +166,7 @@ function MapInterface({ project }: { project: any }) {
                         mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                     >
                         <div className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer transition-transform hover:scale-110 active:scale-95 duration-200 ease-out drop-shadow-2xl">
-                            <div className="relative w-16 h-16 bg-[#83cc16] rounded-full rounded-br-none rotate-45 flex items-center justify-center border-[3px] border-white shadow-sm">
+                            <div className="relative w-16 h-16 bg-primary rounded-full rounded-br-none rotate-45 flex items-center justify-center border-[3px] border-white shadow-sm">
                                 <MapPin className="text-white -rotate-45 h-8 w-8" />
                             </div>
                         </div>
@@ -229,13 +187,8 @@ function MapInterface({ project }: { project: any }) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {message && (
-                            <div className={`p-3 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'}`}>
-                                {message.text}
-                            </div>
-                        )}
+                        {/* Buscador de Google Places — se deja manual (no TextField) */}
                         <div className="relative">
-                            <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground font-semibold">BUSCAR</Label>
                             <div className="relative">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
@@ -261,47 +214,47 @@ function MapInterface({ project }: { project: any }) {
                             )}
                         </div>
 
-                        <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
-                            <div className="grid w-full gap-1.5">
-                                <Label htmlFor="address">Dirección</Label>
-                                <Input
-                                    value={formValues.address}
-                                    onChange={e => setFormValues({ ...formValues, address: e.target.value })}
+                        <form onSubmit={handleFormSubmit} className="space-y-3 pt-2">
+                            <TextField
+                                label="Dirección"
+                                value={formValues.address}
+                                onChange={updateField("address")}
+                                placeholder="Av. Corrientes 1234"
+                                required={false}
+                            />
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <TextField
+                                    label="Ciudad"
+                                    value={formValues.city}
+                                    onChange={updateField("city")}
+                                    placeholder="Buenos Aires"
+                                    required={false}
+                                />
+                                <TextField
+                                    label="Provincia / Estado"
+                                    value={formValues.state}
+                                    onChange={updateField("state")}
+                                    placeholder="Buenos Aires"
+                                    required={false}
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="city">Ciudad</Label>
-                                    <Input
-                                        value={formValues.city}
-                                        onChange={e => setFormValues({ ...formValues, city: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="state">Provincia / Estado</Label>
-                                    <Input
-                                        value={formValues.state}
-                                        onChange={e => setFormValues({ ...formValues, state: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="zip_code">Código Postal</Label>
-                                    <Input
-                                        value={formValues.zip_code}
-                                        onChange={e => setFormValues({ ...formValues, zip_code: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="country">País</Label>
-                                    <Input
-                                        value={formValues.country}
-                                        onChange={e => setFormValues({ ...formValues, country: e.target.value })}
-                                    />
-                                </div>
+                                <TextField
+                                    label="Código Postal"
+                                    value={formValues.zip_code}
+                                    onChange={updateField("zip_code")}
+                                    placeholder="1043"
+                                    required={false}
+                                />
+                                <TextField
+                                    label="País"
+                                    value={formValues.country}
+                                    onChange={updateField("country")}
+                                    placeholder="Argentina"
+                                    required={false}
+                                />
                             </div>
 
                             {/* Hidden Coords & Place ID */}
@@ -319,4 +272,3 @@ function MapInterface({ project }: { project: any }) {
         </div>
     );
 }
-

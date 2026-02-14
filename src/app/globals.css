@@ -574,3 +574,21 @@ select:focus-visible,
     opacity: 0;
   }
 }
+
+/* ============================================================================
+   GOOGLE MAPS — Satellite tile filter (markers/overlays NOT affected)
+   Applied via getMapContainerClass() from @/lib/map-config
+   
+   Google Maps DOM (confirmed via DOM inspection):
+   .gm-style
+     └─ div:first-child              (parent wrapper)
+          ├─ div:first-child [z:1]   ← TILES — filter here
+          └─ div [z:3/4/106]         ← Overlays / Markers — untouched
+   ============================================================================ */
+.seencel-map-dark .gm-style>div:first-child>div:first-child {
+  filter: saturate(0) brightness(0.4) contrast(1.15);
+}
+
+.seencel-map-light .gm-style>div:first-child>div:first-child {
+  filter: saturate(0) brightness(0.9) contrast(1.05);
+}

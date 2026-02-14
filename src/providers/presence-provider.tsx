@@ -162,6 +162,7 @@ function deriveViewName(pathname: string): string {
         { pattern: /^\/project\/[^/]+\/construction-tasks$/, label: 'Proyecto - Tareas' },
         { pattern: /^\/project\/[^/]+\/clients$/, label: 'Proyecto - Clientes' },
         { pattern: /^\/project\/[^/]+\/details$/, label: 'Proyecto - Detalles' },
+        { pattern: /^\/organization\/projects\/[^/]+$/, label: 'Proyecto - Detalles' },
         { pattern: /^\/project\/[^/]+\/files$/, label: 'Proyecto - Archivos' },
         { pattern: /^\/project\/[^/]+\/finance$/, label: 'Proyecto - Finanzas' },
         { pattern: /^\/project\/[^/]+\/health$/, label: 'Proyecto - Salud' },

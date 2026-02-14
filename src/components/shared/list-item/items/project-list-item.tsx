@@ -18,6 +18,7 @@ import {
     Pencil,
     Trash2,
     MoreHorizontal,
+    ExternalLink,
     Activity,
     CheckCircle,
     Clock,
@@ -28,6 +29,7 @@ import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseDateFromDB } from "@/lib/timezone-data";
+import { Link } from "@/i18n/routing";
 
 // ============================================================================
 // Types
@@ -63,6 +65,7 @@ export const ProjectListItem = memo(function ProjectListItem({
     onEdit,
     onDelete,
 }: ProjectListItemProps) {
+    const detailHref = `/organization/projects/${project.id}` as any;
     const t = useTranslations("Project.status");
 
     const palette = project.image_palette;
@@ -241,14 +244,22 @@ export const ProjectListItem = memo(function ProjectListItem({
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={(e) => {
+                                    e.stopPropagation();
+                                }} asChild>
+                                    <Link href={detailHref}>
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Editar
+                                    </Link>
+                                </DropdownMenuItem>
                                 {onEdit && (
                                     <DropdownMenuItem onClick={(e) => {
                                         e.stopPropagation();
                                         onEdit(project);
                                     }}>
                                         <Pencil className="h-4 w-4 mr-2" />
-                                        Editar
+                                        Edición Rápida
                                     </DropdownMenuItem>
                                 )}
                                 {onDelete && (

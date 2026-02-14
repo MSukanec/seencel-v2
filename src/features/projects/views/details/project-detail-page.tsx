@@ -20,7 +20,7 @@ export function ProjectDetailPage({ project }: { project: any }) {
             <TabsContent value="general" className="m-0 h-full focus-visible:outline-none p-0 outline-none ring-0">
                 <ContentLayout variant="narrow">
                     <div className="space-y-6">
-                        <ProjectProfileView project={project} />
+                        <ProjectProfileView project={project} projectTypes={[]} projectModalities={[]} />
                     </div>
                 </ContentLayout>
             </TabsContent>

@@ -313,15 +313,6 @@ export async function updateProject(formData: FormData) {
     const description = getString("description");
     if (description !== null) dataFields.description = description;
 
-    const start_date = getDate("start_date");
-    if (start_date) dataFields.start_date = start_date;
-
-    const end_date = getDate("end_date");
-    if (end_date) dataFields.estimated_end = end_date;
-
-    const internal_notes = getString("internal_notes");
-    if (internal_notes !== null) dataFields.internal_notes = internal_notes;
-
     // Surfaces
     const surface_total = getNumber("surface_total");
     if (surface_total !== null) dataFields.surface_total = surface_total;
@@ -331,16 +322,6 @@ export async function updateProject(formData: FormData) {
 
     const surface_semi = getNumber("surface_semi");
     if (surface_semi !== null) dataFields.surface_semi = surface_semi;
-
-    // Client
-    const client_name = getString("client_name");
-    if (client_name !== null) dataFields.client_name = client_name;
-
-    const contact_phone = getString("contact_phone");
-    if (contact_phone !== null) dataFields.contact_phone = contact_phone;
-
-    const email = getString("email");
-    if (email !== null) dataFields.email = email;
 
     // Location
     const lat = getNumber("lat");
@@ -419,6 +400,7 @@ export async function updateProject(formData: FormData) {
         revalidatePath(`/project/${projectId}`);
         revalidatePath(`/project/${projectId}/details`);
         revalidatePath(`/organization/projects`);
+        revalidatePath(`/organization/projects/${projectId}`);
         return { success: true };
     } catch (e: any) {
         console.error("Update Project Error:", e);

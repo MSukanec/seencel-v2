@@ -8,9 +8,9 @@ import { Activity, Users, FileText, Calendar, Clock, AlertCircle, MapPin, Loader
 
 import { GoogleMap, useLoadScript, MarkerF } from "@react-google-maps/api";
 import { useTheme } from "next-themes";
+import { MAP_TYPE_ID, getMapContainerClass } from "@/lib/map-config";
 import Image from "next/image";
-import Link from "next/link";
-import { useLocale } from "next-intl";
+import { Link } from "@/i18n/routing";
 
 interface ProjectDashboardClientProps {
     project: any;
@@ -80,7 +80,7 @@ export function ProjectDashboardView({ project, signedImageUrl }: ProjectDashboa
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {project.project_data?.estimated_end ? new Date(project.project_data.estimated_end).toLocaleDateString() : 'Sin definir'}
+                            Sin definir
                         </div>
                         <p className="text-xs text-muted-foreground">Fecha de finalización</p>
                     </CardContent>
@@ -115,7 +115,7 @@ export function ProjectDashboardView({ project, signedImageUrl }: ProjectDashboa
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
                                         <Clock className="h-4 w-4 text-muted-foreground" />
-                                        <span className="text-sm">Inicio: {project.project_data?.start_date ? new Date(project.project_data.start_date).toLocaleDateString() : '-'}</span>
+                                        <span className="text-sm">Inicio: -</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <AlertCircle className="h-4 w-4 text-muted-foreground" />
@@ -160,17 +160,10 @@ function ProjectHero({ project, imageUrl }: { project: any, imageUrl?: string | 
     // Theme for map style
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
-    const locale = useLocale();
 
-    // Simplified Dark Mode style
-    const mapStyle = isDark ? [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-    ] : []; // Default lightness
+
+    // CSS class for desaturated satellite look (only affects tiles, not markers)
+    const mapClass = getMapContainerClass(isDark);
 
     return (
         <div className="relative w-full h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-2xl group border border-border/50">
@@ -200,7 +193,7 @@ function ProjectHero({ project, imageUrl }: { project: any, imageUrl?: string | 
                             {project.name}
                         </h1>
                         <Link
-                            href={`/${locale}/project/${project.id}/details`}
+                            href={`/organization/projects/${project.id}` as any}
                             className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md border border-white/20 shadow-lg"
                             title="Editar Información"
                         >
@@ -215,25 +208,23 @@ function ProjectHero({ project, imageUrl }: { project: any, imageUrl?: string | 
                             </p>
                         </div>
                     )}
-                    {project.project_data?.client_name && (
-                        <p className="text-sm text-white/70">
-                            Cliente: <span className="text-white font-medium">{project.project_data.client_name}</span>
-                        </p>
-                    )}
+
                 </div>
             </div>
 
             {/* Mini Map Card (Bottom Right) */}
             <div className="absolute bottom-6 right-6 hidden md:block w-[280px] h-[180px] rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 hover:scale-105 transition-transform duration-300">
                 {isLoaded && hasLocation ? (
-                    <GoogleMap
-                        zoom={15}
-                        center={center}
-                        mapContainerClassName="w-full h-full"
-                        options={{ ...mapOptions, styles: mapStyle }}
-                    >
-                        <MarkerF position={center} />
-                    </GoogleMap>
+                    <div className={`w-full h-full ${mapClass}`}>
+                        <GoogleMap
+                            zoom={15}
+                            center={center}
+                            mapContainerClassName="w-full h-full"
+                            options={{ ...mapOptions, mapTypeId: MAP_TYPE_ID }}
+                        >
+                            <MarkerF position={center} />
+                        </GoogleMap>
+                    </div>
                 ) : (
                     <div className="w-full h-full bg-muted flex items-center justify-center flex-col gap-2 p-4 text-center">
                         <MapPin className="h-8 w-8 text-muted-foreground/50" />

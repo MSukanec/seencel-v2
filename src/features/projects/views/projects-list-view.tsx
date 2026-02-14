@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Project } from "@/types/project";
 import { useRouter } from "@/i18n/routing";
-import { useLayoutStore } from "@/stores/layout-store";
 import { useModal } from "@/stores/modal-store";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { useTranslations } from "next-intl";
@@ -47,7 +46,6 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
     const [isDeleting, setIsDeleting] = useState(false);
 
     const router = useRouter();
-    const { actions } = useLayoutStore();
     const { openModal } = useModal();
     const tForm = useTranslations('Project.form');
 
@@ -117,8 +115,7 @@ export function ProjectsListView({ projects, organizationId, lastActiveProjectId
     };
 
     const handleNavigateToProject = (project: Project) => {
-        actions.setActiveProjectId(project.id);
-        actions.setActiveContext('organization');
+        router.push(`/organization/projects/${project.id}` as any);
     };
 
     const handleDelete = (project: Project) => {

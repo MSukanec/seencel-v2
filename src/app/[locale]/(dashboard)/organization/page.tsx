@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { getDashboardLayout } from "@/actions/widget-actions";
+import {
+    getDashboardLayout,
+    getOverviewHeroData,
+    getRecentProjects,
+    getUpcomingEvents,
+    getRecentFiles,
+    getActivityFeedItems,
+} from "@/actions/widget-actions";
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { createClient } from "@/lib/supabase/server";
@@ -48,15 +55,34 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
     try {
         const orgId = await getActiveOrganizationId();
 
-        // Only lightweight queries — widgets load their own data autonomously
         const supabase = await createClient();
-        const [orgResult, planFeatures, savedLayout] = await Promise.all([
+
+        // Phase 1: Page-level queries (layout, org name, plan features)
+        // Phase 2: Widget data prefetch (parallel, fault-tolerant)
+        const [orgResult, planFeatures, savedLayout, ...widgetResults] = await Promise.all([
+            // Phase 1
             orgId ? supabase.from("organizations").select("name").eq("id", orgId).single() : null,
             orgId ? getOrganizationPlanFeatures(orgId) : null,
             getDashboardLayout('org_dashboard'),
+            // Phase 2 — Widget prefetch (allSettled semantics via .catch)
+            getOverviewHeroData(null).catch(() => null),          // org_pulse
+            getRecentProjects(6).catch(() => null),               // org_recent_projects
+            getUpcomingEvents('all', 8).catch(() => null),        // upcoming_events
+            getRecentFiles('media', 'organization', 12).catch(() => null), // recent_files_gallery
+            getActivityFeedItems('all', 5).catch(() => null),     // activity_kpi
         ]);
 
         const orgName = orgResult?.data?.name || "Organización";
+
+        // Build prefetchedData map — keyed by widget ID
+        // Widgets that got null (failed) will fetch client-side as fallback
+        const prefetchedData: Record<string, any> = {};
+        const widgetKeys = ['org_pulse', 'org_recent_projects', 'upcoming_events', 'recent_files_gallery', 'activity_kpi'];
+        widgetKeys.forEach((key, i) => {
+            if (widgetResults[i] != null) {
+                prefetchedData[key] = widgetResults[i];
+            }
+        });
 
         return (
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
@@ -73,6 +99,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <OrganizationDashboardView
+                            prefetchedData={prefetchedData}
                             savedLayout={savedLayout}
                             isCustomDashboardEnabled={planFeatures?.custom_dashboard ?? false}
                         />

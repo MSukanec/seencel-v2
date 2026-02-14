@@ -199,15 +199,15 @@ Para cada página, seguir este flujo:
 11. Gastos Generales (`/organization/general-costs`)
 12. Informes (`/organization/reports`)
 13. Avanzado (`/organization/advanced`)
-14. Configuración (`/organization/settings`)
+14. Equipo (`/organization/team`)
 
 ### Proyecto
-15. Visión General del Proyecto
+15. ~~Visión General del Proyecto~~ (es el Dashboard del proyecto)
 16. Planificación del Proyecto
 17. ~~Documentación del Proyecto~~  ✅
 18. Presupuestos del Proyecto
 19. Finanzas del Proyecto
-20. Información
+20. ~~Información~~ (migrada a `/organization/projects/[projectId]`)
 21. Salud
 22. Tareas
 23. Materiales

@@ -16,55 +16,12 @@ import { Loader2, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTheme } from "next-themes";
+import { MAP_TYPE_ID, getMapContainerClass } from "@/lib/map-config";
 
 // Define libraries array outside component to prevent re-renders
 const libraries: ("places")[] = ["places"];
 
-// Map Styles
-const darkMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#212121" }] },
-    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
-    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#757575" }] },
-    { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-    { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
-    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
-    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#181818" }] },
-    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { featureType: "poi.park", elementType: "labels.text.stroke", stylers: [{ color: "#1b1b1b" }] },
-    { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2c" }] },
-    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
-    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#373737" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
-    { featureType: "road.highway.controlled_access", elementType: "geometry", stylers: [{ color: "#4e4e4e" }] },
-    { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d3d3d" }] },
-];
-
-const lightMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-    { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
-    { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
-    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-    { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
-    { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-    { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-    { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
-    { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-];
+// Map styling is centralized in @/lib/map-config
 
 export function OrganizationLocationManager({ organization }: { organization: any }) {
     const orgDataRaw = organization.organization_data;
@@ -86,8 +43,9 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
     const [isPending, startTransition] = useTransition();
     const { resolvedTheme } = useTheme();
 
-    // Determine styles based on theme
-    const currentMapStyle = resolvedTheme === 'dark' ? darkMapStyle : lightMapStyle;
+    // Determine filter based on theme
+    const isDark = resolvedTheme === 'dark';
+    const mapClass = getMapContainerClass(isDark);
 
     // Custom Marker Image URL - uses logo_url (full URL from DB)
     const logoUrl = organization.logo_url || "/logo.png";
@@ -191,15 +149,15 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
     return (
         <div className="relative w-full h-full overflow-hidden">
             {/* Background Map */}
-            <div className="absolute inset-0 z-0">
+            <div className={`absolute inset-0 z-0 ${mapClass}`}>
                 <GoogleMap
                     zoom={zoom}
                     center={center}
                     mapContainerClassName="w-full h-full"
                     options={{
+                        mapTypeId: MAP_TYPE_ID,
                         disableDefaultUI: true,
                         zoomControl: true,
-                        styles: currentMapStyle,
                         clickableIcons: false,
                     }}
                     onClick={(e) => {
@@ -216,7 +174,7 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                         mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                     >
                         <div className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer transition-transform hover:scale-110 active:scale-95 duration-200 ease-out drop-shadow-2xl">
-                            <div className="relative w-16 h-16 bg-[#83cc16] rounded-full rounded-br-none rotate-45 flex items-center justify-center border-[3px] border-white shadow-sm">
+                            <div className="relative w-16 h-16 bg-primary rounded-full rounded-br-none rotate-45 flex items-center justify-center border-[3px] border-white shadow-sm">
                                 <div className="w-12 h-12 bg-white rounded-full overflow-hidden -rotate-45 border border-black/5">
                                     {/* Use standard img for overlay, next/image can be tricky with absolute positioning/sizing here */}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}

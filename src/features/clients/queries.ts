@@ -46,15 +46,20 @@ async function getActiveOrganizationId() {
     return pref?.last_organization_id || null;
 }
 
-export async function getClients(projectId: string) {
+export async function getClients(projectId: string | null) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('project_clients_view')
         .select('*')
-        .eq('project_id', projectId)
         .eq('is_deleted', false)
         .order('contact_full_name', { ascending: true });
+
+    if (projectId) {
+        query = query.eq('project_id', projectId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching clients:", JSON.stringify(error, null, 2));
@@ -351,13 +356,18 @@ export async function getSchedulesByOrganization(organizationId: string) {
     return { data: data as any[], error: null };
 }
 
-export async function getClientFinancialSummary(projectId: string) {
+export async function getClientFinancialSummary(projectId: string | null) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('client_financial_summary_view')
-        .select('*')
-        .eq('project_id', projectId);
+        .select('*');
+
+    if (projectId) {
+        query = query.eq('project_id', projectId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching client financial summary:", error);
@@ -367,10 +377,10 @@ export async function getClientFinancialSummary(projectId: string) {
     return { data: data as ClientFinancialSummary[], error: null };
 }
 
-export async function getClientCommitments(projectId: string) {
+export async function getClientCommitments(projectId: string | null) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('client_commitments')
         .select(`
             *,
@@ -381,9 +391,14 @@ export async function getClientCommitments(projectId: string) {
             ),
             currency:currencies(symbol, code)
         `)
-        .eq('project_id', projectId)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
+
+    if (projectId) {
+        query = query.eq('project_id', projectId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching client commitments:", error);
@@ -393,14 +408,19 @@ export async function getClientCommitments(projectId: string) {
     return { data, error: null };
 }
 
-export async function getClientPayments(projectId: string) {
+export async function getClientPayments(projectId: string | null) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('client_payments_view')
         .select('*')
-        .eq('project_id', projectId)
         .order('payment_date', { ascending: false });
+
+    if (projectId) {
+        query = query.eq('project_id', projectId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Error fetching client payments:", error);
@@ -411,17 +431,41 @@ export async function getClientPayments(projectId: string) {
     return { data: enriched as ClientPaymentView[], error: null };
 }
 
-export async function getClientPaymentSchedules(projectId: string) {
+export async function getClientPaymentSchedules(projectId: string | null) {
     const supabase = await createClient();
 
-    // Joining client_commitments to filter by project_id
-    // Note: Implicit inner join filter syntax in PostgREST for relation filtering
+    if (projectId) {
+        const { data, error } = await supabase
+            .from('client_payment_schedule')
+            .select(`
+                *,
+                commitment:client_commitments!inner(
+                    id,
+                    project_id,
+                    client:project_clients(
+                        id,
+                        contact:contacts(full_name)
+                    )
+                ),
+                currency:currencies(symbol, code)
+            `)
+            .eq('commitment.project_id', projectId)
+            .eq('is_deleted', false)
+            .order('due_date', { ascending: true });
 
+        if (error) {
+            console.error("Error fetching client payment schedules:", error);
+            return { data: [] as any[], error };
+        }
+        return { data: data as any[], error: null };
+    }
+
+    // No project filter — get all schedules
     const { data, error } = await supabase
         .from('client_payment_schedule')
         .select(`
             *,
-            commitment:client_commitments!inner(
+            commitment:client_commitments(
                 id,
                 project_id,
                 client:project_clients(
@@ -431,7 +475,6 @@ export async function getClientPaymentSchedules(projectId: string) {
             ),
             currency:currencies(symbol, code)
         `)
-        .eq('commitment.project_id', projectId)
         .eq('is_deleted', false)
         .order('due_date', { ascending: true });
 
@@ -439,7 +482,6 @@ export async function getClientPaymentSchedules(projectId: string) {
         console.error("Error fetching client payment schedules:", error);
         return { data: [] as any[], error };
     }
-
     return { data: data as any[], error: null };
 }
 

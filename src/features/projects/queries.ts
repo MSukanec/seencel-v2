@@ -94,7 +94,9 @@ export async function getProjectById(projectId: string) {
         .from('projects')
         .select(`
             *,
-            project_data (*)
+            project_data (*),
+            project_types (id, name),
+            project_modalities (id, name)
         `)
         .eq('id', projectId)
         .single();

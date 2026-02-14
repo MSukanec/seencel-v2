@@ -10,10 +10,10 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MapPin, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { MapPin, Building2, Hammer, ImageOff, Pencil, Trash2, MoreHorizontal, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useLayoutStore } from "@/stores/layout-store";
+import { Link } from "@/i18n/routing";
 
 interface ProjectCardProps {
     project: Project;
@@ -29,7 +29,6 @@ interface ProjectCardProps {
  */
 export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCardProps) {
     const t = useTranslations('Project.status');
-    const { actions } = useLayoutStore();
 
     const palette = project.image_palette;
     const hasPalette = !!(palette && (palette.primary || palette.secondary || palette.background || palette.accent));
@@ -55,10 +54,7 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         e.stopPropagation();
     };
 
-    const handleCardClick = () => {
-        actions.setActiveContext("organization");
-        actions.setActiveProjectId(project.id);
-    };
+    const detailHref = `/organization/projects/${project.id}` as any;
 
     // ── Palette-driven design tokens ──────────────────────────────────────────
     // IMPORTANT: Palette colors from images are often LIGHT (sky, white walls).
@@ -96,12 +92,9 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
         : undefined;
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
+        <Link
+            href={detailHref}
             className="block group cursor-pointer"
-            onClick={handleCardClick}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
         >
             <Card
                 className={cn(
@@ -232,14 +225,22 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={(e) => {
+                                    e.stopPropagation();
+                                }} asChild>
+                                    <Link href={detailHref}>
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Editar
+                                    </Link>
+                                </DropdownMenuItem>
                                 {onEdit && (
                                     <DropdownMenuItem onClick={(e) => {
                                         e.stopPropagation();
                                         onEdit(project);
                                     }}>
                                         <Pencil className="h-4 w-4 mr-2" />
-                                        Editar
+                                        Edición Rápida
                                     </DropdownMenuItem>
                                 )}
                                 {onDelete && (
@@ -259,6 +260,6 @@ export function ProjectCard({ project, className, onEdit, onDelete }: ProjectCar
                     )}
                 </div>
             </Card>
-        </div>
+        </Link>
     );
 }
