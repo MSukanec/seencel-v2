@@ -315,60 +315,24 @@ export async function getFinancialSummary(
         return { income: 0, expenses: 0, balance: 0, currencySymbol: '$', currencyCode: 'ARS' };
     }
 
-    // Get functional currency symbol
-    const { data: prefs } = await supabase
-        .from('organization_preferences')
-        .select('functional_currency_id')
-        .eq('organization_id', orgId)
-        .single();
+    // Use SQL function for aggregation (1 row instead of N rows)
+    const { data, error } = await supabase.rpc('fn_financial_kpi_summary', {
+        p_org_id: orgId,
+        ...(scope === 'project' && projectId ? { p_project_id: projectId } : {}),
+    });
 
-    let currencySymbol = '$';
-    let currencyCode = 'ARS';
-    if (prefs?.functional_currency_id) {
-        const { data: cur } = await supabase
-            .from('currencies')
-            .select('symbol, code')
-            .eq('id', prefs.functional_currency_id)
-            .single();
-        if (cur) {
-            currencySymbol = cur.symbol || '$';
-            currencyCode = cur.code || 'ARS';
-        }
+    if (error || !data || data.length === 0) {
+        console.error('[getFinancialSummary] RPC error:', error);
+        return { income: 0, expenses: 0, balance: 0, currencySymbol: '$', currencyCode: 'ARS' };
     }
 
-    // Build query for movements
-    let query = supabase
-        .from('unified_financial_movements_view')
-        .select('functional_amount, amount_sign')
-        .eq('organization_id', orgId)
-        .neq('amount_sign', 0); // Exclude neutral (transfers/exchanges)
-
-    if (scope === 'project' && projectId) {
-        query = query.eq('project_id', projectId);
-    }
-
-    const { data: movements } = await query;
-
-    let income = 0;
-    let expenses = 0;
-
-    if (movements) {
-        for (const m of movements) {
-            const fa = Number(m.functional_amount) || 0;
-            if (m.amount_sign === 1) {
-                income += fa;
-            } else if (m.amount_sign === -1) {
-                expenses += fa;
-            }
-        }
-    }
-
+    const row = data[0];
     return {
-        income,
-        expenses,
-        balance: income - expenses,
-        currencySymbol,
-        currencyCode,
+        income: Number(row.income) || 0,
+        expenses: Number(row.expenses) || 0,
+        balance: Number(row.balance) || 0,
+        currencySymbol: row.currency_symbol || '$',
+        currencyCode: row.currency_code || 'ARS',
     };
 }
 
@@ -395,45 +359,29 @@ export async function getStorageOverviewData(): Promise<StorageOverviewData> {
 
         const supabase = await createClient();
 
-        const [filesResult, foldersResult, planResult] = await Promise.all([
-            supabase
-                .from('media_files')
-                .select('file_type, file_size')
-                .eq('organization_id', orgId)
-                .eq('is_deleted', false),
-            supabase
-                .from('media_file_folders')
-                .select('id', { count: 'exact', head: true })
-                .eq('organization_id', orgId),
-            supabase
-                .from('plan_features')
-                .select('max_storage_mb')
-                .eq('plan_id', (
-                    await supabase.from('organizations').select('plan_id').eq('id', orgId).single()
-                ).data?.plan_id || '')
-                .single(),
-        ]);
+        // Use SQL function for aggregation (1 row instead of N rows)
+        const { data, error } = await supabase.rpc('fn_storage_overview', {
+            p_org_id: orgId,
+        });
 
-        const files = filesResult.data || [];
-        let totalBytes = 0;
-        const typeAgg: Record<string, { count: number; bytes: number }> = {};
-        for (const row of files) {
-            const size = Number(row.file_size) || 0;
-            totalBytes += size;
-            const type = row.file_type || 'other';
-            if (!typeAgg[type]) typeAgg[type] = { count: 0, bytes: 0 };
-            typeAgg[type].count++;
-            typeAgg[type].bytes += size;
+        if (error || !data || data.length === 0) {
+            console.error('[getStorageOverviewData] RPC error:', error);
+            return { totalBytes: 0, fileCount: 0, folderCount: 0, maxStorageMb: 500, byType: [] };
         }
 
+        const row = data[0];
+        const byType = Array.isArray(row.by_type) ? row.by_type : [];
+
         return {
-            totalBytes,
-            fileCount: files.length,
-            folderCount: foldersResult.count || 0,
-            maxStorageMb: planResult.data?.max_storage_mb ?? 500,
-            byType: Object.entries(typeAgg)
-                .map(([type, agg]) => ({ type, ...agg }))
-                .sort((a, b) => b.bytes - a.bytes),
+            totalBytes: Number(row.total_bytes) || 0,
+            fileCount: Number(row.file_count) || 0,
+            folderCount: Number(row.folder_count) || 0,
+            maxStorageMb: Number(row.max_storage_mb) || 500,
+            byType: byType.map((t: any) => ({
+                type: t.type || 'other',
+                count: Number(t.count) || 0,
+                bytes: Number(t.bytes) || 0,
+            })),
         };
     } catch (error) {
         console.error('[getStorageOverviewData] Error:', error);
@@ -452,6 +400,8 @@ export interface RecentFileItem {
     file_size: number;
     url: string;
     signed_url?: string;
+    /** Optimized thumbnail URL (256px) for image files */
+    thumbnail_url?: string;
     created_at: string;
     project_id?: string | null;
 }
@@ -566,6 +516,21 @@ export async function getRecentFiles(
             const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${mf.bucket}/${mf.file_path}`;
             const fileUrl = isPublicBucket ? publicUrl : (signedUrlMap.get(mf.id) || publicUrl);
 
+            // Generate thumbnail URL for images (256px, cover crop)
+            let thumbnailUrl: string | undefined;
+            if (mf.file_type === 'image') {
+                if (isPublicBucket) {
+                    // Public: use Supabase Image Transformation endpoint
+                    thumbnailUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/render/image/public/${mf.bucket}/${mf.file_path}?width=256&height=256&resize=cover&quality=60`;
+                } else {
+                    // Private: append transform params to signed URL
+                    const signedUrl = signedUrlMap.get(mf.id);
+                    if (signedUrl) {
+                        thumbnailUrl = `${signedUrl}&width=256&height=256&resize=cover&quality=60`;
+                    }
+                }
+            }
+
             return {
                 id: mf.id,
                 file_name: mf.file_name,
@@ -573,6 +538,7 @@ export async function getRecentFiles(
                 file_size: mf.file_size,
                 url: fileUrl,
                 signed_url: fileUrl,
+                thumbnail_url: thumbnailUrl,
                 created_at: mf.created_at,
                 project_id: row.project_id,
             };
@@ -949,4 +915,169 @@ export async function saveDashboardLayout(
     }
 
     return { success: true };
+}
+
+// ============================================================================
+// OVERVIEW HERO DATA (for OverviewHeroWidget)
+// ============================================================================
+// Replaces the client-side fetchHeroData() with duplicated queries.
+// Single server action for both org mode and project mode.
+// ============================================================================
+
+export interface OverviewHeroData {
+    name: string;
+    avatarUrl: string | null;
+    planName: string | null;
+    planSlug: string | null;
+    isFounder: boolean;
+    memberCount: number;
+    projectCount: number;
+    projectLocations: {
+        id: string;
+        name: string;
+        status: string;
+        lat: number;
+        lng: number;
+        city: string | null;
+        country: string | null;
+        address: string | null;
+        imageUrl: string | null;
+    }[];
+    members: { name: string; image: string | null; email?: string }[];
+    isProjectMode: boolean;
+    projectStatus: string | null;
+    projectTypeName: string | null;
+    projectModalityName: string | null;
+}
+
+/**
+ * Fetches hero data for the OverviewHeroWidget.
+ * Supports org mode (overview of all projects) and project mode (single project focus).
+ */
+export async function getOverviewHeroData(
+    projectId?: string | null
+): Promise<OverviewHeroData | null> {
+    try {
+        const orgId = await getActiveOrganizationId();
+        if (!orgId) return null;
+
+        const supabase = await createClient();
+
+        if (projectId) {
+            // ── PROJECT MODE ──
+            const [projectResult, locationResult, membersAvatarResult] = await Promise.all([
+                supabase.from("projects")
+                    .select("id, name, image_url, status, project_types(name), project_modalities(name)")
+                    .eq("id", projectId)
+                    .single(),
+                supabase.from("project_data")
+                    .select("lat, lng, city, country, address")
+                    .eq("project_id", projectId)
+                    .single(),
+                supabase.from("organization_members")
+                    .select("users(full_name, avatar_url, email)")
+                    .eq("organization_id", orgId)
+                    .eq("is_active", true)
+                    .limit(8),
+            ]);
+
+            const project = projectResult.data as any;
+            const locData = locationResult.data as any;
+            const projectLocations: OverviewHeroData['projectLocations'] = [];
+            if (locData?.lat && locData?.lng) {
+                projectLocations.push({
+                    id: project?.id || projectId,
+                    name: project?.name || "Proyecto",
+                    status: project?.status || "active",
+                    lat: Number(locData.lat),
+                    lng: Number(locData.lng),
+                    city: locData.city,
+                    country: locData.country,
+                    address: locData.address || null,
+                    imageUrl: project?.image_url || null,
+                });
+            }
+
+            const membersForStack = (membersAvatarResult?.data || [])
+                .filter((m: any) => m.users)
+                .map((m: any) => ({ name: m.users.full_name || "Member", image: m.users.avatar_url || null, email: m.users.email || undefined }));
+
+            const statusMap: Record<string, string> = { active: 'Activo', planning: 'Planificación', paused: 'Pausado', completed: 'Completado', cancelled: 'Cancelado' };
+
+            return {
+                name: project?.name || "Proyecto",
+                avatarUrl: project?.image_url || null,
+                planName: null, planSlug: null, isFounder: false, memberCount: 0, projectCount: 0,
+                projectLocations,
+                members: membersForStack,
+                isProjectMode: true,
+                projectStatus: statusMap[(project?.status || 'active').toLowerCase()] || project?.status || null,
+                projectTypeName: project?.project_types?.name || null,
+                projectModalityName: project?.project_modalities?.name || null,
+            };
+        }
+
+        // ── ORGANIZATION MODE ──
+        const [orgResult, membersResult, projectCountResult, locationsResult, membersAvatarResult] = await Promise.all([
+            supabase.from("organizations")
+                .select("name, logo_url, settings, plans(name, slug)")
+                .eq("id", orgId)
+                .single(),
+            supabase.from("organization_members")
+                .select("id", { count: "exact", head: true })
+                .eq("organization_id", orgId)
+                .eq("is_active", true),
+            supabase.from("projects")
+                .select("id", { count: "exact", head: true })
+                .eq("organization_id", orgId)
+                .eq("is_deleted", false),
+            supabase.from("project_data")
+                .select("lat, lng, city, country, address, projects!inner(id, name, status, is_deleted, image_url)")
+                .eq("organization_id", orgId)
+                .not("lat", "is", null)
+                .not("lng", "is", null),
+            supabase.from("organization_members")
+                .select("users(full_name, avatar_url, email)")
+                .eq("organization_id", orgId)
+                .eq("is_active", true)
+                .limit(8),
+        ]);
+
+        const orgData = orgResult.data as any;
+        const projectLocations = (locationsResult.data || [])
+            .filter((pd: any) => pd.projects && !pd.projects.is_deleted)
+            .map((pd: any) => {
+                const p = pd.projects;
+                return {
+                    id: p.id, name: p.name, status: p.status,
+                    lat: Number(pd.lat), lng: Number(pd.lng),
+                    city: pd.city, country: pd.country,
+                    address: pd.address || null,
+                    imageUrl: p.image_url || null,
+                };
+            });
+
+        const membersForStack = (membersAvatarResult?.data || [])
+            .filter((m: any) => m.users)
+            .map((m: any) => ({ name: m.users.full_name || "Member", image: m.users.avatar_url || null, email: m.users.email || undefined }));
+
+        return {
+            name: orgData?.name || "Organización",
+            avatarUrl: orgData?.logo_url || null,
+            planName: orgData?.plans?.name || null,
+            planSlug: orgData?.plans?.slug || null,
+            isFounder: (orgData?.settings as any)?.is_founder === true,
+            memberCount: membersResult.count || 0,
+            projectStatus: null,
+            projectTypeName: null,
+            projectModalityName: null,
+            projectCount: projectCountResult.count || 0,
+            projectLocations,
+            members: membersForStack,
+            isProjectMode: false,
+        };
+    } catch (error) {
+        console.error('[getOverviewHeroData] Error:', error);
+        return null;
+    }
 }

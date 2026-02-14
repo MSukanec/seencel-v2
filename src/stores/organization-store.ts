@@ -207,77 +207,80 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
 }));
 
 // === Hydrator Component ===
-// This component hydrates the store from server-side data
-// It renders nothing but ensures the store is populated
+// Two-phase hydration:
+// Phase 1 (instant): activeOrgId + impersonation from server layout
+// Phase 2 (lazy): currencies, wallets, projects, clients via server action
 
 interface OrganizationStoreHydratorProps {
     activeOrgId: string | null;
-    preferences: OrganizationPreferences | null;
-    isFounder: boolean;
-    wallets: Wallet[];
-    projects: Project[];
-    clients: Client[];
-    currencies: Currency[];
-    decimalPlaces: number;
-    kpiCompactFormat: boolean;
     isImpersonating?: boolean;
     impersonationOrgName?: string | null;
 }
 
 import { useEffect, useRef } from 'react';
+import { fetchOrganizationStoreData } from '@/actions/organization-store-actions';
 
 export function OrganizationStoreHydrator({
     activeOrgId,
-    preferences,
-    isFounder,
-    wallets,
-    projects,
-    clients,
-    currencies,
-    decimalPlaces,
-    kpiCompactFormat,
     isImpersonating = false,
     impersonationOrgName = null,
 }: OrganizationStoreHydratorProps) {
-    // Track previous critical values to detect changes that require re-hydration
     const prevActiveOrgId = useRef(activeOrgId);
-    const prevIsFounder = useRef(isFounder);
     const hydrated = useRef(false);
+    const fetchingRef = useRef(false);
 
     useEffect(() => {
-        // Detect if critical values changed (org switch or plan upgrade)
         const orgChanged = prevActiveOrgId.current !== activeOrgId;
-        const founderStatusChanged = prevIsFounder.current !== isFounder;
-        const shouldRehydrate = orgChanged || founderStatusChanged;
-
-        // Update refs for next comparison
         prevActiveOrgId.current = activeOrgId;
-        prevIsFounder.current = isFounder;
 
-        // Hydrate on first mount OR when critical data changes
-        if (!hydrated.current || shouldRehydrate) {
+        // Phase 1: Hydrate core data instantly (no network)
+        if (!hydrated.current || orgChanged) {
             hydrated.current = true;
 
+            // Set minimal state immediately so layout renders fast
             useOrganizationStore.getState().hydrate({
                 activeOrgId,
-                preferences,
-                isFounder,
-                wallets,
-                projects,
-                clients,
-                currencies,
-                decimalPlaces,
-                kpiCompactFormat,
             });
 
-            // Set impersonation state (from server detection)
+            // Set impersonation state
             if (isImpersonating) {
                 useOrganizationStore.getState().setImpersonating(impersonationOrgName || '');
             } else {
                 useOrganizationStore.getState().clearImpersonating();
             }
         }
-    }, [activeOrgId, preferences, isFounder, wallets, projects, clients, currencies, decimalPlaces, kpiCompactFormat, isImpersonating, impersonationOrgName]);
+
+        // Phase 2: Lazy fetch heavy data (currencies, wallets, projects, clients)
+        if (activeOrgId && (!fetchingRef.current || orgChanged)) {
+            fetchingRef.current = true;
+
+            fetchOrganizationStoreData(activeOrgId)
+                .then((data) => {
+                    useOrganizationStore.getState().hydrate({
+                        activeOrgId,
+                        preferences: data.preferences as any,
+                        isFounder: data.isFounder,
+                        wallets: data.wallets,
+                        projects: data.projects,
+                        clients: data.clients,
+                        currencies: data.currencies,
+                        decimalPlaces: data.decimalPlaces,
+                        kpiCompactFormat: data.kpiCompactFormat,
+                    });
+                })
+                .catch((error) => {
+                    console.error('Failed to load organization data:', error);
+                    // Still mark as hydrated with empty data so UI doesn't block
+                    useOrganizationStore.getState().hydrate({
+                        activeOrgId,
+                        wallets: [],
+                        projects: [],
+                        clients: [],
+                        currencies: [],
+                    });
+                });
+        }
+    }, [activeOrgId, isImpersonating, impersonationOrgName]);
 
     return null;
 }

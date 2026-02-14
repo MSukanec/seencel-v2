@@ -58,10 +58,8 @@ export async function middleware(request: NextRequest) {
     // Remove locale prefix to check logical path (e.g. /es/onboarding -> /onboarding)
     const pathWithoutLocale = pathname.replace(/^\/(en|es)/, "") || "/";
 
-    // Public paths that valid users shouldn't necessarily be forced out of,
-    // BUT if they are logged in, we verify onboarding.
+    // Public paths that don't require onboarding checks
     const isAuthPath = ["/login", "/signup", "/auth/callback", "/forgot-password", "/update-password"].some(p => pathWithoutLocale.startsWith(p));
-    const isOnboardingPath = pathWithoutLocale.startsWith("/onboarding") || pathWithoutLocale.startsWith("/bienvenida");
     const isPublicStatic = ["/favicon.ico", "/api", "/_next", "/static", "/images"].some(p => pathname.startsWith(p)) || /\.(?:jpg|jpeg|gif|png|svg|ico|webp|js|json|xml|txt|webmanifest)$/i.test(pathname);
 
     if (isPublicStatic) return response;
@@ -70,41 +68,23 @@ export async function middleware(request: NextRequest) {
     if (user) {
         // User is logged in
 
-        // Check Onboarding Status
-        // We use the internal user ID mapped from auth_id to check preferences
-        const { data: userPrefs } = await supabase
-            .from("user_preferences")
-            .select("onboarding_completed")
-            .eq("user_id", (await supabase.from("users").select("id").eq("auth_id", user.id).single()).data?.id)
-            .single();
+        // SCENARIO 1: Onboarding check is now handled by the dashboard layout
+        // (where getUserProfile already fetches signup_completed).
+        // This eliminates 2 DB queries from EVERY HTTP request.
 
-        const onboardingCompleted = userPrefs?.onboarding_completed ?? false;
-
-        // SCENARIO 1: User needs onboarding but is not on onboarding page
-        if (!onboardingCompleted && !isOnboardingPath) {
-            const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";
-            return NextResponse.redirect(new URL(`/${locale}/onboarding`, request.url));
-        }
-
-        // SCENARIO 2: User completed onboarding but tries to go to onboarding page
-        if (onboardingCompleted && isOnboardingPath) {
-            const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";
-            return NextResponse.redirect(new URL(`/${locale}/organization`, request.url));
-        }
-
-        // SCENARIO 3: User logged in trying to access login/signup
+        // SCENARIO 2: User logged in trying to access login/signup
         if (isAuthPath) {
             const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";
             return NextResponse.redirect(new URL(`/${locale}/organization`, request.url));
         }
 
-        // SCENARIO 4: Allow invitation acceptance for logged-in users
+        // SCENARIO 3: Allow invitation acceptance for logged-in users
         const isInvitePath = pathWithoutLocale.startsWith("/invite") || pathWithoutLocale.startsWith("/invitacion");
         if (isInvitePath) {
             return response; // Let them through to accept invitation
         }
 
-        // SCENARIO 5: Authenticated user on landing page → redirect to hub instantly
+        // SCENARIO 4: Authenticated user on landing page → redirect to hub instantly
         // Skip redirect if user explicitly requested the landing page (?landing=true)
         if (pathWithoutLocale === "/" && !request.nextUrl.searchParams.has('landing')) {
             const locale = request.cookies.get("NEXT_LOCALE")?.value || "es";

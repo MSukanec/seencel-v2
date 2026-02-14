@@ -5,14 +5,15 @@ import { UserProfile } from '@/types/user';
 // User Profile Query
 // ============================================================================
 
-export async function getUserProfile(): Promise<{ profile: UserProfile | null; error: string | null }> {
+export async function getUserProfile(authId?: string): Promise<{ profile: UserProfile | null; error: string | null }> {
     const supabase = await createClient();
 
-    // 1. Get Auth User
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
-        return { profile: null, error: "Not authenticated" };
+    // 1. Resolve Auth ID (skip auth.getUser() if provided by caller)
+    let resolvedAuthId = authId;
+    if (!resolvedAuthId) {
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        if (authError || !authUser) return { profile: null, error: "Not authenticated" };
+        resolvedAuthId = authUser.id;
     }
 
     // 2. Fetch User + User Data
@@ -34,7 +35,7 @@ export async function getUserProfile(): Promise<{ profile: UserProfile | null; e
                 )
             )
         `)
-        .eq('auth_id', authUser.id)
+        .eq('auth_id', resolvedAuthId)
         .single();
 
     if (dbError) {
@@ -135,11 +136,16 @@ export async function checkIsBetaTester(): Promise<boolean> {
 // Combined Role Check (optimized - single query)
 // ============================================================================
 
-export async function checkUserRoles(): Promise<{ isAdmin: boolean; isBetaTester: boolean }> {
+export async function checkUserRoles(authId?: string): Promise<{ isAdmin: boolean; isBetaTester: boolean }> {
     const supabase = await createClient();
 
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !authUser) return { isAdmin: false, isBetaTester: false };
+    // Resolve Auth ID (skip auth.getUser() if provided by caller)
+    let resolvedAuthId = authId;
+    if (!resolvedAuthId) {
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        if (authError || !authUser) return { isAdmin: false, isBetaTester: false };
+        resolvedAuthId = authUser.id;
+    }
 
     const { data: userWithRole, error } = await supabase
         .from('users')
@@ -149,7 +155,7 @@ export async function checkUserRoles(): Promise<{ isAdmin: boolean; isBetaTester
                 name
             )
         `)
-        .eq('auth_id', authUser.id)
+        .eq('auth_id', resolvedAuthId)
         .single();
 
     if (error || !userWithRole) return { isAdmin: false, isBetaTester: false };

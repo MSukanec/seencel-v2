@@ -249,14 +249,18 @@ export async function getDashboardData() {
 // SETTINGS QUERIES
 // ----------------------------------------------------------------------------
 
-export async function getUserOrganizations() {
+export async function getUserOrganizations(authId?: string) {
     const supabase = await createClient();
 
-    // 1. Get Current User Auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { organizations: [], activeOrgId: null };
+    // 1. Resolve Auth ID (skip auth.getUser() if provided by caller)
+    let resolvedAuthId = authId;
+    if (!resolvedAuthId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { organizations: [], activeOrgId: null };
+        resolvedAuthId = user.id;
+    }
 
-    // 2. Get Public User ID & Preferences
+    // 2. Get Public User ID & Preferences (required for all subsequent queries)
     const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
@@ -265,7 +269,7 @@ export async function getUserOrganizations() {
                 last_organization_id
             )
         `)
-        .eq('auth_id', user.id)
+        .eq('auth_id', resolvedAuthId)
         .single();
 
     if (userError || !userData) {
@@ -280,52 +284,56 @@ export async function getUserOrganizations() {
 
     const activeOrgId = pref?.last_organization_id || null;
 
-    // 3. Fetch User's Organizations (Just the organizations first)
-    const { data: myMemberships, error: orgsError } = await supabase
-        .from('organization_members')
-        .select(`
-            organizations:organizations!organization_members_organization_id_fkey (
-                id,
-                name,
-                logo_url,
-                owner_id,
-                plans:plan_id (
+    // 3. Fetch organizations, usage stats and members ALL IN PARALLEL
+    // (was sequential waterfall: orgs → usage → members)
+    const [membershipsResult, usageResult] = await Promise.all([
+        // 3a. Organizations
+        supabase
+            .from('organization_members')
+            .select(`
+                organizations:organizations!organization_members_organization_id_fkey (
                     id,
                     name,
-                    slug
+                    logo_url,
+                    owner_id,
+                    plans:plan_id (
+                        id,
+                        name,
+                        slug
+                    )
                 )
-            )
-        `)
-        .eq('user_id', publicUserId)
-        .eq('is_active', true);
+            `)
+            .eq('user_id', publicUserId)
+            .eq('is_active', true),
 
-    if (orgsError) {
-        console.error("Error fetching organizations FULL:", JSON.stringify(orgsError, null, 2));
+        // 3b. Usage Stats (Last Access) — parallel, not waiting for orgs
+        supabase
+            .from('user_organization_preferences')
+            .select('organization_id, updated_at')
+            .eq('user_id', publicUserId),
+    ]);
+
+    if (membershipsResult.error) {
+        console.error("Error fetching organizations FULL:", JSON.stringify(membershipsResult.error, null, 2));
         return { organizations: [], activeOrgId };
     }
 
-    // 3b. Fetch Usage Stats (Last Access)
-    const { data: usagePrefs } = await supabase
-        .from('user_organization_preferences')
-        .select('organization_id, updated_at')
-        .eq('user_id', publicUserId);
-
     const lastAccessMap = new Map<string, number>();
-    usagePrefs?.forEach((p: any) => {
+    usageResult.data?.forEach((p: any) => {
         if (p.organization_id && p.updated_at) {
             lastAccessMap.set(p.organization_id, new Date(p.updated_at).getTime());
         }
     });
 
     // Extract bare organizations
-    const rawOrgs = (myMemberships || [])
+    const rawOrgs = (membershipsResult.data || [])
         .map((m: any) => m.organizations)
         .filter((org: any) => !!org);
 
-    // 4. Fetch Members for these organizations (Separate query for safety/performance)
     const orgIds = rawOrgs.map((o: any) => o.id);
-    let orgMembers: any[] = [];
 
+    // 4. Fetch member avatars (only if orgs exist — can't parallelize with step 3 because we need orgIds)
+    let orgMembers: any[] = [];
     if (orgIds.length > 0) {
         const { data: membersData, error: membersError } = await supabase
             .from('organization_members')
@@ -341,7 +349,6 @@ export async function getUserOrganizations() {
             .eq('is_active', true);
 
         if (membersError) {
-            // Log warning but allow the page to render without avatars
             console.error("Warning: Failed to fetch organization members details", membersError);
         } else {
             orgMembers = membersData || [];
@@ -350,7 +357,6 @@ export async function getUserOrganizations() {
 
     // Map and Merge results
     const organizations = rawOrgs.map((org: any) => {
-        // Filter members for this specific org
         const theseMembers = orgMembers.filter((m: any) => m.organization_id === org.id);
 
         return {
@@ -372,18 +378,15 @@ export async function getUserOrganizations() {
 
     // Sort: Active Org First -> Then Most Recently Used -> Then Alphabetical
     organizations.sort((a: any, b: any) => {
-        // 1. Active Org is ALWAYS first
         if (a.id === activeOrgId) return -1;
         if (b.id === activeOrgId) return 1;
 
-        // 2. Sort by Last Access (updated_at DESC)
         const accessA = a.updated_at || 0;
         const accessB = b.updated_at || 0;
         if (accessA !== accessB) {
-            return accessB - accessA; // Descending
+            return accessB - accessA;
         }
 
-        // 3. Fallback to Name ASC
         return a.name.localeCompare(b.name);
     });
 

@@ -1,42 +1,57 @@
 import { getUserProfile, checkUserRoles } from "@/features/users/queries";
-import { getUserOrganizations, getOrganizationFinancialData } from "@/features/organization/queries";
-import { getOrganizationProjects } from "@/features/projects/queries";
-import { getClientsByOrganization } from "@/features/clients/queries";
+import { getUserOrganizations } from "@/features/organization/queries";
 import { LayoutSwitcher } from "@/components/layout";
 import { getFeatureFlags } from "@/actions/feature-flags";
 import { FeatureFlagsProvider } from "@/providers/feature-flags-provider";
 import { ThemeCustomizationHydrator } from "@/stores/theme-store";
 
 import { OrganizationStoreHydrator } from "@/stores/organization-store";
-import { Currency } from "@/types/currency";
 import MaintenancePage from "./maintenance/page";
 import { MemberRemovedOverlay } from "@/features/organization/components/member-removed-overlay";
-import { PendingInvitationOverlay } from "@/features/team/components/pending-invitation-overlay";
+import { PendingInvitationChecker } from "@/features/team/components/pending-invitation-checker";
 import { createClient } from "@/lib/supabase/server";
-import { getStorageUrl } from "@/lib/storage-utils";
 
-// Force dynamic to ensure fresh organization data on every request
-// This is critical for organization switching to work correctly
-export const dynamic = 'force-dynamic';
+// Next.js detects this layout as dynamic automatically because it uses
+// cookies (Supabase createClient). No need for force-dynamic.
+// Removing force-dynamic enables Request Deduplication and partial caching.
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    // Get all feature flags once
-    const flags = await getFeatureFlags();
-    const { isAdmin, isBetaTester } = await checkUserRoles();
-    const isMaintenanceMode = flags.find(f => f.key === "dashboard_maintenance_mode")?.value ?? false;
+    // ── Phase 0: Single auth check (was called 3x independently) ──
+    const supabaseAuth = await createClient();
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) {
+        const { redirect } = await import('next/navigation');
+        return redirect('/login');
+    }
 
-    // If maintenance mode is on, check if user is admin or beta tester (they can still access)
-    // Regular users see maintenance page
+    // ── Phase 1: Parallel minimal queries (only what layout/sidebar needs) ──
+    // All functions receive authId to skip redundant auth.getUser() calls
+    const [flags, roles, userResult, orgsResult] = await Promise.all([
+        getFeatureFlags(),
+        checkUserRoles(authUser.id),
+        getUserProfile(authUser.id),
+        getUserOrganizations(authUser.id),
+    ]);
+
+    const { isAdmin, isBetaTester } = roles;
+    const { profile } = userResult;
+    const { organizations, activeOrgId } = orgsResult;
+
+    // Maintenance mode check
+    const isMaintenanceMode = flags.find(f => f.key === "dashboard_maintenance_mode")?.value ?? false;
     if (isMaintenanceMode && !isAdmin && !isBetaTester) {
         return <MaintenancePage />;
     }
 
-    const { profile } = await getUserProfile();
-    const { organizations, activeOrgId } = await getUserOrganizations();
+    // Onboarding guard (moved from middleware to avoid 2 queries per HTTP request)
+    if (profile && !profile.signup_completed) {
+        const { redirect } = await import('next/navigation');
+        return redirect('/onboarding');
+    }
 
     // Detect stale membership: user was removed from their active org
     const wasRemoved = !isAdmin && activeOrgId && organizations.length > 0 && !organizations.some((o: any) => o.id === activeOrgId);
@@ -55,156 +70,18 @@ export default async function DashboardLayout({
         impersonationOrgName = orgData?.name || null;
     }
 
-    // Check for pending invitations for this user
-    let pendingInvitation: { id: string; token: string; organization_name: string; organization_logo: string | null; role_name: string; inviter_name: string | null } | null = null;
-    if (profile?.email) {
-        const supabase = await createClient();
-        const { data: invitations } = await supabase
-            .from('organization_invitations')
-            .select('id, token, role_id, organization_id, invited_by')
-            .eq('email', profile.email.toLowerCase())
-            .eq('status', 'pending')
-            .gte('expires_at', new Date().toISOString())
-            .order('created_at', { ascending: false })
-            .limit(1);
+    // ── Pending invitations are checked lazily by PendingInvitationChecker
+    // after mount (same pattern as OrganizationStoreHydrator). ──
 
-        if (invitations && invitations.length > 0) {
-            const inv = invitations[0];
-
-            // Fetch organization name & logo (separate query avoids RLS join issues)
-            let orgName = 'Organización';
-            let logoUrl: string | null = null;
-            if (inv.organization_id) {
-                const { data: orgData } = await supabase
-                    .from('organizations')
-                    .select('name, logo_url')
-                    .eq('id', inv.organization_id)
-                    .single();
-                if (orgData) {
-                    orgName = orgData.name || orgName;
-                    logoUrl = orgData.logo_url || null;
-                }
-            }
-
-            // Fetch role name (separate query - RLS may block via join)
-            let roleName = 'Miembro';
-            if (inv.role_id) {
-                const { data: roleData } = await supabase
-                    .from('roles')
-                    .select('name')
-                    .eq('id', inv.role_id)
-                    .single();
-                if (roleData?.name) {
-                    roleName = roleData.name;
-                }
-            }
-
-            // Get inviter name (invited_by → organization_members.id → user_id → users.full_name)
-            let inviterName: string | null = null;
-            if (inv.invited_by) {
-                const { data: memberData } = await supabase
-                    .from('organization_members')
-                    .select('user_id')
-                    .eq('id', inv.invited_by)
-                    .single();
-                if (memberData?.user_id) {
-                    const { data: inviterUser } = await supabase
-                        .from('users')
-                        .select('full_name')
-                        .eq('id', memberData.user_id)
-                        .single();
-                    inviterName = inviterUser?.full_name || null;
-                }
-            }
-
-            pendingInvitation = {
-                id: inv.id,
-                token: inv.token,
-                organization_name: orgName,
-                organization_logo: logoUrl,
-                role_name: roleName,
-                inviter_name: inviterName,
-            };
-        }
-    }
-
-    // Initialize data arrays
-    let currencies: Currency[] = [];
-    let financialData: Awaited<ReturnType<typeof getOrganizationFinancialData>> | null = null;
-    let wallets: { id: string; name: string; wallet_id?: string; is_default?: boolean; currency_symbol?: string }[] = [];
-    let projects: { id: string; name: string }[] = [];
-    let clients: { id: string; name: string; project_id?: string }[] = [];
-
-    if (activeOrgId) {
-        try {
-            // Fetch all organization data in parallel
-            const [financialResult, projectsResult, clientsResult] = await Promise.all([
-                getOrganizationFinancialData(activeOrgId),
-                getOrganizationProjects(activeOrgId),
-                getClientsByOrganization(activeOrgId),
-            ]);
-
-            financialData = financialResult;
-
-            // Format currencies
-            currencies = (financialData?.currencies || []).map((c: any) => ({
-                id: c.id,
-                code: c.code,
-                name: c.name,
-                symbol: c.symbol,
-                is_default: c.is_default,
-                exchange_rate: c.exchange_rate,
-            }));
-
-            // Format wallets
-            wallets = (financialData?.wallets || []).map((w: any) => ({
-                id: w.id,
-                wallet_id: w.wallet_id,
-                name: w.name,
-                is_default: w.is_default,
-                currency_symbol: w.currency_symbol,
-            }));
-
-            // Format projects
-            projects = (projectsResult || []).map((p: any) => ({
-                id: p.id,
-                name: p.name,
-            }));
-
-            // Format clients
-            clients = (clientsResult.data || []).map((c: any) => ({
-                id: c.id,
-                name: c.contact_name || c.company_name || 'Sin nombre',
-                project_id: c.project_id,
-            }));
-        } catch {
-            // Fallback: empty data (forms will handle gracefully)
-        }
-    }
-
-    // Determine default exchange rate (from secondary currency)
-    const secondaryCurrency = currencies.find(c => !c.is_default);
-    const defaultExchangeRate = secondaryCurrency?.exchange_rate || 1;
-
-    // Get decimal places preference (default to 2)
-    const decimalPlaces = financialData?.preferences?.currency_decimal_places ?? 2;
-
-    // Get KPI compact format preference (default to false = full numbers)
-    const kpiCompactFormat = financialData?.preferences?.kpi_compact_format ?? false;
+    // ── Heavy data (currencies, wallets, projects, clients) is loaded lazily
+    // by OrganizationStoreHydrator via fetchOrganizationStoreData() server action.
+    // This does NOT block the layout render. ──
 
     return (
         <>
-            {/* Zustand Store Hydrators */}
+            {/* Zustand Store Hydrators — Phase 1 instant, Phase 2 lazy */}
             <OrganizationStoreHydrator
                 activeOrgId={activeOrgId || null}
-                preferences={activeOrgId && financialData?.preferences ? financialData.preferences as any : null}
-                isFounder={activeOrgId ? financialData?.isFounder ?? false : false}
-                wallets={wallets}
-                projects={projects}
-                clients={clients}
-                currencies={currencies}
-                decimalPlaces={decimalPlaces}
-                kpiCompactFormat={kpiCompactFormat}
                 isImpersonating={isImpersonating}
                 impersonationOrgName={impersonationOrgName}
             />
@@ -218,14 +95,11 @@ export default async function DashboardLayout({
                             fallbackOrgName={fallbackOrg.name}
                         />
                     )}
-                    {!wasRemoved && pendingInvitation && (
-                        <PendingInvitationOverlay
-                            invitation={pendingInvitation}
-                        />
+                    {!wasRemoved && (
+                        <PendingInvitationChecker email={profile?.email} />
                     )}
                 </LayoutSwitcher>
             </FeatureFlagsProvider>
         </>
     );
 }
-

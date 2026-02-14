@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { getOrganizationSettingsData } from "@/actions/organization-settings";
-import { prefetchOrgWidgetData, getDashboardLayout } from "@/actions/widget-actions";
+import { getDashboardLayout } from "@/actions/widget-actions";
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { createClient } from "@/lib/supabase/server";
@@ -47,20 +46,16 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
     const defaultTab = view === 'activity' ? 'activity' : 'overview';
 
     try {
-        // Only fetch what's needed for the Activity tab
         const orgId = await getActiveOrganizationId();
 
-        // Fetch settings + widget data + org name + saved layout in parallel
+        // Only lightweight queries — widgets load their own data autonomously
         const supabase = await createClient();
-        const [settingsData, widgetData, orgResult, planFeatures, savedLayout] = await Promise.all([
-            orgId ? getOrganizationSettingsData(orgId) : null,
-            orgId ? prefetchOrgWidgetData(orgId) : {},
+        const [orgResult, planFeatures, savedLayout] = await Promise.all([
             orgId ? supabase.from("organizations").select("name").eq("id", orgId).single() : null,
             orgId ? getOrganizationPlanFeatures(orgId) : null,
             getDashboardLayout('org_dashboard'),
         ]);
 
-        const activityLogs = settingsData?.activityLogs || [];
         const orgName = orgResult?.data?.name || "Organización";
 
         return (
@@ -78,14 +73,13 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
                 >
                     <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <OrganizationDashboardView
-                            prefetchedData={widgetData}
                             savedLayout={savedLayout}
                             isCustomDashboardEnabled={planFeatures?.custom_dashboard ?? false}
                         />
                     </TabsContent>
 
                     <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <TeamActivityView logs={activityLogs} />
+                        <TeamActivityView />
                     </TabsContent>
                 </PageWrapper>
             </Tabs>

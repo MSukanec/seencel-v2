@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { OrganizationActivityLog } from "@/features/team/types";
 import { TeamActivityLogsTable } from "@/features/team/components/team-activity-logs-table";
 import { ContentLayout } from "@/components/layout";
@@ -9,12 +9,27 @@ import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/tool
 import { DateRangeFilter, DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
 import { moduleConfigs, actionConfigs, getActionVerb } from "@/config/audit-logs";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { getActivityFeedItems } from "@/actions/widget-actions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TeamActivityViewProps {
-    logs: OrganizationActivityLog[];
+    logs?: OrganizationActivityLog[];
 }
 
-export function TeamActivityView({ logs = [] }: TeamActivityViewProps) {
+export function TeamActivityView({ logs: initialLogs }: TeamActivityViewProps) {
+    const [logs, setLogs] = useState<OrganizationActivityLog[]>(initialLogs || []);
+    const [isLoading, setIsLoading] = useState(!initialLogs);
+
+    // Auto-fetch if no initial data provided
+    useEffect(() => {
+        if (initialLogs) return;
+        getActivityFeedItems("organization", 50)
+            .then((data) => {
+                setLogs(data as OrganizationActivityLog[]);
+                setIsLoading(false);
+            })
+            .catch(() => setIsLoading(false));
+    }, [initialLogs]);
     // Search state with debounce
     const [searchQuery, setSearchQuery] = useState("");
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

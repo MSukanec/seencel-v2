@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import type { WidgetProps } from "@/components/widgets/grid/types";
-import { createClient } from "@/lib/supabase/client";
+import { getOverviewHeroData } from "@/actions/widget-actions";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { GoogleMap, useLoadScript, OverlayView } from "@react-google-maps/api";
@@ -435,117 +435,11 @@ export function OverviewHeroWidget({ initialData }: WidgetProps) {
     useEffect(() => {
         if (data) return;
 
-        async function fetchHeroData() {
-            try {
-                const supabase = createClient();
-
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                const { data: userData } = await supabase
-                    .from("users")
-                    .select("user_preferences!inner(last_organization_id)")
-                    .eq("auth_id", user.id)
-                    .single();
-
-                const pref = Array.isArray(userData?.user_preferences)
-                    ? (userData.user_preferences as any)[0]
-                    : (userData?.user_preferences as any);
-                const orgId = pref?.last_organization_id;
-                if (!orgId) return;
-
-                if (activeProjectId) {
-                    const [projectResult, locationResult, membersAvatarResult] = await Promise.all([
-                        supabase.from("projects").select("id, name, image_url, status, project_types(name), project_modalities(name)").eq("id", activeProjectId).single(),
-                        supabase.from("project_data").select("lat, lng, city, country, address").eq("project_id", activeProjectId).single(),
-                        supabase.from("organization_members").select("users(full_name, avatar_url, email)").eq("organization_id", orgId).eq("is_active", true).limit(8),
-                    ]);
-
-                    const project = projectResult.data as any;
-                    const locData = locationResult.data as any;
-                    const projectLocations: ProjectLocation[] = [];
-                    if (locData?.lat && locData?.lng) {
-                        projectLocations.push({
-                            id: project?.id || activeProjectId,
-                            name: project?.name || "Proyecto",
-                            status: project?.status || "active",
-                            lat: Number(locData.lat),
-                            lng: Number(locData.lng),
-                            city: locData.city,
-                            country: locData.country,
-                            address: locData.address || null,
-                            imageUrl: project?.image_url || null,
-                        });
-                    }
-
-                    const membersForStack = (membersAvatarResult?.data || [])
-                        .filter((m: any) => m.users)
-                        .map((m: any) => ({ name: m.users.full_name || "Member", image: m.users.avatar_url || null, email: m.users.email || undefined }));
-
-                    // Extract status label
-                    const statusMap: Record<string, string> = { active: 'Activo', planning: 'Planificación', paused: 'Pausado', completed: 'Completado', cancelled: 'Cancelado' };
-
-                    setData({
-                        name: project?.name || "Proyecto",
-                        avatarUrl: project?.image_url || null,
-                        planName: null, planSlug: null, isFounder: false, memberCount: 0, projectCount: 0,
-                        projectLocations,
-                        members: membersForStack,
-                        isProjectMode: true,
-                        projectStatus: statusMap[(project?.status || 'active').toLowerCase()] || project?.status || null,
-                        projectTypeName: project?.project_types?.name || null,
-                        projectModalityName: project?.project_modalities?.name || null,
-                    });
-                    return;
-                }
-
-                const [orgResult, membersResult, projectCountResult, locationsResult, membersAvatarResult] = await Promise.all([
-                    supabase.from("organizations").select("name, logo_url, settings, plans(name, slug)").eq("id", orgId).single(),
-                    supabase.from("organization_members").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("is_active", true),
-                    supabase.from("projects").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("is_deleted", false),
-                    supabase.from("project_data").select("lat, lng, city, country, address, projects!inner(id, name, status, is_deleted, image_url)").eq("organization_id", orgId).not("lat", "is", null).not("lng", "is", null),
-                    supabase.from("organization_members").select("users(full_name, avatar_url, email)").eq("organization_id", orgId).eq("is_active", true).limit(8),
-                ]);
-
-                const orgData = orgResult.data as any;
-                const projectLocations = (locationsResult.data || [])
-                    .filter((pd: any) => pd.projects && !pd.projects.is_deleted)
-                    .map((pd: any) => {
-                        const p = pd.projects;
-                        return {
-                            id: p.id, name: p.name, status: p.status,
-                            lat: Number(pd.lat), lng: Number(pd.lng),
-                            city: pd.city, country: pd.country,
-                            address: pd.address || null,
-                            imageUrl: p.image_url || null,
-                        };
-                    });
-
-                const membersForStack = (membersAvatarResult?.data || [])
-                    .filter((m: any) => m.users)
-                    .map((m: any) => ({ name: m.users.full_name || "Member", image: m.users.avatar_url || null, email: m.users.email || undefined }));
-
-                setData({
-                    name: orgData?.name || "Organización",
-                    avatarUrl: orgData?.logo_url || null,
-                    planName: orgData?.plans?.name || null,
-                    planSlug: orgData?.plans?.slug || null,
-                    isFounder: (orgData?.settings as any)?.is_founder === true,
-                    memberCount: membersResult.count || 0,
-                    projectStatus: null,
-                    projectTypeName: null,
-                    projectModalityName: null,
-                    projectCount: projectCountResult.count || 0,
-                    projectLocations,
-                    members: membersForStack,
-                    isProjectMode: false,
-                });
-            } catch (error) {
-                console.error("Error fetching hero data:", error);
-            }
-        }
-
-        fetchHeroData();
+        getOverviewHeroData(activeProjectId || null)
+            .then((result) => {
+                if (result) setData(result);
+            })
+            .catch((err) => console.error("Error fetching hero data:", err));
     }, [data, activeProjectId]);
 
     const handleMapReady = useCallback(() => { }, []);

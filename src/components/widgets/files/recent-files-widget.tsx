@@ -28,8 +28,8 @@ import { useActiveProjectId } from "@/stores/layout-store";
 
 /** Minimum cell width to calculate columns */
 const MIN_CELL_WIDTH = 100;
-/** Max items to fetch */
-const MAX_ITEMS = 36;
+/** Max items to fetch — widget is a preview, full gallery is in Documentación */
+const MAX_ITEMS = 12;
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -223,7 +223,7 @@ function GalleryThumbnail({ file }: { file: RecentFileItem }) {
         >
             {isImage ? (
                 <img
-                    src={file.signed_url || file.url}
+                    src={file.thumbnail_url || file.signed_url || file.url}
                     alt={file.file_name}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
