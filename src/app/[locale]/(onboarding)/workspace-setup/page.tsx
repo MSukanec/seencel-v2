@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { checkPendingInvitation } from "@/actions/invitation-actions";
-import { WorkspaceSetupView } from "./workspace-setup-view";
+import { WorkspaceSetupView } from "@/features/users/views/workspace-setup-view";
 
 export default async function WorkspaceSetupPage() {
     const supabase = await createClient();
