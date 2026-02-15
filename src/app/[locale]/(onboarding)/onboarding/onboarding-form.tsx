@@ -7,7 +7,7 @@ import { submitOnboarding } from "@/actions/onboarding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
-import { Loader2, User } from "lucide-react";
+import { Loader2, Building2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 
@@ -31,7 +31,7 @@ export default function OnboardingForm() {
                 console.error("Onboarding error:", result.message);
                 setError("Ocurrió un error inesperado. Por favor intentá nuevamente. Si el problema persiste, contactanos en contacto@seencel.com");
             } else if (result?.success) {
-                router.push("/hub");
+                router.push("/organization");
                 router.refresh();
             }
         });
@@ -68,6 +68,24 @@ export default function OnboardingForm() {
                             />
                         </FormGroup>
                     </div>
+                </Section>
+
+                {/* Organization Section */}
+                <Section title={t("steps.organization")} icon={<Building2 className="w-5 h-5 text-primary" />}>
+                    <FormGroup
+                        label={t("form.orgName")}
+                        htmlFor="orgName"
+                        required
+                        helpText={t("form.orgHelper")}
+                    >
+                        <Input
+                            id="orgName"
+                            name="orgName"
+                            required
+                            className="h-10"
+                            placeholder={t("form.orgNamePlaceholder")}
+                        />
+                    </FormGroup>
                 </Section>
 
                 {error && (

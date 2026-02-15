@@ -7,18 +7,23 @@ import { revalidatePath } from "next/cache";
 const onboardingSchema = z.object({
     firstName: z.string().min(2, "Min 2 chars"),
     lastName: z.string().min(2, "Min 2 chars"),
+    orgName: z.string().min(2, "Min 2 chars"),
     timezone: z.string().optional(),
 });
 
 /**
- * Onboarding 1: Solo nombre y apellido.
- * Marca signup_completed = true en users.
- * La organización se crea después en el Onboarding 2.
+ * Onboarding unificado: nombre/apellido + creación de organización.
+ * 
+ * 1. Actualiza users.full_name + signup_completed
+ * 2. Upsert user_data (first_name, last_name)
+ * 3. Guarda timezone en user_preferences
+ * 4. Crea la organización via handle_new_organization RPC
  */
 export async function submitOnboarding(prevState: any, formData: FormData) {
     const validatedFields = onboardingSchema.safeParse({
         firstName: formData.get("firstName"),
         lastName: formData.get("lastName"),
+        orgName: formData.get("orgName"),
         timezone: formData.get("timezone") || undefined,
     });
 
@@ -31,7 +36,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         return { error: "validation_error", message: `Validation failed: ${errorMessage}`, details: fieldErrors };
     }
 
-    const { firstName, lastName, timezone } = validatedFields.data;
+    const { firstName, lastName, orgName, timezone } = validatedFields.data;
     const supabase = await createClient();
 
     const {
@@ -95,6 +100,34 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
             // Non-critical, don't fail
         }
     }
+
+    // 5. Create organization via RPC (handle_new_organization)
+    // This creates org, roles, member, currencies, wallets, preferences
+    // and sets it as the active organization in user_preferences
+    const { data: newOrgId, error: rpcError } = await supabase.rpc('handle_new_organization', {
+        p_user_id: internalUser.id,
+        p_organization_name: orgName.trim(),
+    });
+
+    if (rpcError) {
+        console.error("Error creating organization:", rpcError);
+        return { error: "org_creation_failed", message: `Organization creation failed: ${rpcError.message}` };
+    }
+
+    if (!newOrgId) {
+        return { error: "org_creation_failed", message: "No organization ID returned" };
+    }
+
+    // 6. Upsert Org-Specific Preferences (Last Access Timestamp)
+    await supabase
+        .from('user_organization_preferences')
+        .upsert({
+            user_id: internalUser.id,
+            organization_id: newOrgId,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'user_id, organization_id'
+        });
 
     revalidatePath("/", "layout");
 

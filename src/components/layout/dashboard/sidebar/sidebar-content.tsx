@@ -553,7 +553,7 @@ export function SidebarContent({
                             <SidebarNavButton
                                 icon={ArrowLeft}
                                 label="Volver al Hub"
-                                href={"/organization" as any}
+                                href={"/hub" as any}
                                 isActive={false}
                                 isExpanded={isExpanded}
                                 onClick={onLinkClick}
