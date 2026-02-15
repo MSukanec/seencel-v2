@@ -21,17 +21,23 @@ import { useModal } from "@/stores/modal-store";
 import { SitelogForm } from "./sitelog-form";
 import { deleteSiteLog } from "@/actions/sitelog";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 interface SitelogShellProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     initialTypes: SiteLogType[];
     initialLogs: SiteLog[];
 }
 
-export function SitelogShell({ projectId, organizationId, initialTypes, initialLogs }: SitelogShellProps) {
+export function SitelogShell({ projectId: fixedProjectId, organizationId, initialTypes, initialLogs }: SitelogShellProps) {
     const t = useTranslations('Sitelog');
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Project filter from global store (org-wide mode)
+    const activeProjectId = useActiveProjectId();
+    // If a fixed projectId was passed (old /project/ route), use it; otherwise use the global filter
+    const effectiveProjectId = fixedProjectId || activeProjectId;
 
     // Filters State (Multi-select)
     const [severityFilter, setSeverityFilter] = useState<Set<string>>(new Set());
@@ -41,7 +47,7 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
     const { openModal, closeModal } = useModal();
 
     // Placeholder for create action - user logic will determine when to show this
-    const canCreateLog = true; // Logic: canCreate(user, 'sitelog')
+    const canCreateLog = !!effectiveProjectId; // Need a project selected to create
 
     // Standard tab trigger style from ContactsPage
     const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -49,6 +55,11 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
     // Client-side filtering
     const filteredLogs = useMemo(() => {
         let logs = initialLogs;
+
+        // Project Filter (org-wide mode)
+        if (effectiveProjectId) {
+            logs = logs.filter(log => log.project_id === effectiveProjectId);
+        }
 
         // Search Filter
         if (searchQuery) {
@@ -76,14 +87,14 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
         }
 
         return logs;
-    }, [initialLogs, searchQuery, severityFilter, typeFilter, showFavoritesOnly]);
+    }, [initialLogs, effectiveProjectId, searchQuery, severityFilter, typeFilter, showFavoritesOnly]);
 
     const handleCreate = () => {
-        // ... same as before
+        if (!effectiveProjectId) return;
         openModal(
             <SitelogForm
                 organizationId={organizationId}
-                projectId={projectId}
+                projectId={effectiveProjectId}
                 descriptionType={initialTypes}
                 onSuccess={closeModal}
             />,
@@ -98,13 +109,11 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
     // Action State (same)
     const [logToDelete, setLogToDelete] = useState<SiteLog | null>(null);
 
-    // ... handlers (handleEdit, handleDeleteClick, confirmDelete, handleToggleFavorite) same as before
-
     const handleEdit = (log: SiteLog) => {
         openModal(
             <SitelogForm
                 organizationId={organizationId}
-                projectId={projectId}
+                projectId={log.project_id}
                 descriptionType={initialTypes}
                 initialData={log}
                 onSuccess={closeModal}
@@ -125,12 +134,10 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
         if (!logToDelete) return;
 
         try {
-            const result = await deleteSiteLog(logToDelete.id, projectId);
+            const result = await deleteSiteLog(logToDelete.id, logToDelete.project_id);
             if (result.error) {
-                // You might need a toast here, checking if toast is imported
                 console.error(result.error);
             }
-            // Success is handled by revalidatePath usually, but we can close modal
         } catch (error) {
             console.error(error);
         }
@@ -239,6 +246,7 @@ export function SitelogShell({ projectId, organizationId, initialTypes, initialL
                                 onEdit={handleEdit}
                                 onDelete={handleDeleteClick}
                                 onToggleFavorite={handleToggleFavorite}
+                                showProjectName={!effectiveProjectId}
                             />
                         </TabsContent>
 

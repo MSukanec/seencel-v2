@@ -40,7 +40,54 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
         return [];
     }
 
-    // Transform logic to flatten media_links -> media AND Sign URLs
+    return transformSiteLogs(supabase, data);
+}
+
+/**
+ * Get ALL site logs for the organization (org-wide view).
+ * Includes project name for display in the unified list.
+ */
+export async function getSiteLogsForOrganization(organizationId: string): Promise<SiteLog[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('site_logs')
+        .select(`
+            *,
+            entry_type:site_log_types(*),
+            author:created_by(
+                id,
+                user:users(full_name, email, avatar_url)
+            ),
+            project:projects!project_id(id, name),
+            media_links(
+                media_file:media_files(
+                    id,
+                    is_public,
+                    file_type,
+                    file_name,
+                    bucket,
+                    file_path
+                )
+            )
+        `)
+        .eq('organization_id', organizationId)
+        .eq('is_deleted', false)
+        .order('log_date', { ascending: false })
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching org site logs:", error);
+        return [];
+    }
+
+    return transformSiteLogs(supabase, data);
+}
+
+/**
+ * Shared transform: flatten media_links → media AND sign URLs
+ */
+async function transformSiteLogs(supabase: any, data: any[]): Promise<SiteLog[]> {
     const formattedData = await Promise.all(data.map(async (log: any) => {
         const mediaItems = await Promise.all((log.media_links || []).map(async (link: any) => {
             const file = link.media_file;
@@ -146,6 +193,7 @@ export async function createSiteLogType(organizationId: string, name: string, de
     }
 
     revalidatePath(`/project/[projectId]/sitelog`, 'page');
+    revalidatePath(`/organization/sitelog`, 'page');
     return data;
 }
 
@@ -167,6 +215,7 @@ export async function updateSiteLogType(id: string, name: string, description?: 
     }
 
     revalidatePath(`/project/[projectId]/sitelog`, 'page');
+    revalidatePath(`/organization/sitelog`, 'page');
 }
 
 export async function deleteSiteLogType(id: string, replacementId?: string) {
@@ -200,6 +249,7 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
     }
 
     revalidatePath(`/project/[projectId]/sitelog`, 'page');
+    revalidatePath(`/organization/sitelog`, 'page');
 }
 
 // --- CREATE ACTION ---
@@ -383,6 +433,7 @@ export async function deleteSiteLog(logId: string, projectId: string) {
     }
 
     revalidatePath(`/project/${projectId}/sitelog`);
+    revalidatePath(`/organization/sitelog`, 'page');
     return { success: true };
 }
 

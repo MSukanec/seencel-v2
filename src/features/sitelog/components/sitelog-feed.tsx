@@ -25,6 +25,7 @@ interface SitelogFeedProps {
     onEdit?: (log: SiteLog) => void;
     onDelete?: (log: SiteLog) => void;
     onToggleFavorite?: (log: SiteLog) => Promise<void>;
+    showProjectName?: boolean;
 }
 
 import * as React from "react";
@@ -34,7 +35,7 @@ import { WEATHER_CONFIG } from "../constants";
 
 // ... SitelogFeed component start
 
-export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite }: SitelogFeedProps) {
+export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite, showProjectName }: SitelogFeedProps) {
     const [lightboxOpen, setLightboxOpen] = React.useState(false);
     const [currentMediaItems, setCurrentMediaItems] = React.useState<MediaItem[]>([]);
     const [initialMediaIndex, setInitialMediaIndex] = React.useState(0);
@@ -106,6 +107,7 @@ export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite }: Sitelo
                                         onEdit={onEdit}
                                         onDelete={onDelete}
                                         onToggleFavorite={onToggleFavorite}
+                                        showProjectName={showProjectName}
                                     />
                                 </div>
                             ))}
@@ -129,19 +131,22 @@ function LogCard({
     onMediaClick,
     onEdit,
     onDelete,
-    onToggleFavorite
+    onToggleFavorite,
+    showProjectName
 }: {
     log: SiteLog,
     onMediaClick: (items: any[], index: number) => void,
     onEdit?: (log: SiteLog) => void;
     onDelete?: (log: SiteLog) => void;
     onToggleFavorite?: (log: SiteLog) => Promise<void>;
+    showProjectName?: boolean;
 }) {
     // ... LogCard render logic
 
     const authorName = log.author?.user?.full_name || log.author?.user?.email || "Desconocido";
     const authorAvatar = log.author?.user?.avatar_url;
     const typeName = log.entry_type?.name;
+    const projectName = (log as any).project?.name;
 
     return (
         <div className="relative group pl-0">
@@ -225,6 +230,12 @@ function LogCard({
                                 {getWeatherIcon(log.weather)}
                                 <span className="capitalize">{translateWeather(log.weather)}</span>
                             </div>
+                        )}
+
+                        {showProjectName && projectName && (
+                            <Badge variant="outline" className="w-fit bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+                                {projectName}
+                            </Badge>
                         )}
 
                         {typeName && (
