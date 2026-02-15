@@ -5,21 +5,39 @@ import { useRouter } from "@/i18n/routing";
 import { useModal } from "@/stores/modal-store";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { RecipeListItem } from "@/components/shared/list-item/items/recipe-list-item";
-import { Package, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Package,
+    Plus,
+    Building2,
+    Globe,
+    Eye,
+    Star,
+    ChevronRight,
+    ArrowLeft,
+    HardHat,
+    Wrench,
+    FileText,
+    DollarSign,
+    Layers,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
     updateRecipeMaterial,
     deleteRecipeMaterial,
     updateRecipeLabor,
     deleteRecipeLabor,
-    updateRecipeVisibility,
-    deleteRecipe,
+    updateRecipeExternalService,
+    deleteRecipeExternalService,
 } from "@/features/tasks/actions";
 import { TasksRecipeForm } from "@/features/tasks/forms/tasks-recipe-form";
 import { TasksRecipeResourceForm } from "@/features/tasks/forms/tasks-recipe-resource-form";
-import type { TaskView, TaskRecipeView, RecipeResources } from "@/features/tasks/types";
-import type { RecipeListItemData, MaterialPriceInfo, LaborPriceInfo } from "@/components/shared/list-item/items/recipe-list-item";
+import type { TaskView, TaskRecipeView, RecipeResources, ExternalService } from "@/features/tasks/types";
+import { RecipeCard } from "@/features/tasks/components/recipe-card";
+import type { RecipeCardData, MaterialPriceInfo, LaborPriceInfo, ExternalServicePriceInfo } from "@/features/tasks/components/recipe-card";
+import { cn } from "@/lib/utils";
+import { StatCard, StatCardGroup } from "@/components/shared/stat-card";
 
 // ============================================================================
 // Types
@@ -38,6 +56,8 @@ export interface TasksDetailRecipeViewProps {
     catalogMaterials?: CatalogMaterialOption[];
     /** Catalog labor types — needed for labor form Combobox */
     catalogLaborTypes?: { id: string; name: string; unit_id?: string | null; unit_name?: string | null; unit_symbol?: string | null; category_name?: string | null; level_name?: string | null; role_name?: string | null; current_price?: number | null; currency_id?: string | null; currency_symbol?: string | null; price_valid_from?: string | null }[];
+    /** Catalog external services — needed for external service form Combobox */
+    catalogExternalServices?: ExternalService[];
 }
 
 /** Material option from catalog — includes pricing for cost calculations */
@@ -55,6 +75,17 @@ export interface CatalogMaterialOption {
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+function formatCurrency(value: number): string {
+    return "$" + value.toLocaleString("es-AR", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    });
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -66,6 +97,7 @@ export function TasksDetailRecipeView({
     isAdminMode = false,
     catalogMaterials = [],
     catalogLaborTypes = [],
+    catalogExternalServices = [],
 }: TasksDetailRecipeViewProps) {
     const router = useRouter();
     const { openModal } = useModal();
@@ -73,6 +105,9 @@ export function TasksDetailRecipeView({
     // Local state — synced with server props via useEffect
     const [recipes, setRecipes] = useState(serverRecipes);
     const [resourcesMap, setResourcesMap] = useState(serverResourcesMap);
+
+    // ── Navigation state: null = lista, string = detalle de receta ──
+    const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
 
     // ========================================================================
     // Sync server data → local state (critical for router.refresh())
@@ -111,6 +146,7 @@ export function TasksDetailRecipeView({
                 recipeId={recipeId}
                 materials={catalogMaterials}
                 laborTypes={catalogLaborTypes}
+                externalServices={catalogExternalServices}
             />,
             {
                 title: "Agregar Recurso",
@@ -118,7 +154,7 @@ export function TasksDetailRecipeView({
                 size: "md",
             }
         );
-    }, [catalogMaterials, catalogLaborTypes, openModal]);
+    }, [catalogMaterials, catalogLaborTypes, catalogExternalServices, openModal]);
 
     // ========================================================================
     // Material Handlers
@@ -249,37 +285,54 @@ export function TasksDetailRecipeView({
     }, [resourcesMap]);
 
     // ========================================================================
-    // Recipe Actions
+    // External Service Handlers
     // ========================================================================
 
-    const handleToggleVisibility = useCallback(async (recipeId: string, isPublic: boolean) => {
+    const handleUpdateExternalServiceQuantity = useCallback(async (itemId: string, newQuantity: number) => {
         // Optimistic update
-        setRecipes(prev => prev.map(r =>
-            r.id === recipeId ? { ...r, is_public: isPublic } : r
-        ));
+        setResourcesMap(prev => {
+            const updated = { ...prev };
+            for (const recipeId of Object.keys(updated)) {
+                updated[recipeId] = {
+                    ...updated[recipeId],
+                    externalServices: (updated[recipeId].externalServices || []).map(es =>
+                        es.id === itemId ? { ...es, quantity: newQuantity } : es
+                    ),
+                };
+            }
+            return updated;
+        });
 
-        const result = await updateRecipeVisibility(recipeId, isPublic);
-        if (result.success) {
-            toast.success(isPublic ? "Receta publicada" : "Receta ahora es privada");
-        } else {
-            toast.error(result.error || "Error al cambiar visibilidad");
-            setRecipes(serverRecipes); // Rollback
-        }
-    }, [serverRecipes]);
-
-    const handleDeleteRecipe = useCallback(async (recipeId: string) => {
-        // Optimistic: remove recipe immediately
-        const previousRecipes = [...recipes];
-        setRecipes(prev => prev.filter(r => r.id !== recipeId));
-
-        const result = await deleteRecipe(recipeId);
+        const result = await updateRecipeExternalService(itemId, { quantity: newQuantity });
         if (!result.success) {
-            toast.error(result.error || "Error al eliminar receta");
-            setRecipes(previousRecipes); // Rollback
-        } else {
-            toast.success("Receta eliminada");
+            toast.error(result.error || "Error al actualizar");
+            setResourcesMap(serverResourcesMap); // Rollback
         }
-    }, [recipes]);
+    }, [serverResourcesMap]);
+
+    const handleRemoveExternalService = useCallback(async (itemId: string) => {
+        // Optimistic: remove item immediately
+        const previousMap = { ...resourcesMap };
+        setResourcesMap(prev => {
+            const updated = { ...prev };
+            for (const recipeId of Object.keys(updated)) {
+                updated[recipeId] = {
+                    ...updated[recipeId],
+                    externalServices: (updated[recipeId].externalServices || []).filter(es => es.id !== itemId),
+                };
+            }
+            return updated;
+        });
+
+        const result = await deleteRecipeExternalService(itemId);
+        if (!result.success) {
+            toast.error("Error al eliminar servicio externo");
+            setResourcesMap(previousMap); // Rollback
+        } else {
+            toast.success("Servicio externo eliminado");
+        }
+    }, [resourcesMap]);
+
 
     // ========================================================================
     // Material Price Map — for cost calculations
@@ -328,21 +381,67 @@ export function TasksDetailRecipeView({
     }, [catalogLaborTypes, organizationId]);
 
     // ========================================================================
+    // External Service Price Map — for cost calculations
+    // ========================================================================
+
+    const externalServicePriceMap = useMemo(() => {
+        const map = new Map<string, ExternalServicePriceInfo>();
+        // External services don't have catalog-level pricing yet
+        // This map will be populated when PricePulse is integrated
+        return map;
+    }, []);
+
+    // ========================================================================
     // Build list item data
     // ========================================================================
 
-    const recipeListData: RecipeListItemData[] = recipes.map(recipe => ({
+    const recipeListData: RecipeCardData[] = recipes.map(recipe => ({
         recipe,
-        resources: resourcesMap[recipe.id] || { materials: [], labor: [] },
+        resources: resourcesMap[recipe.id] || { materials: [], labor: [], externalServices: [] },
         isOwn: recipe.organization_id === organizationId,
     }));
 
     // Price update handler — refresh data after price change
     const handlePriceUpdated = useCallback((_materialId: string, _newPrice: number) => {
-        // Server-side revalidation already triggered by upsertMaterialPrice
-        // We just refresh to pick up the new prices
         router.refresh();
     }, [router]);
+
+    // Calculate grand total for a recipe (used in list items)
+    const getRecipeGrandTotal = useCallback((data: RecipeCardData): number => {
+        const { resources } = data;
+        const materialsTotal = resources.materials.reduce((sum, item) => {
+            const priceInfo = materialPriceMap?.get(item.material_id);
+            if (!priceInfo) return sum;
+            const totalQty = item.total_quantity ?? item.quantity * (1 + (item.waste_percentage || 0) / 100);
+            return sum + totalQty * priceInfo.effectiveUnitPrice;
+        }, 0);
+        const laborTotal = resources.labor.reduce((sum, item) => {
+            const priceInfo = laborPriceMap?.get(item.labor_type_id);
+            if (!priceInfo) return sum;
+            return sum + item.quantity * priceInfo.unitPrice;
+        }, 0);
+        const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
+            const priceInfo = externalServicePriceMap?.get(item.external_service_id);
+            if (!priceInfo) return sum;
+            return sum + item.quantity * priceInfo.unitPrice;
+        }, 0);
+        return materialsTotal + laborTotal + externalServicesTotal;
+    }, [materialPriceMap, laborPriceMap, externalServicePriceMap]);
+
+    // ========================================================================
+    // Selected recipe for detail view
+    // ========================================================================
+
+    const selectedData = selectedRecipeId
+        ? recipeListData.find(d => d.recipe.id === selectedRecipeId)
+        : null;
+
+    // If selected recipe was deleted or no longer exists, go back to list
+    useEffect(() => {
+        if (selectedRecipeId && !selectedData) {
+            setSelectedRecipeId(null);
+        }
+    }, [selectedRecipeId, selectedData]);
 
     // ========================================================================
     // Empty State
@@ -377,7 +476,276 @@ export function TasksDetailRecipeView({
     }
 
     // ========================================================================
-    // Render — Lista de recetas
+    // Render — Detail View (selected recipe)
+    // ========================================================================
+
+    if (selectedRecipeId && selectedData) {
+        const displayName = selectedData.recipe.name
+            || (selectedData.isOwn ? "Receta sin nombre" : selectedData.recipe.org_name || "Receta Anónima");
+
+        return (
+            <>
+                <Toolbar
+                    portalToHeader
+                    mobileShowSearch={false}
+                    leftActions={
+                        <div className="flex items-center gap-1.5">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedRecipeId(null)}
+                                className="gap-1.5 text-muted-foreground hover:text-foreground h-8 px-2"
+                            >
+                                <ArrowLeft className="h-3.5 w-3.5" />
+                                Recetas
+                            </Button>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <div className={cn(
+                                    "shrink-0 flex items-center justify-center h-5 w-5 rounded",
+                                    selectedData.isOwn
+                                        ? "bg-primary/10 text-primary"
+                                        : "bg-muted text-muted-foreground"
+                                )}>
+                                    {selectedData.isOwn ? (
+                                        <Building2 className="h-3 w-3" />
+                                    ) : (
+                                        <Globe className="h-3 w-3" />
+                                    )}
+                                </div>
+                                <span className="font-medium text-sm truncate">
+                                    {displayName}
+                                </span>
+                            </div>
+                        </div>
+                    }
+                    actions={[
+                        {
+                            label: "Agregar Recurso",
+                            icon: Plus,
+                            onClick: () => handleAddResource(selectedRecipeId),
+                        },
+                    ]}
+                />
+
+                {/* ── KPI StatCards ── */}
+                {(() => {
+                    const { resources } = selectedData;
+                    const materialsTotal = resources.materials.reduce((sum, item) => {
+                        const priceInfo = materialPriceMap?.get(item.material_id);
+                        if (!priceInfo) return sum;
+                        const totalQty = item.total_quantity ?? item.quantity * (1 + (item.waste_percentage || 0) / 100);
+                        return sum + totalQty * priceInfo.effectiveUnitPrice;
+                    }, 0);
+                    const laborTotal = resources.labor.reduce((sum, item) => {
+                        const priceInfo = laborPriceMap?.get(item.labor_type_id);
+                        if (!priceInfo) return sum;
+                        return sum + item.quantity * priceInfo.unitPrice;
+                    }, 0);
+                    const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
+                        const priceInfo = externalServicePriceMap?.get(item.external_service_id);
+                        if (!priceInfo) return sum;
+                        return sum + item.quantity * priceInfo.unitPrice;
+                    }, 0);
+                    const equipmentTotal = 0; // placeholder
+                    const grandTotal = materialsTotal + laborTotal + externalServicesTotal + equipmentTotal;
+
+                    const materialsPct = grandTotal > 0 ? (materialsTotal / grandTotal) * 100 : 0;
+                    const laborPct = grandTotal > 0 ? (laborTotal / grandTotal) * 100 : 0;
+                    const externalServicesPct = grandTotal > 0 ? (externalServicesTotal / grandTotal) * 100 : 0;
+                    const equipmentPct = grandTotal > 0 ? (equipmentTotal / grandTotal) * 100 : 0;
+
+                    const totalResources = resources.materials.length + resources.labor.length + (resources.externalServices || []).length;
+
+                    return (
+                        <StatCardGroup columns={4} className="mb-4">
+                            {/* ── Costo Total (first position) ── */}
+                            <StatCard
+                                title="Costo Total"
+                                subtitle={task.unit_name ? `por ${task.unit_name}` : "por unidad"}
+                                icon={DollarSign}
+                                compact
+                            >
+                                <div className="px-4 py-3 flex flex-col items-center justify-center">
+                                    <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
+                                        {grandTotal > 0 ? formatCurrency(grandTotal) : "$0"}
+                                        {task.unit_symbol && (
+                                            <span className="text-lg font-semibold text-muted-foreground ml-1">
+                                                / {task.unit_symbol.toUpperCase()}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {grandTotal > 0 && (
+                                        <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <span className="h-2 w-2 rounded-sm bg-[#C48B6A]" />
+                                                Mat. {formatCurrency(materialsTotal)}
+                                            </span>
+                                            <span className="text-border">·</span>
+                                            <span className="flex items-center gap-1">
+                                                <span className="h-2 w-2 rounded-sm bg-[#9B8E8A]" />
+                                                M.O. {formatCurrency(laborTotal)}
+                                            </span>
+                                            {externalServicesTotal > 0 && (
+                                                <>
+                                                    <span className="text-border">·</span>
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="h-2 w-2 rounded-sm bg-[#C4B590]" />
+                                                        Serv. {formatCurrency(externalServicesTotal)}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </StatCard>
+
+                            {/* ── Composición de Costos (2 cols) ── */}
+                            <StatCard
+                                title="Composición"
+                                subtitle="Distribución por categoría"
+                                icon={Layers}
+                                compact
+                                className="col-span-1 sm:col-span-2"
+                            >
+                                <div className="px-4 py-3 space-y-3">
+                                    {/* Stacked bar */}
+                                    <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
+                                        {materialsPct > 0 && (
+                                            <div
+                                                className="h-full bg-[#C48B6A] transition-all duration-500"
+                                                style={{ width: `${materialsPct}%` }}
+                                            />
+                                        )}
+                                        {laborPct > 0 && (
+                                            <div
+                                                className="h-full bg-[#9B8E8A] transition-all duration-500"
+                                                style={{ width: `${laborPct}%` }}
+                                            />
+                                        )}
+                                        {equipmentPct > 0 && (
+                                            <div
+                                                className="h-full bg-[#8A9A7B] transition-all duration-500"
+                                                style={{ width: `${equipmentPct}%` }}
+                                            />
+                                        )}
+                                        {externalServicesPct > 0 && (
+                                            <div
+                                                className="h-full bg-[#C4B590] transition-all duration-500"
+                                                style={{ width: `${externalServicesPct}%` }}
+                                            />
+                                        )}
+                                    </div>
+
+                                    {/* Legend */}
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="h-2.5 w-2.5 rounded-sm bg-[#C48B6A]" />
+                                                <span className="text-xs text-muted-foreground">Materiales</span>
+                                            </div>
+                                            <span className="text-xs font-semibold tabular-nums">
+                                                {materialsTotal > 0 ? `${formatCurrency(materialsTotal)} (${materialsPct.toFixed(0)}%)` : "—"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="h-2.5 w-2.5 rounded-sm bg-[#9B8E8A]" />
+                                                <span className="text-xs text-muted-foreground">Mano de Obra</span>
+                                            </div>
+                                            <span className="text-xs font-semibold tabular-nums">
+                                                {laborTotal > 0 ? `${formatCurrency(laborTotal)} (${laborPct.toFixed(0)}%)` : "—"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B] opacity-40" />
+                                                <span className="text-xs text-muted-foreground/50">Equipos</span>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground/40">—</span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className={cn("h-2.5 w-2.5 rounded-sm bg-[#C4B590]", externalServicesTotal === 0 && "opacity-40")} />
+                                                <span className={cn("text-xs text-muted-foreground", externalServicesTotal === 0 && "text-muted-foreground/50")}>Servicios Ext.</span>
+                                            </div>
+                                            <span className={cn("text-xs", externalServicesTotal > 0 ? "font-semibold tabular-nums" : "text-muted-foreground/40")}>
+                                                {externalServicesTotal > 0 ? `${formatCurrency(externalServicesTotal)} (${externalServicesPct.toFixed(0)}%)` : "—"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </StatCard>
+
+                            {/* ── Recursos ── */}
+                            <StatCard
+                                title="Recursos"
+                                subtitle={`${totalResources} componente${totalResources !== 1 ? "s" : ""}`}
+                                icon={FileText}
+                                compact
+                            >
+                                <div className="px-4 py-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <Package className="h-3.5 w-3.5 text-[#C48B6A]" />
+                                            <span className="text-xs text-muted-foreground">Materiales</span>
+                                        </div>
+                                        <span className="text-sm font-semibold tabular-nums">
+                                            {resources.materials.length}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <HardHat className="h-3.5 w-3.5 text-[#9B8E8A]" />
+                                            <span className="text-xs text-muted-foreground">Mano de Obra</span>
+                                        </div>
+                                        <span className="text-sm font-semibold tabular-nums">
+                                            {resources.labor.length}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <FileText className={cn("h-3.5 w-3.5 text-[#C4B590]", (resources.externalServices || []).length === 0 && "opacity-40")} />
+                                            <span className={cn("text-xs text-muted-foreground", (resources.externalServices || []).length === 0 && "opacity-40")}>Servicios Ext.</span>
+                                        </div>
+                                        <span className={cn("text-sm tabular-nums", (resources.externalServices || []).length > 0 ? "font-semibold" : "text-xs text-muted-foreground opacity-40")}>
+                                            {(resources.externalServices || []).length > 0 ? (resources.externalServices || []).length : "—"}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between opacity-40">
+                                        <div className="flex items-center gap-1.5">
+                                            <Wrench className="h-3.5 w-3.5 text-[#8A9A7B]" />
+                                            <span className="text-xs text-muted-foreground">Equipos</span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">—</span>
+                                    </div>
+                                </div>
+                            </StatCard>
+                        </StatCardGroup>
+                    );
+                })()}
+
+                {/* Full recipe detail — resource lanes grouped by type */}
+                <RecipeCard
+                    data={selectedData}
+                    materialPriceMap={materialPriceMap}
+                    laborPriceMap={laborPriceMap}
+                    externalServicePriceMap={externalServicePriceMap}
+                    onUpdateMaterialQuantity={handleUpdateMaterialQuantity}
+                    onUpdateMaterialWaste={handleUpdateMaterialWaste}
+                    onRemoveMaterial={handleRemoveMaterial}
+                    onUpdateLaborQuantity={handleUpdateLaborQuantity}
+                    onRemoveLabor={handleRemoveLabor}
+                    onUpdateExternalServiceQuantity={handleUpdateExternalServiceQuantity}
+                    onRemoveExternalService={handleRemoveExternalService}
+                    onPriceUpdated={handlePriceUpdated}
+                />
+            </>
+        );
+    }
+
+    // ========================================================================
+    // Render — List View (all recipes)
     // ========================================================================
 
     return (
@@ -393,26 +761,82 @@ export function TasksDetailRecipeView({
                 ]}
             />
 
-            <div className="space-y-3 px-2 py-3">
-                {recipeListData.map((data, index) => (
-                    <RecipeListItem
-                        key={data.recipe.id}
-                        data={data}
-                        defaultOpen={index === 0 && data.isOwn}
-                        materialPriceMap={materialPriceMap}
-                        laborPriceMap={laborPriceMap}
-                        taskUnitName={task.unit_name}
-                        onAddResource={handleAddResource}
-                        onUpdateMaterialQuantity={handleUpdateMaterialQuantity}
-                        onUpdateMaterialWaste={handleUpdateMaterialWaste}
-                        onRemoveMaterial={handleRemoveMaterial}
-                        onUpdateLaborQuantity={handleUpdateLaborQuantity}
-                        onRemoveLabor={handleRemoveLabor}
-                        onToggleVisibility={handleToggleVisibility}
-                        onDeleteRecipe={handleDeleteRecipe}
-                        onPriceUpdated={handlePriceUpdated}
-                    />
-                ))}
+            <div className="space-y-2">
+                {recipeListData.map((data) => {
+                    const { recipe, resources, isOwn } = data;
+                    const esCount = (resources.externalServices || []).length;
+                    const totalItems = resources.materials.length + resources.labor.length + esCount;
+                    const displayName = recipe.name
+                        || (isOwn ? "Receta sin nombre" : recipe.org_name || "Receta Anónima");
+                    const grandTotal = getRecipeGrandTotal(data);
+
+                    return (
+                        <button
+                            key={recipe.id}
+                            type="button"
+                            onClick={() => setSelectedRecipeId(recipe.id)}
+                            className={cn(
+                                "w-full flex items-center gap-3 p-3 rounded-lg border bg-sidebar",
+                                "hover:bg-muted/50 transition-colors text-left cursor-pointer",
+                                "group"
+                            )}
+                        >
+                            {/* Icon */}
+                            <div className={cn(
+                                "shrink-0 flex items-center justify-center h-10 w-10 rounded-lg",
+                                isOwn
+                                    ? "bg-primary/10 text-primary"
+                                    : "bg-muted text-muted-foreground"
+                            )}>
+                                {isOwn ? (
+                                    <Building2 className="h-5 w-5" />
+                                ) : (
+                                    <Globe className="h-5 w-5" />
+                                )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-sm leading-tight truncate">
+                                    {displayName}
+                                </h3>
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                    {totalItems} recurso{totalItems !== 1 ? "s" : ""}
+                                    {resources.materials.length > 0 && ` · ${resources.materials.length} mat.`}
+                                    {resources.labor.length > 0 && ` · ${resources.labor.length} m.o.`}
+                                    {esCount > 0 && ` · ${esCount} serv.`}
+                                    {recipe.region && ` · ${recipe.region}`}
+                                </p>
+                            </div>
+
+                            {/* Badges */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                {recipe.is_public && (
+                                    <Badge variant="outline" className="text-xs gap-1">
+                                        <Eye className="h-3 w-3" />
+                                        Pública
+                                    </Badge>
+                                )}
+                                {recipe.rating_avg != null && recipe.rating_count > 0 && (
+                                    <Badge variant="outline" className="text-xs gap-1">
+                                        <Star className="h-3 w-3 text-yellow-500" />
+                                        {recipe.rating_avg.toFixed(1)}
+                                    </Badge>
+                                )}
+                            </div>
+
+                            {/* Grand total */}
+                            {grandTotal > 0 && (
+                                <span className="hidden sm:block text-sm font-semibold text-foreground tabular-nums shrink-0">
+                                    {formatCurrency(grandTotal)}
+                                </span>
+                            )}
+
+                            {/* Chevron → indicates drill-down */}
+                            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </button>
+                    );
+                })}
             </div>
         </>
     );

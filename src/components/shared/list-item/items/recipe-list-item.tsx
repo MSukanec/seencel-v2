@@ -120,7 +120,7 @@ export const RecipeListItem = memo(function RecipeListItem({
     const { recipe, resources, isOwn } = data;
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
-    const totalItems = resources.materials.length + resources.labor.length;
+    const totalItems = resources.materials.length + resources.labor.length + (resources.externalServices || []).length;
 
     const displayName = recipe.name
         || (isOwn ? "Receta sin nombre" : recipe.org_name || "Receta Anónima");
@@ -453,9 +453,10 @@ function MaterialResourceRow({
 
     // Build PricePulse data if available
     const pricePulseData: PricePulseData | null = priceInfo ? {
-        materialId: priceInfo.materialId,
-        materialName: priceInfo.materialName,
-        materialCode: priceInfo.materialCode,
+        resourceType: "material",
+        resourceId: priceInfo.materialId,
+        resourceName: priceInfo.materialName,
+        resourceCode: priceInfo.materialCode,
         organizationId: priceInfo.organizationId,
         currencyId: priceInfo.currencyId,
         effectiveUnitPrice: priceInfo.effectiveUnitPrice,

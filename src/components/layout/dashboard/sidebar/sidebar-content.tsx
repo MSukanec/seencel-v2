@@ -551,7 +551,7 @@ export function SidebarContent({
 
                             {/* Hub Button — visible for all users */}
                             <SidebarNavButton
-                                icon={LayoutDashboard}
+                                icon={ArrowLeft}
                                 label="Volver al Hub"
                                 href={"/organization" as any}
                                 isActive={false}

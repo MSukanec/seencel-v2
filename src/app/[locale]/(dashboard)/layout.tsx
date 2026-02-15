@@ -53,6 +53,7 @@ export default async function DashboardLayout({
         return redirect('/onboarding');
     }
 
+
     // Detect stale membership: user was removed from their active org
     const wasRemoved = !isAdmin && activeOrgId && organizations.length > 0 && !organizations.some((o: any) => o.id === activeOrgId);
     const fallbackOrg = wasRemoved ? organizations[0] : null;

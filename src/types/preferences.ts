@@ -6,7 +6,6 @@ export interface UserPreferences {
     user_id: string;
     last_organization_id: string | null;
     theme: 'light' | 'dark';
-    onboarding_completed: boolean;
     created_at: string | null;
     sidebar_mode: SidebarMode; // Replaces sidebar_docked
     updated_at: string | null;

@@ -7,8 +7,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, type LucideIcon } from "lucide-react";
+import { Loader2, type LucideIcon } from "lucide-react";
 import { upsertMaterialPrice } from "@/features/materials/actions";
+import { upsertLaborPrice } from "@/features/labor/actions";
 import { toast } from "sonner";
 import { parseDateFromDB } from "@/lib/timezone-data";
 
@@ -16,14 +17,21 @@ import { parseDateFromDB } from "@/lib/timezone-data";
 // Types
 // ============================================================================
 
+export type PriceResourceType = "material" | "labor" | "equipment" | "subcontract" | "external_service";
+
 export interface PricePulseData {
-    materialId: string;
-    materialName: string;
-    materialCode?: string | null;
+    /** What type of resource this price belongs to */
+    resourceType: PriceResourceType;
+    /** Resource ID (material_id or labor_type_id) */
+    resourceId: string;
+    /** Display name */
+    resourceName: string;
+    /** Optional code */
+    resourceCode?: string | null;
     organizationId: string;
     currencyId: string | null;
     effectiveUnitPrice: number;
-    /** ISO date string from material_prices.valid_from */
+    /** ISO date string from prices.valid_from */
     priceValidFrom?: string | null;
     unitSymbol?: string | null;
     /** Icon to show in the popover header */
@@ -96,7 +104,7 @@ export function PricePulsePopover({
 }: {
     data: PricePulseData;
     children: React.ReactNode;
-    onPriceUpdated?: (materialId: string, newPrice: number) => void;
+    onPriceUpdated?: (resourceId: string, newPrice: number) => void;
 }) {
     const [open, setOpen] = useState(false);
     const [newPrice, setNewPrice] = useState<string>(data.effectiveUnitPrice.toFixed(2));
@@ -115,20 +123,30 @@ export function PricePulsePopover({
         }
 
         if (!data.currencyId) {
-            toast.error("No se encontró moneda para este material");
+            toast.error("No se encontró moneda para este recurso");
             return;
         }
 
         setIsSaving(true);
         try {
-            await upsertMaterialPrice({
-                material_id: data.materialId,
-                organization_id: data.organizationId,
-                currency_id: data.currencyId,
-                unit_price: price,
-            });
-            toast.success(`Precio de ${data.materialName} actualizado a $${price.toLocaleString("es-AR")}`);
-            onPriceUpdated?.(data.materialId, price);
+            // Dispatch to the correct action based on resource type
+            if (data.resourceType === "labor") {
+                await upsertLaborPrice({
+                    labor_type_id: data.resourceId,
+                    organization_id: data.organizationId,
+                    currency_id: data.currencyId,
+                    unit_price: price,
+                });
+            } else {
+                await upsertMaterialPrice({
+                    material_id: data.resourceId,
+                    organization_id: data.organizationId,
+                    currency_id: data.currencyId,
+                    unit_price: price,
+                });
+            }
+            toast.success(`Precio de ${data.resourceName} actualizado a $${price.toLocaleString("es-AR")}`);
+            onPriceUpdated?.(data.resourceId, price);
             setOpen(false);
         } catch {
             toast.error("Error al actualizar el precio");
@@ -141,22 +159,26 @@ export function PricePulsePopover({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>{children}</PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
-                {/* Header with icon */}
-                <div className="px-4 pt-4 pb-3 border-b flex items-center gap-2">
-                    {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
-                    <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">{data.materialName}</p>
-                        {data.materialCode && (
-                            <p className="text-xs text-muted-foreground font-mono mt-0.5">{data.materialCode}</p>
-                        )}
+                {/* ── Header — exact modal-provider pattern ── */}
+                <div className="flex-none p-3 border-b border-border">
+                    <div className="flex items-center gap-3">
+                        {Icon && <Icon className="h-5 w-5 text-primary shrink-0" />}
+                        <div className="space-y-0.5">
+                            <p className="text-sm font-medium text-foreground leading-snug">
+                                {data.resourceName}
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-normal">
+                                Precio global
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Body */}
-                <div className="p-4 space-y-4">
+                {/* ── Body ── */}
+                <div className="p-4 space-y-3">
                     {/* Price Input */}
                     <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                        <label className="text-sm font-medium leading-none mb-2 block">
                             Precio unitario
                         </label>
                         <div className="relative">
@@ -167,55 +189,56 @@ export function PricePulsePopover({
                                 type="number"
                                 value={newPrice}
                                 onChange={(e) => setNewPrice(e.target.value)}
-                                className="h-10 text-base font-mono pl-7 pr-14 text-right"
+                                className="h-9 text-sm font-mono pl-7 pr-14 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 min="0"
                                 step="0.01"
                                 autoFocus
                             />
                             {data.unitSymbol && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none uppercase">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none uppercase">
                                     / {data.unitSymbol}
                                 </span>
                             )}
                         </div>
-                    </div>
-
-                    {/* Freshness */}
-                    <div className="flex items-center gap-2">
-                        <span className={cn("h-2 w-2 rounded-full shrink-0", colors.dot, colors.pulse)} />
-                        <div className="min-w-0">
-                            <p className={cn("text-xs font-medium", colors.text)}>{label}</p>
-                            {dateLabel && (
-                                <p className="text-[11px] text-muted-foreground">{dateLabel}</p>
-                            )}
+                        {/* Freshness — inline below input */}
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", colors.dot, colors.pulse)} />
+                            <p className={cn("text-[11px]", colors.text)}>
+                                {label}{dateLabel ? ` · ${dateLabel}` : ""}
+                            </p>
                         </div>
                     </div>
 
-                    {/* Warning — simple text, not a card */}
-                    <p className="text-[11px] text-muted-foreground leading-relaxed flex items-start gap-1.5">
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-                        Este precio es <strong>global</strong>. Modificarlo afecta a todas las recetas que usen este recurso.
-                    </p>
+                    {/* Info card — global price warning */}
+                    <div className="rounded-md border border-dashed border-muted-foreground/25 bg-muted/30 px-3 py-2.5">
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            Este es el precio unitario del recurso en tu organización. Al modificarlo se actualizará en <strong>todas las recetas</strong> que lo utilicen.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Footer */}
-                <div className="flex items-center justify-end gap-2 px-4 py-3 border-t bg-muted/30">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setOpen(false)}
-                        disabled={isSaving}
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? "Guardando..." : "Actualizar Precio"}
-                    </Button>
+                {/* ── Footer — FormFooter grid-cols-4 (25% / 75%) ── */}
+                <div className="p-3 border-t border-border bg-background">
+                    <div className="grid grid-cols-4 gap-3">
+                        <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => setOpen(false)}
+                            disabled={isSaving}
+                            className="w-full col-span-1"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="w-full col-span-3"
+                        >
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSaving ? "Guardando..." : "Actualizar"}
+                        </Button>
+                    </div>
                 </div>
             </PopoverContent>
         </Popover>

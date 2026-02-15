@@ -51,7 +51,7 @@ const ListItemRoot = React.forwardRef<HTMLDivElement, ListItemProps>(
                     } : undefined}
                     className={cn(
                         // Base styles
-                        "flex items-center gap-3 transition-colors group",
+                        "flex items-center gap-3 transition-colors group overflow-hidden",
                         // Variant styles
                         variant === "card" && [
                             "p-3 rounded-lg border bg-sidebar",
@@ -338,7 +338,7 @@ ListItemActions.displayName = "ListItem.Actions";
 // ============================================================================
 
 interface ListItemColorStripProps extends React.HTMLAttributes<HTMLDivElement> {
-    color?: "slate" | "indigo" | "green" | "amber" | "red" | "blue" | "system";
+    color?: "slate" | "indigo" | "green" | "amber" | "red" | "blue" | "terracotta" | "pewter" | "sage" | "sand" | "system";
 }
 
 const colorClasses = {
@@ -348,6 +348,10 @@ const colorClasses = {
     amber: "bg-amber-500",
     red: "bg-red-500",
     blue: "bg-blue-500",
+    terracotta: "bg-[#C48B6A]",
+    pewter: "bg-[#9B8E8A]",
+    sage: "bg-[#8A9A7B]",
+    sand: "bg-[#C4B590]",
     system: "bg-system", // Uses CSS variable --system
 };
 

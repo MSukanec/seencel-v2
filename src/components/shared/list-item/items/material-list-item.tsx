@@ -95,9 +95,10 @@ export const MaterialListItem = memo(function MaterialListItem({
     const pricePulseData: PricePulseData | null =
         material.org_unit_price != null && organizationId && material.org_price_currency_id
             ? {
-                materialId: material.id,
-                materialName: material.name,
-                materialCode: material.code,
+                resourceType: "material",
+                resourceId: material.id,
+                resourceName: material.name,
+                resourceCode: material.code,
                 organizationId,
                 currencyId: material.org_price_currency_id,
                 effectiveUnitPrice: material.org_unit_price,

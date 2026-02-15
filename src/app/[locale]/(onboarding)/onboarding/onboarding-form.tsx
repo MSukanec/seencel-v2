@@ -7,85 +7,29 @@ import { submitOnboarding } from "@/actions/onboarding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
-import { Loader2, Building2, User } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 
-// Available currencies for auto-assignment based on country
-const COUNTRY_CURRENCY_MAP: Record<string, string> = {
-    'US': 'USD',
-    'ES': 'EUR',
-    'AR': 'ARS',
-    'CL': 'CLP',
-    'CO': 'COP',
-    'MX': 'MXN',
-    'UY': 'UYU',
-    'BR': 'BRL',
-    'PE': 'PEN',
-};
-
-// Helper to get tax label based on country code
-function getTaxLabelForCountry(countryCode: string): string {
-    const upper = countryCode?.toUpperCase();
-    // LATAM and Spain use IVA
-    if (['AR', 'MX', 'ES', 'CL', 'CO', 'PE', 'UY', 'PY', 'EC', 'VE', 'BO', 'PA'].includes(upper)) {
-        return 'IVA';
-    }
-    // USA
-    if (upper === 'US') return 'Sales Tax';
-    // UK/Commonwealth
-    if (['GB', 'UK', 'IE', 'AU', 'NZ'].includes(upper)) return 'VAT';
-    // Brazil
-    if (upper === 'BR') return 'ICMS';
-    // Canada
-    if (upper === 'CA') return 'GST';
-    // Default
-    return 'IVA';
-}
-
-interface OnboardingFormProps {
-    countryCode?: string;
-    organizationName?: string;
-}
-
-export default function OnboardingForm({ countryCode, organizationName }: OnboardingFormProps) {
+export default function OnboardingForm() {
     const t = useTranslations("Onboarding");
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
 
-    // Auto-assign currency based on country (no user selection needed)
-    const getAutoCurrency = (): string => {
-        if (countryCode) {
-            return COUNTRY_CURRENCY_MAP[countryCode.toUpperCase()] || 'ARS';
-        }
-        return 'ARS'; // Default to ARS
-    };
-
     const handleSubmit = (formData: FormData) => {
         setError(null);
 
-        // Detect Timezone
+        // Detect Timezone for user preferences
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         formData.append("timezone", timezone);
-
-        // Auto-assign currency based on country (simplified - no user selection)
-        const baseCurrency = getAutoCurrency();
-        formData.append("baseCurrency", baseCurrency);
-
-        if (countryCode) {
-            formData.append("countryCode", countryCode);
-            // Auto-detect tax label based on country
-            const taxLabel = getTaxLabelForCountry(countryCode);
-            formData.append("taxLabel", taxLabel);
-        }
 
         startTransition(async () => {
             const result = await submitOnboarding(null, formData);
 
             if (result?.error) {
-                // Use the specific message if available, otherwise fallback to generic
-                setError(result.message || t("form.error"));
+                console.error("Onboarding error:", result.message);
+                setError("Ocurrió un error inesperado. Por favor intentá nuevamente. Si el problema persiste, contactanos en contacto@seencel.com");
             } else if (result?.success) {
                 router.push("/hub");
                 router.refresh();
@@ -126,27 +70,6 @@ export default function OnboardingForm({ countryCode, organizationName }: Onboar
                     </div>
                 </Section>
 
-                {/* Organization Section */}
-                <Section title={t("steps.organization")} icon={<Building2 className="w-5 h-5 text-primary" />}>
-                    <FormGroup
-                        label={t("form.orgName")}
-                        htmlFor="orgName"
-                        required
-                        helpText={t("form.orgHelper")}
-                    >
-                        <Input
-                            id="orgName"
-                            name="orgName"
-                            required
-                            className="h-10"
-                            placeholder={t("form.orgNamePlaceholder")}
-                            defaultValue={organizationName || ""}
-                        />
-                    </FormGroup>
-                </Section>
-
-                {/* Currency is now auto-assigned based on country - no user selection needed */}
-
                 {error && (
                     <Alert variant="destructive">
                         <AlertDescription>{error}</AlertDescription>
@@ -166,7 +89,7 @@ export default function OnboardingForm({ countryCode, organizationName }: Onboar
                                 const { createClient } = await import("@/lib/supabase/client");
                                 const supabase = createClient();
                                 await supabase.auth.signOut();
-                                router.push("/login"); // or "/"
+                                router.push("/login");
                                 router.refresh();
                             }}
                             className="text-xs text-muted-foreground hover:text-primary transition-colors hover:underline"

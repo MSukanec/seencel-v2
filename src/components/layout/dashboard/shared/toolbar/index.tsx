@@ -146,6 +146,8 @@ export function Toolbar<TData>({
     }, []);
 
     // Resolve search state (Table vs Generic)
+    // Search only renders when explicitly wired via props
+    const hasSearch = !!(onSearchChange || setGlobalFilter || table);
     const searchValue = globalFilter ?? searchQuery ?? "";
     const onSearch = setGlobalFilter ?? onSearchChange ?? (() => { });
 
@@ -253,13 +255,15 @@ export function Toolbar<TData>({
                 {/* Generic Filter Content */}
                 {filterContent}
 
-                {/* Global Search */}
-                <ToolbarSearch
-                    placeholder={searchPlaceholder}
-                    value={searchValue}
-                    onChange={onSearch}
-                    className="shrink-0"
-                />
+                {/* Global Search — only when search props are provided */}
+                {hasSearch && (
+                    <ToolbarSearch
+                        placeholder={searchPlaceholder}
+                        value={searchValue}
+                        onChange={onSearch}
+                        className="shrink-0"
+                    />
+                )}
 
                 {/* Filter indicator */}
                 {isFiltered && (
@@ -529,7 +533,7 @@ export function Toolbar<TData>({
                                 )}
 
                                 {/* Search or Filters */}
-                                {(mobileShowSearch || (mobileShowFilters && hasFilters)) && (
+                                {((mobileShowSearch && hasSearch) || (mobileShowFilters && hasFilters)) && (
                                     <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
                                         <SheetTrigger asChild>
                                             <button
@@ -553,7 +557,7 @@ export function Toolbar<TData>({
                                             </SheetHeader>
                                             <div className="space-y-4 px-6 pb-8">
                                                 {/* Mobile Search Input */}
-                                                {mobileShowSearch && (
+                                                {mobileShowSearch && hasSearch && (
                                                     <div className="relative">
                                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                                         <Input

@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    // Default to organization dashboard (HUB) after login if no specific next param
-    const next = searchParams.get('next') ?? '/organization'
+    // Default to HUB after login — the dashboard layout guard will redirect
+    // to /onboarding if signup_completed is false (new users)
+    const next = searchParams.get('next') ?? '/hub'
 
     // Get locale from cookie or default to 'es'
     const cookieStore = await cookies()

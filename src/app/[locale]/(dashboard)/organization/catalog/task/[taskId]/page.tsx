@@ -10,7 +10,7 @@ import { BackButton } from "@/components/shared/back-button";
 import { TasksDetailGeneralView } from "@/features/tasks/views/detail/tasks-detail-general-view";
 import { TasksDetailRecipeView } from "@/features/tasks/views/detail/tasks-detail-recipe-view";
 import { getTaskById, getTaskDivisions, getUnits } from "@/features/tasks/queries";
-import { getTaskRecipes, getRecipeResources } from "@/features/tasks/actions";
+import { getTaskRecipes, getRecipeResources, getExternalServices } from "@/features/tasks/actions";
 import { getMaterialsForOrganization } from "@/features/materials/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
 
@@ -61,12 +61,13 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
         if (!task) notFound();
 
         // Fetch all recipes + divisions/units/catalog in parallel
-        const [recipes, { data: divisions }, { data: units }, catalogMaterials, catalogLaborTypes] = await Promise.all([
+        const [recipes, { data: divisions }, { data: units }, catalogMaterials, catalogLaborTypes, catalogExternalServices] = await Promise.all([
             getTaskRecipes(taskId),
             getTaskDivisions(),
             getUnits(),
             getMaterialsForOrganization(activeOrgId),
             getLaborTypesWithPrices(activeOrgId),
+            getExternalServices(),
         ]);
 
         // Load resources for each recipe in parallel
@@ -132,6 +133,7 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
                                 isAdminMode={false}
                                 catalogMaterials={catalogMaterials}
                                 catalogLaborTypes={catalogLaborTypes}
+                                catalogExternalServices={catalogExternalServices}
                             />
                         </ContentLayout>
                     </TabsContent>

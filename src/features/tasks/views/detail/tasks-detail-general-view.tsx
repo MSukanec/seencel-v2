@@ -1,18 +1,31 @@
 "use client";
 
-import { useState } from "react";
+// ============================================================================
+// TASK DETAIL — GENERAL VIEW
+// ============================================================================
+// Vista de detalle general de una tarea usando SettingsSection layout.
+// Campos editables inline con guardado automático (debounce).
+// Si la tarea es de sistema y no estamos en admin mode, los campos son read-only.
+//
+// Secciones:
+//   1. Identificación (código, nombre, descripción, origen)
+//   2. Clasificación (unidad, división, elemento, acción, tipo)
+//   3. Admin (selector de organización — solo admin mode)
+// ============================================================================
+
+import { useRef, useCallback, useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useModal } from "@/stores/modal-store";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SettingsSection } from "@/components/shared/settings-section";
+import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
+import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { TextField, NotesField, SelectField } from "@/components/shared/forms/fields";
 import { Combobox } from "@/components/ui/combobox";
-import { Monitor, Building2, Settings, Pencil, Boxes, Zap, Layers } from "lucide-react";
+import { Monitor, Building2, Settings, FileText, Ruler, Boxes, Zap, Layers, Tag } from "lucide-react";
 import { toast } from "sonner";
-import { updateTaskOrganization } from "@/features/tasks/actions";
-import { TasksForm } from "@/features/tasks/forms/tasks-form";
-import type { TaskView, TaskDivision, Unit, Task } from "@/features/tasks/types";
+import { updateTask, updateTaskOrganization } from "@/features/tasks/actions";
+import type { TaskView, TaskDivision, Unit } from "@/features/tasks/types";
 
 // ============================================================================
 // Types
@@ -45,71 +58,120 @@ export function TasksDetailGeneralView({
     organizations = [],
 }: TasksDetailGeneralViewProps) {
     const router = useRouter();
-    const { openModal, closeModal } = useModal();
+
+    // Only allow editing non-system tasks (org tasks), or admin mode
+    const canEdit = !task.is_system || isAdminMode;
+
+    // ========================================================================
+    // Form State
+    // ========================================================================
+
+    const [name, setName] = useState(task.name || task.custom_name || "");
+    const [code, setCode] = useState(task.code || "");
+    const [description, setDescription] = useState(task.description || "");
+    const [unitId, setUnitId] = useState(task.unit_id || "");
+    const [divisionId, setDivisionId] = useState(task.task_division_id || "");
+
+    // Admin mode
     const [selectedOrgId, setSelectedOrgId] = useState(task.organization_id || "");
 
     // ========================================================================
-    // Edit Handler
+    // Debounced auto-save (1000ms) for text fields
     // ========================================================================
 
-    const handleEdit = () => {
-        // Map TaskView to partial Task for the form's initialData
-        const taskForForm: Task = {
-            id: task.id,
-            name: task.name || task.custom_name || "",
-            custom_name: task.custom_name || null,
-            code: task.code || null,
-            description: task.description || null,
-            unit_id: task.unit_id || "",
-            task_division_id: task.task_division_id || null,
-            organization_id: task.organization_id || null,
-            is_system: task.is_system || false,
-            is_published: task.is_published ?? false,
-            is_deleted: false,
-            deleted_at: null,
-            created_at: task.created_at || "",
-            updated_at: task.updated_at || "",
-        };
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        openModal(
-            <TasksForm
-                mode="edit"
-                initialData={taskForForm}
-                organizationId={organizationId}
-                units={units}
-                divisions={divisions}
-                isAdminMode={isAdminMode}
-                onCancel={() => closeModal()}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-            />,
-            {
-                title: "Editar Tarea",
-                description: "Modificá los datos generales de la tarea.",
-                size: "lg",
+    const triggerAutoSave = useCallback((fields: {
+        name: string;
+        code: string;
+        description: string;
+        unit_id: string;
+        task_division_id: string;
+    }) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        debounceRef.current = setTimeout(async () => {
+            if (!fields.name.trim()) return; // name is required
+
+            try {
+                const formData = new FormData();
+                formData.set("id", task.id);
+                formData.set("name", fields.name);
+                formData.set("code", fields.code);
+                formData.set("description", fields.description);
+                formData.set("unit_id", fields.unit_id);
+                formData.set("task_division_id", fields.task_division_id);
+                formData.set("is_published", String(task.is_published ?? false));
+                if (isAdminMode) formData.set("is_admin_mode", "true");
+                const result = await updateTask(formData);
+                if (result.error) {
+                    toast.error(result.error);
+                } else {
+                    toast.success("¡Cambios guardados!");
+                }
+            } catch {
+                toast.error("Error al guardar los cambios.");
             }
-        );
+        }, 1000);
+    }, [task.id, task.is_published, isAdminMode]);
+
+    // ========================================================================
+    // Immediate save for selects (no debounce needed)
+    // ========================================================================
+
+    const saveField = useCallback(async (fieldName: string, value: string) => {
+        try {
+            const formData = new FormData();
+            formData.set("id", task.id);
+            formData.set("name", name);
+            formData.set("code", code);
+            formData.set("description", description);
+            formData.set("unit_id", fieldName === "unit_id" ? value : unitId);
+            formData.set("task_division_id", fieldName === "task_division_id" ? value : divisionId);
+            formData.set("is_published", String(task.is_published ?? false));
+            if (isAdminMode) formData.set("is_admin_mode", "true");
+            const result = await updateTask(formData);
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success("¡Cambios guardados!");
+            }
+        } catch {
+            toast.error("Error al guardar los cambios.");
+        }
+    }, [task.id, task.is_published, isAdminMode, name, code, description, unitId, divisionId]);
+
+    // ========================================================================
+    // Field change handlers
+    // ========================================================================
+
+    const handleNameChange = (value: string) => {
+        setName(value);
+        triggerAutoSave({ name: value, code, description, unit_id: unitId, task_division_id: divisionId });
     };
 
-    // ========================================================================
-    // Derived data
-    // ========================================================================
+    const handleCodeChange = (value: string) => {
+        setCode(value);
+        triggerAutoSave({ name, code: value, description, unit_id: unitId, task_division_id: divisionId });
+    };
 
-    const divisionName = task.division_name ||
-        divisions.find(d => d.id === task.task_division_id)?.name ||
-        "Sin división";
+    const handleDescriptionChange = (value: string) => {
+        setDescription(value);
+        triggerAutoSave({ name, code, description: value, unit_id: unitId, task_division_id: divisionId });
+    };
 
-    // Admin: org options for combobox
-    const orgOptions = [
-        { value: "", label: "Sistema (sin organización)" },
-        ...organizations.map(org => ({
-            value: org.id,
-            label: org.name,
-        }))
-    ];
+    const handleUnitChange = (value: string) => {
+        setUnitId(value);
+        saveField("unit_id", value);
+    };
 
+    const handleDivisionChange = (value: string) => {
+        const newValue = value === "__none__" ? "" : value;
+        setDivisionId(newValue);
+        saveField("task_division_id", newValue);
+    };
+
+    // Admin: org change
     const handleOrgChange = async (newOrgId: string) => {
         setSelectedOrgId(newOrgId);
 
@@ -127,121 +189,103 @@ export function TasksDetailGeneralView({
         }
     };
 
-    // Only allow editing non-system tasks (org tasks)
-    const canEdit = !task.is_system || isAdminMode;
+    // ========================================================================
+    // Derived data
+    // ========================================================================
+
+    // Unit options
+    const unitOptions = units.map(u => ({
+        value: u.id,
+        label: `${u.name} (${u.symbol})`,
+    }));
+
+    // Division options
+    const divisionOptions = [
+        { value: "__none__", label: "Sin división" },
+        ...divisions.map(d => ({
+            value: d.id,
+            label: d.name,
+        })),
+    ];
+
+    // Admin: org options
+    const orgOptions = [
+        { value: "", label: "Sistema (sin organización)" },
+        ...organizations.map(org => ({
+            value: org.id,
+            label: org.name,
+        }))
+    ];
 
     return (
-        <>
-            {/* Toolbar con botón Editar en header */}
-            <Toolbar
-                portalToHeader
-                actions={canEdit ? [
-                    {
-                        label: "Editar Tarea",
-                        icon: Pencil,
-                        onClick: handleEdit,
-                    },
-                ] : undefined}
-            />
+        <ContentLayout variant="settings">
+            <SettingsSectionContainer>
 
-            <div className="space-y-6 p-4">
-                {/* Basic Info Card */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle>Información de la Tarea</CardTitle>
-                                <CardDescription>Datos generales de la tarea</CardDescription>
-                            </div>
-                            <Badge
-                                variant={task.is_system ? "system" : "default"}
-                                className="gap-1"
-                            >
-                                {task.is_system ? (
-                                    <>
-                                        <Monitor className="h-3 w-3" />
-                                        Sistema
-                                    </>
-                                ) : (
-                                    <>
-                                        <Building2 className="h-3 w-3" />
-                                        Organización
-                                    </>
-                                )}
-                            </Badge>
+                {/* ── Información General ── */}
+                <SettingsSection
+                    icon={FileText}
+                    title="Información General"
+                    description="Datos generales de la tarea."
+                >
+                    <div className="space-y-4">
+                        {/* Nombre */}
+                        <TextField
+                            label="Nombre"
+                            value={name}
+                            onChange={handleNameChange}
+                            placeholder="Nombre de la tarea"
+                            required
+                            disabled={!canEdit}
+                        />
+
+                        {/* Código / División */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TextField
+                                label="Código"
+                                value={code}
+                                onChange={handleCodeChange}
+                                placeholder="Ej: ALB010-0001"
+                                disabled={!canEdit}
+                            />
+                            <SelectField
+                                label="División (Rubro)"
+                                value={divisionId || "__none__"}
+                                onChange={handleDivisionChange}
+                                options={divisionOptions}
+                                placeholder="Seleccionar división..."
+                                disabled={!canEdit}
+                            />
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Código</p>
-                                <p className="font-medium">{task.code || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Nombre</p>
-                                <p className="font-medium">{task.name || task.custom_name}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Unidad</p>
-                                <p className="font-medium">{task.unit_name || "—"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">División</p>
-                                <p className="font-medium">{divisionName}</p>
-                            </div>
 
-                            {/* Campos adicionales de tasks_view */}
-                            {task.element_name && (
-                                <div>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                        <Boxes className="h-3.5 w-3.5" />
-                                        Elemento
-                                    </p>
-                                    <p className="font-medium">{task.element_name}</p>
-                                </div>
-                            )}
-                            {task.action_name && (
-                                <div>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                        <Zap className="h-3.5 w-3.5" />
-                                        Acción
-                                    </p>
-                                    <p className="font-medium">
-                                        {task.action_name}
-                                        {task.action_short_code && (
-                                            <span className="text-muted-foreground font-mono text-xs ml-1">
-                                                ({task.action_short_code})
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                            )}
-                            {task.is_parametric && (
-                                <div>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                        <Layers className="h-3.5 w-3.5" />
-                                        Tipo
-                                    </p>
-                                    <Badge variant="outline" className="text-xs">Paramétrica</Badge>
-                                </div>
-                            )}
+                        {/* Unidad de Medida */}
+                        <SelectField
+                            label="Unidad de Medida"
+                            value={unitId}
+                            onChange={handleUnitChange}
+                            options={unitOptions}
+                            placeholder="Seleccionar unidad..."
+                            disabled={!canEdit}
+                            required
+                        />
 
-                            {task.description && (
-                                <div className="col-span-4">
-                                    <p className="text-sm text-muted-foreground">Descripción</p>
-                                    <p className="font-medium">{task.description}</p>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                        {/* Descripción */}
+                        <NotesField
+                            label="Descripción"
+                            value={description}
+                            onChange={handleDescriptionChange}
+                            placeholder="Descripción de la tarea, especificaciones, alcance..."
+                            rows={3}
+                            disabled={!canEdit}
+                        />
+                    </div>
+                </SettingsSection>
 
-                {/* Admin Settings */}
+                {/* ── Admin Settings ── */}
                 {isAdminMode && (
                     <SettingsSection
                         icon={Settings}
                         title="Configuración Admin"
-                        description="Cambiar la propiedad de la tarea"
+                        description="Cambiar la propiedad de la tarea."
                     >
                         <div className="max-w-sm">
                             <Combobox
@@ -255,7 +299,8 @@ export function TasksDetailGeneralView({
                         </div>
                     </SettingsSection>
                 )}
-            </div>
-        </>
+
+            </SettingsSectionContainer>
+        </ContentLayout>
     );
 }

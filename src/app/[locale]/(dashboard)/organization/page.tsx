@@ -55,6 +55,11 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
     try {
         const orgId = await getActiveOrganizationId();
 
+        // Guard: If user has no org, redirect to workspace setup (Onboarding 2)
+        if (!orgId) {
+            const { redirect } = await import('next/navigation');
+            return redirect('/workspace-setup');
+        }
         const supabase = await createClient();
 
         // Phase 1: Page-level queries (layout, org name, plan features)
