@@ -182,7 +182,7 @@
     },
     "Onboarding": {
         "title": "Bienvenido a Seencel",
-        "subtitle": "Para comenzar, necesitamos conocerte un poco mejor. Completá tu perfil y creá tu espacio de trabajo.",
+        "subtitle": "Para comenzar, necesitamos conocerte un poco mejor. Completá tu perfil para continuar.",
         "steps": {
             "personal": "Datos Personales",
             "organization": "Organización",
