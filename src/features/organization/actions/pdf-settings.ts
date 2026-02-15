@@ -121,16 +121,16 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
 
     const logoUrl = orgRes.data?.logo_url || null;
 
-    // Prepare Demo Data
-    const demoData = orgDataRes.data ? {
+    // Prepare Demo Data — always include companyName from org
+    const demoData = {
         companyName: orgRes.data?.name || "Mi Empresa",
-        address: orgDataRes.data.address,
-        city: orgDataRes.data.city,
-        state: orgDataRes.data.state,
-        country: orgDataRes.data.country,
-        phone: orgDataRes.data.phone,
-        email: orgDataRes.data.email
-    } : undefined;
+        address: orgDataRes.data?.address,
+        city: orgDataRes.data?.city,
+        state: orgDataRes.data?.state,
+        country: orgDataRes.data?.country,
+        phone: orgDataRes.data?.phone,
+        email: orgDataRes.data?.email
+    };
 
     let targetId: string | undefined | null;
 
@@ -249,7 +249,7 @@ export async function createOrganizationPdfTemplate(name: string): Promise<{ suc
 
     await supabase.from('organization_preferences').update({ default_pdf_template_id: data.id }).eq('organization_id', orgId);
 
-    revalidatePath('/organization/identity');
+    revalidatePath('/organization/settings');
     return { success: true, newTemplateId: data.id };
 }
 
@@ -403,7 +403,7 @@ export async function uploadPdfLogo(formData: FormData): Promise<{
         // Return success with URL
         const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
 
-        revalidatePath('/organization/identity');
+        revalidatePath('/organization/settings');
         return { success: true, pdfLogoUrl: publicUrl };
 
     } catch (error: any) {

@@ -53,7 +53,7 @@ export async function uploadOrganizationLogo(formData: FormData) {
         if (updateError) throw updateError;
 
         // 5. Return Success
-        revalidatePath('/organization/identity');
+        revalidatePath('/organization/settings');
         revalidatePath('/hub');
         revalidatePath('/', 'layout');
         return { success: true, logoUrl: publicUrl };

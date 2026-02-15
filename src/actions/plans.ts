@@ -14,7 +14,7 @@ export interface PlanFeatures {
     api_access: boolean;
     webhooks: boolean;
     support_level: "community" | "priority" | "dedicated";
-    custom_portal_branding: boolean;
+    custom_project_branding: boolean;
     max_org_boards?: number;
     max_project_boards?: number;
     custom_dashboard?: boolean;
@@ -146,7 +146,7 @@ const UNLIMITED_FEATURES: PlanFeatures = {
     api_access: true,
     webhooks: true,
     support_level: "dedicated",
-    custom_portal_branding: true,
+    custom_project_branding: true,
     max_org_boards: -1,
     max_project_boards: -1,
     custom_dashboard: true,

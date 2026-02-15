@@ -20,7 +20,7 @@ import { FactoryLabel } from "./field-wrapper";
 import { useFileUpload, type UploadedFile, type FileUploadState } from "@/hooks/use-file-upload";
 import type { ImagePreset } from "@/lib/client-image-compression";
 import { cn } from "@/lib/utils";
-import { extractColorsFromImage } from "@/features/customization/lib/color-extraction";
+import { extractColorsFromImage } from "@/components/shared/theme-customizer/lib/color-extraction";
 import {
     UploadCloud,
     X,

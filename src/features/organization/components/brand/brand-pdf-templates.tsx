@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef } from "react";
+import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
     FileText,
     Type,
     Ruler,
-    Check,
     Minus,
     Plus,
     Maximize,
@@ -50,6 +49,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
 import { SplitEditorLayout, SplitEditorSidebar } from "@/components/layout";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { BetaBadge } from "@/components/shared/beta-badge";
 import {
     getOrganizationPdfTheme,
     updateOrganizationPdfTheme,
@@ -60,7 +61,6 @@ import {
 } from "@/features/organization/actions/pdf-settings";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { FeatureGuard } from "@/components/ui/feature-guard";
 import { useModal } from "@/stores/modal-store";
 import { PdfTemplateForm } from "../forms/pdf-template-form";
 
@@ -120,6 +120,7 @@ export function BrandPdfTemplates() {
             const res = await getOrganizationPdfTheme(templateId);
             if (res.data) {
                 setConfig(res.data);
+                lastSavedSnapshot.current = JSON.stringify(res.data);
             }
             if (res.isPro !== undefined) setIsPro(res.isPro);
             if (res.canCreateCustomTemplates !== undefined) setCanCreateCustomTemplates(res.canCreateCustomTemplates);
@@ -139,20 +140,35 @@ export function BrandPdfTemplates() {
         loadTheme();
     }, []);
 
-    const handleSave = () => {
-        if (isGlobal) return;
+    // ── Debounced auto-save (1000ms) ──
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastSavedSnapshot = useRef<string>("");
 
-        startTransition(async () => {
-            const res = await updateOrganizationPdfTheme(config);
-            if (res.success) {
-                toast.success("Configuración guardada", {
-                    description: "Los cambios se han aplicado a la plantilla."
-                });
-            } else {
-                toast.error("Error al guardar", { description: res.error });
+    const triggerAutoSave = useCallback((currentConfig: PdfGlobalTheme) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        debounceRef.current = setTimeout(async () => {
+            try {
+                const res = await updateOrganizationPdfTheme(currentConfig);
+                if (res.success) {
+                    lastSavedSnapshot.current = JSON.stringify(currentConfig);
+                    toast.success("Cambios guardados");
+                } else {
+                    toast.error("Error al guardar", { description: res.error });
+                }
+            } catch {
+                toast.error("Error al guardar los cambios.");
             }
-        });
-    };
+        }, 1000);
+    }, []);
+
+    // Auto-save on config changes (only if different from last saved state)
+    useEffect(() => {
+        if (isGlobal || !config.id) return;
+        const currentSnapshot = JSON.stringify(config);
+        if (currentSnapshot === lastSavedSnapshot.current) return;
+        triggerAutoSave(config);
+    }, [config, isGlobal, triggerAutoSave]);
 
     const handleCreateTemplate = async (templateName: string) => {
         const res = await createOrganizationPdfTemplate(templateName);
@@ -205,454 +221,444 @@ export function BrandPdfTemplates() {
     const canEdit = isPro && !isGlobal;
 
     return (
-        <SplitEditorLayout
-            sidebarPosition="right"
-            className="h-full overflow-hidden"
-            sidebar={
-                <SplitEditorSidebar
-                    header={
-                        <div className="flex flex-col gap-4 pb-4 border-b border-border/40">
-                            <div className="flex items-center justify-between">
+        <>
+            <Toolbar
+                portalToHeader={true}
+                actions={[{
+                    label: "Nueva Plantilla",
+                    icon: Plus,
+                    onClick: handleOpenCreateModal,
+                    featureGuard: {
+                        isEnabled: canCreateCustomTemplates,
+                        featureName: "Plantillas PDF Personalizadas",
+                        requiredPlan: "PRO" as const,
+                    },
+                }]}
+            />
+            <SplitEditorLayout
+                sidebarPosition="right"
+                className="h-full overflow-hidden"
+                sidebar={
+                    <SplitEditorSidebar
+                        header={
+                            <div className="flex flex-col gap-4 pb-4 border-b border-border/40">
                                 <div className="flex items-center gap-2">
                                     <FileText className="h-4 w-4 text-primary" />
                                     <span className="font-semibold text-sm">Plantillas PDF</span>
+                                    <BetaBadge />
                                 </div>
-                                <FeatureGuard
-                                    isEnabled={canCreateCustomTemplates}
-                                    featureName="Plantillas PDF Personalizadas"
-                                    requiredPlan="PRO"
-                                >
-                                    <Button
-                                        size="sm"
-                                        className="h-7 text-xs px-2"
-                                        onClick={handleOpenCreateModal}
+
+                                <div className="flex items-center gap-2">
+                                    <Select
+                                        disabled={!isPro && availableTemplates.length === 0}
+                                        value={isGlobal ? "default" : config.id}
+                                        onValueChange={handleTemplateChange}
                                     >
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Nueva Plantilla
-                                    </Button>
-                                </FeatureGuard>
+                                        <SelectTrigger className="flex-1 h-9 text-xs">
+                                            <SelectValue placeholder="Seleccionar plantilla" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            position="popper"
+                                            side="bottom"
+                                            align="start"
+                                            sideOffset={4}
+                                            className="max-h-[200px] w-[var(--radix-select-trigger-width)]"
+                                        >
+                                            <SelectItem value="default" className="cursor-pointer">
+                                                <div className="flex items-center justify-between w-full gap-2 min-w-0">
+                                                    <span className="truncate">Plantilla Predeterminada</span>
+                                                    <Badge variant="secondary" className="ml-auto text-[9px] h-4 px-1 bg-[var(--plan-pro)]/10 text-[var(--plan-pro)] font-medium border-0 shrink-0">Solo Lectura</Badge>
+                                                </div>
+                                            </SelectItem>
+                                            {availableTemplates.map(t => (
+                                                <SelectItem key={t.id} value={t.id} className="cursor-pointer">
+                                                    {t.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {!isGlobal && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => setIsDeleteDialogOpen(true)}
+                                            disabled={isLoading}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
+                        }
+                    >
+                        <div className="space-y-6 animate-in fade-in duration-500 pb-20 pt-4 -mt-4">
+                            <Accordion type="single" collapsible defaultValue="general" className="w-full space-y-2">
 
-                            <Select
-                                disabled={!isPro && availableTemplates.length === 0}
-                                value={isGlobal ? "default" : config.id}
-                                onValueChange={handleTemplateChange}
-                            >
-                                <SelectTrigger className="w-full h-9 text-xs">
-                                    <SelectValue placeholder="Seleccionar plantilla" />
-                                </SelectTrigger>
-                                <SelectContent
-                                    position="popper"
-                                    side="bottom"
-                                    align="start"
-                                    sideOffset={4}
-                                    className="max-h-[200px] w-[var(--radix-select-trigger-width)]"
-                                >
-                                    <SelectItem value="default" className="cursor-pointer">
-                                        <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                                            <span className="truncate">Plantilla Predeterminada</span>
-                                            <Badge variant="secondary" className="ml-auto text-[9px] h-4 px-1 bg-[var(--plan-pro)]/10 text-[var(--plan-pro)] font-medium border-0 shrink-0">Solo Lectura</Badge>
-                                        </div>
-                                    </SelectItem>
-                                    {availableTemplates.map(t => (
-                                        <SelectItem key={t.id} value={t.id} className="cursor-pointer">
-                                            {t.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    }
-                >
-                    <div className="space-y-6 animate-in fade-in duration-500 pb-20 pt-4 -mt-4">
-                        <Accordion type="single" collapsible defaultValue="general" className="w-full space-y-2">
-
-                            {/* --- FORMATO GENERAL --- */}
-                            <AccordionItem value="general" className="border rounded-lg px-2 shadow-sm bg-card/30">
-                                <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
-                                    <span className="flex items-center gap-2">
-                                        <LayoutTemplate className="h-4 w-4 text-primary" />
-                                        Formato General
-                                    </span>
-                                </AccordionTrigger>
-                                <AccordionContent className="pt-2 pb-4 px-1 space-y-4">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {['A4', 'Letter'].map((size) => (
-                                            <div
-                                                key={size}
-                                                onClick={() => canEdit && setConfig({ ...config, pageSize: size as any })}
-                                                className={cn(
-                                                    "p-3 rounded-xl border bg-card/50 transition-all flex items-center justify-center text-sm font-medium relative overflow-hidden",
-                                                    canEdit ? "cursor-pointer hover:border-primary" : "cursor-not-allowed opacity-60",
-                                                    config.pageSize === size ? "ring-2 ring-primary border-transparent bg-primary/5" : ""
-                                                )}
-                                            >
-                                                {size}
-                                                {!canEdit && config.pageSize !== size && <Lock className="absolute h-3 w-3 text-muted-foreground/30 top-1 right-1" />}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">Orientación</Label>
+                                {/* --- FORMATO GENERAL --- */}
+                                <AccordionItem value="general" className="border rounded-lg px-2 shadow-sm bg-card/30">
+                                    <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
+                                        <span className="flex items-center gap-2">
+                                            <LayoutTemplate className="h-4 w-4 text-primary" />
+                                            Formato General
+                                        </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-2 pb-4 px-1 space-y-4">
                                         <div className="grid grid-cols-2 gap-3">
-                                            {[
-                                                { id: 'portrait', label: 'Vertical' },
-                                                { id: 'landscape', label: 'Horizontal' }
-                                            ].map((opt) => (
+                                            {['A4', 'Letter'].map((size) => (
                                                 <div
-                                                    key={opt.id}
-                                                    onClick={() => canEdit && setConfig({ ...config, orientation: opt.id as any })}
+                                                    key={size}
+                                                    onClick={() => canEdit && setConfig({ ...config, pageSize: size as any })}
                                                     className={cn(
                                                         "p-3 rounded-xl border bg-card/50 transition-all flex items-center justify-center text-sm font-medium relative overflow-hidden",
                                                         canEdit ? "cursor-pointer hover:border-primary" : "cursor-not-allowed opacity-60",
-                                                        config.orientation === opt.id ? "ring-2 ring-primary border-transparent bg-primary/5" : ""
+                                                        config.pageSize === size ? "ring-2 ring-primary border-transparent bg-primary/5" : ""
                                                     )}
                                                 >
-                                                    {opt.label}
-                                                    {!canEdit && config.orientation !== opt.id && <Lock className="absolute h-3 w-3 text-muted-foreground/30 top-1 right-1" />}
+                                                    {size}
+                                                    {!canEdit && config.pageSize !== size && <Lock className="absolute h-3 w-3 text-muted-foreground/30 top-1 right-1" />}
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
 
-                                    {/* SEPARATOR AND MARGINS */}
-                                    <div className="h-px bg-border/40 my-2" />
-
-                                    <div className="space-y-3">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
-                                            <Ruler className="h-3 w-3" /> Márgenes (mm)
-                                        </Label>
-                                        <div className="grid grid-cols-2 gap-x-6 gap-y-6 p-4 rounded-xl border bg-card/40">
-                                            {(['marginTop', 'marginBottom', 'marginLeft', 'marginRight'] as const).map((margin) => (
-                                                <div key={margin} className="space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <Label className="text-[10px] text-muted-foreground capitalize">{margin.replace('margin', '')}</Label>
-                                                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{config[margin]}</span>
+                                        <div className="space-y-3">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">Orientación</Label>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {[
+                                                    { id: 'portrait', label: 'Vertical' },
+                                                    { id: 'landscape', label: 'Horizontal' }
+                                                ].map((opt) => (
+                                                    <div
+                                                        key={opt.id}
+                                                        onClick={() => canEdit && setConfig({ ...config, orientation: opt.id as any })}
+                                                        className={cn(
+                                                            "p-3 rounded-xl border bg-card/50 transition-all flex items-center justify-center text-sm font-medium relative overflow-hidden",
+                                                            canEdit ? "cursor-pointer hover:border-primary" : "cursor-not-allowed opacity-60",
+                                                            config.orientation === opt.id ? "ring-2 ring-primary border-transparent bg-primary/5" : ""
+                                                        )}
+                                                    >
+                                                        {opt.label}
+                                                        {!canEdit && config.orientation !== opt.id && <Lock className="absolute h-3 w-3 text-muted-foreground/30 top-1 right-1" />}
                                                     </div>
-                                                    <Slider
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* SEPARATOR AND MARGINS */}
+                                        <div className="h-px bg-border/40 my-2" />
+
+                                        <div className="space-y-3">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
+                                                <Ruler className="h-3 w-3" /> Márgenes (mm)
+                                            </Label>
+                                            <div className="grid grid-cols-2 gap-x-6 gap-y-6 p-4 rounded-xl border bg-card/40">
+                                                {(['marginTop', 'marginBottom', 'marginLeft', 'marginRight'] as const).map((margin) => (
+                                                    <div key={margin} className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <Label className="text-[10px] text-muted-foreground capitalize">{margin.replace('margin', '')}</Label>
+                                                            <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{config[margin]}</span>
+                                                        </div>
+                                                        <Slider
+                                                            disabled={!canEdit}
+                                                            value={[config[margin]]}
+                                                            max={60}
+                                                            min={5}
+                                                            step={1}
+                                                            onValueChange={(v) => canEdit && setConfig({ ...config, [margin]: v[0] })}
+                                                            className={cn("[&>.absolute]:bg-primary", !canEdit && "opacity-50")}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+
+                                {/* --- LOGO & HEADER --- */}
+                                <AccordionItem value="logo" className="border rounded-lg px-2 shadow-sm bg-card/30">
+                                    <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
+                                        <span className="flex items-center gap-2">
+                                            <ImageIcon className="h-4 w-4 text-primary" />
+                                            Logotipo y Cabecera
+                                        </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-2 pb-4 px-1 space-y-6">
+                                        <div className="space-y-4 p-4 rounded-xl border bg-card/40">
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <Label className="text-[10px] text-muted-foreground uppercase">Ancho Logo (px)</Label>
+                                                    <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{config.logoWidth}</span>
+                                                </div>
+                                                <Slider
+                                                    disabled={!canEdit}
+                                                    value={[config.logoWidth]}
+                                                    max={300}
+                                                    min={20}
+                                                    step={5}
+                                                    onValueChange={(v) => canEdit && setConfig({ ...config, logoWidth: v[0] })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <Label className="text-[10px] text-muted-foreground uppercase">Alto Logo (px)</Label>
+                                                    <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{config.logoHeight}</span>
+                                                </div>
+                                                <Slider
+                                                    disabled={!canEdit}
+                                                    value={[config.logoHeight]}
+                                                    max={200}
+                                                    min={20}
+                                                    step={5}
+                                                    onValueChange={(v) => canEdit && setConfig({ ...config, logoHeight: v[0] })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Visibility options */}
+                                        <div className="h-px bg-border/40 my-2" />
+                                        <div className="space-y-3">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">
+                                                Opciones de Visibilidad
+                                            </Label>
+                                            <div className="space-y-3 p-3 rounded-lg border bg-card/40">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs">Mostrar nombre de empresa</Label>
+                                                    <Switch
                                                         disabled={!canEdit}
-                                                        value={[config[margin]]}
-                                                        max={60}
-                                                        min={5}
-                                                        step={1}
-                                                        onValueChange={(v) => canEdit && setConfig({ ...config, [margin]: v[0] })}
-                                                        className={cn("[&>.absolute]:bg-primary", !canEdit && "opacity-50")}
+                                                        checked={config.showCompanyName}
+                                                        onCheckedChange={(checked) => canEdit && setConfig({ ...config, showCompanyName: checked })}
                                                     />
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-
-                            {/* --- LOGO & HEADER --- */}
-                            <AccordionItem value="logo" className="border rounded-lg px-2 shadow-sm bg-card/30">
-                                <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
-                                    <span className="flex items-center gap-2">
-                                        <ImageIcon className="h-4 w-4 text-primary" />
-                                        Logotipo y Cabecera
-                                    </span>
-                                </AccordionTrigger>
-                                <AccordionContent className="pt-2 pb-4 px-1 space-y-6">
-                                    <div className="space-y-4 p-4 rounded-xl border bg-card/40">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <Label className="text-[10px] text-muted-foreground uppercase">Ancho Logo (px)</Label>
-                                                <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{config.logoWidth}</span>
-                                            </div>
-                                            <Slider
-                                                disabled={!canEdit}
-                                                value={[config.logoWidth]}
-                                                max={300}
-                                                min={20}
-                                                step={5}
-                                                onValueChange={(v) => canEdit && setConfig({ ...config, logoWidth: v[0] })}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <Label className="text-[10px] text-muted-foreground uppercase">Alto Logo (px)</Label>
-                                                <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{config.logoHeight}</span>
-                                            </div>
-                                            <Slider
-                                                disabled={!canEdit}
-                                                value={[config.logoHeight]}
-                                                max={200}
-                                                min={20}
-                                                step={5}
-                                                onValueChange={(v) => canEdit && setConfig({ ...config, logoHeight: v[0] })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Visibility options */}
-                                    <div className="h-px bg-border/40 my-2" />
-                                    <div className="space-y-3">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">
-                                            Opciones de Visibilidad
-                                        </Label>
-                                        <div className="space-y-3 p-3 rounded-lg border bg-card/40">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-xs">Mostrar nombre de empresa</Label>
-                                                <Switch
-                                                    disabled={!canEdit}
-                                                    checked={config.showCompanyName}
-                                                    onCheckedChange={(checked) => canEdit && setConfig({ ...config, showCompanyName: checked })}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-xs">Mostrar dirección</Label>
-                                                <Switch
-                                                    disabled={!canEdit}
-                                                    checked={config.showCompanyAddress}
-                                                    onCheckedChange={(checked) => canEdit && setConfig({ ...config, showCompanyAddress: checked })}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* PDF Logo Upload Section */}
-                                    <div className="h-px bg-border/40 my-2" />
-                                    <div className="space-y-3">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
-                                            <ImageIcon className="h-3 w-3" /> Logo para PDF
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Sube un logo optimizado para documentos (sin fondo, formato horizontal).
-                                        </p>
-                                        <div className="flex flex-col gap-3">
-                                            {pdfLogoUrl ? (
-                                                <div className="relative p-3 rounded-lg border bg-white/5 flex items-center gap-3">
-                                                    <img
-                                                        src={pdfLogoUrl}
-                                                        alt="Logo PDF"
-                                                        className="max-h-12 max-w-[120px] object-contain"
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs">Mostrar dirección</Label>
+                                                    <Switch
+                                                        disabled={!canEdit}
+                                                        checked={config.showCompanyAddress}
+                                                        onCheckedChange={(checked) => canEdit && setConfig({ ...config, showCompanyAddress: checked })}
                                                     />
-                                                    <span className="text-xs text-muted-foreground flex-1">Logo PDF activo</span>
                                                 </div>
-                                            ) : (
-                                                <div className="p-3 rounded-lg border border-dashed bg-muted/20 text-center">
-                                                    <p className="text-xs text-muted-foreground">Sin logo PDF específico (usa logo web)</p>
-                                                </div>
-                                            )}
-                                            <input
-                                                type="file"
-                                                id="pdf-logo-input"
-                                                accept="image/png,image/webp,image/jpeg"
-                                                className="hidden"
-                                                disabled={!canEdit}
-                                                onChange={async (e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (!file || !config.id) return;
-                                                    const formData = new FormData();
-                                                    formData.append("file", file);
-                                                    formData.append("templateId", config.id);
-                                                    startTransition(async () => {
-                                                        const res = await uploadPdfLogo(formData);
-                                                        if (res.success && res.pdfLogoUrl) {
-                                                            setPdfLogoUrl(res.pdfLogoUrl);
-                                                            toast.success("Logo PDF actualizado");
-                                                        } else {
-                                                            toast.error("Error al subir", { description: res.error });
-                                                        }
-                                                    });
-                                                    // Reset input to allow re-uploading same file
-                                                    e.target.value = '';
-                                                }}
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full"
-                                                disabled={!canEdit || isLoading}
-                                                onClick={() => document.getElementById('pdf-logo-input')?.click()}
-                                            >
-                                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                                                {pdfLogoUrl ? "Cambiar Logo PDF" : "Subir Logo PDF"}
-                                            </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
 
-                            {/* --- BRANDING / TYPOGRAPHY --- */}
-                            <AccordionItem value="branding" className="border rounded-lg px-2 shadow-sm bg-card/30">
-                                <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
-                                    <span className="flex items-center gap-2">
-                                        <Palette className="h-4 w-4 text-primary" />
-                                        Estilos y Colores
-                                    </span>
-                                </AccordionTrigger>
-                                <AccordionContent className="pt-2 pb-4 px-1 space-y-6">
-                                    {/* FONT FAMILY */}
-                                    <div className="space-y-3">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
-                                            <Type className="h-3 w-3" /> Tipografía
-                                        </Label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {PDF_FONTS.map(font => (
-                                                <div
-                                                    key={font}
-                                                    onClick={() => canEdit && setConfig({ ...config, fontFamily: font })}
-                                                    className={cn(
-                                                        "p-2 rounded-lg border text-xs text-center transition-colors truncate",
-                                                        canEdit ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed opacity-50",
-                                                        config.fontFamily === font ? "border-primary bg-primary/5 font-semibold" : ""
-                                                    )}
-                                                    style={{ fontFamily: font }}
+                                        {/* PDF Logo Upload Section */}
+                                        <div className="h-px bg-border/40 my-2" />
+                                        <div className="space-y-3">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
+                                                <ImageIcon className="h-3 w-3" /> Logo para PDF
+                                            </Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Sube un logo optimizado para documentos (sin fondo, formato horizontal).
+                                            </p>
+                                            <div className="flex flex-col gap-3">
+                                                {pdfLogoUrl ? (
+                                                    <div className="relative p-3 rounded-lg border bg-white/5 flex items-center gap-3">
+                                                        <img
+                                                            src={pdfLogoUrl}
+                                                            alt="Logo PDF"
+                                                            className="max-h-12 max-w-[120px] object-contain"
+                                                        />
+                                                        <span className="text-xs text-muted-foreground flex-1">Logo PDF activo</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-3 rounded-lg border border-dashed bg-muted/20 text-center">
+                                                        <p className="text-xs text-muted-foreground">Sin logo PDF específico (usa logo web)</p>
+                                                    </div>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    id="pdf-logo-input"
+                                                    accept="image/png,image/webp,image/jpeg"
+                                                    className="hidden"
+                                                    disabled={!canEdit}
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file || !config.id) return;
+                                                        const formData = new FormData();
+                                                        formData.append("file", file);
+                                                        formData.append("templateId", config.id);
+                                                        startTransition(async () => {
+                                                            const res = await uploadPdfLogo(formData);
+                                                            if (res.success && res.pdfLogoUrl) {
+                                                                setPdfLogoUrl(res.pdfLogoUrl);
+                                                                toast.success("Logo PDF actualizado");
+                                                            } else {
+                                                                toast.error("Error al subir", { description: res.error });
+                                                            }
+                                                        });
+                                                        // Reset input to allow re-uploading same file
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    disabled={!canEdit || isLoading}
+                                                    onClick={() => document.getElementById('pdf-logo-input')?.click()}
                                                 >
-                                                    {font}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* FONT SIZES */}
-                                    <div className="h-px bg-border/50" />
-                                    <div className="space-y-4">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">Tamaños de Texto</Label>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {/* Title Size */}
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between">
-                                                    <Label className="text-[10px]">Títulos</Label>
-                                                    <span className="text-[10px] font-mono text-muted-foreground">{config.titleSize}pt</span>
-                                                </div>
-                                                <Slider disabled={!canEdit} value={[config.titleSize]} max={36} min={10} step={1} onValueChange={v => canEdit && setConfig({ ...config, titleSize: v[0] })} />
-                                            </div>
-                                            {/* Subtitle Size */}
-                                            <div className="space-y-2">
-                                                <div className="flex justify-between">
-                                                    <Label className="text-[10px]">Subtítulos</Label>
-                                                    <span className="text-[10px] font-mono text-muted-foreground">{config.subtitleSize}pt</span>
-                                                </div>
-                                                <Slider disabled={!canEdit} value={[config.subtitleSize]} max={24} min={8} step={1} onValueChange={v => canEdit && setConfig({ ...config, subtitleSize: v[0] })} />
-                                            </div>
-                                            {/* Body Size */}
-                                            <div className="space-y-2 col-span-2">
-                                                <div className="flex justify-between">
-                                                    <Label className="text-[10px]">Cuerpo</Label>
-                                                    <span className="text-[10px] font-mono text-muted-foreground">{config.bodySize}pt</span>
-                                                </div>
-                                                <Slider disabled={!canEdit} value={[config.bodySize]} max={18} min={6} step={0.5} onValueChange={v => canEdit && setConfig({ ...config, bodySize: v[0] })} />
+                                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                                                    {pdfLogoUrl ? "Cambiar Logo PDF" : "Subir Logo PDF"}
+                                                </Button>
                                             </div>
                                         </div>
-                                    </div>
+                                    </AccordionContent>
+                                </AccordionItem>
 
-                                    {/* COLORS */}
-                                    <div className="h-px bg-border/50" />
-                                    <div className="space-y-3">
-                                        <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">Paleta de Colores</Label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <ColorPicker disabled={!canEdit} label="Primario" color={config.primaryColor} onChange={(c) => setConfig({ ...config, primaryColor: c })} />
-                                            <ColorPicker disabled={!canEdit} label="Secundario" color={config.secondaryColor} onChange={(c) => setConfig({ ...config, secondaryColor: c })} />
-                                            <ColorPicker disabled={!canEdit} label="Texto Base" color={config.textColor} onChange={(c) => setConfig({ ...config, textColor: c })} />
-                                            <ColorPicker disabled={!canEdit} label="Nombre Empresa" color={config.companyNameColor} onChange={(c) => setConfig({ ...config, companyNameColor: c })} />
+                                {/* --- BRANDING / TYPOGRAPHY --- */}
+                                <AccordionItem value="branding" className="border rounded-lg px-2 shadow-sm bg-card/30">
+                                    <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
+                                        <span className="flex items-center gap-2">
+                                            <Palette className="h-4 w-4 text-primary" />
+                                            Estilos y Colores
+                                        </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-2 pb-4 px-1 space-y-6">
+                                        {/* FONT FAMILY */}
+                                        <div className="space-y-3">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider flex items-center gap-2">
+                                                <Type className="h-3 w-3" /> Tipografía
+                                            </Label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {PDF_FONTS.map(font => (
+                                                    <div
+                                                        key={font}
+                                                        onClick={() => canEdit && setConfig({ ...config, fontFamily: font })}
+                                                        className={cn(
+                                                            "p-2 rounded-lg border text-xs text-center transition-colors truncate",
+                                                            canEdit ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed opacity-50",
+                                                            config.fontFamily === font ? "border-primary bg-primary/5 font-semibold" : ""
+                                                        )}
+                                                        style={{ fontFamily: font }}
+                                                    >
+                                                        {font}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
 
-                            {/* --- FOOTER --- */}
-                            <AccordionItem value="footer" className="border rounded-lg px-2 shadow-sm bg-card/30">
-                                <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
-                                    <span className="flex items-center gap-2">
-                                        <Footprints className="h-4 w-4 text-primary" />
-                                        Pie de Página
-                                    </span>
-                                </AccordionTrigger>
-                                <AccordionContent className="pt-2 pb-4 px-1">
-                                    <div className="p-4 rounded-xl border bg-card/40 space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-xs">Mostrar Footer</Label>
-                                            <Switch disabled={!canEdit} checked={config.showFooter} onCheckedChange={(c) => setConfig({ ...config, showFooter: c })} />
-                                        </div>
-                                        {config.showFooter && (
-                                            <div className={cn("space-y-4 animate-in slide-in-from-top-2 fade-in", !canEdit && "opacity-50 pointer-events-none")}>
-                                                <div className="space-y-2">
-                                                    <Label className="text-[10px] text-muted-foreground">Texto Legal</Label>
-                                                    <Input
-                                                        disabled={!canEdit}
-                                                        value={config.footerText}
-                                                        onChange={(e) => setConfig({ ...config, footerText: e.target.value })}
-                                                        className="h-8 text-xs font-mono bg-background"
-                                                    />
-                                                </div>
-                                                {/* Footer Text Size Slider */}
+                                        {/* FONT SIZES */}
+                                        <div className="h-px bg-border/50" />
+                                        <div className="space-y-4">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">Tamaños de Texto</Label>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {/* Title Size */}
                                                 <div className="space-y-2">
                                                     <div className="flex justify-between">
-                                                        <Label className="text-[10px]">Tamaño Texto Pie</Label>
-                                                        <span className="text-[10px] font-mono text-muted-foreground">{config.companyInfoSize}pt</span>
+                                                        <Label className="text-[10px]">Títulos</Label>
+                                                        <span className="text-[10px] font-mono text-muted-foreground">{config.titleSize}pt</span>
                                                     </div>
-                                                    <Slider disabled={!canEdit} value={[config.companyInfoSize]} max={14} min={6} step={1} onValueChange={v => canEdit && setConfig({ ...config, companyInfoSize: v[0] })} />
+                                                    <Slider disabled={!canEdit} value={[config.titleSize]} max={36} min={10} step={1} onValueChange={v => canEdit && setConfig({ ...config, titleSize: v[0] })} />
                                                 </div>
-                                                <div className="flex items-center justify-between pt-2 border-t border-dashed">
-                                                    <Label className="text-[10px] text-muted-foreground">Numeración</Label>
-                                                    <Switch disabled={!canEdit} checked={config.showPageNumbers} onCheckedChange={(c) => setConfig({ ...config, showPageNumbers: c })} />
+                                                {/* Subtitle Size */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between">
+                                                        <Label className="text-[10px]">Subtítulos</Label>
+                                                        <span className="text-[10px] font-mono text-muted-foreground">{config.subtitleSize}pt</span>
+                                                    </div>
+                                                    <Slider disabled={!canEdit} value={[config.subtitleSize]} max={24} min={8} step={1} onValueChange={v => canEdit && setConfig({ ...config, subtitleSize: v[0] })} />
+                                                </div>
+                                                {/* Body Size */}
+                                                <div className="space-y-2 col-span-2">
+                                                    <div className="flex justify-between">
+                                                        <Label className="text-[10px]">Cuerpo</Label>
+                                                        <span className="text-[10px] font-mono text-muted-foreground">{config.bodySize}pt</span>
+                                                    </div>
+                                                    <Slider disabled={!canEdit} value={[config.bodySize]} max={18} min={6} step={0.5} onValueChange={v => canEdit && setConfig({ ...config, bodySize: v[0] })} />
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
+                                        </div>
+
+                                        {/* COLORS */}
+                                        <div className="h-px bg-border/50" />
+                                        <div className="space-y-3">
+                                            <Label className="uppercase text-[10px] font-bold text-muted-foreground tracking-wider">Paleta de Colores</Label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <ColorPicker disabled={!canEdit} label="Primario" color={config.primaryColor} onChange={(c) => setConfig({ ...config, primaryColor: c })} />
+                                                <ColorPicker disabled={!canEdit} label="Secundario" color={config.secondaryColor} onChange={(c) => setConfig({ ...config, secondaryColor: c })} />
+                                                <ColorPicker disabled={!canEdit} label="Texto Base" color={config.textColor} onChange={(c) => setConfig({ ...config, textColor: c })} />
+                                                <ColorPicker disabled={!canEdit} label="Nombre Empresa" color={config.companyNameColor} onChange={(c) => setConfig({ ...config, companyNameColor: c })} />
+                                            </div>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+
+                                {/* --- FOOTER --- */}
+                                <AccordionItem value="footer" className="border rounded-lg px-2 shadow-sm bg-card/30">
+                                    <AccordionTrigger className="hover:no-underline py-3 px-1 text-sm font-semibold">
+                                        <span className="flex items-center gap-2">
+                                            <Footprints className="h-4 w-4 text-primary" />
+                                            Pie de Página
+                                        </span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-2 pb-4 px-1">
+                                        <div className="p-4 rounded-xl border bg-card/40 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-xs">Mostrar Footer</Label>
+                                                <Switch disabled={!canEdit} checked={config.showFooter} onCheckedChange={(c) => setConfig({ ...config, showFooter: c })} />
+                                            </div>
+                                            {config.showFooter && (
+                                                <div className={cn("space-y-4 animate-in slide-in-from-top-2 fade-in", !canEdit && "opacity-50 pointer-events-none")}>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] text-muted-foreground">Texto Legal</Label>
+                                                        <Input
+                                                            disabled={!canEdit}
+                                                            value={config.footerText}
+                                                            onChange={(e) => setConfig({ ...config, footerText: e.target.value })}
+                                                            className="h-8 text-xs font-mono bg-background"
+                                                        />
+                                                    </div>
+                                                    {/* Footer Text Size Slider */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between">
+                                                            <Label className="text-[10px]">Tamaño Texto Pie</Label>
+                                                            <span className="text-[10px] font-mono text-muted-foreground">{config.companyInfoSize}pt</span>
+                                                        </div>
+                                                        <Slider disabled={!canEdit} value={[config.companyInfoSize]} max={14} min={6} step={1} onValueChange={v => canEdit && setConfig({ ...config, companyInfoSize: v[0] })} />
+                                                    </div>
+                                                    <div className="flex items-center justify-between pt-2 border-t border-dashed">
+                                                        <Label className="text-[10px] text-muted-foreground">Numeración</Label>
+                                                        <Switch disabled={!canEdit} checked={config.showPageNumbers} onCheckedChange={(c) => setConfig({ ...config, showPageNumbers: c })} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
 
 
-                        {/* FOOTER ACTIONS */}
-                        {!isGlobal && (
-                            <div className="pt-4 text-center pb-8 space-y-3 border-t border-dashed mt-4">
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={isLoading}
-                                    className="w-full bg-primary text-primary-foreground font-semibold shadow-lg hover:brightness-110"
-                                >
-                                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-                                    {isLoading ? "Guardando..." : "Guardar Cambios"}
-                                </Button>
+                        </div>
+                    </SplitEditorSidebar>
+                }
+            >
+                <ZoomPanCanvas>
+                    <PdfPreview config={config} logoUrl={pdfLogoUrl || logoUrl} demoData={demoData} />
+                </ZoomPanCanvas>
 
-                                <Button
-                                    onClick={() => setIsDeleteDialogOpen(true)}
-                                    disabled={isLoading}
-                                    variant="ghost"
-                                    className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 h-8 text-xs"
-                                >
-                                    <Trash2 className="h-3 w-3 mr-2" />
-                                    Eliminar Plantilla
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </SplitEditorSidebar>
-            }
-        >
-            <ZoomPanCanvas>
-                <PdfPreview config={config} logoUrl={pdfLogoUrl || logoUrl} demoData={demoData} />
-            </ZoomPanCanvas>
-
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará permanentemente la plantilla
-                            <span className="font-bold text-foreground"> &quot;{config.name}&quot;</span>.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => { e.preventDefault(); handleDeleteTemplate(); }}
-                            className="bg-red-500 hover:bg-red-600 border-red-500"
-                        >
-                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Eliminar"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </SplitEditorLayout >
+                {/* Delete Confirmation Dialog */}
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminará permanentemente la plantilla
+                                <span className="font-bold text-foreground"> &quot;{config.name}&quot;</span>.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => { e.preventDefault(); handleDeleteTemplate(); }}
+                                className="bg-red-500 hover:bg-red-600 border-red-500"
+                            >
+                                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Eliminar"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </SplitEditorLayout>
+        </>
     );
 }
 
@@ -759,12 +765,12 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="flex-1 w-full h-full relative bg-[#3f3f46] overflow-hidden select-none group">
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-black/80 backdrop-blur-sm p-1.5 rounded-full border border-white/10 shadow-xl transition-opacity opacity-0 group-hover:opacity-100">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/20" onClick={() => setScale(s => Math.max(s - 0.1, MIN_SCALE))}><Minus className="h-4 w-4" /></Button>
-                <span className="text-xs font-mono text-white w-12 text-center">{Math.round(scale * 100)}%</span>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/20" onClick={() => setScale(s => Math.min(s + 0.1, MAX_SCALE))}><Plus className="h-4 w-4" /></Button>
-                <div className="w-[1px] h-4 bg-white/20 mx-1" />
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/20" onClick={fitToScreen}><Maximize className="h-3 w-3" /></Button>
+            <div className="absolute bottom-3 right-3 z-50 flex items-center gap-0.5 bg-black/70 backdrop-blur-sm p-1 rounded-full border border-white/10 shadow-lg transition-opacity opacity-0 group-hover:opacity-100">
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-white/70 hover:text-white hover:bg-white/20" onClick={() => setScale(s => Math.max(s - 0.1, MIN_SCALE))}><Minus className="h-3 w-3" /></Button>
+                <span className="text-[10px] font-mono text-white/70 w-9 text-center">{Math.round(scale * 100)}%</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-white/70 hover:text-white hover:bg-white/20" onClick={() => setScale(s => Math.min(s + 0.1, MAX_SCALE))}><Plus className="h-3 w-3" /></Button>
+                <div className="w-[1px] h-3 bg-white/15 mx-0.5" />
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-white/70 hover:text-white hover:bg-white/20" onClick={fitToScreen}><Maximize className="h-2.5 w-2.5" /></Button>
             </div>
 
             <div
@@ -790,15 +796,13 @@ function ZoomPanCanvas({ children }: { children: React.ReactNode }) {
                 </motion.div>
             </div>
 
-            <div className="absolute bottom-4 left-4 text-[10px] text-white/40 pointer-events-none">
-                Scroll: Zoom • Drag: Pan
-            </div>
+
         </div>
     );
 }
 
 // Updated Preview to support Demo Data
-function PdfPreview({ config, logoUrl, demoData }: { config: PdfGlobalTheme, logoUrl?: string | null, demoData?: { address?: string, city?: string, state?: string, country?: string, phone?: string, email?: string } }) {
+function PdfPreview({ config, logoUrl, demoData }: { config: PdfGlobalTheme, logoUrl?: string | null, demoData?: { companyName?: string, address?: string, city?: string, state?: string, country?: string, phone?: string, email?: string } }) {
     const mmToPx = 3.78;
 
     // Paper Size (Base Portrait)
@@ -830,15 +834,7 @@ function PdfPreview({ config, logoUrl, demoData }: { config: PdfGlobalTheme, log
             className="bg-white relative flex flex-col transition-all duration-300 ease-in-out"
             style={{ width, height, ...styles }}
         >
-            <div className="absolute inset-0 pointer-events-none border-dashed border-blue-400/30"
-                style={{
-                    top: styles.paddingTop,
-                    bottom: styles.paddingBottom,
-                    left: styles.paddingLeft,
-                    right: styles.paddingRight,
-                    borderWidth: '1px'
-                }}
-            />
+            {/* Margin guide removed — was debug-only dashed border */}
 
             {/* DOCUMENT CONTENT */}
 
@@ -868,7 +864,7 @@ function PdfPreview({ config, logoUrl, demoData }: { config: PdfGlobalTheme, log
                                 className="font-bold leading-none"
                                 style={{ fontSize: `${config.companyNameSize}pt`, color: config.companyNameColor }}
                             >
-                                {demoData ? "Mi Empresa" : "Nombre Empresa"}
+                                {demoData?.companyName || "Nombre Empresa"}
                             </div>
                         )}
                         {/* Organization Data in Header */}

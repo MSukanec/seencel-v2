@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Settings, MapPin } from "lucide-react";
+import { Settings, MapPin, Palette } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
@@ -51,7 +51,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         const project = await getProjectById(projectId);
         if (!project) notFound();
 
-        // Prefetch type/modality options in parallel
+        // Prefetch type/modality options and plan features in parallel
         const [projectTypes, projectModalities] = await Promise.all([
             getProjectTypes(project.organization_id),
             getProjectModalities(project.organization_id),
@@ -79,6 +79,13 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                             <TabsTrigger value="location" className="gap-2">
                                 <MapPin className="h-4 w-4" />
                                 Ubicación
+                            </TabsTrigger>
+                            <TabsTrigger value="appearance" className="gap-2 relative" disabled>
+                                <Palette className="h-4 w-4" />
+                                Apariencia
+                                <span className="ml-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground leading-none">
+                                    Próximamente
+                                </span>
                             </TabsTrigger>
                         </TabsList>
                     }

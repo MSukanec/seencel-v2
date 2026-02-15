@@ -4,28 +4,27 @@ import React, { useState, useCallback, useRef, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, Image as ImageIcon, Loader2, Sparkles, RotateCcw, Check, Palette } from "lucide-react";
-import { extractColorsFromImage } from "@/features/customization/lib/color-extraction";
-import { generateRefinedPalette } from "@/features/customization/lib/palette-analysis";
-import { detectPaletteMood, MOOD_TYPOGRAPHY, type TypographyMood } from "@/features/customization/lib/typography-mood";
+import { extractColorsFromImage } from "@/components/shared/theme-customizer/lib/color-extraction";
+import { generateRefinedPalette } from "@/components/shared/theme-customizer/lib/palette-analysis";
+// TODO: Legacy — typography-mood was deleted. This file is unused and should be removed entirely.
 import { useThemeCustomization } from "@/stores/theme-store";
 import { BentoKpiCard } from "@/components/widgets/grid/presets/bento-kpi-card";
-import type { ExtractedColor, CuratedPalette } from "@/features/customization/types/palette";
+import type { ExtractedColor, CuratedPalette } from "@/components/shared/theme-customizer/types/palette";
 import { DollarSign, Users, TrendingUp, Folder } from "lucide-react";
 import { toast } from "sonner";
 
 /**
  * Advanced Appearance View
  * 
- * Permite a los usuarios personalizar la apariencia de Seencel
- * subiendo una imagen y aplicando la paleta extraída a toda la aplicación.
+ * @deprecated Este archivo no se usa. La funcionalidad de apariencia se movió a proyectos.
  */
 export function AdvancedAppearanceView() {
-    const { isCustomThemeActive, applyTheme, resetTheme } = useThemeCustomization();
+    const { isCustomThemeActive, resetTheme } = useThemeCustomization();
     const [isLoading, setIsLoading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [extractedColors, setExtractedColors] = useState<ExtractedColor[]>([]);
     const [activePalette, setActivePalette] = useState<CuratedPalette | null>(null);
-    const [currentMood, setCurrentMood] = useState<TypographyMood | null>(null);
+    const [currentMood, setCurrentMood] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
@@ -98,8 +97,8 @@ export function AdvancedAppearanceView() {
             const palette = generateRefinedPalette(colors, 'Custom Palette');
             setActivePalette(palette);
 
-            const mood = detectPaletteMood(colors);
-            setCurrentMood(mood);
+            // detectPaletteMood removed — typography-mood module no longer exists
+            setCurrentMood(null);
 
             // Apply preview styles to preview container
             if (previewRef.current && palette) {
@@ -128,12 +127,8 @@ export function AdvancedAppearanceView() {
             return;
         }
 
-        const cssVars = paletteToCssVars(activePalette);
-        applyTheme(cssVars as any);
-        toast.success('¡Tema personalizado aplicado!', {
-            description: 'Los colores se guardarán en tu navegador.'
-        });
-    }, [activePalette, applyTheme, paletteToCssVars]);
+        toast.info('Para aplicar un tema, andá a la configuración de apariencia de un proyecto.');
+    }, [activePalette]);
 
     const handleReset = useCallback(() => {
         resetTheme();
@@ -144,7 +139,7 @@ export function AdvancedAppearanceView() {
         toast.success('Tema restaurado a valores por defecto');
     }, [resetTheme]);
 
-    const moodConfig = currentMood ? MOOD_TYPOGRAPHY[currentMood] : null;
+    const moodConfig = null;
 
     return (
         <div className="space-y-6">
@@ -377,7 +372,7 @@ export function AdvancedAppearanceView() {
 
             {/* Info */}
             <p className="text-xs text-muted-foreground text-center">
-                Los cambios se guardan localmente en tu navegador y se aplicarán cada vez que uses Seencel.
+                Los temas se aplican por proyecto. Configurá la apariencia desde la página del proyecto.
             </p>
         </div>
     );

@@ -1,27 +1,25 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
-import { GoogleMap, useLoadScript, Marker, OverlayView } from "@react-google-maps/api";
+import { useState, useTransition } from "react";
+import { GoogleMap, useLoadScript, OverlayView } from "@react-google-maps/api";
 import usePlacesAutocomplete, {
     getGeocode,
     getLatLng,
-    getZipCode,
 } from "use-places-autocomplete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { updateOrganization } from "@/actions/update-organization";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TextField } from "@/components/shared/forms/fields";
 import { Loader2, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
-
 import { useTheme } from "next-themes";
-import { MAP_TYPE_ID, getMapContainerClass } from "@/lib/map-config";
+import { updateOrganization } from "@/actions/update-organization";
 
 // Define libraries array outside component to prevent re-renders
 const libraries: ("places")[] = ["places"];
 
-// Map styling is centralized in @/lib/map-config
+// CSS filter applied to map container for dark desaturated hybrid look
+import { MAP_TYPE_ID, getMapContainerClass } from "@/lib/map-config";
 
 export function OrganizationLocationManager({ organization }: { organization: any }) {
     const orgDataRaw = organization.organization_data;
@@ -43,19 +41,15 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
     const [isPending, startTransition] = useTransition();
     const { resolvedTheme } = useTheme();
 
-    // Determine filter based on theme
     const isDark = resolvedTheme === 'dark';
     const mapClass = getMapContainerClass(isDark);
 
-    // Custom Marker Image URL - uses logo_url (full URL from DB)
-    const logoUrl = organization.logo_url || "/logo.png";
-
     // Map State
     const [center, setCenter] = useState({
-        lat: orgData.lat ? Number(orgData.lat) : -34.6037, // Default Buenos Aires
+        lat: orgData.lat ? Number(orgData.lat) : -34.6037,
         lng: orgData.lng ? Number(orgData.lng) : -58.3816
     });
-    const [zoom, setZoom] = useState(orgData.lat ? 17 : 12); // Slightly more zoomed in if location exists
+    const [zoom, setZoom] = useState(orgData.lat ? 17 : 12);
     const [marker, setMarker] = useState(center);
 
     // Form State
@@ -63,25 +57,19 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
         address: orgData.address || "",
         city: orgData.city || "",
         state: orgData.state || "",
-        postal_code: orgData.postal_code || "",
         country: orgData.country || "",
-        lat: orgData.lat || "",
-        lng: orgData.lng || ""
+        postal_code: orgData.postal_code || "",
+        lat: String(orgData.lat || ""),
+        lng: String(orgData.lng || ""),
     });
 
-    // Validates autocomplete loaded
     const {
         ready,
         value,
         setValue,
         suggestions: { status, data },
         clearSuggestions,
-    } = usePlacesAutocomplete({
-        requestOptions: {
-            /* Define search scope here if needed */
-        },
-        debounce: 300,
-    });
+    } = usePlacesAutocomplete({ debounce: 300 });
 
     const handleSelect = async (address: string) => {
         setValue(address, false);
@@ -91,13 +79,12 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
             const results = await getGeocode({ address });
             const { lat, lng } = await getLatLng(results[0]);
 
-            // Extract components
             const components = results[0].address_components;
             let city = "", state = "", country = "", postal_code = "", route = "", street_number = "";
 
             components.forEach((c) => {
                 if (c.types.includes("locality")) city = c.long_name;
-                if (!city && c.types.includes("administrative_area_level_2")) city = c.long_name; // Fallback
+                if (!city && c.types.includes("administrative_area_level_2")) city = c.long_name;
                 if (c.types.includes("administrative_area_level_1")) state = c.long_name;
                 if (c.types.includes("country")) country = c.long_name;
                 if (c.types.includes("postal_code")) postal_code = c.long_name;
@@ -105,21 +92,20 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                 if (c.types.includes("street_number")) street_number = c.long_name;
             });
 
-            // Update Map
             setCenter({ lat, lng });
             setMarker({ lat, lng });
             setZoom(17);
 
-            // Update Form
             const fullAddress = route ? `${route} ${street_number}`.trim() : address;
+
             setFormValues({
                 address: fullAddress,
                 city,
                 state,
-                postal_code,
                 country,
+                postal_code,
                 lat: String(lat),
-                lng: String(lng)
+                lng: String(lng),
             });
 
         } catch (error) {
@@ -131,24 +117,28 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
         e.preventDefault();
 
         const formData = new FormData();
-        // Append all field values from state + implicit ones
         Object.entries(formValues).forEach(([key, val]) => {
             formData.append(key, val);
         });
 
         startTransition(async () => {
             const result = await updateOrganization(organization.id, formData);
-            if (result.error) {
-                toast.error(`Error: ${result.error}`);
+            if (result?.error) {
+                toast.error(result.error);
             } else {
                 toast.success("Ubicación actualizada correctamente");
             }
         });
     };
 
+    // Helper to update a single field in formValues
+    const updateField = (field: keyof typeof formValues) => (value: string) => {
+        setFormValues(prev => ({ ...prev, [field]: value }));
+    };
+
     return (
-        <div className="relative w-full h-full overflow-hidden">
-            {/* Background Map */}
+        <div className="relative w-full h-full min-h-[600px] overflow-hidden rounded-none border-0">
+            {/* Background Map - Full Screen with hybrid + desaturated overlay */}
             <div className={`absolute inset-0 z-0 ${mapClass}`}>
                 <GoogleMap
                     zoom={zoom}
@@ -175,15 +165,7 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                     >
                         <div className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer transition-transform hover:scale-110 active:scale-95 duration-200 ease-out drop-shadow-2xl">
                             <div className="relative w-16 h-16 bg-primary rounded-full rounded-br-none rotate-45 flex items-center justify-center border-[3px] border-white shadow-sm">
-                                <div className="w-12 h-12 bg-white rounded-full overflow-hidden -rotate-45 border border-black/5">
-                                    {/* Use standard img for overlay, next/image can be tricky with absolute positioning/sizing here */}
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={logoUrl}
-                                        alt="Logo"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
+                                <MapPin className="text-white -rotate-45 h-8 w-8" />
                             </div>
                         </div>
                     </OverlayView>
@@ -199,24 +181,22 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                             Ubicación de la Organización
                         </CardTitle>
                         <CardDescription>
-                            Busca y confirma la sede central.
+                            Busca y confirma la sede central de tu organización.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-
+                        {/* Buscador de Google Places — se deja manual (no TextField) */}
                         <div className="relative">
-                            <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground font-semibold">BUSCAR DIRECCIÓN</Label>
                             <div className="relative">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     value={value}
                                     onChange={(e) => setValue(e.target.value)}
                                     disabled={!ready}
-                                    placeholder="Buscar ubicación..."
+                                    placeholder="Buscar dirección..."
                                     className="pl-9"
                                 />
                             </div>
-                            {/* Autocomplete Suggestions */}
                             {status === "OK" && (
                                 <ul className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg py-1 max-h-60 overflow-auto">
                                     {data.map(({ place_id, description }) => (
@@ -232,47 +212,47 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                             )}
                         </div>
 
-                        <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
-                            <div className="grid w-full gap-1.5">
-                                <Label htmlFor="address">Dirección</Label>
-                                <Input
-                                    value={formValues.address}
-                                    onChange={e => setFormValues({ ...formValues, address: e.target.value })}
+                        <form onSubmit={handleFormSubmit} className="space-y-3 pt-2">
+                            <TextField
+                                label="Dirección"
+                                value={formValues.address}
+                                onChange={updateField("address")}
+                                placeholder="Av. Corrientes 1234"
+                                required={false}
+                            />
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <TextField
+                                    label="Ciudad"
+                                    value={formValues.city}
+                                    onChange={updateField("city")}
+                                    placeholder="Buenos Aires"
+                                    required={false}
+                                />
+                                <TextField
+                                    label="Provincia / Estado"
+                                    value={formValues.state}
+                                    onChange={updateField("state")}
+                                    placeholder="Buenos Aires"
+                                    required={false}
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="city">Ciudad</Label>
-                                    <Input
-                                        value={formValues.city}
-                                        onChange={e => setFormValues({ ...formValues, city: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="state">Provincia / Estado</Label>
-                                    <Input
-                                        value={formValues.state}
-                                        onChange={e => setFormValues({ ...formValues, state: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="postal_code">Código Postal</Label>
-                                    <Input
-                                        value={formValues.postal_code}
-                                        onChange={e => setFormValues({ ...formValues, postal_code: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid w-full gap-1.5">
-                                    <Label htmlFor="country">País</Label>
-                                    <Input
-                                        value={formValues.country}
-                                        onChange={e => setFormValues({ ...formValues, country: e.target.value })}
-                                    />
-                                </div>
+                                <TextField
+                                    label="Código Postal"
+                                    value={formValues.postal_code}
+                                    onChange={updateField("postal_code")}
+                                    placeholder="1043"
+                                    required={false}
+                                />
+                                <TextField
+                                    label="País"
+                                    value={formValues.country}
+                                    onChange={updateField("country")}
+                                    placeholder="Argentina"
+                                    required={false}
+                                />
                             </div>
 
                             {/* Hidden Coords */}
@@ -280,7 +260,7 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
                             <input type="hidden" name="lng" value={formValues.lng} />
 
                             <Button disabled={isPending} className="w-full mt-2">
-                                {isPending ? "Guardando..." : "Guardar Ubicación"}
+                                {isPending ? "Guardando..." : "Confirmar Ubicación"}
                             </Button>
                         </form>
                     </CardContent>
@@ -289,4 +269,3 @@ function MapInterface({ organization, orgData }: { organization: any, orgData: a
         </div>
     );
 }
-

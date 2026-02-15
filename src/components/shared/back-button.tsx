@@ -29,7 +29,7 @@ export function BackButton({ fallbackHref }: { fallbackHref?: string }) {
         <Button
             variant="ghost"
             size="icon"
-            className="mr-2"
+            className="mr-2 cursor-pointer"
             onClick={handleBack}
         >
             <ArrowLeft className="h-4 w-4" />

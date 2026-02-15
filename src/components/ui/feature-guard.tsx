@@ -8,27 +8,9 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/**
- * Resolve the CSS variable for a given plan name.
- * Maps "PRO" → "--plan-pro", "TEAMS" → "--plan-teams", etc.
- * Falls back to "--plan-pro" if no match.
- */
-function getPlanCssVar(requiredPlan: string): string {
-    const slug = requiredPlan.toLowerCase().trim();
-    // Only allow known plan slugs
-    if (["free", "pro", "teams"].includes(slug)) {
-        return `--plan-${slug}`;
-    }
-    return "--plan-pro"; // fallback
-}
+import { PlanBadge } from "@/components/shared/plan-badge";
 
 // ============================================================================
 // Types
@@ -68,10 +50,8 @@ function LockPopoverContent({
     requiredPlan: string;
     customMessage?: string;
     upgradeHref: string;
-    t: any;
+    t: ReturnType<typeof useTranslations>;
 }) {
-    const planVar = getPlanCssVar(requiredPlan);
-
     return (
         <HoverCardContent
             className="w-64 p-3"
@@ -81,12 +61,13 @@ function LockPopoverContent({
         >
             <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                    <div
-                        className="h-8 w-8 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: `color-mix(in srgb, var(${planVar}) 20%, transparent)` }}
-                    >
-                        <Lock className="h-4 w-4" style={{ color: `var(${planVar})` }} />
-                    </div>
+                    <PlanBadge
+                        planSlug={requiredPlan}
+                        compact
+                        showIcon
+                        showLabel={false}
+                        linkToPricing={false}
+                    />
                     <div className="flex-1">
                         <p className="text-sm font-semibold leading-tight">
                             {t('locked')}
@@ -102,13 +83,15 @@ function LockPopoverContent({
                 <Link
                     href={upgradeHref as any}
                     className={cn(
-                        "mt-1 w-full inline-flex items-center justify-center",
-                        "text-xs font-medium py-1.5 px-3 rounded-md",
-                        "text-white hover:opacity-90 transition-opacity"
+                        "mt-1 w-full no-underline",
                     )}
-                    style={{ backgroundColor: `var(${planVar})` }}
                 >
-                    {t('upgrade', { plan: requiredPlan })}
+                    <PlanBadge
+                        planSlug={requiredPlan}
+                        compact
+                        linkToPricing={false}
+                        className="w-full justify-center"
+                    />
                 </Link>
             </div>
         </HoverCardContent>
@@ -130,24 +113,17 @@ export function FeatureLockBadge({
     upgradeHref?: string;
 }) {
     const t = useTranslations('Portal.FeatureGuard');
-    const planVar = getPlanCssVar(requiredPlan);
 
     return (
         <HoverCard openDelay={100} closeDelay={100}>
             <HoverCardTrigger asChild>
-                <Badge
-                    variant="secondary"
-                    className={cn(
-                        "h-5 px-1.5 text-[10px] font-semibold",
-                        "text-white border-0",
-                        "flex items-center gap-0.5 cursor-help",
-                        "hover:scale-105 transition-transform"
-                    )}
-                    style={{ backgroundColor: `var(${planVar})` }}
-                >
-                    <Lock className="h-2.5 w-2.5" />
-                    {requiredPlan}
-                </Badge>
+                <span className="cursor-help inline-flex hover:scale-105 transition-transform">
+                    <PlanBadge
+                        planSlug={requiredPlan}
+                        micro
+                        linkToPricing={false}
+                    />
+                </span>
             </HoverCardTrigger>
             <LockPopoverContent
                 featureName={featureName}
@@ -164,7 +140,7 @@ export function FeatureLockBadge({
  * A reusable wrapper component that gates features based on plan capabilities.
  * When the feature is disabled:
  * - Renders the children as disabled (pointer-events-none, opacity reduced)
- * - Shows a lock badge overlay
+ * - Shows a lock badge overlay (uses PlanBadge micro)
  * - On hover, shows a popover explaining the restriction and prompting upgrade
  */
 export function FeatureGuard({
@@ -178,7 +154,6 @@ export function FeatureGuard({
     upgradeHref = "/pricing"
 }: FeatureGuardProps) {
     const t = useTranslations('Portal.FeatureGuard');
-    const planVar = getPlanCssVar(requiredPlan);
 
     if (isEnabled) {
         // Feature is enabled, render children normally
@@ -193,21 +168,15 @@ export function FeatureGuard({
                 {children}
             </div>
 
-            {/* Lock badge overlay */}
+            {/* Lock badge overlay — PlanBadge micro (material system) */}
             {showBadge && (
-                <Badge
-                    variant="secondary"
-                    className={cn(
-                        "absolute -top-1.5 right-0 h-5 px-1.5 text-[10px] font-semibold",
-                        "text-white border-0",
-                        "flex items-center gap-0.5 shadow-lg",
-                        "group-hover:scale-110 transition-transform"
-                    )}
-                    style={{ backgroundColor: `var(${planVar})` }}
-                >
-                    <Lock className="h-2.5 w-2.5" />
-                    {requiredPlan}
-                </Badge>
+                <div className="absolute -top-2 -right-1 group-hover:scale-110 transition-transform">
+                    <PlanBadge
+                        planSlug={requiredPlan}
+                        micro
+                        linkToPricing={false}
+                    />
+                </div>
             )}
         </div>
     );

@@ -192,14 +192,13 @@ Para cada página, seguir este flujo:
 4. Presupuestos (`/organization/quotes`)
 5. Finanzas (`/organization/finance`)
 6. ~~Proyectos (`/organization/projects`)~~ ✅
-7. Identidad (`/organization/identity`)
-8. Catálogo Técnico (`/organization/catalog`)
-9. ~~Contactos (`/organization/contacts`)~~ ✅
-10. Capital (`/organization/capital`)
-11. Gastos Generales (`/organization/general-costs`)
-12. Informes (`/organization/reports`)
-13. Avanzado (`/organization/advanced`)
-14. Equipo (`/organization/team`)
+7. Catálogo Técnico (`/organization/catalog`)
+8. ~~Contactos (`/organization/contacts`)~~ ✅
+9. Capital (`/organization/capital`)
+10. Gastos Generales (`/organization/general-costs`)
+11. Informes (`/organization/reports`)
+12. ~~Equipo (`/organization/team`)~~ ✅ (migrada a Configuración)
+13. ~~Configuración (`/organization/settings`)~~ ✅ — Incluye tabs: Información, Ubicación, Documentos PDF, Índices Económicos
 
 ### Proyecto
 15. ~~Visión General del Proyecto~~ (es el Dashboard del proyecto)
@@ -207,7 +206,7 @@ Para cada página, seguir este flujo:
 17. ~~Documentación del Proyecto~~  ✅
 18. Presupuestos del Proyecto
 19. Finanzas del Proyecto
-20. ~~Información~~ (migrada a `/organization/projects/[projectId]`)
+20. ~~Información~~ (migrada a `/organization/projects/[projectId]`) ✅
 21. Salud
 22. Tareas
 23. Materiales

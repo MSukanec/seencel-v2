@@ -31,7 +31,7 @@ Almacenados en columna `features` de tabla `plans`.
   "max_project_boards": 1,
   "max_active_projects": 2,
   "custom_pdf_templates": false,
-  "custom_portal_branding": false,
+  "custom_project_branding": false,
   "custom_insight_thresholds": false
 }
 ```

@@ -1,0 +1,151 @@
+---
+title: Índices Económicos
+description: Cómo usar los índices económicos en SEENCEL para ajustar presupuestos, contratos y costos de obra.
+---
+
+# Índices Económicos
+
+Los **índices económicos** son indicadores numéricos que reflejan cómo cambian los precios en la industria de la construcción a lo largo del tiempo. En SEENCEL podés registrarlos, actualizarlos periódicamente y usarlos para mantener tus presupuestos y contratos al día con la realidad del mercado.
+
+---
+
+## ¿Para qué sirven?
+
+En la construcción, los costos de materiales, mano de obra, equipos y servicios cambian constantemente. Un presupuesto que hiciste hace 6 meses puede estar completamente desactualizado. Los índices económicos te permiten:
+
+- **Ajustar presupuestos y certificados de obra**: Si firmaste un contrato en enero y certificás en julio, podés calcular automáticamente cuánto aumentó cada componente usando la variación del índice.
+- **Calcular redeterminaciones de precio**: Aplicar fórmulas polinómicas (la clásica fórmula de ajuste por variación de precios) usando los distintos componentes de un índice oficial.
+- **Monitorear la inflación sectorial**: Ver mes a mes cómo evolucionan los costos con variaciones porcentuales automáticas.
+- **Comparar períodos**: Saber cuánto costaba algo en un momento dado vs. otro, ajustado por el índice de referencia.
+
+<Callout type="tip" title="¿Por qué no alcanza con usar el IPC?">
+El IPC mide la inflación general, pero los costos de la construcción tienen su propia dinámica. El CAC y el ICC miden específicamente cómo varían los insumos de obra: materiales, mano de obra, equipos. Por eso en la industria se usan índices sectoriales.
+</Callout>
+
+---
+
+## ¿Qué índices puedo usar?
+
+### Índices oficiales (reales)
+
+Podés cargar los valores publicados por organismos oficiales:
+
+| Índice | Emisor | Frecuencia | Componentes típicos |
+|--------|--------|------------|---------------------|
+| **CAC** | Cámara Argentina de la Construcción | Mensual | Nivel General, Materiales, Mano de Obra, Gastos Generales, Equipos |
+| **ICC** | INDEC | Mensual | Nivel General, Materiales, Mano de Obra, Gastos Generales |
+| **IPC** | INDEC | Mensual | Nivel General (índice único) |
+
+<Callout type="info" title="Plantilla ICC">
+SEENCEL incluye una plantilla predefinida con los componentes oficiales del ICC (INDEC). Al crear un nuevo índice, podés usar el botón **"Usar Plantilla"** para cargar automáticamente los 4 componentes estándar.
+</Callout>
+
+### Índices personalizados
+
+No estás limitado a los índices oficiales. Podés crear **tus propios índices** con los componentes que necesites:
+
+- Un índice de **costos internos** para tu empresa
+- Un índice de **precios de materiales** específico de tu zona
+- Un índice de **mano de obra** ajustado a tu convenio colectivo
+- Cualquier otro indicador que quieras trackear periódicamente
+
+---
+
+## ¿Cómo funcionan los componentes?
+
+Cada índice puede tener uno o más **componentes**. Los componentes son las variables individuales que componen el índice.
+
+**Ejemplo del ICC (INDEC):**
+
+| Componente | Es Principal | Uso |
+|------------|:------------:|-----|
+| Nivel General | ✅ | Valor de referencia principal, obligatorio al cargar valores |
+| Materiales | | Se usa en fórmulas polinómicas para ajustar insumos |
+| Mano de Obra | | Se usa para ajustar costos laborales |
+| Gastos Generales | | Se usa para ajustar gastos indirectos |
+
+El **componente principal** es obligatorio: cuando cargás valores mensuales, al menos ese debe tener un número. Los demás componentes son opcionales y se usan cuando necesitás aplicar ajustes más finos (fórmulas polinómicas con distintos coeficientes por rubro).
+
+---
+
+## Cómo crear un índice
+
+1. Andá a **Configuración → Índices Económicos**
+2. Hacé click en **"Crear Índice"**
+3. Completá:
+   - **Nombre**: Cómo se llama tu índice (ej: "CAC - Construcción")
+   - **Periodicidad**: Mensual, Trimestral o Anual
+   - **Fuente**: De dónde sacás los datos (ej: "INDEC", "CAC", "Interno")
+   - **Año Base** *(opcional)*: El año de referencia del índice
+4. Agregá los **componentes** que necesites, marcando uno como principal
+5. O usá el botón **"Usar Plantilla"** para cargar rápidamente la estructura del ICC
+
+<Callout type="info" title="Clave del componente">
+Cada componente tiene una **clave** (ej: `nivel_general`, `materiales`). Esta clave se genera automáticamente a partir del nombre y se usa internamente para vincular valores con componentes. No la vas a ver en la interfaz pero es importante que no se repita dentro del mismo índice.
+</Callout>
+
+---
+
+## Cómo cargar valores
+
+Una vez creado el índice, hacé click en la card para entrar a la **vista de valores**:
+
+1. Click en **"Agregar Valor"**
+2. Seleccioná el **período** (año y mes o trimestre, según la periodicidad)
+3. Ingresá los **valores numéricos** para cada componente
+   - El componente principal es obligatorio
+   - Los demás son opcionales
+4. Opcionalmente agregá:
+   - **URL de Fuente**: Link a la publicación oficial (para tener referencia)
+   - **Notas**: Cualquier aclaración relevante
+
+Los valores se muestran en una tabla cronológica con la **variación porcentual** calculada automáticamente respecto al período anterior.
+
+---
+
+## ¿Dónde se van a usar en SEENCEL?
+
+Los índices que cargues en Configuración se podrán usar en distintos módulos de la plataforma:
+
+| Módulo | Uso del índice |
+|--------|---------------|
+| **Presupuestos** | Ajustar montos entre la fecha de presupuesto y la fecha de certificación |
+| **Contratos** | Calcular redeterminaciones de precio usando fórmulas polinómicas |
+| **Certificados de obra** | Aplicar coeficientes de ajuste automáticos basados en la variación del índice |
+| **Análisis financiero** | Comparar costos reales vs. costos ajustados por inflación |
+
+<Callout type="warning" title="En desarrollo">
+La integración automática con presupuestos y certificados está en desarrollo. Por ahora, podés consultar los valores cargados y usarlos como referencia para tus cálculos manuales. Próximamente SEENCEL aplicará los ajustes directamente.
+</Callout>
+
+---
+
+## Ejemplo práctico
+
+Supongamos que firmaste un contrato de obra en **enero 2026** por $100.000.000 y necesitás ajustarlo al **mes de junio 2026** usando el ICC:
+
+1. Cargás el ICC con sus 4 componentes
+2. Registrás los valores de enero (base) y junio (actual)
+3. Si el Nivel General pasó de **1.250** a **1.420**, la variación es del **13,6%**
+4. El monto ajustado sería: $100.000.000 × 1,136 = **$113.600.000**
+
+Con fórmulas polinómicas más detalladas, podés usar cada componente por separado con distintos coeficientes según los rubros del contrato.
+
+---
+
+## Preguntas frecuentes
+
+### ¿Puedo tener más de un índice?
+Sí, podés crear todos los que necesites. Es habitual tener el CAC, el ICC y quizás alguno personalizado.
+
+### ¿Los valores se descargan automáticamente?
+No, por ahora los valores se cargan manualmente. Los organismos oficiales publican los índices en sus sitios web y vos los transcribís en SEENCEL. Podés guardar la URL de la fuente para referencia.
+
+### ¿Puedo editar o borrar valores ya cargados?
+Sí, cada fila tiene un menú con opciones de editar y eliminar. Al eliminar, el valor se borra permanentemente.
+
+### ¿El componente principal es obligatorio?
+Sí. Siempre debe haber al menos un componente marcado como principal, y su valor es obligatorio al cargar datos de un período.
+
+### ¿Puedo cambiar los componentes después de crear el índice?
+Actualmente podés editar el nombre, la periodicidad y la fuente del índice, pero los componentes se definen al momento de la creación. Si necesitás cambiarlos, podés crear un nuevo índice con la estructura correcta.

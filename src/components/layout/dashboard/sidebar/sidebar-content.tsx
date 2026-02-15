@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useLayoutStore, NavigationContext } from "@/stores/layout-store";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { useRouter as useNextRouter } from "next/navigation";
-import { SidebarContextButton, SidebarAvatarButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
+import { SidebarContextButton, SidebarBrandButton, SidebarNavButton, SidebarNotificationsButton, SidebarAdminButton } from "./buttons";
 import { SidebarAccordionGroups } from "./sidebar-accordion";
 import { SidebarPlanButton } from "./plan-button";
 import { getPlanAccentVars } from "@/components/shared/plan-badge";
@@ -449,17 +449,30 @@ export function SidebarContent({
                                             </SidebarTooltip>
                                         ))}
                                     </div>
-                                    {/* Visión General — below quick access, same style as nav buttons */}
-                                    <div className="mt-1">
-                                        <SidebarNavButton
-                                            icon={LayoutDashboard}
-                                            label="Visión General"
-                                            href="/organization"
-                                            isActive={pathname === '/organization'}
-                                            isExpanded={true}
-                                            onClick={onLinkClick}
-                                        />
-                                    </div>
+                                </div>
+
+                                {/* Visión General — styled as card matching accordion items */}
+                                <div
+                                    className={cn(
+                                        "rounded-lg",
+                                        "bg-sidebar-accent/50",
+                                        "border border-sidebar-border/40",
+                                        "px-0.5 py-0.5",
+                                    )}
+                                    style={{
+                                        boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
+                                        borderLeftColor: "var(--plan-border, rgba(255,255,255,0.06))",
+                                        borderLeftWidth: "2px",
+                                    }}
+                                >
+                                    <SidebarNavButton
+                                        icon={LayoutDashboard}
+                                        label="Visión General"
+                                        href="/organization"
+                                        isActive={pathname === '/organization'}
+                                        isExpanded={isExpanded}
+                                        onClick={onLinkClick}
+                                    />
                                 </div>
 
                                 {/* Unified Nav Items with Accordion (exclude standalone 'principal' group) */}
@@ -536,19 +549,18 @@ export function SidebarContent({
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />
 
+                            {/* Hub Button — visible for all users */}
+                            <SidebarNavButton
+                                icon={LayoutDashboard}
+                                label="Volver al Hub"
+                                href={"/organization" as any}
+                                isActive={false}
+                                isExpanded={isExpanded}
+                                onClick={onLinkClick}
+                            />
+
                             {/* Plan Badge — full width */}
                             <SidebarPlanButton isExpanded={isExpanded} />
-
-                            {/* Subtle separator */}
-                            <div className="border-t border-sidebar-border/30" />
-
-                            {/* User Avatar Button */}
-                            <SidebarAvatarButton
-                                avatarUrl={user?.avatar_url}
-                                name={user?.full_name || "Usuario"}
-                                email={user?.email}
-                                isExpanded={isExpanded}
-                            />
                         </div>
                     )}
                 </div>

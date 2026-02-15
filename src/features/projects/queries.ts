@@ -74,7 +74,7 @@ export async function getSidebarProjects(organizationId: string) {
     // Use projects_view which joins project_settings for color fields
     const { data, error } = await supabase
         .from('projects_view')
-        .select('id, name, status, organization_id, color, custom_color_hex, use_custom_color, image_url')
+        .select('id, name, status, organization_id, color, custom_color_hex, use_custom_color, image_url, image_palette, use_palette_theme')
         .eq('organization_id', organizationId)
         .neq('status', 'completed')
         .order('last_active_at', { ascending: false, nullsFirst: false });
@@ -95,6 +95,7 @@ export async function getProjectById(projectId: string) {
         .select(`
             *,
             project_data (*),
+            project_settings (*),
             project_types (id, name),
             project_modalities (id, name)
         `)

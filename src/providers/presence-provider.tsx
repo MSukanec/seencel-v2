@@ -85,14 +85,14 @@ function deriveViewName(pathname: string): string {
         '/organization/finance': 'Finanzas',
         '/organization/general-costs': 'Gastos Generales',
         '/organization/capital': 'Capital',
-        '/organization/identity': 'Identidad',
+        '/organization/settings': 'Configuración',
         '/organization/planner': 'Planificador',
         '/organization/projects': 'Proyectos',
         '/organization/quotes': 'Presupuestos',
         '/organization/reports': 'Reportes',
         '/organization/files': 'Archivos',
         '/organization/team': 'Equipo',
-        '/organization/advanced': 'Avanzado',
+
 
         // ── Academy ──
         '/academy/my-courses': 'Academia - Mis Cursos',

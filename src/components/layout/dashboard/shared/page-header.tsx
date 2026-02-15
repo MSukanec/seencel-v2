@@ -6,6 +6,7 @@ import { useSidebarNavigation } from "@/hooks/use-sidebar-navigation";
 import { usePathname } from "next/navigation";
 import { CurrencyModeSelector } from "@/components/shared/currency-mode-selector";
 import { HeaderOrgProjectSelector } from "@/components/layout/dashboard/shared/header-org-project-selector";
+import { HeaderAvatarButton } from "@/components/layout/dashboard/shared/header-avatar-button";
 
 export interface BreadcrumbItem {
     label: string | React.ReactNode
@@ -119,14 +120,15 @@ export function PageHeader({
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
-                        {/* Org/Project selector + Currency selector */}
-                        {(pathname.includes('/organization') || pathname.includes('/organizacion') || pathname.includes('/project') || pathname.includes('/proyecto')) && (
-                            <>
-                                <HeaderOrgProjectSelector />
-                                <CurrencyModeSelector />
-                            </>
-                        )}
+                        {/* Org/Project selector (auto-hides on org-scoped pages) + Currency selector */}
+                        <HeaderOrgProjectSelector />
+                        <CurrencyModeSelector />
                         {actions}
+
+                        {/* User Avatar — always last */}
+                        <div className="ml-1 border-l border-border/50 pl-3">
+                            <HeaderAvatarButton />
+                        </div>
                     </div>
                 </div>
 

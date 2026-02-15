@@ -74,7 +74,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
         }
 
         revalidatePath('/organization');
-        revalidatePath('/organization/identity');
+        revalidatePath('/organization/settings');
         revalidatePath('/hub'); // Refresh sidebar org selector
         revalidatePath('/', 'layout'); // Refresh entire layout for sidebar
         return { success: true };

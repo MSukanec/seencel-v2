@@ -59,7 +59,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         // 6. Clients (only id + name for dropdowns)
         supabase
             .from('project_clients_view')
-            .select('id, contact_full_name, company_name, project_id')
+            .select('id, contact_full_name, contact_company_name, project_id')
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
             .order('contact_full_name', { ascending: true }),
@@ -112,7 +112,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
     // Format clients (minimal for dropdowns)
     const clients = (clientsResult.data || []).map((c: any) => ({
         id: c.id,
-        name: c.contact_full_name || c.company_name || 'Sin nombre',
+        name: c.contact_full_name || c.contact_company_name || 'Sin nombre',
         project_id: c.project_id,
     }));
 

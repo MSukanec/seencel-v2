@@ -7,14 +7,15 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { Link } from "@/i18n/routing";
+import { useRouter } from "@/i18n/routing";
 import { usePathname } from "next/navigation";
-import { ChevronsUpDown, Briefcase, Check, Plus, Crown } from "lucide-react";
+import { ChevronsUpDown, Check, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getStorageUrl } from "@/lib/storage-utils";
-import { useSidebarData } from "@/hooks/use-sidebar-data";
+import { useLayoutData } from "@/hooks/use-layout-data";
 import { useLayoutStore, useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
+import { useThemeCustomization } from "@/stores/theme-store";
 
 // Preset colors for projects
 const PROJECT_COLORS: Record<string, string> = {
@@ -33,6 +34,13 @@ interface ProjectLike {
     use_custom_color?: boolean;
     image_path?: string | null;
     status?: string | null;
+    image_palette?: {
+        primary?: string;
+        secondary?: string;
+        accent?: string;
+        background?: string;
+    } | null;
+    use_palette_theme?: boolean;
 }
 
 function getProjectColor(project: ProjectLike | null): string {
@@ -59,30 +67,39 @@ export function HeaderOrgProjectSelector() {
     const pathname = usePathname();
 
     // Get org/project data
-    const { currentOrg, currentProject, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useSidebarData();
+    const { currentOrg, currentProject, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useLayoutData();
     const showProjectAvatar = useLayoutStore(s => s.sidebarProjectAvatars);
     const activeProjectId = useActiveProjectId();
     const { setActiveProjectId } = useLayoutActions();
+    const { resolveThemeForProject, resetTheme } = useThemeCustomization();
+    const router = useRouter();
 
-    // Only show in org/project routes
-    const isOrgOrProject = pathname.includes('/organization') || pathname.includes('/organizacion') ||
-        pathname.includes('/project') || pathname.includes('/proyecto');
+    // ── Org-only route prefixes (selector HIDDEN) ──
+    // These pages show org-wide data and the project context is irrelevant.
+    // All other /organization routes show the selector (Visión General, Finanzas, 
+    // Presupuestos, Construcción, Planner, Documentación, etc.)
+    const ORG_ONLY_PREFIXES = [
+        '/organization/settings', '/organizacion/configuracion',
+        '/organization/contacts', '/organizacion/contactos',
+        '/organization/catalog', '/organizacion/catalogo',
+        '/organization/reports', '/organizacion/informes',
+        '/organization/projects', '/organizacion/proyectos',
+        '/organization/team', '/organizacion/equipo',
+        '/organization/capital', '/organizacion/capital',
+    ];
 
-    // Sync project selection when navigating to /project/[id] via URL
-    React.useEffect(() => {
-        const projectMatch = pathname.match(/\/project\/([^/]+)/);
-        if (projectMatch) {
-            const urlProjectId = projectMatch[1];
-            if (urlProjectId && currentProject?.id !== urlProjectId) {
-                const projectInList = projects.find((p: any) => p.id === urlProjectId);
-                if (projectInList) {
-                    sidebarProjectChange(urlProjectId);
-                }
-            }
-        }
-    }, [pathname, currentProject?.id, projects, sidebarProjectChange]);
+    const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/)/, '');
+    const isOrgRoute = pathWithoutLocale.startsWith('/organization') || pathWithoutLocale.startsWith('/organizacion');
 
-    if (!isOrgOrProject || !currentOrg) return null;
+    // Project detail pages (/organization/projects/[id]) ARE project-scoped, so exclude from org-only
+    const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/[^/]+/.test(pathWithoutLocale);
+
+    const isOrgOnly = !isProjectDetailPage && ORG_ONLY_PREFIXES.some(prefix =>
+        pathWithoutLocale === prefix || pathWithoutLocale.startsWith(prefix + '/')
+    );
+
+    // Hide if: not an org route at all, or it's an org-only page
+    if (!isOrgRoute || isOrgOnly || !currentOrg) return null;
 
     const activeProjects = (projects || []).filter((p: ProjectLike) => !p.status || p.status === 'active');
     const selectedProject = activeProjectId
@@ -93,6 +110,7 @@ export function HeaderOrgProjectSelector() {
 
     const handleSelectOrg = () => {
         setActiveProjectId(null);
+        resetTheme();
         setOpen(false);
     };
 
@@ -100,6 +118,19 @@ export function HeaderOrgProjectSelector() {
         setActiveProjectId(projectId);
         saveProjectPreference(projectId);
         sidebarProjectChange(projectId);
+
+        // Resolve theme for the selected project
+        const project = activeProjects.find((p: ProjectLike) => p.id === projectId);
+        if (project) {
+            resolveThemeForProject(project);
+        }
+
+        // Context-aware redirect: if on project detail page, navigate to the new project
+        const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/([^/]+)/.test(pathname);
+        if (isProjectDetailPage) {
+            router.push({ pathname: '/organization/projects/[projectId]', params: { projectId } });
+        }
+
         setOpen(false);
     };
 
@@ -193,9 +224,8 @@ export function HeaderOrgProjectSelector() {
 
                 {/* Projects Section */}
                 <div>
-                    <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        <Briefcase className="h-3 w-3" />
-                        Proyectos activos
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Proyectos Activos
                     </div>
                     <ScrollArea className="max-h-[200px]">
                         {activeProjects.length === 0 ? (
@@ -223,15 +253,6 @@ export function HeaderOrgProjectSelector() {
                         )}
                     </ScrollArea>
 
-                    {/* New Project Button */}
-                    <Link
-                        href="/organization/projects"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-2 w-full px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors text-muted-foreground mt-1"
-                    >
-                        <Plus className="h-4 w-4" />
-                        <span>Nuevo proyecto</span>
-                    </Link>
                 </div>
             </PopoverContent>
         </Popover>

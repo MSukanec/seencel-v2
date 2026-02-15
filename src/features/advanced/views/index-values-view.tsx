@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, TrendingUp, TrendingDown, Minus, Calendar, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { IndexValueForm } from "../components/forms/index-value-form";
+import { AdvancedIndexValueForm } from "../forms/advanced-index-value-form";
 import { getIndexValues } from "../queries";
 import { deleteIndexValueAction } from "../actions";
 import { toast } from "sonner";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import type { EconomicIndexType, EconomicIndexValue } from "../types";
 import { MONTH_NAMES, QUARTER_NAMES } from "../types";
 import {
@@ -20,6 +20,16 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 
 interface IndexValuesViewProps {
@@ -69,19 +79,26 @@ export function IndexValuesView({
     indexType,
     onBack,
 }: IndexValuesViewProps) {
-    const { openModal, closeModal } = useModal();
-    const router = useRouter();
-    const [values, setValues] = useState<EconomicIndexValue[]>([]);
+    const { openModal } = useModal();
+    const [serverValues, setServerValues] = useState<EconomicIndexValue[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [valueToDelete, setValueToDelete] = useState<EconomicIndexValue | null>(null);
 
     const components = indexType.components || [];
     const mainComponent = components.find(c => c.is_main);
+
+    // Optimistic list for values
+    const { optimisticItems: values, removeItem } = useOptimisticList<EconomicIndexValue>({
+        items: serverValues,
+        getItemId: (item) => item.id,
+    });
 
     useEffect(() => {
         async function fetchValues() {
             setIsLoading(true);
             const data = await getIndexValues(indexType.id);
-            setValues(data);
+            setServerValues(data);
             setIsLoading(false);
         }
         fetchValues();
@@ -89,15 +106,8 @@ export function IndexValuesView({
 
     const handleAddValue = () => {
         openModal(
-            <IndexValueForm
+            <AdvancedIndexValueForm
                 indexType={indexType}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                    // Refetch values
-                    getIndexValues(indexType.id).then(setValues);
-                }}
-                onCancel={closeModal}
             />,
             {
                 title: "Agregar Valor",
@@ -109,15 +119,9 @@ export function IndexValuesView({
 
     const handleEditValue = (value: EconomicIndexValue) => {
         openModal(
-            <IndexValueForm
+            <AdvancedIndexValueForm
                 indexType={indexType}
                 initialData={value}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                    getIndexValues(indexType.id).then(setValues);
-                }}
-                onCancel={closeModal}
             />,
             {
                 title: "Editar Valor",
@@ -127,16 +131,27 @@ export function IndexValuesView({
         );
     };
 
-    const handleDeleteValue = async (value: EconomicIndexValue) => {
-        if (!confirm(`¿Eliminar el registro de ${formatPeriod(value, indexType.periodicity)}?`)) return;
+    const handleDeleteClick = (value: EconomicIndexValue) => {
+        setValueToDelete(value);
+        setDeleteDialogOpen(true);
+    };
 
-        try {
-            await deleteIndexValueAction(value.id);
-            toast.success("Valor eliminado");
-            getIndexValues(indexType.id).then(setValues);
-        } catch {
-            toast.error("Error al eliminar");
-        }
+    const handleDeleteConfirm = () => {
+        if (!valueToDelete) return;
+        const idToDelete = valueToDelete.id;
+
+        setDeleteDialogOpen(false);
+        setValueToDelete(null);
+
+        // Optimistic: remove immediately, server action runs in background
+        removeItem(idToDelete, async () => {
+            try {
+                await deleteIndexValueAction(idToDelete);
+                toast.success("Valor eliminado");
+            } catch {
+                toast.error("Error al eliminar, se restauró el valor");
+            }
+        });
     };
 
     if (isLoading) {
@@ -148,123 +163,147 @@ export function IndexValuesView({
     }
 
     return (
-        <div className="space-y-6">
-            <Toolbar
-                portalToHeader
-                leftActions={
-                    <Button variant="ghost" size="sm" onClick={onBack}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Volver
-                    </Button>
-                }
-                actions={[
-                    {
-                        label: "Agregar Valor",
-                        icon: Plus,
-                        onClick: handleAddValue,
+        <>
+            <div className="space-y-6">
+                <Toolbar
+                    portalToHeader
+                    leftActions={
+                        <Button variant="ghost" size="sm" onClick={onBack}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver
+                        </Button>
                     }
-                ]}
-            />
+                    actions={[
+                        {
+                            label: "Agregar Valor",
+                            icon: Plus,
+                            onClick: handleAddValue,
+                        }
+                    ]}
+                />
 
-            {/* Header */}
-            <div className="flex items-center gap-4 pb-4 border-b">
-                <div>
-                    <h2 className="text-2xl font-bold">{indexType.name}</h2>
-                    {indexType.description && (
-                        <p className="text-muted-foreground">{indexType.description}</p>
-                    )}
+                {/* Header */}
+                <div className="flex items-center gap-4 pb-4 border-b">
+                    <div>
+                        <h2 className="text-2xl font-bold">{indexType.name}</h2>
+                        {indexType.description && (
+                            <p className="text-muted-foreground">{indexType.description}</p>
+                        )}
+                    </div>
+                    <Badge variant="secondary">
+                        {indexType.source || 'Manual'}
+                    </Badge>
                 </div>
-                <Badge variant="secondary">
-                    {indexType.source || 'Manual'}
-                </Badge>
+
+                {values.length === 0 ? (
+                    <div className="h-full flex items-center justify-center min-h-[300px]">
+                        <ViewEmptyState
+                            mode="empty"
+                            icon={Calendar}
+                            viewName="Valores del Índice"
+                            featureDescription={`Agregá el primer valor para ${indexType.name}. Los valores se registran periódicamente según la frecuencia configurada del índice.`}
+                            onAction={handleAddValue}
+                            actionLabel="Agregar Valor"
+                        />
+                    </div>
+                ) : (
+                    /* Values Table */
+                    <div className="border rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-muted/50">
+                                    <tr>
+                                        <th className="text-left px-4 py-3 font-medium text-sm">Período</th>
+                                        {components.map(comp => (
+                                            <th key={comp.id} className="text-right px-4 py-3 font-medium text-sm">
+                                                {comp.name}
+                                                {comp.is_main && <Badge variant="outline" className="ml-2 text-[10px]">Principal</Badge>}
+                                            </th>
+                                        ))}
+                                        <th className="text-right px-4 py-3 font-medium text-sm">Var %</th>
+                                        <th className="w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {values.map((value, index) => {
+                                        const previousValue = values[index + 1];
+                                        const mainKey = mainComponent?.key || 'general';
+                                        const variation = calculateVariation(
+                                            value.values[mainKey],
+                                            previousValue?.values[mainKey]
+                                        );
+
+                                        return (
+                                            <tr key={value.id} className="hover:bg-muted/30">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="font-medium">
+                                                            {formatPeriod(value, indexType.periodicity)}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {components.map(comp => (
+                                                    <td key={comp.id} className="text-right px-4 py-3 font-mono">
+                                                        {value.values[comp.key]?.toLocaleString('es-AR', { maximumFractionDigits: 2 }) || '—'}
+                                                    </td>
+                                                ))}
+                                                <td className="text-right px-4 py-3">
+                                                    <VariationBadge variation={variation} />
+                                                </td>
+                                                <td className="px-2">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEditValue(value)}>
+                                                                <Pencil className="mr-2 h-4 w-4" />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteClick(value)}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {values.length === 0 ? (
-                <div className="h-full flex items-center justify-center min-h-[300px]">
-                    <ViewEmptyState
-                        mode="empty"
-                        icon={Calendar}
-                        viewName="Valores del Índice"
-                        featureDescription={`Agregá el primer valor para ${indexType.name}`}
-                        onAction={handleAddValue}
-                        actionLabel="Agregar Valor"
-                    />
-                </div>
-            ) : (
-                /* Values Table */
-                <div className="border rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-muted/50">
-                                <tr>
-                                    <th className="text-left px-4 py-3 font-medium text-sm">Período</th>
-                                    {components.map(comp => (
-                                        <th key={comp.id} className="text-right px-4 py-3 font-medium text-sm">
-                                            {comp.name}
-                                            {comp.is_main && <Badge variant="outline" className="ml-2 text-[10px]">Principal</Badge>}
-                                        </th>
-                                    ))}
-                                    <th className="text-right px-4 py-3 font-medium text-sm">Var %</th>
-                                    <th className="w-12"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {values.map((value, index) => {
-                                    const previousValue = values[index + 1];
-                                    const mainKey = mainComponent?.key || 'general';
-                                    const variation = calculateVariation(
-                                        value.values[mainKey],
-                                        previousValue?.values[mainKey]
-                                    );
-
-                                    return (
-                                        <tr key={value.id} className="hover:bg-muted/30">
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-medium">
-                                                        {formatPeriod(value, indexType.periodicity)}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            {components.map(comp => (
-                                                <td key={comp.id} className="text-right px-4 py-3 font-mono">
-                                                    {value.values[comp.key]?.toLocaleString('es-AR', { maximumFractionDigits: 2 }) || '—'}
-                                                </td>
-                                            ))}
-                                            <td className="text-right px-4 py-3">
-                                                <VariationBadge variation={variation} />
-                                            </td>
-                                            <td className="px-2">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleEditValue(value)}>
-                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                            Editar
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleDeleteValue(value)}
-                                                            className="text-destructive focus:text-destructive"
-                                                        >
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Eliminar
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-        </div>
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar valor?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Se eliminará el registro de <strong>{valueToDelete ? formatPeriod(valueToDelete, indexType.periodicity) : ''}</strong>.
+                            Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

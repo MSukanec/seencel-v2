@@ -2,6 +2,7 @@
 
 import { Table } from "@tanstack/react-table";
 import { Search, X, Plus, MoreHorizontal, LayoutTemplate, Lock, BookOpen, Trash2, CheckSquare } from "lucide-react";
+import { PlanBadge } from "@/components/shared/plan-badge";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -381,11 +382,12 @@ export function Toolbar<TData>({
                 <Icon className="h-6 w-6" />
                 {/* Lock badge overlay for locked state */}
                 {locked && (
-                    <div
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-md"
-                        style={{ backgroundColor: 'var(--plan-pro)' }}
-                    >
-                        <Lock className="h-3 w-3 text-white" />
+                    <div className="absolute -top-1.5 -right-1.5 shadow-md">
+                        <PlanBadge
+                            planSlug={primaryAction?.featureGuard?.requiredPlan || "PRO"}
+                            micro
+                            linkToPricing={false}
+                        />
                     </div>
                 )}
             </button>
@@ -402,8 +404,14 @@ export function Toolbar<TData>({
                         </SheetTrigger>
                         <SheetContent side="bottom" className="rounded-t-3xl outline-none">
                             <SheetHeader className="mb-4 text-left px-6 pt-6">
-                                <SheetTitle className="flex items-center gap-2">
-                                    <Lock className="h-5 w-5" style={{ color: 'var(--plan-pro)' }} />
+                                <SheetTitle className="flex items-center gap-3">
+                                    <PlanBadge
+                                        planSlug={primaryAction.featureGuard?.requiredPlan || "PRO"}
+                                        compact
+                                        showIcon
+                                        showLabel={false}
+                                        linkToPricing={false}
+                                    />
                                     Función Bloqueada
                                 </SheetTitle>
                             </SheetHeader>
@@ -412,12 +420,14 @@ export function Toolbar<TData>({
                                     {primaryAction.featureGuard?.customMessage ||
                                         `"${primaryAction.featureGuard?.featureName}" requiere el plan ${primaryAction.featureGuard?.requiredPlan || "PRO"}.`}
                                 </p>
-                                <ToolbarButton
-                                    className="w-full h-12"
-                                    onClick={() => window.location.href = '/pricing'}
-                                >
-                                    Actualizar a {primaryAction.featureGuard?.requiredPlan || "PRO"}
-                                </ToolbarButton>
+                                <Link href="/pricing" className="block no-underline">
+                                    <PlanBadge
+                                        planSlug={primaryAction.featureGuard?.requiredPlan || "PRO"}
+                                        compact
+                                        linkToPricing={false}
+                                        className="w-full justify-center h-12"
+                                    />
+                                </Link>
                             </div>
                         </SheetContent>
                     </Sheet>

@@ -38,7 +38,7 @@ export default async function ClientPortalPage({ params }: PageProps) {
 
     // Find current plan and check if custom branding is allowed
     const currentPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
-    const canCustomize = currentPlan?.features?.custom_portal_branding ?? false;
+    const canCustomize = currentPlan?.features?.custom_project_branding ?? false;
 
     return (
         <Tabs defaultValue="design" syncUrl="view" className="h-full flex flex-col">

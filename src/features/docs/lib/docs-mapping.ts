@@ -52,6 +52,10 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/contacts': { slug: 'contactos/introduccion' },
     '/organizacion/contactos': { slug: 'contactos/introduccion' },
 
+    // Settings (Configuración) — Índices Económicos tab
+    '/organization/settings': { slug: 'indices-economicos' },
+    '/organizacion/configuracion': { slug: 'indices-economicos' },
+
     // Add more feature -> docs mappings here as documentation is created
 };
 

@@ -35,9 +35,9 @@ export const routing = defineRouting({
             es: '/organizacion/proyectos/[projectId]'
         },
 
-        '/organization/identity': {
-            en: '/organization/identity',
-            es: '/organizacion/identidad'
+        '/organization/settings': {
+            en: '/organization/settings',
+            es: '/organizacion/configuracion'
         },
         '/organization/contacts': {
             en: '/organization/contacts',
@@ -90,10 +90,7 @@ export const routing = defineRouting({
             en: '/organization/capital',
             es: '/organizacion/capital'
         },
-        '/organization/advanced': {
-            en: '/organization/advanced',
-            es: '/organizacion/avanzado'
-        },
+
         '/organization/reports': {
             en: '/organization/reports',
             es: '/organizacion/informes'

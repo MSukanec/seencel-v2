@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, Calendar, MoreHorizontal, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { IndexTypeForm } from "../components/forms/index-type-form";
+import { AdvancedIndexTypeForm } from "../forms/advanced-index-type-form";
 import { IndexValuesView } from "./index-values-view";
 import type { EconomicIndexType } from "../types";
 import { PERIODICITY_LABELS, MONTH_NAMES } from "../types";
 import { deleteIndexTypeAction } from "../actions";
 import { toast } from "sonner";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -143,23 +143,22 @@ export function AdvancedIndicesView({
     organizationId,
     indexTypes = [],
 }: AdvancedIndicesViewProps) {
-    const { openModal, closeModal } = useModal();
-    const router = useRouter();
+    const { openModal } = useModal();
     const [selectedIndexType, setSelectedIndexType] = useState<EconomicIndexType | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [indexToDelete, setIndexToDelete] = useState<EconomicIndexType | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
 
-    // Handlers
+    // Optimistic list for index types
+    const { optimisticItems, removeItem } = useOptimisticList<EconomicIndexType>({
+        items: indexTypes,
+        getItemId: (item) => item.id,
+    });
+
+    // Handlers — Semi-autónomo: forms manejan closeModal + router.refresh internamente
     const handleCreate = () => {
         openModal(
-            <IndexTypeForm
+            <AdvancedIndexTypeForm
                 organizationId={organizationId}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-                onCancel={closeModal}
             />,
             {
                 title: "Crear Índice",
@@ -171,14 +170,9 @@ export function AdvancedIndicesView({
 
     const handleEdit = (indexType: EconomicIndexType) => {
         openModal(
-            <IndexTypeForm
+            <AdvancedIndexTypeForm
                 organizationId={organizationId}
                 initialData={indexType}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
-                onCancel={closeModal}
             />,
             {
                 title: "Editar Índice",
@@ -193,21 +187,22 @@ export function AdvancedIndicesView({
         setDeleteDialogOpen(true);
     };
 
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = () => {
         if (!indexToDelete) return;
+        const idToDelete = indexToDelete.id;
 
-        setIsDeleting(true);
-        try {
-            await deleteIndexTypeAction(indexToDelete.id);
-            toast.success("Índice eliminado");
-            router.refresh();
-        } catch {
-            toast.error("Error al eliminar");
-        } finally {
-            setIsDeleting(false);
-            setDeleteDialogOpen(false);
-            setIndexToDelete(null);
-        }
+        setDeleteDialogOpen(false);
+        setIndexToDelete(null);
+
+        // Optimistic: remove immediately, server action runs in background
+        removeItem(idToDelete, async () => {
+            try {
+                await deleteIndexTypeAction(idToDelete);
+                toast.success("Índice eliminado");
+            } catch {
+                toast.error("Error al eliminar, se restauró el índice");
+            }
+        });
     };
 
     const handleSelect = (indexType: EconomicIndexType) => {
@@ -226,7 +221,7 @@ export function AdvancedIndicesView({
     }
 
     // Empty state
-    if (indexTypes.length === 0) {
+    if (optimisticItems.length === 0) {
         return (
             <>
                 <Toolbar
@@ -244,9 +239,10 @@ export function AdvancedIndicesView({
                         mode="empty"
                         icon={TrendingUp}
                         viewName="Índices Económicos"
-                        featureDescription="Los índices económicos (CAC, ICC, IPC) te permiten ajustar presupuestos y contratos según la inflación."
+                        featureDescription="Los índices económicos te permiten ajustar presupuestos y contratos según la inflación. Podés registrar índices oficiales como el CAC, ICC o IPC con sus componentes, o crear tus propios índices personalizados. Los valores que cargues se usarán para calcular redeterminaciones, actualizar costos y comparar la evolución de precios a lo largo del tiempo."
                         onAction={handleCreate}
                         actionLabel="Crear Índice"
+                        docsPath="/docs/indices-economicos"
                     />
                 </div>
             </>
@@ -269,7 +265,7 @@ export function AdvancedIndicesView({
 
                 {/* Index Types Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {indexTypes.map((indexType) => (
+                    {optimisticItems.map((indexType) => (
                         <IndexTypeCard
                             key={indexType.id}
                             indexType={indexType}
@@ -287,18 +283,17 @@ export function AdvancedIndicesView({
                     <AlertDialogHeader>
                         <AlertDialogTitle>¿Eliminar índice?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Se eliminará <strong>"{indexToDelete?.name}"</strong> junto con todos sus {indexToDelete?.values_count || 0} registros de valores.
+                            Se eliminará <strong>&quot;{indexToDelete?.name}&quot;</strong> junto con todos sus {indexToDelete?.values_count || 0} registros de valores.
                             Esta acción no se puede deshacer.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDeleteConfirm}
-                            disabled={isDeleting}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {isDeleting ? "Eliminando..." : "Eliminar"}
+                            Eliminar
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

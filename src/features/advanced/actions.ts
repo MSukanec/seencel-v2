@@ -72,7 +72,7 @@ export async function createIndexTypeAction(input: CreateIndexTypeInput) {
         }
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
     return indexType;
 }
 
@@ -101,7 +101,7 @@ export async function updateIndexTypeAction(
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
     return data;
 }
 
@@ -118,7 +118,7 @@ export async function deleteIndexTypeAction(id: string) {
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
 }
 
 // ==========================================
@@ -157,7 +157,7 @@ export async function createIndexValueAction(input: CreateIndexValueInput) {
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
     return data;
 }
 
@@ -187,7 +187,7 @@ export async function updateIndexValueAction(
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
     return data;
 }
 
@@ -204,7 +204,7 @@ export async function deleteIndexValueAction(id: string) {
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
 }
 
 // ==========================================
@@ -241,7 +241,7 @@ export async function createComponentAction(input: CreateComponentInput) {
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
     return data;
 }
 
@@ -258,5 +258,5 @@ export async function deleteComponentAction(id: string) {
         throw new Error(sanitizeError(error));
     }
 
-    revalidatePath('/organization/advanced');
+    revalidatePath('/organization/settings');
 }

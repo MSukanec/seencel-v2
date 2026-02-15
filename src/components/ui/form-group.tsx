@@ -59,8 +59,8 @@ export function FormGroup({
     return (
         <div className={cn("flex flex-col gap-2", className)} {...props}>
             {label && (
-                <div className="flex items-center gap-1.5 w-full">
-                    <Label htmlFor={htmlFor} className="text-foreground/80 w-full inline-flex items-center gap-0.5">
+                <div className="flex items-center gap-1.5">
+                    <Label htmlFor={htmlFor} className="text-foreground/80 inline-flex items-center gap-0.5">
                         {label}
                         {required && <span className="text-primary ml-1">*</span>}
                     </Label>

@@ -2,9 +2,9 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/routing';
 import { ArrowLeft, Home, LayoutDashboard, LifeBuoy } from 'lucide-react';
 
 export default function NotFound() {

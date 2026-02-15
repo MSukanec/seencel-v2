@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { MapPin, ArrowLeft, Building2, Hammer } from "lucide-react";
+import { MapPin, ArrowLeft, Building2, Hammer, Pencil } from "lucide-react";
 import { PlanBadge, FounderBadge } from "@/components/shared/plan-badge";
 import { cn } from "@/lib/utils";
 
 import { AvatarStack } from "@/components/ui/avatar-stack";
+import { useRouter } from "@/i18n/routing";
 import type { WidgetProps } from "@/components/widgets/grid/types";
 import { getOverviewHeroData } from "@/actions/widget-actions";
 
@@ -212,6 +213,7 @@ function GradientBackground() {
 export function OverviewHeroWidget({ initialData }: WidgetProps) {
     const activeProjectId = useActiveProjectId();
     const { setActiveProjectId } = useLayoutActions();
+    const router = useRouter();
     const [data, setData] = useState<HeroData | null>(initialData ?? null);
     const [hoveredProject, setHoveredProject] = useState<string | null>(null);
 
@@ -451,7 +453,7 @@ export function OverviewHeroWidget({ initialData }: WidgetProps) {
     return (
         <div
             className={cn(
-                "relative h-full w-full rounded-xl overflow-hidden",
+                "relative h-full w-full rounded-xl overflow-hidden group/name",
                 "border border-white/[0.08]",
             )}
         >
@@ -539,9 +541,29 @@ export function OverviewHeroWidget({ initialData }: WidgetProps) {
                     </div>
 
                     <div className="flex flex-col gap-1.5 min-w-0">
-                        <h2 className="text-xl font-bold text-white truncate leading-tight drop-shadow-md">
-                            {data.name}
-                        </h2>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h2 className="text-xl font-bold text-white truncate leading-tight drop-shadow-md">
+                                {data.name}
+                            </h2>
+                            {data.isProjectMode && activeProjectId && (
+                                <button
+                                    onClick={() => router.push(`/organization/projects/${activeProjectId}` as any)}
+                                    className={cn(
+                                        "shrink-0 w-7 h-7 rounded-full",
+                                        "bg-white/10 hover:bg-white/25 backdrop-blur-sm",
+                                        "border border-white/10 hover:border-white/25",
+                                        "flex items-center justify-center",
+                                        "text-white/0 group-hover/name:text-white/70 hover:!text-white",
+                                        "transition-all duration-200 hover:scale-110",
+                                        "opacity-0 group-hover/name:opacity-100",
+                                        "cursor-pointer"
+                                    )}
+                                    title="Ver detalle del proyecto"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                             {/* Plan Badge — only in Org mode */}
                             {!data.isProjectMode && (
