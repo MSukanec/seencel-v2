@@ -31,7 +31,7 @@ export const useLayoutStore = create<LayoutState>()(
             layoutMode: 'sidebar',
             activeContext: 'home',
             activeProjectId: null,
-            sidebarMode: 'expanded_hover',
+            sidebarMode: 'docked',
             sidebarProjectAvatars: true,
             headerTitle: null,
             actions: {
@@ -45,11 +45,12 @@ export const useLayoutStore = create<LayoutState>()(
         }),
         {
             name: 'seencel-layout',
+            version: 2, // Bump to force sidebarMode reset from old localStorage values
             partialize: (state) => ({
                 layoutMode: state.layoutMode,
                 activeContext: state.activeContext,
                 activeProjectId: state.activeProjectId,
-                sidebarMode: state.sidebarMode,
+                // sidebarMode intentionally NOT persisted — always 'docked' for now
                 sidebarProjectAvatars: state.sidebarProjectAvatars,
                 // headerTitle is not persisted as it depends on current page
             }),

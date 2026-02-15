@@ -205,6 +205,19 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_reports', { title: 'Informes', href: '/organization/reports', icon: FileChartColumn }),
                 ].filter((i): i is NavItem => i !== null),
             },
+            // Construcción
+            {
+                id: 'construccion',
+                label: 'Construcción',
+                items: [
+                    getItemStatus('sidebar_tasks', { title: 'Tareas', href: '/organization/construction-tasks', icon: ClipboardList }),
+                    getItemStatus('sidebar_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
+                    getItemStatus('sidebar_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
+                    getItemStatus('sidebar_subcontracts', { title: 'Subcontratos', href: '/organization/subcontracts', icon: Handshake }),
+                    getItemStatus('sidebar_sitelog', { title: tSidebar('items.sitelog'), href: '/organization/sitelog', icon: FileText }),
+                    getItemStatus('sidebar_health', { title: 'Salud', href: '/organization/health', icon: HeartPulse }),
+                ].filter((i): i is NavItem => i !== null),
+            },
             // Finanzas
             {
                 id: 'finanzas',
@@ -215,19 +228,6 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_general_costs', { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard }),
                     getItemStatus('sidebar_clients', { title: 'Clientes', href: '/organization/clients', icon: Banknote }),
                     getItemStatus('sidebar_portal', { title: 'Portal de Clientes', href: '/organization/portal', icon: Monitor }),
-                ].filter((i): i is NavItem => i !== null),
-            },
-            // Construcción
-            {
-                id: 'construccion',
-                label: 'Construcción',
-                items: [
-                    getItemStatus('sidebar_health', { title: 'Salud', href: '/organization/health', icon: HeartPulse }),
-                    getItemStatus('sidebar_tasks', { title: 'Tareas', href: '/organization/construction-tasks', icon: ClipboardList }),
-                    getItemStatus('sidebar_materials', { title: 'Materiales', href: '/organization/materials', icon: Package }),
-                    getItemStatus('sidebar_labor', { title: 'Mano de Obra', href: '/organization/labor', icon: HardHat }),
-                    getItemStatus('sidebar_subcontracts', { title: 'Subcontratos', href: '/organization/subcontracts', icon: Handshake }),
-                    getItemStatus('sidebar_sitelog', { title: tSidebar('items.sitelog'), href: '/organization/sitelog', icon: FileText }),
                 ].filter((i): i is NavItem => i !== null),
             },
         ];

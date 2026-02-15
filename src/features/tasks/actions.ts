@@ -1502,7 +1502,7 @@ export async function getExternalServices(): Promise<ExternalService[]> {
         .from("external_services")
         .select(`
             *,
-            contacts(name)
+            contacts!default_contact_id(name)
         `)
         .eq("organization_id", activeOrgId)
         .eq("is_deleted", false)
@@ -1608,8 +1608,8 @@ export async function getRecipeExternalServices(
         .from("task_recipe_external_services")
         .select(`
             *,
-            external_services!inner(name, modality, description),
-            contacts(name)
+            external_services!external_service_id(name, modality, description),
+            contacts!contact_id(name)
         `)
         .eq("recipe_id", recipeId)
         .eq("is_deleted", false);
