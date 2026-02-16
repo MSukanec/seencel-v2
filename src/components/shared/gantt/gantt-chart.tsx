@@ -519,55 +519,51 @@ export function GanttChart({
                                     </div>
                                 );
                             })}
+                            {/* Temporary connection line while dragging */}
+                            {connectingFrom && connectMousePos && (() => {
+                                const sourceItem = items.find(i => i.id === connectingFrom.id);
+                                const sourceIndex = items.findIndex(i => i.id === connectingFrom.id);
+                                if (!sourceItem || sourceIndex < 0) return null;
+                                const sourcePos = getBarPosition(sourceItem, sourceIndex);
+                                const GANTT_BAR_VERTICAL_PADDING = (GANTT_ROW_HEIGHT - 28) / 2;
+                                const startX = connectingFrom.side === "right"
+                                    ? sourcePos.x + sourcePos.width + 6
+                                    : sourcePos.x - 6;
+                                const startY = sourcePos.y + GANTT_BAR_VERTICAL_PADDING + 14; // center of bar
+                                return (
+                                    <svg
+                                        className="absolute inset-0 pointer-events-none"
+                                        width={totalWidth}
+                                        height={totalHeight}
+                                        style={{ zIndex: 50 }}
+                                    >
+                                        <line
+                                            x1={startX}
+                                            y1={startY}
+                                            x2={connectMousePos.x}
+                                            y2={connectMousePos.y}
+                                            className="stroke-primary"
+                                            strokeWidth="2"
+                                            strokeDasharray="6 3"
+                                            opacity="0.7"
+                                        />
+                                        <circle
+                                            cx={startX}
+                                            cy={startY}
+                                            r="4"
+                                            className="fill-primary"
+                                        />
+                                        <circle
+                                            cx={connectMousePos.x}
+                                            cy={connectMousePos.y}
+                                            r="4"
+                                            className="fill-primary"
+                                            opacity="0.5"
+                                        />
+                                    </svg>
+                                );
+                            })()}
                         </div>
-
-                        {/* Temporary connection line while dragging */}
-                        {connectingFrom && connectMousePos && (() => {
-                            const sourceItem = items.find(i => i.id === connectingFrom.id);
-                            const sourceIndex = items.findIndex(i => i.id === connectingFrom.id);
-                            if (!sourceItem || sourceIndex < 0) return null;
-                            const sourcePos = getBarPosition(sourceItem, sourceIndex);
-                            const GANTT_BAR_VERTICAL_PADDING = (GANTT_ROW_HEIGHT - 28) / 2;
-                            const startX = connectingFrom.side === "right"
-                                ? sourcePos.x + sourcePos.width + 6
-                                : sourcePos.x - 6;
-                            const startY = sourcePos.y + GANTT_BAR_VERTICAL_PADDING + 14; // center of bar
-                            return (
-                                <svg
-                                    className="absolute inset-0 pointer-events-none z-40"
-                                    style={{
-                                        width: "100%",
-                                        height: "100%",
-                                        minWidth: totalWidth,
-                                        minHeight: totalHeight,
-                                    }}
-                                >
-                                    <line
-                                        x1={startX}
-                                        y1={startY}
-                                        x2={connectMousePos.x}
-                                        y2={connectMousePos.y}
-                                        stroke="hsl(var(--primary))"
-                                        strokeWidth="2"
-                                        strokeDasharray="6 3"
-                                        opacity="0.7"
-                                    />
-                                    <circle
-                                        cx={startX}
-                                        cy={startY}
-                                        r="4"
-                                        fill="hsl(var(--primary))"
-                                    />
-                                    <circle
-                                        cx={connectMousePos.x}
-                                        cy={connectMousePos.y}
-                                        r="4"
-                                        fill="hsl(var(--primary))"
-                                        opacity="0.5"
-                                    />
-                                </svg>
-                            );
-                        })()}
                     </div>
                 </div>
             </div>

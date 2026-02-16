@@ -49,6 +49,7 @@ import { RecipeCard } from "@/features/tasks/components/recipe-card";
 import type { RecipeCardData, MaterialPriceInfo, LaborPriceInfo, ExternalServicePriceInfo } from "@/features/tasks/components/recipe-card";
 import { cn } from "@/lib/utils";
 import { StatCard, StatCardGroup } from "@/components/shared/stat-card";
+import { FreshnessDot } from "@/components/shared/price-pulse-popover";
 
 // ============================================================================
 // Types
@@ -545,7 +546,6 @@ export function TasksDetailRecipeView({
 
     const externalServicePriceMap = useMemo(() => {
         const map = new Map<string, ExternalServicePriceInfo>();
-        // External services have inline pricing (unit_price stored directly on the item)
         for (const recipeId of Object.keys(resourcesMap)) {
             for (const es of (resourcesMap[recipeId].externalServices || [])) {
                 if (es.unit_price != null && es.unit_price > 0) {
@@ -556,6 +556,7 @@ export function TasksDetailRecipeView({
                         serviceId: es.id,
                         organizationId: organizationId,
                         unitSymbol: es.unit_symbol,
+                        priceValidFrom: es.price_valid_from ?? null,
                     });
                 }
             }
@@ -596,6 +597,29 @@ export function TasksDetailRecipeView({
             return sum + (item.unit_price || 0);
         }, 0);
         return materialsTotal + laborTotal + externalServicesTotal;
+    }, [materialPriceMap, laborPriceMap, externalServicePriceMap]);
+
+    // Get the oldest price date across all resources of a recipe (for freshness semaphore)
+    const getOldestPriceDate = useCallback((data: RecipeCardData): string | null => {
+        const { resources } = data;
+        const dates: string[] = [];
+
+        for (const item of resources.materials) {
+            const priceInfo = materialPriceMap?.get(item.material_id);
+            if (priceInfo?.priceValidFrom) dates.push(priceInfo.priceValidFrom);
+        }
+        for (const item of resources.labor) {
+            const priceInfo = laborPriceMap?.get(item.labor_type_id);
+            if (priceInfo?.priceValidFrom) dates.push(priceInfo.priceValidFrom);
+        }
+        for (const es of (resources.externalServices || [])) {
+            const priceInfo = externalServicePriceMap?.get(es.id);
+            if (priceInfo?.priceValidFrom) dates.push(priceInfo.priceValidFrom);
+        }
+
+        if (dates.length === 0) return null;
+        dates.sort(); // ISO strings sort lexicographically
+        return dates[0]; // oldest date
     }, [materialPriceMap, laborPriceMap, externalServicePriceMap]);
 
     // ========================================================================
@@ -1044,9 +1068,10 @@ export function TasksDetailRecipeView({
                                 )}
                             </div>
 
-                            {/* Grand total */}
+                            {/* Grand total + freshness */}
                             {grandTotal > 0 && (
-                                <span className="hidden sm:block text-sm font-semibold text-foreground tabular-nums shrink-0">
+                                <span className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-foreground tabular-nums shrink-0">
+                                    <FreshnessDot validFrom={getOldestPriceDate(data)} />
                                     {formatCurrency(grandTotal)}
                                 </span>
                             )}

@@ -243,6 +243,7 @@ export interface TaskRecipeExternalService {
     unit_name?: string | null;
     unit_symbol?: string | null;
     currency_symbol?: string | null;
+    price_valid_from?: string | null;
 }
 
 /** Combined resources for a single recipe */

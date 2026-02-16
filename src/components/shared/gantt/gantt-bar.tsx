@@ -134,6 +134,12 @@ export const GanttBar = React.memo(function GanttBar({
             }}
             onClick={() => onClick?.(item.id)}
         >
+            {/* Invisible hover extender — catches mouse in the dot zone without changing visuals */}
+            <div
+                className="absolute pointer-events-auto"
+                style={{ inset: "-8px -24px" }}
+            />
+
             {/* Bar background */}
             <div
                 className={cn(

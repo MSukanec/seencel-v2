@@ -15,7 +15,7 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 import { GanttChart, GanttItem, GanttDependency } from "@/components/shared/gantt";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { getConstructionTaskColumns } from "../components/construction-tasks-columns";
-import { ContentLayout } from "@/components/layout";
+
 import { useModal } from "@/stores/modal-store";
 import { useActiveProjectId } from "@/stores/layout-store";
 import {
@@ -597,7 +597,7 @@ export function ConstructionTasksView({
 
             {/* Content */}
             {filteredTasks.length === 0 ? (
-                <ContentLayout variant="wide">
+                <>
                     {tasks.length === 0 ? (
                         <div className="min-h-full flex flex-col">
                             <ViewEmptyState
@@ -624,12 +624,12 @@ export function ConstructionTasksView({
                             />
                         </div>
                     )}
-                </ContentLayout>
+                </>
             ) : (
                 <>
                     {/* Gantt View */}
                     {viewMode === "gantt" && (
-                        <ContentLayout variant="full">
+                        <>
                             {ganttItems.length > 0 ? (
                                 <GanttChart
                                     items={ganttItems}
@@ -647,38 +647,34 @@ export function ConstructionTasksView({
                                     Las tareas necesitan fechas planificadas para mostrarse en el Gantt.
                                 </div>
                             )}
-                        </ContentLayout>
+                        </>
                     )}
 
                     {/* Cards View */}
                     {viewMode === "cards" && (
-                        <ContentLayout variant="wide">
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {filteredTasks.map((task) => (
-                                    <ConstructionTaskCard
-                                        key={task.id}
-                                        task={task}
-                                        onEdit={handleEdit}
-                                        onDelete={handleDelete}
-                                        onStatusChange={handleStatusChange}
-                                    />
-                                ))}
-                            </div>
-                        </ContentLayout>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {filteredTasks.map((task) => (
+                                <ConstructionTaskCard
+                                    key={task.id}
+                                    task={task}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDelete}
+                                    onStatusChange={handleStatusChange}
+                                />
+                            ))}
+                        </div>
                     )}
 
                     {/* Table View */}
                     {viewMode === "table" && (
-                        <ContentLayout variant="wide">
-                            <DataTable
-                                columns={tableColumns}
-                                data={filteredTasks}
-                                onRowClick={handleEdit}
-                                pageSize={20}
-                                showPagination={filteredTasks.length > 20}
-                                stickyHeader
-                            />
-                        </ContentLayout>
+                        <DataTable
+                            columns={tableColumns}
+                            data={filteredTasks}
+                            onRowClick={handleEdit}
+                            pageSize={20}
+                            showPagination={filteredTasks.length > 20}
+                            stickyHeader
+                        />
                     )}
                 </>
             )}

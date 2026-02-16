@@ -109,12 +109,14 @@ export default async function OrganizationConstructionTasksPage({ params, search
                     }
                 >
                     <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ConstructionTasksView
-                            organizationId={activeOrgId}
-                            tasks={tasks}
-                            initialDependencies={initialDependencies}
-                            catalogTasks={catalogTasks}
-                        />
+                        <ContentLayout variant="wide">
+                            <ConstructionTasksView
+                                organizationId={activeOrgId}
+                                tasks={tasks}
+                                initialDependencies={initialDependencies}
+                                catalogTasks={catalogTasks}
+                            />
+                        </ContentLayout>
                     </TabsContent>
 
                     {hasCatalogData && (

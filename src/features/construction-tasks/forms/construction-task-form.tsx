@@ -8,18 +8,15 @@ import { ConstructionTaskView, ConstructionTaskStatus, CostScope } from "../type
 import { createConstructionTask, updateConstructionTask, getRecipesForTask } from "../actions";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import type { TaskRecipeView } from "@/features/tasks/types";
-import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { Input } from "@/components/ui/input";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { DateField, NotesField } from "@/components/shared/forms/fields";
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+    TextField,
+    AmountField,
+    DateField,
+    NotesField,
+    SelectField,
+    type SelectOption,
+} from "@/components/shared/forms/fields";
 
 // ============================================================================
 // Types
@@ -40,6 +37,23 @@ interface ConstructionTaskFormProps {
     catalogTasks: CatalogTask[];
     initialData?: ConstructionTaskView | null;
 }
+
+// ============================================================================
+// Options
+// ============================================================================
+
+const STATUS_OPTIONS: SelectOption[] = [
+    { value: "pending", label: "Pendiente" },
+    { value: "in_progress", label: "En Progreso" },
+    { value: "completed", label: "Completada" },
+    { value: "paused", label: "Pausada" },
+];
+
+const COST_SCOPE_OPTIONS: SelectOption[] = [
+    { value: "materials_and_labor", label: "Materiales + Mano de Obra" },
+    { value: "materials_only", label: "Solo Materiales" },
+    { value: "labor_only", label: "Solo Mano de Obra" },
+];
 
 // ============================================================================
 // Component
@@ -104,8 +118,21 @@ export function ConstructionTaskForm({
         }
     }, [selectedTaskId, isCustomTask, fetchRecipes]);
 
-    // Build Combobox options for recipes
-    const recipeOptions: ComboboxOption[] = useMemo(() => {
+    // Build SelectField options for catalog tasks
+    const catalogTaskOptions: SelectOption[] = useMemo(() => {
+        return catalogTasks.map((t) => {
+            const label = t.name || t.custom_name || "Sin nombre";
+            const subtitle = [t.code, t.unit_name, t.division_name].filter(Boolean).join(" · ");
+            return {
+                value: t.id,
+                label: subtitle ? `${label} — ${subtitle}` : label,
+                searchTerms: `${label} ${t.code || ""} ${t.division_name || ""}`,
+            };
+        });
+    }, [catalogTasks]);
+
+    // Build SelectField options for recipes
+    const recipeOptions: SelectOption[] = useMemo(() => {
         return availableRecipes.map((r) => {
             const label = r.name || "Receta sin nombre";
             const details = [
@@ -114,40 +141,11 @@ export function ConstructionTaskForm({
             ].filter(Boolean).join(" · ");
             return {
                 value: r.id,
-                label,
+                label: details ? `${label} — ${details}` : label,
                 searchTerms: `${label} ${r.org_name || ""}`,
-                content: (
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium truncate">{label}</span>
-                        {details && (
-                            <span className="text-xs text-muted-foreground">{details}</span>
-                        )}
-                    </div>
-                ),
             };
         });
     }, [availableRecipes]);
-
-    // Build Combobox options from catalog tasks
-    const catalogTaskOptions: ComboboxOption[] = useMemo(() => {
-        return catalogTasks.map((t) => {
-            const label = t.name || t.custom_name || "Sin nombre";
-            const subtitle = [t.code, t.unit_name, t.division_name].filter(Boolean).join(" · ");
-            return {
-                value: t.id,
-                label,
-                searchTerms: `${label} ${t.code || ""} ${t.division_name || ""}`,
-                content: (
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium truncate">{label}</span>
-                        {subtitle && (
-                            <span className="text-xs text-muted-foreground">{subtitle}</span>
-                        )}
-                    </div>
-                ),
-            };
-        });
-    }, [catalogTasks]);
 
     // --- Form Fields ---
     const [customName, setCustomName] = useState(initialData?.custom_name || "");
@@ -257,88 +255,82 @@ export function ConstructionTaskForm({
 
                     {!isCustomTask ? (
                         <>
-                            <FormGroup
+                            <SelectField
+                                value={selectedTaskId || ""}
+                                onChange={(v) => {
+                                    setSelectedTaskId(v || null);
+                                    setErrors(prev => ({ ...prev, task: "" }));
+                                }}
+                                options={catalogTaskOptions}
                                 label="Tarea del Catálogo"
-                                htmlFor="task_selector"
+                                placeholder="Seleccionar tarea..."
+                                searchable
+                                searchPlaceholder="Buscar por nombre, código o división..."
                                 required
+                                disabled={isEditing}
                                 error={errors.task}
-                            >
-                                <Combobox
-                                    value={selectedTaskId || ""}
-                                    onValueChange={(v) => {
-                                        setSelectedTaskId(v || null);
-                                        setErrors(prev => ({ ...prev, task: "" }));
-                                    }}
-                                    options={catalogTaskOptions}
-                                    placeholder="Seleccionar tarea..."
-                                    searchPlaceholder="Buscar por nombre, código o división..."
-                                    emptyMessage="No se encontraron tareas"
-                                    disabled={isEditing}
-                                />
+                                emptyState={{
+                                    message: "No se encontraron tareas",
+                                }}
+                            />
 
-                                {/* Toggle a tarea custom */}
-                                {!isEditing && (
-                                    <button
-                                        type="button"
-                                        onClick={handleToggleCustom}
-                                        className="text-xs text-primary hover:underline mt-1"
-                                    >
-                                        Crear tarea personalizada (sin catálogo)
-                                    </button>
-                                )}
-                            </FormGroup>
+                            {/* Toggle a tarea custom */}
+                            {!isEditing && (
+                                <button
+                                    type="button"
+                                    onClick={handleToggleCustom}
+                                    className="text-xs text-primary hover:underline -mt-2"
+                                >
+                                    Crear tarea personalizada (sin catálogo)
+                                </button>
+                            )}
 
                             {/* Recipe Selector — only when task has recipes */}
                             {selectedTaskId && availableRecipes.length > 0 && (
-                                <FormGroup
+                                <SelectField
+                                    value={selectedRecipeId || ""}
+                                    onChange={(v) => setSelectedRecipeId(v || null)}
+                                    options={recipeOptions}
                                     label="Receta"
-                                    htmlFor="recipe_selector"
-                                >
-                                    <Combobox
-                                        value={selectedRecipeId || ""}
-                                        onValueChange={(v) => setSelectedRecipeId(v || null)}
-                                        options={recipeOptions}
-                                        placeholder={isLoadingRecipes ? "Cargando recetas..." : "Seleccionar receta (opcional)"}
-                                        searchPlaceholder="Buscar receta..."
-                                        emptyMessage="No se encontraron recetas"
-                                        disabled={isLoadingRecipes}
-                                    />
-                                </FormGroup>
+                                    placeholder={isLoadingRecipes ? "Cargando recetas..." : "Seleccionar receta (opcional)"}
+                                    searchable
+                                    searchPlaceholder="Buscar receta..."
+                                    required={false}
+                                    disabled={isLoadingRecipes}
+                                    loading={isLoadingRecipes}
+                                    emptyState={{
+                                        message: "No se encontraron recetas",
+                                    }}
+                                />
                             )}
                         </>
                     ) : (
                         /* Tarea Custom */
                         <>
-                            <FormGroup
+                            <TextField
+                                value={customName}
+                                onChange={setCustomName}
                                 label="Nombre de la tarea"
-                                htmlFor="custom_name"
+                                placeholder="Ej: Limpieza general de obra"
                                 required
+                                autoFocus
                                 error={errors.customName}
-                            >
-                                <Input
-                                    id="custom_name"
-                                    placeholder="Ej: Limpieza general de obra"
-                                    value={customName}
-                                    onChange={(e) => setCustomName(e.target.value)}
-                                    autoFocus
-                                />
-                            </FormGroup>
+                            />
 
-                            <FormGroup label="Unidad" htmlFor="custom_unit">
-                                <Input
-                                    id="custom_unit"
-                                    placeholder="m², ml, un, gl"
-                                    value={customUnit}
-                                    onChange={(e) => setCustomUnit(e.target.value)}
-                                />
-                            </FormGroup>
+                            <TextField
+                                value={customUnit}
+                                onChange={setCustomUnit}
+                                label="Unidad"
+                                placeholder="m², ml, un, gl"
+                                required={false}
+                            />
 
                             {/* Toggle a catálogo */}
                             {!isEditing && (
                                 <button
                                     type="button"
                                     onClick={handleToggleCustom}
-                                    className="text-xs text-primary hover:underline"
+                                    className="text-xs text-primary hover:underline -mt-2"
                                 >
                                     ← Seleccionar del catálogo
                                 </button>
@@ -352,35 +344,23 @@ export function ConstructionTaskForm({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
                         {/* Cantidad */}
-                        <FormGroup
+                        <AmountField
+                            value={quantity}
+                            onChange={setQuantity}
                             label="Cantidad"
-                            htmlFor="quantity"
-                            required
-                            error={errors.quantity}
-                        >
-                            <Input
-                                id="quantity"
-                                type="number"
-                                step="0.01"
-                                placeholder="100"
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
-                            />
-                        </FormGroup>
+                            placeholder="100"
+                            min={0}
+                            step={0.01}
+                        />
 
                         {/* Alcance de Costos */}
-                        <FormGroup label="Alcance de Costos" htmlFor="cost_scope">
-                            <Select value={costScope} onValueChange={(v) => setCostScope(v as CostScope)}>
-                                <SelectTrigger id="cost_scope">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="materials_and_labor">Materiales + Mano de Obra</SelectItem>
-                                    <SelectItem value="materials_only">Solo Materiales</SelectItem>
-                                    <SelectItem value="labor_only">Solo Mano de Obra</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <SelectField
+                            value={costScope}
+                            onChange={(v) => setCostScope(v as CostScope)}
+                            options={COST_SCOPE_OPTIONS}
+                            label="Alcance de Costos"
+                            required={false}
+                        />
 
                         {/* Fecha inicio planificada */}
                         <DateField
@@ -399,39 +379,23 @@ export function ConstructionTaskForm({
                         />
 
                         {/* Estado */}
-                        <FormGroup label="Estado" htmlFor="status">
-                            <Select
-                                value={status}
-                                onValueChange={(v) => setStatus(v as ConstructionTaskStatus)}
-                            >
-                                <SelectTrigger id="status">
-                                    <SelectValue placeholder="Seleccionar estado" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="pending">Pendiente</SelectItem>
-                                    <SelectItem value="in_progress">En Progreso</SelectItem>
-                                    <SelectItem value="completed">Completada</SelectItem>
-                                    <SelectItem value="paused">Pausada</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
+                        <SelectField
+                            value={status}
+                            onChange={(v) => setStatus(v as ConstructionTaskStatus)}
+                            options={STATUS_OPTIONS}
+                            label="Estado"
+                            required={false}
+                        />
 
                         {/* Progreso */}
-                        <FormGroup
+                        <AmountField
+                            value={progressPercent}
+                            onChange={setProgressPercent}
                             label="Progreso (%)"
-                            htmlFor="progress_percent"
-                            error={errors.progressPercent}
-                        >
-                            <Input
-                                id="progress_percent"
-                                type="number"
-                                min={0}
-                                max={100}
-                                placeholder="0"
-                                value={progressPercent}
-                                onChange={(e) => setProgressPercent(e.target.value)}
-                            />
-                        </FormGroup>
+                            placeholder="0"
+                            min={0}
+                            step={1}
+                        />
                     </div>
 
                     {/* =================================== */}

@@ -1536,7 +1536,10 @@ export async function getRecipeExternalServices(
             *,
             contacts(full_name),
             units(name, symbol),
-            currencies(symbol)
+            currencies(symbol),
+            external_service_prices!external_service_prices_recipe_external_service_id_fkey(
+                valid_from
+            )
         `)
         .eq("recipe_id", recipeId)
         .eq("is_deleted", false);
@@ -1546,16 +1549,26 @@ export async function getRecipeExternalServices(
         return [];
     }
 
-    return (data || []).map((row: any) => ({
-        ...row,
-        contact_name: row.contacts?.full_name || null,
-        unit_name: row.units?.name || null,
-        unit_symbol: row.units?.symbol || null,
-        currency_symbol: row.currencies?.symbol || null,
-        contacts: undefined,
-        units: undefined,
-        currencies: undefined,
-    })).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")) as TaskRecipeExternalService[];
+    return (data || []).map((row: any) => {
+        // Get the latest price valid_from from external_service_prices
+        const prices = row.external_service_prices || [];
+        const latestPrice = prices.sort((a: any, b: any) =>
+            (b.valid_from || "").localeCompare(a.valid_from || "")
+        )[0];
+
+        return {
+            ...row,
+            contact_name: row.contacts?.full_name || null,
+            unit_name: row.units?.name || null,
+            unit_symbol: row.units?.symbol || null,
+            currency_symbol: row.currencies?.symbol || null,
+            price_valid_from: latestPrice?.valid_from || null,
+            contacts: undefined,
+            units: undefined,
+            currencies: undefined,
+            external_service_prices: undefined,
+        };
+    }).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")) as TaskRecipeExternalService[];
 }
 
 /**
@@ -1588,6 +1601,24 @@ export async function addRecipeExternalService(
         return { success: false, error: sanitizeError(error) };
     }
 
+    // Insert initial price in external_service_prices (aligned with material_prices/labor_type_prices pattern)
+    if (result && data.unit_price != null && data.unit_price > 0) {
+        const { error: priceError } = await supabase
+            .from("external_service_prices")
+            .insert({
+                recipe_external_service_id: result.id,
+                organization_id: activeOrgId,
+                currency_id: data.currency_id,
+                unit_price: data.unit_price,
+                // valid_from defaults to CURRENT_DATE in DB
+            });
+
+        if (priceError) {
+            console.error("Error inserting external service price:", priceError);
+            // Non-blocking: the service was created, price record failed
+        }
+    }
+
     revalidatePath("/admin/catalog");
     return { success: true, data: result };
 }
@@ -1617,6 +1648,46 @@ export async function updateRecipeExternalService(
     if (error) {
         console.error("Error updating recipe external service:", error);
         return { success: false, error: sanitizeError(error) };
+    }
+
+    // If price changed, insert new price record in external_service_prices
+    if (data.unit_price != null && data.unit_price > 0) {
+        const { activeOrgId } = await getUserOrganizations();
+
+        // Get current currency_id from the service record if not provided
+        let currencyId = data.currency_id;
+        if (!currencyId) {
+            const { data: current } = await supabase
+                .from("task_recipe_external_services")
+                .select("currency_id")
+                .eq("id", itemId)
+                .single();
+            currencyId = current?.currency_id;
+        }
+
+        if (currencyId) {
+            // Close any existing open price record
+            await supabase
+                .from("external_service_prices")
+                .update({ valid_to: new Date().toISOString().split("T")[0] })
+                .eq("recipe_external_service_id", itemId)
+                .is("valid_to", null);
+
+            // Insert new price record with current date
+            const { error: priceError } = await supabase
+                .from("external_service_prices")
+                .insert({
+                    recipe_external_service_id: itemId,
+                    organization_id: activeOrgId,
+                    currency_id: currencyId,
+                    unit_price: data.unit_price,
+                    // valid_from defaults to CURRENT_DATE in DB
+                });
+
+            if (priceError) {
+                console.error("Error inserting updated external service price:", priceError);
+            }
+        }
     }
 
     revalidatePath("/admin/catalog");
