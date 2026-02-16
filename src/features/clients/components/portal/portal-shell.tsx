@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { useTranslations } from "next-intl";
 import { SitelogFeed } from "@/features/sitelog/components/sitelog-feed";
-import { SiteLog } from "@/types/sitelog";
+import { SiteLog } from "@/features/sitelog/types";
 import { PortalQuoteItems } from "./portal-quote-items";
 import { PortalQuoteApproval } from "./portal-quote-approval";
 import { PortalQuotePdfButton } from "./portal-quote-pdf-button";

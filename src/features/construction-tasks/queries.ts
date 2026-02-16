@@ -1,5 +1,67 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserOrganizations } from "@/features/organization/queries";
 import { ConstructionTaskView } from "./types";
+
+/**
+ * Get ALL construction tasks for an organization (from construction_tasks_view)
+ * No project filter — the view handles client-side filtering.
+ */
+export async function getOrganizationConstructionTasks(): Promise<ConstructionTaskView[]> {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) return [];
+
+    const { data, error } = await supabase
+        .from("construction_tasks_view")
+        .select("*")
+        .eq("organization_id", activeOrgId)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching org construction tasks:", error);
+        return [];
+    }
+
+    return data as ConstructionTaskView[];
+}
+
+/**
+ * Get ALL construction dependencies for an organization
+ * Scoped by joining through construction_tasks → organization_id
+ */
+export async function getOrganizationConstructionDependencies(): Promise<ConstructionDependencyRow[]> {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) return [];
+
+    const { data, error } = await supabase
+        .from("construction_dependencies")
+        .select(`
+            id,
+            predecessor_task_id,
+            successor_task_id,
+            type,
+            lag_days,
+            predecessor:construction_tasks!construction_dependencies_predecessor_task_id_fkey(organization_id)
+        `)
+        .eq("predecessor.organization_id", activeOrgId);
+
+    if (error) {
+        console.error("Error fetching org construction dependencies:", error);
+        return [];
+    }
+
+    return (data || []).map((d: any) => ({
+        id: d.id,
+        predecessor_task_id: d.predecessor_task_id,
+        successor_task_id: d.successor_task_id,
+        type: d.type,
+        lag_days: d.lag_days,
+    }));
+}
+
 
 /**
  * Get all construction tasks for a project (from construction_tasks_view)

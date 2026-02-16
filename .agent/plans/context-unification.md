@@ -44,13 +44,13 @@
 - [x] 13. Avanzado (`/organization/advanced`) — org-only, contexto se ignora ✅
 
 ### Bloque 3: Páginas a CREAR (vienen de /project/)
-- [ ] 14. Tareas de Construcción (`/organization/construction-tasks`) [NEW]
-- [ ] 15. Materiales (`/organization/materials`) [NEW]
-- [ ] 16. Mano de Obra (`/organization/labor`) [NEW]
+- [x] 14. Tareas de Construcción (`/organization/construction-tasks`) ✅
+- [x] 15. Materiales (`/organization/materials`) ✅
+- [x] 16. Mano de Obra (`/organization/labor`) ✅
 - [ ] 17. Subcontratos (`/organization/subcontracts`) [NEW]
 - [ ] 18. Clientes (`/organization/clients`) [NEW]
 - [ ] 19. Salud (`/organization/health`) [NEW]
-- [ ] 20. Bitácora (`/organization/sitelog`) [NEW]
+- [x] 20. Bitácora (`/organization/sitelog`) ✅
 
 ### Bloque 4: Páginas a REHACER (futuro)
 - [ ] Portal de Clientes

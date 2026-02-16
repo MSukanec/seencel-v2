@@ -21,7 +21,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface LaborOverviewViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     payments: LaborPaymentView[];
 }

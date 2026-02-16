@@ -63,7 +63,7 @@ export interface ContextItem {
 }
 
 const ALL_CONTEXTS: ContextItem[] = [
-    { id: 'organization', label: 'Organización', icon: Building },
+    { id: 'organization', label: 'Espacio de Trabajo', icon: Building },
     { id: 'portal', label: 'Portal de Clientes', icon: Building },
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },

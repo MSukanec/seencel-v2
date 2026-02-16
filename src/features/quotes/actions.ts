@@ -152,7 +152,7 @@ export async function createChangeOrder(
     revalidatePath("/organization/quotes");
     revalidatePath(`/organization/quotes/${contractId}`);
     if (contract.project_id) {
-        revalidatePath(`/project/${contract.project_id}/quotes`);
+        revalidatePath('/organization/quotes', 'page');
     }
 
     return { data: changeOrder, error: null };
@@ -378,7 +378,7 @@ export async function approveQuote(quoteId: string) {
     revalidatePath("/organization/quotes");
     revalidatePath(`/organization/quotes/${quoteId}`);
     if (quote.project_id) {
-        revalidatePath(`/project/${quote.project_id}/quotes`);
+        revalidatePath('/organization/quotes', 'page');
         revalidatePath(`/project/${quote.project_id}/construction-tasks`);
     }
 
@@ -569,7 +569,6 @@ export async function updateQuoteItem(id: string, formData: FormData) {
 
     // Revalidate both list and detail pages (org and project level)
     revalidatePath("/organization/quotes");
-    revalidatePath("/project", "layout"); // Revalidate all project routes
     if (data?.quote_id) {
         revalidatePath(`/organization/quotes/${data.quote_id}`);
     }
@@ -602,7 +601,6 @@ export async function deleteQuoteItem(id: string, quoteId?: string) {
     }
 
     revalidatePath("/organization/quotes");
-    revalidatePath("/project", "layout");
     if (quoteId) {
         revalidatePath(`/organization/quotes/${quoteId}`);
     }
@@ -663,7 +661,7 @@ export async function convertQuoteToContract(quoteId: string) {
 
     revalidatePath("/organization/quotes");
     revalidatePath(`/organization/quotes/${quoteId}`);
-    revalidatePath(`/project/${quote.project_id}/quotes`);
+    revalidatePath('/organization/quotes', 'page');
 
     return { success: true };
 }
@@ -885,7 +883,7 @@ export async function generateCommitmentsFromQuote(
         return { error: sanitizeError(error), data: null };
     }
 
-    revalidatePath(`/project/${quote.project_id}/clients`);
+    revalidatePath('/organization/quotes', 'page');
     revalidatePath(`/organization/quotes/${quoteId}`);
 
     return { data, error: null };

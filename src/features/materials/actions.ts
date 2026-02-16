@@ -288,6 +288,37 @@ export async function getMaterialPurchasesAction(projectId: string) {
     }));
 }
 
+/**
+ * Get ALL material invoices/purchases for an organization (no project filter)
+ * Used by the unified /organization/materials page
+ */
+export async function getOrgMaterialPurchasesAction(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_invoices')
+        .select('id, invoice_number, notes, provider_id, project_id')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("material_invoices table may not exist yet, returning empty array");
+            return [];
+        }
+        console.warn("Error fetching org material invoices:", error.message);
+        return [];
+    }
+
+    return (data || []).map((inv: any) => ({
+        id: inv.id,
+        reference: inv.invoice_number || null,
+        concept: inv.notes || null,
+        supplier_name: null,
+        project_id: inv.project_id || null,
+    }));
+}
+
 // ===============================================
 // Material CRUD (Unified for Admin + Organization)
 // ===============================================

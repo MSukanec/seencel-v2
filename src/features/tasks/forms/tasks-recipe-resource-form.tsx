@@ -15,13 +15,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { addRecipeMaterial, addRecipeLabor, addRecipeExternalService } from "@/features/tasks/actions";
+import { addRecipeMaterial, addRecipeLabor } from "@/features/tasks/actions";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ResourceType = "material" | "labor" | "external_service";
+type ResourceType = "material" | "labor";
 
 interface CatalogMaterialOption {
     id: string;
@@ -43,21 +43,12 @@ interface LaborTypeOption {
     role_name?: string | null;
 }
 
-interface ExternalServiceOption {
-    id: string;
-    name: string;
-    modality: string;
-    description?: string | null;
-}
-
 interface TasksRecipeResourceFormProps {
     recipeId: string;
     /** Catalog materials for combobox */
     materials: CatalogMaterialOption[];
     /** Catalog labor types for combobox */
     laborTypes: LaborTypeOption[];
-    /** Catalog external services for combobox */
-    externalServices?: ExternalServiceOption[];
     /** Pre-selected resource type (optional) */
     defaultResourceType?: ResourceType;
 }
@@ -70,7 +61,6 @@ export function TasksRecipeResourceForm({
     recipeId,
     materials,
     laborTypes,
-    externalServices = [],
     defaultResourceType = "material",
 }: TasksRecipeResourceFormProps) {
     const router = useRouter();
@@ -106,9 +96,7 @@ export function TasksRecipeResourceForm({
 
     const unitDisplay = resourceType === "material"
         ? selectedMaterial?.unit_symbol || selectedMaterial?.unit_name || ""
-        : resourceType === "labor"
-            ? selectedLaborType?.unit_symbol || selectedLaborType?.unit_name || ""
-            : ""; // External services use task unit
+        : selectedLaborType?.unit_symbol || selectedLaborType?.unit_name || "";
 
     // Combobox options — memoized per type
     const materialOptions = useMemo(
@@ -131,22 +119,9 @@ export function TasksRecipeResourceForm({
         [laborTypes]
     );
 
-    const externalServiceOptions = useMemo(
-        () => externalServices.map((es) => ({
-            value: es.id,
-            label: es.name,
-            searchTerms: [es.modality === "turnkey" ? "llave en mano" : "ejecución", es.description]
-                .filter(Boolean)
-                .join(" "),
-        })),
-        [externalServices]
-    );
-
     const comboboxOptions = resourceType === "material"
         ? materialOptions
-        : resourceType === "labor"
-            ? laborOptions
-            : externalServiceOptions;
+        : laborOptions;
 
     // ========================================================================
     // Handlers
@@ -168,7 +143,6 @@ export function TasksRecipeResourceForm({
             const messages: Record<ResourceType, string> = {
                 material: "Seleccioná un material del catálogo",
                 labor: "Seleccioná un tipo de mano de obra",
-                external_service: "Seleccioná un servicio externo del catálogo",
             };
             toast.error(messages[resourceType]);
             return;
@@ -197,7 +171,8 @@ export function TasksRecipeResourceForm({
                 } else {
                     toast.error(result.error || "Error al agregar material");
                 }
-            } else if (resourceType === "labor") {
+            } else {
+                // Labor
                 const result = await addRecipeLabor({
                     recipe_id: recipeId,
                     labor_type_id: selectedId,
@@ -211,22 +186,6 @@ export function TasksRecipeResourceForm({
                     handleSuccess();
                 } else {
                     toast.error(result.error || "Error al agregar mano de obra");
-                }
-            } else {
-                // External service
-                const result = await addRecipeExternalService({
-                    recipe_id: recipeId,
-                    external_service_id: selectedId,
-                    quantity,
-                    notes: notes.trim() || null,
-                    contact_id: null,
-                    is_optional: isOptional,
-                });
-                if (result.success) {
-                    toast.success("Servicio externo agregado a la receta");
-                    handleSuccess();
-                } else {
-                    toast.error(result.error || "Error al agregar servicio externo");
                 }
             }
         } catch {
@@ -257,14 +216,6 @@ export function TasksRecipeResourceForm({
             optional: "Mano de obra opcional",
             submit: "Agregar Mano de Obra",
         },
-        external_service: {
-            combobox: "Servicio Externo",
-            placeholder: "Seleccionar servicio...",
-            search: "Buscar servicio...",
-            empty: "No se encontraron servicios externos",
-            optional: "Servicio opcional",
-            submit: "Agregar Servicio",
-        },
     };
 
     const l = labels[resourceType];
@@ -282,7 +233,6 @@ export function TasksRecipeResourceForm({
                             <SelectContent>
                                 <SelectItem value="material">Material</SelectItem>
                                 <SelectItem value="labor">Mano de Obra</SelectItem>
-                                <SelectItem value="external_service">Servicio Externo</SelectItem>
                             </SelectContent>
                         </Select>
                     </FormGroup>
@@ -315,15 +265,13 @@ export function TasksRecipeResourceForm({
                         />
                     </FormGroup>
 
-                    {resourceType !== "external_service" && (
-                        <FormGroup label="Unidad">
-                            <Input
-                                value={unitDisplay}
-                                disabled
-                                placeholder="Se auto-completa"
-                            />
-                        </FormGroup>
-                    )}
+                    <FormGroup label="Unidad">
+                        <Input
+                            value={unitDisplay}
+                            disabled
+                            placeholder="Se auto-completa"
+                        />
+                    </FormGroup>
 
                     <FormGroup label="Notas" className="md:col-span-2">
                         <Input

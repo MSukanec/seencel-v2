@@ -1093,8 +1093,6 @@ import {
     TaskRecipeMaterial,
     TaskRecipeLabor,
     RecipeResources,
-    ExternalService,
-    ExternalServiceFormData,
     TaskRecipeExternalService,
     TaskRecipeExternalServiceFormData,
 } from "./types";
@@ -1492,112 +1490,7 @@ export async function deleteRecipeLabor(itemId: string) {
 // ============================================
 
 /**
- * Get all external services for the org (catalog)
- */
-export async function getExternalServices(): Promise<ExternalService[]> {
-    const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
-
-    const { data, error } = await supabase
-        .from("external_services")
-        .select(`
-            *,
-            contacts!default_contact_id(name)
-        `)
-        .eq("organization_id", activeOrgId)
-        .eq("is_deleted", false)
-        .order("name", { ascending: true });
-
-    if (error) {
-        console.error("Error fetching external services:", error);
-        return [];
-    }
-
-    return (data || []).map((row: any) => ({
-        ...row,
-        contact_name: row.contacts?.name || null,
-        contacts: undefined,
-    })) as ExternalService[];
-}
-
-/**
- * Create a new external service in the catalog
- */
-export async function createExternalService(data: ExternalServiceFormData) {
-    const supabase = await createClient();
-    const { activeOrgId } = await getUserOrganizations();
-
-    const { data: result, error } = await supabase
-        .from("external_services")
-        .insert({
-            organization_id: activeOrgId,
-            name: data.name,
-            modality: data.modality,
-            description: data.description || null,
-            default_contact_id: data.default_contact_id || null,
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Error creating external service:", error);
-        return { success: false, error: sanitizeError(error) };
-    }
-
-    return { success: true, data: result };
-}
-
-/**
- * Update an external service in the catalog
- */
-export async function updateExternalService(
-    serviceId: string,
-    data: ExternalServiceFormData
-) {
-    const supabase = await createClient();
-
-    const { error } = await supabase
-        .from("external_services")
-        .update({
-            name: data.name,
-            modality: data.modality,
-            description: data.description || null,
-            default_contact_id: data.default_contact_id || null,
-        })
-        .eq("id", serviceId);
-
-    if (error) {
-        console.error("Error updating external service:", error);
-        return { success: false, error: sanitizeError(error) };
-    }
-
-    return { success: true };
-}
-
-/**
- * Delete an external service (soft delete)
- */
-export async function deleteExternalService(serviceId: string) {
-    const supabase = await createClient();
-
-    const { error } = await supabase
-        .from("external_services")
-        .update({
-            is_deleted: true,
-            deleted_at: new Date().toISOString(),
-        })
-        .eq("id", serviceId);
-
-    if (error) {
-        console.error("Error deleting external service:", error);
-        return { success: false, error: sanitizeError(error) };
-    }
-
-    return { success: true };
-}
-
-/**
- * Get external services for a recipe (with joined names)
+ * Get external services for a recipe (with joined contact names)
  */
 export async function getRecipeExternalServices(
     recipeId: string
@@ -1608,30 +1501,21 @@ export async function getRecipeExternalServices(
         .from("task_recipe_external_services")
         .select(`
             *,
-            external_services!external_service_id(name, modality, description),
-            contacts!contact_id(name)
+            contacts(full_name)
         `)
         .eq("recipe_id", recipeId)
         .eq("is_deleted", false);
 
     if (error) {
-        console.error("Error fetching recipe external services:", error);
+        console.error("Error fetching recipe external services:", JSON.stringify(error, null, 2));
         return [];
     }
 
-    return (data || [])
-        .map((row: any) => ({
-            ...row,
-            service_name: row.external_services?.name,
-            service_modality: row.external_services?.modality,
-            service_description: row.external_services?.description,
-            contact_name: row.contacts?.name || null,
-            external_services: undefined,
-            contacts: undefined,
-        }))
-        .sort((a: any, b: any) =>
-            (a.service_name || "").localeCompare(b.service_name || "")
-        ) as TaskRecipeExternalService[];
+    return (data || []).map((row: any) => ({
+        ...row,
+        contact_name: row.contacts?.full_name || null,
+        contacts: undefined,
+    })) as TaskRecipeExternalService[];
 }
 
 /**
@@ -1647,11 +1531,9 @@ export async function addRecipeExternalService(
         .from("task_recipe_external_services")
         .insert({
             recipe_id: data.recipe_id,
-            external_service_id: data.external_service_id,
             quantity: data.quantity,
             notes: data.notes || null,
             contact_id: data.contact_id || null,
-            is_optional: data.is_optional,
             organization_id: activeOrgId,
         })
         .select()
@@ -1678,11 +1560,9 @@ export async function updateRecipeExternalService(
     const { error } = await supabase
         .from("task_recipe_external_services")
         .update({
-            external_service_id: data.external_service_id,
             quantity: data.quantity,
             notes: data.notes,
             contact_id: data.contact_id,
-            is_optional: data.is_optional,
         })
         .eq("id", itemId);
 

@@ -20,7 +20,7 @@ const formatNumber = (value: number): string => {
 };
 
 interface MaterialsRequirementsViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     requirements: MaterialRequirement[];
 }
@@ -76,18 +76,7 @@ export function MaterialsRequirementsView({
                         mode="empty"
                         icon={Package}
                         viewName="Necesidades de Materiales"
-                        featureDescription={
-                            <>
-                                Las necesidades de materiales aparecerán cuando tengas{' '}
-                                <a
-                                    href={`/es/project/${projectId}/tasks`}
-                                    className="text-primary hover:underline font-medium"
-                                >
-                                    tareas de construcción
-                                </a>
-                                {' '}con recetas de materiales asignadas.
-                            </>
-                        }
+                        featureDescription="Las necesidades de materiales aparecerán cuando tengas tareas de construcción con recetas de materiales asignadas."
                     />
                 ) : (
                     <div className="space-y-6">

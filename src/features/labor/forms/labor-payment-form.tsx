@@ -54,7 +54,7 @@ interface LaborPaymentFormProps {
     laborTypes: LaborType[];
     wallets: FormattedWallet[];
     currencies: FormattedCurrency[];
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -132,12 +132,12 @@ export function LaborPaymentForm({
             };
 
             if (isEditing && initialData) {
-                await updateLaborPayment(initialData.id, payload, projectId);
+                await updateLaborPayment(initialData.id, payload, projectId!);
                 toast.success("Pago actualizado");
             } else {
                 await createLaborPayment({
                     ...payload,
-                    project_id: projectId,
+                    project_id: projectId!,
                     organization_id: organizationId,
                 });
                 toast.success("Pago registrado");

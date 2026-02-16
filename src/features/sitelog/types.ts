@@ -60,4 +60,3 @@ export interface SiteLog {
         } | null;
     } | null;
 }
-

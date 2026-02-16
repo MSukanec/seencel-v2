@@ -13,12 +13,12 @@ import { ContentLayout } from "@/components/layout";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
 interface MaterialsOverviewViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     payments: MaterialPaymentView[];
 }
 
-export function MaterialsOverviewView({ projectId, orgId, payments }: MaterialsOverviewViewProps) {
+export function MaterialsOverviewView({ orgId, payments }: MaterialsOverviewViewProps) {
     const money = useMoney();
 
     // =============================================

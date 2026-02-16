@@ -120,11 +120,7 @@ export function RecipeCard({
             return sum + item.quantity * priceInfo.unitPrice;
         }, 0);
 
-        const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
-            const priceInfo = externalServicePriceMap?.get(item.external_service_id);
-            if (!priceInfo) return sum;
-            return sum + item.quantity * priceInfo.unitPrice;
-        }, 0);
+        const externalServicesTotal = 0; // External services don't have catalog-level pricing yet
 
         return { materialsTotal, laborTotal, externalServicesTotal };
     }, [resources, materialPriceMap, laborPriceMap, externalServicePriceMap]);
@@ -241,37 +237,17 @@ export function RecipeCard({
                     accentColor="text-[#C4B590]"
                 >
                     {resources.externalServices.map((item) => {
-                        const priceInfo = externalServicePriceMap?.get(item.external_service_id);
-                        const pricePulseData: PricePulseData | null = priceInfo ? {
-                            resourceType: "external_service",
-                            resourceId: priceInfo.serviceId,
-                            resourceName: priceInfo.serviceName,
-                            organizationId: priceInfo.organizationId,
-                            currencyId: priceInfo.currencyId,
-                            effectiveUnitPrice: priceInfo.unitPrice,
-                            priceValidFrom: priceInfo.priceValidFrom,
-                            unitSymbol: priceInfo.unitSymbol,
-                            icon: FileText,
-                        } : null;
-
                         return (
                             <RecipeResourceListItem
                                 key={item.id}
                                 variant="subcontract"
                                 id={item.id}
-                                name={item.service_name || "Servicio"}
-                                unitSymbol={item.unit_symbol || item.unit_name}
-                                unitName={item.unit_name}
+                                name={item.contact_name || "Servicio Externo"}
                                 isOwn={isOwn}
-                                isOptional={item.is_optional}
                                 quantity={item.quantity}
                                 onUpdateQuantity={(id, val) => onUpdateExternalServiceQuantity?.(id, val)}
-                                unitPrice={priceInfo?.unitPrice}
-                                priceValidFrom={priceInfo?.priceValidFrom}
-                                pricePulseData={pricePulseData}
-                                onPriceUpdated={onPriceUpdated}
                                 onRemove={(id) => onRemoveExternalService?.(id)}
-                                resourceId={item.external_service_id}
+                                resourceId={item.id}
                             />
                         );
                     })}

@@ -1,7 +1,6 @@
 "use client";
 
-import { SiteLog } from "@/types/sitelog";
-import { ViewEmptyState } from "@/components/shared/empty-state";
+import { SiteLog } from "../types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,17 +47,7 @@ export function SitelogFeed({ logs, onEdit, onDelete, onToggleFavorite, showProj
     };
 
     if (!logs || logs.length === 0) {
-        // ... empty state logic
-        return (
-            <div className="h-[60vh]">
-                <ViewEmptyState
-                    mode="empty"
-                    viewName="Bitácora"
-                    featureDescription="Aún no hay registros en la bitácora de este proyecto. Comienza creando el primero."
-                    icon={Quote}
-                />
-            </div>
-        );
+        return null;
     }
 
     // Group logs logic ... (same)
@@ -166,41 +155,7 @@ function LogCard({
                         </div>
                     </div>
 
-                    <div className="flex gap-2 items-center">
-                        {/* Actions (Visible on Hover) - Only if actions are provided */}
-                        {(onEdit || onDelete || onToggleFavorite) && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                            <span className="sr-only">Open menu</span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {onEdit && (
-                                            <DropdownMenuItem onClick={() => onEdit(log)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                Editar
-                                            </DropdownMenuItem>
-                                        )}
-                                        {onToggleFavorite && (
-                                            <DropdownMenuItem onClick={() => onToggleFavorite(log)}>
-                                                <Star className={cn("mr-2 h-4 w-4", log.is_favorite ? "fill-yellow-400 text-yellow-400" : "")} />
-                                                {log.is_favorite ? "Quitar de favoritos" : "Marcar como favorita"}
-                                            </DropdownMenuItem>
-                                        )}
-                                        {(onEdit || onToggleFavorite) && onDelete && <DropdownMenuSeparator />}
-                                        {onDelete && (
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(log)}>
-                                                <Trash className="mr-2 h-4 w-4" />
-                                                Eliminar
-                                            </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        )}
+                    <div className="flex gap-2 items-center flex-wrap">
 
                         {/* Status Indicators */}
                         {log.is_favorite && (
@@ -239,9 +194,42 @@ function LogCard({
                         )}
 
                         {typeName && (
-                            <Badge variant="outline" className="w-fit bg-primary/5 text-primary border-primary/20 hover:bg-primary/10">
+                            <Badge variant="outline" className="w-fit bg-primary/5 text-primary border-primary/20">
                                 {typeName}
                             </Badge>
+                        )}
+
+                        {/* Actions Menu — Always visible, at the END */}
+                        {(onEdit || onDelete || onToggleFavorite) && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">Acciones</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {onEdit && (
+                                        <DropdownMenuItem onClick={() => onEdit(log)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Editar
+                                        </DropdownMenuItem>
+                                    )}
+                                    {onToggleFavorite && (
+                                        <DropdownMenuItem onClick={() => onToggleFavorite(log)}>
+                                            <Star className={cn("mr-2 h-4 w-4", log.is_favorite ? "fill-yellow-400 text-yellow-400" : "")} />
+                                            {log.is_favorite ? "Quitar de favoritos" : "Marcar como favorita"}
+                                        </DropdownMenuItem>
+                                    )}
+                                    {(onEdit || onToggleFavorite) && onDelete && <DropdownMenuSeparator />}
+                                    {onDelete && (
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(log)}>
+                                            <Trash className="mr-2 h-4 w-4" />
+                                            Eliminar
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         )}
                     </div>
                 </div>

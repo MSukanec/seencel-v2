@@ -219,53 +219,19 @@ export interface TaskRecipeLabor {
     unit_symbol?: string | null;
 }
 
-// --- External Services (Servicios Externos) ---
-
-export type ExternalServiceModality = 'execution_only' | 'turnkey';
-
-export interface ExternalService {
-    id: string;
-    organization_id: string;
-    name: string;
-    modality: ExternalServiceModality;
-    description: string | null;
-    default_contact_id: string | null;
-    is_deleted: boolean;
-    created_at: string;
-    updated_at: string;
-    // Joined fields (from query)
-    contact_name?: string | null;
-}
-
-export interface ExternalServicePrice {
-    id: string;
-    external_service_id: string;
-    organization_id: string;
-    currency_id: string;
-    unit_price: number;
-    valid_from: string;
-    valid_to: string | null;
-    created_at: string;
-}
+// --- Recipe External Services (Servicios Externos en Receta) ---
 
 export interface TaskRecipeExternalService {
     id: string;
     recipe_id: string;
-    external_service_id: string;
     organization_id: string;
     quantity: number;
     notes: string | null;
     contact_id: string | null;
-    is_optional: boolean;
     created_at: string;
     updated_at: string;
     // Joined fields (from query)
-    service_name?: string;
-    service_modality?: ExternalServiceModality;
-    service_description?: string | null;
     contact_name?: string | null;
-    unit_name?: string | null;
-    unit_symbol?: string | null;
 }
 
 /** Combined resources for a single recipe */
@@ -330,22 +296,11 @@ export const taskRecipeLaborSchema = z.object({
 
 export type TaskRecipeLaborFormData = z.infer<typeof taskRecipeLaborSchema>;
 
-export const externalServiceSchema = z.object({
-    name: z.string().min(1, "El nombre del servicio es obligatorio"),
-    modality: z.enum(['execution_only', 'turnkey']).default('execution_only'),
-    description: z.string().nullable().optional(),
-    default_contact_id: z.string().uuid().nullable().optional(),
-});
-
-export type ExternalServiceFormData = z.infer<typeof externalServiceSchema>;
-
 export const taskRecipeExternalServiceSchema = z.object({
     recipe_id: z.string().uuid(),
-    external_service_id: z.string().uuid("Seleccioná un servicio externo"),
     quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0").default(1),
     notes: z.string().nullable().optional(),
     contact_id: z.string().uuid().nullable().optional(),
-    is_optional: z.boolean().default(false),
 });
 
 export type TaskRecipeExternalServiceFormData = z.infer<typeof taskRecipeExternalServiceSchema>;

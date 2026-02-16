@@ -17,6 +17,7 @@ import { DataTable } from "@/components/shared/data-table/data-table";
 import { getConstructionTaskColumns } from "../components/construction-tasks-columns";
 import { ContentLayout } from "@/components/layout";
 import { useModal } from "@/stores/modal-store";
+import { useActiveProjectId } from "@/stores/layout-store";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ClipboardList, Plus, GanttChartSquare, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "@/i18n/routing";
 
 // ============================================================================
 // Types
@@ -38,7 +38,7 @@ import { useRouter } from "@/i18n/routing";
 type ViewMode = "gantt" | "cards" | "table";
 
 interface ConstructionTasksViewProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     tasks: ConstructionTaskView[];
     initialDependencies: ConstructionDependencyRow[];
@@ -101,15 +101,17 @@ const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_CONFIG) as ConstructionTaskSta
 // ============================================================================
 
 export function ConstructionTasksView({
-    projectId,
+    projectId: propProjectId,
     organizationId,
     tasks: initialTasks,
     initialDependencies,
     catalogTasks,
     workDays = [1, 2, 3, 4, 5],
 }: ConstructionTasksViewProps) {
-    const router = useRouter();
-    const { openModal, closeModal } = useModal();
+    const { openModal } = useModal();
+    const storeProjectId = useActiveProjectId();
+    // Use store filter first, then prop fallback
+    const activeProjectId = storeProjectId ?? propProjectId ?? null;
 
     // Compute non-work days (inverse of workDays) for the Gantt
     const nonWorkDays = useMemo(() => {
@@ -137,6 +139,8 @@ export function ConstructionTasksView({
 
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
+            // Project filter (from store or prop)
+            if (activeProjectId && task.project_id !== activeProjectId) return false;
             const matchesSearch =
                 [
                     task.task_name || task.custom_name || "",
@@ -147,7 +151,7 @@ export function ConstructionTasksView({
             const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(task.status);
             return matchesSearch && matchesStatus;
         });
-    }, [tasks, searchQuery, selectedStatuses]);
+    }, [tasks, searchQuery, selectedStatuses, activeProjectId]);
 
     // ========================================================================
     // Gantt items (memoized conversion)
@@ -173,25 +177,17 @@ export function ConstructionTasksView({
         setSelectedStatuses(next);
     };
 
-    const handleFormSuccess = (data: any, isEditing: boolean) => {
-        closeModal();
-        if (isEditing && data) {
-            // Optimistic: update local state with server response
-            setTasks(prev => prev.map(t => t.id === data.id ? { ...t, ...data } : t));
-        } else if (data) {
-            // For new tasks, we need the full view data — refresh to get joined fields
-            router.refresh();
-        }
-    };
 
     const handleCreate = () => {
+        if (!activeProjectId) {
+            toast.error("Seleccioná un proyecto en el header para crear una tarea.");
+            return;
+        }
         openModal(
             <ConstructionTaskForm
-                projectId={projectId}
+                projectId={activeProjectId}
                 organizationId={organizationId}
                 catalogTasks={catalogTasks}
-                onSuccess={handleFormSuccess}
-                onCancel={closeModal}
             />,
             {
                 title: "Nueva Tarea",
@@ -204,12 +200,10 @@ export function ConstructionTasksView({
     const handleEdit = (task: ConstructionTaskView) => {
         openModal(
             <ConstructionTaskForm
-                projectId={projectId}
+                projectId={task.project_id}
                 organizationId={organizationId}
                 catalogTasks={catalogTasks}
                 initialData={task}
-                onSuccess={handleFormSuccess}
-                onCancel={closeModal}
             />,
             {
                 title: "Editar Tarea",
@@ -234,7 +228,7 @@ export function ConstructionTasksView({
 
         // Persist in background
         startTransition(async () => {
-            const result = await deleteConstructionTask(taskToDelete.id, projectId);
+            const result = await deleteConstructionTask(taskToDelete.id, taskToDelete.project_id);
             if (!result.success) {
                 // Rollback on error
                 setTasks(prev => [...prev, taskToDelete]);
@@ -263,7 +257,7 @@ export function ConstructionTasksView({
         startTransition(async () => {
             const result = await updateConstructionTaskStatus(
                 task.id,
-                projectId,
+                task.project_id,
                 newStatus as ConstructionTaskStatus
             );
             if (!result.success) {
@@ -398,7 +392,7 @@ export function ConstructionTasksView({
 
         // Persist all in parallel
         const persists = [
-            updateConstructionTask(id, projectId, {
+            updateConstructionTask(id, original.project_id, {
                 planned_start_date: newStartStr,
                 planned_end_date: newEndStr,
             }).then(result => {
@@ -408,7 +402,7 @@ export function ConstructionTasksView({
                 }
             }),
             ...cascaded.map(c =>
-                updateConstructionTask(c.id, projectId, {
+                updateConstructionTask(c.id, c.original.project_id, {
                     planned_start_date: c.newStartStr,
                     planned_end_date: c.newEndStr,
                 }).then(result => {
@@ -421,7 +415,7 @@ export function ConstructionTasksView({
         ];
 
         void Promise.all(persists);
-    }, [tasks, projectId, dependencies, propagateDependencies]);
+    }, [tasks, dependencies, propagateDependencies]);
 
     const handleGanttItemResize = useCallback((id: string, newEnd: Date) => {
         const original = tasks.find(t => t.id === id);
@@ -463,7 +457,7 @@ export function ConstructionTasksView({
 
         // Persist all in parallel
         const persists = [
-            updateConstructionTask(id, projectId, {
+            updateConstructionTask(id, original.project_id, {
                 planned_end_date: newEndStr,
             }).then(result => {
                 if (!result.success) {
@@ -472,7 +466,7 @@ export function ConstructionTasksView({
                 }
             }),
             ...cascaded.map(c =>
-                updateConstructionTask(c.id, projectId, {
+                updateConstructionTask(c.id, c.original.project_id, {
                     planned_start_date: c.newStartStr,
                     planned_end_date: c.newEndStr,
                 }).then(result => {
@@ -485,7 +479,7 @@ export function ConstructionTasksView({
         ];
 
         void Promise.all(persists);
-    }, [tasks, projectId, dependencies, propagateDependencies]);
+    }, [tasks, dependencies, propagateDependencies]);
 
     // ========================================================================
     // Dependency handlers

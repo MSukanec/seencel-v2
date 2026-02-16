@@ -35,7 +35,7 @@ interface ContactOption {
 }
 
 interface LaborTeamViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     workers: ProjectLaborView[];
     laborTypes: LaborType[];

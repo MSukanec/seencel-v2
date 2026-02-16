@@ -37,7 +37,7 @@ import { updatePurchaseOrderStatus, deletePurchaseOrder } from "../actions";
 import { CatalogMaterial, MaterialUnit } from "../queries";
 
 interface MaterialsOrdersViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     orders: PurchaseOrderView[];
     providers: { id: string; name: string }[];

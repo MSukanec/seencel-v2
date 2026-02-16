@@ -29,7 +29,7 @@ import { BulkImportModal } from "@/components/shared/import/import-modal";
 import { createImportBatch, revertImportBatch, importMaterialPaymentsBatch } from "@/lib/import";
 
 interface MaterialsPaymentsViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     payments: MaterialPaymentView[];
     purchases: MaterialPurchase[];
@@ -139,7 +139,7 @@ export function MaterialsPaymentsView({
         ],
         onImport: async (data) => {
             const batch = await createImportBatch(orgId, "material_payments", data.length);
-            const result = await importMaterialPaymentsBatch(orgId, projectId, data, batch.id);
+            const result = await importMaterialPaymentsBatch(orgId, projectId || "", data, batch.id);
             return { success: result.success, errors: result.errors, warnings: result.warnings, batchId: batch.id };
         },
         onRevert: async (batchId) => {

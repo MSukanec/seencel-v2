@@ -47,7 +47,7 @@ export async function createConstructionTask(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${projectId}/construction-tasks`);
+    revalidatePath(`/organization/construction-tasks`);
     return { success: true, data: result };
 }
 
@@ -88,7 +88,7 @@ export async function updateConstructionTask(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${projectId}/construction-tasks`);
+    revalidatePath(`/organization/construction-tasks`);
     return { success: true, data: result };
 }
 
@@ -122,7 +122,7 @@ export async function updateConstructionTaskStatus(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${projectId}/construction-tasks`);
+    revalidatePath(`/organization/construction-tasks`);
     return { success: true };
 }
 
@@ -145,7 +145,7 @@ export async function deleteConstructionTask(taskId: string, projectId: string) 
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${projectId}/construction-tasks`);
+    revalidatePath(`/organization/construction-tasks`);
     return { success: true };
 }
 
@@ -232,8 +232,30 @@ export async function upsertProjectSettings(
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${projectId}/construction-tasks`);
+    revalidatePath(`/organization/construction-tasks`);
     return { success: true };
+}
+
+/**
+ * Fetch project settings from client components (server action wrapper)
+ */
+export async function fetchProjectSettingsAction(
+    projectId: string
+): Promise<{ work_days: number[] }> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("project_settings")
+        .select("work_days")
+        .eq("project_id", projectId)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error fetching project settings:", error);
+        return { work_days: [1, 2, 3, 4, 5] };
+    }
+
+    return { work_days: data?.work_days ?? [1, 2, 3, 4, 5] };
 }
 
 // ============================================================================

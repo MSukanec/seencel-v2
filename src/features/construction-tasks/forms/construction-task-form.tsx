@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useRouter } from "@/i18n/routing";
+import { useModal } from "@/stores/modal-store";
 import { ConstructionTaskView, ConstructionTaskStatus, CostScope } from "../types";
 import { createConstructionTask, updateConstructionTask, getRecipesForTask } from "../actions";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
@@ -37,8 +39,6 @@ interface ConstructionTaskFormProps {
     organizationId: string;
     catalogTasks: CatalogTask[];
     initialData?: ConstructionTaskView | null;
-    onSuccess?: (data: any, isEditing: boolean) => void;
-    onCancel?: () => void;
 }
 
 // ============================================================================
@@ -50,11 +50,21 @@ export function ConstructionTaskForm({
     organizationId,
     catalogTasks,
     initialData,
-    onSuccess,
-    onCancel,
 }: ConstructionTaskFormProps) {
+    const router = useRouter();
+    const { closeModal } = useModal();
     const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!initialData;
+
+    // Internal lifecycle callbacks (semi-autonomous pattern)
+    const handleSuccess = () => {
+        closeModal();
+        router.refresh();
+    };
+
+    const handleCancel = () => {
+        closeModal();
+    };
 
     // --- Task Selection ---
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialData?.task_id || null);
@@ -221,7 +231,7 @@ export function ConstructionTaskForm({
 
             if (result.success) {
                 toast.success(isEditing ? "Tarea actualizada" : "Tarea creada");
-                onSuccess?.(result.data, isEditing);
+                handleSuccess();
             } else {
                 toast.error(result.error || "Error al guardar la tarea");
             }
@@ -442,7 +452,7 @@ export function ConstructionTaskForm({
                 className="-mx-4 -mb-4 mt-6"
                 isLoading={isLoading}
                 submitLabel={isEditing ? "Guardar Cambios" : "Agregar Tarea"}
-                onCancel={onCancel}
+                onCancel={handleCancel}
             />
         </form>
     );

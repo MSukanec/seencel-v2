@@ -33,7 +33,7 @@ import {
 } from "@/features/tasks/actions";
 import { TasksRecipeForm } from "@/features/tasks/forms/tasks-recipe-form";
 import { TasksRecipeResourceForm } from "@/features/tasks/forms/tasks-recipe-resource-form";
-import type { TaskView, TaskRecipeView, RecipeResources, ExternalService } from "@/features/tasks/types";
+import type { TaskView, TaskRecipeView, RecipeResources } from "@/features/tasks/types";
 import { RecipeCard } from "@/features/tasks/components/recipe-card";
 import type { RecipeCardData, MaterialPriceInfo, LaborPriceInfo, ExternalServicePriceInfo } from "@/features/tasks/components/recipe-card";
 import { cn } from "@/lib/utils";
@@ -56,8 +56,7 @@ export interface TasksDetailRecipeViewProps {
     catalogMaterials?: CatalogMaterialOption[];
     /** Catalog labor types — needed for labor form Combobox */
     catalogLaborTypes?: { id: string; name: string; unit_id?: string | null; unit_name?: string | null; unit_symbol?: string | null; category_name?: string | null; level_name?: string | null; role_name?: string | null; current_price?: number | null; currency_id?: string | null; currency_symbol?: string | null; price_valid_from?: string | null }[];
-    /** Catalog external services — needed for external service form Combobox */
-    catalogExternalServices?: ExternalService[];
+
 }
 
 /** Material option from catalog — includes pricing for cost calculations */
@@ -97,7 +96,7 @@ export function TasksDetailRecipeView({
     isAdminMode = false,
     catalogMaterials = [],
     catalogLaborTypes = [],
-    catalogExternalServices = [],
+
 }: TasksDetailRecipeViewProps) {
     const router = useRouter();
     const { openModal } = useModal();
@@ -146,7 +145,6 @@ export function TasksDetailRecipeView({
                 recipeId={recipeId}
                 materials={catalogMaterials}
                 laborTypes={catalogLaborTypes}
-                externalServices={catalogExternalServices}
             />,
             {
                 title: "Agregar Recurso",
@@ -154,7 +152,7 @@ export function TasksDetailRecipeView({
                 size: "md",
             }
         );
-    }, [catalogMaterials, catalogLaborTypes, catalogExternalServices, openModal]);
+    }, [catalogMaterials, catalogLaborTypes, openModal]);
 
     // ========================================================================
     // Material Handlers
@@ -420,11 +418,7 @@ export function TasksDetailRecipeView({
             if (!priceInfo) return sum;
             return sum + item.quantity * priceInfo.unitPrice;
         }, 0);
-        const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
-            const priceInfo = externalServicePriceMap?.get(item.external_service_id);
-            if (!priceInfo) return sum;
-            return sum + item.quantity * priceInfo.unitPrice;
-        }, 0);
+        const externalServicesTotal = 0; // External services don't have catalog-level pricing yet
         return materialsTotal + laborTotal + externalServicesTotal;
     }, [materialPriceMap, laborPriceMap, externalServicePriceMap]);
 
@@ -542,11 +536,7 @@ export function TasksDetailRecipeView({
                         if (!priceInfo) return sum;
                         return sum + item.quantity * priceInfo.unitPrice;
                     }, 0);
-                    const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
-                        const priceInfo = externalServicePriceMap?.get(item.external_service_id);
-                        if (!priceInfo) return sum;
-                        return sum + item.quantity * priceInfo.unitPrice;
-                    }, 0);
+                    const externalServicesTotal = 0; // External services don't have catalog-level pricing yet
                     const equipmentTotal = 0; // placeholder
                     const grandTotal = materialsTotal + laborTotal + externalServicesTotal + equipmentTotal;
 

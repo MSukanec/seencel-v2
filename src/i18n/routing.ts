@@ -169,18 +169,7 @@ export const routing = defineRouting({
             en: '/project/[projectId]/details',
             es: '/proyecto/[projectId]/detalles'
         },
-        '/project/[projectId]/construction-tasks': {
-            en: '/project/[projectId]/construction-tasks',
-            es: '/proyecto/[projectId]/tareas-obra'
-        },
-        '/project/[projectId]/materials': {
-            en: '/project/[projectId]/materials',
-            es: '/proyecto/[projectId]/materiales'
-        },
-        '/project/[projectId]/labor': {
-            en: '/project/[projectId]/labor',
-            es: '/proyecto/[projectId]/mano-de-obra'
-        },
+
         '/project/[projectId]/subcontracts': {
             en: '/project/[projectId]/subcontracts',
             es: '/proyecto/[projectId]/subcontratos'
@@ -188,10 +177,6 @@ export const routing = defineRouting({
         '/project/[projectId]/subcontracts/[subcontractId]': {
             en: '/project/[projectId]/subcontracts/[subcontractId]',
             es: '/proyecto/[projectId]/subcontratos/[subcontractId]'
-        },
-        '/project/[projectId]/finance': {
-            en: '/project/[projectId]/finance',
-            es: '/proyecto/[projectId]/finanzas'
         },
         '/project/[projectId]/health': {
             en: '/project/[projectId]/health',

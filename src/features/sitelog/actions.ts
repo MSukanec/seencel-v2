@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-import { SiteLog, SiteLogType } from "@/types/sitelog";
+import { SiteLog, SiteLogType } from "./types";
 
 // --- SITE LOGS (ENTRIES) ---
 
@@ -180,7 +180,7 @@ export async function createSiteLogType(organizationId: string, name: string, de
             organization_id: organizationId,
             name,
             description,
-            is_system: false, // Start as custom type
+            is_system: false,
             created_by: memberData.id,
             updated_by: memberData.id
         })
@@ -192,7 +192,6 @@ export async function createSiteLogType(organizationId: string, name: string, de
         throw new Error("Failed to create type");
     }
 
-    revalidatePath(`/project/[projectId]/sitelog`, 'page');
     revalidatePath(`/organization/sitelog`, 'page');
     return data;
 }
@@ -205,7 +204,7 @@ export async function updateSiteLogType(id: string, name: string, description?: 
         .update({
             name,
             description,
-            updated_by: (await supabase.auth.getUser()).data.user?.id // This will trigger trigger to map to member
+            updated_by: (await supabase.auth.getUser()).data.user?.id
         })
         .eq('id', id);
 
@@ -214,14 +213,13 @@ export async function updateSiteLogType(id: string, name: string, description?: 
         throw new Error("Failed to update type");
     }
 
-    revalidatePath(`/project/[projectId]/sitelog`, 'page');
     revalidatePath(`/organization/sitelog`, 'page');
 }
 
 export async function deleteSiteLogType(id: string, replacementId?: string) {
     const supabase = await createClient();
 
-    // 1. Reassign (if we had site_logs table, we would update them here)
+    // 1. Reassign
     if (replacementId) {
         const { error: moveError } = await supabase
             .from('site_logs')
@@ -248,11 +246,10 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
         throw new Error("Failed to delete type");
     }
 
-    revalidatePath(`/project/[projectId]/sitelog`, 'page');
     revalidatePath(`/organization/sitelog`, 'page');
 }
 
-// --- CREATE ACTION ---
+// --- CREATE / UPDATE SITE LOG ---
 
 export async function createSiteLog(formData: FormData) {
     const supabase = await createClient();
@@ -341,7 +338,6 @@ export async function createSiteLog(formData: FormData) {
                     else if (item.type === 'application/pdf') dbFileType = 'pdf';
 
                     // Check if this file already exists in DB (by ID)
-                    // If it's a new upload, the ID is random UUID and won't exist in DB
                     const { data: existingFile } = await supabase
                         .from('media_files')
                         .select('id')
@@ -349,7 +345,6 @@ export async function createSiteLog(formData: FormData) {
                         .single();
 
                     if (existingFile) {
-                        // File exists, use it
                         validMediaFileIds.push(existingFile.id);
                     } else {
                         // File does not exist, create it
@@ -358,8 +353,8 @@ export async function createSiteLog(formData: FormData) {
                             .from('media_files')
                             .insert({
                                 organization_id: organizationId,
-                                bucket: item.bucket || 'sitelogs', // Default bucket if missing
-                                file_path: item.path || item.url, // Fallback
+                                bucket: item.bucket || 'sitelogs',
+                                file_path: item.path || item.url,
                                 file_name: item.name,
                                 file_type: dbFileType,
                                 created_by: user.id
@@ -406,7 +401,7 @@ export async function createSiteLog(formData: FormData) {
         }
     }
 
-    revalidatePath(`/project/${projectId}/sitelog`);
+    revalidatePath(`/organization/sitelog`, 'page');
     return { success: true };
 }
 
@@ -432,8 +427,6 @@ export async function deleteSiteLog(logId: string, projectId: string) {
         return { error: "Error al eliminar el registro" };
     }
 
-    revalidatePath(`/project/${projectId}/sitelog`);
     revalidatePath(`/organization/sitelog`, 'page');
     return { success: true };
 }
-

@@ -204,7 +204,7 @@ export async function createLaborCategory(input: CreateLaborCategoryInput): Prom
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath('/project/[projectId]/labor', 'page');
+    revalidatePath('/organization/labor', 'page');
     return { success: true, data: data as LaborCategory };
 }
 
@@ -233,7 +233,7 @@ export async function updateLaborCategory(input: UpdateLaborCategoryInput): Prom
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath('/project/[projectId]/labor', 'page');
+    revalidatePath('/organization/labor', 'page');
     return { success: true, data: data as LaborCategory };
 }
 
@@ -251,7 +251,7 @@ export async function deleteLaborCategory(id: string): Promise<{ success: boolea
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath('/project/[projectId]/labor', 'page');
+    revalidatePath('/organization/labor', 'page');
     return { success: true };
 }
 
@@ -653,6 +653,25 @@ export async function getProjectLaborView(projectId: string): Promise<ProjectLab
     return data as ProjectLaborView[];
 }
 
+/**
+ * Get ALL labor from the view for an organization (across all projects)
+ */
+export async function getOrgLaborView(organizationId: string): Promise<ProjectLaborView[]> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('project_labor_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching org labor view:', error);
+        return [];
+    }
+
+    return data as ProjectLaborView[];
+}
+
 interface CreateProjectLaborInput {
     project_id: string;
     organization_id: string;
@@ -687,7 +706,7 @@ export async function createProjectLabor(input: CreateProjectLaborInput): Promis
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${input.project_id}/labor`);
+    revalidatePath('/organization/labor', 'page');
     return { success: true, data: data as ProjectLabor };
 }
 
@@ -718,7 +737,7 @@ export async function updateProjectLabor(input: UpdateProjectLaborInput): Promis
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${input.project_id}/labor`);
+    revalidatePath('/organization/labor', 'page');
     return { success: true, data: data as ProjectLabor };
 }
 
@@ -735,7 +754,7 @@ export async function deleteProjectLabor(id: string, projectId: string): Promise
         return { success: false, error: sanitizeError(error) };
     }
 
-    revalidatePath(`/project/${projectId}/labor`);
+    revalidatePath('/organization/labor', 'page');
     return { success: true };
 }
 
@@ -812,7 +831,7 @@ export async function createLaborPayment(data: {
         .single();
 
     if (error) throw new Error(sanitizeError(error));
-    revalidatePath(`/project/${data.project_id}/labor`);
+    revalidatePath('/organization/labor', 'page');
     return newPayment;
 }
 
@@ -846,7 +865,7 @@ export async function updateLaborPayment(id: string, data: {
         .single();
 
     if (error) throw new Error(sanitizeError(error));
-    revalidatePath(`/project/${projectId}/labor`);
+    revalidatePath('/organization/labor', 'page');
     return updatedPayment;
 }
 
@@ -861,6 +880,6 @@ export async function deleteLaborPayment(id: string, projectId: string) {
         .eq('id', id);
 
     if (error) throw new Error(sanitizeError(error));
-    revalidatePath(`/project/${projectId}/labor`);
+    revalidatePath('/organization/labor', 'page');
     return true;
 }

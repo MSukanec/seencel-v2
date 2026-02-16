@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { CalendarDays, Check } from "lucide-react";
+import { CalendarDays, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 
-import { upsertProjectSettings } from "../actions";
+import { upsertProjectSettings, fetchProjectSettingsAction } from "../actions";
 
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { cn } from "@/lib/utils";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 // ============================================================================
 // Types
 // ============================================================================
 
 interface ConstructionTasksSettingsViewProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
-    initialWorkDays: number[];
+    initialWorkDays?: number[];
     onWorkDaysChange?: (workDays: number[]) => void;
 }
 
@@ -31,6 +32,7 @@ const DAYS_OF_WEEK = [
     { value: 0, label: "Dom", fullLabel: "Domingo" },
 ];
 
+const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5];
 const AUTOSAVE_DELAY = 1000; // 1 second debounce
 
 // ============================================================================
@@ -38,15 +40,38 @@ const AUTOSAVE_DELAY = 1000; // 1 second debounce
 // ============================================================================
 
 export function ConstructionTasksSettingsView({
-    projectId,
+    projectId: propProjectId,
     organizationId,
     initialWorkDays,
     onWorkDaysChange,
 }: ConstructionTasksSettingsViewProps) {
-    const [workDays, setWorkDays] = useState<number[]>(initialWorkDays);
+    const storeProjectId = useActiveProjectId();
+    const activeProjectId = storeProjectId ?? propProjectId ?? null;
+
+    const [workDays, setWorkDays] = useState<number[]>(initialWorkDays ?? DEFAULT_WORK_DAYS);
     const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+    const [isLoading, setIsLoading] = useState(false);
     const saveTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
     const isFirstRender = useRef(true);
+    const lastLoadedProjectId = useRef<string | null>(null);
+
+    // Load project settings when activeProjectId changes (org-level usage)
+    useEffect(() => {
+        if (!activeProjectId) return;
+        if (activeProjectId === lastLoadedProjectId.current) return;
+        // If we have initialWorkDays and this is the first render with prop projectId, skip fetch
+        if (initialWorkDays && isFirstRender.current && propProjectId === activeProjectId) {
+            lastLoadedProjectId.current = activeProjectId;
+            return;
+        }
+
+        lastLoadedProjectId.current = activeProjectId;
+        setIsLoading(true);
+        fetchProjectSettingsAction(activeProjectId).then((settings: { work_days: number[] }) => {
+            setWorkDays(settings.work_days);
+            setIsLoading(false);
+        });
+    }, [activeProjectId, initialWorkDays, propProjectId]);
 
     // Auto-save with debounce when workDays changes
     useEffect(() => {
@@ -55,6 +80,8 @@ export function ConstructionTasksSettingsView({
             isFirstRender.current = false;
             return;
         }
+
+        if (!activeProjectId) return;
 
         // Clear previous timeout
         if (saveTimeout.current) {
@@ -65,7 +92,7 @@ export function ConstructionTasksSettingsView({
 
         saveTimeout.current = setTimeout(async () => {
             try {
-                const result = await upsertProjectSettings(projectId, organizationId, workDays);
+                const result = await upsertProjectSettings(activeProjectId, organizationId, workDays);
                 if (result.success) {
                     setSaveStatus("saved");
                     onWorkDaysChange?.(workDays);
@@ -102,6 +129,46 @@ export function ConstructionTasksSettingsView({
             return next;
         });
     }, []);
+
+    // No project selected — show informational message
+    if (!activeProjectId) {
+        return (
+            <div className="p-6 overflow-y-auto h-full">
+                <SettingsSectionContainer
+                    title="Ajustes de Ejecución"
+                    description="Configurá las opciones generales para las tareas de construcción."
+                    variant="card"
+                >
+                    <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border">
+                        <Info className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                            Seleccioná un proyecto en el header para configurar sus ajustes de ejecución.
+                        </p>
+                    </div>
+                </SettingsSectionContainer>
+            </div>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <div className="p-6 overflow-y-auto h-full">
+                <SettingsSectionContainer
+                    title="Ajustes de Ejecución"
+                    description="Cargando configuración del proyecto..."
+                    variant="card"
+                >
+                    <div className="animate-pulse space-y-4">
+                        <div className="flex gap-2">
+                            {Array.from({ length: 7 }).map((_, i) => (
+                                <div key={i} className="w-16 h-16 rounded-lg bg-muted" />
+                            ))}
+                        </div>
+                    </div>
+                </SettingsSectionContainer>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 overflow-y-auto h-full">
@@ -176,3 +243,4 @@ export function ConstructionTasksSettingsView({
         </div>
     );
 }
+

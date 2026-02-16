@@ -28,7 +28,7 @@ import {
 import { CatalogMaterial, MaterialUnit } from "../queries";
 
 interface PurchaseOrderFormProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     providers: { id: string; name: string }[];
     financialData: OrganizationFinancialData;
@@ -156,7 +156,7 @@ export function PurchaseOrderForm({
             }
 
             const payload = {
-                project_id: projectId,
+                project_id: projectId || "",
                 organization_id: organizationId,
                 provider_id: providerId || null,
                 order_date: orderDate ? format(orderDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),

@@ -22,7 +22,7 @@ import { deleteLaborCategory } from "../actions";
 import { toast } from "sonner";
 
 interface LaborSettingsViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     laborTypes: LaborCategory[];
 }

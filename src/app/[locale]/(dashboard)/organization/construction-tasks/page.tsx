@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
+import { setRequestLocale } from "next-intl/server";
 import { ClipboardList } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
@@ -8,9 +9,8 @@ import { ErrorDisplay } from "@/components/ui/error-display";
 import { ConstructionTasksView } from "@/features/construction-tasks/views/construction-tasks-view";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { ConstructionTasksSettingsView } from "@/features/construction-tasks/views/construction-tasks-settings-view";
-import { getProjectConstructionTasks, getProjectConstructionDependencies, getProjectSettings } from "@/features/construction-tasks/queries";
+import { getOrganizationConstructionTasks, getOrganizationConstructionDependencies } from "@/features/construction-tasks/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getProjectById } from "@/features/projects/queries";
 import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getUnits, getTaskActions, getTaskElements } from "@/features/tasks/queries";
 
 // ============================================================================
@@ -20,16 +20,11 @@ import { getOrganizationTasks, getTasksGroupedByDivision, getTaskDivisions, getU
 export async function generateMetadata({
     params,
 }: {
-    params: Promise<{ projectId: string; locale: string }>;
+    params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
-    const { projectId } = await params;
-    const project = await getProjectById(projectId);
-
     return {
-        title: project
-            ? `Tareas - ${project.name} | Seencel`
-            : "Tareas | Seencel",
-        description: "Gestión de tareas de construcción del proyecto",
+        title: `Tareas de Construcción | SEENCEL`,
+        description: "Gestión de tareas de construcción",
         robots: "noindex, nofollow",
     };
 }
@@ -40,7 +35,7 @@ export async function generateMetadata({
 
 interface PageProps {
     params: Promise<{
-        projectId: string;
+        locale: string;
     }>;
     searchParams: Promise<{ view?: string }>;
 }
@@ -49,9 +44,11 @@ interface PageProps {
 // Page Component
 // ============================================================================
 
-export default async function ConstructionTasksPage({ params, searchParams }: PageProps) {
+export default async function OrganizationConstructionTasksPage({ params, searchParams }: PageProps) {
+    const { locale } = await params;
+    setRequestLocale(locale);
+
     try {
-        const { projectId } = await params;
         const resolvedSearchParams = await searchParams;
         const defaultTab = resolvedSearchParams.view || "tasks";
 
@@ -61,22 +58,10 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
             redirect("/");
         }
 
-        // Validate project exists and belongs to org
-        const project = await getProjectById(projectId);
-
-        if (!project) {
-            notFound();
-        }
-
-        if (project.organization_id !== activeOrgId) {
-            notFound();
-        }
-
-        // Fetch construction tasks and catalog data in parallel
+        // Fetch ALL org construction tasks and catalog data in parallel
         const [
             tasks,
             initialDependencies,
-            projectSettings,
             catalogResult,
             catalogGroupedTasks,
             divisionsResult,
@@ -84,9 +69,8 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
             actionsResult,
             elementsResult
         ] = await Promise.all([
-            getProjectConstructionTasks(projectId),
-            getProjectConstructionDependencies(projectId),
-            getProjectSettings(projectId),
+            getOrganizationConstructionTasks(),
+            getOrganizationConstructionDependencies(),
             getOrganizationTasks(activeOrgId),
             getTasksGroupedByDivision(activeOrgId),
             getTaskDivisions(),
@@ -112,11 +96,11 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
-                    title="Tareas"
+                    title="Tareas de Construcción"
                     icon={<ClipboardList />}
                     tabs={
                         <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">
-                            <TabsTrigger value="tasks">Tareas del Proyecto</TabsTrigger>
+                            <TabsTrigger value="tasks">Tareas</TabsTrigger>
                             {hasCatalogData && (
                                 <TabsTrigger value="catalog">Catálogo</TabsTrigger>
                             )}
@@ -126,12 +110,10 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
                 >
                     <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ConstructionTasksView
-                            projectId={projectId}
                             organizationId={activeOrgId}
                             tasks={tasks}
                             initialDependencies={initialDependencies}
                             catalogTasks={catalogTasks}
-                            workDays={projectSettings.work_days}
                         />
                     </TabsContent>
 
@@ -153,9 +135,7 @@ export default async function ConstructionTasksPage({ params, searchParams }: Pa
 
                     <TabsContent value="settings" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ConstructionTasksSettingsView
-                            projectId={projectId}
                             organizationId={activeOrgId}
-                            initialWorkDays={projectSettings.work_days}
                         />
                     </TabsContent>
                 </PageWrapper>

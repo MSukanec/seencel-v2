@@ -52,7 +52,7 @@ interface FormattedCurrency {
 }
 
 interface LaborPaymentsViewProps {
-    projectId: string;
+    projectId?: string;
     orgId: string;
     payments: LaborPaymentView[];
     laborTypes: LaborType[];
@@ -136,7 +136,7 @@ export function LaborPaymentsView({
 
         startDeleteTransition(async () => {
             try {
-                await deleteLaborPayment(paymentToDelete.id, projectId);
+                await deleteLaborPayment(paymentToDelete.id, projectId!);
                 toast.success("Pago eliminado");
                 setIsDeleteDialogOpen(false);
             } catch (error) {

@@ -56,7 +56,7 @@ interface LaborWorkerFormProps {
     initialData?: ProjectLaborView | null;
     contacts: ContactOption[];
     laborTypes: LaborType[];
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -92,7 +92,7 @@ export function LaborWorkerForm({
             if (isEditing && initialData) {
                 const result = await updateProjectLabor({
                     id: initialData.id,
-                    project_id: projectId,
+                    project_id: projectId!,
                     contact_id: values.contact_id,
                     labor_type_id: values.labor_type_id || null,
                     status: values.status,
@@ -107,7 +107,7 @@ export function LaborWorkerForm({
                 toast.success("Trabajador actualizado");
             } else {
                 const result = await createProjectLabor({
-                    project_id: projectId,
+                    project_id: projectId!,
                     organization_id: organizationId,
                     contact_id: values.contact_id,
                     labor_type_id: values.labor_type_id || null,

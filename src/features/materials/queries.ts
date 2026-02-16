@@ -35,6 +35,34 @@ export async function getMaterialPayments(projectId: string): Promise<MaterialPa
     }));
 }
 
+/**
+ * Get ALL material payments for an organization (no project filter)
+ * Used by the unified /organization/materials page
+ */
+export async function getOrgMaterialPayments(organizationId: string): Promise<MaterialPaymentView[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_payments_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('payment_date', { ascending: false });
+
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("material_payments_view does not exist yet, returning empty array");
+            return [];
+        }
+        console.error("Error fetching org material payments:", error);
+        return [];
+    }
+
+    return (data || []).map((p: any) => ({
+        ...p,
+        purchase_reference: p.invoice_number || null,
+    }));
+}
+
 // ===============================================
 // Organization Financial Data (shared query)
 // ===============================================
@@ -300,6 +328,42 @@ export async function getProjectMaterialRequirements(projectId: string): Promise
     }));
 }
 
+/**
+ * Get ALL material requirements for an organization (no project filter)
+ * Used by the unified /organization/materials page
+ */
+export async function getOrgMaterialRequirements(organizationId: string): Promise<MaterialRequirement[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('project_material_requirements_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('material_name', { ascending: true });
+
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("project_material_requirements_view does not exist yet, returning empty array");
+            return [];
+        }
+        console.error("Error fetching org material requirements:", error);
+        return [];
+    }
+
+    return (data || []).map((r: any) => ({
+        project_id: r.project_id,
+        organization_id: r.organization_id,
+        material_id: r.material_id,
+        material_name: r.material_name || 'Material desconocido',
+        unit_name: r.unit_name,
+        category_id: r.category_id,
+        category_name: r.category_name,
+        total_required: parseFloat(r.total_required) || 0,
+        task_count: parseInt(r.task_count) || 0,
+        construction_task_ids: r.construction_task_ids || [],
+    }));
+}
+
 // ===============================================
 // Purchase Orders Queries
 // ===============================================
@@ -324,6 +388,55 @@ export async function getPurchaseOrders(projectId: string): Promise<PurchaseOrde
             return [];
         }
         console.error("Error fetching purchase orders:", error);
+        return [];
+    }
+
+    return (data || []).map((po: any) => ({
+        id: po.id,
+        organization_id: po.organization_id,
+        project_id: po.project_id,
+        order_number: po.order_number,
+        order_date: po.order_date,
+        expected_delivery_date: po.expected_delivery_date,
+        status: po.status,
+        notes: po.notes,
+        currency_id: po.currency_id,
+        subtotal: parseFloat(po.subtotal) || 0,
+        tax_amount: parseFloat(po.tax_amount) || 0,
+        total: parseFloat(po.total) || 0,
+        provider_id: po.provider_id,
+        provider_name: po.provider_name,
+        requested_by: po.requested_by,
+        approved_by: po.approved_by,
+        is_deleted: po.is_deleted,
+        created_at: po.created_at,
+        updated_at: po.updated_at,
+        currency_symbol: po.currency_symbol,
+        currency_code: po.currency_code,
+        project_name: po.project_name,
+        item_count: parseInt(po.item_count) || 0,
+    }));
+}
+
+/**
+ * Get ALL purchase orders for an organization (no project filter)
+ * Used by the unified /organization/materials page
+ */
+export async function getOrgPurchaseOrders(organizationId: string): Promise<PurchaseOrderView[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('material_purchase_orders_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+            console.warn("material_purchase_orders_view does not exist yet");
+            return [];
+        }
+        console.error("Error fetching org purchase orders:", error);
         return [];
     }
 

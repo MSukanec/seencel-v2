@@ -21,7 +21,7 @@ import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/c
 import { OrganizationFinancialData, MaterialPurchase, MaterialType } from "@/features/materials/types";
 
 interface MaterialPaymentFormProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     purchases: MaterialPurchase[];
     materialTypes: MaterialType[];
@@ -108,7 +108,7 @@ export function MaterialPaymentForm({
             }
 
             const formData = new FormData();
-            formData.append('project_id', projectId);
+            formData.append('project_id', projectId || "");
             formData.append('organization_id', organizationId);
             formData.append('payment_date', formatDateForDB(date) || formatDateForDB(new Date())!);
             formData.append('purchase_id', purchaseId);
