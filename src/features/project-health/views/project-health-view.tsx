@@ -27,13 +27,15 @@ import {
     XCircle,
     AlertTriangle,
     Database,
-    Info
+    Info,
+    HeartPulse
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useActiveProjectId } from '@/stores/layout-store';
 
 interface ProjectHealthViewProps {
-    projectId: string;
+    projectId?: string;
 }
 
 // =============================================
@@ -158,8 +160,27 @@ function IndicatorCard({
 // =============================================
 // COMPONENTE PRINCIPAL
 // =============================================
-export function ProjectHealthView({ projectId }: ProjectHealthViewProps) {
-    const { health, metrics, isLoading, error, refresh } = useProjectHealth(projectId);
+export function ProjectHealthView({ projectId: projectIdProp }: ProjectHealthViewProps) {
+    const activeProjectId = useActiveProjectId();
+    const projectId = projectIdProp || activeProjectId;
+    const { health, metrics, isLoading, error, refresh } = useProjectHealth(projectId || '');
+
+    // No project selected state
+    if (!projectId) {
+        return (
+            <div className="h-full flex items-center justify-center p-6">
+                <div className="text-center space-y-4">
+                    <HeartPulse size={48} className="mx-auto text-muted-foreground" />
+                    <div>
+                        <h3 className="font-semibold text-lg">Seleccioná un proyecto</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Para ver el diagnóstico de salud, primero seleccioná un proyecto activo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // Loading State
     if (isLoading) {

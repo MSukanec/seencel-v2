@@ -29,6 +29,9 @@ import {
     Landmark,
     LayoutTemplate,
     MessageCircle,
+    ScrollText,
+    MessageSquareText,
+    Receipt,
 } from "lucide-react";
 import { NavigationContext } from "@/stores/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -64,7 +67,7 @@ export interface ContextItem {
 
 const ALL_CONTEXTS: ContextItem[] = [
     { id: 'organization', label: 'Espacio de Trabajo', icon: Building },
-    { id: 'portal', label: 'Portal de Clientes', icon: Building },
+    // Portal removed — now lives as tab inside project detail page
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
@@ -76,7 +79,6 @@ export const contextRoutes: Record<NavigationContext, string> = {
     home: '/hub',
     organization: '/organization',
     project: '/organization/projects',
-    portal: '/portal',
     learnings: '/academy/my-courses',
     community: '/community',
     admin: '/admin'
@@ -101,7 +103,6 @@ export function useSidebarNavigation() {
             // Mapping: Context ID -> Feature Flag Key
             let flagKey = null;
             if (ctx.id === 'organization' || ctx.id === 'project') flagKey = 'context_workspace_enabled';
-            if (ctx.id === 'portal') flagKey = 'context_portal_enabled';
             if (ctx.id === 'learnings') flagKey = 'context_academy_enabled';
             if (ctx.id === 'community') flagKey = 'context_community_enabled';
 
@@ -178,7 +179,63 @@ export function useSidebarNavigation() {
     };
 
 
-    const getNavGroups = (ctx: 'organization' | 'project'): NavGroup[] => {
+    const getNavGroups = (ctx: 'organization' | 'project' | 'admin'): NavGroup[] => {
+        if (ctx === 'admin') {
+            return [
+                // Visión General (standalone)
+                {
+                    id: 'principal',
+                    label: '',
+                    standalone: true,
+                    items: [
+                        { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
+                    ],
+                },
+                // Directorio — personas, actividad y soporte
+                {
+                    id: 'directorio',
+                    label: 'Directorio',
+                    defaultOpen: true,
+                    items: [
+                        { title: 'Usuarios', href: '/admin/directory', icon: Users },
+                        { title: 'Actividad', href: '/admin/audit-logs', icon: ScrollText },
+                        { title: 'Soporte', href: '/admin/support', icon: MessageCircle },
+                    ],
+                },
+                // Comercial
+                {
+                    id: 'comercial',
+                    label: 'Comercial',
+                    items: [
+                        { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
+                        { title: 'Facturación', href: '/admin/billing', icon: Receipt },
+                    ],
+                },
+                // Contenido
+                {
+                    id: 'contenido',
+                    label: 'Contenido',
+                    items: [
+                        { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
+                        { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
+                        { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },
+                        { title: 'Changelog', href: '/admin/changelog', icon: FileText },
+                    ],
+                },
+                // Plataforma
+                {
+                    id: 'plataforma',
+                    label: 'Plataforma',
+                    items: [
+                        { title: 'Sistema', href: '/admin/system', icon: Monitor },
+                        { title: 'Monitoreo', href: '/admin/monitoring', icon: HeartPulse },
+                        { title: 'Plantillas', href: '/admin/emails', icon: LayoutTemplate },
+                        { title: 'Configuración', href: '/admin/settings', icon: Settings },
+                    ],
+                },
+            ];
+        }
+
         // Unified sidebar — all routes under /organization
         return [
             // Visión General (standalone)
@@ -227,7 +284,6 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_capital', { title: 'Capital', href: '/organization/capital', icon: Landmark }),
                     getItemStatus('sidebar_general_costs', { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard }),
                     getItemStatus('sidebar_clients', { title: 'Clientes', href: '/organization/clients', icon: Banknote }),
-                    getItemStatus('sidebar_portal', { title: 'Portal de Clientes', href: '/organization/portal', icon: Monitor }),
                 ].filter((i): i is NavItem => i !== null),
             },
         ];
@@ -239,9 +295,6 @@ export function useSidebarNavigation() {
             case 'project':
                 return getNavGroups(ctx).flatMap(g => g.items);
 
-            case 'portal':
-                // Portal is a direct link, no subitems
-                return [];
             case 'learnings':
                 return [
                     { title: 'Mis Cursos', href: '/academy/my-courses', icon: Video },
@@ -252,19 +305,7 @@ export function useSidebarNavigation() {
 
                 return [foundersItem, mapItem].filter((i): i is NavItem => i !== null);
             case 'admin':
-                return [
-                    { title: 'Visión General', href: '/admin', icon: LayoutDashboard },
-                    { title: 'Directorio', href: '/admin/directory', icon: Users },
-                    { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
-                    { title: 'Finanzas', href: '/admin/finance', icon: Wallet },
-                    { title: 'Plataforma', href: '/admin/system', icon: Monitor },
-                    { title: 'Monitoreo', href: '/admin/monitoring', icon: HeartPulse },
-                    { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
-                    { title: 'Plantillas', href: '/admin/emails', icon: LayoutTemplate },
-                    { title: 'Changelog', href: '/admin/changelog', icon: FileText },
-                    { title: 'Soporte', href: '/admin/support', icon: MessageCircle },
-                    { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },
-                ];
+                return getNavGroups('admin').flatMap(g => g.items);
             default:
                 return [];
         }

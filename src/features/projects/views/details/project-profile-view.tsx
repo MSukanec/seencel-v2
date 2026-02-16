@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { useRef, useCallback, useState } from "react";
+import { useLayoutData } from "@/hooks/use-layout-data";
 import { ContentLayout } from "@/components/layout";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { TextField, NotesField } from "@/components/shared/forms/fields";
@@ -83,6 +84,7 @@ interface ProjectProfileViewProps {
 
 export function ProjectProfileView({ project, projectTypes, projectModalities }: ProjectProfileViewProps) {
     const data = project.project_data || {};
+    const { updateProjectInList } = useLayoutData();
 
     // ── Form state ──
     const [name, setName] = useState(project.name || "");
@@ -110,6 +112,8 @@ export function ProjectProfileView({ project, projectTypes, projectModalities }:
                 formData.set("name", fields.name);
                 formData.set("description", fields.description);
                 await updateProject(formData);
+                // Optimistic update — refresh name in header selector immediately
+                updateProjectInList(project.id, { name: fields.name });
                 toast.success("¡Cambios guardados!");
             } catch {
                 toast.error("Error al guardar los cambios.");

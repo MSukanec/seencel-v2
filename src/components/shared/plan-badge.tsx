@@ -149,9 +149,9 @@ const PLAN_ACCENTS: Record<PlanSlug, Record<string, string>> = {
         "--plan-border": "rgba(155,125,210,0.25)",
     },
     enterprise: {
-        "--plan-accent": "rgba(160,155,210,0.10)",
-        "--plan-glow": "0 0 12px rgba(160,155,220,0.08)",
-        "--plan-border": "rgba(165,160,220,0.30)",
+        "--plan-accent": "rgba(200,180,100,0.10)",
+        "--plan-glow": "0 0 12px rgba(200,180,100,0.08)",
+        "--plan-border": "rgba(200,180,100,0.25)",
     },
     founder: {
         "--plan-accent": "rgba(255,255,255,0.04)",
@@ -287,26 +287,26 @@ const MATERIALS: Record<PlanSlug, Material> = {
         hoverIntensity: 0.85,
     },
 
-    // ── OBSIDIAN — polished volcanic glass, glassy reflections ──
+    // ── OBSIDIAN × SATIN BRASS — polished black with gold lettering ──
     enterprise: {
         surface: "linear-gradient(175deg, #232328, #18181c, #1e1e24)",
-        bevelLight: "rgba(200,200,240,0.14)",
+        bevelLight: "rgba(210,190,140,0.14)",
         bevelDark: "rgba(0,0,0,0.70)",
         dropShadow: "0 3px 10px rgba(0,0,0,0.50)",
-        border: "rgba(160,160,210,0.12)",
+        border: "rgba(180,160,100,0.15)",
         engrave: "#2a2a32",
-        markColor: "#9090a8",
-        cutFill: "linear-gradient(160deg, #a8a8b8 0%, #8088a0 20%, #90b0a8 40%, #a898b8 60%, #88a0b0 80%, #b0a8b8 100%)",
-        founderCutFill: "linear-gradient(160deg, #8888a0 0%, #607888 40%, #887898 60%, #708898 100%)",
+        markColor: "#b8a060",
+        cutFill: "linear-gradient(160deg, #d4b868 0%, #a08840 20%, #e0c878 40%, #c8a850 60%, #dcc070 80%, #b89848 100%)",
+        founderCutFill: "linear-gradient(160deg, #a89050 0%, #887038 40%, #b8a060 60%, #987840 100%)",
         cutDepth: "0 1px 1px rgba(0 0 0 / 0.65)",
-        brushTexture: "repeating-linear-gradient(135deg, transparent, transparent 1px, rgba(180,180,240,0.008) 1px, rgba(180,180,240,0.008) 2px)",
+        brushTexture: "repeating-linear-gradient(135deg, transparent, transparent 1px, rgba(200,180,120,0.010) 1px, rgba(200,180,120,0.010) 2px)",
         hasSheen: true,
         isDominant: true,
-        lightColor: "rgba(180,170,220,0.14)",
+        lightColor: "rgba(220,200,140,0.18)",
         letterSpacing: "0.14em",
-        innerGlow: "inset 0 0 12px rgba(150,140,200,0.06), inset 0 1px 0 rgba(180,180,220,0.08)",
-        hoverShape: "ellipse 100px 40px",
-        hoverIntensity: 0.7,
+        innerGlow: "inset 0 0 12px rgba(180,160,100,0.06), inset 0 1px 0 rgba(220,200,140,0.10)",
+        hoverShape: "ellipse 70px 30px",
+        hoverIntensity: 1.0,
     },
 
     // ── Founder standalone — inherits Essential (flat gray) ──

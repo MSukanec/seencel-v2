@@ -444,21 +444,41 @@ export function SidebarContent({
                             </nav>
                         )}
 
-                        {/* ADMIN STATE */}
+                        {/* ADMIN STATE — Accordion groups identical to organization */}
                         {drillState === "admin" && (
-                            <nav className={cn("flex flex-col gap-2 px-2", slideClass)} key="admin">
+                            <nav className={cn("flex flex-col gap-1 px-2", slideClass)} key="admin">
 
-                                {getNavItems("admin").map((item, idx) => (
+                                {/* Visión General — styled as card matching accordion items */}
+                                <div
+                                    className={cn(
+                                        "rounded-lg",
+                                        "bg-sidebar-accent/50",
+                                        "border border-sidebar-border/40",
+                                        "px-0.5 py-0.5",
+                                    )}
+                                    style={{
+                                        boxShadow: "0 1px 3px 0 rgba(0,0,0,0.12), inset 0 1px 0 0 rgba(255,255,255,0.06)",
+                                        borderLeftColor: "var(--plan-border, rgba(255,255,255,0.06))",
+                                        borderLeftWidth: "2px",
+                                    }}
+                                >
                                     <SidebarNavButton
-                                        key={idx}
-                                        icon={item.icon}
-                                        label={item.title}
-                                        href={item.href}
-                                        isActive={pathname === item.href}
+                                        icon={LayoutDashboard}
+                                        label="Visión General"
+                                        href="/admin"
+                                        isActive={pathname === '/admin'}
                                         isExpanded={isExpanded}
                                         onClick={onLinkClick}
                                     />
-                                ))}
+                                </div>
+
+                                {/* Admin Nav Groups with Accordion (exclude standalone 'principal' group) */}
+                                <SidebarAccordionGroups
+                                    groups={getNavGroups('admin').filter(g => g.id !== 'principal')}
+                                    renderItem={renderNavItem}
+                                    isExpanded={isExpanded}
+                                    activePath={pathname}
+                                />
                             </nav>
                         )}
                     </ScrollArea>
@@ -476,6 +496,18 @@ export function SidebarContent({
                         <div className="mt-auto pt-3 border-t border-sidebar-border/50 px-2 space-y-2">
                             {/* Admin Button (only visible to admins) */}
                             <SidebarAdminButton isExpanded={isExpanded} />
+
+                            {/* Back to Workspace — only in admin context */}
+                            {drillState === "admin" && (
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label="Espacio de Trabajo"
+                                    href={"/organization" as any}
+                                    isActive={false}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                            )}
 
                             {/* Hub Button — visible for all users */}
                             <SidebarNavButton

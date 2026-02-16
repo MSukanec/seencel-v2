@@ -858,3 +858,165 @@ export async function getUserJourneys(limit: number = 50): Promise<UserJourney[]
     return sortedJourneys;
 }
 
+// ============================================================================
+// User Detail (Admin User Profile Page)
+// ============================================================================
+
+export interface AdminUserDetail {
+    // Core user
+    id: string;
+    email: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    avatar_source: string | null;
+    is_active: boolean;
+    signup_completed: boolean;
+    created_at: string;
+    role_id: string;
+    // Extended data
+    first_name: string | null;
+    last_name: string | null;
+    phone_e164: string | null;
+    birthdate: string | null;
+    country_name: string | null;
+    // Preferences
+    theme: string | null;
+    language: string | null;
+    layout: string | null;
+    sidebar_mode: string | null;
+    timezone: string | null;
+    // Presence
+    last_seen_at: string | null;
+    current_view: string | null;
+    status: string | null;
+    user_agent: string | null;
+    // Organizations
+    organizations: {
+        id: string;
+        name: string;
+        logo_url: string | null;
+        role_name: string | null;
+        plan_name: string | null;
+        joined_at: string | null;
+        is_active: boolean;
+    }[];
+    // Session stats
+    total_sessions: number;
+    total_pageviews: number;
+    total_time_seconds: number;
+    // View history (raw for the activity timeline)
+    view_history: {
+        id: string;
+        view_name: string;
+        entered_at: string;
+        exited_at: string | null;
+        duration_seconds: number | null;
+        session_id: string | null;
+    }[];
+}
+
+export async function getAdminUserDetail(userId: string): Promise<AdminUserDetail | null> {
+    const supabase = await createClient();
+
+    // Parallel fetch all user data
+    const [
+        userRes,
+        userDataRes,
+        prefsRes,
+        presenceRes,
+        membersRes,
+        statsRes,
+        historyRes,
+    ] = await Promise.all([
+        // Core user
+        supabase.from('users').select('*').eq('id', userId).single(),
+        // Extended data
+        supabase.from('user_data').select('first_name, last_name, phone_e164, birthdate, country:countries(name)').eq('user_id', userId).maybeSingle(),
+        // Preferences
+        supabase.from('user_preferences').select('theme, language, layout, sidebar_mode, timezone').eq('user_id', userId).maybeSingle(),
+        // Presence
+        supabase.from('user_presence').select('last_seen_at, current_view, status, user_agent').eq('user_id', userId).maybeSingle(),
+        // Organizations with plan
+        supabase.from('organization_members')
+            .select(`
+                organization_id,
+                joined_at,
+                is_active,
+                roles (name),
+                organizations (
+                    id,
+                    name,
+                    logo_url,
+                    organization_subscriptions (
+                        plans (name)
+                    )
+                )
+            `)
+            .eq('user_id', userId),
+        // Session stats from analytics view
+        supabase.from('analytics_top_users_view').select('total_sessions, total_pageviews, total_time_seconds').eq('id', userId).maybeSingle(),
+        // Recent view history (last 200 entries)
+        supabase.from('user_view_history').select('id, view_name, entered_at, exited_at, duration_seconds, session_id').eq('user_id', userId).order('entered_at', { ascending: false }).limit(200),
+    ]);
+
+    if (userRes.error || !userRes.data) {
+        console.error("Error fetching user detail:", userRes.error);
+        return null;
+    }
+
+    const user = userRes.data;
+    const userData = userDataRes.data;
+    const prefs = prefsRes.data;
+    const presence = presenceRes.data;
+    const stats = statsRes.data;
+
+    // Parse organizations
+    const organizations = (membersRes.data || []).map((m: any) => ({
+        id: m.organizations?.id || m.organization_id,
+        name: m.organizations?.name || 'Desconocida',
+        logo_url: m.organizations?.logo_url || null,
+        role_name: m.roles?.name || null,
+        plan_name: m.organizations?.organization_subscriptions?.[0]?.plans?.name || null,
+        joined_at: m.joined_at,
+        is_active: m.is_active,
+    }));
+
+    return {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        avatar_url: user.avatar_url,
+        avatar_source: user.avatar_source,
+        is_active: user.is_active,
+        signup_completed: user.signup_completed,
+        created_at: user.created_at,
+        role_id: user.role_id,
+        first_name: userData?.first_name || null,
+        last_name: userData?.last_name || null,
+        phone_e164: userData?.phone_e164 || null,
+        birthdate: userData?.birthdate || null,
+        country_name: (userData?.country as any)?.name || null,
+        theme: prefs?.theme || null,
+        language: prefs?.language || null,
+        layout: prefs?.layout || null,
+        sidebar_mode: prefs?.sidebar_mode || null,
+        timezone: prefs?.timezone || null,
+        last_seen_at: presence?.last_seen_at || null,
+        current_view: presence?.current_view || null,
+        status: presence?.status || null,
+        user_agent: presence?.user_agent || null,
+        organizations,
+        total_sessions: stats?.total_sessions || 0,
+        total_pageviews: stats?.total_pageviews || 0,
+        total_time_seconds: stats?.total_time_seconds || 0,
+        view_history: (historyRes.data || []).map((h: any) => ({
+            id: h.id,
+            view_name: h.view_name,
+            entered_at: h.entered_at,
+            exited_at: h.exited_at,
+            duration_seconds: h.duration_seconds,
+            session_id: h.session_id,
+        })),
+    };
+}
+

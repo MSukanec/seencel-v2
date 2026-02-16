@@ -913,7 +913,7 @@ export async function updatePortalSettings(
         }
     }
 
-    revalidatePath(`/project/${projectId}/portal`);
+    revalidatePath(`/organization/projects/${projectId}`);
     return { success: true };
 }
 
@@ -977,7 +977,7 @@ export async function updatePortalBranding(
         }
     }
 
-    revalidatePath(`/project/${projectId}/portal`);
+    revalidatePath(`/organization/projects/${projectId}`);
     return { success: true };
 }
 

@@ -46,7 +46,6 @@ export function ClientsSchedulesView({ data }: ClientsSchedulesViewProps) {
                     icon={Calendar}
                     viewName="Cronogramas de Cuotas"
                     featureDescription="Visualiza y gestiona los vencimientos de cuotas de tus clientes."
-                    comingSoon
                 />
             </div>
         );

@@ -71,3 +71,41 @@ export async function getSubcontractPayments(projectId: string) {
 
     return data;
 }
+
+// ============================================
+// ORG-LEVEL QUERIES (for unified organization route)
+// ============================================
+
+export async function getSubcontractsByOrganization(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('subcontracts_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('title', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching org subcontracts:', JSON.stringify(error, null, 2));
+        return [];
+    }
+
+    return data;
+}
+
+export async function getSubcontractPaymentsByOrganization(organizationId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('subcontract_payments_view')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('payment_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching org subcontract payments:', JSON.stringify(error, null, 2));
+        return [];
+    }
+
+    return data;
+}

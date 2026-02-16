@@ -2,7 +2,6 @@
 
 import { LucideIcon, BookOpen, RotateCcw, Plus, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/routing";
 
@@ -70,9 +69,6 @@ interface ViewEmptyStateProps {
      */
     onSwitchToOrg?: () => void;
 
-    /** Show "Coming Soon" badge */
-    comingSoon?: boolean;
-
     className?: string;
 }
 
@@ -130,7 +126,6 @@ export function ViewEmptyState({
     filterContext,
     projectName,
     onSwitchToOrg,
-    comingSoon = false,
     className,
 }: ViewEmptyStateProps) {
     const isEmptyMode = mode === "empty";
@@ -185,16 +180,6 @@ export function ViewEmptyState({
                     <div className="absolute -top-2 -right-2 w-6 h-6 border-2 border-primary/20 rounded-md animate-[spin_8s_linear_infinite]" />
                 </div>
             </div>
-
-            {/* Coming Soon Badge */}
-            {comingSoon && (
-                <Badge
-                    variant="outline"
-                    className="relative z-10 mb-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 uppercase tracking-wider text-xs font-semibold px-3 py-1"
-                >
-                    Próximamente
-                </Badge>
-            )}
 
             {/* Title */}
             <h3 className="relative z-10 text-xl font-bold tracking-tight text-foreground/90">

@@ -238,7 +238,6 @@ export function SubcontractOverviewView({ subcontract, payments, financialData, 
                     icon={BarChart3}
                     viewName="Métricas de Subcontrato"
                     featureDescription="Próximamente verás gráficos de avance financiero y de obra."
-                    comingSoon
                     className="border-none"
                 />
             </div>

@@ -5,33 +5,25 @@ import { ContentLayout } from "@/components/layout";
 import { ProjectHealthView } from "@/features/project-health/views/project-health-view";
 import { getTranslations } from "next-intl/server";
 
-interface PageProps {
-    params: Promise<{
-        projectId: string;
-        locale: string;
-    }>;
-}
-
 export async function generateMetadata({
     params
 }: {
     params: Promise<{ locale: string }>
 }): Promise<Metadata> {
-    const t = await getTranslations({ locale: (await params).locale, namespace: 'ProjectHealth' });
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'ProjectHealth' });
     return {
-        title: `${t('title')} | Seencel`,
+        title: `${t('title')} | SEENCEL`,
         description: t('subtitle'),
         robots: "noindex, nofollow",
     };
 }
 
-export default async function ProjectHealthPage({ params }: PageProps) {
-    const { projectId } = await params;
-
+export default async function HealthPage() {
     return (
-        <PageWrapper type="page" title="Salud del Proyecto" icon={<HeartPulse />}>
+        <PageWrapper type="page" title="Salud" icon={<HeartPulse />}>
             <ContentLayout variant="wide">
-                <ProjectHealthView projectId={projectId} />
+                <ProjectHealthView />
             </ContentLayout>
         </PageWrapper>
     );

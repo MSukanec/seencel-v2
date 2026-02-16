@@ -140,7 +140,7 @@ export function MobileNav() {
         if (orgContext) list.push(orgContext);
 
         contexts.forEach(ctx => {
-            if (ctx.id !== 'organization' && ctx.id !== 'portal') {
+            if (ctx.id !== 'organization') {
                 list.push(ctx);
             }
         });
@@ -185,8 +185,8 @@ export function MobileNav() {
     const currentContext = allContexts.find(c => c.id === activeContextId);
     const currentItems = activeContextId ? getNavItems(activeContextId as any) : [];
     const currentGroups: NavGroup[] = React.useMemo(() => {
-        if (activeContextId === 'organization' || activeContextId === 'project') {
-            return getNavGroups(activeContextId);
+        if (activeContextId === 'organization' || activeContextId === 'project' || activeContextId === 'admin') {
+            return getNavGroups(activeContextId as any);
         }
         // For other contexts, wrap all items in a single standalone group
         return [{ id: 'all', label: '', items: currentItems, standalone: true }];
@@ -238,7 +238,7 @@ export function MobileNav() {
                     )}>
                         <Icon className="h-4 w-4" />
                     </div>
-                    <span className="text-[15px] font-medium truncate flex-1 ml-2">
+                    <span className="text-lg font-medium truncate flex-1 ml-2">
                         {item.title}
                     </span>
                 </div>
@@ -289,30 +289,39 @@ export function MobileNav() {
                         )}
                     >
                         <div className="h-full overflow-y-auto py-2">
-                            <nav className="px-3 space-y-1">
+                            <nav className="p-2 flex flex-col gap-0.5">
                                 {/* Hub - Direct navigation */}
                                 <Link
                                     href="/hub"
                                     onClick={() => setOpen(false)}
-                                    className={cn(
-                                        "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all group",
-                                        pathname?.includes('/hub')
-                                            ? "bg-primary/10 text-primary"
-                                            : "hover:bg-muted/60 text-foreground/80 hover:text-foreground"
-                                    )}
+                                    className="w-full block"
                                 >
-                                    <div className={cn(
-                                        "flex items-center justify-center w-9 h-9 rounded-lg transition-colors",
-                                        pathname?.includes('/hub')
-                                            ? "bg-primary/15"
-                                            : "bg-muted/50 group-hover:bg-muted"
-                                    )}>
-                                        <Home className="h-4 w-4" />
+                                    <div
+                                        className={cn(
+                                            "group relative flex items-center w-full rounded-lg transition-colors",
+                                            "hover:bg-muted text-muted-foreground hover:text-foreground",
+                                            "p-0 min-h-[44px]",
+                                            pathname?.includes('/hub') && "text-foreground"
+                                        )}
+                                        style={pathname?.includes('/hub') ? {
+                                            borderLeft: "2px solid var(--plan-border, rgba(255,255,255,0.1))",
+                                            boxShadow: "var(--plan-glow, none)",
+                                            background: `linear-gradient(90deg, var(--plan-accent, rgba(255,255,255,0.06)), transparent 70%), hsl(var(--secondary))`,
+                                        } : undefined}
+                                    >
+                                        <div className={cn(
+                                            "w-8 h-8 flex items-center justify-center shrink-0",
+                                            pathname?.includes('/hub') ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                                        )}>
+                                            <Home className="h-4 w-4" />
+                                        </div>
+                                        <span className="text-lg font-medium truncate flex-1 ml-2">
+                                            Hub
+                                        </span>
                                     </div>
-                                    <span className="flex-1">Hub</span>
                                 </Link>
 
-                                <div className="h-px bg-border/50 my-2 mx-3" />
+                                <div className="h-px bg-border/50 my-1.5 mx-2" />
 
                                 {/* Contexts - Drill down navigation */}
                                 {allContexts.map((ctx) => {
@@ -324,36 +333,41 @@ export function MobileNav() {
                                             key={ctx.id}
                                             onClick={() => !ctx.disabled && navigateToContext(ctx.id)}
                                             disabled={ctx.disabled}
-                                            className={cn(
-                                                "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all group text-left",
-                                                ctx.disabled
-                                                    ? "opacity-50 cursor-not-allowed"
-                                                    : "hover:bg-muted/60",
-                                                isCurrentContext
-                                                    ? "bg-primary/10 text-primary"
-                                                    : "text-foreground/80 hover:text-foreground",
-                                                ctx.hidden && "opacity-60"
-                                            )}
+                                            className="w-full block text-left"
                                         >
-                                            <div className={cn(
-                                                "flex items-center justify-center w-9 h-9 rounded-lg transition-colors",
-                                                isCurrentContext
-                                                    ? "bg-primary/15"
-                                                    : "bg-muted/50 group-hover:bg-muted"
-                                            )}>
-                                                <Icon className="h-4 w-4" />
+                                            <div
+                                                className={cn(
+                                                    "group relative flex items-center w-full rounded-lg transition-colors",
+                                                    "hover:bg-muted text-muted-foreground hover:text-foreground",
+                                                    "p-0 min-h-[44px]",
+                                                    ctx.disabled && "opacity-50 cursor-not-allowed",
+                                                    ctx.hidden && "opacity-60",
+                                                    isCurrentContext && "text-foreground"
+                                                )}
+                                                style={isCurrentContext ? {
+                                                    borderLeft: "2px solid var(--plan-border, rgba(255,255,255,0.1))",
+                                                    boxShadow: "var(--plan-glow, none)",
+                                                    background: `linear-gradient(90deg, var(--plan-accent, rgba(255,255,255,0.06)), transparent 70%) hsl(var(--secondary))`,
+                                                } : undefined}
+                                            >
+                                                <div className={cn(
+                                                    "w-8 h-8 flex items-center justify-center shrink-0",
+                                                    isCurrentContext ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                                                )}>
+                                                    <Icon className="h-4 w-4" />
+                                                </div>
+                                                <span className="text-lg font-medium truncate flex-1 ml-2">
+                                                    {ctx.label}
+                                                    {ctx.hidden && " (Oculto)"}
+                                                </span>
+                                                {ctx.disabled ? (
+                                                    <Lock className="h-4 w-4 text-muted-foreground mr-2" />
+                                                ) : ctx.status === 'maintenance' ? (
+                                                    <Lock className="h-4 w-4 text-orange-500 mr-2" />
+                                                ) : (
+                                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors mr-2" />
+                                                )}
                                             </div>
-                                            <span className="flex-1">
-                                                {ctx.label}
-                                                {ctx.hidden && " (Oculto)"}
-                                            </span>
-                                            {ctx.disabled ? (
-                                                <Lock className="h-4 w-4 text-muted-foreground" />
-                                            ) : ctx.status === 'maintenance' ? (
-                                                <Lock className="h-4 w-4 text-orange-500" />
-                                            ) : (
-                                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                                            )}
                                         </button>
                                     );
                                 })}
@@ -400,7 +414,7 @@ export function MobileNav() {
                                                     className={cn(
                                                         "flex items-center justify-between w-full",
                                                         "px-2.5 py-2.5 rounded-lg",
-                                                        "text-[13px] font-bold text-sidebar-foreground/70",
+                                                        "text-[16px] font-bold text-sidebar-foreground/70",
                                                         "hover:text-sidebar-foreground/90 transition-all cursor-pointer",
                                                         isOpen && "[&>svg]:rotate-180"
                                                     )}

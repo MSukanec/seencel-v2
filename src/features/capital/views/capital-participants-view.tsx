@@ -37,7 +37,6 @@ export function CapitalParticipantsView({
                     icon={Users}
                     viewName="Participantes"
                     featureDescription="Esta sección permitirá gestionar los socios y participantes del capital."
-                    comingSoon
                     onAction={handleCreate}
                     actionLabel="Nuevo Participante"
                 />

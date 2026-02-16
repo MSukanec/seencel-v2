@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { useMoney } from "@/hooks/use-money";
 
 interface SubcontractsListViewProps {
-    projectId: string;
+    projectId?: string;
     organizationId: string;
     providers: { id: string; name: string; image?: string | null; fallback?: string }[];
     currencies: { id: string; code: string; symbol: string; name: string }[];
@@ -146,7 +146,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
                 }}
                 onCancel={closeModal}
                 organizationId={organizationId}
-                projectId={projectId}
+                projectId={projectId || ''}
                 providers={providers}
                 currencies={currencies}
                 defaultCurrencyId={defaultCurrencyId}
@@ -170,7 +170,7 @@ export function SubcontractsListView({ projectId, organizationId, providers, cur
                 }}
                 onCancel={closeModal}
                 organizationId={organizationId}
-                projectId={projectId}
+                projectId={projectId || ''}
                 providers={providers}
                 currencies={currencies}
                 defaultCurrencyId={defaultCurrencyId}

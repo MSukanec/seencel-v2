@@ -26,7 +26,7 @@ interface SubcontractsPaymentsViewProps {
     data: any[];
     subcontracts: any[];
     financialData: any;
-    projectId: string;
+    projectId?: string;
     orgId: string;
 }
 
@@ -144,7 +144,7 @@ export function SubcontractsPaymentsView({
                     allowCreate: true,
                     createAction: async (value: string) => {
                         const { createQuickSubcontractAction } = await import("@/features/subcontracts/actions");
-                        return createQuickSubcontractAction(orgId, projectId, value);
+                        return createQuickSubcontractAction(orgId, projectId || '', value);
                     }
                 }
             },
@@ -189,7 +189,7 @@ export function SubcontractsPaymentsView({
         ],
         onImport: async (data) => {
             const batch = await createImportBatch(orgId, "subcontract_payments", data.length);
-            const result = await importSubcontractPaymentsBatch(orgId, projectId, data, batch.id);
+            const result = await importSubcontractPaymentsBatch(orgId, projectId || '', data, batch.id);
             return { success: result.success, errors: result.errors, warnings: result.warnings, batchId: batch.id };
         },
         onRevert: async (batchId) => {
@@ -212,7 +212,7 @@ export function SubcontractsPaymentsView({
     const handleNewPayment = () => {
         openModal(
             <SubcontractPaymentForm
-                projectId={projectId}
+                projectId={projectId || ''}
                 organizationId={orgId}
                 subcontracts={subcontracts}
                 financialData={financialData}
@@ -231,7 +231,7 @@ export function SubcontractsPaymentsView({
     const handleEdit = (payment: any) => {
         openModal(
             <SubcontractPaymentForm
-                projectId={projectId}
+                projectId={projectId || ''}
                 organizationId={orgId}
                 subcontracts={subcontracts}
                 financialData={financialData}
@@ -292,7 +292,7 @@ export function SubcontractsPaymentsView({
 
         setIsBulkDeleting(true);
         try {
-            await bulkDeleteSubcontractPaymentsAction(bulkDeleteIds, projectId);
+            await bulkDeleteSubcontractPaymentsAction(bulkDeleteIds, projectId || '');
             toast.success(`${bulkDeleteIds.length} pagos eliminados`);
             router.refresh();
         } catch (error) {

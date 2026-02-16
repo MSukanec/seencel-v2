@@ -16,7 +16,6 @@ export function SubcontractTasksView({ subcontract, projectId }: SubcontractTask
                 icon={CheckSquare}
                 viewName="Tareas del Subcontrato"
                 featureDescription="Próximamente podrás asignar y gestionar tareas vinculadas a este subcontrato."
-                comingSoon
             />
         </div>
     );

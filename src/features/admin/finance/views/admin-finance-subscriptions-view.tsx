@@ -15,7 +15,6 @@ export function AdminFinanceSubscriptionsView() {
                 icon={Wallet}
                 viewName="Suscripciones Activas"
                 featureDescription="Monitor de MRR/ARR y estado de suscripciones."
-                comingSoon
             />
         </div>
     );

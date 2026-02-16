@@ -19,7 +19,6 @@ export function CapitalBalancesView({
                 icon={Scale}
                 viewName="Balances"
                 featureDescription="Esta sección mostrará el balance de capital de cada participante."
-                comingSoon
             />
         </div>
     );

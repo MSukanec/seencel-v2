@@ -157,7 +157,7 @@ export async function createSubcontractPaymentAction(input: z.infer<typeof creat
         }
     }
 
-    revalidatePath(`/project/${payload.project_id}/subcontracts`);
+    revalidatePath('/organization/subcontracts', 'page');
     return data;
 }
 
@@ -244,7 +244,7 @@ export async function updateSubcontractPaymentAction(input: z.infer<typeof updat
         throw new Error("Error al actualizar el pago.");
     }
 
-    revalidatePath(`/project/${payload.project_id}/subcontracts`);
+    revalidatePath('/organization/subcontracts', 'page');
     return data;
 }
 
@@ -281,7 +281,7 @@ export async function bulkDeleteSubcontractPaymentsAction(paymentIds: string[], 
         throw new Error("Error al eliminar los pagos seleccionados.");
     }
 
-    revalidatePath(`/project/${projectId}/subcontracts`);
+    revalidatePath('/organization/subcontracts', 'page');
     return { deleted: paymentIds.length };
 }
 // ===============================================
@@ -361,7 +361,7 @@ export async function createSubcontractAction(input: z.infer<typeof createSubcon
         throw new Error(`Error al crear el subcontrato: ${sanitizeError(error)}`);
     }
 
-    revalidatePath(`/project/${input.project_id}/subcontracts`);
+    revalidatePath('/organization/subcontracts', 'page');
     return data;
 }
 
@@ -399,9 +399,7 @@ export async function updateSubcontractAction(input: z.infer<typeof updateSubcon
         throw new Error("Error al actualizar el subcontrato.");
     }
 
-    if (input.project_id) {
-        revalidatePath(`/project/${input.project_id}/subcontracts`);
-    }
+    revalidatePath('/organization/subcontracts', 'page');
     return data;
 }
 

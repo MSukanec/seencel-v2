@@ -3,7 +3,6 @@ import { SubcontractDetailPage, generateSubcontractMetadata } from "@/features/s
 
 interface SubcontractDetailPageProps {
     params: Promise<{
-        projectId: string;
         subcontractId: string;
         locale: string;
     }>;
@@ -19,6 +18,6 @@ export async function generateMetadata({
 }
 
 export default async function Page({ params }: SubcontractDetailPageProps) {
-    const { projectId, subcontractId } = await params;
-    return <SubcontractDetailPage projectId={projectId} subcontractId={subcontractId} />;
+    const { subcontractId } = await params;
+    return <SubcontractDetailPage subcontractId={subcontractId} />;
 }

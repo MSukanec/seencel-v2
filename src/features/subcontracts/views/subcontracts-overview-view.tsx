@@ -10,7 +10,6 @@ export function SubcontractsOverviewView() {
             icon={BarChart3}
             viewName="Visión General"
             featureDescription="Próximamente métricas y resumen de subcontratos"
-            comingSoon
         />
     );
 }

@@ -40,6 +40,7 @@ interface LayoutData {
     isLoading: boolean;
     handleProjectChange: (projectId: string) => void;
     saveProjectPreference: (projectId: string) => void;
+    updateProjectInList: (projectId: string, fields: Partial<Project>) => void;
 }
 
 
@@ -305,13 +306,28 @@ export function useLayoutData(): LayoutData {
         });
     }, []);
 
+    // Optimistic update: allows views to immediately update a project's fields
+    // in the sidebar/selector without waiting for Supabase Realtime
+    const updateProjectInList = React.useCallback((projectId: string, fields: Partial<Project>) => {
+        setProjects(prev => prev.map(p =>
+            p.id === projectId ? { ...p, ...fields } : p
+        ));
+        setCurrentProject(prev => {
+            if (prev && prev.id === projectId) {
+                return { ...prev, ...fields };
+            }
+            return prev;
+        });
+    }, []);
+
     return {
         currentOrg,
         projects,
         currentProject,
         isLoading,
         handleProjectChange,
-        saveProjectPreference
+        saveProjectPreference,
+        updateProjectInList
     };
 }
 

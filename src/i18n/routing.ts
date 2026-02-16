@@ -194,10 +194,6 @@ export const routing = defineRouting({
             en: '/project/[projectId]/clients',
             es: '/proyecto/[projectId]/clientes'
         },
-        '/project/[projectId]/portal': {
-            en: '/project/[projectId]/portal',
-            es: '/proyecto/[projectId]/portal'
-        },
 
         '/contact': {
             en: '/contact',

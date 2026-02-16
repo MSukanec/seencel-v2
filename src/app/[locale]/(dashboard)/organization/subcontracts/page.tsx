@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { Handshake } from "lucide-react";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { PageWrapper } from "@/components/layout/dashboard/shared/page-wrapper";
@@ -9,17 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubcontractsOverviewView } from "@/features/subcontracts/views/subcontracts-overview-view";
 import { SubcontractsListView } from "@/features/subcontracts/views/subcontracts-list-view";
 import { SubcontractsPaymentsView } from "@/features/subcontracts/views/subcontracts-payments-view";
-import { getOrganizationFinancialData } from "@/features/organization/queries";
-import { getProjectById } from "@/features/projects/queries";
-import { getSubcontractsByProject, getSubcontractPayments } from "@/features/subcontracts/queries";
+import { getOrganizationFinancialData, getUserOrganizations } from "@/features/organization/queries";
+import { getSubcontractsByOrganization, getSubcontractPaymentsByOrganization } from "@/features/subcontracts/queries";
 import { getIndexTypes } from "@/features/advanced/queries";
-
-interface SubcontractsPageProps {
-    params: Promise<{
-        projectId: string;
-        locale: string;
-    }>;
-}
+import { getOrganizationContacts } from "@/actions/contacts";
 
 // ============================================
 // METADATA (SEO)
@@ -33,33 +26,28 @@ export async function generateMetadata({
     return {
         title: `${t('title', { default: 'Subcontratos' })} | Seencel`,
         description: t('subtitle', { default: 'Gestión de Subcontratos' }),
-        robots: "noindex, nofollow", // Private dashboard
+        robots: "noindex, nofollow",
     };
 }
 
-import { getOrganizationContacts } from "@/actions/contacts";
-
-export default async function SubcontractsPage({ params }: SubcontractsPageProps) {
-    const { projectId } = await params;
+export default async function SubcontractsPage({ params }: { params: Promise<{ locale: string }> }) {
+    await params;
     const t = await getTranslations('Subcontracts');
 
     try {
-        // 1. Fetch Project to get Organization ID
-        const project = await getProjectById(projectId);
+        const { activeOrgId } = await getUserOrganizations();
 
-        if (!project) {
-            return notFound();
+        if (!activeOrgId) {
+            redirect("/");
         }
 
-        const organizationId = project.organization_id;
-
-        // 2. Fetch Data in Parallel
+        // Fetch Data in Parallel
         const [financialData, providers, subcontracts, payments, indexTypes] = await Promise.all([
-            getOrganizationFinancialData(organizationId),
-            getOrganizationContacts(organizationId),
-            getSubcontractsByProject(projectId),
-            getSubcontractPayments(projectId),
-            getIndexTypes(organizationId)
+            getOrganizationFinancialData(activeOrgId),
+            getOrganizationContacts(activeOrgId),
+            getSubcontractsByOrganization(activeOrgId),
+            getSubcontractPaymentsByOrganization(activeOrgId),
+            getIndexTypes(activeOrgId)
         ]);
 
         return (
@@ -80,7 +68,7 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
                     {/* TAB: OVERVIEW */}
                     <TabsContent
                         value="overview"
-                        className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none min-h-0"
+                        className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"
                     >
                         <ContentLayout variant="wide" className="h-full">
                             <SubcontractsOverviewView />
@@ -90,12 +78,11 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
                     {/* TAB: LIST */}
                     <TabsContent
                         value="list"
-                        className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none min-h-0"
+                        className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"
                     >
                         <ContentLayout variant="wide" className="h-full">
                             <SubcontractsListView
-                                projectId={projectId}
-                                organizationId={organizationId}
+                                organizationId={activeOrgId}
                                 initialSubcontracts={subcontracts}
                                 payments={payments}
                                 providers={providers.map((p: any) => ({
@@ -118,15 +105,14 @@ export default async function SubcontractsPage({ params }: SubcontractsPageProps
                     {/* TAB: PAYMENTS */}
                     <TabsContent
                         value="payments"
-                        className="m-0 flex-1 h-full flex flex-col focus-visible:outline-none min-h-0"
+                        className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"
                     >
                         <ContentLayout variant="wide" className="h-full">
                             <SubcontractsPaymentsView
                                 data={payments}
                                 subcontracts={subcontracts}
                                 financialData={financialData}
-                                projectId={projectId}
-                                orgId={organizationId}
+                                orgId={activeOrgId}
                             />
                         </ContentLayout>
                     </TabsContent>

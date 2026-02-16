@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Monitor, Mail } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
+import Link from "next/link";
 
 interface UsersTableProps {
     users: AdminUser[];
@@ -65,7 +66,7 @@ export function UsersTable({ users }: UsersTableProps) {
             cell: ({ row }) => {
                 const user = row.original;
                 return (
-                    <div className="flex items-center gap-3">
+                    <Link href={`/admin/directory/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                         <Avatar className="h-9 w-9">
                             <AvatarImage src={user.avatar_url || ""} alt={user.full_name || user.email} />
                             <AvatarFallback className="uppercase">
@@ -73,7 +74,7 @@ export function UsersTable({ users }: UsersTableProps) {
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                            <span className="text-sm font-medium leading-none">
+                            <span className="text-sm font-medium leading-none underline-offset-4 hover:underline">
                                 {user.full_name || "Sin nombre"}
                             </span>
                             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
@@ -81,7 +82,7 @@ export function UsersTable({ users }: UsersTableProps) {
                                 <span className="truncate max-w-[180px]">{user.email}</span>
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 );
             },
             enableHiding: false,

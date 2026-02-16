@@ -15,7 +15,6 @@ export function AdminFinanceInvoicesView() {
                 icon={FileText}
                 viewName="Historial de Facturas"
                 featureDescription="Registro de todas las transacciones generadas."
-                comingSoon
             />
         </div>
     );

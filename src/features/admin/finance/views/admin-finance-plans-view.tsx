@@ -15,7 +15,6 @@ export function AdminFinancePlansView() {
                 icon={PieChart}
                 viewName="Planes de Precios"
                 featureDescription="Configuración de Tiers (Free, Pro, Enterprise)."
-                comingSoon
             />
         </div>
     );

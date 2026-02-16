@@ -22,7 +22,7 @@ import { SubcontractTasksView } from "./subcontract-tasks-view";
 import { SubcontractAdjustmentView } from "./subcontract-adjustment-view";
 
 interface SubcontractDetailPageProps {
-    projectId: string;
+    projectId?: string;
     subcontractId: string;
 }
 
@@ -39,17 +39,24 @@ export async function generateSubcontractMetadata({
     };
 }
 
-export async function SubcontractDetailPage({ projectId, subcontractId }: SubcontractDetailPageProps) {
+export async function SubcontractDetailPage({ projectId: initialProjectId, subcontractId }: SubcontractDetailPageProps) {
     const t = await getTranslations('Subcontracts');
 
     try {
-        const [project, subcontract, allPayments] = await Promise.all([
+        // Fetch subcontract first to derive projectId if not provided
+        const subcontract = await getSubcontractById(subcontractId);
+        if (!subcontract) {
+            return notFound();
+        }
+
+        const projectId = initialProjectId || subcontract.project_id;
+
+        const [project, allPayments] = await Promise.all([
             getProjectById(projectId),
-            getSubcontractById(subcontractId),
             getSubcontractPayments(projectId),
         ]);
 
-        if (!project || !subcontract) {
+        if (!project) {
             return notFound();
         }
 
@@ -100,7 +107,7 @@ export async function SubcontractDetailPage({ projectId, subcontractId }: Subcon
                     icon={<Handshake />}
                     backButton={
                         <Button variant="ghost" size="icon" asChild className="h-8 w-8 mr-2">
-                            <Link href={`/project/${projectId}/subcontracts`}>
+                            <Link href="/organization/subcontracts">
                                 <ChevronLeft className="h-4 w-4" />
                             </Link>
                         </Button>
