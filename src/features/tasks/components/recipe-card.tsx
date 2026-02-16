@@ -10,7 +10,7 @@
 
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Package, HardHat, Wrench, FileText } from "lucide-react";
+import { Package, HardHat, Wrench, Handshake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskRecipeView, RecipeResources } from "@/features/tasks/types";
 import { type PricePulseData } from "@/components/shared/price-pulse-popover";
@@ -62,12 +62,15 @@ export interface RecipeCardProps {
     materialPriceMap?: Map<string, MaterialPriceInfo>;
     laborPriceMap?: Map<string, LaborPriceInfo>;
     externalServicePriceMap?: Map<string, ExternalServicePriceInfo>;
+    onEditMaterial?: (itemId: string) => void;
     onUpdateMaterialQuantity?: (itemId: string, quantity: number) => void;
     onUpdateMaterialWaste?: (itemId: string, wastePercentage: number) => void;
     onRemoveMaterial?: (itemId: string) => void;
+    onEditLabor?: (itemId: string) => void;
     onUpdateLaborQuantity?: (itemId: string, quantity: number) => void;
     onRemoveLabor?: (itemId: string) => void;
-    onUpdateExternalServiceQuantity?: (itemId: string, quantity: number) => void;
+    onEditExternalService?: (itemId: string) => void;
+    onUpdateExternalServiceQuantity?: (itemId: string, quantity: number) => void; // DEPRECATED: quantity removed
     onRemoveExternalService?: (itemId: string) => void;
     onPriceUpdated?: (resourceId: string, newPrice: number) => void;
     className?: string;
@@ -93,11 +96,14 @@ export function RecipeCard({
     materialPriceMap,
     laborPriceMap,
     externalServicePriceMap,
+    onEditMaterial,
     onUpdateMaterialQuantity,
     onUpdateMaterialWaste,
     onRemoveMaterial,
+    onEditLabor,
     onUpdateLaborQuantity,
     onRemoveLabor,
+    onEditExternalService,
     onUpdateExternalServiceQuantity,
     onRemoveExternalService,
     onPriceUpdated,
@@ -120,7 +126,9 @@ export function RecipeCard({
             return sum + item.quantity * priceInfo.unitPrice;
         }, 0);
 
-        const externalServicesTotal = 0; // External services don't have catalog-level pricing yet
+        const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
+            return sum + (item.unit_price || 0);
+        }, 0);
 
         return { materialsTotal, laborTotal, externalServicesTotal };
     }, [resources, materialPriceMap, laborPriceMap, externalServicePriceMap]);
@@ -162,7 +170,6 @@ export function RecipeCard({
                                 unitSymbol={item.unit_symbol || item.unit_name}
                                 unitName={item.unit_name}
                                 isOwn={isOwn}
-                                isOptional={item.is_optional}
                                 quantity={item.quantity}
                                 onUpdateQuantity={(id, val) => onUpdateMaterialQuantity?.(id, val)}
                                 wastePercentage={item.waste_percentage}
@@ -172,6 +179,7 @@ export function RecipeCard({
                                 priceValidFrom={priceInfo?.priceValidFrom}
                                 pricePulseData={pricePulseData}
                                 onPriceUpdated={onPriceUpdated}
+                                onEdit={(id) => onEditMaterial?.(id)}
                                 onRemove={(id) => onRemoveMaterial?.(id)}
                                 resourceId={item.material_id}
                             />
@@ -212,13 +220,13 @@ export function RecipeCard({
                                 unitSymbol={item.unit_symbol || item.unit_name}
                                 unitName={item.unit_name}
                                 isOwn={isOwn}
-                                isOptional={item.is_optional}
                                 quantity={item.quantity}
                                 onUpdateQuantity={(id, val) => onUpdateLaborQuantity?.(id, val)}
                                 unitPrice={priceInfo?.unitPrice}
                                 priceValidFrom={priceInfo?.priceValidFrom}
                                 pricePulseData={pricePulseData}
                                 onPriceUpdated={onPriceUpdated}
+                                onEdit={(id) => onEditLabor?.(id)}
                                 onRemove={(id) => onRemoveLabor?.(id)}
                                 resourceId={item.labor_type_id}
                             />
@@ -230,8 +238,8 @@ export function RecipeCard({
             {/* EXTERNAL SERVICES LANE */}
             {(resources.externalServices || []).length > 0 && (
                 <ResourceLane
-                    title="Servicios Externos"
-                    icon={<FileText className="h-4 w-4" />}
+                    title="Servicio Subcontratado"
+                    icon={<Handshake className="h-4 w-4" />}
                     count={resources.externalServices.length}
                     subtotal={costs.externalServicesTotal}
                     accentColor="text-[#C4B590]"
@@ -242,10 +250,13 @@ export function RecipeCard({
                                 key={item.id}
                                 variant="subcontract"
                                 id={item.id}
-                                name={item.contact_name || "Servicio Externo"}
+                                name={item.name || "Servicio Externo"}
+                                unitSymbol={item.unit_symbol || item.unit_name}
+                                unitName={item.unit_name}
                                 isOwn={isOwn}
-                                quantity={item.quantity}
-                                onUpdateQuantity={(id, val) => onUpdateExternalServiceQuantity?.(id, val)}
+                                quantity={1}
+                                unitPrice={item.unit_price}
+                                onEdit={(id) => onEditExternalService?.(id)}
                                 onRemove={(id) => onRemoveExternalService?.(id)}
                                 resourceId={item.id}
                             />

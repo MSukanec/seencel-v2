@@ -10,8 +10,14 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Link2 } from "lucide-react";
 import { ResourcePriceDisplay } from "@/components/shared/price-pulse-popover";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // ============================================================================
 // Types
@@ -38,6 +44,10 @@ export interface TaskListItemData {
     total_price?: number | null;
     currency_symbol?: string | null;
     price_valid_from?: string | null;
+    // Optional: usage info
+    usage_count?: number;
+    quote_usage_count?: number;
+    construction_usage_count?: number;
 }
 
 export interface TaskListItemProps {
@@ -148,18 +158,48 @@ export const TaskListItem = memo(function TaskListItem({
                 </ListItem.Badges>
             </ListItem.Content>
 
-            {/* Right side: Price + Unit below */}
-            <div className="flex flex-col items-end mr-2 min-w-[100px]">
-                <ResourcePriceDisplay
-                    price={task.total_price}
-                    currencySymbol={task.currency_symbol || "$"}
-                    priceValidFrom={task.price_valid_from}
-                />
-                {unitDisplay && (
-                    <span className="text-xs text-muted-foreground">
-                        {task.unit_name || unitDisplay}
-                    </span>
+            {/* Right side: Usage badge + Price */}
+            <div className="flex items-center gap-3 mr-2">
+                {/* Usage indicator */}
+                {(task.usage_count ?? 0) > 0 && (
+                    <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Badge
+                                    variant="outline"
+                                    className="text-xs gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-default shrink-0"
+                                >
+                                    <Link2 className="h-3 w-3" />
+                                    En uso · {task.usage_count}
+                                </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="text-xs">
+                                <div className="flex flex-col gap-0.5">
+                                    {(task.quote_usage_count ?? 0) > 0 && (
+                                        <span>{task.quote_usage_count} {task.quote_usage_count === 1 ? 'presupuesto' : 'presupuestos'}</span>
+                                    )}
+                                    {(task.construction_usage_count ?? 0) > 0 && (
+                                        <span>{task.construction_usage_count} {task.construction_usage_count === 1 ? 'obra' : 'obras'}</span>
+                                    )}
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 )}
+
+                {/* Price + Unit */}
+                <div className="flex flex-col items-end min-w-[100px]">
+                    <ResourcePriceDisplay
+                        price={task.total_price}
+                        currencySymbol={task.currency_symbol || "$"}
+                        priceValidFrom={task.price_valid_from}
+                    />
+                    {unitDisplay && (
+                        <span className="text-xs text-muted-foreground">
+                            {task.unit_name || unitDisplay}
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Actions dropdown */}

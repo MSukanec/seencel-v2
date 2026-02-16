@@ -261,7 +261,7 @@ export const RecipeListItem = memo(function RecipeListItem({
                                                     totalQuantity={item.total_quantity}
                                                     effectiveUnitPrice={priceInfo?.effectiveUnitPrice}
                                                     notes={item.notes}
-                                                    isOptional={item.is_optional}
+
                                                     isOwn={isOwn}
                                                     priceInfo={priceInfo}
                                                     onUpdateQuantity={(qty) => onUpdateMaterialQuantity?.(item.id, qty)}
@@ -304,7 +304,7 @@ export const RecipeListItem = memo(function RecipeListItem({
                                                     unitPrice={priceInfo?.unitPrice}
                                                     priceValidFrom={priceInfo?.priceValidFrom}
                                                     notes={item.notes}
-                                                    isOptional={item.is_optional}
+
                                                     isOwn={isOwn}
                                                     onUpdateQuantity={(qty) => onUpdateLaborQuantity?.(item.id, qty)}
                                                     onRemove={() => onRemoveLabor?.(item.id)}
@@ -424,7 +424,7 @@ function MaterialResourceRow({
     totalQuantity,
     effectiveUnitPrice,
     notes,
-    isOptional,
+
     isOwn,
     priceInfo,
     onUpdateQuantity,
@@ -440,7 +440,7 @@ function MaterialResourceRow({
     totalQuantity: number;
     effectiveUnitPrice?: number;
     notes?: string | null;
-    isOptional: boolean;
+
     isOwn: boolean;
     priceInfo?: MaterialPriceInfo;
     onUpdateQuantity: (qty: number) => void;
@@ -571,13 +571,8 @@ function MaterialResourceRow({
                     <span className="text-sm text-muted-foreground/50">sin precio</span>
                 )}
             </div>
-            {/* Optional badge + Actions menu */}
+            {/* Actions menu */}
             <div className="shrink-0 flex items-center gap-1">
-                {isOptional && (
-                    <Badge variant="secondary" className="text-[10px]">
-                        Opc
-                    </Badge>
-                )}
                 {isOwn && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -612,7 +607,7 @@ function LaborResourceRow({
     unitPrice,
     priceValidFrom,
     notes,
-    isOptional,
+
     isOwn,
     onUpdateQuantity,
     onRemove,
@@ -623,7 +618,7 @@ function LaborResourceRow({
     unitPrice?: number;
     priceValidFrom?: string | null;
     notes?: string | null;
-    isOptional: boolean;
+
     isOwn: boolean;
     onUpdateQuantity: (qty: number) => void;
     onRemove: () => void;
@@ -695,13 +690,8 @@ function LaborResourceRow({
                     <span className="text-sm text-muted-foreground/50">sin precio</span>
                 )}
             </div>
-            {/* Optional badge + Actions menu */}
+            {/* Actions menu */}
             <div className="shrink-0 flex items-center gap-1">
-                {isOptional && (
-                    <Badge variant="secondary" className="text-[10px]">
-                        Opc
-                    </Badge>
-                )}
                 {isOwn && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

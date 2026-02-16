@@ -47,6 +47,10 @@ export interface TaskView extends Task {
     total_price?: number | null;
     price_valid_from?: string | null;
     recipe_count?: number;
+    // Usage info (enriched by page)
+    usage_count?: number;
+    quote_usage_count?: number;
+    construction_usage_count?: number;
 }
 
 export interface TaskDivision {
@@ -191,7 +195,7 @@ export interface TaskRecipeMaterial {
     total_quantity: number;
     unit_id: string | null;
     notes: string | null;
-    is_optional: boolean;
+
     organization_id: string;
     created_at: string;
     updated_at: string;
@@ -209,7 +213,7 @@ export interface TaskRecipeLabor {
     quantity: number;
     unit_id: string | null;
     notes: string | null;
-    is_optional: boolean;
+
     organization_id: string;
     created_at: string;
     updated_at: string;
@@ -225,13 +229,20 @@ export interface TaskRecipeExternalService {
     id: string;
     recipe_id: string;
     organization_id: string;
-    quantity: number;
-    notes: string | null;
+    name: string;
+    unit_id: string | null;
+    unit_price: number;
+    currency_id: string;
     contact_id: string | null;
+    includes_materials: boolean;
+    notes: string | null;
     created_at: string;
     updated_at: string;
     // Joined fields (from query)
     contact_name?: string | null;
+    unit_name?: string | null;
+    unit_symbol?: string | null;
+    currency_symbol?: string | null;
 }
 
 /** Combined resources for a single recipe */
@@ -280,7 +291,7 @@ export const taskRecipeMaterialSchema = z.object({
     waste_percentage: z.coerce.number().min(0, "La merma no puede ser negativa").default(0),
     unit_id: z.string().uuid().nullable().optional(),
     notes: z.string().nullable().optional(),
-    is_optional: z.boolean().default(false),
+
 });
 
 export type TaskRecipeMaterialFormData = z.infer<typeof taskRecipeMaterialSchema>;
@@ -291,16 +302,20 @@ export const taskRecipeLaborSchema = z.object({
     quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0"),
     unit_id: z.string().uuid().nullable().optional(),
     notes: z.string().nullable().optional(),
-    is_optional: z.boolean().default(false),
+
 });
 
 export type TaskRecipeLaborFormData = z.infer<typeof taskRecipeLaborSchema>;
 
 export const taskRecipeExternalServiceSchema = z.object({
     recipe_id: z.string().uuid(),
-    quantity: z.coerce.number().positive("La cantidad debe ser mayor a 0").default(1),
-    notes: z.string().nullable().optional(),
+    name: z.string().min(1, "El nombre del servicio es obligatorio"),
+    unit_id: z.string().uuid().nullable().optional(),
+    unit_price: z.coerce.number().min(0, "El precio no puede ser negativo").default(0),
+    currency_id: z.string().uuid("Seleccioná una moneda"),
     contact_id: z.string().uuid().nullable().optional(),
+    includes_materials: z.boolean().default(false),
+    notes: z.string().nullable().optional(),
 });
 
 export type TaskRecipeExternalServiceFormData = z.infer<typeof taskRecipeExternalServiceSchema>;

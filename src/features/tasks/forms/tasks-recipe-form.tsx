@@ -7,27 +7,37 @@ import { toast } from "sonner";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
-import { createRecipe } from "@/features/tasks/actions";
+import { createRecipe, updateRecipe } from "@/features/tasks/actions";
 
 // ============================================================================
 // Types
 // ============================================================================
 
+/** Data for editing an existing recipe */
+export interface EditRecipeData {
+    recipeId: string;
+    name: string;
+}
+
 interface TasksRecipeFormProps {
     taskId: string;
+    /** When provided, the form operates in edit mode */
+    editData?: EditRecipeData;
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export function TasksRecipeForm({ taskId }: TasksRecipeFormProps) {
+export function TasksRecipeForm({ taskId, editData }: TasksRecipeFormProps) {
     const router = useRouter();
     const { closeModal } = useModal();
     const [isLoading, setIsLoading] = useState(false);
 
-    // State
-    const [name, setName] = useState("");
+    const isEditMode = !!editData;
+
+    // State — initialized from editData when editing
+    const [name, setName] = useState(editData?.name || "");
 
     // ========================================================================
     // Callbacks internos (semi-autónomo)
@@ -52,18 +62,30 @@ export function TasksRecipeForm({ taskId }: TasksRecipeFormProps) {
 
         setIsLoading(true);
         try {
-            const result = await createRecipe({
-                task_id: taskId,
-                name: name.trim(),
-                is_public: false,
-                region: null,
-            });
-
-            if (result.success) {
-                toast.success("Receta creada");
-                handleSuccess();
+            if (isEditMode && editData) {
+                const result = await updateRecipe(editData.recipeId, {
+                    name: name.trim(),
+                });
+                if (result.success) {
+                    toast.success("Receta actualizada");
+                    handleSuccess();
+                } else {
+                    toast.error(result.error || "Error al actualizar la receta");
+                }
             } else {
-                toast.error(result.error || "Error al crear la receta");
+                const result = await createRecipe({
+                    task_id: taskId,
+                    name: name.trim(),
+                    is_public: false,
+                    region: null,
+                });
+
+                if (result.success) {
+                    toast.success("Receta creada");
+                    handleSuccess();
+                } else {
+                    toast.error(result.error || "Error al crear la receta");
+                }
             }
         } catch {
             toast.error("Error inesperado");
@@ -93,7 +115,7 @@ export function TasksRecipeForm({ taskId }: TasksRecipeFormProps) {
 
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
-                submitLabel="Crear Receta"
+                submitLabel={isEditMode ? "Guardar Cambios" : "Crear Receta"}
                 isLoading={isLoading}
                 onCancel={handleCancel}
             />

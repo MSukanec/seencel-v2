@@ -13,6 +13,8 @@ import { getTaskById, getTaskDivisions, getUnits } from "@/features/tasks/querie
 import { getTaskRecipes, getRecipeResources } from "@/features/tasks/actions";
 import { getMaterialsForOrganization } from "@/features/materials/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
+import { getCurrencies } from "@/features/billing/queries";
+import { getOrganizationContacts } from "@/features/clients/queries";
 
 // ============================================================================
 // Metadata
@@ -61,12 +63,14 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
         if (!task) notFound();
 
         // Fetch all recipes + divisions/units/catalog in parallel
-        const [recipes, { data: divisions }, { data: units }, catalogMaterials, catalogLaborTypes] = await Promise.all([
+        const [recipes, { data: divisions }, { data: units }, catalogMaterials, catalogLaborTypes, currencies, { data: contacts }] = await Promise.all([
             getTaskRecipes(taskId),
             getTaskDivisions(),
             getUnits(),
             getMaterialsForOrganization(activeOrgId),
             getLaborTypesWithPrices(activeOrgId),
+            getCurrencies(),
+            getOrganizationContacts(activeOrgId),
         ]);
 
         // Load resources for each recipe in parallel
@@ -132,6 +136,8 @@ export default async function TaskDetailPage({ params, searchParams }: TaskDetai
                                 isAdminMode={false}
                                 catalogMaterials={catalogMaterials}
                                 catalogLaborTypes={catalogLaborTypes}
+                                currencies={currencies}
+                                contacts={contacts}
                             />
                         </ContentLayout>
                     </TabsContent>

@@ -22,6 +22,7 @@ import {
     HardHat,
     Wrench,
     FileText,
+    Pencil,
     Trash2,
     MoreHorizontal,
     ExternalLink,
@@ -30,6 +31,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type PricePulseData } from "@/components/shared/price-pulse-popover";
@@ -98,8 +100,7 @@ export interface RecipeResourceListItemProps {
     /** Whether this resource belongs to the current org (enables editing) */
     isOwn: boolean;
 
-    /** Whether this resource is optional */
-    isOptional?: boolean;
+
 
     // ── Quantity ──
 
@@ -136,6 +137,9 @@ export interface RecipeResourceListItemProps {
 
     // ── Actions ──
 
+    /** Callback to edit this resource */
+    onEdit?: (id: string) => void;
+
     /** Callback to remove this resource */
     onRemove?: (id: string) => void;
 
@@ -166,7 +170,7 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
     unitSymbol,
     unitName,
     isOwn,
-    isOptional = false,
+
     quantity,
     onUpdateQuantity,
     wastePercentage,
@@ -176,6 +180,7 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
     priceValidFrom,
     pricePulseData,
     onPriceUpdated,
+    onEdit,
     onRemove,
     resourceId,
 }: RecipeResourceListItemProps) {
@@ -209,6 +214,10 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
     const unitDisplay = unitSymbol || unitName || null;
 
     // Handlers
+    const handleEdit = useCallback(() => {
+        onEdit?.(id);
+    }, [onEdit, id]);
+
     const handleRemove = useCallback(() => {
         onRemove?.(id);
     }, [onRemove, id]);
@@ -224,11 +233,7 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
                 <ListItem.Content className="space-y-0.5">
                     <div className="flex items-center gap-1.5">
                         <ListItem.Title className="text-sm">{name}</ListItem.Title>
-                        {isOptional && (
-                            <Badge variant="secondary" className="text-[9px] h-4 px-1 shrink-0">
-                                Opcional
-                            </Badge>
-                        )}
+
                     </div>
                     <div className="flex items-center gap-2">
                         {unitDisplay && (
@@ -300,7 +305,7 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
             </div>
 
             {/* Actions: "..." dropdown menu */}
-            {isOwn && (onRemove || resourceId) && (
+            {isOwn && (onEdit || onRemove || resourceId) && (
                 <ListItem.Actions>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -310,6 +315,13 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            {/* Edit — open form in edit mode */}
+                            {onEdit && (
+                                <DropdownMenuItem onClick={handleEdit}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                </DropdownMenuItem>
+                            )}
                             {/* Detail link — only for materials and labor */}
                             {(variant === "material" || variant === "labor") && resourceId && (
                                 <DropdownMenuItem
@@ -322,7 +334,11 @@ export const RecipeResourceListItem = memo(function RecipeResourceListItem({
                                     Ver detalle
                                 </DropdownMenuItem>
                             )}
-                            {/* Delete — direct, no confirmation */}
+                            {/* Separator before destructive action */}
+                            {onRemove && (onEdit || resourceId) && (
+                                <DropdownMenuSeparator />
+                            )}
+                            {/* Delete */}
                             {onRemove && (
                                 <DropdownMenuItem
                                     onClick={handleRemove}

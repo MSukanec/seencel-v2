@@ -1,11 +1,19 @@
 {
     "order": [
         "introduccion",
+        "recetas",
+        "recursos-de-receta",
         "importar"
     ],
     "items": {
         "introduccion": {
             "title": "Introducción"
+        },
+        "recetas": {
+            "title": "Recetas"
+        },
+        "recursos-de-receta": {
+            "title": "Recursos de Receta"
         },
         "importar": {
             "title": "Importar Tareas"

@@ -47,7 +47,7 @@ export function TasksRecipeLaborForm({
     const [laborTypeId, setLaborTypeId] = useState("");
     const [quantity, setQuantity] = useState<number>(1);
     const [notes, setNotes] = useState("");
-    const [isOptional, setIsOptional] = useState(false);
+
 
     // Derived: unit from selected labor type
     const selectedLaborType = useMemo(
@@ -106,7 +106,7 @@ export function TasksRecipeLaborForm({
                 quantity,
                 unit_id: selectedLaborType?.unit_id || null,
                 notes: notes.trim() || null,
-                is_optional: isOptional,
+
             });
 
             if (result.success) {
@@ -169,18 +169,7 @@ export function TasksRecipeLaborForm({
                         />
                     </FormGroup>
 
-                    <div className="flex items-center gap-2 md:col-span-2">
-                        <input
-                            type="checkbox"
-                            id="is_optional_labor"
-                            checked={isOptional}
-                            onChange={(e) => setIsOptional(e.target.checked)}
-                            className="rounded"
-                        />
-                        <label htmlFor="is_optional_labor" className="text-sm">
-                            Mano de obra opcional
-                        </label>
-                    </div>
+
                 </div>
             </div>
 

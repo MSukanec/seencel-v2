@@ -1,0 +1,118 @@
+---
+title: Recursos de Receta
+description: Materiales, mano de obra y servicios externos dentro de una receta
+---
+
+# Recursos de Receta
+
+Los **recursos** son los componentes individuales que conforman una receta de construcción. Cada recurso representa un insumo concreto con su cantidad, unidad y costo asociado.
+
+## Tipos de Recursos
+
+### Materiales
+
+Los materiales se seleccionan del **Catálogo de Materiales** de tu organización. Al agregarlos a una receta, definís cuánta cantidad se necesita por unidad de tarea.
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| **Material** | Seleccionado del catálogo (bloqueado en edición) | Cemento Portland CPF40 |
+| **Cantidad** | Por unidad de tarea | 6 kg por m² |
+| **Desperdicio (%)** | Porcentaje adicional por pérdidas | 5% |
+| **Notas** | Observaciones opcionales | "Usar marca premium" |
+
+<Callout type="info" title="Cantidad Total">
+La cantidad total se calcula automáticamente: **Cantidad × (1 + Desperdicio%)**. Por ejemplo, 6 kg con 5% de desperdicio = 6.3 kg totales.
+</Callout>
+
+### Mano de Obra
+
+La mano de obra se selecciona del **Catálogo de Mano de Obra**. Representa las horas de trabajo necesarias por cada tipo de trabajador.
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| **Tipo de M.O.** | Seleccionado del catálogo (bloqueado en edición) | Oficial Albañil |
+| **Cantidad** | Horas por unidad de tarea | 0.5 hs por m² |
+| **Notas** | Observaciones opcionales | "Incluye preparación" |
+
+### Servicios Externos (Subcontratados)
+
+Los servicios externos representan trabajos que se subcontratan a terceros. A diferencia de materiales y mano de obra, **no provienen de un catálogo** — se definen al momento de agregarlos.
+
+| Campo | Descripción | Ejemplo |
+|-------|-------------|---------|
+| **Nombre del Servicio** | Descripción del trabajo (bloqueado en edición) | Bombeo de hormigón |
+| **Precio** | Costo del servicio | $45.000 |
+| **Moneda** | Moneda del precio | ARS |
+| **Contacto** | Proveedor (opcional) | "Hormigonera Del Sur" |
+| **Incluye Materiales** | Si el precio ya contempla materiales | Sí / No |
+| **Notas** | Observaciones opcionales | "Incluye flete" |
+
+<Callout type="warning" title="Conflictos al agregar Servicios Externos">
+Al agregar un servicio externo, si la receta ya tiene materiales o mano de obra, se mostrará un diálogo de conflicto. Esto es porque un servicio que **incluye materiales** puede duplicar costos con los materiales ya cargados. El sistema te permite elegir qué hacer en cada caso.
+</Callout>
+
+---
+
+## Agregar un Recurso
+
+1. Desde el detalle de una receta, hacé clic en **Agregar Recurso**
+2. Seleccioná el **tipo de recurso** (Material, Mano de Obra, o Servicio Externo)
+3. Elegí el **concepto** del catálogo (o definí el servicio manualmente)
+4. Completá la **cantidad** y notas opcionales
+5. Confirmá con **Agregar**
+
+---
+
+## Editar un Recurso
+
+Cada recurso tiene un menú de acciones ("**⋯**") que incluye **Editar**. Al editar:
+
+- El **tipo de recurso** queda bloqueado (no podés cambiar de material a mano de obra)
+- El **concepto** queda bloqueado (no podés cambiar qué material es, por ejemplo)
+- Podés modificar la **cantidad**, **desperdicio**, **notas** y otros campos variables
+
+<Callout type="tip" title="¿Por qué se bloquea el concepto?">
+Cambiar el concepto equivale a reemplazar el recurso. Si necesitás otro material o tipo de mano de obra, eliminá el recurso actual y agregá uno nuevo.
+</Callout>
+
+---
+
+## Eliminar un Recurso
+
+Desde el menú de acciones ("**⋯**") de cada recurso, seleccioná **Eliminar**. La eliminación es segura — el recurso se marca como inactivo internamente para mantener la trazabilidad.
+
+---
+
+## Precios y Costos
+
+Los costos de cada recurso se calculan automáticamente:
+
+| Tipo | Fórmula |
+|------|---------|
+| **Material** | Precio unitario × Cantidad total (con desperdicio) |
+| **Mano de Obra** | Precio por hora × Cantidad de horas |
+| **Servicio Externo** | Precio fijo definido al agregar |
+
+### Semáforo de Frescura
+
+Cada recurso muestra un indicador visual de la **antigüedad del precio**:
+
+| Color | Significado |
+|-------|-------------|
+| 🟢 Verde | Precio actualizado (menos de 30 días) |
+| 🟡 Amarillo | Precio algo desactualizado (30-90 días) |
+| 🔴 Rojo | Precio desactualizado (más de 90 días) |
+
+Esto ayuda a identificar rápidamente qué precios necesitan actualizarse para mantener presupuestos confiables.
+
+---
+
+## Interacción Rápida
+
+Desde la vista de detalle de receta, podés modificar cantidades y desperdicios directamente en el listado:
+
+- **Click en la cantidad** de un material → editá inline
+- **Click en el desperdicio** de un material → editá inline
+- **Click en la cantidad** de mano de obra → editá inline
+
+Los cambios se guardan automáticamente al salir del campo.

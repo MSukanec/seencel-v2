@@ -1,0 +1,86 @@
+---
+title: Recetas
+description: Recetas de construcción — composición de recursos para cada tarea
+---
+
+# Recetas
+
+Una **receta** define cómo se ejecuta una tarea de construcción: qué materiales se necesitan, cuánta mano de obra se requiere y qué servicios externos se contratan. Es el puente entre el catálogo técnico y el presupuesto real de obra.
+
+## ¿Qué es una Receta?
+
+Cada tarea de construcción puede tener **múltiples recetas**. Cada receta representa una variante de ejecución con su propia composición de recursos y costos.
+
+| Concepto | Descripción | Ejemplo |
+|----------|-------------|---------|
+| **Receta propia** | Creada por tu organización | "Grueso y fino interior — Receta estándar" |
+| **Receta pública** | Compartida con la comunidad | "Grueso y fino interior — Receta económica" |
+
+<Callout type="info" title="¿Por qué múltiples recetas?">
+Distintas regiones, proveedores o técnicas pueden cambiar completamente los recursos necesarios para la misma tarea. Con múltiples recetas podés comparar alternativas antes de elegir la que mejor se adapte a tu proyecto.
+</Callout>
+
+---
+
+## Campos de una Receta
+
+| Campo | Descripción | Obligatorio |
+|-------|-------------|:-----------:|
+| **Nombre** | Nombre descriptivo de la variante. Ej: "Receta estándar", "Receta económica" | ✅ |
+| **Región** | Zona geográfica de referencia (si aplica) | No |
+| **Pública** | Si es visible para otras organizaciones | No |
+
+---
+
+## Composición de una Receta
+
+Cada receta se compone de tres tipos de **recursos**:
+
+| Tipo de Recurso | Origen | Ejemplo |
+|-----------------|--------|---------|
+| **Materiales** | Catálogo de Materiales | 6 kg de cemento, 0.02 m³ de arena |
+| **Mano de Obra** | Catálogo de Mano de Obra | 0.5 hs de oficial albañil |
+| **Servicios Externos** | Creados al momento | Servicio de bombeo de hormigón |
+
+El **costo total** de la receta se calcula automáticamente sumando el costo de cada recurso según los precios vigentes del catálogo.
+
+---
+
+## Cómo Crear una Receta
+
+1. Entrá al **detalle de una tarea** desde el Catálogo Técnico
+2. Hacé clic en la pestaña **Recetas**
+3. Presioná **Crear Receta**
+4. Asigná un nombre descriptivo
+5. Empezá a agregar recursos (materiales, mano de obra, servicios)
+
+---
+
+## Cómo Editar o Eliminar una Receta
+
+Desde la lista de recetas, cada receta tiene un menú de acciones ("**⋯**") con las opciones:
+
+- **Editar** — Cambiar el nombre de la receta
+- **Eliminar** — Eliminar la receta (se eliminan también sus recursos)
+
+<Callout type="tip" title="Eliminación Segura">
+Las recetas eliminadas no se pierden permanentemente. Internamente se marcan como inactivas, lo que permite mantener integridad en presupuestos y documentos que las referencien.
+</Callout>
+
+---
+
+## Costos y Precios
+
+El costo de una receta se actualiza en tiempo real basándose en los **precios vigentes** de cada recurso:
+
+- **Materiales** — Precio unitario × cantidad (con desperdicio)
+- **Mano de Obra** — Precio por hora × cantidad de horas
+- **Servicios Externos** — Precio fijo definido al agregar el servicio
+
+Al entrar al detalle de una receta, se muestra un panel de **KPIs** con el desglose por categoría (materiales, mano de obra, servicios) y sus porcentajes respecto al total.
+
+---
+
+## Próximos Pasos
+
+- [Recursos de Receta](/docs/tareas/recursos-de-receta) — Cómo agregar y gestionar materiales, mano de obra y servicios dentro de una receta

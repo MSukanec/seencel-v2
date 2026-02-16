@@ -1209,6 +1209,33 @@ export async function createRecipe(data: TaskRecipeFormData) {
 }
 
 /**
+ * Update recipe (name, region, is_public)
+ */
+export async function updateRecipe(
+    recipeId: string,
+    data: Partial<Pick<TaskRecipeFormData, "name" | "is_public" | "region">>
+) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("task_recipes")
+        .update({
+            ...(data.name !== undefined && { name: data.name }),
+            ...(data.is_public !== undefined && { is_public: data.is_public }),
+            ...(data.region !== undefined && { region: data.region }),
+        })
+        .eq("id", recipeId);
+
+    if (error) {
+        console.error("Error updating recipe:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+/**
  * Update recipe visibility
  */
 export async function updateRecipeVisibility(
@@ -1306,7 +1333,7 @@ export async function addRecipeMaterial(data: TaskRecipeMaterialFormData) {
             waste_percentage: data.waste_percentage ?? 0,
             unit_id: data.unit_id || null,
             notes: data.notes || null,
-            is_optional: data.is_optional,
+
             organization_id: activeOrgId,
         })
         .select()
@@ -1338,7 +1365,7 @@ export async function updateRecipeMaterial(
             waste_percentage: data.waste_percentage,
             unit_id: data.unit_id,
             notes: data.notes,
-            is_optional: data.is_optional,
+
         })
         .eq("id", itemId);
 
@@ -1359,7 +1386,10 @@ export async function deleteRecipeMaterial(itemId: string) {
 
     const { error } = await supabase
         .from("task_recipe_materials")
-        .delete()
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
         .eq("id", itemId);
 
     if (error) {
@@ -1421,7 +1451,7 @@ export async function addRecipeLabor(data: TaskRecipeLaborFormData) {
             quantity: data.quantity,
             unit_id: data.unit_id || null,
             notes: data.notes || null,
-            is_optional: data.is_optional,
+
             organization_id: activeOrgId,
         })
         .select()
@@ -1452,7 +1482,7 @@ export async function updateRecipeLabor(
             quantity: data.quantity,
             unit_id: data.unit_id,
             notes: data.notes,
-            is_optional: data.is_optional,
+
         })
         .eq("id", itemId);
 
@@ -1473,7 +1503,10 @@ export async function deleteRecipeLabor(itemId: string) {
 
     const { error } = await supabase
         .from("task_recipe_labor")
-        .delete()
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
         .eq("id", itemId);
 
     if (error) {
@@ -1501,7 +1534,9 @@ export async function getRecipeExternalServices(
         .from("task_recipe_external_services")
         .select(`
             *,
-            contacts(full_name)
+            contacts(full_name),
+            units(name, symbol),
+            currencies(symbol)
         `)
         .eq("recipe_id", recipeId)
         .eq("is_deleted", false);
@@ -1514,8 +1549,13 @@ export async function getRecipeExternalServices(
     return (data || []).map((row: any) => ({
         ...row,
         contact_name: row.contacts?.full_name || null,
+        unit_name: row.units?.name || null,
+        unit_symbol: row.units?.symbol || null,
+        currency_symbol: row.currencies?.symbol || null,
         contacts: undefined,
-    })) as TaskRecipeExternalService[];
+        units: undefined,
+        currencies: undefined,
+    })).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")) as TaskRecipeExternalService[];
 }
 
 /**
@@ -1531,9 +1571,13 @@ export async function addRecipeExternalService(
         .from("task_recipe_external_services")
         .insert({
             recipe_id: data.recipe_id,
-            quantity: data.quantity,
-            notes: data.notes || null,
+            name: data.name,
+            unit_id: data.unit_id || null,
+            unit_price: data.unit_price,
+            currency_id: data.currency_id,
             contact_id: data.contact_id || null,
+            includes_materials: data.includes_materials ?? false,
+            notes: data.notes || null,
             organization_id: activeOrgId,
         })
         .select()
@@ -1560,9 +1604,13 @@ export async function updateRecipeExternalService(
     const { error } = await supabase
         .from("task_recipe_external_services")
         .update({
-            quantity: data.quantity,
-            notes: data.notes,
+            name: data.name,
+            unit_id: data.unit_id,
+            unit_price: data.unit_price,
+            currency_id: data.currency_id,
             contact_id: data.contact_id,
+            includes_materials: data.includes_materials,
+            notes: data.notes,
         })
         .eq("id", itemId);
 
@@ -1576,18 +1624,71 @@ export async function updateRecipeExternalService(
 }
 
 /**
- * Delete recipe external service
+ * Delete recipe external service (soft delete)
  */
 export async function deleteRecipeExternalService(itemId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
         .from("task_recipe_external_services")
-        .delete()
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
         .eq("id", itemId);
 
     if (error) {
         console.error("Error deleting recipe external service:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+/**
+ * Soft-delete ALL materials from a recipe (batch)
+ * Used when adding an external service with includes_materials=true
+ */
+export async function removeAllRecipeMaterials(recipeId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("task_recipe_materials")
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
+        .eq("recipe_id", recipeId)
+        .eq("is_deleted", false);
+
+    if (error) {
+        console.error("Error removing all recipe materials:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+/**
+ * Soft-delete ALL labor from a recipe (batch)
+ * Used when adding an external service that replaces internal labor
+ */
+export async function removeAllRecipeLabor(recipeId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("task_recipe_labor")
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
+        .eq("recipe_id", recipeId)
+        .eq("is_deleted", false);
+
+    if (error) {
+        console.error("Error removing all recipe labor:", error);
         return { success: false, error: sanitizeError(error) };
     }
 

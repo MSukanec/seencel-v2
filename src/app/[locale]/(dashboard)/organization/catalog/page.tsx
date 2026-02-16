@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskActions, getTaskElements, getTaskCosts } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskActions, getTaskElements, getTaskCosts, getTaskUsageCounts } from "@/features/tasks/queries";
 import { getMaterialsForOrganization, getMaterialCategoriesForCatalog, getUnitsForMaterialCatalog, getMaterialCategoryHierarchy, getProvidersForProject } from "@/features/materials/queries";
 import { getUnitsForOrganization, getUnitCategories } from "@/features/units/queries";
 import { getLaborTypesWithPrices } from "@/features/labor/actions";
 import { getCurrencies } from "@/features/billing/queries";
+import { getOrganizationContacts } from "@/features/clients/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
 import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
@@ -77,7 +78,9 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             providers,
             catalogUnits,
             unitCategories,
-            taskCostsMap
+            taskCostsMap,
+            taskUsageMap,
+            { data: contacts },
         ] = await Promise.all([
             getTasksGroupedByDivision(activeOrgId),
             getUnits(),
@@ -93,7 +96,9 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             getProvidersForProject(activeOrgId),
             getUnitsForOrganization(activeOrgId),
             getUnitCategories(),
-            getTaskCosts(activeOrgId)
+            getTaskCosts(activeOrgId),
+            getTaskUsageCounts(activeOrgId),
+            getOrganizationContacts(activeOrgId),
         ]);
 
         // Get default currency (first one or USD)
@@ -112,11 +117,15 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
             ...group,
             tasks: group.tasks.map(task => {
                 const cost = taskCostsMap.get(task.id);
+                const usage = taskUsageMap.get(task.id);
                 return {
                     ...task,
                     total_price: cost?.unit_cost ?? null,
                     price_valid_from: cost?.oldest_price_date ?? null,
                     recipe_count: cost?.recipe_count ?? 0,
+                    usage_count: usage?.total ?? 0,
+                    quote_usage_count: usage?.quote_count ?? 0,
+                    construction_usage_count: usage?.construction_count ?? 0,
                 };
             }),
         }));
@@ -203,6 +212,7 @@ export default async function TechnicalCatalogPage({ params, searchParams }: Cat
                             />
                         </ContentLayout>
                     </TabsContent>
+
                 </PageWrapper>
             </Tabs>
         );

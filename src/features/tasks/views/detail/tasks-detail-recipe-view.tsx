@@ -18,10 +18,20 @@ import {
     ArrowLeft,
     HardHat,
     Wrench,
-    FileText,
+    Handshake,
     DollarSign,
     Layers,
+    MoreHorizontal,
+    Pencil,
+    Trash2,
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
     updateRecipeMaterial,
@@ -30,9 +40,10 @@ import {
     deleteRecipeLabor,
     updateRecipeExternalService,
     deleteRecipeExternalService,
+    deleteRecipe,
 } from "@/features/tasks/actions";
-import { TasksRecipeForm } from "@/features/tasks/forms/tasks-recipe-form";
-import { TasksRecipeResourceForm } from "@/features/tasks/forms/tasks-recipe-resource-form";
+import { TasksRecipeForm, type EditRecipeData } from "@/features/tasks/forms/tasks-recipe-form";
+import { TasksRecipeResourceForm, type EditResourceData } from "@/features/tasks/forms/tasks-recipe-resource-form";
 import type { TaskView, TaskRecipeView, RecipeResources } from "@/features/tasks/types";
 import { RecipeCard } from "@/features/tasks/components/recipe-card";
 import type { RecipeCardData, MaterialPriceInfo, LaborPriceInfo, ExternalServicePriceInfo } from "@/features/tasks/components/recipe-card";
@@ -56,7 +67,10 @@ export interface TasksDetailRecipeViewProps {
     catalogMaterials?: CatalogMaterialOption[];
     /** Catalog labor types — needed for labor form Combobox */
     catalogLaborTypes?: { id: string; name: string; unit_id?: string | null; unit_name?: string | null; unit_symbol?: string | null; category_name?: string | null; level_name?: string | null; role_name?: string | null; current_price?: number | null; currency_id?: string | null; currency_symbol?: string | null; price_valid_from?: string | null }[];
-
+    /** Available currencies for external service form */
+    currencies?: { id: string; code: string; symbol: string; name: string }[];
+    /** Available contacts for external service form */
+    contacts?: { id: string; full_name: string; company_name?: string | null }[];
 }
 
 /** Material option from catalog — includes pricing for cost calculations */
@@ -96,7 +110,8 @@ export function TasksDetailRecipeView({
     isAdminMode = false,
     catalogMaterials = [],
     catalogLaborTypes = [],
-
+    currencies = [],
+    contacts = [],
 }: TasksDetailRecipeViewProps) {
     const router = useRouter();
     const { openModal } = useModal();
@@ -136,15 +151,57 @@ export function TasksDetailRecipeView({
     }, [task.id, openModal]);
 
     // ========================================================================
+    // Edit Recipe — opens form with name pre-filled
+    // ========================================================================
+
+    const handleEditRecipe = useCallback((recipeId: string, recipeName: string) => {
+        const editData: EditRecipeData = {
+            recipeId,
+            name: recipeName,
+        };
+
+        openModal(
+            <TasksRecipeForm taskId={task.id} editData={editData} />,
+            {
+                title: "Editar Receta",
+                description: "Modificá el nombre de la receta.",
+                size: "md",
+            }
+        );
+    }, [task.id, openModal]);
+
+    // ========================================================================
+    // Delete Recipe — soft delete with confirmation
+    // ========================================================================
+
+    const handleDeleteRecipe = useCallback(async (recipeId: string) => {
+        const result = await deleteRecipe(recipeId);
+        if (result.success) {
+            toast.success("Receta eliminada");
+            router.refresh();
+        } else {
+            toast.error(result.error || "Error al eliminar la receta");
+        }
+    }, [router]);
+
+    // ========================================================================
     // Add Resource — opens material or labor form
     // ========================================================================
 
     const handleAddResource = useCallback((recipeId: string) => {
+        const resources = resourcesMap[recipeId];
+        const existingLaborCount = (resources?.labor || []).length;
+        const existingMaterialsCount = (resources?.materials || []).length;
+
         openModal(
             <TasksRecipeResourceForm
                 recipeId={recipeId}
                 materials={catalogMaterials}
                 laborTypes={catalogLaborTypes}
+                currencies={currencies}
+                contacts={contacts}
+                existingLaborCount={existingLaborCount}
+                existingMaterialsCount={existingMaterialsCount}
             />,
             {
                 title: "Agregar Recurso",
@@ -152,7 +209,131 @@ export function TasksDetailRecipeView({
                 size: "md",
             }
         );
-    }, [catalogMaterials, catalogLaborTypes, openModal]);
+    }, [catalogMaterials, catalogLaborTypes, currencies, contacts, openModal, resourcesMap]);
+
+    // ========================================================================
+    // Edit Resource — opens form in edit mode with concept locked
+    // ========================================================================
+
+    const handleEditMaterial = useCallback((itemId: string) => {
+        // Find the material item across all recipes
+        let foundItem: any = null;
+        let foundRecipeId: string | null = null;
+        for (const recipeId of Object.keys(resourcesMap)) {
+            const item = resourcesMap[recipeId].materials.find(m => m.id === itemId);
+            if (item) {
+                foundItem = item;
+                foundRecipeId = recipeId;
+                break;
+            }
+        }
+        if (!foundItem || !foundRecipeId) return;
+
+        const editData: EditResourceData = {
+            itemId: foundItem.id,
+            resourceType: "material",
+            selectedId: foundItem.material_id,
+            quantity: foundItem.quantity,
+            notes: foundItem.notes,
+            wastePercentage: foundItem.waste_percentage,
+        };
+
+        openModal(
+            <TasksRecipeResourceForm
+                recipeId={foundRecipeId}
+                materials={catalogMaterials}
+                laborTypes={catalogLaborTypes}
+                currencies={currencies}
+                contacts={contacts}
+                editData={editData}
+            />,
+            {
+                title: "Editar Material",
+                description: "Modificá la cantidad y notas del material.",
+                size: "md",
+            }
+        );
+    }, [catalogMaterials, catalogLaborTypes, currencies, contacts, openModal, resourcesMap]);
+
+    const handleEditLabor = useCallback((itemId: string) => {
+        let foundItem: any = null;
+        let foundRecipeId: string | null = null;
+        for (const recipeId of Object.keys(resourcesMap)) {
+            const item = resourcesMap[recipeId].labor.find(l => l.id === itemId);
+            if (item) {
+                foundItem = item;
+                foundRecipeId = recipeId;
+                break;
+            }
+        }
+        if (!foundItem || !foundRecipeId) return;
+
+        const editData: EditResourceData = {
+            itemId: foundItem.id,
+            resourceType: "labor",
+            selectedId: foundItem.labor_type_id,
+            quantity: foundItem.quantity,
+            notes: foundItem.notes,
+        };
+
+        openModal(
+            <TasksRecipeResourceForm
+                recipeId={foundRecipeId}
+                materials={catalogMaterials}
+                laborTypes={catalogLaborTypes}
+                currencies={currencies}
+                contacts={contacts}
+                editData={editData}
+            />,
+            {
+                title: "Editar Mano de Obra",
+                description: "Modificá la cantidad y notas de la mano de obra.",
+                size: "md",
+            }
+        );
+    }, [catalogMaterials, catalogLaborTypes, currencies, contacts, openModal, resourcesMap]);
+
+    const handleEditExternalService = useCallback((itemId: string) => {
+        let foundItem: any = null;
+        let foundRecipeId: string | null = null;
+        for (const recipeId of Object.keys(resourcesMap)) {
+            const item = (resourcesMap[recipeId].externalServices || []).find(es => es.id === itemId);
+            if (item) {
+                foundItem = item;
+                foundRecipeId = recipeId;
+                break;
+            }
+        }
+        if (!foundItem || !foundRecipeId) return;
+
+        const editData: EditResourceData = {
+            itemId: foundItem.id,
+            resourceType: "external_service",
+            quantity: 1,
+            notes: foundItem.notes,
+            serviceName: foundItem.name,
+            unitPrice: foundItem.unit_price,
+            currencyId: foundItem.currency_id,
+            contactId: foundItem.contact_id,
+            includesMaterials: foundItem.includes_materials,
+        };
+
+        openModal(
+            <TasksRecipeResourceForm
+                recipeId={foundRecipeId}
+                materials={catalogMaterials}
+                laborTypes={catalogLaborTypes}
+                currencies={currencies}
+                contacts={contacts}
+                editData={editData}
+            />,
+            {
+                title: "Editar Servicio Externo",
+                description: "Modificá los datos del servicio subcontratado.",
+                size: "md",
+            }
+        );
+    }, [catalogMaterials, catalogLaborTypes, currencies, contacts, openModal, resourcesMap]);
 
     // ========================================================================
     // Material Handlers
@@ -286,27 +467,7 @@ export function TasksDetailRecipeView({
     // External Service Handlers
     // ========================================================================
 
-    const handleUpdateExternalServiceQuantity = useCallback(async (itemId: string, newQuantity: number) => {
-        // Optimistic update
-        setResourcesMap(prev => {
-            const updated = { ...prev };
-            for (const recipeId of Object.keys(updated)) {
-                updated[recipeId] = {
-                    ...updated[recipeId],
-                    externalServices: (updated[recipeId].externalServices || []).map(es =>
-                        es.id === itemId ? { ...es, quantity: newQuantity } : es
-                    ),
-                };
-            }
-            return updated;
-        });
 
-        const result = await updateRecipeExternalService(itemId, { quantity: newQuantity });
-        if (!result.success) {
-            toast.error(result.error || "Error al actualizar");
-            setResourcesMap(serverResourcesMap); // Rollback
-        }
-    }, [serverResourcesMap]);
 
     const handleRemoveExternalService = useCallback(async (itemId: string) => {
         // Optimistic: remove item immediately
@@ -384,10 +545,23 @@ export function TasksDetailRecipeView({
 
     const externalServicePriceMap = useMemo(() => {
         const map = new Map<string, ExternalServicePriceInfo>();
-        // External services don't have catalog-level pricing yet
-        // This map will be populated when PricePulse is integrated
+        // External services have inline pricing (unit_price stored directly on the item)
+        for (const recipeId of Object.keys(resourcesMap)) {
+            for (const es of (resourcesMap[recipeId].externalServices || [])) {
+                if (es.unit_price != null && es.unit_price > 0) {
+                    map.set(es.id, {
+                        unitPrice: es.unit_price,
+                        currencyId: es.currency_id ?? null,
+                        serviceName: es.name,
+                        serviceId: es.id,
+                        organizationId: organizationId,
+                        unitSymbol: es.unit_symbol,
+                    });
+                }
+            }
+        }
         return map;
-    }, []);
+    }, [resourcesMap, organizationId]);
 
     // ========================================================================
     // Build list item data
@@ -418,7 +592,9 @@ export function TasksDetailRecipeView({
             if (!priceInfo) return sum;
             return sum + item.quantity * priceInfo.unitPrice;
         }, 0);
-        const externalServicesTotal = 0; // External services don't have catalog-level pricing yet
+        const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
+            return sum + (item.unit_price || 0);
+        }, 0);
         return materialsTotal + laborTotal + externalServicesTotal;
     }, [materialPriceMap, laborPriceMap, externalServicePriceMap]);
 
@@ -462,7 +638,7 @@ export function TasksDetailRecipeView({
                         featureDescription="Las recetas definen los recursos necesarios para ejecutar esta tarea: materiales, mano de obra y equipos. Cada organización puede crear múltiples recetas con distintas variantes."
                         onAction={handleCreateRecipe}
                         actionLabel="Crear Receta"
-                        docsPath="/docs/tareas"
+                        docsPath="/docs/tareas/recetas"
                     />
                 </div>
             </>
@@ -478,7 +654,7 @@ export function TasksDetailRecipeView({
             || (selectedData.isOwn ? "Receta sin nombre" : selectedData.recipe.org_name || "Receta Anónima");
 
         return (
-            <>
+            <div className="h-full flex flex-col">
                 <Toolbar
                     portalToHeader
                     mobileShowSearch={false}
@@ -522,9 +698,28 @@ export function TasksDetailRecipeView({
                     ]}
                 />
 
-                {/* ── KPI StatCards ── */}
+                {/* ── Check if recipe has resources ── */}
                 {(() => {
                     const { resources } = selectedData;
+                    const totalResources = resources.materials.length + resources.labor.length + (resources.externalServices || []).length;
+
+                    // ── Empty state: no resources yet ──
+                    if (totalResources === 0) {
+                        return (
+                            <div className="flex-1 flex items-center justify-center">
+                                <ViewEmptyState
+                                    mode="empty"
+                                    icon={Layers}
+                                    viewName="Recursos de la Receta"
+                                    featureDescription="Agregá materiales, mano de obra o servicios subcontratados para componer el costo de esta receta."
+                                    onAction={() => handleAddResource(selectedRecipeId!)}
+                                    actionLabel="Agregar Recurso"
+                                />
+                            </div>
+                        );
+                    }
+
+                    // ── Has resources: show KPI cards + RecipeCard ──
                     const materialsTotal = resources.materials.reduce((sum, item) => {
                         const priceInfo = materialPriceMap?.get(item.material_id);
                         if (!priceInfo) return sum;
@@ -536,7 +731,9 @@ export function TasksDetailRecipeView({
                         if (!priceInfo) return sum;
                         return sum + item.quantity * priceInfo.unitPrice;
                     }, 0);
-                    const externalServicesTotal = 0; // External services don't have catalog-level pricing yet
+                    const externalServicesTotal = (resources.externalServices || []).reduce((sum, item) => {
+                        return sum + (item.unit_price || 0);
+                    }, 0);
                     const equipmentTotal = 0; // placeholder
                     const grandTotal = materialsTotal + laborTotal + externalServicesTotal + equipmentTotal;
 
@@ -545,192 +742,194 @@ export function TasksDetailRecipeView({
                     const externalServicesPct = grandTotal > 0 ? (externalServicesTotal / grandTotal) * 100 : 0;
                     const equipmentPct = grandTotal > 0 ? (equipmentTotal / grandTotal) * 100 : 0;
 
-                    const totalResources = resources.materials.length + resources.labor.length + (resources.externalServices || []).length;
-
                     return (
-                        <StatCardGroup columns={4} className="mb-4">
-                            {/* ── Costo Total (first position) ── */}
-                            <StatCard
-                                title="Costo Total"
-                                subtitle={task.unit_name ? `por ${task.unit_name}` : "por unidad"}
-                                icon={DollarSign}
-                                compact
-                            >
-                                <div className="px-4 py-3 flex flex-col items-center justify-center">
-                                    <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
-                                        {grandTotal > 0 ? formatCurrency(grandTotal) : "$0"}
-                                        {task.unit_symbol && (
-                                            <span className="text-lg font-semibold text-muted-foreground ml-1">
-                                                / {task.unit_symbol.toUpperCase()}
-                                            </span>
+                        <>
+                            <StatCardGroup columns={4} className="mb-4">
+                                {/* ── Costo Total (first position) ── */}
+                                <StatCard
+                                    title="Costo Total"
+                                    subtitle={task.unit_name ? `por ${task.unit_name}` : "por unidad"}
+                                    icon={DollarSign}
+                                    compact
+                                >
+                                    <div className="px-4 py-3 flex flex-col items-center justify-center">
+                                        <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
+                                            {grandTotal > 0 ? formatCurrency(grandTotal) : "$0"}
+                                            {task.unit_symbol && (
+                                                <span className="text-lg font-semibold text-muted-foreground ml-1">
+                                                    / {task.unit_symbol.toUpperCase()}
+                                                </span>
+                                            )}
+                                        </span>
+                                        {grandTotal > 0 && (
+                                            <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
+                                                <span className="flex items-center gap-1">
+                                                    <span className="h-2 w-2 rounded-sm bg-[#C48B6A]" />
+                                                    Mat. {formatCurrency(materialsTotal)}
+                                                </span>
+                                                <span className="text-border">·</span>
+                                                <span className="flex items-center gap-1">
+                                                    <span className="h-2 w-2 rounded-sm bg-[#9B8E8A]" />
+                                                    M.O. {formatCurrency(laborTotal)}
+                                                </span>
+                                                {externalServicesTotal > 0 && (
+                                                    <>
+                                                        <span className="text-border">·</span>
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="h-2 w-2 rounded-sm bg-[#C4B590]" />
+                                                            Serv. {formatCurrency(externalServicesTotal)}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
                                         )}
-                                    </span>
-                                    {grandTotal > 0 && (
-                                        <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <span className="h-2 w-2 rounded-sm bg-[#C48B6A]" />
-                                                Mat. {formatCurrency(materialsTotal)}
-                                            </span>
-                                            <span className="text-border">·</span>
-                                            <span className="flex items-center gap-1">
-                                                <span className="h-2 w-2 rounded-sm bg-[#9B8E8A]" />
-                                                M.O. {formatCurrency(laborTotal)}
-                                            </span>
-                                            {externalServicesTotal > 0 && (
-                                                <>
-                                                    <span className="text-border">·</span>
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="h-2 w-2 rounded-sm bg-[#C4B590]" />
-                                                        Serv. {formatCurrency(externalServicesTotal)}
-                                                    </span>
-                                                </>
+                                    </div>
+                                </StatCard>
+
+                                {/* ── Composición de Costos (2 cols) ── */}
+                                <StatCard
+                                    title="Composición"
+                                    subtitle="Distribución por categoría"
+                                    icon={Layers}
+                                    compact
+                                    className="col-span-1 sm:col-span-2"
+                                >
+                                    <div className="px-4 py-3 space-y-3">
+                                        {/* Stacked bar */}
+                                        <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
+                                            {materialsPct > 0 && (
+                                                <div
+                                                    className="h-full bg-[#C48B6A] transition-all duration-500"
+                                                    style={{ width: `${materialsPct}%` }}
+                                                />
+                                            )}
+                                            {laborPct > 0 && (
+                                                <div
+                                                    className="h-full bg-[#9B8E8A] transition-all duration-500"
+                                                    style={{ width: `${laborPct}%` }}
+                                                />
+                                            )}
+                                            {equipmentPct > 0 && (
+                                                <div
+                                                    className="h-full bg-[#8A9A7B] transition-all duration-500"
+                                                    style={{ width: `${equipmentPct}%` }}
+                                                />
+                                            )}
+                                            {externalServicesPct > 0 && (
+                                                <div
+                                                    className="h-full bg-[#C4B590] transition-all duration-500"
+                                                    style={{ width: `${externalServicesPct}%` }}
+                                                />
                                             )}
                                         </div>
-                                    )}
-                                </div>
-                            </StatCard>
 
-                            {/* ── Composición de Costos (2 cols) ── */}
-                            <StatCard
-                                title="Composición"
-                                subtitle="Distribución por categoría"
-                                icon={Layers}
-                                compact
-                                className="col-span-1 sm:col-span-2"
-                            >
-                                <div className="px-4 py-3 space-y-3">
-                                    {/* Stacked bar */}
-                                    <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
-                                        {materialsPct > 0 && (
-                                            <div
-                                                className="h-full bg-[#C48B6A] transition-all duration-500"
-                                                style={{ width: `${materialsPct}%` }}
-                                            />
-                                        )}
-                                        {laborPct > 0 && (
-                                            <div
-                                                className="h-full bg-[#9B8E8A] transition-all duration-500"
-                                                style={{ width: `${laborPct}%` }}
-                                            />
-                                        )}
-                                        {equipmentPct > 0 && (
-                                            <div
-                                                className="h-full bg-[#8A9A7B] transition-all duration-500"
-                                                style={{ width: `${equipmentPct}%` }}
-                                            />
-                                        )}
-                                        {externalServicesPct > 0 && (
-                                            <div
-                                                className="h-full bg-[#C4B590] transition-all duration-500"
-                                                style={{ width: `${externalServicesPct}%` }}
-                                            />
-                                        )}
+                                        {/* Legend */}
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="h-2.5 w-2.5 rounded-sm bg-[#C48B6A]" />
+                                                    <span className="text-xs text-muted-foreground">Materiales</span>
+                                                </div>
+                                                <span className="text-xs font-semibold tabular-nums">
+                                                    {materialsTotal > 0 ? `${formatCurrency(materialsTotal)} (${materialsPct.toFixed(0)}%)` : "—"}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="h-2.5 w-2.5 rounded-sm bg-[#9B8E8A]" />
+                                                    <span className="text-xs text-muted-foreground">Mano de Obra</span>
+                                                </div>
+                                                <span className="text-xs font-semibold tabular-nums">
+                                                    {laborTotal > 0 ? `${formatCurrency(laborTotal)} (${laborPct.toFixed(0)}%)` : "—"}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B] opacity-40" />
+                                                    <span className="text-xs text-muted-foreground/50">Equipos</span>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground/40">—</span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className={cn("h-2.5 w-2.5 rounded-sm bg-[#C4B590]", externalServicesTotal === 0 && "opacity-40")} />
+                                                    <span className={cn("text-xs text-muted-foreground", externalServicesTotal === 0 && "text-muted-foreground/50")}>Servicios Ext.</span>
+                                                </div>
+                                                <span className={cn("text-xs", externalServicesTotal > 0 ? "font-semibold tabular-nums" : "text-muted-foreground/40")}>
+                                                    {externalServicesTotal > 0 ? `${formatCurrency(externalServicesTotal)} (${externalServicesPct.toFixed(0)}%)` : "—"}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
+                                </StatCard>
 
-                                    {/* Legend */}
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                                        <div className="flex items-center justify-between gap-2">
+                                {/* ── Recursos ── */}
+                                <StatCard
+                                    title="Recursos"
+                                    subtitle={`${totalResources} componente${totalResources !== 1 ? "s" : ""}`}
+                                    icon={Layers}
+                                    compact
+                                >
+                                    <div className="px-4 py-3 space-y-2">
+                                        <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
-                                                <div className="h-2.5 w-2.5 rounded-sm bg-[#C48B6A]" />
+                                                <Package className="h-3.5 w-3.5 text-[#C48B6A]" />
                                                 <span className="text-xs text-muted-foreground">Materiales</span>
                                             </div>
-                                            <span className="text-xs font-semibold tabular-nums">
-                                                {materialsTotal > 0 ? `${formatCurrency(materialsTotal)} (${materialsPct.toFixed(0)}%)` : "—"}
+                                            <span className="text-sm font-semibold tabular-nums">
+                                                {resources.materials.length}
                                             </span>
                                         </div>
-                                        <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
-                                                <div className="h-2.5 w-2.5 rounded-sm bg-[#9B8E8A]" />
+                                                <HardHat className="h-3.5 w-3.5 text-[#9B8E8A]" />
                                                 <span className="text-xs text-muted-foreground">Mano de Obra</span>
                                             </div>
-                                            <span className="text-xs font-semibold tabular-nums">
-                                                {laborTotal > 0 ? `${formatCurrency(laborTotal)} (${laborPct.toFixed(0)}%)` : "—"}
+                                            <span className="text-sm font-semibold tabular-nums">
+                                                {resources.labor.length}
                                             </span>
                                         </div>
-                                        <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
-                                                <div className="h-2.5 w-2.5 rounded-sm bg-[#8A9A7B] opacity-40" />
-                                                <span className="text-xs text-muted-foreground/50">Equipos</span>
+                                                <Handshake className={cn("h-3.5 w-3.5 text-[#C4B590]", (resources.externalServices || []).length === 0 && "opacity-40")} />
+                                                <span className={cn("text-xs text-muted-foreground", (resources.externalServices || []).length === 0 && "opacity-40")}>Subcontrato</span>
                                             </div>
-                                            <span className="text-xs text-muted-foreground/40">—</span>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-1.5">
-                                                <div className={cn("h-2.5 w-2.5 rounded-sm bg-[#C4B590]", externalServicesTotal === 0 && "opacity-40")} />
-                                                <span className={cn("text-xs text-muted-foreground", externalServicesTotal === 0 && "text-muted-foreground/50")}>Servicios Ext.</span>
-                                            </div>
-                                            <span className={cn("text-xs", externalServicesTotal > 0 ? "font-semibold tabular-nums" : "text-muted-foreground/40")}>
-                                                {externalServicesTotal > 0 ? `${formatCurrency(externalServicesTotal)} (${externalServicesPct.toFixed(0)}%)` : "—"}
+                                            <span className={cn("text-sm tabular-nums", (resources.externalServices || []).length > 0 ? "font-semibold" : "text-xs text-muted-foreground opacity-40")}>
+                                                {(resources.externalServices || []).length > 0 ? (resources.externalServices || []).length : "—"}
                                             </span>
+                                        </div>
+                                        <div className="flex items-center justify-between opacity-40">
+                                            <div className="flex items-center gap-1.5">
+                                                <Wrench className="h-3.5 w-3.5 text-[#8A9A7B]" />
+                                                <span className="text-xs text-muted-foreground">Equipos</span>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">—</span>
                                         </div>
                                     </div>
-                                </div>
-                            </StatCard>
+                                </StatCard>
+                            </StatCardGroup>
 
-                            {/* ── Recursos ── */}
-                            <StatCard
-                                title="Recursos"
-                                subtitle={`${totalResources} componente${totalResources !== 1 ? "s" : ""}`}
-                                icon={FileText}
-                                compact
-                            >
-                                <div className="px-4 py-3 space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <Package className="h-3.5 w-3.5 text-[#C48B6A]" />
-                                            <span className="text-xs text-muted-foreground">Materiales</span>
-                                        </div>
-                                        <span className="text-sm font-semibold tabular-nums">
-                                            {resources.materials.length}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <HardHat className="h-3.5 w-3.5 text-[#9B8E8A]" />
-                                            <span className="text-xs text-muted-foreground">Mano de Obra</span>
-                                        </div>
-                                        <span className="text-sm font-semibold tabular-nums">
-                                            {resources.labor.length}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <FileText className={cn("h-3.5 w-3.5 text-[#C4B590]", (resources.externalServices || []).length === 0 && "opacity-40")} />
-                                            <span className={cn("text-xs text-muted-foreground", (resources.externalServices || []).length === 0 && "opacity-40")}>Servicios Ext.</span>
-                                        </div>
-                                        <span className={cn("text-sm tabular-nums", (resources.externalServices || []).length > 0 ? "font-semibold" : "text-xs text-muted-foreground opacity-40")}>
-                                            {(resources.externalServices || []).length > 0 ? (resources.externalServices || []).length : "—"}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between opacity-40">
-                                        <div className="flex items-center gap-1.5">
-                                            <Wrench className="h-3.5 w-3.5 text-[#8A9A7B]" />
-                                            <span className="text-xs text-muted-foreground">Equipos</span>
-                                        </div>
-                                        <span className="text-xs text-muted-foreground">—</span>
-                                    </div>
-                                </div>
-                            </StatCard>
-                        </StatCardGroup>
+                            {/* Full recipe detail — resource lanes grouped by type */}
+                            <RecipeCard
+                                data={selectedData}
+                                materialPriceMap={materialPriceMap}
+                                laborPriceMap={laborPriceMap}
+                                externalServicePriceMap={externalServicePriceMap}
+                                onEditMaterial={handleEditMaterial}
+                                onUpdateMaterialQuantity={handleUpdateMaterialQuantity}
+                                onUpdateMaterialWaste={handleUpdateMaterialWaste}
+                                onRemoveMaterial={handleRemoveMaterial}
+                                onEditLabor={handleEditLabor}
+                                onUpdateLaborQuantity={handleUpdateLaborQuantity}
+                                onRemoveLabor={handleRemoveLabor}
+                                onEditExternalService={handleEditExternalService}
+                                onRemoveExternalService={handleRemoveExternalService}
+                                onPriceUpdated={handlePriceUpdated}
+                            />
+                        </>
                     );
                 })()}
-
-                {/* Full recipe detail — resource lanes grouped by type */}
-                <RecipeCard
-                    data={selectedData}
-                    materialPriceMap={materialPriceMap}
-                    laborPriceMap={laborPriceMap}
-                    externalServicePriceMap={externalServicePriceMap}
-                    onUpdateMaterialQuantity={handleUpdateMaterialQuantity}
-                    onUpdateMaterialWaste={handleUpdateMaterialWaste}
-                    onRemoveMaterial={handleRemoveMaterial}
-                    onUpdateLaborQuantity={handleUpdateLaborQuantity}
-                    onRemoveLabor={handleRemoveLabor}
-                    onUpdateExternalServiceQuantity={handleUpdateExternalServiceQuantity}
-                    onRemoveExternalService={handleRemoveExternalService}
-                    onPriceUpdated={handlePriceUpdated}
-                />
-            </>
+            </div>
         );
     }
 
@@ -751,38 +950,71 @@ export function TasksDetailRecipeView({
                 ]}
             />
 
-            <div className="space-y-2">
-                {recipeListData.map((data) => {
+            {(() => {
+                // Classify recipes based on resource composition
+                const ownRecipes = recipeListData.filter(d => {
+                    const esCount = (d.resources.externalServices || []).length;
+                    return esCount === 0;
+                });
+                const subcontractedRecipes = recipeListData.filter(d => {
+                    const esCount = (d.resources.externalServices || []).length;
+                    return esCount > 0;
+                });
+
+                /** Get the right icon based on resource composition */
+                const getRecipeIcon = (data: typeof recipeListData[number]) => {
+                    const hasMaterials = data.resources.materials.length > 0;
+                    const hasLabor = data.resources.labor.length > 0;
+                    const hasES = (data.resources.externalServices || []).length > 0;
+
+                    if (hasES) return Handshake;
+                    if (hasMaterials && hasLabor) return Wrench;
+                    if (hasLabor) return HardHat;
+                    if (hasMaterials) return Package;
+                    return Layers; // empty recipe
+                };
+
+                /** Get a descriptive subtitle based on composition */
+                const getCompositionLabel = (data: typeof recipeListData[number]) => {
+                    const matCount = data.resources.materials.length;
+                    const laborCount = data.resources.labor.length;
+                    const esCount = (data.resources.externalServices || []).length;
+                    const parts: string[] = [];
+                    if (matCount > 0) parts.push(`${matCount} mat.`);
+                    if (laborCount > 0) parts.push(`${laborCount} m.o.`);
+                    if (esCount > 0) parts.push(`${esCount} serv.`);
+                    if (parts.length === 0) return "Sin recursos";
+                    return parts.join(" · ");
+                };
+
+                const renderRecipeItem = (data: typeof recipeListData[number]) => {
                     const { recipe, resources, isOwn } = data;
-                    const esCount = (resources.externalServices || []).length;
-                    const totalItems = resources.materials.length + resources.labor.length + esCount;
                     const displayName = recipe.name
                         || (isOwn ? "Receta sin nombre" : recipe.org_name || "Receta Anónima");
                     const grandTotal = getRecipeGrandTotal(data);
+                    const RecipeIcon = getRecipeIcon(data);
 
                     return (
-                        <button
+                        <div
                             key={recipe.id}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                             onClick={() => setSelectedRecipeId(recipe.id)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRecipeId(recipe.id); } }}
                             className={cn(
                                 "w-full flex items-center gap-3 p-3 rounded-lg border bg-sidebar",
                                 "hover:bg-muted/50 transition-colors text-left cursor-pointer",
                                 "group"
                             )}
                         >
-                            {/* Icon */}
+                            {/* Smart Icon */}
                             <div className={cn(
                                 "shrink-0 flex items-center justify-center h-10 w-10 rounded-lg",
                                 isOwn
                                     ? "bg-primary/10 text-primary"
                                     : "bg-muted text-muted-foreground"
                             )}>
-                                {isOwn ? (
-                                    <Building2 className="h-5 w-5" />
-                                ) : (
-                                    <Globe className="h-5 w-5" />
-                                )}
+                                <RecipeIcon className="h-5 w-5" />
                             </div>
 
                             {/* Content */}
@@ -791,10 +1023,7 @@ export function TasksDetailRecipeView({
                                     {displayName}
                                 </h3>
                                 <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                    {totalItems} recurso{totalItems !== 1 ? "s" : ""}
-                                    {resources.materials.length > 0 && ` · ${resources.materials.length} mat.`}
-                                    {resources.labor.length > 0 && ` · ${resources.labor.length} m.o.`}
-                                    {esCount > 0 && ` · ${esCount} serv.`}
+                                    {getCompositionLabel(data)}
                                     {recipe.region && ` · ${recipe.region}`}
                                 </p>
                             </div>
@@ -822,12 +1051,84 @@ export function TasksDetailRecipeView({
                                 </span>
                             )}
 
-                            {/* Chevron → indicates drill-down */}
-                            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
-                        </button>
+                            {/* Actions dropdown */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditRecipe(recipe.id, displayName);
+                                        }}
+                                    >
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteRecipe(recipe.id);
+                                        }}
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Eliminar
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     );
-                })}
-            </div>
+                };
+
+                // Both categories exist — show separated
+                const showBothSections = ownRecipes.length > 0 && subcontractedRecipes.length > 0;
+
+                return (
+                    <div className="space-y-6">
+                        {/* Own execution recipes */}
+                        {ownRecipes.length > 0 && (
+                            <div className="space-y-2">
+                                {showBothSections && (
+                                    <div className="flex items-center gap-2 px-1 mb-1">
+                                        <Wrench className="h-3.5 w-3.5 text-primary" />
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                            Ejecución Propia
+                                        </span>
+                                        <div className="flex-1 border-t border-border/50" />
+                                    </div>
+                                )}
+                                {ownRecipes.map(renderRecipeItem)}
+                            </div>
+                        )}
+
+                        {/* Subcontracted recipes */}
+                        {subcontractedRecipes.length > 0 && (
+                            <div className="space-y-2">
+                                {showBothSections && (
+                                    <div className="flex items-center gap-2 px-1 mb-1">
+                                        <Handshake className="h-3.5 w-3.5 text-amber-500" />
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                            Subcontratadas
+                                        </span>
+                                        <div className="flex-1 border-t border-border/50" />
+                                    </div>
+                                )}
+                                {subcontractedRecipes.map(renderRecipeItem)}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
         </>
     );
 }

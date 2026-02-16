@@ -385,18 +385,233 @@ async function main() {
         sections.push('');
     }
 
-    // ── WRITE FILE ──
+    // ── WRITE FILES ──
     const outputDir = path.resolve(__dirname, '..', 'DB');
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
+    // Write monolithic SCHEMA.md (backward compatible)
     const outputPath = path.join(outputDir, 'SCHEMA.md');
     fs.writeFileSync(outputPath, sections.join('\n'), 'utf-8');
 
+    // ── SPLIT INTO INDIVIDUAL FILES ──
+    // Write each section to a separate file for easier searching/reading
+    const schemaDir = path.join(outputDir, 'schema');
+    if (fs.existsSync(schemaDir)) {
+        // Clean old files
+        for (const f of fs.readdirSync(schemaDir)) {
+            fs.unlinkSync(path.join(schemaDir, f));
+        }
+    } else {
+        fs.mkdirSync(schemaDir, { recursive: true });
+    }
+
+    const header = [
+        `# Database Schema (Auto-generated)`,
+        `> Generated: ${new Date().toISOString()}`,
+        `> Source: Supabase PostgreSQL (read-only introspection)`,
+        `> ⚠️ This file is auto-generated. Do NOT edit manually.\n`,
+    ].join('\n');
+
+    // 1. Tables — split into chunks of ~30 tables each for readability
+    const tableNames = tablesRes.rows.map(t => t.table_name);
+    const TABLES_PER_FILE = 30;
+    for (let i = 0; i < tableNames.length; i += TABLES_PER_FILE) {
+        const chunk = tableNames.slice(i, i + TABLES_PER_FILE);
+        const fileIndex = Math.floor(i / TABLES_PER_FILE) + 1;
+        const tableLines = [header, `## Tables (chunk ${fileIndex}: ${chunk[0]} — ${chunk[chunk.length - 1]})\n`];
+
+        for (const name of chunk) {
+            const cols = columnsByTable[name] || [];
+            const pks = pkByTable[name] || new Set();
+            const fks = fkByTable[name] || [];
+            const uniques = uniqueByTable[name] || new Set();
+
+            tableLines.push(`### \`${name}\`\n`);
+            tableLines.push(`| Column | Type | Nullable | Default | Constraints |`);
+            tableLines.push(`|--------|------|----------|---------|-------------|`);
+
+            for (const col of cols) {
+                const type = col.character_maximum_length
+                    ? `${col.udt_name}(${col.character_maximum_length})`
+                    : col.udt_name;
+                const nullable = col.is_nullable === 'YES' ? '✓' : '✗';
+                const def = col.column_default
+                    ? col.column_default.length > 40
+                        ? col.column_default.substring(0, 37) + '...'
+                        : col.column_default
+                    : '';
+
+                const constraints = [];
+                if (pks.has(col.column_name)) constraints.push('PK');
+                if (uniques.has(col.column_name)) constraints.push('UNIQUE');
+                const fk = fks.find(f => f.column_name === col.column_name);
+                if (fk) constraints.push(`FK → ${fk.foreign_table}.${fk.foreign_column}`);
+
+                tableLines.push(`| ${col.column_name} | ${type} | ${nullable} | ${def} | ${constraints.join(', ')} |`);
+            }
+            tableLines.push('');
+        }
+
+        fs.writeFileSync(path.join(schemaDir, `tables_${fileIndex}.md`), tableLines.join('\n'), 'utf-8');
+    }
+
+    // 2. Views
+    if (viewsRes.rows.length > 0) {
+        const viewLines = [header, `## Views (${viewsRes.rows.length})\n`];
+        for (const view of viewsRes.rows) {
+            viewLines.push(`### \`${view.table_name}\`\n`);
+            viewLines.push('```sql');
+            viewLines.push(view.view_definition?.trim() || '-- (definition not available)');
+            viewLines.push('```\n');
+        }
+        fs.writeFileSync(path.join(schemaDir, 'views.md'), viewLines.join('\n'), 'utf-8');
+    }
+
+    // 3. Functions — split into chunks for readability (same pattern as tables)
+    if (funcsRes.rows.length > 0) {
+        const FUNCS_PER_FILE = 20;
+        for (let i = 0; i < funcsRes.rows.length; i += FUNCS_PER_FILE) {
+            const chunk = funcsRes.rows.slice(i, i + FUNCS_PER_FILE);
+            const fileIndex = Math.floor(i / FUNCS_PER_FILE) + 1;
+            const funcLines = [header, `## Functions & Procedures (chunk ${fileIndex}: ${chunk[0].name} — ${chunk[chunk.length - 1].name})\n`];
+
+            for (const fn of chunk) {
+                const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
+                funcLines.push(`### \`${fn.name}(${fn.args})\`${badge}\n`);
+                funcLines.push(`- **Returns**: ${fn.return_type}`);
+                funcLines.push(`- **Kind**: ${fn.kind} | ${fn.volatility} | ${fn.security}\n`);
+                funcLines.push('<details><summary>Source</summary>\n');
+                funcLines.push('```sql');
+                funcLines.push(fn.definition?.trim() || '-- (source not available)');
+                funcLines.push('```\n</details>\n');
+            }
+            fs.writeFileSync(path.join(schemaDir, `functions_${fileIndex}.md`), funcLines.join('\n'), 'utf-8');
+        }
+    }
+
+    // 4. Triggers
+    if (triggersRes.rows.length > 0) {
+        const triggerEvents = {};
+        for (const t of triggersRes.rows) {
+            const key = `${t.table_name}.${t.trigger_name}`;
+            if (!triggerEvents[key]) triggerEvents[key] = { ...t, events: [] };
+            triggerEvents[key].events.push(t.event);
+        }
+
+        const trigLines = [header, `## Triggers (${Object.keys(triggerEvents).length})\n`];
+        trigLines.push(`| Table | Trigger | Timing | Events | Action |`);
+        trigLines.push(`|-------|---------|--------|--------|--------|`);
+        for (const t of Object.values(triggerEvents)) {
+            const action = t.action_statement.length > 60
+                ? t.action_statement.substring(0, 57) + '...'
+                : t.action_statement;
+            trigLines.push(`| ${t.table_name} | ${t.trigger_name} | ${t.timing} | ${t.events.join(', ')} | ${action} |`);
+        }
+        trigLines.push('');
+        fs.writeFileSync(path.join(schemaDir, 'triggers.md'), trigLines.join('\n'), 'utf-8');
+    }
+
+    // 5. RLS Policies
+    if (rlsRes.rows.length > 0) {
+        const rlsByTable = {};
+        for (const p of rlsRes.rows) {
+            if (!rlsByTable[p.tablename]) rlsByTable[p.tablename] = [];
+            rlsByTable[p.tablename].push(p);
+        }
+
+        const rlsLines = [header, `## RLS Policies (${rlsRes.rows.length})\n`];
+        for (const [table, policies] of Object.entries(rlsByTable)) {
+            rlsLines.push(`### \`${table}\` (${policies.length} policies)\n`);
+            for (const p of policies) {
+                rlsLines.push(`#### ${p.policyname}\n`);
+                rlsLines.push(`- **Command**: ${p.cmd} | **Permissive**: ${p.permissive}`);
+                rlsLines.push(`- **Roles**: ${p.roles}`);
+                if (p.qual) {
+                    rlsLines.push(`- **USING**:`);
+                    rlsLines.push('```sql');
+                    rlsLines.push(p.qual);
+                    rlsLines.push('```');
+                }
+                if (p.with_check) {
+                    rlsLines.push(`- **WITH CHECK**:`);
+                    rlsLines.push('```sql');
+                    rlsLines.push(p.with_check);
+                    rlsLines.push('```');
+                }
+                rlsLines.push('');
+            }
+        }
+        fs.writeFileSync(path.join(schemaDir, 'rls.md'), rlsLines.join('\n'), 'utf-8');
+    }
+
+    // 6. Enums
+    if (enumsRes.rows.length > 0) {
+        const enumLines = [header, `## Enums (${enumsRes.rows.length})\n`];
+        enumLines.push(`| Enum | Values |`);
+        enumLines.push(`|------|--------|`);
+        for (const e of enumsRes.rows) {
+            enumLines.push(`| ${e.enum_name} | ${e.values} |`);
+        }
+        enumLines.push('');
+        fs.writeFileSync(path.join(schemaDir, 'enums.md'), enumLines.join('\n'), 'utf-8');
+    }
+
+    // 7. Indexes
+    if (indexesRes.rows.length > 0) {
+        const idxLines = [header, `## Indexes (${indexesRes.rows.length}, excluding PKs)\n`];
+        idxLines.push(`| Table | Index | Definition |`);
+        idxLines.push(`|-------|-------|------------|`);
+        for (const idx of indexesRes.rows) {
+            const def = idx.indexdef.length > 80
+                ? idx.indexdef.substring(0, 77) + '...'
+                : idx.indexdef;
+            idxLines.push(`| ${idx.tablename} | ${idx.indexname} | \`${def}\` |`);
+        }
+        idxLines.push('');
+        fs.writeFileSync(path.join(schemaDir, 'indexes.md'), idxLines.join('\n'), 'utf-8');
+    }
+
+    // 8. Comprehensive index (quick reference for tables, functions, views)
+    const indexFileLines = [header, `## Table Index\n`, `All ${tableNames.length} tables, alphabetical:\n`];
+    for (const name of tableNames) {
+        const cols = columnsByTable[name] || [];
+        const fks = fkByTable[name] || [];
+        const fkList = fks.map(f => `${f.column_name} → ${f.foreign_table}`).join(', ');
+        indexFileLines.push(`- **\`${name}\`** (${cols.length} cols${fkList ? ` | FK: ${fkList}` : ''})`);
+    }
+    indexFileLines.push('');
+
+    // Function index
+    if (funcsRes.rows.length > 0) {
+        indexFileLines.push(`---\n## Function Index\n`);
+        indexFileLines.push(`All ${funcsRes.rows.length} functions/procedures:\n`);
+        const FUNCS_PER_FILE_IDX = 20;
+        for (let i = 0; i < funcsRes.rows.length; i++) {
+            const fn = funcsRes.rows[i];
+            const fileIndex = Math.floor(i / FUNCS_PER_FILE_IDX) + 1;
+            const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
+            indexFileLines.push(`- \`${fn.name}(${fn.args})\` → ${fn.return_type}${badge} *(functions_${fileIndex}.md)*`);
+        }
+        indexFileLines.push('');
+    }
+
+    // View index
+    if (viewsRes.rows.length > 0) {
+        indexFileLines.push(`---\n## View Index\n`);
+        for (const view of viewsRes.rows) {
+            indexFileLines.push(`- **\`${view.table_name}\`**`);
+        }
+        indexFileLines.push('');
+    }
+    fs.writeFileSync(path.join(schemaDir, '_index.md'), indexFileLines.join('\n'), 'utf-8');
+
     await client.end();
 
+    const splitFiles = fs.readdirSync(schemaDir);
     console.log(`\n✅ Schema written to DB/SCHEMA.md`);
+    console.log(`✅ Split into ${splitFiles.length} files in DB/schema/`);
     console.log(`   📊 ${tablesRes.rows.length} tables`);
     console.log(`   👁️  ${viewsRes.rows.length} views`);
     console.log(`   ⚙️  ${funcsRes.rows.length} functions`);

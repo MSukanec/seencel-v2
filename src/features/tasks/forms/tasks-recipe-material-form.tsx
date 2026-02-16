@@ -45,7 +45,7 @@ export function TasksRecipeMaterialForm({
     const [materialId, setMaterialId] = useState("");
     const [quantity, setQuantity] = useState<number>(1);
     const [notes, setNotes] = useState("");
-    const [isOptional, setIsOptional] = useState(false);
+
 
     // Derived: unit from selected material
     const selectedMaterial = useMemo(
@@ -103,7 +103,7 @@ export function TasksRecipeMaterialForm({
                 waste_percentage: 0,
                 unit_id: selectedMaterial?.unit_id || null,
                 notes: notes.trim() || null,
-                is_optional: isOptional,
+
             });
 
             if (result.success) {
@@ -166,18 +166,7 @@ export function TasksRecipeMaterialForm({
                         />
                     </FormGroup>
 
-                    <div className="flex items-center gap-2 md:col-span-2">
-                        <input
-                            type="checkbox"
-                            id="is_optional_material"
-                            checked={isOptional}
-                            onChange={(e) => setIsOptional(e.target.checked)}
-                            className="rounded"
-                        />
-                        <label htmlFor="is_optional_material" className="text-sm">
-                            Material opcional
-                        </label>
-                    </div>
+
                 </div>
             </div>
 

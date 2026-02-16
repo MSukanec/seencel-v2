@@ -1,0 +1,491 @@
+# Database Schema (Auto-generated)
+> Generated: 2026-02-16T18:36:44.978Z
+> Source: Supabase PostgreSQL (read-only introspection)
+> ⚠️ This file is auto-generated. Do NOT edit manually.
+
+## Table Index
+
+All 212 tables, alphabetical:
+
+- **`app_settings`** (4 cols)
+- **`bank_transfer_payments`** (22 cols | FK: user_id → users, payment_id → payments, plan_id → plans, reviewed_by → users, organization_id → organizations, course_id → courses)
+- **`billing_profiles`** (12 cols | FK: user_id → users, country_id → countries)
+- **`brands`** (4 cols)
+- **`calendar_event_attendees`** (5 cols | FK: member_id → organization_members, event_id → calendar_events)
+- **`calendar_event_reminders`** (6 cols | FK: event_id → calendar_events)
+- **`calendar_events`** (22 cols | FK: organization_id → organizations, created_by → organization_members, updated_by → organization_members, parent_event_id → calendar_events, project_id → projects)
+- **`capital_adjustments`** (17 cols | FK: project_id → projects, currency_id → currencies, organization_id → organizations, created_by → organization_members, partner_id → capital_participants)
+- **`capital_participants`** (11 cols | FK: contact_id → contacts, created_by → organization_members, organization_id → organizations)
+- **`changelog_entries`** (9 cols | FK: created_by → users)
+- **`client_commitments`** (18 cols | FK: currency_id → currencies, client_id → project_clients, created_by → organization_members, project_id → projects, quote_id → quotes, updated_by → organization_members, organization_id → organizations)
+- **`client_payment_schedule`** (16 cols | FK: organization_id → organizations, updated_by → organization_members, created_by → organization_members, currency_id → currencies, commitment_id → client_commitments)
+- **`client_payments`** (21 cols | FK: client_id → project_clients, commitment_id → client_commitments, schedule_id → client_payment_schedule, created_by → organization_members, import_batch_id → import_batches, updated_by → organization_members, wallet_id → organization_wallets, organization_id → organizations, project_id → projects, currency_id → currencies)
+- **`client_portal_branding`** (14 cols | FK: organization_id → organizations, project_id → projects)
+- **`client_portal_settings`** (14 cols | FK: organization_id → organizations, updated_by → organization_members, created_by → organization_members, project_id → projects)
+- **`client_representatives`** (13 cols | FK: organization_id → organizations, client_id → project_clients, contact_id → contacts, invited_by → organization_members)
+- **`client_roles`** (11 cols | FK: created_by → organization_members, organization_id → organizations, updated_by → organization_members)
+- **`construction_dependencies`** (10 cols | FK: updated_by → organization_members, organization_id → organizations, created_by → organization_members, predecessor_task_id → construction_tasks, successor_task_id → construction_tasks)
+- **`construction_phase_tasks`** (6 cols | FK: project_id → projects, construction_task_id → construction_tasks, project_phase_id → construction_project_phases)
+- **`construction_phases`** (7 cols | FK: project_id → projects, organization_id → organizations)
+- **`construction_project_phases`** (9 cols | FK: phase_id → construction_phases, project_id → projects, created_by → organization_members)
+- **`construction_task_material_snapshots`** (11 cols | FK: construction_task_id → construction_tasks, material_id → materials, organization_id → organizations, project_id → projects, source_task_id → tasks, unit_id → units)
+- **`construction_tasks`** (26 cols | FK: updated_by → organization_members, created_by → organization_members, organization_id → organizations, project_id → projects, quote_item_id → quote_items, recipe_id → task_recipes, task_id → tasks)
+- **`contact_categories`** (9 cols | FK: updated_by → organization_members, organization_id → organizations, created_by → organization_members)
+- **`contact_category_links`** (6 cols | FK: organization_id → organizations, contact_category_id → contact_categories, contact_id → contacts)
+- **`contacts`** (27 cols | FK: created_by → organization_members, company_id → contacts, organization_id → organizations, updated_by → organization_members, linked_user_id → users, import_batch_id → import_batches)
+- **`countries`** (7 cols)
+- **`coupon_courses`** (2 cols | FK: course_id → courses, coupon_id → coupons)
+- **`coupon_plans`** (2 cols | FK: coupon_id → coupons, plan_id → plans)
+- **`coupon_redemptions`** (10 cols | FK: coupon_id → coupons, course_id → courses, plan_id → plans, subscription_id → organization_subscriptions, user_id → users)
+- **`coupons`** (16 cols | FK: created_by → users)
+- **`course_details`** (13 cols | FK: instructor_id → course_instructors, course_id → courses)
+- **`course_enrollments`** (8 cols | FK: course_id → courses, user_id → users)
+- **`course_faqs`** (7 cols | FK: course_id → courses)
+- **`course_instructors`** (16 cols | FK: created_by → users, user_id → users)
+- **`course_lesson_notes`** (9 cols | FK: user_id → users, lesson_id → course_lessons)
+- **`course_lesson_progress`** (10 cols | FK: user_id → users, lesson_id → course_lessons)
+- **`course_lessons`** (11 cols | FK: module_id → course_modules)
+- **`course_modules`** (10 cols | FK: course_id → courses)
+- **`courses`** (14 cols | FK: created_by → users)
+- **`currencies`** (8 cols)
+- **`dashboard_layouts`** (7 cols | FK: user_id → users, organization_id → organizations)
+- **`debug_signup_log`** (4 cols)
+- **`economic_index_components`** (8 cols | FK: index_type_id → economic_index_types)
+- **`economic_index_types`** (11 cols | FK: organization_id → organizations)
+- **`economic_index_values`** (10 cols | FK: index_type_id → economic_index_types)
+- **`email_queue`** (11 cols)
+- **`exchange_rates`** (7 cols)
+- **`external_service_prices`** (11 cols | FK: created_by → organization_members, updated_by → organization_members, currency_id → currencies, organization_id → organizations, recipe_external_service_id → task_recipe_external_services)
+- **`feature_flag_categories`** (5 cols | FK: parent_id → feature_flag_categories)
+- **`feature_flags`** (12 cols | FK: parent_id → feature_flags, category_id → feature_flag_categories)
+- **`feedback`** (5 cols | FK: user_id → users)
+- **`financial_operation_movements`** (15 cols | FK: currency_id → currencies, created_by → organization_members, wallet_id → organization_wallets, organization_id → organizations, financial_operation_id → financial_operations, project_id → projects, updated_by → organization_members)
+- **`financial_operations`** (12 cols | FK: created_by → organization_members, updated_by → organization_members, project_id → projects, organization_id → organizations)
+- **`forum_categories`** (12 cols | FK: course_id → courses)
+- **`forum_posts`** (10 cols | FK: author_id → users, thread_id → forum_threads, parent_id → forum_posts, organization_id → organizations)
+- **`forum_reactions`** (6 cols | FK: user_id → users)
+- **`forum_threads`** (15 cols | FK: category_id → forum_categories, author_id → users, organization_id → organizations)
+- **`founder_event_registrations`** (6 cols | FK: event_id → founder_portal_events, user_id → users, organization_id → organizations)
+- **`founder_portal_events`** (13 cols | FK: created_by → users)
+- **`founder_vote_ballots`** (6 cols | FK: organization_id → organizations, topic_id → founder_vote_topics, user_id → users, option_id → founder_vote_options)
+- **`founder_vote_options`** (4 cols | FK: topic_id → founder_vote_topics)
+- **`founder_vote_topics`** (10 cols | FK: created_by → users)
+- **`general_cost_categories`** (11 cols | FK: created_by → organization_members, updated_by → organization_members, organization_id → organizations)
+- **`general_cost_payment_allocations`** (5 cols | FK: project_id → projects, payment_id → general_costs_payments)
+- **`general_costs`** (14 cols | FK: organization_id → organizations, updated_by → organization_members, created_by → organization_members, category_id → general_cost_categories)
+- **`general_costs_payments`** (17 cols | FK: currency_id → currencies, wallet_id → organization_wallets, updated_by → organization_members, organization_id → organizations, general_cost_id → general_costs, created_by → organization_members)
+- **`global_announcements`** (16 cols | FK: created_by → users)
+- **`hero_sections`** (17 cols)
+- **`ia_context_snapshots`** (6 cols | FK: user_id → users, organization_id → organizations)
+- **`ia_import_mapping_patterns`** (8 cols | FK: organization_id → organizations)
+- **`ia_import_value_patterns`** (9 cols | FK: organization_id → organizations)
+- **`ia_messages`** (6 cols | FK: user_id → users)
+- **`ia_usage_logs`** (10 cols | FK: user_id → users)
+- **`ia_user_greetings`** (5 cols | FK: user_id → users)
+- **`ia_user_preferences`** (6 cols | FK: user_id → users)
+- **`ia_user_usage_limits`** (6 cols | FK: user_id → users)
+- **`import_batches`** (7 cols | FK: organization_id → organizations, member_id → organization_members)
+- **`indirect_cost_values`** (7 cols | FK: indirect_cost_id → indirect_costs, currency_id → currencies)
+- **`indirect_costs`** (7 cols | FK: organization_id → organizations, project_id → projects)
+- **`indirect_costs_payments`** (16 cols | FK: indirect_cost_id → indirect_costs, wallet_id → organization_wallets, project_id → projects, created_by → organization_members, currency_id → currencies, organization_id → organizations)
+- **`kanban_attachments`** (8 cols | FK: updated_by → organization_members, uploaded_by → organization_members, card_id → kanban_cards)
+- **`kanban_board_permissions`** (7 cols | FK: member_id → organization_members, role_id → roles, board_id → kanban_boards, created_by → organization_members)
+- **`kanban_boards`** (18 cols | FK: updated_by → organization_members, template_id → kanban_boards, project_id → projects, organization_id → organizations, created_by → organization_members)
+- **`kanban_card_labels`** (4 cols | FK: label_id → kanban_labels, card_id → kanban_cards, created_by → organization_members)
+- **`kanban_card_watchers`** (3 cols | FK: member_id → organization_members, card_id → kanban_cards)
+- **`kanban_cards`** (26 cols | FK: board_id → kanban_boards, assigned_to → organization_members, created_by → organization_members, list_id → kanban_lists, organization_id → organizations, project_id → projects, updated_by → organization_members)
+- **`kanban_checklist_items`** (12 cols | FK: checklist_id → kanban_checklists, updated_by → organization_members, assigned_to → organization_members, completed_by → organization_members)
+- **`kanban_checklists`** (8 cols | FK: updated_by → organization_members, card_id → kanban_cards, created_by → organization_members)
+- **`kanban_comments`** (7 cols | FK: author_id → organization_members, card_id → kanban_cards, updated_by → organization_members)
+- **`kanban_labels`** (11 cols | FK: created_by → organization_members, updated_by → organization_members, organization_id → organizations)
+- **`kanban_lists`** (15 cols | FK: organization_id → organizations, board_id → kanban_boards, created_by → organization_members, updated_by → organization_members)
+- **`kanban_mentions`** (6 cols | FK: mentioned_member_id → organization_members, comment_id → kanban_comments)
+- **`labor_categories`** (11 cols | FK: organization_id → organizations, updated_by → organization_members, created_by → organization_members)
+- **`labor_insurances`** (16 cols | FK: project_id → projects, organization_id → organizations, labor_id → project_labor, created_by → organization_members)
+- **`labor_levels`** (6 cols)
+- **`labor_payments`** (19 cols | FK: created_by → organization_members, wallet_id → organization_wallets, updated_by → organization_members, project_id → projects, organization_id → organizations, labor_id → project_labor, import_batch_id → import_batches, currency_id → currencies)
+- **`labor_prices`** (11 cols | FK: updated_by → organization_members, organization_id → organizations, labor_type_id → labor_types, currency_id → currencies, created_by → organization_members)
+- **`labor_roles`** (10 cols)
+- **`labor_types`** (9 cols | FK: unit_id → units, labor_role_id → labor_roles, labor_level_id → labor_levels, labor_category_id → labor_categories)
+- **`linked_accounts`** (5 cols | FK: user_id → users)
+- **`material_categories`** (5 cols | FK: parent_id → material_categories)
+- **`material_invoice_items`** (13 cols | FK: organization_id → organizations, invoice_id → material_invoices, unit_id → units, project_id → projects, product_id → products, material_id → materials)
+- **`material_invoices`** (18 cols | FK: currency_id → currencies, project_id → projects, provider_id → contacts, purchase_order_id → material_purchase_orders, created_by → organization_members, organization_id → organizations)
+- **`material_payments`** (20 cols | FK: purchase_id → material_invoices, wallet_id → organization_wallets, updated_by → organization_members, material_type_id → material_types, created_by → organization_members, currency_id → currencies, import_batch_id → import_batches, organization_id → organizations, project_id → projects)
+- **`material_prices`** (12 cols | FK: currency_id → currencies, organization_id → organizations, updated_by → organization_members, created_by → organization_members, material_id → materials)
+- **`material_purchase_order_items`** (12 cols | FK: created_by → organization_members, purchase_order_id → material_purchase_orders, organization_id → organizations, unit_id → units, project_id → projects, material_id → materials)
+- **`material_purchase_orders`** (18 cols | FK: currency_id → currencies, project_id → projects, provider_id → contacts, requested_by → organization_members, approved_by → organization_members, organization_id → organizations)
+- **`material_types`** (11 cols | FK: created_by → organization_members, updated_by → organization_members, organization_id → organizations)
+- **`materials`** (20 cols | FK: unit_id → units, default_sale_unit_id → units, default_provider_id → contacts, created_by → organization_members, category_id → material_categories, updated_by → organization_members, organization_id → organizations)
+- **`media_file_folders`** (11 cols | FK: updated_by → organization_members, created_by → organization_members, organization_id → organizations, parent_id → media_file_folders, project_id → projects)
+- **`media_files`** (14 cols | FK: updated_by → organization_members, organization_id → organizations)
+- **`media_links`** (29 cols | FK: client_payment_id → client_payments, course_id → courses, folder_id → media_file_folders, general_cost_payment_id → general_costs_payments, material_payment_id → material_payments, material_purchase_id → material_invoices, media_file_id → media_files, organization_id → organizations, partner_contribution_id → partner_contributions, partner_withdrawal_id → partner_withdrawals, labor_payment_id → labor_payments, pin_id → pins, project_id → projects, site_log_id → site_logs, subcontract_payment_id → subcontract_payments, forum_thread_id → forum_threads, updated_by → organization_members, testimonial_id → testimonials, contact_id → contacts)
+- **`movement_concepts`** (10 cols | FK: organization_id → organizations, parent_id → movement_concepts)
+- **`movement_indirects`** (4 cols | FK: movement_id → movements, indirect_id → indirect_costs)
+- **`movements`** (22 cols | FK: type_id → movement_concepts, category_id → movement_concepts, contact_id → contacts, created_by → organization_members, subcategory_id → movement_concepts, wallet_id → organization_wallets, currency_id → currencies, member_id → organization_members, organization_id → organizations, project_id → projects)
+- **`mp_preferences`** (31 cols | FK: plan_id → plans, organization_id → organizations, course_id → courses, coupon_id → coupons, user_id → users)
+- **`notification_settings`** (6 cols | FK: user_id → users)
+- **`notifications`** (12 cols | FK: created_by → users, org_id → organizations, role_id → roles)
+- **`ops_alerts`** (20 cols | FK: organization_id → organizations, user_id → users, resolved_by → users, payment_id → payments, event_id → payment_events, ack_by → users)
+- **`ops_check_runs`** (7 cols)
+- **`ops_repair_actions`** (9 cols)
+- **`ops_repair_logs`** (7 cols | FK: alert_id → ops_alerts)
+- **`organization_activity_logs`** (8 cols | FK: organization_id → organizations, member_id → organization_members)
+- **`organization_billing_cycles`** (22 cols | FK: payment_uuid → payments, organization_id → organizations, plan_id → plans, subscription_id → organization_subscriptions)
+- **`organization_currencies`** (9 cols | FK: organization_id → organizations, currency_id → currencies)
+- **`organization_data`** (22 cols | FK: organization_id → organizations, updated_by → organization_members, created_by → organization_members)
+- **`organization_invitations`** (12 cols | FK: invited_by → organization_members, role_id → roles, organization_id → organizations, user_id → users)
+- **`organization_material_prices`** (9 cols | FK: currency_id → currencies, material_id → materials, organization_id → organizations)
+- **`organization_member_events`** (11 cols | FK: member_id → organization_members, organization_id → organizations, performed_by → users, subscription_id → organization_subscriptions, user_id → users)
+- **`organization_members`** (14 cols | FK: invited_by → organization_members, organization_id → organizations, user_id → users, updated_by → organization_members, role_id → roles, created_by → organization_members)
+- **`organization_preferences`** (13 cols | FK: default_pdf_template_id → pdf_templates, default_tax_label_id → tax_labels, default_wallet_id → wallets, organization_id → organizations, functional_currency_id → currencies, default_currency_id → currencies)
+- **`organization_recipe_preferences`** (5 cols | FK: organization_id → organizations, task_id → tasks, recipe_id → task_recipes)
+- **`organization_subscriptions`** (18 cols | FK: organization_id → organizations, coupon_id → coupons, scheduled_downgrade_plan_id → plans, payment_id → payments, plan_id → plans)
+- **`organization_task_prices`** (11 cols | FK: organization_id → organizations, task_id → tasks)
+- **`organization_wallets`** (10 cols | FK: wallet_id → wallets, created_by → organization_members, organization_id → organizations)
+- **`organizations`** (15 cols | FK: created_by → users, plan_id → plans, updated_by → organization_members, owner_id → users)
+- **`partner_capital_balance`** (9 cols | FK: organization_id → organizations, partner_id → capital_participants)
+- **`partner_contributions`** (17 cols | FK: partner_id → capital_participants, created_by → organization_members, wallet_id → organization_wallets, project_id → projects, organization_id → organizations, currency_id → currencies)
+- **`partner_withdrawals`** (17 cols | FK: created_by → organization_members, currency_id → currencies, organization_id → organizations, partner_id → capital_participants, project_id → projects, wallet_id → organization_wallets)
+- **`payment_events`** (16 cols)
+- **`payment_plans`** (5 cols)
+- **`payments`** (16 cols | FK: course_id → courses, user_id → users, organization_id → organizations)
+- **`paypal_preferences`** (21 cols | FK: coupon_id → coupons, course_id → courses, organization_id → organizations, user_id → users, plan_id → plans)
+- **`pdf`** (7 cols | FK: organization_id → organizations)
+- **`pdf_templates`** (29 cols | FK: organization_id → organizations)
+- **`permissions`** (6 cols)
+- **`personnel_attendees`** (13 cols | FK: created_by → organization_members, project_id → projects, personnel_id → project_labor, site_log_id → site_logs, organization_id → organizations)
+- **`personnel_rates`** (15 cols | FK: created_by → organization_members, currency_id → currencies, labor_type_id → labor_categories, personnel_id → project_labor, organization_id → organizations)
+- **`pin_board_items`** (5 cols | FK: pin_id → pins, board_id → pin_boards)
+- **`pin_boards`** (8 cols | FK: project_id → projects, created_by → organization_members, organization_id → organizations)
+- **`pins`** (8 cols | FK: media_file_id → media_files, organization_id → organizations, project_id → projects)
+- **`plans`** (18 cols)
+- **`product_prices`** (6 cols | FK: currency_id → currencies, provider_product_id → provider_products)
+- **`products`** (15 cols | FK: material_id → materials, brand_id → brands, organization_id → organizations)
+- **`project_clients`** (14 cols | FK: updated_by → organization_members, client_role_id → client_roles, contact_id → contacts, created_by → organization_members, organization_id → organizations, project_id → projects)
+- **`project_data`** (23 cols | FK: updated_by → organization_members, created_by → organization_members, organization_id → organizations, project_id → projects)
+- **`project_labor`** (15 cols | FK: project_id → projects, organization_id → organizations, created_by → organization_members, contact_id → contacts, labor_type_id → labor_categories, updated_by → organization_members)
+- **`project_modalities`** (10 cols | FK: created_by → organization_members, organization_id → organizations, updated_by → organization_members)
+- **`project_settings`** (10 cols | FK: project_id → projects, organization_id → organizations)
+- **`project_types`** (10 cols | FK: created_by → organization_members, updated_by → organization_members, organization_id → organizations)
+- **`projects`** (19 cols | FK: project_modality_id → project_modalities, project_type_id → project_types, organization_id → organizations, updated_by → organization_members, created_by → organization_members)
+- **`provider_products`** (7 cols | FK: product_id → products, organization_id → organizations)
+- **`push_subscriptions`** (7 cols | FK: user_id → users)
+- **`quote_items`** (19 cols | FK: organization_id → organizations, currency_id → currencies, updated_by → organization_members, project_id → projects, quote_id → quotes, task_id → tasks, created_by → organization_members)
+- **`quotes`** (27 cols | FK: updated_by → organization_members, created_by → organization_members, currency_id → currencies, organization_id → organizations, approved_by → organization_members, parent_quote_id → quotes, project_id → projects, client_id → contacts)
+- **`role_permissions`** (5 cols | FK: permission_id → permissions, role_id → roles, organization_id → organizations)
+- **`roles`** (6 cols | FK: organization_id → organizations)
+- **`signatures`** (15 cols | FK: organization_id → organizations)
+- **`site_log_types`** (11 cols | FK: created_by → organization_members, updated_by → organization_members, organization_id → organizations)
+- **`site_logs`** (20 cols | FK: project_id → projects, organization_id → organizations, created_by → organization_members, entry_type_id → site_log_types, updated_by → organization_members)
+- **`subcontract_bid_tasks`** (10 cols | FK: subcontract_task_id → subcontract_tasks, subcontract_bid_id → subcontract_bids)
+- **`subcontract_bids`** (12 cols | FK: currency_id → currencies, contact_id → contacts, subcontract_id → subcontracts, created_by → organization_members)
+- **`subcontract_payments`** (18 cols | FK: updated_by → organization_members, import_batch_id → import_batches, organization_id → organizations, wallet_id → organization_wallets, created_by → organization_members, subcontract_id → subcontracts, currency_id → currencies, project_id → projects)
+- **`subcontract_tasks`** (8 cols | FK: subcontract_id → subcontracts, task_id → construction_tasks)
+- **`subcontracts`** (22 cols | FK: adjustment_index_type_id → economic_index_types, currency_id → currencies, organization_id → organizations, project_id → projects, updated_by → organization_members, winner_bid_id → subcontract_bids, created_by → organization_members, contact_id → contacts)
+- **`subscription_notifications_log`** (4 cols | FK: subscription_id → organization_subscriptions)
+- **`support_messages`** (7 cols | FK: user_id → users)
+- **`system_error_logs`** (8 cols)
+- **`system_job_logs`** (8 cols | FK: organization_id → organizations)
+- **`task_actions`** (6 cols)
+- **`task_construction_systems`** (11 cols)
+- **`task_division_actions`** (3 cols | FK: action_id → task_actions, division_id → task_divisions)
+- **`task_division_elements`** (3 cols | FK: division_id → task_divisions, element_id → task_elements)
+- **`task_divisions`** (15 cols | FK: organization_id → organizations, import_batch_id → import_batches, created_by → organization_members, parent_id → task_divisions, updated_by → organization_members)
+- **`task_element_actions`** (3 cols | FK: action_id → task_actions, element_id → task_elements)
+- **`task_element_parameters`** (5 cols | FK: element_id → task_elements, parameter_id → task_parameters)
+- **`task_element_systems`** (3 cols | FK: element_id → task_elements, system_id → task_construction_systems)
+- **`task_elements`** (12 cols | FK: default_unit_id → units)
+- **`task_parameter_options`** (14 cols | FK: material_id → materials, parameter_id → task_parameters, unit_id → units)
+- **`task_parameters`** (14 cols)
+- **`task_recipe_external_services`** (17 cols | FK: unit_id → units, updated_by → organization_members, recipe_id → task_recipes, organization_id → organizations, import_batch_id → import_batches, currency_id → currencies, created_by → organization_members, contact_id → contacts)
+- **`task_recipe_labor`** (14 cols | FK: recipe_id → task_recipes, organization_id → organizations, import_batch_id → import_batches, created_by → organization_members, labor_type_id → labor_types, updated_by → organization_members, unit_id → units)
+- **`task_recipe_materials`** (16 cols | FK: organization_id → organizations, material_id → materials, created_by → organization_members, import_batch_id → import_batches, updated_by → organization_members, recipe_id → task_recipes, unit_id → units)
+- **`task_recipe_ratings`** (10 cols | FK: user_id → users, organization_id → organizations, recipe_id → task_recipes, construction_task_id → construction_tasks)
+- **`task_recipes`** (17 cols | FK: updated_by → organization_members, import_batch_id → import_batches, created_by → organization_members, task_id → tasks, organization_id → organizations)
+- **`task_task_parameters`** (10 cols | FK: parameter_id → task_parameters, task_id → tasks)
+- **`tasks`** (21 cols | FK: task_action_id → task_actions, updated_by → organization_members, unit_id → units, task_element_id → task_elements, task_division_id → task_divisions, import_batch_id → import_batches, created_by → organization_members, organization_id → organizations)
+- **`tax_labels`** (5 cols)
+- **`testimonials`** (16 cols | FK: user_id → users, course_id → courses, organization_id → organizations)
+- **`unit_categories`** (6 cols)
+- **`units`** (13 cols | FK: unit_category_id → unit_categories, organization_id → organizations, created_by → organization_members, updated_by → organization_members)
+- **`user_acquisition`** (9 cols | FK: user_id → users)
+- **`user_data`** (9 cols | FK: user_id → users, country → countries)
+- **`user_insight_interactions`** (6 cols)
+- **`user_notifications`** (6 cols | FK: notification_id → notifications, user_id → users)
+- **`user_organization_preferences`** (6 cols | FK: last_project_id → projects, organization_id → organizations, user_id → users)
+- **`user_preferences`** (12 cols | FK: last_organization_id → organizations, user_id → users)
+- **`user_presence`** (10 cols | FK: user_id → users)
+- **`user_view_history`** (9 cols | FK: user_id → users, organization_id → organizations)
+- **`users`** (11 cols | FK: role_id → roles)
+- **`wallets`** (5 cols)
+
+---
+## Function Index
+
+All 184 functions/procedures:
+
+- `accept_organization_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(functions_1.md)*
+- `admin_cleanup_test_purchase(p_user_email text, p_org_id uuid)` → jsonb 🔐 *(functions_1.md)*
+- `admin_cleanup_test_user(target_email text)` → void 🔐 *(functions_1.md)*
+- `analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)` → void 🔐 *(functions_1.md)*
+- `approve_quote_and_create_tasks(p_quote_id uuid, p_member_id uuid DEFAULT NULL::uuid)` → jsonb 🔐 *(functions_1.md)*
+- `assert_project_is_active(p_project_id uuid)` → void 🔐 *(functions_1.md)*
+- `assign_default_permissions_to_org_roles(p_organization_id uuid)` → void 🔐 *(functions_1.md)*
+- `audit_subcontract_payments()` → trigger 🔐 *(functions_1.md)*
+- `budget_item_move(p_budget_id uuid, p_item_id uuid, p_prev_item_id uuid, p_next_item_id uuid)` → void 🔐 *(functions_1.md)*
+- `budget_item_set_default_sort_key()` → trigger 🔐 *(functions_1.md)*
+- `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(functions_1.md)*
+- `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(functions_1.md)*
+- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(functions_1.md)*
+- `check_active_project_limit(p_organization_id uuid, p_excluded_project_id uuid DEFAULT NULL::uuid)` → json 🔐 *(functions_1.md)*
+- `cleanup_media_file_storage()` → trigger 🔐 *(functions_1.md)*
+- `create_construction_task_material_snapshot()` → trigger *(functions_1.md)*
+- `current_user_id()` → uuid 🔐 *(functions_1.md)*
+- `dismiss_home_banner()` → boolean 🔐 *(functions_1.md)*
+- `documents_validate_project_org()` → trigger 🔐 *(functions_1.md)*
+- `fill_progress_user_id_from_auth()` → trigger 🔐 *(functions_1.md)*
+- `fill_user_data_user_id_from_auth()` → trigger 🔐 *(functions_2.md)*
+- `fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)` → TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text) 🔐 *(functions_2.md)*
+- `fn_storage_overview(p_org_id uuid)` → TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb) 🔐 *(functions_2.md)*
+- `forbid_user_id_change()` → trigger 🔐 *(functions_2.md)*
+- `generate_next_document_group_name(p_folder_id uuid)` → text 🔐 *(functions_2.md)*
+- `generate_po_order_number()` → trigger *(functions_2.md)*
+- `get_invitation_by_token(p_token text)` → jsonb 🔐 *(functions_2.md)*
+- `get_next_change_order_number(p_contract_id uuid)` → integer *(functions_2.md)*
+- `get_organization_seat_status(p_organization_id uuid)` → jsonb 🔐 *(functions_2.md)*
+- `get_upgrade_proration(p_organization_id uuid, p_target_plan_id uuid)` → jsonb 🔐 *(functions_2.md)*
+- `get_user()` → json 🔐 *(functions_2.md)*
+- `handle_contact_link_user()` → trigger 🔐 *(functions_2.md)*
+- `handle_import_batch_member_id()` → trigger 🔐 *(functions_2.md)*
+- `handle_member_seat_purchase(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(functions_2.md)*
+- `handle_new_org_member_contact()` → trigger 🔐 *(functions_2.md)*
+- `handle_new_organization(p_user_id uuid, p_organization_name text)` → uuid 🔐 *(functions_2.md)*
+- `handle_new_user()` → trigger 🔐 *(functions_2.md)*
+- `handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(functions_2.md)*
+- `handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(functions_2.md)*
+- `handle_registered_invitation()` → trigger 🔐 *(functions_2.md)*
+- `handle_updated_by()` → trigger 🔐 *(functions_3.md)*
+- `handle_updated_by_organizations()` → trigger 🔐 *(functions_3.md)*
+- `handle_upgrade_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(functions_3.md)*
+- `has_permission(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(functions_3.md)*
+- `heartbeat(p_org_id uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)` → void 🔐 *(functions_3.md)*
+- `increment_recipe_usage()` → trigger *(functions_3.md)*
+- `is_admin()` → boolean 🔐 *(functions_3.md)*
+- `is_demo_org(p_organization_id uuid)` → boolean 🔐 *(functions_3.md)*
+- `is_org_member(p_organization_id uuid)` → boolean 🔐 *(functions_3.md)*
+- `is_project_representative(p_project_id uuid)` → boolean 🔐 *(functions_3.md)*
+- `is_self(p_user_id uuid)` → boolean 🔐 *(functions_3.md)*
+- `is_system_row(p_is_system boolean)` → boolean 🔐 *(functions_3.md)*
+- `kanban_auto_complete_card()` → trigger *(functions_3.md)*
+- `kanban_set_card_board_id()` → trigger *(functions_3.md)*
+- `kanban_set_updated_at()` → trigger *(functions_3.md)*
+- `lock_org_task_on_update()` → trigger 🔐 *(functions_3.md)*
+- `log_activity(p_organization_id uuid, p_user_id uuid, p_action text, p_target_table text, p_target_id uuid, p_metadata jsonb)` → void 🔐 *(functions_3.md)*
+- `log_calendar_event_activity()` → trigger 🔐 *(functions_3.md)*
+- `log_client_commitment_activity()` → trigger 🔐 *(functions_3.md)*
+- `log_client_payment_activity()` → trigger 🔐 *(functions_3.md)*
+- `log_client_role_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_construction_task_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_contact_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_contact_category_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_financial_movement_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_financial_operation_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_general_cost_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_general_cost_category_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_general_costs_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_general_costs_payments_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_import_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_import_batch_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_kanban_board_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_kanban_card_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_kanban_child_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_kanban_comment_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_kanban_label_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_labor_category_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_labor_payment_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_labor_price_activity()` → trigger 🔐 *(functions_4.md)*
+- `log_material_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_material_payment_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_media_file_folder_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_member_billable_change()` → trigger 🔐 *(functions_5.md)*
+- `log_organization_data_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_organizations_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_project_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_project_client_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_project_data_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_project_labor_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_project_modality_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_project_type_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_quote_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_quote_item_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_recipe_external_service_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_recipe_labor_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_recipe_material_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_site_log_types_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_site_logs_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_subcontract_activity()` → trigger 🔐 *(functions_5.md)*
+- `log_subcontract_payment_activity()` → trigger 🔐 *(functions_6.md)*
+- `log_system_error(p_domain text, p_entity text, p_function_name text, p_error_message text, p_context jsonb DEFAULT NULL::jsonb, p_severity text DEFAULT 'error'::text)` → void 🔐 *(functions_6.md)*
+- `log_task_activity()` → trigger 🔐 *(functions_6.md)*
+- `log_task_division_activity()` → trigger 🔐 *(functions_6.md)*
+- `log_task_recipe_activity()` → trigger 🔐 *(functions_6.md)*
+- `log_unit_activity()` → trigger 🔐 *(functions_6.md)*
+- `notify_admin_on_new_user()` → trigger 🔐 *(functions_6.md)*
+- `notify_admin_on_payment()` → trigger 🔐 *(functions_6.md)*
+- `notify_broadcast_all(p_type text, p_title text, p_body text, p_data jsonb, p_created_by uuid)` → uuid 🔐 *(functions_6.md)*
+- `notify_course_enrollment()` → trigger 🔐 *(functions_6.md)*
+- `notify_kanban_card_assigned()` → trigger 🔐 *(functions_6.md)*
+- `notify_new_feedback()` → trigger 🔐 *(functions_6.md)*
+- `notify_new_transfer()` → trigger 🔐 *(functions_6.md)*
+- `notify_new_user()` → trigger 🔐 *(functions_6.md)*
+- `notify_push_on_notification()` → trigger 🔐 *(functions_6.md)*
+- `notify_quote_status_change()` → trigger 🔐 *(functions_6.md)*
+- `notify_subscription_activated()` → trigger 🔐 *(functions_6.md)*
+- `notify_system_error()` → trigger 🔐 *(functions_6.md)*
+- `notify_user_direct(p_user_id uuid, p_type text, p_title text, p_body text, p_data jsonb, p_created_by uuid)` → uuid 🔐 *(functions_6.md)*
+- `notify_user_payment_completed()` → trigger 🔐 *(functions_6.md)*
+- `ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)` → void *(functions_7.md)*
+- `ops_detect_orgs_without_currency()` → void 🔐 *(functions_7.md)*
+- `ops_detect_payment_entitlement_missing()` → void 🔐 *(functions_7.md)*
+- `ops_detect_payment_not_applied()` → void 🔐 *(functions_7.md)*
+- `ops_detect_subscription_missing_course()` → void *(functions_7.md)*
+- `ops_execute_repair_action(p_alert_id uuid, p_action_id text, p_executed_by uuid)` → void *(functions_7.md)*
+- `ops_retry_user_creation(p_alert_id uuid, p_executed_by uuid)` → void *(functions_7.md)*
+- `ops_run_all_checks()` → void 🔐 *(functions_7.md)*
+- `queue_email_bank_transfer(p_user_id uuid, p_transfer_id uuid, p_product_name text, p_amount numeric, p_currency text, p_payer_name text, p_receipt_url text, p_user_email text DEFAULT NULL::text, p_user_first_name text DEFAULT NULL::text)` → jsonb 🔐 *(functions_7.md)*
+- `queue_email_welcome()` → trigger 🔐 *(functions_7.md)*
+- `quote_item_set_default_sort_key()` → trigger *(functions_7.md)*
+- `recalculate_po_totals()` → trigger 🔐 *(functions_7.md)*
+- `recalculate_recipe_rating()` → trigger *(functions_7.md)*
+- `redeem_coupon_universal(p_code text, p_product_type text, p_product_id uuid, p_price numeric, p_currency text DEFAULT 'USD'::text, p_order_id uuid DEFAULT NULL::uuid, p_subscription_id uuid DEFAULT NULL::uuid)` → jsonb 🔐 *(functions_7.md)*
+- `refresh_labor_avg_prices()` → void 🔐 *(functions_7.md)*
+- `refresh_material_avg_prices()` → void 🔐 *(functions_7.md)*
+- `refresh_product_avg_prices()` → void 🔐 *(functions_7.md)*
+- `reset_test_payments_and_subscriptions(p_user_id uuid, p_organization_id uuid)` → void *(functions_7.md)*
+- `send_notification(p_user_id uuid, p_type text, p_title text, p_body text, p_data jsonb DEFAULT '{}'::jsonb, p_audience text DEFAULT 'direct'::text)` → uuid 🔐 *(functions_7.md)*
+- `set_budget_task_organization()` → trigger 🔐 *(functions_7.md)*
+- `set_task_labor_organization()` → trigger *(functions_8.md)*
+- `set_task_material_organization()` → trigger 🔐 *(functions_8.md)*
+- `set_timestamp()` → trigger 🔐 *(functions_8.md)*
+- `set_updated_at()` → trigger 🔐 *(functions_8.md)*
+- `set_updated_at_ia_user_preferences()` → trigger 🔐 *(functions_8.md)*
+- `step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_apply_founders_program(p_user_id uuid, p_organization_id uuid)` → void *(functions_8.md)*
+- `step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_course_enrollment_annual(p_user_id uuid, p_course_id uuid)` → void *(functions_8.md)*
+- `step_create_default_kanban_board(p_org_id uuid)` → uuid 🔐 *(functions_8.md)*
+- `step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(functions_8.md)*
+- `step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_create_organization_data(p_org_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_create_organization_roles(p_org_id uuid)` → jsonb 🔐 *(functions_8.md)*
+- `step_create_organization_wallets(p_org_id uuid, p_wallet_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)` → uuid 🔐 *(functions_8.md)*
+- `step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)` → void 🔐 *(functions_8.md)*
+- `step_create_user_data(p_user_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_create_user_organization_preferences(p_user_id uuid, p_org_id uuid)` → void 🔐 *(functions_8.md)*
+- `step_create_user_preferences(p_user_id uuid)` → void 🔐 *(functions_9.md)*
+- `step_log_seat_purchase_event(p_organization_id uuid, p_user_id uuid, p_seats integer, p_amount numeric, p_currency text, p_payment_id uuid, p_prorated boolean)` → uuid 🔐 *(functions_9.md)*
+- `step_organization_increment_seats(p_organization_id uuid, p_seats_to_add integer)` → void 🔐 *(functions_9.md)*
+- `step_organization_set_plan(p_organization_id uuid, p_plan_id uuid)` → void *(functions_9.md)*
+- `step_payment_insert_idempotent(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_product_type text, p_plan_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb)` → uuid *(functions_9.md)*
+- `step_send_purchase_email(p_user_id uuid, p_product_type text, p_product_name text, p_amount numeric, p_currency text, p_payment_id uuid, p_provider text DEFAULT 'mercadopago'::text)` → void 🔐 *(functions_9.md)*
+- `step_subscription_create_active(p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_payment_id uuid, p_amount numeric, p_currency text)` → uuid *(functions_9.md)*
+- `step_subscription_expire_previous(p_organization_id uuid)` → void *(functions_9.md)*
+- `sync_contact_on_user_update()` → trigger 🔐 *(functions_9.md)*
+- `sync_role_permission_org_id()` → trigger *(functions_9.md)*
+- `tick_home_checklist(p_key text, p_value boolean)` → boolean 🔐 *(functions_9.md)*
+- `unaccent(regdictionary, text)` → text *(functions_9.md)*
+- `unaccent(text)` → text *(functions_9.md)*
+- `unaccent_init(internal)` → internal *(functions_9.md)*
+- `unaccent_lexize(internal, internal, internal, internal)` → internal *(functions_9.md)*
+- `update_contact_category_links_updated_at()` → trigger *(functions_9.md)*
+- `update_forum_thread_activity()` → trigger 🔐 *(functions_9.md)*
+- `update_name_rendered_on_task_parametric()` → trigger 🔐 *(functions_9.md)*
+- `update_partner_balance_after_capital_change()` → trigger *(functions_9.md)*
+- `update_testimonials_updated_at()` → trigger 🔐 *(functions_9.md)*
+- `update_timestamp()` → trigger 🔐 *(functions_10.md)*
+- `update_updated_at_column()` → trigger *(functions_10.md)*
+- `users_normalize_email()` → trigger 🔐 *(functions_10.md)*
+- `validate_coupon_universal(p_code text, p_product_type text, p_product_id uuid, p_price numeric, p_currency text DEFAULT 'USD'::text)` → jsonb 🔐 *(functions_10.md)*
+
+---
+## View Index
+
+- **`admin_organizations_view`**
+- **`admin_users`**
+- **`analytics_at_risk_users_view`**
+- **`analytics_bounce_rate_view`**
+- **`analytics_general_kpis_view`**
+- **`analytics_hourly_activity_view`**
+- **`analytics_page_engagement_view`**
+- **`analytics_realtime_overview_view`**
+- **`analytics_session_duration_view`**
+- **`analytics_session_quality_view`**
+- **`analytics_top_users_view`**
+- **`analytics_user_growth_view`**
+- **`analytics_user_journeys_view`**
+- **`analytics_user_session_summary_view`**
+- **`analytics_users_by_country_view`**
+- **`budget_items_view`**
+- **`capital_ledger_view`**
+- **`capital_organization_totals_view`**
+- **`capital_participants_summary_view`**
+- **`capital_partner_balances_view`**
+- **`capital_partner_kpi_view`**
+- **`client_financial_summary_view`**
+- **`client_payments_view`**
+- **`client_representatives_view`**
+- **`construction_tasks_view`**
+- **`contacts_summary_view`**
+- **`contacts_view`**
+- **`contract_summary_view`**
+- **`course_lesson_completions_view`**
+- **`course_lessons_total_view`**
+- **`course_progress_view`**
+- **`course_user_active_days_view`**
+- **`course_user_course_done_view`**
+- **`course_user_global_progress_view`**
+- **`course_user_study_time_view`**
+- **`general_costs_by_category_view`**
+- **`general_costs_monthly_summary_view`**
+- **`general_costs_payments_view`**
+- **`kanban_boards_view`**
+- **`kanban_cards_view`**
+- **`labor_by_type_view`**
+- **`labor_insurance_view`**
+- **`labor_monthly_summary_view`**
+- **`labor_payments_view`**
+- **`labor_view`**
+- **`material_invoices_view`**
+- **`material_payments_view`**
+- **`material_purchase_orders_view`**
+- **`materials_view`**
+- **`organization_activity_logs_view`**
+- **`organization_currencies_view`**
+- **`organization_member_details`**
+- **`organization_members_full_view`**
+- **`organization_online_users`**
+- **`organization_task_prices_view`**
+- **`organization_wallets_view`**
+- **`project_clients_view`**
+- **`project_labor_view`**
+- **`project_material_requirements_view`**
+- **`projects_view`**
+- **`quotes_view`**
+- **`subcontract_payments_view`**
+- **`subcontracts_view`**
+- **`task_costs_view`**
+- **`task_recipes_view`**
+- **`tasks_view`**
+- **`unified_financial_movements_view`**
+- **`user_acquisition_distribution_view`**
+- **`user_drop_off_view`**
+- **`user_engagement_by_view_view`**
+- **`user_hourly_activity_view`**
+- **`user_monthly_growth_view`**
+- **`user_presence_activity_view`**
+- **`user_stats_summary_view`**
+- **`user_top_performers_view`**
+- **`users_public_profile_view`**

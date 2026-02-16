@@ -56,6 +56,7 @@ export const FEATURE_DOCS_MAP: Record<string, DocsMapping> = {
     '/organization/settings': { slug: 'indices-economicos' },
     '/organizacion/configuracion': { slug: 'indices-economicos' },
 
+
     // Add more feature -> docs mappings here as documentation is created
 };
 

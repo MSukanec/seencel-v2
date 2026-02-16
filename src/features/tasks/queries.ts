@@ -611,3 +611,64 @@ export async function getTaskCosts(organizationId: string): Promise<Map<string, 
 
     return map;
 }
+
+// ============================================================================
+// TASK USAGE COUNTS
+// ============================================================================
+
+export interface TaskUsageCount {
+    task_id: string;
+    quote_count: number;
+    construction_count: number;
+    total: number;
+}
+
+/**
+ * Get usage counts for all tasks in an organization.
+ * Counts how many quote_items and construction_tasks reference each catalog task.
+ * Returns a Map keyed by task_id for O(1) lookup.
+ */
+export async function getTaskUsageCounts(organizationId: string): Promise<Map<string, TaskUsageCount>> {
+    const supabase = await createClient();
+
+    // Count quote_items per task_id (scoped by organization via quotes)
+    const [quoteResult, constructionResult] = await Promise.all([
+        supabase
+            .from('quote_items')
+            .select('task_id, quotes!inner(organization_id)', { count: 'exact' })
+            .eq('quotes.organization_id', organizationId)
+            .eq('is_deleted', false)
+            .not('task_id', 'is', null),
+        supabase
+            .from('construction_tasks')
+            .select('task_id', { count: 'exact' })
+            .eq('organization_id', organizationId)
+            .eq('is_deleted', false)
+            .not('task_id', 'is', null),
+    ]);
+
+    const map = new Map<string, TaskUsageCount>();
+
+    // Aggregate quote_items counts
+    for (const row of quoteResult.data || []) {
+        const taskId = row.task_id as string;
+        if (!taskId) continue;
+        const existing = map.get(taskId) || { task_id: taskId, quote_count: 0, construction_count: 0, total: 0 };
+        existing.quote_count++;
+        existing.total = existing.quote_count + existing.construction_count;
+        map.set(taskId, existing);
+    }
+
+    // Aggregate construction_tasks counts
+    for (const row of constructionResult.data || []) {
+        const taskId = row.task_id as string;
+        if (!taskId) continue;
+        const existing = map.get(taskId) || { task_id: taskId, quote_count: 0, construction_count: 0, total: 0 };
+        existing.construction_count++;
+        existing.total = existing.quote_count + existing.construction_count;
+        map.set(taskId, existing);
+    }
+
+    return map;
+}
+
