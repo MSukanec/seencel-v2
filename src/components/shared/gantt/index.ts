@@ -8,4 +8,6 @@ export type {
     GanttDependency,
     GanttChartProps,
     GanttZoom,
+    GanttGroup,
+    GanttDisplayRow,
 } from "./gantt-types";

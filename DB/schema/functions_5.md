@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T18:36:44.978Z
+> Generated: 2026-02-16T21:47:12.644Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -879,7 +879,8 @@ BEGIN
     audit_metadata := jsonb_build_object(
         'recipe_id', target_record.recipe_id,
         'name', target_record.name,
-        'quantity', target_record.quantity
+        'unit_price', target_record.unit_price,
+        'includes_materials', target_record.includes_materials
     );
 
     BEGIN

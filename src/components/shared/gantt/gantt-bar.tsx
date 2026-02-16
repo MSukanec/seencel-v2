@@ -151,7 +151,7 @@ export const GanttBar = React.memo(function GanttBar({
                             : "shadow-sm",
                     item.color
                         ? ""
-                        : "bg-primary/20 border-primary/40"
+                        : "bg-muted/50 border-border"
                 )}
                 style={item.color ? {
                     backgroundColor: `${item.color}33`,
@@ -165,7 +165,9 @@ export const GanttBar = React.memo(function GanttBar({
                     className={cn(
                         "absolute left-0 top-0 bottom-0 rounded-l-md transition-all",
                         progressWidth >= 100 && "rounded-r-md",
-                        item.color ? "" : "bg-primary/50"
+                        item.color ? "" : (
+                            progressWidth >= 100 ? "bg-gantt-complete/70" : "bg-gantt-progress/50"
+                        )
                     )}
                     style={{
                         width: `${progressWidth}%`,

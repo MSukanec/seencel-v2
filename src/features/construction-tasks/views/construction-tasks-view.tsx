@@ -12,7 +12,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { GanttChart, GanttItem, GanttDependency } from "@/components/shared/gantt";
+import { GanttChart, GanttItem, GanttDependency, GanttGroup } from "@/components/shared/gantt";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { getConstructionTaskColumns } from "../components/construction-tasks-columns";
 
@@ -59,10 +59,10 @@ interface ConstructionTasksViewProps {
 
 // Colores por estado para el dot indicador del Gantt
 const STATUS_DOT_COLORS: Record<ConstructionTaskStatus, string> = {
-    pending: "#94a3b8",     // slate-400
-    in_progress: "#3b82f6", // blue-500
-    completed: "#22c55e",   // green-500
-    paused: "#f59e0b",      // amber-500
+    pending: "var(--muted-foreground)",
+    in_progress: "var(--gantt-progress)",
+    completed: "var(--gantt-complete)",
+    paused: "var(--warning)",
 };
 
 function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {
@@ -87,6 +87,7 @@ function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {
         progress: task.progress_percent || 0,
         statusColor: STATUS_DOT_COLORS[task.status] || STATUS_DOT_COLORS.pending,
         group: task.phase_name || undefined,
+        groupId: task.division_name || "__ungrouped__",
     };
 }
 
@@ -162,6 +163,44 @@ export function ConstructionTasksView({
             .map(taskToGanttItem)
             .filter(Boolean) as GanttItem[];
     }, [filteredTasks]);
+
+    // ========================================================================
+    // Gantt groups (by division)
+    // ========================================================================
+
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+    const ganttGroups: GanttGroup[] = useMemo(() => {
+        const divisionNames = new Set<string>();
+        for (const item of ganttItems) {
+            if (item.groupId) divisionNames.add(item.groupId);
+        }
+
+        // Sort named groups alphabetically, "ungrouped" last
+        const sorted = Array.from(divisionNames).sort((a, b) => {
+            if (a === "__ungrouped__") return 1;
+            if (b === "__ungrouped__") return -1;
+            return a.localeCompare(b);
+        });
+
+        return sorted.map(name => ({
+            id: name,
+            label: name === "__ungrouped__" ? "Sin rubro" : name,
+            isCollapsed: collapsedGroups.has(name),
+        }));
+    }, [ganttItems, collapsedGroups]);
+
+    const handleGroupToggle = useCallback((groupId: string) => {
+        setCollapsedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
+            return next;
+        });
+    }, []);
 
     // ========================================================================
     // Handlers
@@ -634,6 +673,8 @@ export function ConstructionTasksView({
                                 <GanttChart
                                     items={ganttItems}
                                     dependencies={ganttDependencies}
+                                    groups={ganttGroups}
+                                    onGroupToggle={handleGroupToggle}
                                     onItemClick={handleGanttItemClick}
                                     onItemMove={handleGanttItemMove}
                                     onItemResize={handleGanttItemResize}

@@ -43,9 +43,21 @@ export interface GanttItem {
         fallback: string;
     };
     group?: string;                // Grouping label (phase, division)
+    groupId?: string;              // Reference to GanttGroup.id
     isDisabled?: boolean;
     isMilestone?: boolean;         // Diamond shape instead of bar
 }
+
+export interface GanttGroup {
+    id: string;
+    label: string;
+    isCollapsed: boolean;
+}
+
+/** A display row can be either a group header or a task item */
+export type GanttDisplayRow =
+    | { type: "group"; group: GanttGroup; itemCount: number; startDate: Date; endDate: Date }
+    | { type: "item"; item: GanttItem; originalIndex: number };
 
 export interface GanttDependency {
     id: string;
@@ -61,6 +73,8 @@ export interface GanttDependency {
 export interface GanttChartProps {
     items: GanttItem[];
     dependencies?: GanttDependency[];
+    groups?: GanttGroup[];
+    onGroupToggle?: (groupId: string) => void;
     onItemMove?: (id: string, newStart: Date, newEnd: Date) => void;
     onItemResize?: (id: string, newEnd: Date) => void;
     onItemClick?: (id: string) => void;

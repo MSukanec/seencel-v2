@@ -1,104 +1,27 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/*
-  ---break--- 
-*/
+
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║                        SEENCEL V2 — DESIGN TOKENS                      ║
+   ║  Organización:                                                         ║
+   ║  1. :root — TODAS las variables (light mode es el default)             ║
+   ║  2. .dark — SOLO los overrides de dark mode                            ║
+   ║  3. @theme — Bridge para Tailwind v4                                   ║
+   ║  4. @layer base — Estilos base                                         ║
+   ║  5. Componentes, utilidades, animaciones                               ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  --color-success: var(--amount-positive);
-  --color-error: var(--amount-negative);
-
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
-}
-
-/* Theme variables bridge for Tailwind v4 */
-
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-chart-6: var(--chart-6);
-  --color-chart-7: var(--chart-7);
-  --color-chart-8: var(--chart-8);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-/*
-  ---break--- 
-*/
+/* ============================================================================
+   1. :root — TODAS las variables del sistema
+   ============================================================================ */
 
 :root {
+  /* ── Layout ── */
   --radius: 0.625rem;
+
+  /* ── Core UI Colors ── */
   --background: oklch(0.95 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(0.97 0 0);
@@ -114,50 +37,68 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(54.392% 0.19137 24.073);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.50 0.02 270);
-  /* ============================================
-     CHART COLOR PALETTE
-     Vibrant, harmonious colors for data visualization.
-     Inspired by modern dashboard designs (purple→pink→orange→yellow→cyan).
-     Order matters: used sequentially in multi-series charts.
-     ============================================ */
-  --chart-1: oklch(0.55 0.12 270);
-  /* Primary - Brand color */
-  --chart-2: #EC4899;
-  /* Pink - Secondary */
-  --chart-3: #F97316;
-  /* Orange - Warm accent */
-  --chart-4: #EAB308;
-  /* Yellow/Gold - Highlight */
-  --chart-5: #06B6D4;
-  /* Cyan - Cool contrast */
-  --chart-6: #8B5CF6;
-  /* Violet - Was primary accent */
-  --chart-7: #6366F1;
-  /* Indigo - Deep accent */
-  --chart-8: #F43F5E;
-  /* Rose - Alert/Hot */
-  /* ============================================
-     FINANCIAL SEMANTIC COLORS
-     Use these for income/expense/balance displays
-     across tables, charts, KPIs, badges, etc.
-     ============================================ */
+
+  /* ── Gantt Chart ──
+     Colores de la barra de progreso del Gantt.
+     gantt-progress = relleno parcial (1-99%)
+     gantt-complete = barra llena (100%) */
+  --gantt-progress: oklch(0.55 0.15 250);
+  /* Azul medio */
+  --gantt-complete: oklch(0.60 0.17 150);
+  /* Verde lima */
+
+  /* ── Semantic Status Colors ──
+     Usar estas variables en TODA la app para representar estados.
+     Cambiar ACA cambia en TODOS lados: badges, dots, barras, textos, etc. */
+  --success: oklch(0.60 0.15 145);
+  /* Verde — Completado, Activo, Cobrado */
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.75 0.15 75);
+  /* Ámbar — Pausado, Pendiente de pago */
+  --warning-foreground: oklch(0.20 0.02 75);
+  --info: oklch(0.60 0.15 250);
+  /* Azul — En progreso, Info */
+  --info-foreground: oklch(0.985 0 0);
+
+  /* ── Financial Semantic Colors ──
+     Para montos: ingresos/egresos/balance.
+     Tablas, charts, KPIs, badges, etc. */
   --amount-positive: oklch(69.766% 0.16285 126.686);
-  /* Soft lime green - Ingresos, Cobrado, Pagado */
+  /* Lima suave — Ingresos, Cobrado */
   --amount-negative: oklch(54.392% 0.19137 24.073);
-  /* Terracotta/brick - Egresos, Deuda, Saldo pendiente */
+  /* Terracota — Egresos, Deuda */
   --amount-neutral: oklch(60.209% 0.12049 235.006);
-  /* Zinc-500 gray - Balance neutral, cero, N/A */
-  /* ============================================
-     SYSTEM INDICATOR COLOR
-     Used for "system" items (catalog entries, units, etc.)
-     Neutral gray that looks the same in dark/light mode
-     ============================================ */
+  /* Gris azulado — Balance neutral */
+
+  /* ── System Indicator ──
+     Para items "de sistema" (catálog, unidades, etc.) */
   --system: oklch(50% 0 0);
-  /* Pure gray 50% - Sistema, no editable por org */
-  /* Sidebar */
+
+  /* ── Chart Palette ──
+     Colores secuenciales para visualización de datos.
+     El orden importa: se usan en serie en charts multi-series. */
+  --chart-1: #758a57;
+  /* Oliva — Primary */
+  --chart-2: #7c72ab;
+  /* Lavanda — Secondary */
+  --chart-3: #b04912;
+  /* Naranja — Warm accent */
+  --chart-4: #c9a03e;
+  /* Oro — Highlight */
+  --chart-5: #06B6D4;
+  /* Cyan — Cool contrast */
+  --chart-6: #8B5CF6;
+  /* Violeta */
+  --chart-7: #6366F1;
+  /* Índigo */
+  --chart-8: #F43F5E;
+  /* Rosa — Alert */
+
+  /* ── Sidebar ── */
   --sidebar: oklch(0.97 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.42 0.02 270);
@@ -166,13 +107,21 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  /* ── Plan Colors (universales, no cambian por tema) ── */
+  --plan-free: oklch(0.55 0 0);
+  --plan-pro: oklch(0.55 0.04 55);
+  --plan-teams: oklch(0.50 0.06 250);
+  --plan-founder: oklch(0.70 0.01 260);
+  --plan-enterprise: rgb(31, 31, 31);
 }
 
-/*
-  ---break--- 
-*/
+/* ============================================================================
+   2. .dark — SOLO overrides de dark mode
+   ============================================================================ */
 
 .dark {
+  /* ── Core UI Colors ── */
   --background: oklch(26.033% 0.00003 271.152);
   --foreground: oklch(0.985 0 0);
   --card: oklch(29% 0.00003 0);
@@ -191,7 +140,17 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.62 0.02 270);
-  /* Sidebar */
+
+  /* ── Semantic Status Colors (dark overrides) ── */
+  --success: oklch(0.65 0.17 145);
+  --warning: oklch(0.78 0.14 75);
+  --info: oklch(0.65 0.17 250);
+
+  /* ── Gantt Chart (dark overrides) ── */
+  --gantt-progress: oklch(0.60 0.17 250);
+  --gantt-complete: #647343;
+
+  /* ── Sidebar ── */
   --sidebar: #303030;
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -202,18 +161,82 @@
   --sidebar-ring: oklch(0.552 0.016 285.938);
 }
 
-/* Plan Colors (universal - don't change per theme) */
-:root {
-  --plan-free: oklch(0.55 0 0);
-  --plan-pro: oklch(0.55 0.04 55);
-  --plan-teams: oklch(0.50 0.06 250);
-  --plan-founder: oklch(0.70 0.01 260);
-  --plan-enterprise: rgb(31, 31, 31)
+/* ============================================================================
+   3. @theme — Bridge para Tailwind v4
+   Mapea CSS vars → Tailwind utility classes
+   ============================================================================ */
+
+@theme inline {
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Core Colors → Tailwind */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic Status → Tailwind (bg-success, text-success, etc.) */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Gantt → Tailwind (bg-gantt-progress, bg-gantt-complete) */
+  --color-gantt-progress: var(--gantt-progress);
+  --color-gantt-complete: var(--gantt-complete);
+
+  /* Charts → Tailwind */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  /* Sidebar → Tailwind */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
-  ---break---
-*/
+/* ============================================================================
+   4. @layer base — Estilos globales
+   ============================================================================ */
 
 @layer base {
   * {
@@ -224,36 +247,27 @@
     @apply bg-background text-foreground;
   }
 
-  html {
-    /* overflow-y: scroll; Removed to prevent conflict with Radix UI */
-  }
-
   body[style*="overflow: hidden"] {
     padding-right: 0 !important;
   }
 }
 
-/* ============================================
-   PRIMARY BUTTON — Brushed metal plate
-   Same visual DNA as the PlanBadge: dark metallic
-   surface, bevel light/dark edges, raised, with
-   the plan-reflection sheen on the top edge.
-   ============================================ */
+/* ============================================================================
+   5. COMPONENTES
+   ============================================================================ */
+
+/* ── Primary Button — Brushed metal plate ─────────────────────────────────── */
 
 [data-slot="button"][data-variant="default"] {
   position: relative;
   overflow: hidden;
-  /* — Surface: dark steel gradient — */
   background: linear-gradient(175deg, #3a3a42 0%, #32323a 50%, #383840 100%);
-  /* — Bevel: bright inset top, dark inset bottom — */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -1px 0 rgba(0, 0, 0, 0.25),
     0 1px 3px rgba(0, 0, 0, 0.20),
     0 0 0 1px rgba(255, 255, 255, 0.04);
-  /* — Subtle border for definition — */
   border: 1px solid rgba(255, 255, 255, 0.06);
-  /* — Brushed texture overlay — */
   background-image:
     repeating-linear-gradient(90deg,
       transparent,
@@ -263,7 +277,6 @@
     linear-gradient(175deg, #3a3a42 0%, #32323a 50%, #383840 100%);
 }
 
-/* — Sheen: plan-reflection flash on top border — */
 [data-slot="button"][data-variant="default"]::after {
   content: "";
   position: absolute;
@@ -298,7 +311,7 @@
     0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* ── Light mode: lighter steel ── */
+/* Light mode: lighter steel */
 :root [data-slot="button"][data-variant="default"] {
   background: linear-gradient(175deg, #505060 0%, #484856 50%, #52525e 100%);
   background-image:
@@ -331,11 +344,11 @@
     0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-/* ============================================
-   FINANCIAL AMOUNT UTILITY CLASSES
-   Use these instead of text-emerald-* or text-green-*
-   Change the CSS variables above to update everywhere
-   ============================================ */
+/* ============================================================================
+   6. UTILITY CLASSES
+   ============================================================================ */
+
+/* ── Financial Amount Utilities ── */
 .text-amount-positive {
   color: var(--amount-positive);
 }
@@ -348,7 +361,6 @@
   color: var(--amount-neutral);
 }
 
-/* Background variants */
 .bg-amount-positive {
   background-color: var(--amount-positive);
 }
@@ -357,7 +369,6 @@
   background-color: var(--amount-negative);
 }
 
-/* With opacity (for badges, highlights) */
 .bg-amount-positive\/10 {
   background-color: color-mix(in srgb, var(--amount-positive) 10%, transparent);
 }
@@ -374,7 +385,7 @@
   border-color: color-mix(in srgb, var(--amount-negative) 20%, transparent);
 }
 
-/* System indicator utility classes */
+/* ── System Indicator Utilities ── */
 .bg-system {
   background-color: var(--system);
 }
@@ -383,10 +394,7 @@
   color: var(--system);
 }
 
-/* ============================================
-   GLOW EFFECTS
-   For badges, trend indicators, and highlights
-   ============================================ */
+/* ── Glow Effects ── */
 .glow-positive {
   box-shadow: 0 0 12px color-mix(in srgb, var(--amount-positive) 40%, transparent),
     0 0 4px color-mix(in srgb, var(--amount-positive) 20%, transparent);
@@ -402,7 +410,6 @@
     0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
-/* Subtle glow variants (for dark mode) */
 .dark .glow-positive {
   box-shadow: 0 0 16px color-mix(in srgb, var(--amount-positive) 50%, transparent),
     0 0 6px color-mix(in srgb, var(--amount-positive) 30%, transparent);
@@ -413,7 +420,7 @@
     0 0 6px color-mix(in srgb, var(--amount-negative) 30%, transparent);
 }
 
-/* Custom Scrollbar - Minimalist & Theme Aware */
+/* ── Scrollbar — Minimalist & Theme Aware ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -424,24 +431,34 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  /* Extremely subtle - 5% opacity of foreground */
   background-color: oklch(from var(--foreground) l c h / 0.05);
   @apply rounded-full transition-colors;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  /* Slightly more visible on hover - 15% opacity */
   background-color: oklch(from var(--foreground) l c h / 0.15);
 }
 
-/* For Firefox */
 * {
   scrollbar-width: thin;
-  /* Track transparent, Thumb extremely subtle */
   scrollbar-color: oklch(from var(--foreground) l c h / 0.05) transparent;
 }
 
-/* Animated Focus Ring - Pulse Effect */
+/* ── No-Scrollbar Utility ── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================================================
+   7. ANIMACIONES & KEYFRAMES
+   ============================================================================ */
+
+/* ── Focus Ring Pulse ── */
 @keyframes ring-pulse {
 
   0%,
@@ -464,6 +481,7 @@ select:focus-visible,
   animation: ring-pulse 2s ease-in-out infinite;
 }
 
+/* ── Tremble ── */
 @keyframes tremble {
 
   0%,
@@ -480,18 +498,7 @@ select:focus-visible,
   }
 }
 
-
-/* Utility to hide scrollbar but keep functionality */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Sidebar Drill-Down Animations */
+/* ── Sidebar Drill-Down ── */
 @keyframes slide-in-right {
   from {
     opacity: 0;
@@ -524,7 +531,7 @@ select:focus-visible,
   animation: slide-in-left 0.2s ease-out;
 }
 
-/* Plan Badge — entrance "plate settle" animation */
+/* ── Plan Badge — Settle ── */
 @keyframes plan-settle {
   0% {
     opacity: 0;
@@ -537,7 +544,7 @@ select:focus-visible,
   }
 }
 
-/* Plan Sidebar — vertical reflection running along left border */
+/* ── Plan Sidebar — Vertical border reflection ── */
 @keyframes plan-border-reflection {
 
   0%,
@@ -556,7 +563,7 @@ select:focus-visible,
   }
 }
 
-/* Plan Badge — ambient metal reflection (quick flash, rare) */
+/* ── Plan Badge — Ambient metal reflection ── */
 @keyframes plan-reflection {
 
   0%,
@@ -576,15 +583,12 @@ select:focus-visible,
 }
 
 /* ============================================================================
-   GOOGLE MAPS — Satellite tile filter (markers/overlays NOT affected)
-   Applied via getMapContainerClass() from @/lib/map-config
-   
-   Google Maps DOM (confirmed via DOM inspection):
-   .gm-style
-     └─ div:first-child              (parent wrapper)
-          ├─ div:first-child [z:1]   ← TILES — filter here
-          └─ div [z:3/4/106]         ← Overlays / Markers — untouched
+   8. VENDOR-SPECIFIC
    ============================================================================ */
+
+/* ── Google Maps — Satellite tile filter ──
+   .gm-style > div:first-child > div:first-child = TILES (filter here)
+   Overlays / Markers are NOT affected */
 .seencel-map-dark .gm-style>div:first-child>div:first-child {
   filter: saturate(0) brightness(0.4) contrast(1.15);
 }

@@ -17,7 +17,7 @@ import {
 interface GanttDependencyLinesProps {
     dependencies: GanttDependency[];
     items: GanttItem[];
-    getPosition: (item: GanttItem, index: number) => GanttBarPosition;
+    getPosition: (item: GanttItem, index?: number) => GanttBarPosition;
     dayWidth: number;
     totalWidth: number;
     totalHeight: number;

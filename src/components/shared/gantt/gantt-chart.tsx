@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
@@ -9,8 +9,11 @@ import {
     GanttChartProps,
     GanttItem,
     GanttZoom,
+    GanttDisplayRow,
     GANTT_ROW_HEIGHT,
     GANTT_HEADER_HEIGHT,
+    GANTT_BAR_HEIGHT,
+    GANTT_BAR_VERTICAL_PADDING,
     GANTT_TASK_LIST_WIDTH,
     GANTT_DAY_WIDTH_BY_ZOOM,
 } from "./gantt-types";
@@ -32,6 +35,8 @@ const ZOOM_ORDER: GanttZoom[] = ["day", "week", "month", "quarter"];
 export function GanttChart({
     items,
     dependencies = [],
+    groups,
+    onGroupToggle,
     onItemMove,
     onItemResize,
     onItemClick,
@@ -99,7 +104,91 @@ export function GanttChart({
         dayWidth,
     } = useGantt({ items, zoom, nonWorkDays });
 
-    const totalHeight = items.length * GANTT_ROW_HEIGHT;
+    // ========================================================================
+    // Display rows (groups + items)
+    // ========================================================================
+
+    const displayRows: GanttDisplayRow[] = useMemo(() => {
+        if (!groups || groups.length === 0) {
+            // No groups → flat list
+            return items.map((item, index) => ({ type: "item" as const, item, originalIndex: index }));
+        }
+
+        const rows: GanttDisplayRow[] = [];
+
+        for (const group of groups) {
+            const groupItems = items.filter(i => i.groupId === group.id);
+            if (groupItems.length === 0) continue;
+
+            // Compute group date range
+            let minDate = groupItems[0].startDate;
+            let maxDate = groupItems[0].endDate;
+            for (const gi of groupItems) {
+                if (gi.startDate < minDate) minDate = gi.startDate;
+                if (gi.endDate > maxDate) maxDate = gi.endDate;
+            }
+
+            rows.push({
+                type: "group",
+                group,
+                itemCount: groupItems.length,
+                startDate: minDate,
+                endDate: maxDate,
+            });
+
+            if (!group.isCollapsed) {
+                for (const gi of groupItems) {
+                    const originalIndex = items.indexOf(gi);
+                    rows.push({ type: "item", item: gi, originalIndex });
+                }
+            }
+        }
+
+        // Items without group
+        const ungrouped = items.filter(i => !i.groupId || !groups.some(g => g.id === i.groupId));
+        for (const item of ungrouped) {
+            const originalIndex = items.indexOf(item);
+            rows.push({ type: "item", item, originalIndex });
+        }
+
+        return rows;
+    }, [items, groups]);
+
+    // Visible items (only item rows, for dependency lines and position lookups)
+    const visibleItems = useMemo(() =>
+        displayRows.filter((r): r is Extract<GanttDisplayRow, { type: "item" }> => r.type === "item").map(r => r.item),
+        [displayRows]
+    );
+
+    // Map from item id → visual row index (accounting for group headers)
+    const itemVisualRowMap = useMemo(() => {
+        const map = new Map<string, number>();
+        displayRows.forEach((row, idx) => {
+            if (row.type === "item") {
+                map.set(row.item.id, idx);
+            }
+        });
+        return map;
+    }, [displayRows]);
+
+    // Adjusted bar position using visual row indices
+    const getVisualBarPosition = useCallback(
+        (item: GanttItem) => {
+            const visualRow = itemVisualRowMap.get(item.id) ?? 0;
+            const x = dateToX(item.startDate);
+            const endX = dateToX(item.endDate);
+            const width = Math.max(endX - x, dayWidth);
+            return {
+                x,
+                width,
+                y: visualRow * GANTT_ROW_HEIGHT,
+                row: visualRow,
+            };
+        },
+        [itemVisualRowMap, dateToX, dayWidth]
+    );
+
+    const totalHeight = displayRows.length * GANTT_ROW_HEIGHT;
 
     // ========================================================================
     // Zoom controls
@@ -406,9 +495,11 @@ export function GanttChart({
                 {/* Task list panel */}
                 <GanttTaskList
                     items={items}
+                    displayRows={groups && groups.length > 0 ? displayRows : undefined}
                     taskListRef={taskListRef}
                     onScroll={() => syncScroll("taskList")}
                     onItemClick={onItemClick}
+                    onGroupToggle={onGroupToggle}
                     width={taskListWidth}
                 />
 
@@ -449,7 +540,7 @@ export function GanttChart({
                             <GanttGrid
                                 bottomCells={bottomHeaderCells}
                                 totalWidth={totalWidth}
-                                totalRows={items.length}
+                                totalRows={displayRows.length}
                                 todayX={todayX}
                                 showTodayLine={todayLine}
                             />
@@ -457,17 +548,48 @@ export function GanttChart({
                             {/* Dependency lines (behind bars) */}
                             <GanttDependencyLines
                                 dependencies={dependencies}
-                                items={items}
-                                getPosition={getBarPosition}
+                                items={visibleItems}
+                                getPosition={(item: GanttItem) => getVisualBarPosition(item)}
                                 dayWidth={dayWidth}
                                 totalWidth={totalWidth}
                                 totalHeight={totalHeight}
                                 onDependencyClick={onDependencyDelete}
                             />
 
+                            {/* Group summary bars */}
+                            {displayRows.map((row, rowIndex) => {
+                                if (row.type !== "group") return null;
+                                const x = dateToX(row.startDate);
+                                const endX = dateToX(row.endDate);
+                                const width = Math.max(endX - x, dayWidth);
+                                const y = rowIndex * GANTT_ROW_HEIGHT;
+                                return (
+                                    <div
+                                        key={`group-bar-${row.group.id}`}
+                                        className="absolute"
+                                        style={{
+                                            left: x,
+                                            top: y + GANTT_BAR_VERTICAL_PADDING + 2,
+                                            width,
+                                            height: GANTT_BAR_HEIGHT - 4,
+                                        }}
+                                    >
+                                        {/* Summary bar background */}
+                                        <div className="h-full w-full rounded bg-muted-foreground/15 border border-muted-foreground/20" />
+                                        {/* Diamond endpoints */}
+                                        <div
+                                            className="absolute -left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-muted-foreground/40 rounded-[1px]"
+                                        />
+                                        <div
+                                            className="absolute -right-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-muted-foreground/40 rounded-[1px]"
+                                        />
+                                    </div>
+                                );
+                            })}
+
                             {/* Task bars */}
-                            {items.map((item, index) => {
-                                let position = getBarPosition(item, index);
+                            {visibleItems.map((item) => {
+                                let position = getVisualBarPosition(item);
 
                                 // Apply drag offset
                                 if (isDragging && dragItemId === item.id) {
@@ -521,15 +643,13 @@ export function GanttChart({
                             })}
                             {/* Temporary connection line while dragging */}
                             {connectingFrom && connectMousePos && (() => {
-                                const sourceItem = items.find(i => i.id === connectingFrom.id);
-                                const sourceIndex = items.findIndex(i => i.id === connectingFrom.id);
-                                if (!sourceItem || sourceIndex < 0) return null;
-                                const sourcePos = getBarPosition(sourceItem, sourceIndex);
-                                const GANTT_BAR_VERTICAL_PADDING = (GANTT_ROW_HEIGHT - 28) / 2;
+                                const sourceItem = visibleItems.find(i => i.id === connectingFrom.id);
+                                if (!sourceItem) return null;
+                                const sourcePos = getVisualBarPosition(sourceItem);
                                 const startX = connectingFrom.side === "right"
                                     ? sourcePos.x + sourcePos.width + 6
                                     : sourcePos.x - 6;
-                                const startY = sourcePos.y + GANTT_BAR_VERTICAL_PADDING + 14; // center of bar
+                                const startY = sourcePos.y + GANTT_BAR_VERTICAL_PADDING + (GANTT_BAR_HEIGHT / 2);
                                 return (
                                     <svg
                                         className="absolute inset-0 pointer-events-none"
