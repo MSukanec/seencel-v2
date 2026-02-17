@@ -244,9 +244,8 @@ export function useSidebarNavigation() {
                     label: 'Plataforma',
                     items: [
                         { title: 'Sistema', href: '/admin/system', icon: Monitor },
-                        { title: 'Monitoreo', href: '/admin/monitoring', icon: HeartPulse },
-                        { title: 'Plantillas', href: '/admin/emails', icon: LayoutTemplate },
-                        { title: 'Configuración', href: '/admin/settings', icon: Settings },
+                        { title: 'Plantillas', href: '/admin/settings', icon: LayoutTemplate },
+                        { title: 'Emails', href: '/admin/emails', icon: LayoutTemplate },
                     ],
                 },
             ];

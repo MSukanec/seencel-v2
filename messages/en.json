@@ -1051,7 +1051,8 @@
         "masterclasses": {
             "badge": "Free Content",
             "title": "Free Masterclasses",
-            "subtitle": "Try our content before enrolling"
+            "subtitle": "Try our content before enrolling",
+            "playlistTitle": "Available Classes"
         },
         "license": {
             "title": "Interested in enterprise licenses?",
