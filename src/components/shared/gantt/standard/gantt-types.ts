@@ -9,6 +9,7 @@
 // ============================================================================
 
 export const GANTT_ROW_HEIGHT = 66;
+export const GANTT_GROUP_ROW_HEIGHT = 33;
 export const GANTT_HEADER_HEIGHT = 56;
 export const GANTT_TASK_LIST_WIDTH = 300;
 export const GANTT_TASK_LIST_MIN_WIDTH = 200;

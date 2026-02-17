@@ -32,3 +32,4 @@ export { ActiveProjectField, type ActiveProjectFieldProps, type ActiveProject } 
 export { SelectField, type SelectFieldProps, type SelectOption, type SelectGroup, type FilterTab, type SelectEmptyState } from "./select-field";
 export { SegmentedField, type SegmentedFieldProps, type SegmentedOption } from "./segmented-field";
 export { PhoneField, type PhoneFieldProps } from "./phone-field";
+export { UnitField, type UnitFieldProps, type UnitOption } from "./unit-field";

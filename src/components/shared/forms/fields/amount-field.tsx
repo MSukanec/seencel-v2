@@ -35,6 +35,8 @@ export interface AmountFieldProps {
     step?: number;
     /** Help text below input */
     helpText?: string;
+    /** Suffix text shown inside input on the right (e.g. unit symbol) */
+    suffix?: string;
 }
 
 export function AmountField({
@@ -48,18 +50,27 @@ export function AmountField({
     min = 0,
     step = 0.01,
     helpText,
+    suffix,
 }: AmountFieldProps) {
     return (
         <FormGroup label={<FactoryLabel label={label} />} required={required} className={className} helpText={helpText}>
-            <Input
-                type="number"
-                step={step}
-                min={min}
-                placeholder={placeholder}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-            />
+            <div className="relative">
+                <Input
+                    type="number"
+                    step={step}
+                    min={min}
+                    placeholder={placeholder}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    disabled={disabled}
+                    className={suffix ? "pr-12" : undefined}
+                />
+                {suffix && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none select-none">
+                        {suffix}
+                    </span>
+                )}
+            </div>
         </FormGroup>
     );
 }

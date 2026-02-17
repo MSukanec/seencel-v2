@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { useModal } from "@/stores/modal-store";
-import { ConstructionTaskView, ConstructionTaskStatus, CostScope } from "../types";
+import { ConstructionTaskView, CostScope } from "../types";
 import { createConstructionTask, updateConstructionTask, getRecipesForTask } from "../actions";
 import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import type { TaskRecipeView } from "@/features/tasks/types";
@@ -15,8 +15,13 @@ import {
     DateField,
     NotesField,
     SelectField,
+    UnitField,
     type SelectOption,
+    type UnitOption,
 } from "@/components/shared/forms/fields";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ============================================================================
 // Types
@@ -27,6 +32,7 @@ interface CatalogTask {
     name: string | null;
     custom_name: string | null;
     unit_name?: string;
+    unit_symbol?: string;
     division_name?: string;
     code: string | null;
 }
@@ -35,19 +41,13 @@ interface ConstructionTaskFormProps {
     projectId: string;
     organizationId: string;
     catalogTasks: CatalogTask[];
+    units: UnitOption[];
     initialData?: ConstructionTaskView | null;
 }
 
 // ============================================================================
 // Options
 // ============================================================================
-
-const STATUS_OPTIONS: SelectOption[] = [
-    { value: "pending", label: "Pendiente" },
-    { value: "in_progress", label: "En Progreso" },
-    { value: "completed", label: "Completada" },
-    { value: "paused", label: "Pausada" },
-];
 
 const COST_SCOPE_OPTIONS: SelectOption[] = [
     { value: "materials_and_labor", label: "Materiales + Mano de Obra" },
@@ -63,6 +63,7 @@ export function ConstructionTaskForm({
     projectId,
     organizationId,
     catalogTasks,
+    units,
     initialData,
 }: ConstructionTaskFormProps) {
     const router = useRouter();
@@ -122,14 +123,57 @@ export function ConstructionTaskForm({
     const catalogTaskOptions: SelectOption[] = useMemo(() => {
         return catalogTasks.map((t) => {
             const label = t.name || t.custom_name || "Sin nombre";
-            const subtitle = [t.code, t.unit_name, t.division_name].filter(Boolean).join(" · ");
             return {
                 value: t.id,
-                label: subtitle ? `${label} — ${subtitle}` : label,
-                searchTerms: `${label} ${t.code || ""} ${t.division_name || ""}`,
+                label,
+                searchTerms: `${label} ${t.code || ""} ${t.unit_name || ""} ${t.division_name || ""}`,
             };
         });
     }, [catalogTasks]);
+
+    // Map for quick lookup of task metadata (unit, code, division) by ID
+    const catalogTaskMap = useMemo(() => {
+        const map = new Map<string, CatalogTask>();
+        for (const t of catalogTasks) {
+            map.set(t.id, t);
+        }
+        return map;
+    }, [catalogTasks]);
+
+    // Custom render for catalog task options in the dropdown
+    const renderCatalogTaskOption = useCallback((option: SelectOption) => {
+        const task = catalogTaskMap.get(option.value);
+        const badges = [
+            task?.unit_symbol || task?.unit_name,
+            task?.code,
+            task?.division_name,
+        ].filter(Boolean);
+
+        return (
+            <div className="flex flex-col gap-1 py-0.5 min-w-0">
+                <span className="text-sm truncate">{option.label}</span>
+                {badges.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                        {badges.map((badge, i) => (
+                            <span
+                                key={i}
+                                className="inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium bg-primary/90 text-primary-foreground leading-4"
+                            >
+                                {badge}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }, [catalogTaskMap]);
+
+    // Derive selected task's unit symbol for the quantity field
+    const selectedUnitSymbol = useMemo(() => {
+        if (!selectedTaskId || isCustomTask) return undefined;
+        const task = catalogTaskMap.get(selectedTaskId);
+        return task?.unit_symbol || task?.unit_name || undefined;
+    }, [selectedTaskId, isCustomTask, catalogTaskMap]);
 
     // Build SelectField options for recipes
     const recipeOptions: SelectOption[] = useMemo(() => {
@@ -157,8 +201,6 @@ export function ConstructionTaskForm({
     const [plannedEndDate, setPlannedEndDate] = useState<Date | undefined>(
         parseDateFromDB(initialData?.planned_end_date) ?? undefined
     );
-    const [status, setStatus] = useState<ConstructionTaskStatus>(initialData?.status || "pending");
-    const [progressPercent, setProgressPercent] = useState(initialData?.progress_percent?.toString() || "0");
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [costScope, setCostScope] = useState(initialData?.cost_scope || "materials_and_labor");
 
@@ -179,11 +221,6 @@ export function ConstructionTaskForm({
         const qty = parseFloat(quantity);
         if (isNaN(qty) || qty <= 0) {
             newErrors.quantity = "La cantidad debe ser mayor a 0";
-        }
-
-        const progress = parseInt(progressPercent);
-        if (isNaN(progress) || progress < 0 || progress > 100) {
-            newErrors.progressPercent = "El progreso debe ser entre 0 y 100";
         }
 
         setErrors(newErrors);
@@ -217,8 +254,6 @@ export function ConstructionTaskForm({
                 quantity: parseFloat(quantity),
                 planned_start_date: formatDateForDB(plannedStartDate),
                 planned_end_date: formatDateForDB(plannedEndDate),
-                status: status,
-                progress_percent: parseInt(progressPercent),
                 notes: notes.trim() || null,
                 cost_scope: costScope as "materials_and_labor" | "materials_only" | "labor_only",
             };
@@ -255,35 +290,49 @@ export function ConstructionTaskForm({
 
                     {!isCustomTask ? (
                         <>
-                            <SelectField
-                                value={selectedTaskId || ""}
-                                onChange={(v) => {
-                                    setSelectedTaskId(v || null);
-                                    setErrors(prev => ({ ...prev, task: "" }));
-                                }}
-                                options={catalogTaskOptions}
-                                label="Tarea del Catálogo"
-                                placeholder="Seleccionar tarea..."
-                                searchable
-                                searchPlaceholder="Buscar por nombre, código o división..."
-                                required
-                                disabled={isEditing}
-                                error={errors.task}
-                                emptyState={{
-                                    message: "No se encontraron tareas",
-                                }}
-                            />
+                            <div className="flex items-end gap-2">
+                                <div className="flex-1">
+                                    <SelectField
+                                        value={selectedTaskId || ""}
+                                        onChange={(v) => {
+                                            setSelectedTaskId(v || null);
+                                            setErrors(prev => ({ ...prev, task: "" }));
+                                        }}
+                                        options={catalogTaskOptions}
+                                        label="Tarea del Catálogo"
+                                        placeholder="Seleccionar tarea..."
+                                        searchable
+                                        searchPlaceholder="Buscar por nombre, código o división..."
+                                        required
+                                        disabled={isEditing}
+                                        error={errors.task}
+                                        renderOption={renderCatalogTaskOption}
+                                        emptyState={{
+                                            message: "No se encontraron tareas",
+                                        }}
+                                    />
+                                </div>
 
-                            {/* Toggle a tarea custom */}
-                            {!isEditing && (
-                                <button
-                                    type="button"
-                                    onClick={handleToggleCustom}
-                                    className="text-xs text-primary hover:underline -mt-2"
-                                >
-                                    Crear tarea personalizada (sin catálogo)
-                                </button>
-                            )}
+                                {/* Botón crear tarea personalizada */}
+                                {!isEditing && (
+                                    <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="shrink-0 h-9 w-9"
+                                                    onClick={handleToggleCustom}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Crear tarea personalizada</TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )}
+                            </div>
 
                             {/* Recipe Selector — only when task has recipes */}
                             {selectedTaskId && availableRecipes.length > 0 && (
@@ -317,12 +366,14 @@ export function ConstructionTaskForm({
                                 error={errors.customName}
                             />
 
-                            <TextField
+                            <UnitField
                                 value={customUnit}
                                 onChange={setCustomUnit}
+                                units={units}
+                                valueKey="symbol"
+                                applicableTo="task"
                                 label="Unidad"
-                                placeholder="m², ml, un, gl"
-                                required={false}
+                                placeholder="Seleccionar unidad..."
                             />
 
                             {/* Toggle a catálogo */}
@@ -351,6 +402,7 @@ export function ConstructionTaskForm({
                             placeholder="100"
                             min={0}
                             step={0.01}
+                            suffix={selectedUnitSymbol}
                         />
 
                         {/* Alcance de Costos */}
@@ -378,24 +430,7 @@ export function ConstructionTaskForm({
                             required={false}
                         />
 
-                        {/* Estado */}
-                        <SelectField
-                            value={status}
-                            onChange={(v) => setStatus(v as ConstructionTaskStatus)}
-                            options={STATUS_OPTIONS}
-                            label="Estado"
-                            required={false}
-                        />
 
-                        {/* Progreso */}
-                        <AmountField
-                            value={progressPercent}
-                            onChange={setProgressPercent}
-                            label="Progreso (%)"
-                            placeholder="0"
-                            min={0}
-                            step={1}
-                        />
                     </div>
 
                     {/* =================================== */}

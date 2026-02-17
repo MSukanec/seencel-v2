@@ -6,6 +6,7 @@ import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { ConstructionTaskView, ConstructionTaskStatus, STATUS_CONFIG } from "../types";
 import { ConstructionTaskCard } from "../components/construction-task-card";
 import { ConstructionTaskForm } from "../forms/construction-task-form";
+import type { UnitOption } from "@/components/shared/forms/fields";
 import { deleteConstructionTask, updateConstructionTask, updateConstructionTaskStatus, createConstructionDependency, deleteConstructionDependency } from "../actions";
 import { ConstructionDependencyRow } from "../queries";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
@@ -51,6 +52,7 @@ interface ConstructionTasksViewProps {
         division_name?: string;
         code: string | null;
     }[];
+    units: UnitOption[];
     workDays?: number[];
 }
 
@@ -112,6 +114,7 @@ export function ConstructionTasksView({
     tasks: initialTasks,
     initialDependencies,
     catalogTasks,
+    units,
     workDays = [1, 2, 3, 4, 5],
 }: ConstructionTasksViewProps) {
     const { openModal } = useModal();
@@ -232,9 +235,10 @@ export function ConstructionTasksView({
                 projectId={activeProjectId}
                 organizationId={organizationId}
                 catalogTasks={catalogTasks}
+                units={units}
             />,
             {
-                title: "Nueva Tarea",
+                title: "Agregar Tarea",
                 description: "Seleccioná una tarea del catálogo o creá una personalizada.",
                 size: "md",
             }
@@ -247,6 +251,7 @@ export function ConstructionTasksView({
                 projectId={task.project_id}
                 organizationId={organizationId}
                 catalogTasks={catalogTasks}
+                units={units}
                 initialData={task}
             />,
             {
@@ -619,10 +624,10 @@ export function ConstructionTasksView({
             value={viewMode}
             onValueChange={(v) => setViewMode(v as ViewMode)}
             options={[
-                { value: "timeline", label: "Timeline", icon: Timer },
                 { value: "gantt", label: "Gantt", icon: GanttChartSquare },
                 { value: "cards", label: "Tarjetas", icon: LayoutGrid },
                 { value: "table", label: "Tabla", icon: List },
+                { value: "timeline", label: "Timeline", icon: Timer, disabled: true },
             ]}
         />
     );
@@ -651,7 +656,7 @@ export function ConstructionTasksView({
                 }
                 actions={[
                     {
-                        label: "Nueva Tarea",
+                        label: "Agregar Tarea",
                         icon: Plus,
                         onClick: handleCreate,
                     },

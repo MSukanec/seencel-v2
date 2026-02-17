@@ -4,7 +4,9 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import {
     GanttHeaderCell,
+    GanttDisplayRow,
     GANTT_ROW_HEIGHT,
+    GANTT_GROUP_ROW_HEIGHT,
 } from "./gantt-types";
 
 // ============================================================================
@@ -15,6 +17,8 @@ interface GanttGridProps {
     bottomCells: GanttHeaderCell[];
     totalWidth: number;
     totalRows: number;
+    displayRows?: GanttDisplayRow[];
+    rowYOffsets?: number[];
     todayX: number | null;
     showTodayLine?: boolean;
 }
@@ -23,10 +27,15 @@ export const GanttGrid = React.memo(function GanttGrid({
     bottomCells,
     totalWidth,
     totalRows,
+    displayRows,
+    rowYOffsets,
     todayX,
     showTodayLine = true,
 }: GanttGridProps) {
-    const totalHeight = totalRows * GANTT_ROW_HEIGHT;
+    // Calculate totalHeight using accumulated offsets if available
+    const totalHeight = rowYOffsets && displayRows
+        ? (rowYOffsets[rowYOffsets.length - 1] ?? 0) + (displayRows[displayRows.length - 1]?.type === "group" ? GANTT_GROUP_ROW_HEIGHT : GANTT_ROW_HEIGHT)
+        : totalRows * GANTT_ROW_HEIGHT;
 
     return (
         <div
@@ -51,16 +60,21 @@ export const GanttGrid = React.memo(function GanttGrid({
             ))}
 
             {/* Horizontal row lines */}
-            {Array.from({ length: totalRows }).map((_, i) => (
-                <div
-                    key={`hline-${i}`}
-                    className="absolute left-0 border-b border-border/10"
-                    style={{
-                        top: (i + 1) * GANTT_ROW_HEIGHT,
-                        width: totalWidth,
-                    }}
-                />
-            ))}
+            {Array.from({ length: totalRows }).map((_, i) => {
+                const lineY = rowYOffsets
+                    ? (rowYOffsets[i] ?? 0) + (displayRows?.[i]?.type === "group" ? GANTT_GROUP_ROW_HEIGHT : GANTT_ROW_HEIGHT)
+                    : (i + 1) * GANTT_ROW_HEIGHT;
+                return (
+                    <div
+                        key={`hline-${i}`}
+                        className="absolute left-0 border-b border-border/10"
+                        style={{
+                            top: lineY,
+                            width: totalWidth,
+                        }}
+                    />
+                );
+            })}
 
             {/* Today line */}
             {showTodayLine && todayX !== null && (

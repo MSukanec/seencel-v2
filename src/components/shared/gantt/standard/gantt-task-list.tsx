@@ -3,7 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GanttDisplayRow, GanttGroup, GanttItem, GANTT_ROW_HEIGHT } from "./gantt-types";
+import { GanttDisplayRow, GanttGroup, GanttItem, GANTT_ROW_HEIGHT, GANTT_GROUP_ROW_HEIGHT } from "./gantt-types";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 // ============================================================================
@@ -104,7 +104,7 @@ function GroupHeaderRow({
     return (
         <div
             className="flex items-center gap-2 px-2 border-b border-border/30 bg-muted/40 cursor-pointer select-none hover:bg-muted/60 transition-colors"
-            style={{ height: GANTT_ROW_HEIGHT }}
+            style={{ height: GANTT_GROUP_ROW_HEIGHT }}
             onClick={() => onToggle?.(group.id)}
         >
             {group.isCollapsed ? (

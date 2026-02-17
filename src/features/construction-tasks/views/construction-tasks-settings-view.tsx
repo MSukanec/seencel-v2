@@ -59,7 +59,6 @@ export function ConstructionTasksSettingsView({
     useEffect(() => {
         if (!activeProjectId) return;
         if (activeProjectId === lastLoadedProjectId.current) return;
-        // If we have initialWorkDays and this is the first render with prop projectId, skip fetch
         if (initialWorkDays && isFirstRender.current && propProjectId === activeProjectId) {
             lastLoadedProjectId.current = activeProjectId;
             return;
@@ -75,7 +74,6 @@ export function ConstructionTasksSettingsView({
 
     // Auto-save with debounce when workDays changes
     useEffect(() => {
-        // Skip first render (initial load)
         if (isFirstRender.current) {
             isFirstRender.current = false;
             return;
@@ -83,7 +81,6 @@ export function ConstructionTasksSettingsView({
 
         if (!activeProjectId) return;
 
-        // Clear previous timeout
         if (saveTimeout.current) {
             clearTimeout(saveTimeout.current);
         }
@@ -96,7 +93,6 @@ export function ConstructionTasksSettingsView({
                 if (result.success) {
                     setSaveStatus("saved");
                     onWorkDaysChange?.(workDays);
-                    // Reset status after 2s
                     setTimeout(() => setSaveStatus("idle"), 2000);
                 } else {
                     setSaveStatus("idle");
@@ -120,7 +116,6 @@ export function ConstructionTasksSettingsView({
                 ? prev.filter(d => d !== day)
                 : [...prev, day].sort((a, b) => a - b);
 
-            // Ensure at least 1 working day
             if (next.length === 0) {
                 toast.error("Debe haber al menos un día laboral");
                 return prev;
@@ -130,117 +125,117 @@ export function ConstructionTasksSettingsView({
         });
     }, []);
 
-    // No project selected — show informational message
+    // No project selected
     if (!activeProjectId) {
         return (
-            <div className="p-6 overflow-y-auto h-full">
-                <SettingsSectionContainer
-                    title="Ajustes de Ejecución"
-                    description="Configurá las opciones generales para las tareas de construcción."
-                    variant="card"
-                >
-                    <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border">
-                        <Info className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <p className="text-sm text-muted-foreground">
-                            Seleccioná un proyecto en el header para configurar sus ajustes de ejecución.
-                        </p>
-                    </div>
-                </SettingsSectionContainer>
+            <div className="h-full overflow-y-auto">
+                <div className="max-w-5xl mx-auto px-6 md:px-8 py-8">
+                    <SettingsSection
+                        icon={Info}
+                        title="Seleccioná un Proyecto"
+                        description="Para configurar los ajustes de ejecución, primero seleccioná un proyecto desde el selector en el header. Los ajustes como días laborales y preferencias de planificación son específicos de cada proyecto."
+                    >
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground">
+                                Los cambios que realices acá se aplicarán únicamente al proyecto seleccionado.
+                            </p>
+                        </div>
+                    </SettingsSection>
+                </div>
             </div>
         );
     }
 
     if (isLoading) {
         return (
-            <div className="p-6 overflow-y-auto h-full">
-                <SettingsSectionContainer
-                    title="Ajustes de Ejecución"
-                    description="Cargando configuración del proyecto..."
-                    variant="card"
-                >
-                    <div className="animate-pulse space-y-4">
-                        <div className="flex gap-2">
-                            {Array.from({ length: 7 }).map((_, i) => (
-                                <div key={i} className="w-16 h-16 rounded-lg bg-muted" />
-                            ))}
+            <div className="h-full overflow-y-auto">
+                <div className="max-w-5xl mx-auto px-6 md:px-8 py-8">
+                    <SettingsSection
+                        icon={CalendarDays}
+                        title="Días Laborales"
+                        description="Cargando configuración del proyecto..."
+                    >
+                        <div className="animate-pulse space-y-4">
+                            <div className="flex gap-2">
+                                {Array.from({ length: 7 }).map((_, i) => (
+                                    <div key={i} className="w-16 h-16 rounded-lg bg-muted" />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </SettingsSectionContainer>
+                    </SettingsSection>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="p-6 overflow-y-auto h-full">
-            <SettingsSectionContainer
-                title="Ajustes de Ejecución"
-                description="Configurá las opciones generales para las tareas de construcción de este proyecto."
-                variant="card"
-            >
-                <SettingsSection
-                    icon={CalendarDays}
-                    title="Días Laborales"
-                    description="Seleccioná qué días de la semana se trabaja en este proyecto. Los días no laborales se mostrarán atenuados en el diagrama de Gantt."
-                >
-                    <div className="space-y-4">
-                        {/* Day toggles */}
-                        <div className="flex flex-wrap gap-2">
-                            {DAYS_OF_WEEK.map(day => {
-                                const isActive = workDays.includes(day.value);
-                                return (
-                                    <button
-                                        key={day.value}
-                                        onClick={() => toggleDay(day.value)}
-                                        className={cn(
-                                            "flex flex-col items-center justify-center w-16 h-16 rounded-lg border-2 transition-all duration-200",
-                                            "hover:scale-105 cursor-pointer select-none",
-                                            isActive
-                                                ? "border-primary bg-primary/10 text-primary"
-                                                : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/40"
-                                        )}
-                                        title={day.fullLabel}
-                                    >
-                                        <span className={cn(
-                                            "text-sm font-semibold",
-                                            isActive && "text-primary"
-                                        )}>
-                                            {day.label}
-                                        </span>
-                                        <div className={cn(
-                                            "w-2 h-2 rounded-full mt-1 transition-colors",
-                                            isActive ? "bg-primary" : "bg-muted-foreground/20"
-                                        )} />
-                                    </button>
-                                );
-                            })}
-                        </div>
+        <div className="h-full overflow-y-auto">
+            <div className="max-w-5xl mx-auto px-6 md:px-8 py-8">
+                <SettingsSectionContainer>
+                    <SettingsSection
+                        icon={CalendarDays}
+                        title="Días Laborales"
+                        description="Seleccioná qué días de la semana se trabaja en este proyecto. Los días no laborales se mostrarán atenuados en el diagrama de Gantt y no se contarán para calcular duraciones."
+                    >
+                        <div className="space-y-4">
+                            {/* Day toggles */}
+                            <div className="flex flex-wrap gap-2">
+                                {DAYS_OF_WEEK.map(day => {
+                                    const isActive = workDays.includes(day.value);
+                                    return (
+                                        <button
+                                            key={day.value}
+                                            onClick={() => toggleDay(day.value)}
+                                            className={cn(
+                                                "flex flex-col items-center justify-center w-16 h-16 rounded-lg border-2 transition-all duration-200",
+                                                "hover:scale-105 cursor-pointer select-none",
+                                                isActive
+                                                    ? "border-primary bg-primary/10 text-primary"
+                                                    : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/40"
+                                            )}
+                                            title={day.fullLabel}
+                                        >
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                isActive && "text-primary"
+                                            )}>
+                                                {day.label}
+                                            </span>
+                                            <div className={cn(
+                                                "w-2 h-2 rounded-full mt-1 transition-colors",
+                                                isActive ? "bg-primary" : "bg-muted-foreground/20"
+                                            )} />
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                        {/* Summary + auto-save status */}
-                        <div className="flex items-center gap-2">
-                            <p className="text-sm text-muted-foreground">
-                                {workDays.length === 7
-                                    ? "Todos los días son laborales."
-                                    : workDays.length === 5 && [1, 2, 3, 4, 5].every(d => workDays.includes(d))
-                                        ? "Semana laboral estándar (Lunes a Viernes)."
-                                        : `${workDays.length} días laborales por semana.`
-                                }
-                            </p>
-                            {saveStatus === "saving" && (
-                                <span className="text-xs text-muted-foreground/60 animate-pulse">
-                                    Guardando...
-                                </span>
-                            )}
-                            {saveStatus === "saved" && (
-                                <span className="text-xs text-primary flex items-center gap-1">
-                                    <Check className="h-3 w-3" />
-                                    Guardado
-                                </span>
-                            )}
+                            {/* Summary + auto-save status */}
+                            <div className="flex items-center gap-2">
+                                <p className="text-sm text-muted-foreground">
+                                    {workDays.length === 7
+                                        ? "Todos los días son laborales."
+                                        : workDays.length === 5 && [1, 2, 3, 4, 5].every(d => workDays.includes(d))
+                                            ? "Semana laboral estándar (Lunes a Viernes)."
+                                            : `${workDays.length} días laborales por semana.`
+                                    }
+                                </p>
+                                {saveStatus === "saving" && (
+                                    <span className="text-xs text-muted-foreground/60 animate-pulse">
+                                        Guardando...
+                                    </span>
+                                )}
+                                {saveStatus === "saved" && (
+                                    <span className="text-xs text-primary flex items-center gap-1">
+                                        <Check className="h-3 w-3" />
+                                        Guardado
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </SettingsSection>
-            </SettingsSectionContainer>
+                    </SettingsSection>
+                </SettingsSectionContainer>
+            </div>
         </div>
     );
 }
-

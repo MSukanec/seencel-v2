@@ -7,7 +7,6 @@ import {
     GanttBarPosition,
     GANTT_BAR_HEIGHT,
     GANTT_BAR_VERTICAL_PADDING,
-    GANTT_ROW_HEIGHT,
 } from "./gantt-types";
 
 // ============================================================================
@@ -96,11 +95,10 @@ export const GanttDependencyLines = React.memo(function GanttDependencyLines({
             const stubEndX1 = x1 + stubDir1 * stubLength;
             const stubEndX2 = x2 + stubDir2 * stubLength;
 
-            // Horizontal line Y = on the row divider between the two rows
-            // Use the divider that's between the two bars
-            const minRow = Math.min(fromIndex, toIndex);
-            const maxRow = Math.max(fromIndex, toIndex);
-            const horizontalY = (minRow + 1) * GANTT_ROW_HEIGHT; // bottom of the upper row = divider line
+            // Horizontal line Y = midpoint between the two bars for a clean connector
+            const minY = Math.min(y1, y2);
+            const maxY = Math.max(y1, y2);
+            const horizontalY = minY + (maxY - minY) / 2;
 
             // Build the orthogonal path:
             // 1. Horizontal stub from source bar

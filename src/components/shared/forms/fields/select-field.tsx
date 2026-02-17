@@ -48,6 +48,31 @@ import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
+// Search Normalization
+// ============================================================================
+
+/**
+ * Normalize a string for accent-insensitive, case-insensitive substring search.
+ * Strips diacritics (á→a, ñ→n, ü→u) and lowercases.
+ */
+function normalizeForSearch(str: string): string {
+    return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
+
+/**
+ * Custom filter for cmdk: strict substring match instead of fuzzy.
+ * Returns 1 (match) if the normalized search term is found anywhere
+ * in the normalized value. Returns 0 (no match) otherwise.
+ */
+function substringFilter(value: string, search: string): number {
+    if (!search) return 1;
+    return normalizeForSearch(value).includes(normalizeForSearch(search)) ? 1 : 0;
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -415,7 +440,7 @@ function SearchableSelect({
                     >
                         <span className="truncate">
                             {selectedOption ? (
-                                renderOption ? renderOption(selectedOption) : selectedOption.label
+                                selectedOption.label
                             ) : (
                                 <span className="text-muted-foreground">{placeholder}</span>
                             )}
@@ -432,7 +457,7 @@ function SearchableSelect({
                         width: "var(--radix-popover-trigger-width)",
                     }}
                 >
-                    <Command className="[&_[data-slot=command-input-wrapper]]:border-none">
+                    <Command filter={substringFilter} className="[&_[data-slot=command-input-wrapper]]:border-none">
                         <CommandInput
                             placeholder={searchPlaceholder}
                             className="border-none focus:ring-0 focus-visible:ring-0 focus:outline-none shadow-none h-9"

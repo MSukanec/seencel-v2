@@ -1,8 +1,8 @@
 // ============================================================================
-// Gantt Chart — Public API (re-export from standard)
+// Gantt Chart Standard — Public API
 // ============================================================================
 
-export { GanttChart } from "./standard";
+export { GanttChart } from "./gantt-chart";
 export type {
     GanttItem,
     GanttDependency,
@@ -10,4 +10,4 @@ export type {
     GanttZoom,
     GanttGroup,
     GanttDisplayRow,
-} from "./standard";
+} from "./gantt-types";

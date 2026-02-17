@@ -11,6 +11,7 @@ import {
     GanttZoom,
     GanttDisplayRow,
     GANTT_ROW_HEIGHT,
+    GANTT_GROUP_ROW_HEIGHT,
     GANTT_HEADER_HEIGHT,
     GANTT_BAR_HEIGHT,
     GANTT_BAR_VERTICAL_PADDING,
@@ -160,18 +161,28 @@ export function GanttChart({
         [displayRows]
     );
 
-    // Map from item id → visual row index (accounting for group headers)
-    const itemVisualRowMap = useMemo(() => {
-        const map = new Map<string, number>();
+    // Map from row index → accumulated Y offset, and from item id → row index
+    const { rowYOffsets, itemVisualRowMap, totalHeight } = useMemo(() => {
+        const offsets: number[] = [];
+        const itemMap = new Map<string, number>();
+        let y = 0;
         displayRows.forEach((row, idx) => {
+            offsets.push(y);
             if (row.type === "item") {
-                map.set(row.item.id, idx);
+                itemMap.set(row.item.id, idx);
             }
+            y += row.type === "group" ? GANTT_GROUP_ROW_HEIGHT : GANTT_ROW_HEIGHT;
         });
-        return map;
+        return { rowYOffsets: offsets, itemVisualRowMap: itemMap, totalHeight: y };
     }, [displayRows]);
 
-    // Adjusted bar position using visual row indices
+    // Height for a given row
+    const getRowHeight = useCallback((rowIndex: number) => {
+        const row = displayRows[rowIndex];
+        return row?.type === "group" ? GANTT_GROUP_ROW_HEIGHT : GANTT_ROW_HEIGHT;
+    }, [displayRows]);
+
+    // Adjusted bar position using accumulated Y offsets
     const getVisualBarPosition = useCallback(
         (item: GanttItem) => {
             const visualRow = itemVisualRowMap.get(item.id) ?? 0;
@@ -181,14 +192,12 @@ export function GanttChart({
             return {
                 x,
                 width,
-                y: visualRow * GANTT_ROW_HEIGHT,
+                y: rowYOffsets[visualRow] ?? 0,
                 row: visualRow,
             };
         },
-        [itemVisualRowMap, dateToX, dayWidth]
+        [itemVisualRowMap, rowYOffsets, dateToX, dayWidth]
     );
-
-    const totalHeight = displayRows.length * GANTT_ROW_HEIGHT;
 
     // ========================================================================
     // Zoom controls
@@ -541,6 +550,8 @@ export function GanttChart({
                                 bottomCells={bottomHeaderCells}
                                 totalWidth={totalWidth}
                                 totalRows={displayRows.length}
+                                displayRows={displayRows}
+                                rowYOffsets={rowYOffsets}
                                 todayX={todayX}
                                 showTodayLine={todayLine}
                             />
@@ -562,16 +573,18 @@ export function GanttChart({
                                 const x = dateToX(row.startDate);
                                 const endX = dateToX(row.endDate);
                                 const width = Math.max(endX - x, dayWidth);
-                                const y = rowIndex * GANTT_ROW_HEIGHT;
+                                const y = rowYOffsets[rowIndex] ?? 0;
+                                const groupBarHeight = GANTT_GROUP_ROW_HEIGHT - 10;
+                                const groupBarTop = (GANTT_GROUP_ROW_HEIGHT - groupBarHeight) / 2;
                                 return (
                                     <div
                                         key={`group-bar-${row.group.id}`}
                                         className="absolute"
                                         style={{
                                             left: x,
-                                            top: y + GANTT_BAR_VERTICAL_PADDING + 2,
+                                            top: y + groupBarTop,
                                             width,
-                                            height: GANTT_BAR_HEIGHT - 4,
+                                            height: groupBarHeight,
                                         }}
                                     >
                                         {/* Summary bar background */}
@@ -616,7 +629,7 @@ export function GanttChart({
                                             left: position.x,
                                             top: position.y,
                                             width: position.width,
-                                            height: GANTT_ROW_HEIGHT,
+                                            height: getRowHeight(itemVisualRowMap.get(item.id) ?? 0),
                                         }}
                                         onMouseEnter={(e) => handleBarMouseEnter(item, e)}
                                         onMouseLeave={handleBarMouseLeave}

@@ -22,7 +22,7 @@ export const constructionTaskSchema = z.object({
     planned_end_date: z.string().nullable().optional(),
     actual_start_date: z.string().nullable().optional(),
     actual_end_date: z.string().nullable().optional(),
-    status: z.enum(['pending', 'in_progress', 'completed', 'paused']).default('pending'),
+    status: z.enum(['pending', 'in_progress', 'completed', 'paused']).optional(),
     progress_percent: z.coerce.number().int().min(0).max(100).nullable().optional(),
     description: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),

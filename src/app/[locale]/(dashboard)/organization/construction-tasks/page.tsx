@@ -85,6 +85,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
             name: t.name,
             custom_name: t.custom_name,
             unit_name: t.unit_name,
+            unit_symbol: t.unit_symbol,
             division_name: t.division_name,
             code: t.code,
         }));
@@ -115,6 +116,7 @@ export default async function OrganizationConstructionTasksPage({ params, search
                                 tasks={tasks}
                                 initialDependencies={initialDependencies}
                                 catalogTasks={catalogTasks}
+                                units={unitsResult.data}
                             />
                         </ContentLayout>
                     </TabsContent>

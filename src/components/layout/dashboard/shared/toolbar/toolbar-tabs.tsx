@@ -15,6 +15,8 @@ export interface ToolbarTabOption {
     label: string;
     /** Ícono opcional que se muestra a la izquierda del label */
     icon?: React.ComponentType<{ className?: string }>;
+    /** Si es true, la tab se muestra deshabilitada y no se puede seleccionar */
+    disabled?: boolean;
 }
 
 interface ToolbarTabsProps {
@@ -36,9 +38,11 @@ export function ToolbarTabs({ value, onValueChange, options, className }: Toolba
                         key={option.value}
                         variant="ghost"
                         size="sm"
-                        onClick={() => onValueChange(option.value)}
+                        disabled={option.disabled}
+                        onClick={() => !option.disabled && onValueChange(option.value)}
                         className={cn(
                             "relative h-full px-2.5 text-xs font-medium transition-all hover:bg-transparent flex-1",
+                            option.disabled && "opacity-40 cursor-not-allowed",
                             isSelected
                                 ? "text-primary-foreground shadow-sm"
                                 : "text-muted-foreground hover:text-foreground"
