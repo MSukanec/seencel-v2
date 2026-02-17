@@ -212,49 +212,13 @@ export const GanttBar = React.memo(function GanttBar({
                     />
                 )}
 
-                {/* Avatar (only if bar is wide enough) */}
-                {item.avatar && position.width > 50 && (
-                    <Avatar className="h-5 w-5 shrink-0 border border-background">
-                        <AvatarImage src={item.avatar.src} />
-                        <AvatarFallback className="text-[9px] font-bold bg-primary text-primary-foreground">
-                            {item.avatar.fallback}
-                        </AvatarFallback>
-                    </Avatar>
-                )}
-
-                {/* Label inside bar (only if wide enough) */}
-                {position.width > 100 && (
-                    <span className="text-[11px] font-medium text-foreground truncate leading-none min-w-0">
-                        {item.label}
-                    </span>
-                )}
-
-                {/* Progress text (only if very wide) */}
-                {position.width > 140 && progressWidth > 0 && (
+                {/* Progress text */}
+                {progressWidth > 0 && position.width > 40 && (
                     <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
                         {Math.round(progressWidth)}%
                     </span>
                 )}
             </div>
-
-            {/* External label (when bar is too small) */}
-            {position.width <= 100 && (
-                <span
-                    className="absolute text-[11px] font-medium text-foreground whitespace-nowrap leading-none z-10 pointer-events-none"
-                    style={{
-                        left: position.width + 6,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                    }}
-                >
-                    {item.label}
-                    {progressWidth > 0 && (
-                        <span className="text-muted-foreground ml-1.5">
-                            {Math.round(progressWidth)}%
-                        </span>
-                    )}
-                </span>
-            )}
 
             {/* Resize handle (right edge) */}
             {!readOnly && !item.isDisabled && isHovered && (

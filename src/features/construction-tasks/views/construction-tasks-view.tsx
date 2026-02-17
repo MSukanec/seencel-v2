@@ -13,6 +13,7 @@ import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolba
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import { GanttChart, GanttItem, GanttDependency, GanttGroup } from "@/components/shared/gantt";
+import { GanttChart as ExperimentalGanttChart } from "@/components/shared/gantt/experimental";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { getConstructionTaskColumns } from "../components/construction-tasks-columns";
 
@@ -28,14 +29,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ClipboardList, Plus, GanttChartSquare, LayoutGrid, List } from "lucide-react";
+import { ClipboardList, Plus, GanttChartSquare, LayoutGrid, List, Timer } from "lucide-react";
 import { toast } from "sonner";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ViewMode = "gantt" | "cards" | "table";
+type ViewMode = "timeline" | "gantt" | "cards" | "table";
 
 interface ConstructionTasksViewProps {
     projectId?: string;
@@ -69,11 +70,13 @@ function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {
     // Sin fechas no puede renderizarse en el Gantt
     if (!task.planned_start_date && !task.planned_end_date) return null;
 
-    const now = new Date();
     const startDate = parseDateFromDB(task.planned_start_date)
         || parseDateFromDB(task.planned_end_date)!;
     const endDate = parseDateFromDB(task.planned_end_date)
         || parseDateFromDB(task.planned_start_date)!;
+
+    const actualStart = parseDateFromDB(task.actual_start_date) ?? undefined;
+    const actualEnd = parseDateFromDB(task.actual_end_date) ?? undefined;
 
     return {
         id: task.id,
@@ -84,6 +87,8 @@ function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {
         subtitle: task.division_name || undefined,
         startDate,
         endDate: endDate >= startDate ? endDate : startDate,
+        actualStartDate: actualStart,
+        actualEndDate: actualEnd,
         progress: task.progress_percent || 0,
         statusColor: STATUS_DOT_COLORS[task.status] || STATUS_DOT_COLORS.pending,
         group: task.phase_name || undefined,
@@ -576,6 +581,24 @@ export function ConstructionTasksView({
         });
     }, [dependencies]);
 
+    const handleRowReorder = useCallback((itemId: string, targetItemId: string, position: "before" | "after") => {
+        setTasks(prev => {
+            const itemIndex = prev.findIndex(t => t.id === itemId);
+            const targetIndex = prev.findIndex(t => t.id === targetItemId);
+            if (itemIndex === -1 || targetIndex === -1) return prev;
+
+            const updated = [...prev];
+            const [moved] = updated.splice(itemIndex, 1);
+
+            // Recalculate target index after removal
+            const newTargetIndex = updated.findIndex(t => t.id === targetItemId);
+            const insertAt = position === "before" ? newTargetIndex : newTargetIndex + 1;
+            updated.splice(insertAt, 0, moved);
+
+            return updated;
+        });
+    }, []);
+
     // ========================================================================
     // DataTable columns (memoized)
     // ========================================================================
@@ -596,6 +619,7 @@ export function ConstructionTasksView({
             value={viewMode}
             onValueChange={(v) => setViewMode(v as ViewMode)}
             options={[
+                { value: "timeline", label: "Timeline", icon: Timer },
                 { value: "gantt", label: "Gantt", icon: GanttChartSquare },
                 { value: "cards", label: "Tarjetas", icon: LayoutGrid },
                 { value: "table", label: "Tabla", icon: List },
@@ -666,6 +690,32 @@ export function ConstructionTasksView({
                 </>
             ) : (
                 <>
+                    {/* Timeline View (Experimental) — Canvas breakout */}
+                    {viewMode === "timeline" && (
+                        <div className="-mt-6 -mb-20 -mx-2 md:-mx-8 h-[calc(100%+1.5rem+5rem)] overflow-hidden">
+                            {ganttItems.length > 0 ? (
+                                <ExperimentalGanttChart
+                                    items={ganttItems}
+                                    dependencies={ganttDependencies}
+                                    groups={ganttGroups}
+                                    onGroupToggle={handleGroupToggle}
+                                    onItemClick={handleGanttItemClick}
+                                    onItemMove={handleGanttItemMove}
+                                    onItemResize={handleGanttItemResize}
+                                    onDependencyCreate={handleDependencyCreate}
+                                    onDependencyDelete={handleDependencyDelete}
+                                    onRowReorder={handleRowReorder}
+                                    todayLine={true}
+                                    nonWorkDays={nonWorkDays}
+                                />
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                                    Las tareas necesitan fechas planificadas para mostrarse en el Timeline.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Gantt View */}
                     {viewMode === "gantt" && (
                         <>

@@ -8,12 +8,13 @@
 // Constants
 // ============================================================================
 
-export const GANTT_ROW_HEIGHT = 66;
+export const GANTT_ROW_HEIGHT = 75;
+export const GANTT_GROUP_ROW_HEIGHT = 38;
 export const GANTT_HEADER_HEIGHT = 56;
 export const GANTT_TASK_LIST_WIDTH = 300;
 export const GANTT_TASK_LIST_MIN_WIDTH = 200;
 export const GANTT_TASK_LIST_MAX_WIDTH = 500;
-export const GANTT_BAR_HEIGHT = 42;
+export const GANTT_BAR_HEIGHT = GANTT_ROW_HEIGHT - 6; // 3px padding top & bottom
 export const GANTT_BAR_VERTICAL_PADDING = (GANTT_ROW_HEIGHT - GANTT_BAR_HEIGHT) / 2;
 export const GANTT_MILESTONE_SIZE = 16;
 export const GANTT_DAY_WIDTH_BY_ZOOM: Record<GanttZoom, number> = {
@@ -82,6 +83,8 @@ export interface GanttChartProps {
     onItemClick?: (id: string) => void;
     onDependencyCreate?: (fromId: string, toId: string, type: GanttDependency["type"]) => void;
     onDependencyDelete?: (id: string) => void;
+    /** Called when a row is reordered via drag-and-drop within its group */
+    onRowReorder?: (itemId: string, targetItemId: string, position: "before" | "after") => void;
     zoom?: GanttZoom;
     onZoomChange?: (zoom: GanttZoom) => void;
     todayLine?: boolean;
