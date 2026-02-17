@@ -8,6 +8,7 @@ const onboardingSchema = z.object({
     firstName: z.string().min(2, "Min 2 chars"),
     lastName: z.string().min(2, "Min 2 chars"),
     timezone: z.string().optional(),
+    countryId: z.string().uuid().optional(),
 });
 
 /**
@@ -23,6 +24,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         firstName: formData.get("firstName"),
         lastName: formData.get("lastName"),
         timezone: formData.get("timezone") || undefined,
+        countryId: formData.get("countryId") || undefined,
     });
 
     if (!validatedFields.success) {
@@ -34,7 +36,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         return { error: "validation_error", message: `Validation failed: ${errorMessage}`, details: fieldErrors };
     }
 
-    const { firstName, lastName, timezone } = validatedFields.data;
+    const { firstName, lastName, timezone, countryId } = validatedFields.data;
     const supabase = await createClient();
 
     const {
@@ -79,6 +81,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
             user_id: internalUser.id,
             first_name: firstName,
             last_name: lastName,
+            ...(countryId ? { country: countryId } : {}),
         }, { onConflict: "user_id" });
 
     if (userDataError) {

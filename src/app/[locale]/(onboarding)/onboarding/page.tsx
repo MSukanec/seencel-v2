@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCountries } from "@/features/countries/queries";
 import OnboardingForm from "./onboarding-form";
 
 export default async function OnboardingPage() {
@@ -11,5 +12,7 @@ export default async function OnboardingPage() {
         return redirect('/login');
     }
 
-    return <OnboardingForm />;
+    const countries = await getCountries();
+
+    return <OnboardingForm countries={countries} />;
 }

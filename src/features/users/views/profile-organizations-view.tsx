@@ -10,8 +10,7 @@ import { Building, Plus } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { OrganizationsList } from "@/features/organization/components/organizations-list";
-import { useModal } from "@/stores/modal-store";
-import { OrganizationCreateForm } from "@/features/organization/forms/organization-create-form";
+import { useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 
 interface Organization {
@@ -41,17 +40,10 @@ interface ProfileOrganizationsViewProps {
 
 export function ProfileOrganizationsView({ organizations, activeOrgId, currentUserId }: ProfileOrganizationsViewProps) {
     const t = useTranslations('Settings.Organization');
-    const { openModal } = useModal();
+    const router = useRouter();
 
     const handleCreate = () => {
-        openModal(
-            <OrganizationCreateForm />,
-            {
-                title: "Crear nueva organización",
-                description: "Creá una nueva organización para gestionar proyectos independientes con su propio equipo y configuración.",
-                size: "md",
-            }
-        );
+        router.push('/workspace-setup');
     };
 
     return (

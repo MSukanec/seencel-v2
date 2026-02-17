@@ -11,8 +11,6 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { Landmark, Wrench } from "lucide-react";
 import type { PaymentMethodId, PaymentMethodFlags } from "@/features/billing/types/checkout";
@@ -90,17 +88,13 @@ export function BillingCheckoutPaymentMethods({
                 <RadioGroup
                     value={value}
                     onValueChange={(newValue) => {
-                        const isLocked = !isArgentina && (newValue === "transfer" || newValue === "mercadopago");
-                        if (!isLocked) {
-                            onChange(newValue as PaymentMethodId);
-                        }
+                        onChange(newValue as PaymentMethodId);
                     }}
                     className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
                 >
                     {orderedMethods.map((method) => {
                         const Icon = method.icon;
                         const isSelected = value === method.id;
-                        const isLocked = !isArgentina && (method.id === "transfer" || method.id === "mercadopago");
 
                         // Check if payment method is disabled in feature flags
                         const isPaymentFlagDisabled = (
@@ -109,10 +103,10 @@ export function BillingCheckoutPaymentMethods({
                         );
 
                         // Visual disabled state (shown to everyone including admin)
-                        const showDisabledVisual = isPaymentFlagDisabled || isLocked;
+                        const showDisabledVisual = isPaymentFlagDisabled;
 
                         // Functional disabled state (admin can still select)
-                        const isClickDisabled = isLocked || (isPaymentFlagDisabled && !isAdmin);
+                        const isClickDisabled = isPaymentFlagDisabled && !isAdmin;
 
                         return (
                             <div key={method.id} className="relative">
@@ -124,15 +118,7 @@ export function BillingCheckoutPaymentMethods({
                                     </span>
                                 )}
 
-                                {/* Locked badge for non-Argentina users */}
-                                {isLocked && !isPaymentFlagDisabled && (
-                                    <Badge
-                                        variant="secondary"
-                                        className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap z-10 px-1.5 py-0.5"
-                                    >
-                                        Solo Argentina · <Link href="/contact" className="text-primary hover:underline">Contacto</Link>
-                                    </Badge>
-                                )}
+
 
                                 <Label
                                     htmlFor={isClickDisabled ? undefined : `payment-${method.id}`}
