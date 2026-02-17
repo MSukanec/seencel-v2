@@ -95,11 +95,11 @@ export async function middleware(request: NextRequest) {
         // User is NOT logged in
 
         // Public pages - must include BOTH English and Spanish paths due to i18n routing
-        // English paths: /privacy, /terms, /contact, /founders, /pricing, /features, /courses, /academy, /about, /portal, /community
-        // Spanish paths: /privacidad, /terminos, /contacto, /fundadores, /precios, /caracteristicas, /cursos, /academia, /sobre, /portal, /comunidad
+        // English paths: /privacy, /terms, /contact, /founders, /pricing, /features, /courses, /academy, /about, /community
+        // Spanish paths: /privacidad, /terminos, /contacto, /fundadores, /precios, /caracteristicas, /cursos, /academia, /sobre, /comunidad
         const publicPrefixes = [
             // English
-            "/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/academy", "/about", "/portal", "/community", "/offline", "/invite",
+            "/privacy", "/terms", "/cookies", "/contact", "/founders", "/pricing", "/features", "/courses", "/academy", "/about", "/community", "/offline", "/invite",
             // Spanish translations
             "/privacidad", "/terminos", "/contacto", "/fundadores", "/precios", "/caracteristicas", "/cursos", "/academia", "/sobre", "/comunidad", "/invitacion"
         ];

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Views (76)
+## Views (75)
 
 ### `admin_organizations_view`
 
@@ -575,40 +575,6 @@ SELECT cp.id,
      LEFT JOIN organization_members om ON ((om.id = cp.created_by)))
      LEFT JOIN users u ON ((u.id = om.user_id)))
   WHERE (cp.is_deleted = false);
-```
-
-### `client_representatives_view`
-
-```sql
-SELECT cr.id,
-    cr.client_id,
-    cr.contact_id,
-    cr.organization_id,
-    cr.role,
-    cr.can_approve,
-    cr.can_chat,
-    cr.invited_at,
-    cr.accepted_at,
-    cr.invited_by,
-    cr.created_at,
-    cr.updated_at,
-    cr.is_deleted,
-    pc.project_id,
-    pc.contact_id AS primary_contact_id,
-    p.name AS project_name,
-    c.full_name AS rep_full_name,
-    c.email AS rep_email,
-    c.phone AS rep_phone,
-    c.linked_user_id,
-    u.auth_id AS rep_auth_id,
-    pcv.contact_full_name AS client_name
-   FROM (((((client_representatives cr
-     JOIN project_clients pc ON ((pc.id = cr.client_id)))
-     JOIN projects p ON ((p.id = pc.project_id)))
-     JOIN contacts c ON ((c.id = cr.contact_id)))
-     LEFT JOIN users u ON ((u.id = c.linked_user_id)))
-     LEFT JOIN project_clients_view pcv ON ((pcv.id = cr.client_id)))
-  WHERE (cr.is_deleted = false);
 ```
 
 ### `construction_tasks_view`

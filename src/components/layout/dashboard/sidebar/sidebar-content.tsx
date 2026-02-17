@@ -21,10 +21,13 @@ import {
     Users,
     ClipboardList,
     LayoutDashboard,
+    UserCircle,
 } from "lucide-react";
 import { useSidebarNavigation, contextRoutes } from "@/hooks/use-sidebar-navigation";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Medal } from "lucide-react";
+import { useAccessContextStore, useIsDualAccess, useAccessMode } from "@/stores/access-context-store";
+import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/external-actors/types";
 
 import { SidebarTooltipProvider, SidebarTooltip, type SidebarRestriction } from "./sidebar-tooltip";
 
@@ -64,6 +67,12 @@ export function SidebarContent({
     const { contexts, contextRoutes, getNavItems, getNavGroups } = useSidebarNavigation();
     const { planSlug } = useOrganization();
     const planAccentVars = React.useMemo(() => getPlanAccentVars(planSlug), [planSlug]);
+
+    // Access mode
+    const isDualAccess = useIsDualAccess();
+    const accessMode = useAccessMode();
+    const switchMode = useAccessContextStore((s) => s.switchMode);
+    const externalActorType = useAccessContextStore((s) => s.externalActorType);
 
 
 
@@ -518,6 +527,80 @@ export function SidebarContent({
                                 isExpanded={isExpanded}
                                 onClick={onLinkClick}
                             />
+
+                            {/* Access Mode Selector — only when user has dual access */}
+                            {isDualAccess && isExpanded && (
+                                <div
+                                    className="rounded-lg bg-sidebar-accent/30 border border-sidebar-border/40 p-1 space-y-0.5"
+                                >
+                                    <button
+                                        onClick={() => {
+                                            switchMode("member");
+                                            router.push("/organization" as any);
+                                        }}
+                                        className={cn(
+                                            "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer",
+                                            accessMode === "member"
+                                                ? "bg-primary/10 text-primary font-medium"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                        )}
+                                    >
+                                        <Building className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">Miembro</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            switchMode("external");
+                                            // Navigate to the external actor overview
+                                            if (externalActorType === "client") {
+                                                router.push("/organization/external/client" as any);
+                                            }
+                                        }}
+                                        className={cn(
+                                            "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer",
+                                            accessMode === "external"
+                                                ? "bg-primary/10 text-primary font-medium"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                        )}
+                                    >
+                                        <UserCircle className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">
+                                            {externalActorType
+                                                ? EXTERNAL_ACTOR_TYPE_LABELS[externalActorType]
+                                                : "Externo"}
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Access Mode Selector — collapsed sidebar (icon only) */}
+                            {isDualAccess && !isExpanded && (
+                                <SidebarTooltip
+                                    label={accessMode === "member" ? "Cambiar a modo externo" : "Cambiar a modo miembro"}
+                                    isExpanded={false}
+                                >
+                                    <button
+                                        onClick={() => {
+                                            const newMode = accessMode === "member" ? "external" : "member";
+                                            switchMode(newMode);
+                                            if (newMode === "external" && externalActorType === "client") {
+                                                router.push("/organization/external/client" as any);
+                                            } else {
+                                                router.push("/organization" as any);
+                                            }
+                                        }}
+                                        className={cn(
+                                            "w-full flex items-center justify-center h-8 rounded-lg transition-all duration-150",
+                                            "text-muted-foreground hover:text-foreground hover:bg-secondary/80 cursor-pointer"
+                                        )}
+                                    >
+                                        {accessMode === "member"
+                                            ? <UserCircle className="h-4 w-4" />
+                                            : <Building className="h-4 w-4" />
+                                        }
+                                    </button>
+                                </SidebarTooltip>
+                            )}
 
                             {/* Plan Badge — full width */}
                             <SidebarPlanButton isExpanded={isExpanded} />

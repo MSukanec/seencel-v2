@@ -1,25 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 4: kanban_labels — ops_alerts)
-
-### `kanban_labels`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| name | text | ✗ |  | UNIQUE |
-| color | text | ✗ | '#6366f1'::text |  |
-| description | text | ✓ |  |  |
-| position | int4 | ✓ | 0 |  |
-| is_default | bool | ✓ | false |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
+## Tables (chunk 4: kanban_lists — ops_check_runs)
 
 ### `kanban_lists`
 
@@ -561,3 +545,15 @@
 | ack_at | timestamptz | ✓ |  |  |
 | resolved_by | uuid | ✓ |  | FK → users.id |
 | resolved_at | timestamptz | ✓ |  |  |
+
+### `ops_check_runs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| created_at | timestamptz | ✗ | now() |  |
+| check_suite | text | ✗ | 'ops_core'::text |  |
+| status | text | ✗ | 'success'::text |  |
+| duration_ms | int4 | ✓ |  |  |
+| stats | jsonb | ✗ | '{}'::jsonb |  |
+| error_message | text | ✓ |  |  |

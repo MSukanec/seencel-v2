@@ -235,6 +235,7 @@ interface OrganizationStoreHydratorProps {
 
 import { useEffect, useRef } from 'react';
 import { fetchOrganizationStoreData } from '@/actions/organization-store-actions';
+import { useAccessContextStore } from '@/stores/access-context-store';
 
 export function OrganizationStoreHydrator({
     activeOrgId,
@@ -264,6 +265,11 @@ export function OrganizationStoreHydrator({
             } else {
                 useOrganizationStore.getState().clearImpersonating();
             }
+
+            // Reset access context on org change
+            if (orgChanged) {
+                useAccessContextStore.getState().reset();
+            }
         }
 
         // Phase 2: Lazy fetch heavy data (currencies, wallets, projects, clients)
@@ -284,6 +290,11 @@ export function OrganizationStoreHydrator({
                         decimalPlaces: data.decimalPlaces,
                         kpiCompactFormat: data.kpiCompactFormat,
                     });
+
+                    // Hydrate access context store
+                    if (data.accessContext) {
+                        useAccessContextStore.getState().hydrate(data.accessContext);
+                    }
                 })
                 .catch((error) => {
                     console.error('Failed to load organization data:', error);

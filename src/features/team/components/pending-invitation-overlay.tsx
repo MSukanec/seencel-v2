@@ -23,6 +23,7 @@ interface PendingInvitation {
     organization_logo: string | null;
     role_name: string;
     inviter_name: string | null;
+    is_external?: boolean;
 }
 
 interface PendingInvitationOverlayProps {
@@ -90,14 +91,21 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
                         )}
                     </div>
                     <AlertDialogTitle className="text-lg">
-                        Te invitaron a una organización
+                        {invitation.is_external
+                            ? 'Te invitaron a colaborar con una organización'
+                            : 'Te invitaron a una organización'
+                        }
                     </AlertDialogTitle>
                     <AlertDialogDescription asChild>
                         <div className="space-y-4 text-sm">
                             <p>
                                 {invitation.inviter_name
-                                    ? `${invitation.inviter_name} te ha invitado a unirte a una organización.`
-                                    : "Te han invitado a unirte a una organización."
+                                    ? invitation.is_external
+                                        ? `${invitation.inviter_name} te ha invitado a colaborar con una organización.`
+                                        : `${invitation.inviter_name} te ha invitado a unirte a una organización.`
+                                    : invitation.is_external
+                                        ? "Te han invitado a colaborar con una organización."
+                                        : "Te han invitado a unirte a una organización."
                                 }
                             </p>
                             <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-left">
@@ -108,7 +116,9 @@ export function PendingInvitationOverlay({ invitation }: PendingInvitationOverla
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-                                    <span className="text-muted-foreground">Rol asignado:</span>
+                                    <span className="text-muted-foreground">
+                                        {invitation.is_external ? 'Tipo de acceso:' : 'Rol asignado:'}
+                                    </span>
                                     <span className="font-medium text-foreground">{invitation.role_name}</span>
                                 </div>
                                 {invitation.inviter_name && (

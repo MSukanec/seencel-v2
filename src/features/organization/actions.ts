@@ -87,7 +87,10 @@ export async function switchOrganization(organizationId: string) {
     redirect(path);
 }
 
-export async function createOrganization(organizationName: string): Promise<{ success: boolean; error?: string }> {
+export async function createOrganization(
+    organizationName: string,
+    businessMode: 'professional' | 'supplier' = 'professional'
+): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
     // 1. Get Current User
@@ -113,6 +116,7 @@ export async function createOrganization(organizationName: string): Promise<{ su
     const { data: newOrgId, error: rpcError } = await supabase.rpc('handle_new_organization', {
         p_user_id: publicUser.id,
         p_organization_name: organizationName.trim(),
+        p_business_mode: businessMode,
     });
 
     if (rpcError) {

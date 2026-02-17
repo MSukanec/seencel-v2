@@ -36,6 +36,9 @@ import {
 import { NavigationContext } from "@/stores/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
 import { useOrganization } from "@/stores/organization-store";
+import { useAccessContext, useViewingAs, useMemberModules } from "@/stores/access-context-store";
+import { getExternalNavGroups } from "@/config/external-navigation-config";
+import { isAccordionVisible } from "@/config/navigation-modules";
 import { useMemo } from "react";
 
 export interface NavItem {
@@ -89,6 +92,9 @@ export function useSidebarNavigation() {
     const tSidebar = useTranslations('Sidebar');
     const { statuses, isAdmin, isBetaTester } = useFeatureFlags();
     const { isFounder } = useOrganization();
+    const { accessMode, externalActorType } = useAccessContext();
+    const viewingAs = useViewingAs();
+    const memberVisibleModules = useMemberModules();
 
     // Combined flag for users who can bypass restrictions (but not see admin panel)
     const canBypassRestrictions = isAdmin || isBetaTester;
@@ -180,6 +186,16 @@ export function useSidebarNavigation() {
 
 
     const getNavGroups = (ctx: 'organization' | 'project' | 'admin'): NavGroup[] => {
+        // "Viewing As" mode: show external actor's own nav groups
+        if (ctx === 'organization' && viewingAs) {
+            return getExternalNavGroups(viewingAs.actorType);
+        }
+
+        // External mode: return external actor's own navigation config
+        if (ctx === 'organization' && accessMode === 'external') {
+            return getExternalNavGroups(externalActorType);
+        }
+
         if (ctx === 'admin') {
             return [
                 // Visión General (standalone)
@@ -237,7 +253,8 @@ export function useSidebarNavigation() {
         }
 
         // Unified sidebar — all routes under /organization
-        return [
+        // Filtered by memberVisibleModules (from preferences / onboarding)
+        const allGroups: NavGroup[] = [
             // Visión General (standalone)
             {
                 id: 'principal',
@@ -287,6 +304,9 @@ export function useSidebarNavigation() {
                 ].filter((i): i is NavItem => i !== null),
             },
         ];
+
+        // Filter by member's visible modules (from onboarding / preferences)
+        return allGroups.filter(group => isAccordionVisible(group.id, memberVisibleModules));
     };
 
     const getNavItems = (ctx: NavigationContext): NavItem[] => {

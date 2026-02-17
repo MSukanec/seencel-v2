@@ -1,9 +1,31 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 10: update_timestamp — validate_coupon_universal)
+## Functions & Procedures (chunk 10: update_testimonials_updated_at — validate_coupon_universal)
+
+### `update_testimonials_updated_at()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.update_testimonials_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$
+```
+</details>
 
 ### `update_timestamp()` 🔐
 

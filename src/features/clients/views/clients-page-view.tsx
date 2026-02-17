@@ -35,8 +35,6 @@ interface ClientsPageClientProps {
     roles: ClientRole[];
     financialData: OrganizationFinancialData;
     defaultTab?: string;
-    contacts?: { id: string; full_name?: string; email?: string; phone?: string; linked_user_id?: string; image_url?: string; }[];
-    representativesByClient?: Record<string, any[]>;
 }
 
 export function ClientsPageClient({
@@ -50,8 +48,6 @@ export function ClientsPageClient({
     roles,
     financialData,
     defaultTab = "overview",
-    contacts = [],
-    representativesByClient = {}
 }: ClientsPageClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -189,8 +185,6 @@ export function ClientsPageClient({
                             roles={roles}
                             orgId={orgId}
                             projectId={projectId}
-                            contacts={contacts}
-                            representativesByClient={representativesByClient}
                         />
                     </TabsContent>
                     <TabsContent value="commitments" className="m-0 h-full focus-visible:outline-none">

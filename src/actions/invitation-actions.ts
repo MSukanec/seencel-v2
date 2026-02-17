@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/team/types";
 
 export interface PendingInvitationData {
     id: string;
@@ -9,6 +10,8 @@ export interface PendingInvitationData {
     organization_logo: string | null;
     role_name: string;
     inviter_name: string | null;
+    /** When true, this is a client/collaborator invitation, not a member invitation */
+    is_external: boolean;
 }
 
 /**
@@ -24,7 +27,7 @@ export async function checkPendingInvitation(email: string): Promise<PendingInvi
     // 1. Check for pending invitations
     const { data: invitations } = await supabase
         .from('organization_invitations')
-        .select('id, token, role_id, organization_id, invited_by')
+        .select('id, token, role_id, organization_id, invited_by, invitation_type, actor_type')
         .eq('email', email.toLowerCase())
         .eq('status', 'pending')
         .gte('expires_at', new Date().toISOString())
@@ -57,12 +60,22 @@ export async function checkPendingInvitation(email: string): Promise<PendingInvi
             : Promise.resolve(null),
     ]);
 
+    // Determine role_name: for external invitations, use actor_type label
+    const isExternal = (inv as any).invitation_type === 'external';
+    const actorType = (inv as any).actor_type as string | null;
+    let roleName = roleDataResult?.data?.name || 'Miembro';
+
+    if (isExternal && actorType && EXTERNAL_ACTOR_TYPE_LABELS[actorType]) {
+        roleName = EXTERNAL_ACTOR_TYPE_LABELS[actorType].label;
+    }
+
     return {
         id: inv.id,
         token: inv.token,
         organization_name: orgDataResult?.data?.name || 'Organización',
         organization_logo: orgDataResult?.data?.logo_url || null,
-        role_name: roleDataResult?.data?.name || 'Miembro',
+        role_name: roleName,
         inviter_name: inviterResult as string | null,
+        is_external: isExternal,
     };
 }

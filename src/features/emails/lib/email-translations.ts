@@ -374,6 +374,22 @@ const translations = {
             en: 'You\'ve been invited to join {orgName} on SEENCEL',
         },
     },
+
+    // External Invitation (clients, collaborators)
+    externalInvitation: {
+        title: {
+            es: 'Invitación a colaborar',
+            en: 'Collaboration Invitation',
+        },
+        body: {
+            es: '{inviterName} te ha invitado a colaborar con {orgName} en SEENCEL como {roleName}.',
+            en: '{inviterName} has invited you to collaborate with {orgName} on SEENCEL as {roleName}.',
+        },
+        expiresNotice: {
+            es: 'Esta invitación expira en 30 días. Si no aceptás antes, deberán enviar una nueva.',
+            en: "This invitation expires in 30 days. If you don't accept before then, a new one will need to be sent.",
+        },
+    },
 } as const;
 
 /**

@@ -1,100 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 7: ops_apply_plan_to_org — set_budget_task_organization)
-
-### `ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)`
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)
- RETURNS void
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-  v_org_id UUID;
-  v_plan_id UUID;
-  v_payment_id UUID;
-BEGIN
-  -- 1. Validar alerta
-  SELECT
-    (metadata->>'organization_id')::uuid,
-    (metadata->>'plan_id')::uuid,
-    (metadata->>'payment_id')::uuid
-  INTO
-    v_org_id,
-    v_plan_id,
-    v_payment_id
-  FROM ops_alerts
-  WHERE id = p_alert_id
-    AND status = 'open';
-
-  IF v_org_id IS NULL OR v_plan_id IS NULL THEN
-    RAISE EXCEPTION 'Alert % does not contain required metadata', p_alert_id;
-  END IF;
-
-  -- 2. Aplicar plan a la organización
-  UPDATE organizations
-  SET
-    plan_id = v_plan_id,
-    updated_at = NOW()
-  WHERE id = v_org_id;
-
-  -- 3. Registrar reparación
-  INSERT INTO ops_repair_logs (
-    alert_id,
-    action_id,
-    executed_by,
-    result,
-    details
-  )
-  VALUES (
-    p_alert_id,
-    'apply_plan_to_org',
-    p_executed_by,
-    'success',
-    jsonb_build_object(
-      'organization_id', v_org_id,
-      'plan_id', v_plan_id,
-      'payment_id', v_payment_id
-    )
-  );
-
-  -- 4. Marcar alerta como resuelta
-  UPDATE ops_alerts
-  SET
-    status = 'resolved',
-    resolved_at = NOW()
-  WHERE id = p_alert_id;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    INSERT INTO ops_repair_logs (
-      alert_id,
-      action_id,
-      executed_by,
-      result,
-      details
-    )
-    VALUES (
-      p_alert_id,
-      'apply_plan_to_org',
-      p_executed_by,
-      'error',
-      jsonb_build_object('error', SQLERRM)
-    );
-
-    RAISE;
-END;
-$function$
-```
-</details>
+## Functions & Procedures (chunk 7: ops_detect_orgs_without_currency — set_task_labor_organization)
 
 ### `ops_detect_orgs_without_currency()` 🔐
 
@@ -1017,6 +926,32 @@ begin
 
   return new;
 end;
+$function$
+```
+</details>
+
+### `set_task_labor_organization()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_task_labor_organization()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    -- Si organization_id es null, heredarlo de la tarea padre
+    IF NEW.organization_id IS NULL THEN
+        SELECT organization_id INTO NEW.organization_id
+        FROM tasks
+        WHERE id = NEW.task_id;
+    END IF;
+    
+    RETURN NEW;
+END;
 $function$
 ```
 </details>

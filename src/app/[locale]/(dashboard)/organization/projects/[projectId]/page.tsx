@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Settings, MapPin, Palette, Users } from "lucide-react";
+import { Settings, MapPin, Palette } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
@@ -8,12 +8,8 @@ import { BackButton } from "@/components/shared/back-button";
 import { LockedBadge } from "@/components/shared/locked-badge";
 import { getProjectById } from "@/features/projects/queries";
 import { getProjectTypes, getProjectModalities } from "@/features/projects/actions";
-import { getPortalSettings } from "@/features/clients/actions";
-import { getClients } from "@/features/clients/queries";
-import { getPlans, getCurrentOrganizationPlanId } from "@/actions/plans";
 import { ProjectProfileView } from "@/features/projects/views/details/project-profile-view";
 import { ProjectLocationView } from "@/features/projects/views/details/project-location-view";
-import { ProjectPortalView } from "@/features/projects/views/details/project-portal-view";
 
 // ============================================================================
 // Metadata
@@ -56,19 +52,10 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         const project = await getProjectById(projectId);
         if (!project) notFound();
 
-        // Prefetch type/modality options, portal data and plan features in parallel
-        const [projectTypes, projectModalities, portalSettings, clientsResult, plans, currentPlanId] = await Promise.all([
+        const [projectTypes, projectModalities] = await Promise.all([
             getProjectTypes(project.organization_id),
             getProjectModalities(project.organization_id),
-            getPortalSettings(projectId),
-            getClients(projectId),
-            getPlans(),
-            getCurrentOrganizationPlanId(),
         ]);
-
-        const clients = clientsResult.data || [];
-        const currentPlan = currentPlanId ? plans.find(p => p.id === currentPlanId) : null;
-        const canCustomize = currentPlan?.features?.custom_project_branding ?? false;
 
         const displayName = project.name || "Proyecto";
         const truncatedName = displayName.length > 60
@@ -94,12 +81,6 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                                 Ubicación
                             </TabsTrigger>
                             <LockedBadge>
-                                <TabsTrigger value="portal" className="gap-2">
-                                    <Users className="h-4 w-4" />
-                                    Portal
-                                </TabsTrigger>
-                            </LockedBadge>
-                            <LockedBadge>
                                 <TabsTrigger value="appearance" className="gap-2">
                                     <Palette className="h-4 w-4" />
                                     Apariencia
@@ -124,18 +105,9 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                         </ContentLayout>
                     </TabsContent>
 
-                    {/* Portal Tab */}
-                    <TabsContent value="portal" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ProjectPortalView
-                            projectId={projectId}
-                            organizationId={project.organization_id}
-                            portalSettings={portalSettings}
-                            clients={clients}
-                            canCustomize={canCustomize}
-                        />
-                    </TabsContent>
                 </PageWrapper>
             </Tabs>
+
         );
     } catch (error) {
         return (

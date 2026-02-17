@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## RLS Policies (365)
+## RLS Policies (358)
 
 ### `app_settings` (4 policies)
 
@@ -1821,7 +1821,7 @@ can_mutate_org(organization_id, 'media.manage'::text)
 can_view_org(organization_id, 'media.view'::text)
 ```
 
-### `media_files` (4 policies)
+### `media_files` (3 policies)
 
 #### MIEMBROS CREAN MEDIA_FILES
 
@@ -1850,19 +1850,7 @@ can_view_org(organization_id, 'media.view'::text)
 ((is_public = true) OR ((organization_id IS NOT NULL) AND can_view_org(organization_id, 'media.view'::text)))
 ```
 
-#### REPRESENTANTES VEN MEDIA_FILES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-(EXISTS ( SELECT 1
-   FROM (media_links ml
-     JOIN site_logs sl ON ((sl.id = ml.site_log_id)))
-  WHERE ((ml.media_file_id = media_files.id) AND (sl.is_public = true) AND (sl.is_deleted = false) AND is_project_representative(sl.project_id))))
-```
-
-### `media_links` (5 policies)
+### `media_links` (4 policies)
 
 #### MIEMBROS CREAN MEDIA_LINKS
 
@@ -1898,17 +1886,6 @@ can_view_org(organization_id, 'media.view'::text)
 - **USING**:
 ```sql
 ((is_public = true) OR ((organization_id IS NOT NULL) AND can_view_org(organization_id, 'media.view'::text)))
-```
-
-#### REPRESENTANTES VEN MEDIA_LINKS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((site_log_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM site_logs sl
-  WHERE ((sl.id = media_links.site_log_id) AND (sl.is_public = true) AND (sl.is_deleted = false) AND is_project_representative(sl.project_id)))))
 ```
 
 ### `mp_preferences` (3 policies)
@@ -2697,7 +2674,7 @@ can_mutate_org(organization_id, 'quotes.manage'::text)
 can_view_org(organization_id, 'quotes.view'::text)
 ```
 
-### `quotes` (5 policies)
+### `quotes` (3 policies)
 
 #### MIEMBROS ACTUALIZAN QUOTES
 
@@ -2724,28 +2701,6 @@ can_mutate_org(organization_id, 'quotes.manage'::text)
 - **USING**:
 ```sql
 can_view_org(organization_id, 'quotes.view'::text)
-```
-
-#### REPRESENTANTES EDITAN QUOTES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {authenticated}
-- **USING**:
-```sql
-((status = 'sent'::text) AND is_project_representative(project_id))
-```
-- **WITH CHECK**:
-```sql
-is_project_representative(project_id)
-```
-
-#### REPRESENTANTES VEN QUOTES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((status <> 'draft'::text) AND is_project_representative(project_id))
 ```
 
 ### `role_permissions` (4 policies)
@@ -2827,7 +2782,7 @@ can_view_org(organization_id, 'roles.view'::text)
 ((is_system = true) OR can_view_org(organization_id, 'roles.view'::text))
 ```
 
-### `site_log_types` (4 policies)
+### `site_log_types` (3 policies)
 
 #### MIEMBROS CREAN SITE_LOG_TYPES
 
@@ -2856,18 +2811,7 @@ can_view_org(organization_id, 'roles.view'::text)
 ((organization_id IS NULL) OR can_view_org(organization_id, 'sitelog.view'::text))
 ```
 
-#### REPRESENTANTES VEN SITE_LOG_TYPES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((is_system = true) OR (EXISTS ( SELECT 1
-   FROM site_logs sl
-  WHERE ((sl.entry_type_id = site_log_types.id) AND (sl.is_public = true) AND (sl.is_deleted = false) AND is_project_representative(sl.project_id)))))
-```
-
-### `site_logs` (4 policies)
+### `site_logs` (3 policies)
 
 #### MIEMBROS CREAN SITE_LOGS
 
@@ -2894,15 +2838,6 @@ can_mutate_org(organization_id, 'sitelog.manage'::text)
 - **USING**:
 ```sql
 can_view_org(organization_id, 'sitelog.view'::text)
-```
-
-#### REPRESENTANTES VEN SITE_LOGS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((is_public = true) AND (is_deleted = false) AND is_project_representative(project_id))
 ```
 
 ### `subcontract_payments` (3 policies)
@@ -3699,23 +3634,7 @@ is_self(user_id)
 (is_self(user_id) OR is_admin())
 ```
 
-### `users` (3 policies)
-
-#### REPRESENTANTES VEN USERS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((EXISTS ( SELECT 1
-   FROM ((client_representatives cr
-     JOIN project_clients pc ON ((pc.id = cr.client_id)))
-     JOIN contacts c ON ((c.id = cr.contact_id)))
-  WHERE ((c.linked_user_id = users.id) AND (cr.is_deleted = false)))) OR (EXISTS ( SELECT 1
-   FROM (organization_members om
-     JOIN site_logs sl ON ((sl.created_by = om.id)))
-  WHERE ((om.user_id = users.id) AND (sl.is_public = true) AND (sl.is_deleted = false) AND is_project_representative(sl.project_id)))))
-```
+### `users` (2 policies)
 
 #### USUARIOS EDITAN USERS
 

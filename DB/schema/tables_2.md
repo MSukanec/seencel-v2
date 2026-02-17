@@ -1,30 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 2: coupons — founder_portal_events)
-
-### `coupons`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| code | text | ✗ |  |  |
-| type | coupon_type_t | ✗ |  |  |
-| amount | numeric | ✗ |  |  |
-| currency | text | ✓ |  |  |
-| max_redemptions | int4 | ✓ |  |  |
-| per_user_limit | int4 | ✓ | 1 |  |
-| starts_at | timestamptz | ✓ |  |  |
-| expires_at | timestamptz | ✓ |  |  |
-| min_order_total | numeric | ✓ |  |  |
-| applies_to_all | bool | ✗ | true |  |
-| is_active | bool | ✗ | true |  |
-| created_by | uuid | ✓ |  | FK → users.id |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| applies_to | text | ✓ | 'courses'::text |  |
+## Tables (chunk 2: course_details — founder_vote_ballots)
 
 ### `course_details`
 
@@ -456,3 +435,14 @@
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
 | is_deleted | bool | ✓ | false |  |
+
+### `founder_vote_ballots`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| topic_id | uuid | ✗ |  | UNIQUE, FK → founder_vote_topics.id |
+| option_id | uuid | ✗ |  | FK → founder_vote_options.id |
+| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| voted_at | timestamptz | ✓ | now() |  |

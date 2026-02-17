@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -1203,7 +1203,7 @@ $function$
 ```
 </details>
 
-### `handle_new_organization(p_user_id uuid, p_organization_name text)` 🔐
+### `handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
 
 - **Returns**: uuid
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -1211,7 +1211,7 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.handle_new_organization(p_user_id uuid, p_organization_name text)
+CREATE OR REPLACE FUNCTION public.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -1244,12 +1244,13 @@ BEGIN
   END IF;
 
   ----------------------------------------------------------------
-  -- 1) Crear organización
+  -- 1) Crear organización (now with business_mode)
   ----------------------------------------------------------------
   v_org_id := public.step_create_organization(
     p_user_id,
     p_organization_name,
-    v_plan_free_id
+    v_plan_free_id,
+    p_business_mode
   );
 
   ----------------------------------------------------------------
@@ -1338,7 +1339,8 @@ EXCEPTION
       SQLERRM,
       jsonb_build_object(
         'user_id', p_user_id,
-        'organization_name', p_organization_name
+        'organization_name', p_organization_name,
+        'business_mode', p_business_mode
       ),
       'critical'
     );

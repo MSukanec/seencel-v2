@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 3: handle_updated_by — log_client_payment_activity)
+## Functions & Procedures (chunk 3: handle_updated_by — log_client_role_activity)
 
 ### `handle_updated_by()` 🔐
 
@@ -439,34 +439,6 @@ $function$
 ```
 </details>
 
-### `is_project_representative(p_project_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.is_project_representative(p_project_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-  SELECT EXISTS (
-    SELECT 1
-    FROM client_representatives cr
-    JOIN project_clients pc ON pc.id = cr.client_id
-    JOIN contacts c ON c.id = cr.contact_id
-    JOIN users u ON u.id = c.linked_user_id
-    WHERE pc.project_id = p_project_id
-      AND u.auth_id = auth.uid()
-      AND cr.is_deleted = false
-      AND pc.is_deleted = false
-  )
-$function$
-```
-</details>
-
 ### `is_self(p_user_id uuid)` 🔐
 
 - **Returns**: boolean
@@ -767,6 +739,41 @@ BEGIN
     audit_metadata := jsonb_build_object('amount', target_record.amount, 'date', target_record.payment_date, 'status', target_record.status);
     BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
     VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_payments', audit_metadata);
+    EXCEPTION WHEN OTHERS THEN NULL; END;
+    RETURN NULL;
+END; $function$
+```
+</details>
+
+### `log_client_role_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.log_client_role_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    resolved_member_id uuid; audit_action text; audit_metadata jsonb; target_record RECORD;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN target_record := OLD; audit_action := 'delete_role'; resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN target_record := NEW; 
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN audit_action := 'delete_role'; ELSE audit_action := 'update_role'; END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN target_record := NEW; audit_action := 'create_role'; resolved_member_id := NEW.created_by; END IF;
+
+    -- Ignorar roles de sistema (sin organización)
+    IF target_record.organization_id IS NULL THEN RETURN NULL; END IF;
+
+    audit_metadata := jsonb_build_object('name', target_record.name, 'is_system', target_record.is_system);
+
+    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
+    VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_roles', audit_metadata);
     EXCEPTION WHEN OTHERS THEN NULL; END;
     RETURN NULL;
 END; $function$

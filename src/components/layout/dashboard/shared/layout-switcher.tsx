@@ -11,6 +11,8 @@ import { QueryProvider } from "@/providers/query-provider";
 import { PresenceProvider } from "@/providers/presence-provider";
 import { OnboardingWidgetWrapper } from "@/features/onboarding/checklist";
 import { ImpersonationBanner } from "./impersonation-banner";
+import { ViewingAsBanner } from "./viewing-as-banner";
+import { useIsViewingAs } from "@/stores/access-context-store";
 
 export function LayoutSwitcher({
     children,
@@ -22,6 +24,10 @@ export function LayoutSwitcher({
 }) {
     const [mounted, setMounted] = React.useState(false);
     const isImpersonating = useOrganizationStore(state => state.isImpersonating);
+    const isViewingAs = useIsViewingAs();
+
+    // Dynamic top padding: each active banner adds ~36px (py-1.5 + text)
+    const bannerPadding = (isImpersonating ? 9 : 0) + (isViewingAs ? 9 : 0);
 
     React.useEffect(() => {
         setMounted(true);
@@ -45,7 +51,8 @@ export function LayoutSwitcher({
     return (
         <QueryProvider>
             <ImpersonationBanner />
-            <div className={isImpersonating ? "pt-9" : ""}>
+            <ViewingAsBanner />
+            <div style={bannerPadding > 0 ? { paddingTop: `${bannerPadding * 4}px` } : undefined}>
                 {user?.id ? (
                     <PresenceProvider userId={user.id}>
                         <SidebarLayout user={user}>

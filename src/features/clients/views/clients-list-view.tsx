@@ -16,42 +16,18 @@ import { deleteClientAction } from "../actions";
 import { toast } from "sonner";
 import { DeleteReplacementModal } from "@/components/shared/forms/general/delete-replacement-modal";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { ClientRepresentativesManager } from "../components/representatives/client-representatives-manager";
+
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
 // ========================================
 // TYPES
 // ========================================
 
-interface Contact {
-    id: string;
-    full_name?: string;
-    email?: string;
-    phone?: string;
-    linked_user_id?: string;
-    image_url?: string;
-}
-
-interface Representative {
-    id: string;
-    client_id: string;
-    contact_id: string;
-    role: string;
-    can_approve: boolean;
-    can_chat: boolean;
-    accepted_at: string | null;
-    rep_full_name?: string;
-    rep_email?: string;
-    linked_user_id?: string;
-}
-
 interface ClientsListViewProps {
     data: ProjectClientView[];
     roles: ClientRole[];
     orgId: string;
     projectId?: string;
-    contacts?: Contact[];
-    representativesByClient?: Record<string, Representative[]>;
 }
 
 // ========================================
@@ -63,8 +39,6 @@ export function ClientsListView({
     roles,
     orgId,
     projectId,
-    contacts = [],
-    representativesByClient = {}
 }: ClientsListViewProps) {
     const router = useRouter();
     const { openModal, closeModal } = useModal();
@@ -137,23 +111,7 @@ export function ClientsListView({
         );
     };
 
-    const handleRepresentatives = (client: ProjectClientView) => {
-        const reps = representativesByClient[client.id] || [];
-        openModal(
-            <ClientRepresentativesManager
-                clientId={client.id}
-                clientName={client.contact_full_name || client.contact_company_name || "Cliente"}
-                orgId={orgId}
-                representatives={reps}
-                availableContacts={contacts}
-            />,
-            {
-                title: "Representantes del Cliente",
-                description: `Gestionar quién puede acceder al portal de ${client.contact_full_name || "este cliente"}`,
-                size: "lg"
-            }
-        );
-    };
+
 
     // Replacement options for delete modal
     const replacementOptions = optimisticData
@@ -262,10 +220,6 @@ export function ClientsListView({
                     {
                         label: "Editar Cliente",
                         onClick: handleEdit,
-                    },
-                    {
-                        label: "Representantes",
-                        onClick: handleRepresentatives,
                     }
                 ]}
             />

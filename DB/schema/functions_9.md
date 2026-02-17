@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 9: step_create_user_preferences — update_testimonials_updated_at)
+## Functions & Procedures (chunk 9: step_create_user_preferences — update_partner_balance_after_capital_change)
 
 ### `step_create_user_preferences(p_user_id uuid)` 🔐
 
@@ -452,6 +452,40 @@ $function$
 ```
 </details>
 
+### `sync_task_status_progress()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.sync_task_status_progress()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    -- Caso 1: Progress llega a 100 → marcar como completed
+    IF NEW.progress_percent = 100 AND OLD.progress_percent < 100 THEN
+        NEW.status := 'completed';
+    END IF;
+
+    -- Caso 2: Status cambia a completed → forzar progress a 100
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        NEW.progress_percent := 100;
+    END IF;
+
+    -- Caso 3: Progress baja de 100 y estaba completed → revertir a in_progress
+    IF NEW.progress_percent < 100 AND OLD.status = 'completed' AND NEW.status = 'completed' THEN
+        NEW.status := 'in_progress';
+    END IF;
+
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
 ### `tick_home_checklist(p_key text, p_value boolean)` 🔐
 
 - **Returns**: boolean
@@ -717,28 +751,6 @@ BEGIN
 
   RETURN NULL;
 END;
-$function$
-```
-</details>
-
-### `update_testimonials_updated_at()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_testimonials_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  new.updated_at := now();
-  return new;
-end;
 $function$
 ```
 </details>

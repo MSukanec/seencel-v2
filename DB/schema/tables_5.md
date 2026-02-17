@@ -1,21 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 5: ops_check_runs — pin_board_items)
-
-### `ops_check_runs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✗ | now() |  |
-| check_suite | text | ✗ | 'ops_core'::text |  |
-| status | text | ✗ | 'success'::text |  |
-| duration_ms | int4 | ✓ |  |  |
-| stats | jsonb | ✗ | '{}'::jsonb |  |
-| error_message | text | ✓ |  |  |
+## Tables (chunk 5: ops_repair_actions — pin_board_items)
 
 ### `ops_repair_actions`
 
@@ -124,6 +112,22 @@
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
 | created_by | uuid | ✓ |  | FK → organization_members.id |
 
+### `organization_external_actors`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| actor_type | text | ✗ |  |  |
+| is_active | bool | ✗ | true |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
 ### `organization_invitations`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -140,6 +144,8 @@
 | updated_at | timestamptz | ✓ | now() |  |
 | user_id | uuid | ✓ |  | FK → users.id |
 | expires_at | timestamptz | ✓ | (now() + '7 days'::interval) |  |
+| invitation_type | text | ✗ | 'member'::text |  |
+| actor_type | text | ✓ |  |  |
 
 ### `organization_material_prices`
 
@@ -291,6 +297,7 @@
 | logo_url | text | ✓ |  |  |
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
 | purchased_seats | int4 | ✓ | 0 |  |
+| business_mode | text | ✗ | 'professional'::text |  |
 
 ### `partner_capital_balance`
 

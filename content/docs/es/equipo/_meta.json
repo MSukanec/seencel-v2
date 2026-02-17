@@ -1,14 +1,18 @@
 {
     "order": [
         "miembros",
-        "usuarios-externos"
+        "clientes",
+        "colaboradores"
     ],
     "items": {
         "miembros": {
             "title": "Miembros del Equipo"
         },
-        "usuarios-externos": {
-            "title": "Usuarios Externos"
+        "clientes": {
+            "title": "Clientes"
+        },
+        "colaboradores": {
+            "title": "Colaboradores"
         }
     }
 }

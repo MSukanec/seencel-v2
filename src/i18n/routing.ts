@@ -151,10 +151,7 @@ export const routing = defineRouting({
             en: '/organization/clients',
             es: '/organizacion/clientes'
         },
-        '/organization/portal': {
-            en: '/organization/portal',
-            es: '/organizacion/portal'
-        },
+
         '/organization/health': {
             en: '/organization/health',
             es: '/organizacion/salud'
@@ -162,6 +159,12 @@ export const routing = defineRouting({
         '/organization/sitelog': {
             en: '/organization/sitelog',
             es: '/organizacion/bitacora'
+        },
+
+        // ===== External Actor Routes =====
+        '/organization/external/client': {
+            en: '/organization/external/client',
+            es: '/organizacion/externo/cliente'
         },
 
         // ===== Project Routes =====
@@ -236,6 +239,10 @@ export const routing = defineRouting({
         '/onboarding': {
             en: '/onboarding',
             es: '/bienvenida'
+        },
+        '/workspace-setup': {
+            en: '/workspace-setup',
+            es: '/configurar-espacio'
         },
         '/admin': '/admin',
         // Admin hub content

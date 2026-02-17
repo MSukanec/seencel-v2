@@ -1,35 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 8: set_task_labor_organization — step_create_user_organization_preferences)
-
-### `set_task_labor_organization()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.set_task_labor_organization()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-    -- Si organization_id es null, heredarlo de la tarea padre
-    IF NEW.organization_id IS NULL THEN
-        SELECT organization_id INTO NEW.organization_id
-        FROM tasks
-        WHERE id = NEW.task_id;
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
-```
-</details>
+## Functions & Procedures (chunk 8: set_task_material_organization — step_create_user_organization_preferences)
 
 ### `set_task_material_organization()` 🔐
 
@@ -519,6 +493,53 @@ EXCEPTION
         'owner_id', p_owner_id,
         'org_name', p_org_name,
         'plan_id', p_plan_id
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_org_id uuid := gen_random_uuid();
+BEGIN
+  INSERT INTO public.organizations (
+    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
+  )
+  VALUES (
+    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id, p_business_mode
+  );
+
+  RETURN v_org_id;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'owner_id', p_owner_id,
+        'org_name', p_org_name,
+        'plan_id', p_plan_id,
+        'business_mode', p_business_mode
       ),
       'critical'
     );

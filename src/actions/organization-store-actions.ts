@@ -17,8 +17,23 @@ import { Currency } from "@/types/currency";
 export async function fetchOrganizationStoreData(orgId: string) {
     const supabase = await createClient();
 
+    // Get current user for access context detection
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentUserId = user?.id;
+
+    // Resolve internal user ID from auth_id for membership/actor checks
+    let internalUserId: string | null = null;
+    if (currentUserId) {
+        const { data: userData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_id', currentUserId)
+            .single();
+        internalUserId = userData?.id || null;
+    }
+
     // All queries in parallel — no sequential dependencies
-    const [prefsResult, orgResult, currenciesResult, walletsResult, projectsResult, clientsResult] = await Promise.all([
+    const [prefsResult, orgResult, currenciesResult, walletsResult, projectsResult, clientsResult, memberResult, externalActorResult] = await Promise.all([
         // 1. Organization preferences
         supabase
             .from('organization_preferences')
@@ -63,12 +78,42 @@ export async function fetchOrganizationStoreData(orgId: string) {
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
             .order('contact_full_name', { ascending: true }),
+
+        // 7. Check if user is a member of this organization
+        internalUserId
+            ? supabase
+                .from('organization_members')
+                .select('id')
+                .eq('organization_id', orgId)
+                .eq('user_id', internalUserId)
+                .eq('is_active', true)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+
+        // 8. Check if user is an external actor of this organization
+        internalUserId
+            ? supabase
+                .from('organization_external_actors')
+                .select('id, actor_type')
+                .eq('organization_id', orgId)
+                .eq('user_id', internalUserId)
+                .eq('is_active', true)
+                .eq('is_deleted', false)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
     ]);
 
     const preferences = prefsResult.data;
     const isFounder = (orgResult.data?.settings as any)?.is_founder === true;
     const planData = orgResult.data?.plan as any;
     const planSlug: string | null = planData?.slug || planData?.name || null;
+
+    // Access context detection
+    // Defensive: if we couldn't resolve the user, default to member=true
+    // to preserve existing navigation behavior
+    const isMember = internalUserId ? !!memberResult.data : true;
+    const isExternal = !!externalActorResult.data;
+    const externalActorType = (externalActorResult.data as any)?.actor_type || null;
 
     // Format currencies
     const effectiveDefaultId = preferences?.default_currency_id
@@ -129,5 +174,11 @@ export async function fetchOrganizationStoreData(orgId: string) {
         defaultCurrencyId: preferences?.default_currency_id || currencies[0]?.id,
         defaultWalletId: wallets.find(w => w.is_default)?.id || wallets[0]?.id,
         defaultTaxLabel: preferences?.default_tax_label_id || 'IVA',
+        // Access context
+        accessContext: {
+            isMember,
+            isExternal,
+            externalActorType,
+        },
     };
 }

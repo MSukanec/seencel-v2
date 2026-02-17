@@ -222,25 +222,8 @@ export const clientFinancialSummarySchema = z.object({
 
 export type ClientFinancialSummary = z.infer<typeof clientFinancialSummarySchema>;
 
-// ==========================================
-// Check Portal Settings
-// ==========================================
 
-export const clientPortalSettingsSchema = z.object({
-    project_id: z.string().uuid(),
-    organization_id: z.string().uuid(),
-    show_dashboard: z.boolean().default(true),
-    show_installments: z.boolean().default(false),
-    show_payments: z.boolean().default(false),
-    show_logs: z.boolean().default(false),
-    show_amounts: z.boolean().default(true),
-    show_progress: z.boolean().default(true),
-    allow_comments: z.boolean().default(false),
-    updated_at: z.string().nullable(),
-    updated_by: z.string().uuid().nullable(),
-});
 
-export type ClientPortalSettings = z.infer<typeof clientPortalSettingsSchema>;
 
 // ==========================================
 // Financial Data (from getOrganizationFinancialData)

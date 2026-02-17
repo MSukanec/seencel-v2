@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -58,10 +58,6 @@
 | client_payments | idx_client_payments_view_project | `CREATE INDEX idx_client_payments_view_project ON public.client_payments USING...` |
 | client_portal_branding | client_portal_branding_project_id_key | `CREATE UNIQUE INDEX client_portal_branding_project_id_key ON public.client_po...` |
 | client_portal_settings | idx_client_portal_settings_org | `CREATE INDEX idx_client_portal_settings_org ON public.client_portal_settings ...` |
-| client_representatives | client_representatives_unique_contact | `CREATE UNIQUE INDEX client_representatives_unique_contact ON public.client_re...` |
-| client_representatives | idx_client_reps_client | `CREATE INDEX idx_client_reps_client ON public.client_representatives USING bt...` |
-| client_representatives | idx_client_reps_contact | `CREATE INDEX idx_client_reps_contact ON public.client_representatives USING b...` |
-| client_representatives | idx_client_reps_org | `CREATE INDEX idx_client_reps_org ON public.client_representatives USING btree...` |
 | construction_dependencies | construction_dependencies_unique | `CREATE UNIQUE INDEX construction_dependencies_unique ON public.construction_d...` |
 | construction_dependencies | idx_construction_dependencies_organization | `CREATE INDEX idx_construction_dependencies_organization ON public.constructio...` |
 | construction_dependencies | idx_construction_dependencies_predecessor | `CREATE INDEX idx_construction_dependencies_predecessor ON public.construction...` |
@@ -284,6 +280,10 @@
 | organization_data | organization_data_city_idx | `CREATE INDEX organization_data_city_idx ON public.organization_data USING btr...` |
 | organization_data | organization_data_country_idx | `CREATE INDEX organization_data_country_idx ON public.organization_data USING ...` |
 | organization_data | organization_data_organization_id_key | `CREATE UNIQUE INDEX organization_data_organization_id_key ON public.organizat...` |
+| organization_external_actors | idx_oea_actor_type | `CREATE INDEX idx_oea_actor_type ON public.organization_external_actors USING ...` |
+| organization_external_actors | idx_oea_organization | `CREATE INDEX idx_oea_organization ON public.organization_external_actors USIN...` |
+| organization_external_actors | idx_oea_user | `CREATE INDEX idx_oea_user ON public.organization_external_actors USING btree ...` |
+| organization_external_actors | oea_unique_org_user | `CREATE UNIQUE INDEX oea_unique_org_user ON public.organization_external_actor...` |
 | organization_invitations | organization_invitations_email_idx | `CREATE INDEX organization_invitations_email_idx ON public.organization_invita...` |
 | organization_invitations | organization_invitations_email_org_unique | `CREATE UNIQUE INDEX organization_invitations_email_org_unique ON public.organ...` |
 | organization_invitations | organization_invitations_organization_id_idx | `CREATE INDEX organization_invitations_organization_id_idx ON public.organizat...` |

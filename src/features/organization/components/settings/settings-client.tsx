@@ -3,7 +3,7 @@
 import { OrganizationSettingsData } from "@/types/organization";
 import { TabsContent } from "@/components/ui/tabs";
 import { TeamMembersView } from "@/features/team/views/team-members-view";
-import { SeatStatus } from "@/features/team/types";
+import { SeatStatus, ExternalActorDetail } from "@/features/team/types";
 import { TeamPermissionsView } from "@/features/team/views/team-permissions-view";
 import { BillingSettingsView } from "@/features/billing/views/billing-settings-view";
 import type { Plan } from "@/actions/plans";
@@ -19,9 +19,11 @@ interface SettingsClientProps {
     plans: Plan[];
     purchaseFlags: PlanPurchaseFlags;
     isAdmin: boolean;
+    externalActors: ExternalActorDetail[];
+    maxExternalAdvisors: number;
 }
 
-export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers, seatStatus, plans, purchaseFlags, isAdmin }: SettingsClientProps) {
+export function SettingsClient({ data, organizationId, currentUserId, ownerId, canInviteMembers, seatStatus, plans, purchaseFlags, isAdmin, externalActors, maxExternalAdvisors }: SettingsClientProps) {
     // Get planId from subscription or fallback
     const planId = data.subscription?.plan_id ?? "";
 
@@ -38,6 +40,8 @@ export function SettingsClient({ data, organizationId, currentUserId, ownerId, c
                     ownerId={ownerId}
                     canInviteMembers={canInviteMembers}
                     initialSeatStatus={seatStatus}
+                    externalActors={externalActors}
+                    maxExternalAdvisors={maxExternalAdvisors}
                 />
             </TabsContent>
             <TabsContent value="permissions" className="m-0 h-full focus-visible:outline-none">

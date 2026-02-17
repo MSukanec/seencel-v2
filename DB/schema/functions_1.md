@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -1003,6 +1003,27 @@ $function$
 ```
 </details>
 
+### `can_view_org(p_organization_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ SECURITY DEFINER
+AS $function$
+  SELECT
+    public.is_admin()
+    OR public.is_demo_org(p_organization_id)
+    OR public.is_org_member(p_organization_id);
+$function$
+```
+</details>
+
 ### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
@@ -1023,27 +1044,6 @@ AS $function$
       public.is_org_member(p_organization_id)
       AND public.has_permission(p_organization_id, p_permission_key)
     );
-$function$
-```
-</details>
-
-### `can_view_org(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- SECURITY DEFINER
-AS $function$
-  SELECT
-    public.is_admin()
-    OR public.is_demo_org(p_organization_id)
-    OR public.is_org_member(p_organization_id);
 $function$
 ```
 </details>

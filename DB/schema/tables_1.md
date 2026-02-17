@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 1: app_settings — coupon_redemptions)
+## Tables (chunk 1: app_settings — coupons)
 
 ### `app_settings`
 
@@ -275,24 +275,6 @@
 | created_by | uuid | ✓ |  | FK → organization_members.id |
 | show_quotes | bool | ✓ | false |  |
 
-### `client_representatives`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| client_id | uuid | ✗ |  | UNIQUE, FK → project_clients.id |
-| contact_id | uuid | ✗ |  | UNIQUE, FK → contacts.id |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| role | text | ✓ | 'viewer'::text |  |
-| can_approve | bool | ✓ | false |  |
-| can_chat | bool | ✓ | true |  |
-| invited_at | timestamptz | ✓ | now() |  |
-| accepted_at | timestamptz | ✓ |  |  |
-| invited_by | uuid | ✓ |  | FK → organization_members.id |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| is_deleted | bool | ✓ | false |  |
-
 ### `client_roles`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -392,7 +374,7 @@
 | planned_end_date | date | ✓ |  |  |
 | duration_in_days | int4 | ✓ |  |  |
 | id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| progress_percent | int4 | ✓ |  |  |
+| progress_percent | int4 | ✓ | 0 |  |
 | description | text | ✓ |  |  |
 | cost_scope | cost_scope_enum | ✗ | 'materials_and_labor'::cost_scope_enum |  |
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
@@ -505,3 +487,24 @@
 | created_at | timestamptz | ✗ | now() |  |
 | subscription_id | uuid | ✓ |  | FK → organization_subscriptions.id |
 | plan_id | uuid | ✓ |  | FK → plans.id |
+
+### `coupons`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| code | text | ✗ |  |  |
+| type | coupon_type_t | ✗ |  |  |
+| amount | numeric | ✗ |  |  |
+| currency | text | ✓ |  |  |
+| max_redemptions | int4 | ✓ |  |  |
+| per_user_limit | int4 | ✓ | 1 |  |
+| starts_at | timestamptz | ✓ |  |  |
+| expires_at | timestamptz | ✓ |  |  |
+| min_order_total | numeric | ✓ |  |  |
+| applies_to_all | bool | ✗ | true |  |
+| is_active | bool | ✗ | true |  |
+| created_by | uuid | ✓ |  | FK → users.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| applies_to | text | ✓ | 'courses'::text |  |

@@ -1,22 +1,14 @@
 "use client";
 
-import { Plus, Building } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useModal } from "@/stores/modal-store";
-import { OrganizationCreateForm } from "@/features/organization/forms/organization-create-form";
+import { useRouter } from "@/i18n/routing";
 
 export function CreateOrganizationButton() {
-    const { openModal } = useModal();
+    const router = useRouter();
 
     const handleCreate = () => {
-        openModal(
-            <OrganizationCreateForm />,
-            {
-                title: "Crear nueva organización",
-                description: "Creá una nueva organización para gestionar proyectos independientes con su propio equipo y configuración.",
-                size: "md",
-            }
-        );
+        router.push("/workspace-setup");
     };
 
     return (

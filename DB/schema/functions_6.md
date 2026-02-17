@@ -1,62 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-16T21:47:12.644Z
+> Generated: 2026-02-17T17:51:37.665Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 6: log_subcontract_payment_activity — notify_user_payment_completed)
-
-### `log_subcontract_payment_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.log_subcontract_payment_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD; audit_action := 'delete_subcontract_payment';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        IF (NEW.status = 'void' AND OLD.status != 'void') THEN
-            audit_action := 'void_subcontract_payment';
-        ELSE
-            audit_action := 'update_subcontract_payment';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW; audit_action := 'create_subcontract_payment';
-        resolved_member_id := NEW.created_by;
-    END IF;
-
-    audit_metadata := jsonb_build_object('amount', target_record.amount, 'currency', target_record.currency_id);
-
-    BEGIN
-        INSERT INTO public.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            target_record.organization_id, resolved_member_id,
-            audit_action, target_record.id, 'subcontract_payments', audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN NULL;
-    END;
-
-    RETURN NULL;
-END;
-$function$
-```
-</details>
+## Functions & Procedures (chunk 6: log_system_error — ops_apply_plan_to_org)
 
 ### `log_system_error(p_domain text, p_entity text, p_function_name text, p_error_message text, p_context jsonb DEFAULT NULL::jsonb, p_severity text DEFAULT 'error'::text)` 🔐
 
@@ -1136,6 +1083,97 @@ BEGIN
         );
     END IF;
     RETURN NEW;
+END;
+$function$
+```
+</details>
+
+### `ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)`
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_org_id UUID;
+  v_plan_id UUID;
+  v_payment_id UUID;
+BEGIN
+  -- 1. Validar alerta
+  SELECT
+    (metadata->>'organization_id')::uuid,
+    (metadata->>'plan_id')::uuid,
+    (metadata->>'payment_id')::uuid
+  INTO
+    v_org_id,
+    v_plan_id,
+    v_payment_id
+  FROM ops_alerts
+  WHERE id = p_alert_id
+    AND status = 'open';
+
+  IF v_org_id IS NULL OR v_plan_id IS NULL THEN
+    RAISE EXCEPTION 'Alert % does not contain required metadata', p_alert_id;
+  END IF;
+
+  -- 2. Aplicar plan a la organización
+  UPDATE organizations
+  SET
+    plan_id = v_plan_id,
+    updated_at = NOW()
+  WHERE id = v_org_id;
+
+  -- 3. Registrar reparación
+  INSERT INTO ops_repair_logs (
+    alert_id,
+    action_id,
+    executed_by,
+    result,
+    details
+  )
+  VALUES (
+    p_alert_id,
+    'apply_plan_to_org',
+    p_executed_by,
+    'success',
+    jsonb_build_object(
+      'organization_id', v_org_id,
+      'plan_id', v_plan_id,
+      'payment_id', v_payment_id
+    )
+  );
+
+  -- 4. Marcar alerta como resuelta
+  UPDATE ops_alerts
+  SET
+    status = 'resolved',
+    resolved_at = NOW()
+  WHERE id = p_alert_id;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    INSERT INTO ops_repair_logs (
+      alert_id,
+      action_id,
+      executed_by,
+      result,
+      details
+    )
+    VALUES (
+      p_alert_id,
+      'apply_plan_to_org',
+      p_executed_by,
+      'error',
+      jsonb_build_object('error', SQLERRM)
+    );
+
+    RAISE;
 END;
 $function$
 ```

@@ -35,7 +35,7 @@ interface SettingsSectionProps {
     /** Título de la sección */
     title: string;
     /** Descripción de la sección */
-    description?: string;
+    description?: React.ReactNode;
     /** Botones de acción debajo de la descripción */
     actions?: SettingsSectionAction[];
     /** Contenido de la sección (campos, tablas, etc.) - va en columna derecha */
@@ -96,9 +96,9 @@ export function SettingsSection({
                         </h3>
                     </div>
                     {description && (
-                        <p className="text-sm text-muted-foreground pl-6 leading-relaxed">
+                        <div className="text-sm text-muted-foreground pl-6 leading-relaxed flex flex-col items-start gap-1">
                             {description}
-                        </p>
+                        </div>
                     )}
                 </div>
                 {actions && actions.length > 0 && (

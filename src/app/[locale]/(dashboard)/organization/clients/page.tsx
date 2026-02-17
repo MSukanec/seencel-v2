@@ -7,7 +7,6 @@ import {
     getPaymentsByOrganization,
     getSchedulesByOrganization,
     getClientRoles,
-    getOrganizationContacts,
 } from "@/features/clients/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { ClientsPageClient } from "@/features/clients/views";
@@ -56,7 +55,6 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
             schedulesRes,
             rolesRes,
             financialData,
-            contactsRes,
         ] = await Promise.all([
             getClientsByOrganization(activeOrgId),
             getFinancialSummaryByOrganization(activeOrgId),
@@ -65,7 +63,6 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
             getSchedulesByOrganization(activeOrgId),
             getClientRoles(activeOrgId),
             getOrganizationFinancialData(activeOrgId),
-            getOrganizationContacts(activeOrgId),
         ]);
 
         return (
@@ -80,8 +77,6 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
                 roles={rolesRes.data || []}
                 financialData={financialData}
                 defaultTab={defaultTab}
-                contacts={contactsRes.data || []}
-                representativesByClient={{}}
             />
         );
     } catch (error) {
