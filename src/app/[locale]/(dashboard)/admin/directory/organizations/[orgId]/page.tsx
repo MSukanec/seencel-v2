@@ -1,67 +1,80 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Building } from "lucide-react";
-import { getAdminUsers, getAdminOrganizations, getPlansForAdmin } from "@/features/admin/queries";
-import { UsersTable } from "@/features/admin/components/users-table";
-import { OrganizationsTable } from "@/features/admin/components/organizations-table";
-import { PageWrapper } from "@/components/layout";
-import { ContentLayout } from "@/components/layout";
-import { ErrorDisplay } from "@/components/ui/error-display";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { Building } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageWrapper, ContentLayout } from "@/components/layout";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { BackButton } from "@/components/shared/back-button";
+import { getAdminOrganizationDetail, getPlansForAdmin } from "@/features/admin/queries";
+import { OrgProfileView } from "@/features/admin/views/org-profile-view";
+import { Building2, Users } from "lucide-react";
 
-export async function generateMetadata(): Promise<Metadata> {
+interface PageProps {
+    params: Promise<{ locale: string; orgId: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const { orgId } = await params;
+    const org = await getAdminOrganizationDetail(orgId);
     return {
-        title: "Directorio | Admin | SEENCEL",
-        description: "Gestión de usuarios y organizaciones del sistema",
+        title: `${org?.name || "Organización"} | Admin | SEENCEL`,
+        description: "Detalle de organización",
         robots: "noindex, nofollow",
     };
 }
 
-export default async function AdminDirectoryPage() {
+export default async function AdminOrgDetailPage({ params }: PageProps) {
+    const { orgId } = await params;
+
     try {
-        const [users, organizations, plans] = await Promise.all([
-            getAdminUsers(),
-            getAdminOrganizations(),
-            getPlansForAdmin()
+        const [org, plans] = await Promise.all([
+            getAdminOrganizationDetail(orgId),
+            getPlansForAdmin(),
         ]);
 
+        if (!org) return notFound();
+
         return (
-            <Tabs defaultValue="users" className="w-full h-full flex flex-col">
+            <Tabs defaultValue="profile" className="w-full h-full flex flex-col">
                 <PageWrapper
                     type="page"
-                    title="Directorio"
-                    icon={<Users />}
+                    title={org.name}
+                    icon={<Building />}
+                    backButton={
+                        <BackButton fallbackHref="/admin/directory" />
+                    }
                     tabs={
                         <TabsList className="bg-transparent p-0 gap-6 flex items-start justify-start">
                             <TabsTrigger
-                                value="users"
+                                value="profile"
+                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    <span>Perfil</span>
+                                </div>
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="members"
                                 className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
                             >
                                 <div className="flex items-center gap-2">
                                     <Users className="h-4 w-4" />
-                                    <span>Usuarios</span>
-                                </div>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="organizations"
-                                className="relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Building className="h-4 w-4" />
-                                    <span>Organizaciones</span>
+                                    <span>Miembros ({org.members.length})</span>
                                 </div>
                             </TabsTrigger>
                         </TabsList>
                     }
                 >
-                    <TabsContent value="users" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <TabsContent value="profile" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
-                            <UsersTable users={users} />
+                            <OrgProfileView org={org} plans={plans} />
                         </ContentLayout>
                     </TabsContent>
 
-                    <TabsContent value="organizations" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <TabsContent value="members" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
-                            <OrganizationsTable organizations={organizations} plans={plans} />
+                            <OrgProfileView org={org} plans={plans} showMembersOnly />
                         </ContentLayout>
                     </TabsContent>
                 </PageWrapper>
@@ -71,7 +84,7 @@ export default async function AdminDirectoryPage() {
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay
-                    title="Error al cargar el directorio"
+                    title="Error al cargar la organización"
                     message={error instanceof Error ? error.message : "Error desconocido"}
                     retryLabel="Reintentar"
                 />

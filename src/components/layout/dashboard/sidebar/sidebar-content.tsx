@@ -518,15 +518,17 @@ export function SidebarContent({
                                 />
                             )}
 
-                            {/* Hub Button — visible for all users */}
-                            <SidebarNavButton
-                                icon={ArrowLeft}
-                                label="Volver al Hub"
-                                href={"/hub" as any}
-                                isActive={false}
-                                isExpanded={isExpanded}
-                                onClick={onLinkClick}
-                            />
+                            {/* Hub Button — visible when NOT already in hub */}
+                            {drillState !== "home" && (
+                                <SidebarNavButton
+                                    icon={ArrowLeft}
+                                    label="Volver al Hub"
+                                    href={"/hub" as any}
+                                    isActive={false}
+                                    isExpanded={isExpanded}
+                                    onClick={onLinkClick}
+                                />
+                            )}
 
                             {/* Access Mode Selector — only when user has dual access */}
                             {isDualAccess && isExpanded && (

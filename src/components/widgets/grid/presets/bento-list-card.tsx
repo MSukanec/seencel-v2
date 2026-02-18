@@ -38,6 +38,8 @@ interface BentoListCardProps extends React.HTMLAttributes<HTMLDivElement> {
     showRank?: boolean;
     /** Card size */
     size?: BentoSize;
+    /** Callback when an item is clicked */
+    onItemClick?: (item: BentoListItem) => void;
 }
 
 const statusStyles = {
@@ -60,6 +62,7 @@ export function BentoListCard({
     maxItems = 5,
     showRank = false,
     size = 'sm',
+    onItemClick,
     className,
     ...props
 }: BentoListCardProps) {
@@ -76,7 +79,16 @@ export function BentoListCard({
         >
             <div className="space-y-3">
                 {displayItems.map((item, index) => (
-                    <div key={item.id} className="flex items-center justify-between">
+                    <div
+                        key={item.id}
+                        className={cn(
+                            "flex items-center justify-between",
+                            onItemClick && "cursor-pointer rounded-md -mx-2 px-2 py-1 hover:bg-muted/50 transition-colors"
+                        )}
+                        onClick={onItemClick ? () => onItemClick(item) : undefined}
+                        role={onItemClick ? "button" : undefined}
+                        tabIndex={onItemClick ? 0 : undefined}
+                    >
                         <div className="flex items-center gap-3 min-w-0">
                             <Avatar className="h-8 w-8 flex-shrink-0">
                                 <AvatarImage src={item.avatar} />

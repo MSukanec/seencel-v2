@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Monitor, Mail } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 interface UsersTableProps {
     users: AdminUser[];
@@ -66,7 +66,7 @@ export function UsersTable({ users }: UsersTableProps) {
             cell: ({ row }) => {
                 const user = row.original;
                 return (
-                    <Link href={`/admin/directory/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <Link href={{ pathname: "/admin/directory/[userId]", params: { userId: user.id } }} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                         <Avatar className="h-9 w-9">
                             <AvatarImage src={user.avatar_url || ""} alt={user.full_name || user.email} />
                             <AvatarFallback className="uppercase">

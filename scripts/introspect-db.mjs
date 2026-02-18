@@ -2,7 +2,7 @@
  * Database Schema Introspection Script
  * =====================================
  * Connects to Supabase PostgreSQL (READ-ONLY queries) and generates
- * a comprehensive DB/SCHEMA.md with all tables, columns, functions,
+ * split schema files in DB/schema/ with all tables, columns, functions,
  * triggers, RLS policies, and views.
  *
  * Usage: node scripts/introspect-db.mjs
@@ -391,9 +391,8 @@ async function main() {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // Write monolithic SCHEMA.md (backward compatible)
-    const outputPath = path.join(outputDir, 'SCHEMA.md');
-    fs.writeFileSync(outputPath, sections.join('\n'), 'utf-8');
+    // NOTE: Monolithic SCHEMA.md no longer generated.
+    // Only split files in DB/schema/ are written.
 
     // ── SPLIT INTO INDIVIDUAL FILES ──
     // Write each section to a separate file for easier searching/reading
@@ -610,8 +609,7 @@ async function main() {
     await client.end();
 
     const splitFiles = fs.readdirSync(schemaDir);
-    console.log(`\n✅ Schema written to DB/SCHEMA.md`);
-    console.log(`✅ Split into ${splitFiles.length} files in DB/schema/`);
+    console.log(`\n✅ Schema written to ${splitFiles.length} files in DB/schema/`);
     console.log(`   📊 ${tablesRes.rows.length} tables`);
     console.log(`   👁️  ${viewsRes.rows.length} views`);
     console.log(`   ⚙️  ${funcsRes.rows.length} functions`);

@@ -45,13 +45,7 @@ export function AddClientForm({ organizationId }: AddClientFormProps) {
             }
 
             closeModal();
-
-            if (result.directAdd) {
-                toast.success("Cliente agregado correctamente");
-            } else {
-                toast.success("Se envió una invitación por email. Cuando se registre y la acepte, aparecerá como cliente.");
-            }
-
+            toast.success("Se envió una invitación al cliente por email.");
             router.refresh();
         } catch (error) {
             toast.error("Error inesperado al agregar cliente");

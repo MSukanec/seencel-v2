@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { BentoKpiCard, BentoListCard, type BentoListItem } from "@/components/widgets/grid";
 import { AdminCharts } from "./admin-charts";
+import { useRouter } from "@/i18n/routing";
 import {
     Activity, Users, Building, Folder, UserPlus, Zap,
     UserMinus, Timer, TrendingDown, Lightbulb
@@ -21,6 +22,11 @@ interface AdminDashboardViewProps {
 
 export function AdminDashboardView({ data }: AdminDashboardViewProps) {
     const { kpis, charts, lists } = data;
+    const router = useRouter();
+
+    const handleUserClick = useCallback((item: BentoListItem) => {
+        router.push(`/admin/directory/${item.id}` as any);
+    }, [router]);
 
     // Generate insights from dashboard data
     const insights = useMemo(() => {
@@ -162,6 +168,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     icon={<Activity className="h-4 w-4" />}
                     items={recentActivityItems}
                     size="tall"
+                    onItemClick={handleUserClick}
                 />
 
                 <BentoListCard
@@ -170,6 +177,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     icon={<UserPlus className="h-4 w-4" />}
                     items={newUsersItems}
                     size="tall"
+                    onItemClick={handleUserClick}
                 />
 
                 <BentoListCard
@@ -179,6 +187,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     items={topUsersItems}
                     showRank
                     size="tall"
+                    onItemClick={handleUserClick}
                 />
 
                 <BentoListCard
@@ -187,6 +196,7 @@ export function AdminDashboardView({ data }: AdminDashboardViewProps) {
                     icon={<UserMinus className="h-4 w-4" />}
                     items={dropOffItems}
                     size="tall"
+                    onItemClick={handleUserClick}
                 />
             </div>
 

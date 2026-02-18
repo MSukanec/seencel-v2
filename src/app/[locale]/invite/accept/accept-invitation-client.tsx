@@ -4,14 +4,25 @@ import { useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Users, Shield, User } from "lucide-react";
+import { CheckCircle, Users, Shield, User, Briefcase } from "lucide-react";
 import { acceptInvitationAction } from "@/features/team/actions";
+
+/** Labels for actor types — duplicated here to avoid importing server-only code */
+const ACTOR_TYPE_LABELS: Record<string, string> = {
+    client: 'Cliente',
+    accountant: 'Contador',
+    field_worker: 'Trabajador de campo',
+    external_site_manager: 'Director de obra externo',
+    subcontractor_portal_user: 'Subcontratista',
+};
 
 interface Props {
     token: string;
     organizationName: string;
     organizationLogo: string | null;
     roleName: string;
+    invitationType: string;
+    actorType: string | null;
     inviterName: string | null;
     email: string;
     isAuthenticated: boolean;
@@ -22,6 +33,8 @@ export function AcceptInvitationClient({
     organizationName,
     organizationLogo,
     roleName,
+    invitationType,
+    actorType,
     inviterName,
     email,
     isAuthenticated,
@@ -29,6 +42,30 @@ export function AcceptInvitationClient({
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [accepted, setAccepted] = useState(false);
+
+    const isExternal = invitationType === 'external';
+    const actorLabel = actorType ? ACTOR_TYPE_LABELS[actorType] || actorType : null;
+
+    // Contextual texts
+    const headerTitle = isExternal
+        ? 'Invitación de colaboración'
+        : 'Invitación a un equipo';
+    const headerSubtext = inviterName
+        ? `${inviterName} te invitó a unirte a`
+        : 'Te invitaron a unirte a';
+    const roleLabel = isExternal
+        ? (actorLabel || 'Colaborador externo')
+        : roleName;
+    const roleSectionTitle = isExternal ? 'Rol asignado' : 'Rol asignado';
+    const footerText = isExternal
+        ? `Al aceptar, colaborarás con esta organización como ${roleLabel?.toLowerCase()}.`
+        : 'Al aceptar, te unirás como miembro de esta organización.';
+    const successTitle = isExternal
+        ? '¡Colaboración aceptada!'
+        : '¡Bienvenido al equipo!';
+    const successText = isExternal
+        ? `Ahora colaborás con`
+        : 'Te uniste a';
 
     const handleAccept = async () => {
         setIsLoading(true);
@@ -43,9 +80,15 @@ export function AcceptInvitationClient({
             setAccepted(true);
 
             if (result.alreadyMember) {
-                toast.info("Ya sos miembro de esta organización");
+                toast.info(isExternal
+                    ? "Ya colaborás con esta organización"
+                    : "Ya sos miembro de esta organización"
+                );
             } else {
-                toast.success("¡Te uniste al equipo correctamente!");
+                toast.success(isExternal
+                    ? "¡Colaboración aceptada correctamente!"
+                    : "¡Te uniste al equipo correctamente!"
+                );
             }
 
             // Redirect to dashboard after brief delay
@@ -66,9 +109,9 @@ export function AcceptInvitationClient({
                 <div className="w-12 h-12 mx-auto rounded-full bg-green-500/10 flex items-center justify-center">
                     <CheckCircle className="w-6 h-6 text-green-500" />
                 </div>
-                <h1 className="text-xl font-semibold">¡Bienvenido al equipo!</h1>
+                <h1 className="text-xl font-semibold">{successTitle}</h1>
                 <p className="text-muted-foreground text-sm">
-                    Te uniste a <span className="font-medium text-foreground">{organizationName}</span>.
+                    {successText} <span className="font-medium text-foreground">{organizationName}</span>.
                     Redirigiendo al dashboard...
                 </p>
             </div>
@@ -93,12 +136,9 @@ export function AcceptInvitationClient({
                         </span>
                     )}
                 </div>
-                <h1 className="text-xl font-semibold">Invitación a un equipo</h1>
+                <h1 className="text-xl font-semibold">{headerTitle}</h1>
                 <p className="text-muted-foreground text-sm">
-                    {inviterName
-                        ? `${inviterName} te invitó a unirte a`
-                        : "Te invitaron a unirte a"
-                    }
+                    {headerSubtext}
                 </p>
                 <p className="text-lg font-semibold">{organizationName}</p>
             </div>
@@ -107,10 +147,10 @@ export function AcceptInvitationClient({
             <div className="rounded-lg bg-muted/30 border p-4 space-y-3">
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-2">
-                        <Shield className="w-4 h-4" />
-                        Rol asignado
+                        {isExternal ? <Briefcase className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                        {roleSectionTitle}
                     </span>
-                    <span className="font-medium">{roleName}</span>
+                    <span className="font-medium">{roleLabel}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-2">
@@ -158,7 +198,7 @@ export function AcceptInvitationClient({
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-                Al aceptar, te unirás como miembro de esta organización.
+                {footerText}
             </p>
         </div>
     );

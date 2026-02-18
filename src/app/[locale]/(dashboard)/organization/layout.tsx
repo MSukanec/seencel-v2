@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Organization Layout Guard
  * 
- * Redirects users without any organization to /organization/setup
+ * Redirects users without any organization to /workspace-setup
  * when they try to access any /organization/* route (except setup itself).
  * 
  * This is the Onboarding 2 guard: users who completed Onboarding 1 (name/lastname)
@@ -29,7 +29,7 @@ export default async function OrganizationLayout({
     // (unless they're already on the setup page — Next.js won't re-render this layout for setup)
     if (!activeOrgId && organizations.length === 0) {
         const { redirect } = await import('next/navigation');
-        return redirect('/organization/setup');
+        return redirect('/workspace-setup');
     }
 
     return <>{children}</>;

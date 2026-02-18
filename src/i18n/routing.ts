@@ -252,6 +252,10 @@ export const routing = defineRouting({
         '/admin/catalog/task/[taskId]': '/admin/catalog/task/[taskId]',
         '/admin/catalog/division/[divisionId]': '/admin/catalog/division/[divisionId]',
         '/admin/catalog/element/[elementId]': '/admin/catalog/element/[elementId]',
+        // Admin Directory
+        '/admin/directory': '/admin/directory',
+        '/admin/directory/[userId]': '/admin/directory/[userId]',
+        '/admin/directory/organizations/[orgId]': '/admin/directory/organizations/[orgId]',
 
         // ===== Documentation =====
         '/docs': {

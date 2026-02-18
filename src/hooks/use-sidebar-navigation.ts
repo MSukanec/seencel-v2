@@ -213,7 +213,7 @@ export function useSidebarNavigation() {
                     label: 'Directorio',
                     defaultOpen: true,
                     items: [
-                        { title: 'Usuarios', href: '/admin/directory', icon: Users },
+                        { title: 'Directorio', href: '/admin/directory', icon: Users },
                         { title: 'Actividad', href: '/admin/audit-logs', icon: ScrollText },
                         { title: 'Soporte', href: '/admin/support', icon: MessageCircle },
                     ],

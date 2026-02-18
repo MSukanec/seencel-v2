@@ -106,6 +106,8 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
                 organizationName={inv.organization_name}
                 organizationLogo={organizationLogo}
                 roleName={inv.role_name}
+                invitationType={inv.invitation_type}
+                actorType={inv.actor_type}
                 inviterName={inv.inviter_name}
                 email={inv.email}
                 isAuthenticated={!!authUser}

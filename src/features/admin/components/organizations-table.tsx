@@ -1,23 +1,44 @@
 "use client";
 
+import { useState } from "react";
 import { AdminOrganization } from "../queries";
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/shared/data-table/data-table";
+import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building, Building2, Clock, Users as UsersIcon, Sparkles, Eye, FolderKanban, Crown, Zap, Copy } from "lucide-react";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { ViewEmptyState } from "@/components/shared/empty-state";
+import { Link } from "@/i18n/routing";
+import {
+    Building, Building2, Clock, Users as UsersIcon, Sparkles,
+    Eye, FolderKanban, Crown, Zap, Copy, Pencil
+} from "lucide-react";
 import { useOrganizationStore } from "@/stores/organization-store";
 import { adminImpersonateOrg } from "@/actions/admin-impersonation-actions";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
-import { getStorageUrl } from "@/lib/storage-utils";
 import { toast } from "sonner";
+import { useModal } from "@/stores/modal-store";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface Plan {
+    id: string;
+    name: string;
+    slug: string | null;
+}
 
 interface OrganizationsTableProps {
     organizations: AdminOrganization[];
+    plans?: Plan[];
 }
 
-// Helper to get plan badge style
+// ============================================================================
+// HELPERS
+// ============================================================================
+
 function getPlanBadgeInfo(planName?: string | null) {
     const normalized = planName?.toLowerCase() || 'free';
 
@@ -32,9 +53,21 @@ function getPlanBadgeInfo(planName?: string | null) {
     }
 }
 
-export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
+function getStatusValue(org: AdminOrganization): string {
+    if (!org.is_active) return "inactive";
+    if (org.is_demo) return "demo";
+    if (org.settings?.is_founder) return "founder";
+    return "active";
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export function OrganizationsTable({ organizations, plans = [] }: OrganizationsTableProps) {
     const activeOrgId = useOrganizationStore(state => state.activeOrgId);
     const setImpersonating = useOrganizationStore(state => state.setImpersonating);
+    const { openModal } = useModal();
 
     const handleImpersonate = async (orgId: string, orgName: string) => {
         if (activeOrgId) {
@@ -44,11 +77,32 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
         await adminImpersonateOrg(orgId);
     };
 
+    const handleEditPlan = (org: AdminOrganization) => {
+        const OrgQuickEditForm = require("./forms/org-quick-edit-form").OrgQuickEditForm;
+        openModal(
+            <OrgQuickEditForm
+                orgId={org.id}
+                orgName={org.name}
+                currentPlanSlug={org.plan_slug}
+                plans={plans}
+            />,
+            {
+                title: "Editar Plan",
+                description: `Cambiar plan de ${org.name}`,
+                size: "sm"
+            }
+        );
+    };
+
+    // ========================================
+    // COLUMNS
+    // ========================================
+
     const columns: ColumnDef<AdminOrganization>[] = [
         // 1. Última Actividad
         {
             accessorKey: "last_activity_at",
-            header: "Última Actividad",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Última Actividad" />,
             size: 180,
             cell: ({ row }) => {
                 const lastActivity = row.original.last_activity_at
@@ -80,24 +134,26 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
                 );
             },
         },
-        // 2. Organización (avatar + nombre + propietario)
+        // 2. Organización (avatar + nombre + propietario) — clickable
         {
             accessorKey: "name",
-            header: "Organización",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Organización" />,
             cell: ({ row }) => {
                 const org = row.original;
-                const logoUrl = org.logo_url;
 
                 return (
-                    <div className="flex items-center gap-3">
+                    <Link
+                        href={{ pathname: "/admin/directory/organizations/[orgId]", params: { orgId: org.id } }}
+                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                    >
                         <Avatar className="h-9 w-9">
-                            <AvatarImage src={logoUrl || ""} alt={org.name} />
+                            <AvatarImage src={org.logo_url || ""} alt={org.name} />
                             <AvatarFallback className="uppercase">
                                 {org.name.substring(0, 2)}
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                            <span className="text-sm font-medium leading-none">
+                            <span className="text-sm font-medium leading-none underline-offset-4 hover:underline">
                                 {org.name}
                             </span>
                             <span className="text-xs text-muted-foreground mt-1">
@@ -109,14 +165,15 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
                                 }
                             </span>
                         </div>
-                    </div>
+                    </Link>
                 );
             },
+            enableHiding: false,
         },
         // 3. Miembros
         {
             accessorKey: "member_count",
-            header: "Miembros",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Miembros" />,
             size: 100,
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -128,7 +185,7 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
         // 4. Proyectos
         {
             accessorKey: "project_count",
-            header: "Proyectos",
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Proyectos" />,
             size: 100,
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -137,10 +194,14 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
                 </div>
             ),
         },
-        // 5. Plan
+        // 5. Plan (con filtro facetado)
         {
-            accessorKey: "plan_name",
-            header: "Plan",
+            id: "plan",
+            accessorFn: (row) => {
+                const planInfo = getPlanBadgeInfo(row.plan_name);
+                return planInfo.label;
+            },
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
             size: 120,
             cell: ({ row }) => {
                 const planInfo = getPlanBadgeInfo(row.original.plan_name);
@@ -151,11 +212,15 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
                     </Badge>
                 );
             },
+            filterFn: (row, id, value) => {
+                return value.includes(row.getValue(id));
+            },
         },
-        // 6. Estado (Founder, Demo, Inactivo)
+        // 6. Estado (con filtro facetado)
         {
-            accessorKey: "is_active",
-            header: "Estado",
+            id: "status",
+            accessorFn: (row) => getStatusValue(row),
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
             size: 150,
             cell: ({ row }) => {
                 const org = row.original;
@@ -179,46 +244,94 @@ export function OrganizationsTable({ organizations }: OrganizationsTableProps) {
                                 Inactivo
                             </Badge>
                         )}
+                        {org.is_active && !org.is_demo && !isFounder && (
+                            <Badge variant="outline" className="shadow-none font-normal text-emerald-600 border-emerald-500/20">
+                                Activo
+                            </Badge>
+                        )}
                     </div>
                 );
+            },
+            filterFn: (row, id, value) => {
+                return value.includes(row.getValue(id));
             },
         },
     ];
 
+    // ========================================
+    // FILTER OPTIONS
+    // ========================================
+
+    const planFilterOptions = [
+        { label: "Esencial", value: "Esencial" },
+        { label: "Profesional", value: "Profesional" },
+        { label: "Equipos", value: "Equipos" },
+        { label: "Empresa", value: "Empresa" },
+    ];
+
+    const statusFilterOptions = [
+        { label: "Activo", value: "active" },
+        { label: "Inactivo", value: "inactive" },
+        { label: "Demo", value: "demo" },
+        { label: "Fundador", value: "founder" },
+    ];
+
+    // ========================================
+    // RENDER
+    // ========================================
+
     if (!organizations || organizations.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground border border-dashed rounded-lg bg-muted/5">
-                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
-                    <Building className="h-6 w-6 text-muted-foreground/50" />
+            <>
+                <Toolbar portalToHeader />
+                <div className="h-full flex items-center justify-center">
+                    <ViewEmptyState
+                        mode="empty"
+                        icon={Building}
+                        viewName="Organizaciones"
+                        featureDescription="Las organizaciones registradas en la plataforma aparecerán aquí. Cada organización puede tener miembros, proyectos y un plan asociado."
+                    />
                 </div>
-                <p>No se encontraron organizaciones.</p>
-            </div>
+            </>
         );
     }
 
     return (
-        <DataTable
-            columns={columns}
-            data={organizations}
-            pageSize={20}
-            showPagination={true}
-            enableRowActions={true}
-            customActions={[
-                {
-                    label: "Copiar ID",
-                    icon: <Copy className="h-4 w-4" />,
-                    onClick: (org: AdminOrganization) => {
-                        navigator.clipboard.writeText(org.id);
-                        toast.success("ID copiado");
+        <>
+            <Toolbar portalToHeader />
+            <DataTable
+                columns={columns}
+                data={organizations}
+                searchPlaceholder="Buscar organizaciones..."
+                pageSize={20}
+                showPagination={true}
+                enableRowActions={true}
+                facetedFilters={[
+                    { columnId: "plan", title: "Plan", options: planFilterOptions },
+                    { columnId: "status", title: "Estado", options: statusFilterOptions },
+                ]}
+                customActions={[
+                    {
+                        label: "Copiar ID",
+                        icon: <Copy className="h-4 w-4" />,
+                        onClick: (org: AdminOrganization) => {
+                            navigator.clipboard.writeText(org.id);
+                            toast.success("ID copiado");
+                        },
                     },
-                },
-                {
-                    label: "Ver como esta org",
-                    icon: <Eye className="h-4 w-4" />,
-                    onClick: (org: AdminOrganization) => handleImpersonate(org.id, org.name),
-                },
-            ]}
-            initialSorting={[{ id: "last_activity_at", desc: true }]}
-        />
+                    {
+                        label: "Editar Plan",
+                        icon: <Pencil className="h-4 w-4" />,
+                        onClick: (org: AdminOrganization) => handleEditPlan(org),
+                    },
+                    {
+                        label: "Ver como esta org",
+                        icon: <Eye className="h-4 w-4" />,
+                        onClick: (org: AdminOrganization) => handleImpersonate(org.id, org.name),
+                    },
+                ]}
+                initialSorting={[{ id: "last_activity_at", desc: true }]}
+            />
+        </>
     );
 }

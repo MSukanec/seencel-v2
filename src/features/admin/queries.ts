@@ -1020,3 +1020,184 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     };
 }
 
+// ============================================================================
+// Organization Detail (Admin Organization Profile Page)
+// ============================================================================
+
+export interface AdminOrganizationDetail {
+    // Core org
+    id: string;
+    name: string;
+    logo_url: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    is_active: boolean;
+    is_deleted: boolean;
+    is_demo: boolean;
+    settings: { is_founder?: boolean; founder_since?: string; business_mode?: string } | null;
+    purchased_seats: number;
+    // Owner
+    owner_id: string | null;
+    owner_name: string | null;
+    owner_email: string | null;
+    owner_avatar_url: string | null;
+    // Plan
+    plan_id: string | null;
+    plan_name: string | null;
+    plan_slug: string | null;
+    // Counts
+    member_count: number;
+    project_count: number;
+    last_activity_at: string | null;
+    // Members list
+    members: {
+        id: string;
+        user_id: string;
+        full_name: string | null;
+        email: string;
+        avatar_url: string | null;
+        role_name: string | null;
+        is_active: boolean;
+        joined_at: string | null;
+    }[];
+    // Projects list
+    projects: {
+        id: string;
+        name: string;
+        status: string;
+        code: string | null;
+        color: string | null;
+        created_at: string;
+    }[];
+}
+
+export async function getAdminOrganizationDetail(orgId: string): Promise<AdminOrganizationDetail | null> {
+    const supabase = await createClient();
+
+    const [orgRes, membersRes, projectsRes] = await Promise.all([
+        // Get org from the admin view (includes owner, plan, counts)
+        supabase
+            .from('admin_organizations_view')
+            .select('*')
+            .eq('id', orgId)
+            .single(),
+        // Get members with user info
+        supabase
+            .from('organization_members')
+            .select(`
+                id,
+                user_id,
+                is_active,
+                joined_at,
+                roles (name),
+                users (
+                    full_name,
+                    email,
+                    avatar_url
+                )
+            `)
+            .eq('organization_id', orgId)
+            .eq('is_active', true)
+            .order('joined_at', { ascending: true }),
+        // Get projects
+        supabase
+            .from('projects')
+            .select('id, name, status, code, color, created_at')
+            .eq('organization_id', orgId)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false })
+            .limit(50),
+    ]);
+
+    if (orgRes.error || !orgRes.data) {
+        console.error("Error fetching org detail:", orgRes.error);
+        return null;
+    }
+
+    const org = orgRes.data as any;
+
+    // Get owner details separately (admin_organizations_view might not have avatar)
+    let ownerAvatarUrl: string | null = null;
+    if (org.owner_name || org.owner_email) {
+        const { data: ownerData } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('email', org.owner_email)
+            .maybeSingle();
+        ownerAvatarUrl = ownerData?.avatar_url || null;
+    }
+
+    const members = (membersRes.data || []).map((m: any) => ({
+        id: m.id,
+        user_id: m.user_id,
+        full_name: m.users?.full_name || null,
+        email: m.users?.email || '',
+        avatar_url: m.users?.avatar_url || null,
+        role_name: m.roles?.name || null,
+        is_active: m.is_active,
+        joined_at: m.joined_at,
+    }));
+
+    const projects = (projectsRes.data || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        code: p.code,
+        color: p.color,
+        created_at: p.created_at,
+    }));
+
+    return {
+        id: org.id,
+        name: org.name,
+        logo_url: org.logo_url,
+        created_at: org.created_at,
+        updated_at: org.updated_at,
+        is_active: org.is_active,
+        is_deleted: org.is_deleted,
+        is_demo: org.is_demo,
+        settings: org.settings,
+        purchased_seats: org.purchased_seats || 0,
+        owner_id: null, // Not available in view
+        owner_name: org.owner_name,
+        owner_email: org.owner_email,
+        owner_avatar_url: ownerAvatarUrl,
+        plan_id: null, // We use plan_slug for updates
+        plan_name: org.plan_name,
+        plan_slug: org.plan_slug,
+        member_count: org.member_count || 0,
+        project_count: org.project_count || 0,
+        last_activity_at: org.last_activity_at,
+        members,
+        projects,
+    };
+}
+
+// ============================================================================
+// Plans List (for Admin Quick Edit)
+// ============================================================================
+
+export interface AdminPlan {
+    id: string;
+    name: string;
+    slug: string | null;
+    is_active: boolean;
+    status: string;
+}
+
+export async function getPlansForAdmin(): Promise<AdminPlan[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('plans')
+        .select('id, name, slug, is_active, status')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching plans:", error);
+        return [];
+    }
+
+    return (data || []) as AdminPlan[];
+}

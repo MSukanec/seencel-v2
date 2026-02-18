@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-17T23:22:11.037Z
+> Generated: 2026-02-18T00:12:14.206Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -2324,7 +2324,9 @@ can_view_org(organization_id, 'billing.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-(is_deleted = false)
+((is_deleted = false) OR (owner_id = ( SELECT users.id
+   FROM users
+  WHERE (users.auth_id = auth.uid()))) OR is_admin())
 ```
 
 ### `payment_events` (2 policies)

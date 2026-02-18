@@ -54,13 +54,7 @@ export function AddExternalCollaboratorForm({ organizationId }: AddExternalFormP
             }
 
             closeModal();
-
-            if (result.directAdd) {
-                toast.success("Colaborador agregado correctamente");
-            } else {
-                toast.success("Se envió una invitación por email. Cuando se registre y la acepte, aparecerá como colaborador.");
-            }
-
+            toast.success("Se envió una invitación al colaborador por email.");
             router.refresh();
         } catch (error) {
             toast.error("Error inesperado al agregar colaborador");

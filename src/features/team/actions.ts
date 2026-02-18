@@ -181,6 +181,8 @@ export async function getInvitationByToken(
         email: string;
         status: string;
         expires_at: string | null;
+        invitation_type: string;
+        actor_type: string | null;
         organization_name: string;
         role_name: string;
         inviter_name: string | null;
@@ -205,6 +207,8 @@ export async function getInvitationByToken(
         email?: string;
         status?: string;
         expires_at?: string;
+        invitation_type?: string;
+        actor_type?: string;
         organization_name?: string;
         role_name?: string;
         inviter_name?: string;
@@ -221,12 +225,15 @@ export async function getInvitationByToken(
             email: result.email!,
             status: result.status!,
             expires_at: result.expires_at || null,
+            invitation_type: result.invitation_type || 'member',
+            actor_type: result.actor_type || null,
             organization_name: result.organization_name || 'Organización',
             role_name: result.role_name || 'Miembro',
             inviter_name: result.inviter_name || null,
         },
     };
 }
+
 
 /**
  * Revoke (cancel) a pending invitation.
@@ -413,90 +420,42 @@ export async function acceptInvitationAction(
         .eq('status', 'pending')
         .maybeSingle();
 
-    // Handle external invitation directly (skip RPC which is member-only)
+    // Handle external invitation via SECURITY DEFINER RPC
+    // (bypasses RLS since the user is not a member of the org yet)
     if (invitation?.invitation_type === 'external') {
-        // Check if already an external actor
-        const { data: existingActor } = await supabase
-            .from('organization_external_actors')
-            .select('id')
-            .eq('organization_id', invitation.organization_id)
-            .eq('user_id', publicUser.id)
-            .eq('is_active', true)
-            .maybeSingle();
+        const { data: result, error } = await supabase.rpc('accept_external_invitation', {
+            p_token: token,
+            p_user_id: publicUser.id,
+        });
 
-        if (existingActor) {
-            // Already external actor — just mark invitation as accepted
-            await supabase
-                .from('organization_invitations')
-                .update({ status: 'accepted' })
-                .eq('id', invitation.id);
+        if (error) {
+            console.error('Error accepting external invitation:', error);
+            return { success: false, error: sanitizeError(error) };
+        }
 
-            const { data: org } = await supabase
-                .from('organizations')
-                .select('name')
-                .eq('id', invitation.organization_id)
-                .single();
+        const res = result as {
+            success: boolean;
+            already_actor?: boolean;
+            organization_id?: string;
+            org_name?: string;
+            error?: string;
+            message?: string;
+        };
 
-            revalidatePath('/[locale]/organization', 'layout');
+        if (!res.success) {
             return {
-                success: true,
-                organizationId: invitation.organization_id,
-                orgName: org?.name || 'Organización',
-                alreadyMember: true,
+                success: false,
+                error: res.message || 'Error al aceptar la invitación',
             };
         }
-
-        // Insert as external actor
-        const { error: insertError } = await supabase
-            .from('organization_external_actors')
-            .insert({
-                organization_id: invitation.organization_id,
-                user_id: publicUser.id,
-                actor_type: invitation.actor_type,
-                is_active: true,
-            });
-
-        if (insertError) {
-            console.error('Error inserting external actor:', insertError);
-            return { success: false, error: 'Error al aceptar la invitación' };
-        }
-
-        // Mark invitation as accepted
-        await supabase
-            .from('organization_invitations')
-            .update({ status: 'accepted' })
-            .eq('id', invitation.id);
-
-        // Get org name
-        const { data: org } = await supabase
-            .from('organizations')
-            .select('name')
-            .eq('id', invitation.organization_id)
-            .single();
-
-        // Set user preferences
-        await supabase
-            .from('user_preferences')
-            .update({ last_organization_id: invitation.organization_id })
-            .eq('user_id', publicUser.id);
-
-        await supabase
-            .from('user_organization_preferences')
-            .upsert({
-                user_id: publicUser.id,
-                organization_id: invitation.organization_id,
-                updated_at: new Date().toISOString()
-            }, {
-                onConflict: 'user_id, organization_id'
-            });
 
         revalidatePath('/[locale]/organization', 'layout');
 
         return {
             success: true,
-            organizationId: invitation.organization_id,
-            orgName: org?.name || 'Organización',
-            alreadyMember: false,
+            organizationId: res.organization_id,
+            orgName: res.org_name,
+            alreadyMember: res.already_actor || false,
         };
     }
 
@@ -916,15 +875,15 @@ export async function purchaseMemberSeats(
 
 
 /**
- * Add an external collaborator to the organization.
- * If the user exists in Seencel → insert directly into organization_external_actors.
- * If the user doesn't exist → create an external invitation and send email.
+ * Add an external collaborator/client to the organization.
+ * ALWAYS creates an invitation — the user must accept before being added.
+ * Notifies via: email (always), in-app modal (if user exists), campanita (if user exists).
  */
 export async function addExternalCollaboratorAction(
     organizationId: string,
     email: string,
     actorType: string
-): Promise<{ success: boolean; directAdd?: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
     // 1. Auth
@@ -990,12 +949,26 @@ export async function addExternalCollaboratorAction(
         return { success: false, error: 'Ya existe una invitación pendiente para este email' };
     }
 
-    // 6. Check if user exists in Seencel
+    // 6. Check if user exists in Seencel (for notification purposes)
     const { data: existingUser } = await supabase
         .from('users')
         .select('id, full_name, email')
         .eq('email', normalizedEmail)
         .maybeSingle();
+
+    // 6b. If user exists, check if already an active external actor
+    if (existingUser) {
+        const { data: existingActor } = await supabase
+            .from('organization_external_actors')
+            .select('id, is_active')
+            .eq('organization_id', organizationId)
+            .eq('user_id', existingUser.id)
+            .maybeSingle();
+
+        if (existingActor?.is_active) {
+            return { success: false, error: 'Este usuario ya es colaborador externo de la organización' };
+        }
+    }
 
     // Get org name for emails/toasts
     const { data: org } = await supabase
@@ -1007,56 +980,11 @@ export async function addExternalCollaboratorAction(
     const orgName = org?.name || 'la organización';
     const inviterName = currentUser.full_name || currentUser.email || 'Un administrador';
 
-    if (existingUser) {
-        // User exists → check if already external actor
-        const { data: existingActor } = await supabase
-            .from('organization_external_actors')
-            .select('id, is_active')
-            .eq('organization_id', organizationId)
-            .eq('user_id', existingUser.id)
-            .maybeSingle();
-
-        if (existingActor?.is_active) {
-            return { success: false, error: 'Este usuario ya es colaborador externo de la organización' };
-        }
-
-        if (existingActor && !existingActor.is_active) {
-            // Reactivate
-            const { error: updateError } = await supabase
-                .from('organization_external_actors')
-                .update({ is_active: true, actor_type: actorType, is_deleted: false, deleted_at: null })
-                .eq('id', existingActor.id);
-
-            if (updateError) {
-                console.error('Error reactivating external actor:', updateError);
-                return { success: false, error: 'Error al reactivar colaborador' };
-            }
-        } else {
-            // Insert directly
-            const { error: insertError } = await supabase
-                .from('organization_external_actors')
-                .insert({
-                    organization_id: organizationId,
-                    user_id: existingUser.id,
-                    actor_type: actorType,
-                    is_active: true,
-                });
-
-            if (insertError) {
-                console.error('Error inserting external actor:', insertError);
-                return { success: false, error: 'Error al agregar colaborador' };
-            }
-        }
-
-        revalidatePath('/organization/team', 'page');
-        return { success: true, directAdd: true };
-    }
-
-    // 7. User doesn't exist → create invitation and send email
+    // 7. ALWAYS create invitation — user must accept
     const token = randomUUID();
     const actorLabel = EXTERNAL_ACTOR_TYPE_LABELS[actorType]?.label || 'Colaborador';
 
-    const { error: insertError } = await supabase
+    const { data: invitationData, error: insertError } = await supabase
         .from('organization_invitations')
         .insert({
             organization_id: organizationId,
@@ -1067,18 +995,19 @@ export async function addExternalCollaboratorAction(
             status: 'pending',
             invitation_type: 'external',
             actor_type: actorType,
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days for externals
-        });
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+        })
+        .select('id')
+        .single();
 
     if (insertError) {
         console.error('Error inserting external invitation:', insertError);
         return { success: false, error: 'Error al crear la invitación' };
     }
 
-    // Send invitation email
+    // 8. Send invitation email ALWAYS
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://seencel.com';
     const acceptUrl = `${baseUrl}/invite/accept?token=${token}`;
-
     const emailSubject = `${inviterName} te invitó a colaborar en ${orgName}`;
 
     try {
@@ -1099,8 +1028,41 @@ export async function addExternalCollaboratorAction(
         // Don't fail — invitation was created
     }
 
+    // 9. If user exists in Seencel → create in-app notification (campanita)
+    // The modal (PendingInvitationOverlay) is handled automatically by PendingInvitationChecker
+    if (existingUser) {
+        try {
+            const { data: notif } = await supabase
+                .from('notifications')
+                .insert({
+                    type: 'invitation',
+                    title: `Te invitaron a ${orgName}`,
+                    body: `${inviterName} te invitó como ${actorLabel}. Aceptá la invitación para unirte.`,
+                    data: {
+                        invitation_id: invitationData?.id,
+                        organization_id: organizationId,
+                        actor_type: actorType,
+                    },
+                })
+                .select('id')
+                .single();
+
+            if (notif) {
+                await supabase
+                    .from('user_notifications')
+                    .insert({
+                        user_id: existingUser.id,
+                        notification_id: notif.id,
+                    });
+            }
+        } catch (notifError) {
+            console.error('Error creating in-app notification:', notifError);
+            // Don't fail — invitation + email were already sent
+        }
+    }
+
     revalidatePath('/organization/team', 'page');
-    return { success: true, directAdd: false };
+    return { success: true };
 }
 
 /**
