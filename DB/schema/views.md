@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Views (77)
+## Views (70)
 
 ### `admin_organizations_view`
 
@@ -97,13 +97,13 @@ SELECT ( SELECT count(*) AS count
 ### `analytics_hourly_activity_view`
 
 ```sql
-SELECT EXTRACT(hour FROM up.last_seen_at) AS hour_of_day,
+SELECT (EXTRACT(hour FROM h.entered_at))::integer AS hour_of_day,
     count(*) AS activity_count
-   FROM (user_presence up
-     JOIN users u ON ((u.id = up.user_id)))
-  WHERE ((up.last_seen_at > (now() - '7 days'::interval)) AND (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))
-  GROUP BY (EXTRACT(hour FROM up.last_seen_at))
-  ORDER BY (EXTRACT(hour FROM up.last_seen_at));
+   FROM (user_view_history h
+     JOIN users u ON ((u.id = h.user_id)))
+  WHERE ((h.entered_at > (now() - '7 days'::interval)) AND (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))
+  GROUP BY (EXTRACT(hour FROM h.entered_at))
+  ORDER BY (EXTRACT(hour FROM h.entered_at));
 ```
 
 ### `analytics_page_engagement_view`
@@ -140,33 +140,6 @@ SELECT round(avg(sessions.total_duration), 0) AS avg_duration_seconds,
              JOIN users u ON ((u.id = h.user_id)))
           WHERE ((h.session_id IS NOT NULL) AND (h.duration_seconds IS NOT NULL) AND (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))
           GROUP BY h.session_id) sessions;
-```
-
-### `analytics_session_quality_view`
-
-```sql
-WITH session_stats AS (
-         SELECT h.session_id,
-            h.user_id,
-            min(h.entered_at) AS session_start,
-            max(h.exited_at) AS session_end,
-            count(*) AS views_count,
-            sum(h.duration_seconds) AS total_duration
-           FROM (user_view_history h
-             JOIN users u ON ((u.id = h.user_id)))
-          WHERE ((h.session_id IS NOT NULL) AND (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))
-          GROUP BY h.session_id, h.user_id
-        )
- SELECT session_stats.session_id,
-    session_stats.user_id,
-    session_stats.session_start,
-    session_stats.total_duration,
-    session_stats.views_count,
-        CASE
-            WHEN ((session_stats.views_count = 1) AND (session_stats.total_duration < 10)) THEN true
-            ELSE false
-        END AS is_bounce
-   FROM session_stats;
 ```
 
 ### `analytics_top_users_view`
@@ -547,6 +520,8 @@ SELECT cp.id,
     cp.created_at,
     cp.created_by,
     cp.schedule_id,
+    cp.updated_at,
+    cp.is_deleted,
     date_trunc('month'::text, (cp.payment_date)::timestamp with time zone) AS payment_month,
     pcv.contact_full_name AS client_name,
     pcv.contact_first_name AS client_first_name,
@@ -564,8 +539,11 @@ SELECT cp.id,
     cc.concept AS commitment_concept,
     cps.notes AS schedule_notes,
     u.full_name AS creator_full_name,
-    u.avatar_url AS creator_avatar_url
-   FROM ((((((((client_payments cp
+    u.avatar_url AS creator_avatar_url,
+    p.name AS project_name,
+    p.image_url AS project_image_url,
+    p.color AS project_color
+   FROM (((((((((client_payments cp
      LEFT JOIN project_clients_view pcv ON ((pcv.id = cp.client_id)))
      LEFT JOIN organization_wallets ow ON ((ow.id = cp.wallet_id)))
      LEFT JOIN wallets w ON ((w.id = ow.wallet_id)))
@@ -574,6 +552,7 @@ SELECT cp.id,
      LEFT JOIN client_payment_schedule cps ON ((cps.id = cp.schedule_id)))
      LEFT JOIN organization_members om ON ((om.id = cp.created_by)))
      LEFT JOIN users u ON ((u.id = om.user_id)))
+     LEFT JOIN projects p ON ((p.id = cp.project_id)))
   WHERE (cp.is_deleted = false);
 ```
 
@@ -700,7 +679,16 @@ SELECT c.id,
           WHERE ((ccl.contact_id = c.id) AND (cc.is_deleted = false))), '[]'::json) AS contact_categories,
     (EXISTS ( SELECT 1
            FROM organization_members om
-          WHERE ((om.user_id = c.linked_user_id) AND (om.organization_id = c.organization_id)))) AS is_organization_member
+          WHERE ((om.user_id = c.linked_user_id) AND (om.organization_id = c.organization_id)))) AS is_organization_member,
+    ( SELECT r.name
+           FROM (organization_members om
+             JOIN roles r ON ((r.id = om.role_id)))
+          WHERE ((om.user_id = c.linked_user_id) AND (om.organization_id = c.organization_id) AND (om.is_active = true))
+         LIMIT 1) AS member_role_name,
+    ( SELECT oea.actor_type
+           FROM organization_external_actors oea
+          WHERE ((oea.user_id = c.linked_user_id) AND (oea.organization_id = c.organization_id) AND (oea.is_active = true) AND (oea.is_deleted = false))
+         LIMIT 1) AS external_actor_type
    FROM ((contacts c
      LEFT JOIN users u ON ((u.id = c.linked_user_id)))
      LEFT JOIN contacts company ON (((company.id = c.company_id) AND (company.is_deleted = false))))
@@ -1440,7 +1428,7 @@ SELECT om.id,
 ### `organization_online_users`
 
 ```sql
-SELECT up.org_id,
+SELECT up.organization_id AS org_id,
     up.user_id,
     up.last_seen_at,
     ((now() - up.last_seen_at) <= '00:01:30'::interval) AS is_online
@@ -1489,6 +1477,74 @@ SELECT ow.id,
     w.created_at AS wallet_created_at
    FROM (organization_wallets ow
      LEFT JOIN wallets w ON ((ow.wallet_id = w.id)));
+```
+
+### `organizations_view`
+
+```sql
+SELECT o.id,
+    o.name,
+    o.logo_url,
+    o.owner_id,
+    o.plan_id,
+    o.is_active,
+    o.is_deleted,
+    o.deleted_at,
+    o.is_demo,
+    o.business_mode,
+    o.settings,
+    o.created_at,
+    o.updated_at,
+    o.created_by,
+    o.purchased_seats,
+    p.name AS plan_name,
+    p.slug AS plan_slug,
+    p.features AS plan_features,
+    u.full_name AS owner_name,
+    u.email AS owner_email,
+    ( SELECT (count(*))::integer AS count
+           FROM organization_members om
+          WHERE ((om.organization_id = o.id) AND (om.is_active = true))) AS active_members_count
+   FROM ((organizations o
+     LEFT JOIN plans p ON ((o.plan_id = p.id)))
+     LEFT JOIN users u ON ((o.owner_id = u.id)));
+```
+
+### `project_access_view`
+
+```sql
+SELECT pa.id,
+    pa.project_id,
+    pa.organization_id,
+    pa.user_id,
+    pa.access_type,
+    pa.access_level,
+    pa.granted_by,
+    pa.client_id,
+    pa.is_active,
+    pa.created_at,
+    pa.updated_at,
+    pa.is_deleted,
+    u.full_name AS user_full_name,
+    u.email AS user_email,
+    u.avatar_url AS user_avatar_url,
+    c.id AS contact_id,
+    c.full_name AS contact_full_name,
+    c.email AS contact_email,
+    c.phone AS contact_phone,
+    c.company_name AS contact_company_name,
+    c.image_url AS contact_image_url,
+    COALESCE(u.avatar_url, c.image_url) AS resolved_avatar_url,
+    gm_u.full_name AS granted_by_name,
+    pc_c.full_name AS client_name
+   FROM ((((((project_access pa
+     LEFT JOIN users u ON ((u.id = pa.user_id)))
+     LEFT JOIN contacts c ON (((c.linked_user_id = pa.user_id) AND (c.organization_id = pa.organization_id) AND (c.is_deleted = false))))
+     LEFT JOIN organization_members gm ON ((gm.id = pa.granted_by)))
+     LEFT JOIN users gm_u ON ((gm_u.id = gm.user_id)))
+     LEFT JOIN project_clients pc ON ((pc.id = pa.client_id)))
+     LEFT JOIN contacts pc_c ON ((pc_c.id = pc.contact_id)))
+  WHERE (pa.is_deleted = false);
 ```
 
 ### `project_clients_view`
@@ -2239,155 +2295,6 @@ UNION ALL
      LEFT JOIN organization_members om_created ON ((om_created.id = fo.created_by)))
      LEFT JOIN users u_created ON ((u_created.id = om_created.user_id)))
   WHERE ((fo.type = 'wallet_transfer'::text) AND (fo.is_deleted = false));
-```
-
-### `user_acquisition_distribution_view`
-
-```sql
-SELECT COALESCE(NULLIF(ua.source, ''::text), NULLIF(ua.medium, ''::text), 'directo'::text) AS acquisition_source,
-    count(*) AS user_count
-   FROM user_acquisition ua
-  WHERE (NOT (ua.user_id IN ( SELECT users.id
-           FROM users
-          WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))))
-  GROUP BY COALESCE(NULLIF(ua.source, ''::text), NULLIF(ua.medium, ''::text), 'directo'::text)
-  ORDER BY (count(*)) DESC
- LIMIT 6;
-```
-
-### `user_drop_off_view`
-
-```sql
-SELECT uvh.user_id,
-    u.full_name,
-    u.avatar_url,
-    count(*) AS session_count,
-    (round((sum(COALESCE(uvh.duration_seconds, 0)))::numeric, 0))::integer AS total_seconds
-   FROM (user_view_history uvh
-     JOIN users u ON ((u.id = uvh.user_id)))
-  WHERE (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)
-  GROUP BY uvh.user_id, u.full_name, u.avatar_url
- HAVING (count(*) <= 2)
-  ORDER BY (count(*))
- LIMIT 8;
-```
-
-### `user_engagement_by_view_view`
-
-```sql
-SELECT user_view_history.view_name,
-    count(*) AS session_count,
-    (round(avg(COALESCE(user_view_history.duration_seconds, 0)), 0))::integer AS avg_duration_seconds,
-    (round((avg(COALESCE(user_view_history.duration_seconds, 0)) / 60.0), 2))::double precision AS avg_duration_minutes,
-    max(user_view_history.entered_at) AS last_activity_at
-   FROM user_view_history
-  WHERE ((NOT (user_view_history.user_id IN ( SELECT users.id
-           FROM users
-          WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)))) AND (user_view_history.duration_seconds IS NOT NULL))
-  GROUP BY user_view_history.view_name
-  ORDER BY ((round(avg(COALESCE(user_view_history.duration_seconds, 0)), 0))::integer) DESC;
-```
-
-### `user_hourly_activity_view`
-
-```sql
-SELECT (EXTRACT(hour FROM user_view_history.entered_at))::integer AS hour,
-    (lpad((EXTRACT(hour FROM user_view_history.entered_at))::text, 2, '0'::text) || ':00'::text) AS hour_label,
-    count(*) AS session_count
-   FROM user_view_history
-  WHERE (NOT (user_view_history.user_id IN ( SELECT users.id
-           FROM users
-          WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))))
-  GROUP BY (EXTRACT(hour FROM user_view_history.entered_at))
-  ORDER BY ((EXTRACT(hour FROM user_view_history.entered_at))::integer);
-```
-
-### `user_monthly_growth_view`
-
-```sql
-SELECT to_char(users.created_at, 'YYYY-MM'::text) AS month,
-    count(*) AS new_users
-   FROM users
-  WHERE (users.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)
-  GROUP BY (to_char(users.created_at, 'YYYY-MM'::text))
-  ORDER BY (to_char(users.created_at, 'YYYY-MM'::text));
-```
-
-### `user_presence_activity_view`
-
-```sql
-SELECT up.user_id,
-    u.full_name,
-    u.avatar_url,
-    up.last_seen_at,
-    up.current_view,
-    up.status
-   FROM (user_presence up
-     JOIN users u ON ((u.id = up.user_id)))
-  WHERE (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)
-  ORDER BY up.last_seen_at DESC
- LIMIT 20;
-```
-
-### `user_stats_summary_view`
-
-```sql
-SELECT (( SELECT count(*) AS count
-           FROM organizations
-          WHERE (organizations.is_deleted = false)))::integer AS total_organizations,
-    (( SELECT count(*) AS count
-           FROM organizations
-          WHERE ((organizations.is_deleted = false) AND (organizations.is_active = true))))::integer AS active_organizations,
-    (( SELECT count(*) AS count
-           FROM organizations
-          WHERE ((organizations.is_deleted = false) AND (organizations.created_at >= date_trunc('month'::text, now())))))::integer AS new_organizations_this_month,
-    (( SELECT count(DISTINCT users.id) AS count
-           FROM users
-          WHERE (users.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)))::integer AS total_users,
-    (( SELECT count(DISTINCT user_presence.user_id) AS count
-           FROM user_presence
-          WHERE ((user_presence.last_seen_at >= (now() - '00:01:30'::interval)) AND (NOT (user_presence.user_id IN ( SELECT users.id
-                   FROM users
-                  WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)))))))::integer AS active_users_now,
-    (( SELECT count(DISTINCT user_view_history.user_id) AS count
-           FROM user_view_history
-          WHERE ((user_view_history.entered_at >= date_trunc('day'::text, now())) AND (NOT (user_view_history.user_id IN ( SELECT users.id
-                   FROM users
-                  WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)))))))::integer AS active_users_today,
-    (( SELECT count(DISTINCT users.id) AS count
-           FROM users
-          WHERE ((users.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid) AND (users.created_at >= date_trunc('month'::text, now())))))::integer AS new_users_this_month,
-    (( SELECT count(*) AS count
-           FROM projects))::integer AS total_projects,
-    (( SELECT count(*) AS count
-           FROM projects
-          WHERE (projects.created_at >= date_trunc('month'::text, now()))))::integer AS new_projects_this_month,
-    (( SELECT count(DISTINCT user_view_history.user_id) AS count
-           FROM user_view_history
-          WHERE ((user_view_history.entered_at >= date_trunc('day'::text, now())) AND (NOT (user_view_history.user_id IN ( SELECT users.id
-                   FROM users
-                  WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)))))))::integer AS sessions_today,
-    COALESCE((round(avg(COALESCE(uvh.duration_seconds, 0)), 0))::integer, 0) AS avg_session_duration
-   FROM user_view_history uvh
-  WHERE ((date(uvh.entered_at) = CURRENT_DATE) AND (NOT (uvh.user_id IN ( SELECT users.id
-           FROM users
-          WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)))));
-```
-
-### `user_top_performers_view`
-
-```sql
-SELECT uvh.user_id,
-    u.full_name,
-    u.avatar_url,
-    count(*) AS session_count,
-    (round((sum(COALESCE(uvh.duration_seconds, 0)))::numeric, 0))::integer AS total_seconds
-   FROM (user_view_history uvh
-     JOIN users u ON ((u.id = uvh.user_id)))
-  WHERE (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid)
-  GROUP BY uvh.user_id, u.full_name, u.avatar_url
-  ORDER BY (count(*)) DESC
- LIMIT 8;
 ```
 
 ### `users_public_profile_view`

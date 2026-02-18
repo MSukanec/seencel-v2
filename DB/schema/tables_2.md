@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 2: course_details — founder_vote_ballots)
+## Tables (chunk 2: course_details — founder_portal_events)
 
 ### `course_details`
 
@@ -254,6 +254,15 @@
 | updated_at | timestamptz | ✗ | now() |  |
 | created_at | timestamptz | ✗ | now() |  |
 
+### `external_actor_scopes`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| external_actor_id | uuid | ✗ |  | UNIQUE, FK → organization_external_actors.id |
+| permission_key | text | ✗ |  | UNIQUE |
+| created_at | timestamptz | ✗ | now() |  |
+
 ### `external_service_prices`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -435,14 +444,3 @@
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
 | is_deleted | bool | ✓ | false |  |
-
-### `founder_vote_ballots`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| topic_id | uuid | ✗ |  | UNIQUE, FK → founder_vote_topics.id |
-| option_id | uuid | ✗ |  | FK → founder_vote_options.id |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
-| voted_at | timestamptz | ✓ | now() |  |

@@ -5,12 +5,10 @@ import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Combobox } from "@/components/ui/combobox";
-import { formatDateForDB } from "@/lib/timezone-data";
+import { formatDateForDB, parseDateFromDB } from "@/lib/timezone-data";
 import { createPaymentAction, updatePaymentAction, getCommitmentsByClientAction } from "@/features/clients/actions";
 import { MultiFileUpload, type UploadedFile, type MultiFileUploadRef } from "@/components/shared/multi-file-upload";
-import { OrganizationFinancialData } from "../../types";
+import { OrganizationFinancialData } from "../types";
 
 // Form Field Factories - Standard 19.10
 import {
@@ -22,6 +20,8 @@ import {
     ExchangeRateField,
     NotesField,
     ReferenceField,
+    SelectField,
+    ContactField,
 } from "@/components/shared/forms/fields";
 
 interface ClientsPaymentFormProps {
@@ -54,7 +54,7 @@ export function ClientsPaymentForm({
 
     // Form State
     const [date, setDate] = useState<Date | undefined>(
-        initialData?.payment_date ? new Date(initialData.payment_date) : new Date()
+        initialData?.payment_date ? parseDateFromDB(initialData.payment_date) ?? new Date() : new Date()
     );
     const [clientId, setClientId] = useState(initialData?.client_id || "");
     const [walletId, setWalletId] = useState(initialData?.wallet_id || defaultWalletId || "");
@@ -69,7 +69,7 @@ export function ClientsPaymentForm({
     const [loadingCommitments, setLoadingCommitments] = useState(false);
 
     // Project state for organization context
-    const [selectedProjectId, setSelectedProjectId] = useState(externalProjectId || "");
+    const [selectedProjectId, setSelectedProjectId] = useState(externalProjectId || initialData?.project_id || "");
     const projectId = externalProjectId || selectedProjectId;
 
     // Filter clients by selected project
@@ -109,13 +109,20 @@ export function ClientsPaymentForm({
             }] : []
     );
 
+    // Track if this is the initial load for commitments (to preserve initialData.commitment_id)
+    const isInitialCommitmentLoad = useRef(true);
+
     useEffect(() => {
         if (clientId) {
             setLoadingCommitments(true);
             getCommitmentsByClientAction(clientId)
                 .then(data => {
                     setCommitments(data);
-                    if (data && data.length > 0) {
+                    // On initial load in edit mode, preserve the original commitmentId
+                    if (isInitialCommitmentLoad.current && initialData?.commitment_id) {
+                        isInitialCommitmentLoad.current = false;
+                        setCommitmentId(initialData.commitment_id);
+                    } else if (data && data.length > 0) {
                         const sorted = [...data].sort((a, b) => {
                             const dateA = new Date(a.created_at || 0).getTime();
                             const dateB = new Date(b.created_at || 0).getTime();
@@ -232,67 +239,58 @@ export function ClientsPaymentForm({
                     />
 
                     {/* Estado */}
-                    <FormGroup label="Estado" required>
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="confirmed">Confirmado</SelectItem>
-                                <SelectItem value="pending">Pendiente</SelectItem>
-                                <SelectItem value="rejected">Rechazado</SelectItem>
-                                <SelectItem value="void">Anulado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <SelectField
+                        label="Estado"
+                        required
+                        value={status}
+                        onChange={setStatus}
+                        options={[
+                            { value: "confirmed", label: "Confirmado" },
+                            { value: "pending", label: "Pendiente" },
+                            { value: "rejected", label: "Rechazado" },
+                            { value: "void", label: "Anulado" },
+                        ]}
+                    />
 
                     {/* Cliente */}
-                    <FormGroup label="Cliente" required>
-                        <Combobox
-                            value={clientId}
-                            onValueChange={setClientId}
-                            disabled={showProjectSelector && !projectId}
-                            options={filteredClients
-                                .sort((a, b) => (a.contact_full_name || "").localeCompare(b.contact_full_name || ""))
-                                .map((client) => ({
-                                    value: client.id,
-                                    label: client.contact_full_name || "Cliente sin nombre",
-                                    image: client.contact_avatar_url || null,
-                                    fallback: (client.contact_full_name || "C").substring(0, 2).toUpperCase()
-                                }))
-                            }
-                            placeholder={showProjectSelector && !projectId ? "Seleccioná un proyecto primero" : "Seleccionar cliente"}
-                            searchPlaceholder="Buscar cliente..."
-                            emptyMessage="No se encontró el cliente."
-                        />
-                    </FormGroup>
+                    <ContactField
+                        label="Cliente"
+                        required
+                        value={clientId}
+                        onChange={setClientId}
+                        disabled={showProjectSelector && !projectId}
+                        placeholder={showProjectSelector && !projectId ? "Seleccioná un proyecto primero" : "Seleccionar cliente"}
+                        searchPlaceholder="Buscar cliente..."
+                        emptyMessage="No se encontró el cliente."
+                        allowNone={false}
+                        contacts={filteredClients.map((client) => ({
+                            id: client.id,
+                            name: client.contact_full_name || "Cliente sin nombre",
+                            avatar_url: client.contact_avatar_url || null,
+                            company_name: client.contact_company_name || null,
+                        }))}
+                    />
 
                     {/* Compromiso */}
-                    <FormGroup label="Compromiso">
-                        <Select
-                            disabled={!clientId || loadingCommitments}
-                            value={commitmentId || "none"}
-                            onValueChange={(v) => setCommitmentId(v === "none" ? "" : v)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder={
-                                    !clientId
-                                        ? "Selecciona un cliente primero"
-                                        : loadingCommitments
-                                            ? "Cargando..."
-                                            : "Seleccionar compromiso"
-                                } />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Sin compromiso</SelectItem>
-                                {commitments.map((c: any) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                        {c.concept || c.unit_description || c.unit_name || "Compromiso"} - {c.currency?.symbol}{c.amount}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    <SelectField
+                        label="Compromiso"
+                        value={commitmentId || "none"}
+                        onChange={(v) => setCommitmentId(v === "none" ? "" : v)}
+                        disabled={!clientId || loadingCommitments}
+                        loading={loadingCommitments}
+                        placeholder={
+                            !clientId
+                                ? "Seleccioná un cliente primero"
+                                : "Seleccionar compromiso"
+                        }
+                        options={[
+                            { value: "none", label: "Sin compromiso" },
+                            ...commitments.map((c: any) => ({
+                                value: c.id,
+                                label: `${c.concept || c.unit_description || c.unit_name || "Compromiso"} - ${c.currency?.symbol || ""}${c.amount}`,
+                            })),
+                        ]}
+                    />
 
                     {/* Billetera */}
                     <WalletField

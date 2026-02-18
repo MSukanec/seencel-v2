@@ -1,9 +1,19 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 6: pin_boards — system_job_logs)
+## Tables (chunk 6: pin_board_items — support_messages)
+
+### `pin_board_items`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| board_id | uuid | ✗ |  | UNIQUE, FK → pin_boards.id |
+| pin_id | uuid | ✗ |  | UNIQUE, FK → pins.id |
+| position | int4 | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
 
 ### `pin_boards`
 
@@ -84,6 +94,24 @@
 | url | text | ✓ |  |  |
 | is_system | bool | ✓ | true |  |
 | organization_id | uuid | ✓ |  | FK → organizations.id |
+
+### `project_access`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✗ |  | UNIQUE, FK → projects.id |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| access_type | text | ✗ |  |  |
+| access_level | text | ✗ | 'viewer'::text |  |
+| granted_by | uuid | ✓ |  | FK → organization_members.id |
+| is_active | bool | ✗ | true |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| client_id | uuid | ✓ |  | FK → project_clients.id |
 
 ### `project_clients`
 
@@ -498,29 +526,3 @@
 | created_at | timestamptz | ✓ | now() |  |
 | read_by_admin | bool | ✗ | false |  |
 | read_by_user | bool | ✗ | false |  |
-
-### `system_error_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| domain | text | ✗ |  |  |
-| entity | text | ✗ |  |  |
-| function_name | text | ✗ |  |  |
-| error_message | text | ✗ |  |  |
-| context | jsonb | ✓ |  |  |
-| severity | text | ✗ | 'error'::text |  |
-| created_at | timestamptz | ✗ | now() |  |
-
-### `system_job_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| subscription_id | uuid | ✓ |  |  |
-| job_type | text | ✗ |  |  |
-| details | jsonb | ✓ |  |  |
-| status | text | ✗ |  |  |
-| error_message | text | ✓ |  |  |
-| processed_at | timestamptz | ✓ | now() |  |

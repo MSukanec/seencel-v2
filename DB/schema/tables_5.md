@@ -1,9 +1,21 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 5: ops_repair_actions — pin_board_items)
+## Tables (chunk 5: ops_check_runs — personnel_rates)
+
+### `ops_check_runs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| created_at | timestamptz | ✗ | now() |  |
+| check_suite | text | ✗ | 'ops_core'::text |  |
+| status | text | ✗ | 'success'::text |  |
+| duration_ms | int4 | ✓ |  |  |
+| stats | jsonb | ✗ | '{}'::jsonb |  |
+| error_message | text | ✓ |  |  |
 
 ### `ops_repair_actions`
 
@@ -146,6 +158,8 @@
 | expires_at | timestamptz | ✓ | (now() + '7 days'::interval) |  |
 | invitation_type | text | ✗ | 'member'::text |  |
 | actor_type | text | ✓ |  |  |
+| project_id | uuid | ✓ |  | FK → projects.id |
+| client_id | uuid | ✓ |  | FK → project_clients.id |
 
 ### `organization_material_prices`
 
@@ -529,13 +543,3 @@
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✗ | now() |  |
 | pay_type | text | ✗ | 'hour'::text |  |
-
-### `pin_board_items`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| board_id | uuid | ✗ |  | UNIQUE, FK → pin_boards.id |
-| pin_id | uuid | ✗ |  | UNIQUE, FK → pins.id |
-| position | int4 | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |

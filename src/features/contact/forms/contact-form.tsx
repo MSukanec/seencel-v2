@@ -1,21 +1,35 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContactWithRelations, ContactCategory, ContactType } from "@/types/contact";
 import { useModal } from "@/stores/modal-store";
+import { useRouter } from "@/i18n/routing";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TextField, NotesField, SegmentedField } from "@/components/shared/forms/fields";
 import { FormGroup } from "@/components/ui/form-group";
 import { FactoryLabel } from "@/components/shared/forms/fields/field-wrapper";
 import { Label } from "@/components/ui/label";
-import { User, Building2, ChevronDown, X } from "lucide-react";
+import { User, Building2, ChevronDown, X, Loader2, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+/** Traducción de actor_type a label legible */
+const ACTOR_TYPE_LABELS: Record<string, string> = {
+    client: "Cliente",
+    field_worker: "Trabajador de Campo",
+    accountant: "Contador",
+    external_site_manager: "Director de Obra Externo",
+    subcontractor_portal_user: "Subcontratista",
+};
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Combobox } from "@/components/ui/combobox";
+import { toast } from "sonner";
 
 import { ContactAvatarManager } from "@/features/contact/components/contact-avatar-manager";
+import { createContact, updateContact, getContactCategories, checkSeencelUser } from "@/actions/contacts";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 const CONTACT_TYPE_OPTIONS = [
     { value: "person" as const, label: "Persona", icon: User },
@@ -28,22 +42,101 @@ export interface CompanyOption {
     name: string;
 }
 
+// ============================================================================
+// Props — Minimal: el form fetchea sus datos auxiliares internamente
+// ============================================================================
+
 interface ContactFormProps {
     organizationId: string;
-    contactCategories: ContactCategory[];
-    /** Available company contacts for linking */
-    companyContacts?: CompanyOption[];
+    /** If provided, form is in EDIT mode */
     initialData?: ContactWithRelations;
-    /** 🚀 Optimistic callback: parent handles server call + optimistic UI */
+    /** Simple callback after successful create/update — parent does refresh */
+    onSuccess?: () => void;
+
+    // ── Legacy props (backward compat) ──────────────────────────────────
+    // Cuando se pasan, se usan directamente en vez de fetchear.
+    // Esto permite que las vistas existentes sigan funcionando sin cambios.
+    contactCategories?: ContactCategory[];
+    companyContacts?: CompanyOption[];
+    /** @deprecated — Use onSuccess instead. Kept for backward compat with ContactsList. */
     onOptimisticSubmit?: (data: any, categoryIds: string[]) => void;
 }
 
-export function ContactForm({ organizationId, contactCategories, companyContacts = [], initialData, onOptimisticSubmit }: ContactFormProps) {
+// ============================================================================
+// Component (Semi-Autonomous)
+// ============================================================================
+
+export function ContactForm({
+    organizationId,
+    initialData,
+    onSuccess,
+    // Legacy props
+    contactCategories: externalCategories,
+    companyContacts: externalCompanyContacts,
+    onOptimisticSubmit,
+}: ContactFormProps) {
     const { closeModal } = useModal();
+    const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const isEditing = !!initialData;
+
     const [contactType, setContactType] = useState<ContactType>(initialData?.contact_type || "person");
     const [showMore, setShowMore] = useState(false);
 
-    // Form State
+    // ── Fetched Data (solo si NO se pasan como props) ───────────────────
+    const [fetchedCategories, setFetchedCategories] = useState<ContactCategory[]>([]);
+    const [fetchedCompanies, setFetchedCompanies] = useState<CompanyOption[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(false);
+
+    // Use external data if provided, otherwise use fetched data
+    const contactCategories = externalCategories ?? fetchedCategories;
+    const companyContacts = externalCompanyContacts ?? fetchedCompanies;
+
+    // Fetch categories + company contacts if not provided externally
+    useEffect(() => {
+        if (externalCategories && externalCompanyContacts) return; // Already provided
+
+        const fetchAuxData = async () => {
+            setIsLoadingData(true);
+            try {
+                // Fetch categories if not provided
+                if (!externalCategories) {
+                    const categories = await getContactCategories(organizationId);
+                    setFetchedCategories(categories);
+                }
+
+                // Fetch company contacts if not provided
+                if (!externalCompanyContacts) {
+                    const supabase = createSupabaseClient();
+                    const { data: companiesData } = await supabase
+                        .from("contacts")
+                        .select("id, full_name, first_name")
+                        .eq("organization_id", organizationId)
+                        .eq("contact_type", "company")
+                        .eq("is_deleted", false)
+                        .order("full_name");
+
+                    if (companiesData) {
+                        setFetchedCompanies(
+                            companiesData.map((c: any) => ({
+                                id: c.id,
+                                name: c.full_name || c.first_name || "",
+                            }))
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching contact form data:", error);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+
+        fetchAuxData();
+    }, [organizationId, externalCategories, externalCompanyContacts]);
+
+    // ── Form State ──────────────────────────────────────────────────────
+
     const [formData, setFormData] = useState({
         first_name: initialData?.first_name || "",
         last_name: initialData?.last_name || "",
@@ -59,6 +152,54 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
     });
 
     const isPerson = contactType === "person";
+    const isLinkedToUser = !!initialData?.linked_user_id;
+
+    // ── Seencel User Match (email lookup) ──────────────────────────────
+    const [seencelUserMatch, setSeencelUserMatch] = useState<{
+        userId: string;
+        fullName: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        avatarUrl: string | null;
+    } | null>(null);
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+    const lastCheckedEmail = useState<string>("")[0];
+
+    const handleEmailBlur = async () => {
+        const email = formData.email.trim();
+        // Skip if: no email, already linked, same email already checked, or editing a linked contact
+        if (!email || !email.includes('@') || isLinkedToUser || email === lastCheckedEmail) return;
+
+        setIsCheckingEmail(true);
+        try {
+            const result = await checkSeencelUser(email);
+            setSeencelUserMatch(result);
+
+            // Auto-fill name and avatar if we found a match and fields are empty
+            if (result) {
+                const updates: Partial<typeof formData> = {};
+                if (!formData.first_name && result.firstName) {
+                    updates.first_name = result.firstName;
+                }
+                if (!formData.last_name && result.lastName) {
+                    updates.last_name = result.lastName;
+                }
+                if (!formData.image_url && result.avatarUrl) {
+                    updates.image_url = result.avatarUrl;
+                }
+                if (Object.keys(updates).length > 0) {
+                    setFormData(prev => ({ ...prev, ...updates }));
+                }
+                toast.success("Usuario de Seencel detectado", {
+                    description: `${result.firstName || ''} ${result.lastName || ''} será vinculado automáticamente al guardar.`.trim(),
+                });
+            }
+        } catch {
+            // Silently fail - not critical
+        } finally {
+            setIsCheckingEmail(false);
+        }
+    };
 
     // Filter out current contact from company options (avoid self-reference)
     const availableCompanies = useMemo(() => {
@@ -107,7 +248,8 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
         setFormData(prev => ({ ...prev, company_id: "", company_name: "" }));
     };
 
-    // 🚀 OPTIMISTIC: Build payload and delegate to parent — no server call here
+    // ── Submit ───────────────────────────────────────────────────────────
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -130,8 +272,30 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
             image_url: formData.image_url || null,
         };
 
-        // Delegate to parent — parent handles optimistic update + server call
-        onOptimisticSubmit?.(dataToSave, formData.categoryIds);
+        // ── Legacy path: delegate to parent via onOptimisticSubmit ───────
+        if (onOptimisticSubmit) {
+            onOptimisticSubmit(dataToSave, formData.categoryIds);
+            return;
+        }
+
+        // ── Autonomous path: form handles server call + lifecycle ────────
+        closeModal();
+        toast.success(isEditing ? "Contacto actualizado" : "Contacto creado");
+
+        startTransition(async () => {
+            try {
+                if (isEditing && initialData) {
+                    await updateContact(initialData.id, dataToSave, formData.categoryIds);
+                } else {
+                    await createContact(organizationId, dataToSave, formData.categoryIds);
+                }
+                onSuccess?.();
+                router.refresh();
+            } catch (error: any) {
+                toast.error(error.message || "Error al guardar el contacto");
+                router.refresh();
+            }
+        });
     };
 
     return (
@@ -144,14 +308,36 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
                         initials={formData.first_name?.[0] || formData.last_name?.[0] || "?"}
                         currentPath={formData.image_url}
                         onPathChange={(path) => setFormData(prev => ({ ...prev, image_url: path || "" }))}
+                        readOnly={isLinkedToUser}
                     />
                 </div>
+
+                {/* Status Badges (linked contacts) */}
+                {isLinkedToUser && (
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            En Seencel
+                        </Badge>
+                        {initialData?.is_organization_member && initialData?.member_role_name && (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                {initialData.member_role_name}
+                            </Badge>
+                        )}
+                        {initialData?.external_actor_type && (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                {ACTOR_TYPE_LABELS[initialData.external_actor_type] || initialData.external_actor_type}
+                            </Badge>
+                        )}
+                    </div>
+                )}
 
                 {/* Contact Type Toggle - Below Avatar, Full Width */}
                 <SegmentedField
                     value={contactType}
                     onChange={handleContactTypeChange}
                     options={CONTACT_TYPE_OPTIONS}
+                    disabled={isLinkedToUser}
                 />
 
                 {/* Name Fields */}
@@ -163,7 +349,9 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
                             onChange={(val) => setFormData({ ...formData, first_name: val })}
                             placeholder="Ej. Juan"
                             required={true}
-                            autoFocus
+                            autoFocus={!isLinkedToUser}
+                            disabled={isLinkedToUser}
+                            helpText={isLinkedToUser ? "Sincronizado desde el perfil del usuario" : undefined}
                         />
                         <TextField
                             label="Apellido"
@@ -171,6 +359,7 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
                             onChange={(val) => setFormData({ ...formData, last_name: val })}
                             placeholder="Ej. Pérez"
                             required={false}
+                            disabled={isLinkedToUser}
                         />
                     </div>
                 ) : (
@@ -190,9 +379,24 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
                         label="Email"
                         type="email"
                         value={formData.email}
-                        onChange={(val) => setFormData({ ...formData, email: val })}
+                        onChange={(val) => {
+                            setFormData({ ...formData, email: val });
+                            // Clear match if email changed
+                            if (seencelUserMatch) setSeencelUserMatch(null);
+                        }}
+                        onBlur={handleEmailBlur}
                         placeholder={isPerson ? "juan@ejemplo.com" : "info@empresa.com"}
                         required={false}
+                        disabled={isLinkedToUser}
+                        helpText={
+                            isLinkedToUser
+                                ? "Sincronizado desde el perfil del usuario"
+                                : seencelUserMatch
+                                    ? "✓ Usuario de Seencel detectado — se vinculará al guardar"
+                                    : isCheckingEmail
+                                        ? "Verificando..."
+                                        : undefined
+                        }
                     />
                     <FormGroup label={<FactoryLabel label="Teléfono" />} required={false}>
                         <PhoneInput
@@ -245,6 +449,11 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
                                     />
                                 )}
                             </div>
+                        ) : isLoadingData ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Cargando empresas...</span>
+                            </div>
                         ) : (
                             /* No company contacts - simple text field */
                             <input
@@ -275,24 +484,31 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
                     <CollapsibleContent className="space-y-4 pt-1">
                         {/* Categories */}
                         <FormGroup label={<FactoryLabel label="Categorías" />} required={false}>
-                            <div className="flex flex-wrap gap-2 border rounded-md p-3 bg-muted/20">
-                                {contactCategories.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground">No hay categorías disponibles.</p>
-                                ) : (
-                                    contactCategories.map(category => (
-                                        <div key={category.id} className="flex items-center space-x-2 bg-background border px-2 py-1 rounded-sm">
-                                            <Checkbox
-                                                id={`category-${category.id}`}
-                                                checked={formData.categoryIds.includes(category.id)}
-                                                onCheckedChange={() => toggleCategory(category.id)}
-                                            />
-                                            <Label htmlFor={`category-${category.id}`} className="text-sm font-normal cursor-pointer">
-                                                {category.name}
-                                            </Label>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                            {isLoadingData && !externalCategories ? (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Cargando categorías...</span>
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2 border rounded-md p-3 bg-muted/20">
+                                    {contactCategories.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground">No hay categorías disponibles.</p>
+                                    ) : (
+                                        contactCategories.map(category => (
+                                            <div key={category.id} className="flex items-center space-x-2 bg-background border px-2 py-1 rounded-sm">
+                                                <Checkbox
+                                                    id={`category-${category.id}`}
+                                                    checked={formData.categoryIds.includes(category.id)}
+                                                    onCheckedChange={() => toggleCategory(category.id)}
+                                                />
+                                                <Label htmlFor={`category-${category.id}`} className="text-sm font-normal cursor-pointer">
+                                                    {category.name}
+                                                </Label>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </FormGroup>
 
                         <TextField
@@ -323,6 +539,7 @@ export function ContactForm({ organizationId, contactCategories, companyContacts
             <FormFooter
                 onCancel={closeModal}
                 submitLabel={initialData ? "Guardar Cambios" : "Crear Contacto"}
+                isLoading={isPending}
                 className="-mx-4 -mb-4 mt-6"
             />
         </form>

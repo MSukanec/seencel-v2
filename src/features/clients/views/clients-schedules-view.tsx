@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { Calendar, Plus } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
+import { Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { ClientSchedulesTable } from "../components/tables/client-schedules-table";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { parseDateFromDB } from "@/lib/timezone-data";
 
 export interface ClientSchedule {
     id: string;
@@ -24,6 +26,53 @@ export interface ClientSchedule {
     };
 }
 
+// ========================================
+// COLUMNS
+// ========================================
+
+const columns: ColumnDef<any>[] = [
+    {
+        accessorKey: "due_date",
+        header: "Vencimiento",
+        cell: ({ row }) => {
+            const date = parseDateFromDB(row.original.due_date);
+            return date ? date.toLocaleDateString() : '-';
+        }
+    },
+    {
+        accessorKey: "commitment.client.contact.full_name",
+        header: "Cliente",
+        cell: ({ row }) => row.original.commitment?.client?.contact?.full_name || "N/A"
+    },
+    {
+        accessorKey: "amount",
+        header: "Monto Cuota",
+        cell: ({ row }) => {
+            return (
+                <span className="font-mono font-medium">
+                    {row.original.currency?.symbol} {Number(row.original.amount).toLocaleString()}
+                </span>
+            );
+        }
+    },
+    {
+        accessorKey: "status",
+        header: "Estado",
+        cell: ({ row }) => {
+            const status = row.original.status;
+            return (
+                <Badge variant={status === 'paid' ? 'default' : status === 'overdue' ? 'destructive' : 'secondary'}>
+                    {status}
+                </Badge>
+            );
+        }
+    }
+];
+
+// ========================================
+// VIEW
+// ========================================
+
 interface ClientsSchedulesViewProps {
     data: ClientSchedule[];
 }
@@ -37,7 +86,7 @@ export function ClientsSchedulesView({ data }: ClientsSchedulesViewProps) {
         return { pending, overdue, paid, total: data.length };
     }, [data]);
 
-    // ✅ CORRECTO: EmptyState SIN action duplicada (ya está en Toolbar si aplica)
+    // ✅ EmptyState
     if (data.length === 0) {
         return (
             <div className="h-full flex items-center justify-center">
@@ -51,11 +100,11 @@ export function ClientsSchedulesView({ data }: ClientsSchedulesViewProps) {
         );
     }
 
-    // ✅ CORRECTO: Renderizar tabla con datos
     return (
-        <>
-            {/* Toolbar solo si hay acciones relevantes - por ahora vacío */}
-            <ClientSchedulesTable data={data} />
-        </>
+        <DataTable
+            columns={columns}
+            data={data}
+            searchKey="commitment.client.contact.full_name"
+        />
     );
 }

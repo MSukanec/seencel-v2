@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## RLS Policies (358)
+## RLS Policies (375)
 
 ### `app_settings` (4 policies)
 
@@ -168,7 +168,16 @@ is_self(user_id)
   WHERE ((e.id = calendar_event_reminders.event_id) AND can_view_org(e.organization_id, 'calendar.view'::text))))
 ```
 
-### `calendar_events` (3 policies)
+### `calendar_events` (4 policies)
+
+#### ACTORES VEN EVENTOS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+((project_id IS NOT NULL) AND can_view_project(project_id))
+```
 
 #### MIEMBROS CREAN CALENDAR_EVENTS
 
@@ -230,7 +239,16 @@ is_admin()
 (is_admin() OR (is_public = true))
 ```
 
-### `client_commitments` (3 policies)
+### `client_commitments` (4 policies)
+
+#### ACTORES VEN COMPROMISOS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS CREAN CLIENT_COMMITMENTS
 
@@ -288,7 +306,16 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 can_view_org(organization_id, 'clients.view'::text)
 ```
 
-### `client_payments` (3 policies)
+### `client_payments` (4 policies)
+
+#### ACTORES VEN PAGOS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS CREAN CLIENT_PAYMENTS
 
@@ -442,7 +469,16 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 can_view_org(organization_id, 'projects.view'::text)
 ```
 
-### `construction_tasks` (3 policies)
+### `construction_tasks` (4 policies)
+
+#### ACTORES VEN TAREAS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS CREAN CONSTRUCTION_TASKS
 
@@ -1055,6 +1091,36 @@ is_admin()
 - **USING**:
 ```sql
 true
+```
+
+### `external_actor_scopes` (2 policies)
+
+#### ACTORES VEN SUS SCOPES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(EXISTS ( SELECT 1
+   FROM organization_external_actors ea
+  WHERE ((ea.id = external_actor_scopes.external_actor_id) AND (ea.user_id = current_user_id()) AND (ea.is_active = true) AND (ea.is_deleted = false))))
+```
+
+#### MIEMBROS GESTIONAN SCOPES
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(EXISTS ( SELECT 1
+   FROM organization_external_actors ea
+  WHERE ((ea.id = external_actor_scopes.external_actor_id) AND can_mutate_org(ea.organization_id, 'team.manage'::text))))
+```
+- **WITH CHECK**:
+```sql
+(EXISTS ( SELECT 1
+   FROM organization_external_actors ea
+  WHERE ((ea.id = external_actor_scopes.external_actor_id) AND can_mutate_org(ea.organization_id, 'team.manage'::text))))
 ```
 
 ### `feature_flag_categories` (3 policies)
@@ -2188,6 +2254,35 @@ can_mutate_org(organization_id, 'billing.manage'::text)
 can_view_org(organization_id, 'billing.view'::text)
 ```
 
+### `organization_external_actors` (3 policies)
+
+#### MIEMBROS CREAN EXTERNAL_ACTORS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'team.manage'::text)
+```
+
+#### MIEMBROS EDITAN EXTERNAL_ACTORS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'team.manage'::text)
+```
+
+#### MIEMBROS Y ACTORES VEN EXTERNAL_ACTORS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(can_view_org(organization_id, 'team.view'::text) OR is_self(user_id))
+```
+
 ### `organization_invitations` (4 policies)
 
 #### INVITADOS VEN SU INVITACION
@@ -2455,7 +2550,40 @@ is_admin()
 true
 ```
 
-### `project_clients` (3 policies)
+### `project_access` (2 policies)
+
+#### MIEMBROS GESTIONAN ACCESO
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'team.manage'::text)
+```
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'team.manage'::text)
+```
+
+#### USUARIOS VEN SU ACCESO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(user_id = current_user_id())
+```
+
+### `project_clients` (4 policies)
+
+#### ACTORES VEN CLIENTES DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS CREAN PROJECT_CLIENTS
 
@@ -2484,7 +2612,16 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 can_view_org(organization_id, 'clients.view'::text)
 ```
 
-### `project_data` (3 policies)
+### `project_data` (4 policies)
+
+#### ACTORES VEN DATOS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS ACTUALIZAN PROJECT_DATA
 
@@ -2612,7 +2749,16 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 (is_admin() OR ((is_deleted = false) AND ((organization_id IS NULL) OR can_view_org(organization_id, 'projects.view'::text))))
 ```
 
-### `projects` (3 policies)
+### `projects` (4 policies)
+
+#### ACTORES VEN PROYECTOS CON ACCESO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(id)
+```
 
 #### MIEMBROS CREAN PROJECTS
 
@@ -2643,7 +2789,16 @@ can_mutate_org(organization_id, 'projects.manage'::text)
   WHERE ((pd.project_id = projects.id) AND (pd.is_public = true)))))
 ```
 
-### `quote_items` (3 policies)
+### `quote_items` (4 policies)
+
+#### ACTORES VEN ITEMS PRESUPUESTO DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS CREAN QUOTE_ITEMS
 
@@ -2676,7 +2831,16 @@ can_mutate_org(organization_id, 'quotes.manage'::text)
 can_view_org(organization_id, 'quotes.view'::text)
 ```
 
-### `quotes` (3 policies)
+### `quotes` (4 policies)
+
+#### ACTORES VEN PRESUPUESTOS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS ACTUALIZAN QUOTES
 
@@ -2813,7 +2977,16 @@ can_view_org(organization_id, 'roles.view'::text)
 ((organization_id IS NULL) OR can_view_org(organization_id, 'sitelog.view'::text))
 ```
 
-### `site_logs` (3 policies)
+### `site_logs` (4 policies)
+
+#### ACTORES VEN BITACORAS DEL PROYECTO
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_project(project_id)
+```
 
 #### MIEMBROS CREAN SITE_LOGS
 

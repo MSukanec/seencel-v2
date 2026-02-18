@@ -299,7 +299,7 @@ export function useSidebarNavigation() {
                     getItemStatus('sidebar_finance', { title: 'Finanzas', href: '/organization/finance', icon: DollarSign }),
                     getItemStatus('sidebar_capital', { title: 'Capital', href: '/organization/capital', icon: Landmark }),
                     getItemStatus('sidebar_general_costs', { title: 'Gastos Generales', href: '/organization/general-costs', icon: CreditCard }),
-                    getItemStatus('sidebar_clients', { title: 'Clientes', href: '/organization/clients', icon: Banknote }),
+                    getItemStatus('sidebar_clients', { title: 'Cobros', href: '/organization/clients', icon: Banknote }),
                 ].filter((i): i is NavItem => i !== null),
             },
         ];

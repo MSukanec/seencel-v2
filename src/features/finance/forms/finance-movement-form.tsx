@@ -32,7 +32,7 @@ import { createGeneralCostPayment } from "@/features/general-costs/actions";
 import { useModal } from "@/stores/modal-store";
 
 // Import other forms
-import { PaymentForm as ClientPaymentForm } from "@/features/clients/components/forms/clients-payment-form";
+import { PaymentForm as ClientPaymentForm } from "@/features/clients/forms/clients-payment-form";
 import { CurrencyExchangeForm } from "@/features/finance/forms/finance-currency-exchange-form";
 import { WalletTransferForm } from "@/features/finance/forms/finance-wallet-transfer-form";
 

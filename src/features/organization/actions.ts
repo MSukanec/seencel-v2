@@ -155,10 +155,7 @@ export async function createOrganization(
     // 5. Revalidate to refresh data across the app
     revalidatePath('/', 'layout');
 
-    // 6. Redirect to the new org's dashboard
-    const locale = await getLocale();
-    const path = locale === 'es' ? '/es/organizacion' : '/en/organization';
-
-    redirect(path);
+    // 6. Redirect to dashboard
+    redirect('/organization');
 }
 

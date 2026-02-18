@@ -1,22 +1,30 @@
 import { Metadata } from "next";
 import { getOrganizationFinancialData } from "@/features/organization/queries";
+import { getActiveOrganizationProjects } from "@/features/projects/queries";
 import {
     getClientsByOrganization,
     getFinancialSummaryByOrganization,
     getCommitmentsByOrganization,
     getPaymentsByOrganization,
-    getSchedulesByOrganization,
-    getClientRoles,
 } from "@/features/clients/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
-import { ClientsPageClient } from "@/features/clients/views";
 import { ErrorDisplay } from "@/components/ui/error-display";
+import { PageWrapper } from "@/components/layout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Banknote } from "lucide-react";
+import { LockedBadge } from "@/components/shared/locked-badge";
+
+// ── Views ──
+import { ClientsOverview } from "@/features/clients/views/clients-overview-view";
+import { CommitmentsView } from "@/features/clients/views/clients-commitments-view";
+import { ClientsPaymentsView } from "@/features/clients/views/clients-payments-view";
+
 
 // ── Metadata ──
 export async function generateMetadata(): Promise<Metadata> {
     return {
-        title: "Clientes | SEENCEL",
-        description: "Gestión de clientes, compromisos y pagos de la organización.",
+        title: "Cobros | SEENCEL",
+        description: "Gestión de cobros, compromisos y pagos de la organización.",
         robots: "noindex, nofollow",
     };
 }
@@ -52,32 +60,71 @@ export default async function OrganizationClientsPage({ searchParams }: PageProp
             summaryRes,
             commitmentsRes,
             paymentsRes,
-            schedulesRes,
-            rolesRes,
             financialData,
+            projects,
         ] = await Promise.all([
             getClientsByOrganization(activeOrgId),
             getFinancialSummaryByOrganization(activeOrgId),
             getCommitmentsByOrganization(activeOrgId),
             getPaymentsByOrganization(activeOrgId),
-            getSchedulesByOrganization(activeOrgId),
-            getClientRoles(activeOrgId),
             getOrganizationFinancialData(activeOrgId),
+            getActiveOrganizationProjects(activeOrgId),
         ]);
 
+        const clients = clientsRes.data || [];
+        const financialSummary = summaryRes.data || [];
+        const commitments = commitmentsRes.data || [];
+        const payments = paymentsRes.data || [];
+
+        const tabs = (
+            <TabsList className="portal-to-header">
+                <TabsTrigger value="overview">Visión General</TabsTrigger>
+                <TabsTrigger value="commitments">Compromisos</TabsTrigger>
+                <TabsTrigger value="payments">Pagos</TabsTrigger>
+                <LockedBadge>
+                    <TabsTrigger value="schedules">Cronogramas</TabsTrigger>
+                </LockedBadge>
+
+            </TabsList>
+        );
+
         return (
-            <ClientsPageClient
-                projectId={null as any}
-                orgId={activeOrgId}
-                clients={clientsRes.data || []}
-                financialSummary={summaryRes.data || []}
-                commitments={commitmentsRes.data || []}
-                payments={paymentsRes.data || []}
-                schedules={schedulesRes.data || []}
-                roles={rolesRes.data || []}
-                financialData={financialData}
-                defaultTab={defaultTab}
-            />
+            <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
+                <PageWrapper
+                    type="page"
+                    title="Cobros"
+                    tabs={tabs}
+                    icon={<Banknote />}
+                >
+                    <TabsContent value="overview" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ClientsOverview
+                            summary={financialSummary}
+                            payments={payments}
+                        />
+                    </TabsContent>
+                    <TabsContent value="commitments" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <CommitmentsView
+                            commitments={commitments}
+                            clients={clients}
+                            payments={payments}
+                            financialData={financialData}
+                            orgId={activeOrgId}
+                            projects={projects.map(p => ({ id: p.id, name: p.name }))}
+                        />
+                    </TabsContent>
+                    <TabsContent value="payments" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ClientsPaymentsView
+                            data={payments}
+                            clients={clients}
+                            financialData={financialData}
+                            orgId={activeOrgId}
+                            projects={projects.map(p => ({ id: p.id, name: p.name }))}
+                        />
+                    </TabsContent>
+
+
+                </PageWrapper>
+            </Tabs>
         );
     } catch (error) {
         return (

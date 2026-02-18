@@ -9,4 +9,5 @@
 export { createDateColumn, type DateColumnOptions } from "./date-column";
 export { createTextColumn, type TextColumnOptions } from "./text-column";
 export { createMoneyColumn, type MoneyColumnOptions } from "./money-column";
+export { createProjectColumn, type ProjectColumnOptions } from "./project-column";
 export { createColumns } from "./column-builder";

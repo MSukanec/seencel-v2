@@ -52,6 +52,8 @@ export interface ContactWithRelations extends Contact {
     resolved_avatar_url: string | null; // Computed: COALESCE(linked_user.avatar, contact.image_url)
     contact_categories: { id: string; name: string }[];
     is_organization_member: boolean;
+    member_role_name: string | null;       // Nombre del rol si es org member
+    external_actor_type: string | null;    // actor_type de organization_external_actors
     linked_company_name: string | null;
     resolved_company_name: string | null;
 }

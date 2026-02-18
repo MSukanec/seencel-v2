@@ -1,5 +1,6 @@
 import { getActiveOrganizationId } from "@/features/general-costs/actions";
 import { getContactCategories, getOrganizationContacts } from "@/actions/contacts";
+import { createClient } from "@/lib/supabase/server";
 import {
     Tabs,
     TabsList,
@@ -46,10 +47,15 @@ export default async function ContactsPage() {
     const t = await getTranslations('Contacts');
 
     try {
-        const [contacts, categories] = await Promise.all([
+        const supabase = await createClient();
+        const [contacts, categories, orgResult] = await Promise.all([
             getOrganizationContacts(organizationId),
-            getContactCategories(organizationId)
+            getContactCategories(organizationId),
+            supabase.from('organizations').select('name, logo_url').eq('id', organizationId).single(),
         ]);
+
+        const organizationName = orgResult.data?.name || '';
+        const organizationLogoUrl = orgResult.data?.logo_url || null;
 
         return (
             <Tabs defaultValue="list" syncUrl="view" className="h-full flex flex-col">
@@ -74,6 +80,8 @@ export default async function ContactsPage() {
                                 organizationId={organizationId}
                                 initialContacts={contacts}
                                 contactCategories={categories}
+                                organizationName={organizationName}
+                                organizationLogoUrl={organizationLogoUrl}
                             />
                         </ContentLayout>
                     </TabsContent>

@@ -1,9 +1,319 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 2: fill_user_data_user_id_from_auth — handle_registered_invitation)
+## Functions & Procedures (chunk 2: current_user_id — handle_new_external_actor_contact)
+
+### `current_user_id()` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.current_user_id()
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select u.id
+  from public.users u
+  where u.auth_id = auth.uid()
+  limit 1;
+$function$
+```
+</details>
+
+### `dismiss_home_banner()` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.dismiss_home_banner()
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_user_id uuid;
+begin
+  -- Resolver user_id desde auth.uid()
+  select u.id
+  into v_user_id
+  from public.users u
+  where u.auth_id = auth.uid()
+  limit 1;
+
+  -- Si no hay usuario autenticado, no hacer nada
+  if v_user_id is null then
+    return false;
+  end if;
+
+  -- Actualizar preferencia
+  update public.user_preferences up
+  set
+    home_banner_dismissed = true,
+    updated_at = now()
+  where up.user_id = v_user_id;
+
+  return true;
+end;
+$function$
+```
+</details>
+
+### `documents_validate_project_org()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.documents_validate_project_org()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  proj_org uuid;
+begin
+  -- Validar que el proyecto pertenezca a la organización
+  if new.project_id is not null then
+    select p.organization_id
+    into proj_org
+    from public.projects p
+    where p.id = new.project_id;
+
+    if proj_org is null or proj_org <> new.organization_id then
+      raise exception 'El proyecto no pertenece a la organización.';
+    end if;
+  end if;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_user record;
+  v_user_data record;
+  v_contact_id uuid;
+  v_first_name text;
+  v_last_name text;
+begin
+  -- Obtener datos del usuario
+  select u.id, u.full_name, u.email, u.avatar_url
+  into v_user
+  from public.users u
+  where u.id = p_user_id
+  limit 1;
+
+  -- Si no hay usuario, no hacer nada
+  if v_user.id is null then
+    return null;
+  end if;
+
+  -- Si no hay email, no intentamos vincular
+  if v_user.email is null then
+    return null;
+  end if;
+
+  -- Obtener first_name/last_name de user_data (si existe)
+  select ud.first_name, ud.last_name
+  into v_user_data
+  from public.user_data ud
+  where ud.user_id = p_user_id
+  limit 1;
+
+  -- Resolver first_name y last_name
+  -- Prioridad: user_data > split de full_name
+  if v_user_data.first_name is not null then
+    v_first_name := v_user_data.first_name;
+    v_last_name := coalesce(v_user_data.last_name, '');
+  elsif v_user.full_name is not null then
+    -- Fallback: split full_name por el primer espacio
+    v_first_name := split_part(v_user.full_name, ' ', 1);
+    v_last_name := nullif(trim(substring(v_user.full_name from position(' ' in v_user.full_name) + 1)), '');
+  end if;
+
+  -- 1) ¿Ya existe un contacto vinculado a este user en esta org?
+  select c.id
+  into v_contact_id
+  from public.contacts c
+  where c.organization_id = p_organization_id
+    and c.linked_user_id = v_user.id
+    and c.is_deleted = false
+  limit 1;
+
+  if v_contact_id is not null then
+    -- Ya existe: actualizar datos que puedan estar faltando
+    update public.contacts c
+    set
+      first_name = coalesce(c.first_name, v_first_name),
+      last_name  = coalesce(c.last_name, v_last_name),
+      image_url  = coalesce(c.image_url, v_user.avatar_url),
+      full_name  = coalesce(v_user.full_name, c.full_name),
+      email      = coalesce(v_user.email, c.email),
+      updated_at = now()
+    where c.id = v_contact_id
+      and (c.first_name is null or c.image_url is null);
+
+    return v_contact_id;
+  end if;
+
+  -- 2) ¿Existe un contacto local (sin linked_user_id) que coincida por email?
+  select c.id
+  into v_contact_id
+  from public.contacts c
+  where c.organization_id = p_organization_id
+    and c.linked_user_id is null
+    and lower(c.email) = lower(v_user.email)
+    and c.is_deleted = false
+  limit 1;
+
+  if v_contact_id is not null then
+    -- Promover contacto local a vinculado
+    update public.contacts c
+    set
+      linked_user_id = v_user.id,
+      full_name      = coalesce(v_user.full_name, c.full_name),
+      first_name     = coalesce(c.first_name, v_first_name),
+      last_name      = coalesce(c.last_name, v_last_name),
+      email          = coalesce(v_user.email, c.email),
+      image_url      = coalesce(c.image_url, v_user.avatar_url),
+      updated_at     = now()
+    where c.id = v_contact_id;
+
+    return v_contact_id;
+  end if;
+
+  -- 3) Crear nuevo contacto vinculado
+  insert into public.contacts (
+    organization_id,
+    linked_user_id,
+    full_name,
+    first_name,
+    last_name,
+    email,
+    image_url,
+    contact_type,
+    created_at,
+    updated_at
+  )
+  values (
+    p_organization_id,
+    v_user.id,
+    v_user.full_name,
+    v_first_name,
+    v_last_name,
+    v_user.email,
+    v_user.avatar_url,
+    'person',
+    now(),
+    now()
+  )
+  returning id into v_contact_id;
+
+  return v_contact_id;
+end;
+$function$
+```
+</details>
+
+### `external_has_scope(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.external_has_scope(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1
+    FROM organization_external_actors ea
+    JOIN external_actor_scopes eas ON eas.external_actor_id = ea.id
+    WHERE ea.organization_id = p_organization_id
+      AND ea.user_id = current_user_id()
+      AND ea.is_active = true
+      AND ea.is_deleted = false
+      AND eas.permission_key = p_permission_key
+  );
+$function$
+```
+</details>
+
+### `fill_progress_user_id_from_auth()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.fill_progress_user_id_from_auth()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_user_id uuid;
+begin
+  -- Si ya viene user_id, no tocar
+  if new.user_id is not null then
+    return new;
+  end if;
+
+  -- Resolver user_id desde auth.uid()
+  select u.id
+  into v_user_id
+  from public.users u
+  where u.auth_id = auth.uid()
+  limit 1;
+
+  -- Si no existe usuario asociado al auth.uid(), error
+  if v_user_id is null then
+    raise exception 'No existe users.id para el auth.uid() actual';
+  end if;
+
+  -- Completar user_id automáticamente
+  new.user_id := v_user_id;
+
+  return new;
+end;
+$function$
+```
+</details>
 
 ### `fill_user_data_user_id_from_auth()` 🔐
 
@@ -313,6 +623,8 @@ BEGIN
         i.email,
         i.status,
         i.expires_at,
+        i.invitation_type,
+        i.actor_type,
         o.name AS organization_name,
         r.name AS role_name,
         u.full_name AS inviter_name
@@ -338,6 +650,8 @@ BEGIN
         'email', v_invitation.email,
         'status', v_invitation.status,
         'expires_at', v_invitation.expires_at,
+        'invitation_type', COALESCE(v_invitation.invitation_type, 'member'),
+        'actor_type', v_invitation.actor_type,
         'organization_name', v_invitation.organization_name,
         'role_name', COALESCE(v_invitation.role_name, 'Miembro'),
         'inviter_name', v_invitation.inviter_name
@@ -916,41 +1230,6 @@ $function$
 ```
 </details>
 
-### `handle_contact_link_user()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_contact_link_user()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  v_user_id uuid;
-begin
-  -- Buscar usuario con el mismo email (case-insensitive)
-  select u.id
-  into v_user_id
-  from public.users u
-  where lower(u.email) = lower(new.email)
-  limit 1;
-
-  -- Si existe, vincularlo al contacto
-  if v_user_id is not null then
-    new.linked_user_id := v_user_id;
-  end if;
-
-  return new;
-end;
-$function$
-```
-</details>
-
 ### `handle_import_batch_member_id()` 🔐
 
 - **Returns**: trigger
@@ -1105,7 +1384,7 @@ END;$function$
 ```
 </details>
 
-### `handle_new_org_member_contact()` 🔐
+### `handle_new_external_actor_contact()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -1113,718 +1392,14 @@ END;$function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.handle_new_org_member_contact()
+CREATE OR REPLACE FUNCTION public.handle_new_external_actor_contact()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-declare
-  v_user record;
-  v_exists_same_link boolean;
-  v_exists_local_match boolean;
 begin
-  -- Traer datos básicos del usuario
-  select u.id, u.full_name, u.email
-  into v_user
-  from public.users u
-  where u.id = new.user_id
-  limit 1;
-
-  -- Si no hay usuario, no hacer nada
-  if v_user.id is null then
-    return new;
-  end if;
-
-  -- Si no hay email, no intentamos vincular contactos
-  if v_user.email is null then
-    return new;
-  end if;
-
-  -- 1) ¿Ya existe un contacto vinculado a este user_id en esta organización?
-  select exists (
-    select 1
-    from public.contacts c
-    where c.organization_id = new.organization_id
-      and c.linked_user_id = v_user.id
-  )
-  into v_exists_same_link;
-
-  if v_exists_same_link then
-    return new;
-  end if;
-
-  -- 2) ¿Existe un contacto local (sin linked_user_id) que coincida por email?
-  select exists (
-    select 1
-    from public.contacts c
-    where c.organization_id = new.organization_id
-      and c.linked_user_id is null
-      and c.email is not distinct from v_user.email
-  )
-  into v_exists_local_match;
-
-  if v_exists_local_match then
-    -- Promover contacto local a vinculado
-    update public.contacts c
-    set
-      linked_user_id = v_user.id,
-      full_name      = coalesce(v_user.full_name, c.full_name),
-      email          = coalesce(v_user.email, c.email),
-      updated_at     = now()
-    where c.organization_id = new.organization_id
-      and c.linked_user_id is null
-      and c.email is not distinct from v_user.email;
-
-    return new;
-  end if;
-
-  -- 3) Crear nuevo contacto vinculado
-  insert into public.contacts (
-    organization_id,
-    linked_user_id,
-    full_name,
-    email,
-    created_at,
-    updated_at
-  )
-  values (
-    new.organization_id,
-    v_user.id,
-    v_user.full_name,
-    v_user.email,
-    now(),
-    now()
-  );
-
-  return new;
-end;
-$function$
-```
-</details>
-
-### `handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_org_id uuid;
-  v_admin_role_id uuid;
-  v_recent_count integer;
-
-  -- Defaults
-  v_plan_free_id uuid := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
-  v_default_currency_id uuid := '58c50aa7-b8b1-4035-b509-58028dd0e33f';
-  v_default_wallet_id uuid := '2658c575-0fa8-4cf6-85d7-6430ded7e188';
-  v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
-BEGIN
-
-  ----------------------------------------------------------------
-  -- 🛡️ GUARD: Rate limit - Max 3 orgs per hour per user
-  ----------------------------------------------------------------
-  SELECT count(*)
-  INTO v_recent_count
-  FROM public.organizations
-  WHERE created_by = p_user_id
-    AND created_at > now() - interval '1 hour';
-
-  IF v_recent_count >= 3 THEN
-    RAISE EXCEPTION 'Has alcanzado el límite de creación de organizaciones. Intentá de nuevo más tarde.'
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  ----------------------------------------------------------------
-  -- 1) Crear organización (now with business_mode)
-  ----------------------------------------------------------------
-  v_org_id := public.step_create_organization(
-    p_user_id,
-    p_organization_name,
-    v_plan_free_id,
-    p_business_mode
-  );
-
-  ----------------------------------------------------------------
-  -- 2) Organization data
-  ----------------------------------------------------------------
-  PERFORM public.step_create_organization_data(v_org_id);
-
-  ----------------------------------------------------------------
-  -- 3) Roles base de la organización
-  ----------------------------------------------------------------
-  PERFORM public.step_create_organization_roles(v_org_id);
-
-  ----------------------------------------------------------------
-  -- 4) Obtener rol Administrador
-  ----------------------------------------------------------------
-  SELECT id
-  INTO v_admin_role_id
-  FROM public.roles
-  WHERE organization_id = v_org_id
-    AND name = 'Administrador'
-    AND is_system = false
-  LIMIT 1;
-
-  IF v_admin_role_id IS NULL THEN
-    RAISE EXCEPTION 'Admin role not found for organization %', v_org_id;
-  END IF;
-
-  ----------------------------------------------------------------
-  -- 5) Agregar usuario como Admin
-  ----------------------------------------------------------------
-  PERFORM public.step_add_org_member(
-    p_user_id,
-    v_org_id,
-    v_admin_role_id
-  );
-
-  ----------------------------------------------------------------
-  -- 6) Asignar permisos a roles
-  ----------------------------------------------------------------
-  PERFORM public.step_assign_org_role_permissions(v_org_id);
-
-  ----------------------------------------------------------------
-  -- 7) Monedas
-  ----------------------------------------------------------------
-  PERFORM public.step_create_organization_currencies(
-    v_org_id,
-    v_default_currency_id
-  );
-
-  ----------------------------------------------------------------
-  -- 8) Billeteras
-  ----------------------------------------------------------------
-  PERFORM public.step_create_organization_wallets(
-    v_org_id,
-    v_default_wallet_id
-  );
-
-  ----------------------------------------------------------------
-  -- 9) Organization preferences
-  ----------------------------------------------------------------
-  PERFORM public.step_create_organization_preferences(
-    v_org_id,
-    v_default_currency_id,
-    v_default_wallet_id,
-    v_default_pdf_template_id
-  );
-
-  ----------------------------------------------------------------
-  -- 10) Setear como organización activa
-  ----------------------------------------------------------------
-  UPDATE public.user_preferences
-  SET
-    last_organization_id = v_org_id,
-    updated_at = now()
-  WHERE user_id = p_user_id;
-
-  ----------------------------------------------------------------
-  RETURN v_org_id;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-      'function',
-      'handle_new_organization',
-      'organization',
-      SQLERRM,
-      jsonb_build_object(
-        'user_id', p_user_id,
-        'organization_name', p_organization_name,
-        'business_mode', p_business_mode
-      ),
-      'critical'
-    );
-    RAISE;
-END;
-$function$
-```
-</details>
-
-### `handle_new_user()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$declare
-  v_user_id uuid;
-  v_avatar_source public.avatar_source_t := 'email';
-  v_avatar_url text;
-  v_full_name text;
-  v_provider text;
-begin
-  ----------------------------------------------------------------
-  -- 🔒 GUARD: evitar doble ejecución del signup
-  ----------------------------------------------------------------
-  IF EXISTS (
-    SELECT 1
-    FROM public.users
-    WHERE auth_id = NEW.id
-  ) THEN
-    RETURN NEW;
-  END IF;
-
-  ----------------------------------------------------------------
-  -- 🧠 Provider real (fuente confiable)
-  ----------------------------------------------------------------
-  v_provider := coalesce(
-    NEW.raw_app_meta_data->>'provider',
-    NEW.raw_user_meta_data->>'provider',
-    'email'
-  );
-
-  ----------------------------------------------------------------
-  -- Avatar source
-  ----------------------------------------------------------------
-  IF v_provider = 'google' THEN
-    v_avatar_source := 'google';
-  ELSIF v_provider = 'discord' THEN
-    v_avatar_source := 'discord';
-  ELSE
-    v_avatar_source := 'email';
-  END IF;
-
-  ----------------------------------------------------------------
-  -- Avatar URL (defensivo)
-  ----------------------------------------------------------------
-  v_avatar_url := coalesce(
-    NEW.raw_user_meta_data->>'avatar_url',
-    NEW.raw_user_meta_data->>'picture',
-    NULL
-  );
-
-  ----------------------------------------------------------------
-  -- Full name (defensivo)
-  ----------------------------------------------------------------
-  v_full_name := coalesce(
-    NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'name',
-    split_part(NEW.email, '@', 1)
-  );
-
-  ----------------------------------------------------------------
-  -- 1) User
-  ----------------------------------------------------------------
-  v_user_id := public.step_create_user(
-    NEW.id,
-    lower(NEW.email),
-    v_full_name,
-    v_avatar_url,
-    v_avatar_source,
-    'e6cc68d2-fc28-421b-8bd3-303326ef91b8'
-  );
-
-  ----------------------------------------------------------------
-  -- 2) User acquisition (tracking)
-  ----------------------------------------------------------------
-  PERFORM public.step_create_user_acquisition(
-    v_user_id,
-    NEW.raw_user_meta_data
-  );
-
-  ----------------------------------------------------------------
-  -- 3) User data
-  ----------------------------------------------------------------
-  PERFORM public.step_create_user_data(v_user_id);
-
-  ----------------------------------------------------------------
-  -- 4) User preferences (sin org — se asigna después)
-  ----------------------------------------------------------------
-  PERFORM public.step_create_user_preferences(v_user_id);
-
-  -- signup_completed queda en FALSE (default)
-  -- Se marca TRUE cuando el usuario completa el Onboarding 1
-
-  RETURN NEW;
-
-exception
-  when others then
-    perform public.log_system_error(
-      'trigger',
-      'handle_new_user',
-      'signup',
-      sqlerrm,
-      jsonb_build_object(
-        'auth_id', NEW.id,
-        'email', NEW.email
-      ),
-      'critical'
-    );
-    raise;
-end;$function$
-```
-</details>
-
-### `handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$DECLARE
-    v_payment_id uuid;
-    v_course_name text;
-    v_step text := 'start';
-BEGIN
-    -- ============================================================
-    -- 1) Idempotencia
-    -- ============================================================
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
-
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
-    v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        NULL,
-        'course',
-        NULL,
-        p_course_id,
-        p_amount,
-        p_currency,
-        p_metadata
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
-    END IF;
-
-    -- ============================================================
-    -- 3) Enroll anual al curso
-    -- ============================================================
-    v_step := 'course_enrollment_annual';
-    PERFORM public.step_course_enrollment_annual(
-        p_user_id,
-        p_course_id
-    );
-
-    -- ============================================================
-    -- 4) NUEVO: Enviar emails de confirmación
-    -- ============================================================
-    v_step := 'send_purchase_email';
-    
-    -- Obtener nombre del curso
-    SELECT title INTO v_course_name
-    FROM public.courses
-    WHERE id = p_course_id;
-    
-    PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'course',
-        COALESCE(v_course_name, 'Curso'),
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
-    );
-
-    -- ============================================================
-    -- DONE
-    -- ============================================================
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'course',
-            'handle_payment_course_success',
-            SQLERRM,
-            jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
-                'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'course_id', p_course_id,
-                'amount', p_amount,
-                'currency', p_currency
-            ),
-            'critical'
-        );
-
-        RETURN jsonb_build_object(
-            'status', 'ok_with_warning',
-            'payment_id', v_payment_id,
-            'warning_step', v_step
-        );
-END;$function$
-```
-</details>
-
-### `handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$DECLARE
-    v_payment_id uuid;
-    v_subscription_id uuid;
-    v_plan_name text;
-    v_step text := 'start';
-BEGIN
-    -- ============================================================
-    -- 1) Idempotencia fuerte
-    -- ============================================================
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
-
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
-    v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        p_organization_id,
-        'subscription',
-        p_plan_id,
-        NULL,
-        p_amount,
-        p_currency,
-        p_metadata
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
-    END IF;
-
-    -- ============================================================
-    -- 3) Expirar suscripción anterior
-    -- ============================================================
-    v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(
-        p_organization_id
-    );
-
-    -- ============================================================
-    -- 4) Crear nueva suscripción activa
-    -- ============================================================
-    v_step := 'create_active_subscription';
-    v_subscription_id := public.step_subscription_create_active(
-        p_organization_id,
-        p_plan_id,
-        p_billing_period,
-        v_payment_id,
-        p_amount,
-        p_currency
-    );
-
-    -- ============================================================
-    -- 5) Actualizar plan activo
-    -- ============================================================
-    v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(
-        p_organization_id,
-        p_plan_id
-    );
-
-    -- ============================================================
-    -- 6) Fundadores (solo anual)
-    -- ============================================================
-    IF p_billing_period = 'annual' THEN
-        v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(
-            p_user_id,
-            p_organization_id
-        );
-    END IF;
-
-    -- ============================================================
-    -- 7) NUEVO: Enviar emails de confirmación
-    -- ============================================================
-    v_step := 'send_purchase_email';
-    
-    -- Obtener nombre del plan
-    SELECT name INTO v_plan_name
-    FROM public.plans
-    WHERE id = p_plan_id;
-    
-    PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'subscription',
-        COALESCE(v_plan_name, 'Plan') || ' (' || p_billing_period || ')',
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
-    );
-
-    -- ============================================================
-    -- OK
-    -- ============================================================
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id,
-        'subscription_id', v_subscription_id
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'subscription',
-            'handle_payment_subscription_success',
-            SQLERRM,
-            jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
-                'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'organization_id', p_organization_id,
-                'plan_id', p_plan_id,
-                'billing_period', p_billing_period
-            ),
-            'critical'
-        );
-
-        RETURN jsonb_build_object(
-            'status', 'ok_with_warning',
-            'payment_id', v_payment_id,
-            'subscription_id', v_subscription_id,
-            'warning_step', v_step
-        );
-END;$function$
-```
-</details>
-
-### `handle_registered_invitation()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_registered_invitation()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  v_user record;
-  v_exists_same_link boolean;
-  v_exists_local_match boolean;
-begin
-  -- Traer datos básicos del usuario asociado a la invitación
-  select u.id, u.full_name, u.email
-  into v_user
-  from public.users u
-  where u.id = new.user_id
-  limit 1;
-
-  -- Si no hay usuario, no hacer nada
-  if v_user.id is null then
-    return new;
-  end if;
-
-  -- Si el usuario no tiene email, no intentamos vincular contactos
-  if v_user.email is null then
-    return new;
-  end if;
-
-  -- 1) ¿Ya existe un contacto vinculado a este user_id en esta organización?
-  select exists (
-    select 1
-    from public.contacts c
-    where c.organization_id = new.organization_id
-      and c.linked_user_id = v_user.id
-  )
-  into v_exists_same_link;
-
-  if v_exists_same_link then
-    return new;
-  end if;
-
-  -- 2) ¿Existe un contacto local (sin linked_user_id) que coincida por email?
-  select exists (
-    select 1
-    from public.contacts c
-    where c.organization_id = new.organization_id
-      and c.linked_user_id is null
-      and c.email is not distinct from v_user.email
-  )
-  into v_exists_local_match;
-
-  if v_exists_local_match then
-    update public.contacts c
-    set
-      linked_user_id = v_user.id,
-      full_name      = coalesce(v_user.full_name, c.full_name),
-      email          = coalesce(v_user.email, c.email),
-      updated_at     = now()
-    where c.organization_id = new.organization_id
-      and c.linked_user_id is null
-      and c.email is not distinct from v_user.email;
-
-    return new;
-  end if;
-
-  -- 3) Crear nuevo contacto vinculado
-  insert into public.contacts (
-    organization_id,
-    linked_user_id,
-    full_name,
-    email,
-    created_at,
-    updated_at
-  )
-  values (
-    new.organization_id,
-    v_user.id,
-    v_user.full_name,
-    v_user.email,
-    now(),
-    now()
-  );
-
+  perform public.ensure_contact_for_user(new.organization_id, new.user_id);
   return new;
 end;
 $function$

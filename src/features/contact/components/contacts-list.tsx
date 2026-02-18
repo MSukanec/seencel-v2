@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { ContactWithRelations, ContactCategory } from "@/types/contact";
-import { Plus, LayoutGrid, List, Upload, Users } from "lucide-react";
+import { Plus, LayoutGrid, List, Upload, Users, ShieldCheck, Building2 } from "lucide-react";
 import { ContactForm } from "@/features/contact/forms/contact-form";
 import { ContactsDataTable } from "./contacts-data-table";
 import { useModal } from "@/stores/modal-store";
@@ -23,14 +23,18 @@ interface ContactsListProps {
     organizationId: string;
     initialContacts: ContactWithRelations[];
     contactCategories: ContactCategory[];
+    organizationName: string;
+    organizationLogoUrl: string | null;
 }
 
 type ViewMode = "grid" | "table";
 
-export function ContactsList({ organizationId, initialContacts, contactCategories }: ContactsListProps) {
+export function ContactsList({ organizationId, initialContacts, contactCategories, organizationName, organizationLogoUrl }: ContactsListProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
+    const [filterSeencel, setFilterSeencel] = useState<Set<string>>(new Set());
+    const [filterOrgMember, setFilterOrgMember] = useState<Set<string>>(new Set());
     const { openModal, closeModal } = useModal();
     const router = useRouter();
 
@@ -62,6 +66,36 @@ export function ContactsList({ organizationId, initialContacts, contactCategorie
 
     const handleClearCategories = useCallback(() => {
         setSelectedCategoryIds(new Set());
+    }, []);
+
+    // Seencel filter options
+    const seencelFilterOptions = useMemo(() => [
+        { label: "En Seencel", value: "yes", icon: ShieldCheck },
+        { label: "No en Seencel", value: "no" },
+    ], []);
+
+    const handleSeencelSelect = useCallback((value: string) => {
+        setFilterSeencel(prev => {
+            const next = new Set(prev);
+            if (next.has(value)) next.delete(value);
+            else next.add(value);
+            return next;
+        });
+    }, []);
+
+    // Org member filter options
+    const orgMemberFilterOptions = useMemo(() => [
+        { label: "De la Organización", value: "yes", icon: Building2 },
+        { label: "No de la Organización", value: "no" },
+    ], []);
+
+    const handleOrgMemberSelect = useCallback((value: string) => {
+        setFilterOrgMember(prev => {
+            const next = new Set(prev);
+            if (next.has(value)) next.delete(value);
+            else next.add(value);
+            return next;
+        });
     }, []);
 
     // Extract company contacts for the company combobox in the form
@@ -107,6 +141,8 @@ export function ContactsList({ organizationId, initialContacts, contactCategorie
             linked_user_avatar_url: null,
             resolved_avatar_url: dataToSave.image_url || null,
             is_organization_member: false,
+            member_role_name: null,
+            external_actor_type: null,
             linked_company_name: null,
             resolved_company_name: dataToSave.company_name || null,
         };
@@ -266,15 +302,31 @@ export function ContactsList({ organizationId, initialContacts, contactCategorie
                     />
                 }
                 filterContent={
-                    categoryFilterOptions.length > 0 ? (
+                    <>
+                        {categoryFilterOptions.length > 0 && (
+                            <FacetedFilter
+                                title="Categoría"
+                                options={categoryFilterOptions}
+                                selectedValues={selectedCategoryIds}
+                                onSelect={handleCategorySelect}
+                                onClear={handleClearCategories}
+                            />
+                        )}
                         <FacetedFilter
-                            title="Categoría"
-                            options={categoryFilterOptions}
-                            selectedValues={selectedCategoryIds}
-                            onSelect={handleCategorySelect}
-                            onClear={handleClearCategories}
+                            title="Seencel"
+                            options={seencelFilterOptions}
+                            selectedValues={filterSeencel}
+                            onSelect={handleSeencelSelect}
+                            onClear={() => setFilterSeencel(new Set())}
                         />
-                    ) : undefined
+                        <FacetedFilter
+                            title="Organización"
+                            options={orgMemberFilterOptions}
+                            selectedValues={filterOrgMember}
+                            onSelect={handleOrgMemberSelect}
+                            onClear={() => setFilterOrgMember(new Set())}
+                        />
+                    </>
                 }
                 actions={[
                     {
@@ -310,6 +362,10 @@ export function ContactsList({ organizationId, initialContacts, contactCategorie
                     globalFilter={searchQuery}
                     onGlobalFilterChange={setSearchQuery}
                     selectedCategoryIds={selectedCategoryIds}
+                    filterSeencel={filterSeencel}
+                    filterOrgMember={filterOrgMember}
+                    organizationName={organizationName}
+                    organizationLogoUrl={organizationLogoUrl}
                     companyContacts={companyContacts}
                     onEditSubmit={handleEditSubmit}
                     onDeleteContact={optimisticRemove}

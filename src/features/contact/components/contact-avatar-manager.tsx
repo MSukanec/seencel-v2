@@ -8,9 +8,10 @@ interface ContactAvatarManagerProps {
     currentPath?: string | null;
     initials: string;
     onPathChange: (path: string | null) => void;
+    readOnly?: boolean;
 }
 
-export function ContactAvatarManager({ currentPath, initials, onPathChange }: ContactAvatarManagerProps) {
+export function ContactAvatarManager({ currentPath, initials, onPathChange, readOnly }: ContactAvatarManagerProps) {
     const avatarUrl = currentPath ? getStorageUrl(currentPath, 'avatars') : null;
 
     return (
@@ -28,7 +29,8 @@ export function ContactAvatarManager({ currentPath, initials, onPathChange }: Co
                 };
             }}
             onSuccess={(path) => onPathChange(path)}
-            onRemove={() => onPathChange(null)}
+            onRemove={readOnly ? undefined : () => onPathChange(null)}
+            disabled={readOnly}
             compressionPreset="avatar"
         />
     );

@@ -199,6 +199,10 @@ export const clientPaymentViewSchema = clientPaymentSchema.extend({
     // Creator info (from organization_members -> users)
     creator_full_name: z.string().nullable(),
     creator_avatar_url: z.string().nullable(),
+    // Project info (from projects)
+    project_name: z.string().nullable(),
+    project_image_url: z.string().nullable(),
+    project_color: z.string().nullable(),
 });
 
 export type ClientPaymentView = z.infer<typeof clientPaymentViewSchema>;

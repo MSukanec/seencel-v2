@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Contact, ContactWithRelations, ContactCategory } from "@/types/contact";
 import { revalidatePath } from "next/cache";
 import { completeOnboardingStep } from "@/features/onboarding/actions";
@@ -54,7 +54,7 @@ export async function createContact(organizationId: string, contact: Partial<Con
     const supabase = await createClient();
 
     // Prepare payload
-    const payload = {
+    const payload: Record<string, any> = {
         ...contact,
         organization_id: organizationId,
     };
@@ -62,6 +62,37 @@ export async function createContact(organizationId: string, contact: Partial<Con
     // Convert relative path to full URL if needed
     if (payload.image_url && !payload.image_url.startsWith('http')) {
         payload.image_url = getStorageUrl(payload.image_url, 'avatars');
+    }
+
+    // Auto-link: if email matches a Seencel user, enrich payload
+    if (payload.email && !payload.linked_user_id) {
+        const seencelUser = await checkSeencelUser(payload.email);
+        if (seencelUser) {
+            // Use service client to bypass RLS (SELECT policy filters is_deleted=false,
+            // but UNIQUE constraint sees ALL rows including soft-deleted)
+            const adminSupabase = createServiceClient();
+            const { data: existingLinked } = await adminSupabase
+                .from('contacts')
+                .select('id')
+                .eq('organization_id', organizationId)
+                .eq('linked_user_id', seencelUser.userId)
+                .limit(1)
+                .maybeSingle();
+
+            if (!existingLinked) {
+                // Safe to link
+                payload.linked_user_id = seencelUser.userId;
+                payload.linked_at = new Date().toISOString();
+                payload.sync_status = 'linked';
+                payload.is_local = false;
+                payload.first_name = seencelUser.firstName || payload.first_name;
+                payload.last_name = seencelUser.lastName || payload.last_name;
+                payload.full_name = [seencelUser.firstName, seencelUser.lastName].filter(Boolean).join(' ') || seencelUser.fullName || payload.full_name;
+                if (seencelUser.avatarUrl && !payload.image_url) {
+                    payload.image_url = seencelUser.avatarUrl;
+                }
+            }
+        }
     }
 
     // 1. Create Contact
@@ -90,7 +121,6 @@ export async function createContact(organizationId: string, contact: Partial<Con
 
         if (linkError) {
             console.error("Error linking contact categories:", linkError);
-            // We don't throw here to avoid failing the whole operation if just tagging fails, but good to note.
         }
     }
 
@@ -105,13 +135,52 @@ export async function createContact(organizationId: string, contact: Partial<Con
 export async function updateContact(contactId: string, updates: Partial<Contact>, categoryIds?: string[]) {
     const supabase = await createClient();
 
-    const payload = {
+    const payload: Record<string, any> = {
         ...updates,
     };
 
     // Convert relative path to full URL if needed
     if (payload.image_url && !payload.image_url.startsWith('http')) {
         payload.image_url = getStorageUrl(payload.image_url, 'avatars');
+    }
+
+    // Auto-link: if email is being updated, check for Seencel user match
+    if (payload.email && !payload.linked_user_id) {
+        // Fetch current contact to check if already linked
+        const { data: currentContact } = await supabase
+            .from('contacts')
+            .select('linked_user_id, organization_id')
+            .eq('id', contactId)
+            .single();
+
+        if (currentContact && !currentContact.linked_user_id) {
+            const seencelUser = await checkSeencelUser(payload.email);
+            if (seencelUser) {
+                // Use service client to bypass RLS (sees soft-deleted contacts too)
+                const adminSupabase = createServiceClient();
+                const { data: existingLinked } = await adminSupabase
+                    .from('contacts')
+                    .select('id')
+                    .eq('organization_id', currentContact.organization_id)
+                    .eq('linked_user_id', seencelUser.userId)
+                    .neq('id', contactId)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (!existingLinked) {
+                    payload.linked_user_id = seencelUser.userId;
+                    payload.linked_at = new Date().toISOString();
+                    payload.sync_status = 'linked';
+                    payload.is_local = false;
+                    payload.first_name = seencelUser.firstName || payload.first_name;
+                    payload.last_name = seencelUser.lastName || payload.last_name;
+                    payload.full_name = [seencelUser.firstName, seencelUser.lastName].filter(Boolean).join(' ') || seencelUser.fullName || payload.full_name;
+                    if (seencelUser.avatarUrl && !payload.image_url) {
+                        payload.image_url = seencelUser.avatarUrl;
+                    }
+                }
+            }
+        }
     }
 
     // 1. Update Details
@@ -122,7 +191,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
 
     if (error) {
         console.error("Error updating contact:", error);
-        throw new Error(`Failed to update contact: ${error.message} (${error.details || ''})`);
+        throw new Error(`Failed to update contact: ${error.message} (${error.details || ''}`);
     }
 
     // 2. Update Categories if provided (replace all)
@@ -166,17 +235,41 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
 export async function deleteContact(contactId: string, replacementId?: string) {
     const supabase = await createClient();
 
-    // 1. If replacement requested, migrate any references
-    if (replacementId) {
-        // Future: Add migrations here if contacts are FK'd from other tables
-        // Example: Update project_data.client_id from contactId to replacementId
-        // For now, contact_category_links uses CASCADE so no migration needed there
+    // Get organization_id for the contact (needed for merge RPC)
+    const { data: contact } = await supabase
+        .from('contacts')
+        .select('organization_id')
+        .eq('id', contactId)
+        .single();
 
-        // Placeholder for future FK migrations:
-        // await supabase.from('some_table').update({ contact_id: replacementId }).eq('contact_id', contactId);
+    if (!contact) {
+        throw new Error('Contacto no encontrado');
     }
 
-    // 2. Soft delete
+    // 1. If replacement requested, use merge_contacts RPC
+    // This atomically moves ALL FK references (12 tables) and soft-deletes the source
+    if (replacementId) {
+        const { data: result, error } = await supabase.rpc('merge_contacts', {
+            p_source_contact_id: contactId,
+            p_target_contact_id: replacementId,
+            p_organization_id: contact.organization_id,
+        });
+
+        if (error) {
+            console.error("Error merging contacts:", JSON.stringify(error, null, 2));
+            throw new Error(`Error al reemplazar contacto: ${error.message}`);
+        }
+
+        const res = result as { success: boolean; message?: string; error?: string };
+        if (!res.success) {
+            throw new Error(res.message || 'Error al reemplazar el contacto');
+        }
+
+        revalidatePath(`/organization/contacts`);
+        return;
+    }
+
+    // 2. Simple soft delete (trigger validates no active references)
     const { error } = await supabase
         .from('contacts')
         .update({
@@ -187,7 +280,7 @@ export async function deleteContact(contactId: string, replacementId?: string) {
 
     if (error) {
         console.error("Error deleting contact:", JSON.stringify(error, null, 2));
-        throw new Error(`Failed to delete contact: ${error.message} | code: ${error.code} | details: ${error.details} | hint: ${error.hint}`);
+        throw new Error(`Error al eliminar contacto: ${error.message}`);
     }
 
     revalidatePath(`/organization/contacts`);
@@ -400,4 +493,51 @@ export async function getContactsByCategories(organizationId: string, categories
     });
 
     return Array.from(uniqueContactsMap.values());
+}
+
+// --- SEENCEL USER LOOKUP ---
+
+/**
+ * Checks if an email belongs to a registered Seencel user.
+ * Used by the contact form to provide visual feedback on email blur.
+ * Returns basic user info if found, null otherwise.
+ */
+export async function checkSeencelUser(email: string): Promise<{
+    userId: string;
+    fullName: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    avatarUrl: string | null;
+} | null> {
+    if (!email || !email.includes('@')) return null;
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('users')
+        .select(`
+            id,
+            full_name,
+            avatar_url,
+            user_data (
+                first_name,
+                last_name
+            )
+        `)
+        .ilike('email', email)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+    if (error || !data) return null;
+
+    const userData = (data as any).user_data;
+
+    return {
+        userId: data.id,
+        fullName: data.full_name,
+        firstName: userData?.first_name || null,
+        lastName: userData?.last_name || null,
+        avatarUrl: data.avatar_url,
+    };
 }

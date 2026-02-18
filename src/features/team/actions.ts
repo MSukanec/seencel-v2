@@ -1068,6 +1068,200 @@ export async function addExternalCollaboratorAction(
 /**
  * Get all external actors for an organization (for the team view).
  */
+
+/**
+ * Add an external collaborator with project context.
+ * Same as addExternalCollaboratorAction but includes project_id and client_id
+ * in the invitation so that accept_external_invitation auto-creates project_access.
+ */
+export async function addExternalCollaboratorWithProjectAction(input: {
+    organizationId: string;
+    email: string;
+    actorType: string;
+    projectId: string;
+    clientId: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // 1. Auth
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+        return { success: false, error: 'No autenticado' };
+    }
+
+    const { data: currentUser } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .eq('auth_id', authUser.id)
+        .single();
+
+    if (!currentUser) {
+        return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    // 2. Verify caller is admin
+    const { data: callerMember } = await supabase
+        .from('organization_members_full_view')
+        .select('id, role_type, role_name, user_id')
+        .eq('organization_id', input.organizationId)
+        .eq('user_id', currentUser.id)
+        .eq('is_active', true)
+        .single();
+
+    const isAdmin = callerMember?.role_type === 'admin' || callerMember?.role_name === 'Administrador';
+    if (!callerMember || !isAdmin) {
+        return { success: false, error: 'Solo los administradores pueden invitar colaboradores' };
+    }
+
+    const normalizedEmail = input.email.toLowerCase().trim();
+
+    // 3. Check if already a member
+    const { data: existingMember } = await supabase
+        .from('organization_members')
+        .select('id, users!inner(email)')
+        .eq('organization_id', input.organizationId)
+        .eq('is_active', true)
+        .eq('users.email', normalizedEmail)
+        .maybeSingle();
+
+    if (existingMember) {
+        return { success: false, error: 'Este email ya es miembro interno de la organización.' };
+    }
+
+    // 4. Check for existing pending invitation
+    const { data: existingInvitation } = await supabase
+        .from('organization_invitations')
+        .select('id')
+        .eq('organization_id', input.organizationId)
+        .eq('email', normalizedEmail)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+    if (existingInvitation) {
+        return { success: false, error: 'Ya existe una invitación pendiente para este email' };
+    }
+
+    // 5. Check if user exists in Seencel
+    const { data: existingUser } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+    // If user exists and already has project_access, skip
+    if (existingUser) {
+        const { data: existingAccess } = await supabase
+            .from('project_access')
+            .select('id')
+            .eq('project_id', input.projectId)
+            .eq('user_id', existingUser.id)
+            .eq('is_deleted', false)
+            .maybeSingle();
+
+        if (existingAccess) {
+            return { success: false, error: 'Este usuario ya tiene acceso a este proyecto' };
+        }
+    }
+
+    // Get org name
+    const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', input.organizationId)
+        .single();
+
+    const orgName = org?.name || 'la organización';
+    const inviterName = currentUser.full_name || currentUser.email || 'Un administrador';
+
+    // 6. Create invitation WITH project context
+    const token = randomUUID();
+    const actorLabel = EXTERNAL_ACTOR_TYPE_LABELS[input.actorType]?.label || 'Colaborador';
+
+    const { data: invitationData, error: insertError } = await supabase
+        .from('organization_invitations')
+        .insert({
+            organization_id: input.organizationId,
+            email: normalizedEmail,
+            role_id: null,
+            invited_by: callerMember.id,
+            token,
+            status: 'pending',
+            invitation_type: 'external',
+            actor_type: input.actorType,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            project_id: input.projectId,
+            client_id: input.clientId,
+        })
+        .select('id')
+        .single();
+
+    if (insertError) {
+        console.error('Error inserting external invitation with project:', insertError);
+        return { success: false, error: 'Error al crear la invitación' };
+    }
+
+    // 7. Send email
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://seencel.com';
+    const acceptUrl = `${baseUrl}/invite/accept?token=${token}`;
+    const emailSubject = `${inviterName} te invitó a colaborar en ${orgName}`;
+
+    try {
+        await sendEmail({
+            to: normalizedEmail,
+            subject: emailSubject,
+            react: TeamInvitationEmail({
+                organizationName: orgName,
+                inviterName,
+                roleName: actorLabel,
+                acceptUrl,
+                locale: 'es',
+                isExternal: true,
+            }),
+        });
+    } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+    }
+
+    // 8. In-app notification if user exists
+    if (existingUser) {
+        try {
+            const { data: notif } = await supabase
+                .from('notifications')
+                .insert({
+                    type: 'invitation',
+                    title: `Te invitaron a ${orgName}`,
+                    body: `${inviterName} te invitó como ${actorLabel}. Aceptá la invitación para unirte.`,
+                    data: {
+                        invitation_id: invitationData?.id,
+                        organization_id: input.organizationId,
+                        actor_type: input.actorType,
+                        project_id: input.projectId,
+                    },
+                })
+                .select('id')
+                .single();
+
+            if (notif) {
+                await supabase
+                    .from('user_notifications')
+                    .insert({
+                        user_id: existingUser.id,
+                        notification_id: notif.id,
+                    });
+            }
+        } catch (notifError) {
+            console.error('Error creating notification:', notifError);
+        }
+    }
+
+    revalidatePath('/organization/projects');
+    revalidatePath('/organization/team', 'page');
+    return { success: true };
+}
+
+/**
+ * Get all external actors for an organization (for the team view).
+ */
 export async function getExternalActorsForOrg(
     organizationId: string
 ): Promise<{ success: boolean; data?: ExternalActorDetail[]; error?: string }> {

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Indexes (534, excluding PKs)
+## Indexes (538, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -130,6 +130,8 @@
 | email_queue | idx_email_queue_pending | `CREATE INDEX idx_email_queue_pending ON public.email_queue USING btree (statu...` |
 | exchange_rates | exchange_rates_unique_pair | `CREATE UNIQUE INDEX exchange_rates_unique_pair ON public.exchange_rates USING...` |
 | exchange_rates | idx_exchange_rates_active | `CREATE INDEX idx_exchange_rates_active ON public.exchange_rates USING btree (...` |
+| external_actor_scopes | external_actor_scopes_external_actor_id_permission_key_key | `CREATE UNIQUE INDEX external_actor_scopes_external_actor_id_permission_key_ke...` |
+| external_actor_scopes | idx_eas_actor_perm | `CREATE INDEX idx_eas_actor_perm ON public.external_actor_scopes USING btree (...` |
 | external_service_prices | idx_ext_service_prices_service | `CREATE INDEX idx_ext_service_prices_service ON public.external_service_prices...` |
 | feature_flags | feature_flags_key_key | `CREATE UNIQUE INDEX feature_flags_key_key ON public.feature_flags USING btree...` |
 | feature_flags | idx_feature_flags_parent_id | `CREATE INDEX idx_feature_flags_parent_id ON public.feature_flags USING btree ...` |
@@ -280,6 +282,7 @@
 | organization_data | organization_data_city_idx | `CREATE INDEX organization_data_city_idx ON public.organization_data USING btr...` |
 | organization_data | organization_data_country_idx | `CREATE INDEX organization_data_country_idx ON public.organization_data USING ...` |
 | organization_data | organization_data_organization_id_key | `CREATE UNIQUE INDEX organization_data_organization_id_key ON public.organizat...` |
+| organization_external_actors | idx_external_actors_org_user | `CREATE INDEX idx_external_actors_org_user ON public.organization_external_act...` |
 | organization_external_actors | idx_oea_actor_type | `CREATE INDEX idx_oea_actor_type ON public.organization_external_actors USING ...` |
 | organization_external_actors | idx_oea_organization | `CREATE INDEX idx_oea_organization ON public.organization_external_actors USIN...` |
 | organization_external_actors | idx_oea_user | `CREATE INDEX idx_oea_user ON public.organization_external_actors USING btree ...` |
@@ -358,6 +361,9 @@
 | pins | idx_pins_project | `CREATE INDEX idx_pins_project ON public.pins USING btree (project_id) WHERE (...` |
 | plans | plans_name_key | `CREATE UNIQUE INDEX plans_name_key ON public.plans USING btree (name)` |
 | product_avg_prices | product_avg_prices_product_id_idx | `CREATE UNIQUE INDEX product_avg_prices_product_id_idx ON public.product_avg_p...` |
+| project_access | idx_project_access_lookup | `CREATE INDEX idx_project_access_lookup ON public.project_access USING btree (...` |
+| project_access | idx_project_access_user | `CREATE INDEX idx_project_access_user ON public.project_access USING btree (us...` |
+| project_access | project_access_project_id_user_id_key | `CREATE UNIQUE INDEX project_access_project_id_user_id_key ON public.project_a...` |
 | project_clients | idx_project_clients_client | `CREATE INDEX idx_project_clients_client ON public.project_clients USING btree...` |
 | project_clients | idx_project_clients_created_at | `CREATE INDEX idx_project_clients_created_at ON public.project_clients USING b...` |
 | project_clients | idx_project_clients_is_primary | `CREATE INDEX idx_project_clients_is_primary ON public.project_clients USING b...` |
@@ -519,14 +525,12 @@
 | user_acquisition | uniq_user_acquisition_user | `CREATE UNIQUE INDEX uniq_user_acquisition_user ON public.user_acquisition USI...` |
 | user_data | user_data_id_key | `CREATE UNIQUE INDEX user_data_id_key ON public.user_data USING btree (id)` |
 | user_data | user_data_user_id_key | `CREATE UNIQUE INDEX user_data_user_id_key ON public.user_data USING btree (us...` |
-| user_insight_interactions | user_insight_interactions_user_id_insight_id_interaction_ty_key | `CREATE UNIQUE INDEX user_insight_interactions_user_id_insight_id_interaction_...` |
 | user_notifications | user_notifications_user_id_notification_id_key | `CREATE UNIQUE INDEX user_notifications_user_id_notification_id_key ON public....` |
 | user_notifications | user_notifications_user_idx | `CREATE INDEX user_notifications_user_idx ON public.user_notifications USING b...` |
 | user_organization_preferences | user_organization_preferences_user_id_organization_id_key | `CREATE UNIQUE INDEX user_organization_preferences_user_id_organization_id_key...` |
 | user_preferences | user_preferences_user_id_key | `CREATE UNIQUE INDEX user_preferences_user_id_key ON public.user_preferences U...` |
+| user_presence | idx_user_presence_organization | `CREATE INDEX idx_user_presence_organization ON public.user_presence USING btr...` |
 | user_presence | idx_user_presence_session | `CREATE INDEX idx_user_presence_session ON public.user_presence USING btree (s...` |
-| user_presence | user_presence_org_idx | `CREATE INDEX user_presence_org_idx ON public.user_presence USING btree (org_id)` |
-| user_presence | user_presence_user_id_key | `CREATE UNIQUE INDEX user_presence_user_id_key ON public.user_presence USING b...` |
 | user_view_history | idx_user_view_history_entered_at | `CREATE INDEX idx_user_view_history_entered_at ON public.user_view_history USI...` |
 | user_view_history | idx_user_view_history_org | `CREATE INDEX idx_user_view_history_org ON public.user_view_history USING btre...` |
 | user_view_history | idx_user_view_history_session_id | `CREATE INDEX idx_user_view_history_session_id ON public.user_view_history USI...` |

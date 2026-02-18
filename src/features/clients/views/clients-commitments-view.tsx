@@ -6,18 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, LayoutGrid, List, Building2, FileText } from "lucide-react";
 import { useModal } from "@/stores/modal-store";
-import { useRouter } from "next/navigation";
+import { useActiveProjectId } from "@/stores/layout-store";
+import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { DataTableAvatarCell } from "@/components/shared/data-table/data-table-avatar-cell";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { deleteCommitmentAction } from "@/features/clients/actions";
-import { CommitmentForm } from "../components/forms/commitment-form";
-import { CommitmentCard } from "../components/commitments/commitment-card";
+import { CommitmentForm } from "../forms/clients-commitment-form";
+import { CommitmentCard } from "../components/commitment-card";
 import { ProjectClientView, OrganizationFinancialData } from "../types";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 
 // ========================================
 // TYPES
@@ -30,6 +32,7 @@ interface CommitmentsViewProps {
     financialData: OrganizationFinancialData;
     projectId?: string;
     orgId?: string;
+    projects?: { id: string; name: string }[];
 }
 
 type ViewMode = "grid" | "table";
@@ -89,9 +92,12 @@ export function CommitmentsView({
     financialData,
     projectId,
     orgId,
+    projects = [],
 }: CommitmentsViewProps) {
     const { openModal, closeModal } = useModal();
     const router = useRouter();
+    const storeProjectId = useActiveProjectId();
+    const activeProjectId = storeProjectId ?? projectId ?? null;
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const [commitmentToDelete, setCommitmentToDelete] = useState<any>(null);
 
@@ -108,6 +114,11 @@ export function CommitmentsView({
     // Enrich and sort data
     const enrichedData = useMemo(() => {
         return optimisticCommitments
+            .filter((commitment) => {
+                // Project filter (from header selector)
+                if (activeProjectId && commitment.project_id !== activeProjectId) return false;
+                return true;
+            })
             .map((commitment) => {
                 const client = clients.find(c => c.id === commitment.client_id);
                 const paidAmount = calculatePaidAmount(commitment.id, payments, commitment);
@@ -135,7 +146,7 @@ export function CommitmentsView({
                 if (!a.unit_name && b.unit_name) return 1;
                 return (a.clientName || "").localeCompare(b.clientName || "");
             });
-    }, [optimisticCommitments, clients, payments]);
+    }, [optimisticCommitments, clients, payments, activeProjectId]);
 
     // ========================================
     // HANDLERS
@@ -144,13 +155,13 @@ export function CommitmentsView({
     const handleCreate = () => {
         openModal(
             <CommitmentForm
-                clients={clients}
+                clients={activeProjectId ? clients.filter(c => c.project_id === activeProjectId) : clients}
                 financialData={financialData}
                 onSuccess={() => {
                     closeModal();
                     router.refresh();
                 }}
-                projectId={projectId}
+                projectId={activeProjectId || undefined}
                 orgId={orgId}
             />,
             {
@@ -296,16 +307,18 @@ export function CommitmentsView({
                         }
                     ]}
                 />
-                <div className="h-full flex items-center justify-center">
-                    <ViewEmptyState
-                        mode="empty"
-                        icon={FileText}
-                        viewName="Compromisos"
-                        featureDescription="Creá el primer compromiso de pago para comenzar."
-                        onAction={handleCreate}
-                        actionLabel="Nuevo Compromiso"
-                    />
-                </div>
+                <ContentLayout variant="wide">
+                    <div className="h-full flex items-center justify-center">
+                        <ViewEmptyState
+                            mode="empty"
+                            icon={FileText}
+                            viewName="Compromisos"
+                            featureDescription="Creá el primer compromiso de pago para comenzar."
+                            onAction={handleCreate}
+                            actionLabel="Nuevo Compromiso"
+                        />
+                    </div>
+                </ContentLayout>
             </>
         );
     }
@@ -348,42 +361,44 @@ export function CommitmentsView({
                 ]}
             />
 
-            {viewMode === "grid" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {enrichedData.map((item) => (
-                        <CommitmentCard
-                            key={item.id}
-                            data={{
-                                id: item.id,
-                                client_id: item.client_id,
-                                clientName: item.clientName,
-                                clientAvatar: item.clientAvatar,
-                                clientRole: item.clientRole,
-                                unitName: item.unit_name,
-                                concept: item.concept,
-                                totalAmount: Number(item.amount),
-                                paidAmount: item.paidAmount,
-                                balance: item.balance,
-                                currencySymbol: item.currencySymbol,
-                                currencyCode: item.currencyCode,
-                            }}
-                            onEdit={() => handleEdit(item)}
-                            onDelete={() => handleDelete(item)}
-                        />
-                    ))}
-                </div>
-            ) : (
-                <DataTable
-                    columns={columns}
-                    data={enrichedData}
-                    enableRowSelection={false}
-                    enableRowActions={true}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    pageSize={50}
-                    initialSorting={[{ id: "unit_name", desc: false }]}
-                />
-            )}
+            <ContentLayout variant="wide">
+                {viewMode === "grid" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {enrichedData.map((item) => (
+                            <CommitmentCard
+                                key={item.id}
+                                data={{
+                                    id: item.id,
+                                    client_id: item.client_id,
+                                    clientName: item.clientName,
+                                    clientAvatar: item.clientAvatar,
+                                    clientRole: item.clientRole,
+                                    unitName: item.unit_name,
+                                    concept: item.concept,
+                                    totalAmount: Number(item.amount),
+                                    paidAmount: item.paidAmount,
+                                    balance: item.balance,
+                                    currencySymbol: item.currencySymbol,
+                                    currencyCode: item.currencyCode,
+                                }}
+                                onEdit={() => handleEdit(item)}
+                                onDelete={() => handleDelete(item)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={enrichedData}
+                        enableRowSelection={false}
+                        enableRowActions={true}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        pageSize={50}
+                        initialSorting={[{ id: "unit_name", desc: false }]}
+                    />
+                )}
+            </ContentLayout>
 
             <DeleteConfirmationDialog
                 open={!!commitmentToDelete}

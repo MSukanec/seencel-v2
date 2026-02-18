@@ -1,9 +1,23 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 8: users — wallets)
+## Tables (chunk 8: user_view_history — wallets)
+
+### `user_view_history`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | FK → users.id |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| view_name | text | ✗ |  |  |
+| entered_at | timestamptz | ✗ | now() |  |
+| exited_at | timestamptz | ✓ |  |  |
+| duration_seconds | int4 | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| session_id | uuid | ✓ |  |  |
 
 ### `users`
 

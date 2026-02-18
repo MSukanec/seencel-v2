@@ -23,6 +23,11 @@ import { sumMoney, calculateDisplayAmount as calcDisplayAmount } from "@/lib/mon
 import { createMoney } from "@/lib/money/money";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
+import { DateRangeFilter, type DateRangeFilterValue } from "@/components/layout/dashboard/shared/toolbar/toolbar-date-range-filter";
+import { parseDateFromDB } from "@/lib/timezone-data";
+import { useActiveProjectId } from "@/stores/layout-store";
 
 interface ClientsOverviewProps {
     summary: ClientFinancialSummary[];
@@ -30,6 +35,36 @@ interface ClientsOverviewProps {
 }
 
 export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
+    const activeProjectId = useActiveProjectId();
+
+    // === Project filter (from header selector) ===
+    const projectPayments = useMemo(() => {
+        if (!activeProjectId) return payments;
+        return payments.filter(p => p.project_id === activeProjectId);
+    }, [payments, activeProjectId]);
+
+    const projectSummary = useMemo(() => {
+        if (!activeProjectId) return summary;
+        return summary.filter(s => s.project_id === activeProjectId);
+    }, [summary, activeProjectId]);
+
+    // === Date Range Filter (absorbed from page orchestrator) ===
+    const [dateRange, setDateRange] = useState<DateRangeFilterValue | undefined>(undefined);
+
+    const filteredPayments = useMemo(() => {
+        if (!dateRange?.from && !dateRange?.to) return projectPayments;
+        return projectPayments.filter(p => {
+            const paymentDate = parseDateFromDB(p.payment_date);
+            if (!paymentDate) return true;
+            if (dateRange?.from && paymentDate < dateRange.from) return false;
+            if (dateRange?.to && paymentDate > dateRange.to) return false;
+            return true;
+        });
+    }, [projectPayments, dateRange]);
+
+    // All calculations below use the date-filtered payments
+    const effectivePayments = filteredPayments;
+
     // === Centralized money operations ===
     const money = useMoney();
 
@@ -133,17 +168,17 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // ========================================
     // Determine which currency has the highest committed volume to prioritize it in sorting
     const dominantCurrencyCode = useMemo(() => {
-        if (!summary || summary.length === 0) return primaryCurrencyCode;
+        if (!projectSummary || projectSummary.length === 0) return primaryCurrencyCode;
 
         // Find the summary item with the highest committed amount
-        const dominant = summary.reduce((prev, current) => {
+        const dominant = projectSummary.reduce((prev, current) => {
             return (current.total_committed_amount > prev.total_committed_amount)
                 ? current
                 : prev;
-        }, summary[0]);
+        }, projectSummary[0]);
 
         return dominant.currency_code || primaryCurrencyCode;
-    }, [summary, primaryCurrencyCode]);
+    }, [projectSummary, primaryCurrencyCode]);
 
     // Secondary currency code for comparisons
     const secondaryCurrencyCode = money.config.secondaryCurrencyCode;
@@ -170,7 +205,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
         // Committed: Use exchange_rate from summary (stored at commitment time)
         const committedResult = sumMoney(
-            summary.map(s => ({
+            projectSummary.map(s => ({
                 amount: s.total_committed_amount,
                 currency_code: s.currency_code,
                 exchange_rate: Number(s.commitment_exchange_rate) || currentRate
@@ -182,7 +217,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
         // Paid: Map payments to MonetaryItem interface
         const paidResult = sumMoney(
-            payments.map(p => ({
+            effectivePayments.map(p => ({
                 amount: Number(p.amount),
                 currency_code: p.currency_code,
                 exchange_rate: Number(p.exchange_rate) || currentRate
@@ -238,21 +273,21 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                 });
         };
 
-        const committedBreakdown = calculateBreakdown(summary.map(s => ({
+        const committedBreakdown = calculateBreakdown(projectSummary.map(s => ({
             amount: s.total_committed_amount,
             functional: s.total_committed_amount, // Will be recalculated by view if needed
             currencyCode: s.currency_code || undefined,
             symbol: s.currency_symbol || undefined
         })));
 
-        const paidBreakdown = calculateBreakdown(payments.map(p => ({
+        const paidBreakdown = calculateBreakdown(effectivePayments.map(p => ({
             amount: p.amount,
             functional: p.amount * (Number(p.exchange_rate) || 1),
             currencyCode: p.currency_code || undefined,
             symbol: p.currency_symbol || undefined
         })));
 
-        const balanceBreakdown = calculateBreakdown(summary.map(s => ({
+        const balanceBreakdown = calculateBreakdown(projectSummary.map(s => ({
             amount: s.balance_due,
             functional: s.balance_due, // No conversion needed for breakdown display
             currencyCode: s.currency_code || undefined,
@@ -261,12 +296,12 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
 
         // Monthly Average - Use FUNCTIONAL values for consistency
-        const monthsWithPayments = new Set(payments.map(p =>
+        const monthsWithPayments = new Set(effectivePayments.map(p =>
             p.payment_month || (p.payment_date ? p.payment_date.substring(0, 7) : '')
         )).size || 1;
 
         // Calculate total paid using display amount logic
-        const totalPaidFunctional = payments.reduce((acc, p) => {
+        const totalPaidFunctional = effectivePayments.reduce((acc, p) => {
             return acc + calculateDisplayAmount({
                 amount: Number(p.amount),
                 currency_code: p.currency_code,
@@ -278,7 +313,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
         // Trend Logic
         // Calculate totals by month using smart logic
-        const paymentsByMonth = payments.reduce((acc, p) => {
+        const paymentsByMonth = effectivePayments.reduce((acc, p) => {
             const month = p.payment_month || (p.payment_date ? p.payment_date.substring(0, 7) : '');
             if (!month) return acc;
 
@@ -313,7 +348,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
             balanceBreakdown,
             dominantCurrencyCode // Export this for UI usage
         };
-    }, [summary, payments, effectiveDisplayMode, money.config, calculateDisplayAmount, primaryCurrencyCode, currentRate]);
+    }, [projectSummary, effectivePayments, effectiveDisplayMode, money.config, calculateDisplayAmount, primaryCurrencyCode, currentRate]);
 
     // ========================================
     // CHART DATA: PAYMENT EVOLUTION + BALANCE
@@ -322,7 +357,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
         const config = money.config;
 
         // Total committed amount across all summary items (using effective mode)
-        const totalCommitted = summary.reduce((acc, s) => {
+        const totalCommitted = projectSummary.reduce((acc, s) => {
             const moneyItem = createMoney({
                 amount: Number(s.total_committed_amount),
                 currency_code: s.currency_code,
@@ -333,7 +368,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
         }, 0);
 
         // Group payments by month (using effective mode)
-        const grouped = payments.reduce((acc, p) => {
+        const grouped = effectivePayments.reduce((acc, p) => {
             let monthKey = "";
             if (p.payment_month) {
                 monthKey = String(p.payment_month).slice(0, 7);
@@ -378,7 +413,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                 balance: Math.max(0, balance) // Saldo pendiente (decreases as you pay)
             };
         });
-    }, [payments, summary, effectiveDisplayMode, money.config, currentRate]);
+    }, [effectivePayments, projectSummary, effectiveDisplayMode, money.config, currentRate]);
 
     // Custom colors for this specific chart using centralized financial variables
     const evolutionChartConfig: ChartConfig = {
@@ -391,7 +426,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // ========================================
     const distributionData = useMemo(() => {
         const config = money.config;
-        const clientTotals = payments.reduce((acc, p) => {
+        const clientTotals = effectivePayments.reduce((acc, p) => {
             const clientName = p.client_name || "Desconocido";
             const moneyItem = createMoney({
                 amount: Number(p.amount),
@@ -414,7 +449,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
                 value,
                 fill: colors[i % colors.length]
             }));
-    }, [payments, effectiveDisplayMode, money.config, currentRate]);
+    }, [effectivePayments, effectiveDisplayMode, money.config, currentRate]);
 
     const distributionChartConfig: ChartConfig = distributionData.reduce((acc, item, i) => {
         acc[item.name] = { label: item.name, color: item.fill };
@@ -428,8 +463,8 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
     const insights = useMemo(() => {
         const rawInsights = generateClientInsights({
-            summary: summary,
-            payments: payments,
+            summary: projectSummary,
+            payments: effectivePayments,
             kpis: kpis,
             primaryCurrencyCode: primaryCurrencyCode || 'USD',
             displayCurrency: money.displayMode === 'secondary' ? 'secondary' : 'primary',
@@ -441,7 +476,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
 
         // Filter out dismissed insights
         return rawInsights.filter(insight => !dismissedIds.has(insight.id));
-    }, [summary, payments, kpis, primaryCurrencyCode, money.displayMode, displayCurrencyCode, currentRate, secondaryCurrencyObj?.code, calculateDisplayAmount, dismissedIds, money]);
+    }, [projectSummary, effectivePayments, kpis, primaryCurrencyCode, money.displayMode, displayCurrencyCode, currentRate, secondaryCurrencyObj?.code, calculateDisplayAmount, dismissedIds, money]);
 
 
     // --- 8. ACTION HANDLERS ---
@@ -452,7 +487,7 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // ========================================
     // RECENT ACTIVITY
     // ========================================
-    const recentActivity = payments.slice(0, 5);
+    const recentActivity = effectivePayments.slice(0, 5);
 
     // Dynamic Labels for Balance (Local Logic)
     const balanceTitle = kpis.totalBalance < 0 ? "Saldo a Favor / Excedente" : "Saldo Pendiente";
@@ -462,192 +497,207 @@ export function ClientsOverview({ summary, payments }: ClientsOverviewProps) {
     // RENDER
     // ========================================
     return (
-        <div className="space-y-6">
-            {/* ROW 1: KPI Grid - 2x2 on mobile, 1x4 on desktop (Idéntico a Finanzas) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* 1. Compromisos Totales */}
-                <DashboardKpiCard
-                    title="Compromisos Totales"
-                    value={isMixView && kpis.committedBreakdown.length === 1
-                        ? `${kpis.committedBreakdown[0].symbol} ${formatNumber(kpis.committedBreakdown[0].nativeTotal)}`
-                        : money.format(kpis.totalCommitted)
-                    }
-                    icon={<FileText className="h-5 w-5" />}
-                    iconClassName="bg-primary/10 text-primary"
-                    description="Valor total de contratos"
-                    currencyBreakdown={isMixView && kpis.committedBreakdown.length > 1 ? kpis.committedBreakdown : undefined}
-                    size="hero"
-                    compact
-                />
-
-                {/* 2. Cobrado a la Fecha */}
-                <DashboardKpiCard
-                    title="Cobrado a la Fecha"
-                    value={isMixView && kpis.paidBreakdown.length === 1
-                        ? `${kpis.paidBreakdown[0].symbol} ${formatNumber(kpis.paidBreakdown[0].nativeTotal)}`
-                        : money.format(kpis.totalPaid)
-                    }
-                    icon={<TrendingUp className="h-5 w-5" />}
-                    iconClassName="bg-amount-positive/10 text-amount-positive"
-                    description="Ingresos reales"
-                    trend={kpis.trendPercent !== 0 ? {
-                        value: `${Math.abs(kpis.trendPercent).toFixed(0)}%`,
-                        direction: kpis.trendDirection as "up" | "down" | "neutral"
-                    } : undefined}
-                    currencyBreakdown={isMixView && kpis.paidBreakdown.length > 1 ? kpis.paidBreakdown : undefined}
-                    size="hero"
-                    compact
-                />
-
-                {/* 3. Saldo / Balance */}
-                <DashboardKpiCard
-                    title={balanceTitle}
-                    value={money.formatWithSign(kpis.totalBalance)}
-                    icon={<Wallet className="h-5 w-5" />}
-                    iconClassName={kpis.totalBalance >= 0 ? "bg-primary/10 text-primary" : "bg-amount-negative/10 text-amount-negative"}
-                    description={balanceSubtitle}
-                    size="hero"
-                    compact
-                    className={kpis.totalBalance >= 0 ? "" : "[&_h2]:text-amount-negative"}
-                />
-
-                {/* 4. Promedio Mensual */}
-                <DashboardKpiCard
-                    title="Promedio Mensual"
-                    value={money.format(kpis.monthlyAverage)}
-                    icon={<Activity className="h-5 w-5" />}
-                    description="Ingreso promedio / mes"
-                    size="hero"
-                    compact
-                />
-            </div>
-
-            {/* ROW 2: Charts */}
-            <div className="grid gap-6 lg:grid-cols-2">
-                <DashboardCard
-                    title="Evolución de Cobros"
-                    description="Pagos vs Saldo pendiente"
-                    icon={<BarChart3 className="w-4 h-4" />}
-                >
-                    {evolutionData.length > 0 ? (
-                        <BaseDualAreaChart
-                            data={evolutionData}
-                            xKey="month"
-                            primaryKey="paid"
-                            secondaryKey="balance"
-                            primaryLabel="Cobrado"
-                            secondaryLabel="Saldo Pendiente"
-                            height={250}
-                            config={evolutionChartConfig}
-                            gradient
-                            showLegend
+        <>
+            {/* Toolbar with date range filter for overview */}
+            <Toolbar
+                portalToHeader={true}
+                leftActions={
+                    <DateRangeFilter
+                        title="Período"
+                        value={dateRange}
+                        onChange={(value) => setDateRange(value)}
+                    />
+                }
+            />
+            <ContentLayout variant="wide">
+                <div className="space-y-6">
+                    {/* ROW 1: KPI Grid - 2x2 on mobile, 1x4 on desktop (Idéntico a Finanzas) */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* 1. Compromisos Totales */}
+                        <DashboardKpiCard
+                            title="Compromisos Totales"
+                            value={isMixView && kpis.committedBreakdown.length === 1
+                                ? `${kpis.committedBreakdown[0].symbol} ${formatNumber(kpis.committedBreakdown[0].nativeTotal)}`
+                                : money.format(kpis.totalCommitted)
+                            }
+                            icon={<FileText className="h-5 w-5" />}
+                            iconClassName="bg-primary/10 text-primary"
+                            description="Valor total de contratos"
+                            currencyBreakdown={isMixView && kpis.committedBreakdown.length > 1 ? kpis.committedBreakdown : undefined}
+                            size="hero"
+                            compact
                         />
-                    ) : (
-                        <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin datos de cobros
-                        </div>
-                    )}
-                </DashboardCard>
 
-                <DashboardCard
-                    title="Distribución por Cliente"
-                    description="Top 5 clientes por monto cobrado"
-                    icon={<PieChart className="w-4 h-4" />}
-                >
-                    {distributionData.length > 0 ? (
-                        <BaseDonutChart
-                            data={distributionData}
-                            nameKey="name"
-                            valueKey="value"
-                            height={200}
-                            config={distributionChartConfig}
-                            legendFormatter={(val) => money.format(val)}
-                            tooltipFormatter={(val) => money.format(val)}
+                        {/* 2. Cobrado a la Fecha */}
+                        <DashboardKpiCard
+                            title="Cobrado a la Fecha"
+                            value={isMixView && kpis.paidBreakdown.length === 1
+                                ? `${kpis.paidBreakdown[0].symbol} ${formatNumber(kpis.paidBreakdown[0].nativeTotal)}`
+                                : money.format(kpis.totalPaid)
+                            }
+                            icon={<TrendingUp className="h-5 w-5" />}
+                            iconClassName="bg-amount-positive/10 text-amount-positive"
+                            description="Ingresos reales"
+                            trend={kpis.trendPercent !== 0 ? {
+                                value: `${Math.abs(kpis.trendPercent).toFixed(0)}%`,
+                                direction: kpis.trendDirection as "up" | "down" | "neutral"
+                            } : undefined}
+                            currencyBreakdown={isMixView && kpis.paidBreakdown.length > 1 ? kpis.paidBreakdown : undefined}
+                            size="hero"
+                            compact
                         />
-                    ) : (
-                        <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin datos de clientes
-                        </div>
-                    )}
-                </DashboardCard>
-            </div>
 
-            {/* ROW 3: Insights & Activity */}
-            <div className="grid gap-6 lg:grid-cols-2">
-                <DashboardCard
-                    title="Insights"
-                    description="Análisis automático de tu cartera"
-                    icon={<Lightbulb className="w-4 h-4" />}
-                >
-                    {/* INSIGHTS LIST */}
-                    {insights.length > 0 && (
-                        <div className="space-y-4">
-                            {insights.map((insight) => (
-                                <InsightCard
-                                    key={insight.id}
-                                    insight={insight}
-                                    onAction={handleAction}
-                                    onDismiss={dismissInsight}
+                        {/* 3. Saldo / Balance */}
+                        <DashboardKpiCard
+                            title={balanceTitle}
+                            value={money.formatWithSign(kpis.totalBalance)}
+                            icon={<Wallet className="h-5 w-5" />}
+                            iconClassName={kpis.totalBalance >= 0 ? "bg-primary/10 text-primary" : "bg-amount-negative/10 text-amount-negative"}
+                            description={balanceSubtitle}
+                            size="hero"
+                            compact
+                            className={kpis.totalBalance >= 0 ? "" : "[&_h2]:text-amount-negative"}
+                        />
+
+                        {/* 4. Promedio Mensual */}
+                        <DashboardKpiCard
+                            title="Promedio Mensual"
+                            value={money.format(kpis.monthlyAverage)}
+                            icon={<Activity className="h-5 w-5" />}
+                            description="Ingreso promedio / mes"
+                            size="hero"
+                            compact
+                        />
+                    </div>
+
+                    {/* ROW 2: Charts */}
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <DashboardCard
+                            title="Evolución de Cobros"
+                            description="Pagos vs Saldo pendiente"
+                            icon={<BarChart3 className="w-4 h-4" />}
+                        >
+                            {evolutionData.length > 0 ? (
+                                <BaseDualAreaChart
+                                    data={evolutionData}
+                                    xKey="month"
+                                    primaryKey="paid"
+                                    secondaryKey="balance"
+                                    primaryLabel="Cobrado"
+                                    secondaryLabel="Saldo Pendiente"
+                                    height={250}
+                                    config={evolutionChartConfig}
+                                    gradient
+                                    showLegend
                                 />
-                            ))}
-                        </div>
-                    )}
-                    {insights.length === 0 && (
-                        <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">
-                            No hay insights disponibles
-                        </div>
-                    )}
-                </DashboardCard>
+                            ) : (
+                                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
+                                    Sin datos de cobros
+                                </div>
+                            )}
+                        </DashboardCard>
 
-                <DashboardCard
-                    title="Actividad Reciente"
-                    description="Últimos cobros registrados"
-                    icon={<Activity className="w-4 h-4" />}
-                >
-                    {recentActivity.length > 0 ? (
-                        <div className="space-y-4">
-                            {recentActivity.map((payment, i) => {
-                                const hasCreatorAvatar = payment.creator_avatar_url;
-                                const creatorInitial = payment.creator_full_name?.charAt(0)?.toUpperCase() || '?';
+                        <DashboardCard
+                            title="Distribución por Cliente"
+                            description="Top 5 clientes por monto cobrado"
+                            icon={<PieChart className="w-4 h-4" />}
+                        >
+                            {distributionData.length > 0 ? (
+                                <BaseDonutChart
+                                    data={distributionData}
+                                    nameKey="name"
+                                    valueKey="value"
+                                    height={200}
+                                    config={distributionChartConfig}
+                                    legendFormatter={(val) => money.format(val)}
+                                    tooltipFormatter={(val) => money.format(val)}
+                                />
+                            ) : (
+                                <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                                    Sin datos de clientes
+                                </div>
+                            )}
+                        </DashboardCard>
+                    </div>
 
-                                return (
-                                    <div key={i} className="flex items-center gap-3">
-                                        {/* Creator Avatar (como en Finanzas) */}
-                                        {hasCreatorAvatar ? (
-                                            <img
-                                                src={payment.creator_avatar_url || undefined}
-                                                alt={payment.creator_full_name || 'Usuario'}
-                                                className="h-9 w-9 rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
-                                                {creatorInitial}
+                    {/* ROW 3: Insights & Activity */}
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <DashboardCard
+                            title="Insights"
+                            description="Análisis automático de tu cartera"
+                            icon={<Lightbulb className="w-4 h-4" />}
+                        >
+                            {/* INSIGHTS LIST */}
+                            {insights.length > 0 && (
+                                <div className="space-y-4">
+                                    {insights.map((insight) => (
+                                        <InsightCard
+                                            key={insight.id}
+                                            insight={insight}
+                                            onAction={handleAction}
+                                            onDismiss={dismissInsight}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                            {insights.length === 0 && (
+                                <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">
+                                    No hay insights disponibles
+                                </div>
+                            )}
+                        </DashboardCard>
+
+                        <DashboardCard
+                            title="Actividad Reciente"
+                            description="Últimos cobros registrados"
+                            icon={<Activity className="w-4 h-4" />}
+                        >
+                            {recentActivity.length > 0 ? (
+                                <div className="space-y-4">
+                                    {recentActivity.map((payment, i) => {
+                                        const hasCreatorAvatar = payment.creator_avatar_url;
+                                        const creatorInitial = payment.creator_full_name?.charAt(0)?.toUpperCase() || '?';
+
+                                        return (
+                                            <div key={i} className="flex items-center gap-3">
+                                                {/* Creator Avatar (como en Finanzas) */}
+                                                {hasCreatorAvatar ? (
+                                                    <img
+                                                        src={payment.creator_avatar_url || undefined}
+                                                        alt={payment.creator_full_name || 'Usuario'}
+                                                        className="h-9 w-9 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                                                        {creatorInitial}
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium truncate">
+                                                        {payment.client_name || "Pago registrado"}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {payment.creator_full_name && <span>{payment.creator_full_name} · </span>}
+                                                        {formatDistanceToNow(parseDateFromDB(payment.payment_date) || new Date(), { addSuffix: true, locale: es })}
+                                                    </p>
+                                                </div>
+                                                <span className="text-sm font-semibold text-amount-positive">
+                                                    +{payment.currency_symbol || "$"} {Number(payment.amount).toLocaleString('es-AR')}
+                                                </span>
                                             </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">
-                                                {payment.client_name || "Pago registrado"}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {payment.creator_full_name && <span>{payment.creator_full_name} · </span>}
-                                                {formatDistanceToNow(new Date(payment.payment_date), { addSuffix: true, locale: es })}
-                                            </p>
-                                        </div>
-                                        <span className="text-sm font-semibold text-amount-positive">
-                                            +{payment.currency_symbol || "$"} {Number(payment.amount).toLocaleString('es-AR')}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">
-                            Sin actividad reciente
-                        </div>
-                    )}
-                </DashboardCard>
-            </div>
-        </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">
+                                    Sin actividad reciente
+                                </div>
+                            )}
+                        </DashboardCard>
+                    </div>
+                </div>
+            </ContentLayout>
+        </>
     );
 }
 

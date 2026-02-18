@@ -22,6 +22,10 @@ interface ContactsDataTableProps {
     globalFilter?: string;
     onGlobalFilterChange?: (value: string) => void;
     selectedCategoryIds?: Set<string>;
+    filterSeencel?: Set<string>;
+    filterOrgMember?: Set<string>;
+    organizationName: string;
+    organizationLogoUrl: string | null;
     /** Company contacts for the edit form combobox */
     companyContacts: CompanyOption[];
     /** Callback: parent handles optimistic update for edit */
@@ -38,6 +42,10 @@ export function ContactsDataTable({
     globalFilter,
     onGlobalFilterChange,
     selectedCategoryIds,
+    filterSeencel,
+    filterOrgMember,
+    organizationName,
+    organizationLogoUrl,
     companyContacts,
     onEditSubmit,
     onDeleteContact,
@@ -57,6 +65,18 @@ export function ContactsDataTable({
             );
         }
 
+        // Filter by Seencel status
+        if (filterSeencel && filterSeencel.size > 0 && filterSeencel.size < 2) {
+            const wantSeencel = filterSeencel.has("yes");
+            result = result.filter(c => wantSeencel ? !!c.linked_user_id : !c.linked_user_id);
+        }
+
+        // Filter by Org member status
+        if (filterOrgMember && filterOrgMember.size > 0 && filterOrgMember.size < 2) {
+            const wantOrgMember = filterOrgMember.has("yes");
+            result = result.filter(c => wantOrgMember ? c.is_organization_member : !c.is_organization_member);
+        }
+
         // Filter by search query
         if (globalFilter?.trim()) {
             const query = globalFilter.toLowerCase();
@@ -71,7 +91,7 @@ export function ContactsDataTable({
         }
 
         return result;
-    }, [contacts, globalFilter, selectedCategoryIds]);
+    }, [contacts, globalFilter, selectedCategoryIds, filterSeencel, filterOrgMember]);
 
     // 🚀 OPTIMISTIC EDIT: parent handles the update
     const handleOpenEdit = (contact: ContactWithRelations) => {
@@ -150,6 +170,8 @@ export function ContactsDataTable({
                         <ContactCard
                             key={contact.id}
                             contact={contact}
+                            organizationName={organizationName}
+                            organizationLogoUrl={organizationLogoUrl}
                             onEdit={handleOpenEdit}
                             onDelete={handleDelete}
                             onAttachFiles={handleAttachFiles}

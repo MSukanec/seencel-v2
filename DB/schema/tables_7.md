@@ -1,9 +1,35 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Tables (chunk 7: task_actions — user_view_history)
+## Tables (chunk 7: system_error_logs — user_presence)
+
+### `system_error_logs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| domain | text | ✗ |  |  |
+| entity | text | ✗ |  |  |
+| function_name | text | ✗ |  |  |
+| error_message | text | ✗ |  |  |
+| context | jsonb | ✓ |  |  |
+| severity | text | ✗ | 'error'::text |  |
+| created_at | timestamptz | ✗ | now() |  |
+
+### `system_job_logs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| subscription_id | uuid | ✓ |  |  |
+| job_type | text | ✗ |  |  |
+| details | jsonb | ✓ |  |  |
+| status | text | ✗ |  |  |
+| error_message | text | ✓ |  |  |
+| processed_at | timestamptz | ✓ | now() |  |
 
 ### `task_actions`
 
@@ -377,17 +403,6 @@
 | last_name | text | ✓ |  |  |
 | phone_e164 | text | ✓ |  |  |
 
-### `user_insight_interactions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✗ |  | UNIQUE |
-| insight_id | text | ✗ |  | UNIQUE |
-| interaction_type | text | ✗ |  | UNIQUE |
-| metadata | jsonb | ✓ | '{}'::jsonb |  |
-| created_at | timestamptz | ✓ | now() |  |
-
 ### `user_notifications`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -431,8 +446,8 @@
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
-| user_id | uuid | ✗ |  | PK, UNIQUE, FK → users.id |
-| org_id | uuid | ✗ |  |  |
+| user_id | uuid | ✗ |  | PK, FK → users.id |
+| organization_id | uuid | ✓ |  |  |
 | last_seen_at | timestamptz | ✗ | now() |  |
 | status | text | ✗ | 'online'::text |  |
 | user_agent | text | ✓ |  |  |
@@ -440,18 +455,4 @@
 | updated_from | text | ✓ |  |  |
 | current_view | text | ✓ |  |  |
 | updated_at | timestamptz | ✓ | now() |  |
-| session_id | uuid | ✓ |  |  |
-
-### `user_view_history`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✗ |  | FK → users.id |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| view_name | text | ✗ |  |  |
-| entered_at | timestamptz | ✗ | now() |  |
-| exited_at | timestamptz | ✓ |  |  |
-| duration_seconds | int4 | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
 | session_id | uuid | ✓ |  |  |

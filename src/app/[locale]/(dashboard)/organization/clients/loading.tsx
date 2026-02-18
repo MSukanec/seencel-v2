@@ -3,7 +3,7 @@ import { PageSkeleton } from "@/components/shared/page-skeleton";
 export default function Loading() {
     return (
         <PageSkeleton
-            title="Clientes"
+            title="Cobros"
             messages={[
                 "Cargando datos de clientes…",
                 "Preparando compromisos y pagos…",

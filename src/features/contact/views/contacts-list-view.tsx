@@ -6,9 +6,11 @@ interface ContactsListViewProps {
     organizationId: string;
     initialContacts: ContactWithRelations[];
     contactCategories: ContactCategory[];
+    organizationName: string;
+    organizationLogoUrl: string | null;
 }
 
-export function ContactsListView({ organizationId, initialContacts, contactCategories }: ContactsListViewProps) {
+export function ContactsListView({ organizationId, initialContacts, contactCategories, organizationName, organizationLogoUrl }: ContactsListViewProps) {
     return (
         <div className="space-y-6">
             {/* Contacts Table */}
@@ -16,6 +18,8 @@ export function ContactsListView({ organizationId, initialContacts, contactCateg
                 organizationId={organizationId}
                 initialContacts={initialContacts}
                 contactCategories={contactCategories}
+                organizationName={organizationName}
+                organizationLogoUrl={organizationLogoUrl}
             />
         </div>
     );

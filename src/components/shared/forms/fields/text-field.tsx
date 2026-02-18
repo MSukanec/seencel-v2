@@ -42,6 +42,8 @@ export interface TextFieldProps {
     helpText?: string;
     /** HTML input type (default: "text") */
     type?: string;
+    /** Callback when input loses focus */
+    onBlur?: () => void;
 }
 
 export function TextField({
@@ -57,6 +59,7 @@ export function TextField({
     error,
     helpText,
     type = "text",
+    onBlur,
 }: TextFieldProps) {
     return (
         <FormGroup
@@ -75,6 +78,7 @@ export function TextField({
                     placeholder={placeholder}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
+                    onBlur={onBlur}
                     disabled={disabled}
                     autoFocus={autoFocus}
                     className={cn(Icon && "pl-10")}

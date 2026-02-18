@@ -2,16 +2,27 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
+import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContactWithRelations } from "@/types/contact";
-import { Building2, Mail, MapPin, MessageCircle, MoreHorizontal, Paperclip, Pencil, Phone, PhoneCall, Trash2, User } from "lucide-react";
+import { Building2, Mail, MessageCircle, MoreHorizontal, Paperclip, Pencil, Phone, PhoneCall, ShieldCheck, Trash2 } from "lucide-react";
+
+/** Traducción de actor_type a label legible */
+const ACTOR_TYPE_LABELS: Record<string, string> = {
+    client: "Cliente",
+    field_worker: "Trabajador de Campo",
+    accountant: "Contador",
+    external_site_manager: "Director de Obra Externo",
+    subcontractor_portal_user: "Subcontratista",
+};
 
 interface ContactCardProps {
     contact: ContactWithRelations;
+    organizationName: string;
+    organizationLogoUrl: string | null;
     onEdit: (contact: ContactWithRelations) => void;
     onDelete: (contact: ContactWithRelations) => void;
     onAttachFiles?: (contact: ContactWithRelations) => void;
@@ -22,7 +33,7 @@ function formatPhoneForWhatsApp(phone: string): string {
     return phone.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
 }
 
-export function ContactCard({ contact, onEdit, onDelete, onAttachFiles }: ContactCardProps) {
+export function ContactCard({ contact, organizationName, organizationLogoUrl, onEdit, onDelete, onAttachFiles }: ContactCardProps) {
     const avatarUrl = contact.resolved_avatar_url || contact.image_url;
 
     return (
@@ -58,23 +69,44 @@ export function ContactCard({ contact, onEdit, onDelete, onAttachFiles }: Contac
                 </DropdownMenu>
             </div>
 
-            {/* Organization Member Indicator (Top Left) - Mini Logo */}
-            {contact.is_organization_member && (
-                <div className="absolute top-4 left-4 z-10">
+            {/* Mini Avatar Indicators (Top Left) */}
+            {contact.linked_user_id && (
+                <div className="absolute top-4 left-4 z-10 flex gap-1.5">
+                    {/* Seencel Badge */}
                     <TooltipProvider delayDuration={0}>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Avatar className="h-8 w-8 border border-border/50 shadow-sm bg-background">
-                                    <AvatarFallback className="bg-primary/5 text-primary">
-                                        <Building2 className="h-4 w-4" />
-                                    </AvatarFallback>
+                                <Avatar className="h-7 w-7 border border-border/50 shadow-sm">
+                                    <AvatarImage src="/logo.png" alt="Seencel" className="object-cover" />
+                                    <AvatarFallback className="text-[10px] bg-muted">S</AvatarFallback>
                                 </Avatar>
                             </TooltipTrigger>
-                            <TooltipContent side="right">
-                                <p className="text-xs">Miembro de la Organización</p>
+                            <TooltipContent side="bottom">
+                                <p className="text-xs">Usuario de Seencel</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
+
+                    {/* Org Member Badge */}
+                    {contact.is_organization_member && (
+                        <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Avatar className="h-7 w-7 border border-border/50 shadow-sm">
+                                        {organizationLogoUrl ? (
+                                            <AvatarImage src={organizationLogoUrl} alt={organizationName} className="object-cover" />
+                                        ) : null}
+                                        <AvatarFallback className="text-[10px] bg-primary/5 text-primary">
+                                            <Building2 className="h-3.5 w-3.5" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">
+                                    <p className="text-xs">Miembro de {organizationName}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                 </div>
             )}
 
@@ -106,6 +138,28 @@ export function ContactCard({ contact, onEdit, onDelete, onAttachFiles }: Contac
                     <div className="h-5 mt-1" /> /* Spacer for alignment */
                 )}
             </div>
+
+            {/* Status Badges */}
+            {contact.linked_user_id && (
+                <div className="h-6 w-full flex items-center justify-center overflow-hidden mb-1">
+                    <div className="flex gap-1 justify-center">
+                        <Badge variant="outline" className="text-xs h-5 px-2 font-normal bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-0.5">
+                            <ShieldCheck className="h-2.5 w-2.5" />
+                            Seencel
+                        </Badge>
+                        {contact.is_organization_member && contact.member_role_name && (
+                            <Badge variant="outline" className="text-xs h-5 px-2 font-normal bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                {contact.member_role_name}
+                            </Badge>
+                        )}
+                        {contact.external_actor_type && (
+                            <Badge variant="outline" className="text-xs h-5 px-2 font-normal bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                {ACTOR_TYPE_LABELS[contact.external_actor_type] || contact.external_actor_type}
+                            </Badge>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Tags Slot - Moved here below name */}
             <div className="h-6 w-full flex items-center justify-center overflow-hidden mb-2">

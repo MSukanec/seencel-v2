@@ -1,9 +1,183 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 1: accept_organization_invitation — fill_progress_user_id_from_auth)
+## Functions & Procedures (chunk 1: accept_external_invitation — create_construction_task_material_snapshot)
+
+### `accept_external_invitation(p_token text, p_user_id uuid)` 🔐
+
+- **Returns**: jsonb
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.accept_external_invitation(p_token text, p_user_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_invitation RECORD;
+    v_existing_actor RECORD;
+    v_actor_id uuid;
+BEGIN
+    -- 1. Buscar invitación externa por token
+    SELECT
+        i.id,
+        i.organization_id,
+        i.email,
+        i.status,
+        i.expires_at,
+        i.invitation_type,
+        i.actor_type,
+        i.project_id,
+        i.client_id,
+        o.name AS org_name
+    INTO v_invitation
+    FROM public.organization_invitations i
+    JOIN public.organizations o ON o.id = i.organization_id
+    WHERE i.token = p_token
+      AND i.invitation_type = 'external'
+    LIMIT 1;
+
+    IF v_invitation IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'invitation_not_found',
+            'message', 'Invitación no encontrada o token inválido'
+        );
+    END IF;
+
+    -- 2. Verificar status
+    IF v_invitation.status NOT IN ('pending', 'registered') THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'invitation_already_used',
+            'message', 'Esta invitación ya fue utilizada'
+        );
+    END IF;
+
+    -- 3. Verificar expiración
+    IF v_invitation.expires_at IS NOT NULL AND v_invitation.expires_at < NOW() THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'invitation_expired',
+            'message', 'Esta invitación ha expirado'
+        );
+    END IF;
+
+    -- 4. Verificar si ya es actor externo (activo o inactivo)
+    SELECT id, is_active
+    INTO v_existing_actor
+    FROM public.organization_external_actors
+    WHERE organization_id = v_invitation.organization_id
+      AND user_id = p_user_id;
+
+    IF v_existing_actor IS NOT NULL AND v_existing_actor.is_active THEN
+        -- Ya es actor activo → marcar invitación y continuar
+        -- (podría tener project_id pendiente de vincular)
+        v_actor_id := v_existing_actor.id;
+
+        UPDATE public.organization_invitations
+        SET status = 'accepted', accepted_at = NOW(), user_id = p_user_id
+        WHERE id = v_invitation.id;
+
+    ELSIF v_existing_actor IS NOT NULL AND NOT v_existing_actor.is_active THEN
+        -- 5a. Reactivar actor soft-deleted
+        UPDATE public.organization_external_actors
+        SET
+            is_active = true,
+            actor_type = v_invitation.actor_type,
+            is_deleted = false,
+            deleted_at = NULL,
+            updated_at = NOW()
+        WHERE id = v_existing_actor.id;
+
+        v_actor_id := v_existing_actor.id;
+
+        -- Asegurar que el contacto existe
+        PERFORM public.ensure_contact_for_user(
+            v_invitation.organization_id,
+            p_user_id
+        );
+
+        -- Marcar invitación como aceptada
+        UPDATE public.organization_invitations
+        SET status = 'accepted', accepted_at = NOW(), user_id = p_user_id
+        WHERE id = v_invitation.id;
+    ELSE
+        -- 5b. Insertar nuevo actor externo
+        INSERT INTO public.organization_external_actors (
+            organization_id,
+            user_id,
+            actor_type,
+            is_active
+        ) VALUES (
+            v_invitation.organization_id,
+            p_user_id,
+            v_invitation.actor_type,
+            true
+        )
+        RETURNING id INTO v_actor_id;
+
+        -- Marcar invitación como aceptada
+        UPDATE public.organization_invitations
+        SET status = 'accepted', accepted_at = NOW(), user_id = p_user_id
+        WHERE id = v_invitation.id;
+    END IF;
+
+    -- 6. AUTO-CREAR project_access si la invitación tiene project_id
+    IF v_invitation.project_id IS NOT NULL THEN
+        INSERT INTO public.project_access (
+            project_id,
+            organization_id,
+            user_id,
+            access_type,
+            access_level,
+            client_id,
+            is_active
+        ) VALUES (
+            v_invitation.project_id,
+            v_invitation.organization_id,
+            p_user_id,
+            COALESCE(v_invitation.actor_type, 'external'),
+            'viewer',
+            v_invitation.client_id,
+            true
+        )
+        ON CONFLICT (project_id, user_id)
+        WHERE is_deleted = false
+        DO NOTHING; -- Si ya tiene acceso, no hacer nada
+    END IF;
+
+    -- 7. Configurar preferencias del usuario
+    UPDATE public.user_preferences
+    SET last_organization_id = v_invitation.organization_id
+    WHERE user_id = p_user_id;
+
+    INSERT INTO public.user_organization_preferences (
+        user_id, organization_id, updated_at
+    ) VALUES (
+        p_user_id, v_invitation.organization_id, NOW()
+    )
+    ON CONFLICT (user_id, organization_id) DO UPDATE
+    SET updated_at = NOW();
+
+    -- 8. Retornar éxito
+    RETURN jsonb_build_object(
+        'success', true,
+        'already_actor', (v_existing_actor IS NOT NULL AND v_existing_actor.is_active),
+        'organization_id', v_invitation.organization_id,
+        'org_name', v_invitation.org_name,
+        'project_id', v_invitation.project_id
+    );
+END;
+$function$
+```
+</details>
 
 ### `accept_organization_invitation(p_token text, p_user_id uuid)` 🔐
 
@@ -452,42 +626,42 @@ CREATE OR REPLACE FUNCTION public.analytics_track_navigation(p_org_id uuid, p_vi
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
-declare
-  v_user_id uuid;
-begin
-  select u.id into v_user_id from public.users u where u.auth_id = auth.uid() limit 1;
-  if v_user_id is null then return; end if;
+DECLARE
+    v_user_id uuid;
+BEGIN
+    SELECT u.id INTO v_user_id FROM public.users u WHERE u.auth_id = auth.uid() LIMIT 1;
+    IF v_user_id IS NULL THEN RETURN; END IF;
 
-  -- A. Cerrar vista anterior de ESTA sesión
-  update public.user_view_history
-  set 
-    exited_at = now(),
-    duration_seconds = extract(epoch from (now() - entered_at))::integer
-  where user_id = v_user_id 
-    and session_id = p_session_id
-    and exited_at is null;
+    -- A. Cerrar vista anterior de ESTA sesión
+    UPDATE public.user_view_history
+    SET
+        exited_at = now(),
+        duration_seconds = EXTRACT(EPOCH FROM (now() - entered_at))::integer
+    WHERE user_id = v_user_id
+      AND session_id = p_session_id
+      AND exited_at IS NULL;
 
-  -- B. Abrir nueva vista
-  insert into public.user_view_history (
-    user_id, organization_id, session_id, view_name, entered_at
-  ) values (
-    v_user_id, p_org_id, p_session_id, p_view_name, now()
-  );
+    -- B. Abrir nueva vista
+    INSERT INTO public.user_view_history (
+        user_id, organization_id, session_id, view_name, entered_at
+    ) VALUES (
+        v_user_id, p_org_id, p_session_id, p_view_name, now()
+    );
 
-  -- C. Actualizar Presencia en tiempo real
-  insert into public.user_presence (
-    user_id, org_id, session_id, last_seen_at, current_view, status, updated_from, updated_at
-  ) values (
-    v_user_id, p_org_id, p_session_id, now(), p_view_name, 'online', 'navigation', now()
-  )
-  on conflict (user_id) do update set
-    org_id = excluded.org_id,
-    session_id = excluded.session_id,
-    last_seen_at = excluded.last_seen_at,
-    current_view = excluded.current_view,
-    status = 'online',
-    updated_at = now();
-end;
+    -- C. Actualizar Presencia en tiempo real
+    INSERT INTO public.user_presence (
+        user_id, organization_id, session_id, last_seen_at, current_view, status, updated_from, updated_at
+    ) VALUES (
+        v_user_id, p_org_id, p_session_id, now(), p_view_name, 'online', 'navigation', now()
+    )
+    ON CONFLICT (user_id) DO UPDATE SET
+        organization_id = COALESCE(EXCLUDED.organization_id, user_presence.organization_id),
+        session_id = EXCLUDED.session_id,
+        last_seen_at = EXCLUDED.last_seen_at,
+        current_view = EXCLUDED.current_view,
+        status = 'online',
+        updated_at = now();
+END;
 $function$
 ```
 </details>
@@ -1003,23 +1177,77 @@ $function$
 ```
 </details>
 
-### `can_view_org(p_organization_id uuid)` 🔐
+### `can_mutate_project(p_project_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
-- **Kind**: function | VOLATILE | SECURITY DEFINER
+- **Kind**: function | STABLE | SECURITY DEFINER
 
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
+CREATE OR REPLACE FUNCTION public.can_mutate_project(p_project_id uuid, p_permission_key text)
  RETURNS boolean
  LANGUAGE sql
- SECURITY DEFINER
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
   SELECT
-    public.is_admin()
-    OR public.is_demo_org(p_organization_id)
-    OR public.is_org_member(p_organization_id);
+    is_admin()
+    -- Miembros con permiso mutan via can_mutate_org
+    OR EXISTS (
+      SELECT 1 FROM projects p
+      WHERE p.id = p_project_id
+        AND can_mutate_org(p.organization_id, p_permission_key)
+    )
+    -- Actores con access_level editor o admin
+    OR EXISTS (
+      SELECT 1 FROM project_access pa
+      WHERE pa.project_id = p_project_id
+        AND pa.user_id = current_user_id()
+        AND pa.is_active = true
+        AND pa.is_deleted = false
+        AND pa.access_level IN ('editor', 'admin')
+    );
+$function$
+```
+</details>
+
+### `can_view_client_data(p_project_id uuid, p_client_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_client_data(p_project_id uuid, p_client_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+    SELECT
+        -- Admins ven todo
+        is_admin()
+        -- Miembros de la org ven todo
+        OR EXISTS (
+            SELECT 1 FROM projects p
+            JOIN organization_members om ON om.organization_id = p.organization_id
+            WHERE p.id = p_project_id
+                AND om.user_id = current_user_id()
+                AND om.is_active = true
+        )
+        -- Actores con acceso al proyecto:
+        -- Si client_id IS NULL → ve todo (director de obra, etc.)
+        -- Si client_id = p_client_id → ve los datos de ese cliente
+        OR EXISTS (
+            SELECT 1 FROM project_access pa
+            WHERE pa.project_id = p_project_id
+                AND pa.user_id = current_user_id()
+                AND pa.is_active = true
+                AND pa.is_deleted = false
+                AND (pa.client_id IS NULL OR pa.client_id = p_client_id)
+        );
 $function$
 ```
 </details>
@@ -1027,7 +1255,7 @@ $function$
 ### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
-- **Kind**: function | VOLATILE | SECURITY DEFINER
+- **Kind**: function | STABLE | SECURITY DEFINER
 
 <details><summary>Source</summary>
 
@@ -1035,14 +1263,75 @@ $function$
 CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid, p_permission_key text)
  RETURNS boolean
  LANGUAGE sql
- SECURITY DEFINER
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
   SELECT
-    public.is_admin()
-    OR public.is_demo_org(p_organization_id)
+    is_admin()
+    OR is_demo_org(p_organization_id)
     OR (
-      public.is_org_member(p_organization_id)
-      AND public.has_permission(p_organization_id, p_permission_key)
+      is_org_member(p_organization_id)
+      AND has_permission(p_organization_id, p_permission_key)
+    )
+    OR external_has_scope(p_organization_id, p_permission_key);
+$function$
+```
+</details>
+
+### `can_view_org(p_organization_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT
+    is_admin()
+    OR is_demo_org(p_organization_id)
+    OR is_org_member(p_organization_id)
+    OR is_external_actor(p_organization_id);
+$function$
+```
+</details>
+
+### `can_view_project(p_project_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_project(p_project_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT
+    is_admin()
+    -- Miembros de la org ven todos los proyectos de su org
+    OR EXISTS (
+      SELECT 1 FROM projects p
+      JOIN organization_members om ON om.organization_id = p.organization_id
+      WHERE p.id = p_project_id
+        AND om.user_id = current_user_id()
+        AND om.is_active = true
+    )
+    -- Actores con acceso explícito al proyecto (externos, clientes, empleados)
+    OR EXISTS (
+      SELECT 1 FROM project_access pa
+      WHERE pa.project_id = p_project_id
+        AND pa.user_id = current_user_id()
+        AND pa.is_active = true
+        AND pa.is_deleted = false
     );
 $function$
 ```
@@ -1168,148 +1457,6 @@ BEGIN
     
     RETURN NEW;
 END;
-$function$
-```
-</details>
-
-### `current_user_id()` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.current_user_id()
- RETURNS uuid
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  select u.id
-  from public.users u
-  where u.auth_id = auth.uid()
-  limit 1;
-$function$
-```
-</details>
-
-### `dismiss_home_banner()` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.dismiss_home_banner()
- RETURNS boolean
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  v_user_id uuid;
-begin
-  -- Resolver user_id desde auth.uid()
-  select u.id
-  into v_user_id
-  from public.users u
-  where u.auth_id = auth.uid()
-  limit 1;
-
-  -- Si no hay usuario autenticado, no hacer nada
-  if v_user_id is null then
-    return false;
-  end if;
-
-  -- Actualizar preferencia
-  update public.user_preferences up
-  set
-    home_banner_dismissed = true,
-    updated_at = now()
-  where up.user_id = v_user_id;
-
-  return true;
-end;
-$function$
-```
-</details>
-
-### `documents_validate_project_org()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.documents_validate_project_org()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  proj_org uuid;
-begin
-  -- Validar que el proyecto pertenezca a la organización
-  if new.project_id is not null then
-    select p.organization_id
-    into proj_org
-    from public.projects p
-    where p.id = new.project_id;
-
-    if proj_org is null or proj_org <> new.organization_id then
-      raise exception 'El proyecto no pertenece a la organización.';
-    end if;
-  end if;
-
-  return new;
-end;
-$function$
-```
-</details>
-
-### `fill_progress_user_id_from_auth()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.fill_progress_user_id_from_auth()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  v_user_id uuid;
-begin
-  -- Si ya viene user_id, no tocar
-  if new.user_id is not null then
-    return new;
-  end if;
-
-  -- Resolver user_id desde auth.uid()
-  select u.id
-  into v_user_id
-  from public.users u
-  where u.auth_id = auth.uid()
-  limit 1;
-
-  -- Si no existe usuario asociado al auth.uid(), error
-  if v_user_id is null then
-    raise exception 'No existe users.id para el auth.uid() actual';
-  end if;
-
-  -- Completar user_id automáticamente
-  new.user_id := v_user_id;
-
-  return new;
-end;
 $function$
 ```
 </details>

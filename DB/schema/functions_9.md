@@ -1,9 +1,513 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-18T00:12:14.206Z
+> Generated: 2026-02-18T21:46:26.792Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Functions & Procedures (chunk 9: step_create_user_preferences — update_partner_balance_after_capital_change)
+## Functions & Procedures (chunk 9: step_create_organization — sync_role_permission_org_id)
+
+### `step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_org_id uuid := gen_random_uuid();
+BEGIN
+  INSERT INTO public.organizations (
+    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
+  )
+  VALUES (
+    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id, p_business_mode
+  );
+
+  RETURN v_org_id;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'owner_id', p_owner_id,
+        'org_name', p_org_name,
+        'plan_id', p_plan_id,
+        'business_mode', p_business_mode
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  INSERT INTO public.organization_currencies (
+    id,
+    organization_id,
+    currency_id,
+    is_active,
+    is_default,
+    created_at
+  )
+  VALUES (
+    gen_random_uuid(),
+    p_org_id,
+    p_currency_id,
+    true,
+    true,
+    now()
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_currencies',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'organization_id', p_org_id,
+        'currency_id', p_currency_id
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_organization_data(p_org_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_data(p_org_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.organization_data (organization_id)
+  VALUES (p_org_id);
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_data',
+      'signup',
+      SQLERRM,
+      jsonb_build_object('org_id', p_org_id),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.organization_preferences (
+    organization_id, default_currency_id, default_wallet_id, default_pdf_template_id,
+    use_currency_exchange, created_at, updated_at
+  )
+  VALUES (
+    p_org_id, p_currency_id, p_wallet_id, p_pdf_template_id,
+    false, now(), now()
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_preferences',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'org_id', p_org_id,
+        'currency_id', p_currency_id,
+        'wallet_id', p_wallet_id,
+        'pdf_template_id', p_pdf_template_id
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_organization_roles(p_org_id uuid)` 🔐
+
+- **Returns**: jsonb
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_roles(p_org_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$DECLARE
+  v_admin_id  uuid;
+  v_editor_id uuid;
+  v_viewer_id uuid;
+BEGIN
+  ----------------------------------------------------------------
+  -- ADMIN
+  ----------------------------------------------------------------
+  SELECT id
+  INTO v_admin_id
+  FROM public.roles
+  WHERE organization_id = p_org_id
+    AND name = 'Administrador'
+    AND is_system = false
+  LIMIT 1;
+
+  IF v_admin_id IS NULL THEN
+    INSERT INTO public.roles (name, description, type, organization_id, is_system)
+    VALUES ('Administrador', 'Acceso total', 'organization', p_org_id, false)
+    RETURNING id INTO v_admin_id;
+  END IF;
+
+  ----------------------------------------------------------------
+  -- EDITOR
+  ----------------------------------------------------------------
+  SELECT id
+  INTO v_editor_id
+  FROM public.roles
+  WHERE organization_id = p_org_id
+    AND name = 'Editor'
+    AND is_system = false
+  LIMIT 1;
+
+  IF v_editor_id IS NULL THEN
+    INSERT INTO public.roles (name, description, type, organization_id, is_system)
+    VALUES ('Editor', 'Puede editar', 'organization', p_org_id, false)
+    RETURNING id INTO v_editor_id;
+  END IF;
+
+  ----------------------------------------------------------------
+  -- VIEWER
+  ----------------------------------------------------------------
+  SELECT id
+  INTO v_viewer_id
+  FROM public.roles
+  WHERE organization_id = p_org_id
+    AND name = 'Lector'
+    AND is_system = false
+  LIMIT 1;
+
+  IF v_viewer_id IS NULL THEN
+    INSERT INTO public.roles (name, description, type, organization_id, is_system)
+    VALUES ('Lector', 'Solo lectura', 'organization', p_org_id, false)
+    RETURNING id INTO v_viewer_id;
+  END IF;
+
+  ----------------------------------------------------------------
+  -- RETURN
+  ----------------------------------------------------------------
+  RETURN jsonb_build_object(
+    'admin',  v_admin_id,
+    'editor', v_editor_id,
+    'viewer', v_viewer_id
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_roles',
+      'signup',
+      SQLERRM,
+      jsonb_build_object('org_id', p_org_id),
+      'critical'
+    );
+    RAISE;
+END;$function$
+```
+</details>
+
+### `step_create_organization_wallets(p_org_id uuid, p_wallet_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_wallets(p_org_id uuid, p_wallet_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  INSERT INTO public.organization_wallets (
+    id,
+    organization_id,
+    wallet_id,
+    is_active,
+    is_default,
+    created_at
+  )
+  VALUES (
+    gen_random_uuid(),
+    p_org_id,
+    p_wallet_id,
+    true,
+    true,
+    now()
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_wallets',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'organization_id', p_org_id,
+        'wallet_id', p_wallet_id
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_user_id uuid := gen_random_uuid();
+BEGIN
+  INSERT INTO public.users (
+    id, auth_id, email, full_name, avatar_url, avatar_source, role_id
+  )
+  VALUES (
+    v_user_id, p_auth_user_id, p_email, p_full_name, p_avatar_url, p_avatar_source, p_role_id
+  );
+
+  RETURN v_user_id;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_user',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'auth_user_id', p_auth_user_id,
+        'email', p_email,
+        'role_id', p_role_id
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$declare
+  v_source text;
+begin
+  ----------------------------------------------------------------
+  -- Fuente (fallback a direct)
+  ----------------------------------------------------------------
+  v_source := coalesce(
+    p_raw_meta->>'utm_source',
+    'direct'
+  );
+
+  INSERT INTO public.user_acquisition (
+    user_id,
+    source,
+    medium,
+    campaign,
+    content,
+    landing_page,
+    referrer
+  )
+  VALUES (
+    p_user_id,
+    v_source,
+    p_raw_meta->>'utm_medium',
+    p_raw_meta->>'utm_campaign',
+    p_raw_meta->>'utm_content',
+    p_raw_meta->>'landing_page',
+    p_raw_meta->>'referrer'
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    source = EXCLUDED.source,
+    medium = EXCLUDED.medium,
+    campaign = EXCLUDED.campaign,
+    content = EXCLUDED.content,
+    landing_page = EXCLUDED.landing_page,
+    referrer = EXCLUDED.referrer;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_user_acquisition',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'user_id', p_user_id,
+        'raw_meta', p_raw_meta
+      ),
+      'critical'
+    );
+    RAISE;
+end;$function$
+```
+</details>
+
+### `step_create_user_data(p_user_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_user_data(p_user_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.user_data (id, user_id, created_at)
+  VALUES (gen_random_uuid(), p_user_id, now());
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_user_data',
+      'signup',
+      SQLERRM,
+      jsonb_build_object('user_id', p_user_id),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_user_organization_preferences(p_user_id uuid, p_org_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_user_organization_preferences(p_user_id uuid, p_org_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.user_organization_preferences (
+    id, user_id, organization_id, created_at, updated_at
+  )
+  VALUES (
+    gen_random_uuid(), p_user_id, p_org_id, now(), now()
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_user_organization_preferences',
+      'signup',
+      SQLERRM,
+      jsonb_build_object('user_id', p_user_id, 'org_id', p_org_id),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
 
 ### `step_create_user_preferences(p_user_id uuid)` 🔐
 
@@ -447,309 +951,6 @@ BEGIN
     FROM public.roles WHERE id = NEW.role_id;
   END IF;
   RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `sync_task_status_progress()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.sync_task_status_progress()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-    -- Caso 1: Progress llega a 100 → marcar como completed
-    IF NEW.progress_percent = 100 AND OLD.progress_percent < 100 THEN
-        NEW.status := 'completed';
-    END IF;
-
-    -- Caso 2: Status cambia a completed → forzar progress a 100
-    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-        NEW.progress_percent := 100;
-    END IF;
-
-    -- Caso 3: Progress baja de 100 y estaba completed → revertir a in_progress
-    IF NEW.progress_percent < 100 AND OLD.status = 'completed' AND NEW.status = 'completed' THEN
-        NEW.status := 'in_progress';
-    END IF;
-
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `tick_home_checklist(p_key text, p_value boolean)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.tick_home_checklist(p_key text, p_value boolean)
- RETURNS boolean
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  v_user_id uuid;
-begin
-  -- Obtener usuario autenticado
-  v_user_id := public.current_user_id();
-
-  if v_user_id is null then
-    return false;
-  end if;
-
-  update public.user_preferences up
-  set
-    home_checklist = jsonb_set(
-      coalesce(up.home_checklist, '{}'::jsonb),
-      array[p_key],
-      to_jsonb(p_value),
-      true
-    ),
-    updated_at = now()
-  where up.user_id = v_user_id;
-
-  return true;
-end;
-$function$
-```
-</details>
-
-### `unaccent(regdictionary, text)`
-
-- **Returns**: text
-- **Kind**: function | STABLE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent(regdictionary, text)
- RETURNS text
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/unaccent', $function$unaccent_dict$function$
-```
-</details>
-
-### `unaccent(text)`
-
-- **Returns**: text
-- **Kind**: function | STABLE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent(text)
- RETURNS text
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/unaccent', $function$unaccent_dict$function$
-```
-</details>
-
-### `unaccent_init(internal)`
-
-- **Returns**: internal
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent_init(internal)
- RETURNS internal
- LANGUAGE c
- PARALLEL SAFE
-AS '$libdir/unaccent', $function$unaccent_init$function$
-```
-</details>
-
-### `unaccent_lexize(internal, internal, internal, internal)`
-
-- **Returns**: internal
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent_lexize(internal, internal, internal, internal)
- RETURNS internal
- LANGUAGE c
- PARALLEL SAFE
-AS '$libdir/unaccent', $function$unaccent_lexize$function$
-```
-</details>
-
-### `update_contact_category_links_updated_at()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_contact_category_links_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `update_forum_thread_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_forum_thread_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  if tg_op = 'INSERT' then
-    update public.forum_threads
-    set
-      last_activity_at = now(),
-      reply_count = reply_count + 1
-    where id = new.thread_id;
-
-  elsif tg_op = 'DELETE' then
-    update public.forum_threads
-    set
-      reply_count = greatest(reply_count - 1, 0)
-    where id = old.thread_id;
-  end if;
-
-  return null;
-end;
-$function$
-```
-</details>
-
-### `update_name_rendered_on_task_parametric()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_name_rendered_on_task_parametric()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  tipo_tarea_id uuid;
-begin
-  -- Generar nombre renderizado a partir de parámetros
-  new.name_rendered :=
-    public.render_parametric_task_name(new.param_order, new.param_values);
-
-  -- Validar param_values
-  if new.param_values is null then
-    raise exception 'param_values no puede ser NULL';
-  end if;
-
-  -- Extraer tipo_tarea (clave esperada)
-  tipo_tarea_id := (new.param_values ->> 'tipo_tarea')::uuid;
-
-  if tipo_tarea_id is null then
-    raise exception 'param_values.tipo_tarea es requerido';
-  end if;
-
-  -- Asignar unidad y categoría desde opciones del parámetro
-  select tpo.unit_id, tpo.category_id
-  into new.unit_id, new.category_id
-  from public.task_parameter_options tpo
-  where tpo.id = tipo_tarea_id;
-
-  -- Validación fuerte
-  if new.unit_id is null or new.category_id is null then
-    raise exception
-      'No se pudo resolver unit_id / category_id para tipo_tarea %',
-      tipo_tarea_id;
-  end if;
-
-  return new;
-end;
-$function$
-```
-</details>
-
-### `update_partner_balance_after_capital_change()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_partner_balance_after_capital_change()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-  v_partner_id uuid;
-  v_organization_id uuid;
-  v_signed_amount numeric;
-BEGIN
-  -- Determine the partner_id and organization_id based on the operation
-  IF TG_TABLE_NAME = 'capital_adjustments' THEN
-    v_partner_id := NEW.partner_id;
-    v_organization_id := NEW.organization_id;
-    v_signed_amount := CASE 
-      WHEN TG_OP = 'DELETE' THEN -(OLD.amount)
-      ELSE NEW.amount
-    END;
-  ELSIF TG_TABLE_NAME = 'partner_contributions' THEN
-    v_partner_id := NEW.partner_id;
-    v_organization_id := NEW.organization_id;
-    v_signed_amount := CASE 
-      WHEN TG_OP = 'DELETE' THEN -(OLD.amount)
-      ELSE NEW.amount
-    END;
-  ELSIF TG_TABLE_NAME = 'partner_withdrawals' THEN
-    v_partner_id := NEW.partner_id;
-    v_organization_id := NEW.organization_id;
-    v_signed_amount := CASE 
-      WHEN TG_OP = 'DELETE' THEN OLD.amount
-      ELSE -(NEW.amount)
-    END;
-  END IF;
-
-  -- Only update if we have a partner_id
-  IF v_partner_id IS NOT NULL THEN
-    INSERT INTO partner_capital_balance (partner_id, organization_id, balance_amount, balance_date, is_deleted)
-    VALUES (v_partner_id, v_organization_id, v_signed_amount, CURRENT_DATE, false)
-    ON CONFLICT (partner_id, organization_id) 
-    DO UPDATE SET 
-      balance_amount = partner_capital_balance.balance_amount + EXCLUDED.balance_amount,
-      updated_at = NOW();
-  END IF;
-
-  RETURN NULL;
 END;
 $function$
 ```
