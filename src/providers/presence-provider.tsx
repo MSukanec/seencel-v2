@@ -229,7 +229,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
     // Heartbeat Effect
     // ========================================================================
     useEffect(() => {
-        if (!userId || !activeOrgId || !sessionIdRef.current) return;
+        if (!userId || !sessionIdRef.current) return;
         if (isImpersonating) return; // Suppress heartbeat during admin impersonation
 
         const supabase = createClient();
@@ -237,7 +237,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
         const sendHeartbeat = async () => {
             try {
                 await supabase.rpc('heartbeat', {
-                    p_org_id: activeOrgId,
+                    p_org_id: activeOrgId || null,
                     p_session_id: sessionIdRef.current,
                     p_status: 'online',
                 });
@@ -263,7 +263,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
     // Navigation Tracking Effect
     // ========================================================================
     useEffect(() => {
-        if (!userId || !activeOrgId || !sessionIdRef.current) return;
+        if (!userId || !sessionIdRef.current) return;
         if (!pathname) return;
         if (isImpersonating) return; // Suppress tracking during admin impersonation
 
@@ -277,7 +277,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
         const trackNavigation = async () => {
             try {
                 await supabase.rpc('analytics_track_navigation', {
-                    p_org_id: activeOrgId,
+                    p_org_id: activeOrgId || null,
                     p_session_id: sessionIdRef.current,
                     p_view_name: viewName,
                 });
@@ -294,7 +294,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
     // Visibility Change Effect (tab switching)
     // ========================================================================
     useEffect(() => {
-        if (!userId || !activeOrgId || !sessionIdRef.current) return;
+        if (!userId || !sessionIdRef.current) return;
         if (isImpersonating) return; // Suppress visibility during admin impersonation
 
         const supabase = createClient();
@@ -304,7 +304,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
 
             try {
                 await supabase.rpc('heartbeat', {
-                    p_org_id: activeOrgId,
+                    p_org_id: activeOrgId || null,
                     p_session_id: sessionIdRef.current,
                     p_status: status,
                 });
