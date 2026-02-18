@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-17T17:51:37.665Z
+> Generated: 2026-02-17T23:22:11.037Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## Views (75)
+## Views (77)
 
 ### `admin_organizations_view`
 
@@ -1312,6 +1312,45 @@ SELECT m.id,
   WHERE (m.is_deleted = false);
 ```
 
+### `ops_alerts_enriched_view`
+
+```sql
+SELECT oa.id,
+    oa.created_at,
+    oa.updated_at,
+    oa.severity,
+    oa.status,
+    oa.alert_type,
+    oa.title,
+    oa.description,
+    oa.provider,
+    oa.provider_payment_id,
+    oa.fingerprint,
+    oa.evidence,
+    oa.ack_at,
+    oa.resolved_at,
+    oa.user_id,
+    u.email AS user_email,
+    u.full_name AS user_name,
+    oa.organization_id,
+    o.name AS org_name,
+    pl.name AS org_plan_name,
+    oa.payment_id,
+    p.amount AS payment_amount,
+    p.currency AS payment_currency,
+    p.product_type AS payment_product_type,
+    p.status AS payment_status,
+    ack_u.full_name AS ack_by_name,
+    res_u.full_name AS resolved_by_name
+   FROM ((((((ops_alerts oa
+     LEFT JOIN users u ON ((u.id = oa.user_id)))
+     LEFT JOIN organizations o ON ((o.id = oa.organization_id)))
+     LEFT JOIN plans pl ON ((pl.id = o.plan_id)))
+     LEFT JOIN payments p ON ((p.id = oa.payment_id)))
+     LEFT JOIN users ack_u ON ((ack_u.id = oa.ack_by)))
+     LEFT JOIN users res_u ON ((res_u.id = oa.resolved_by)));
+```
+
 ### `organization_activity_logs_view`
 
 ```sql
@@ -1725,6 +1764,34 @@ SELECT s.id,
      LEFT JOIN contacts ct ON ((s.contact_id = ct.id)))
      LEFT JOIN currencies c ON ((s.currency_id = c.id)))
   WHERE (s.is_deleted = false);
+```
+
+### `system_errors_enriched_view`
+
+```sql
+SELECT sel.id,
+    sel.domain,
+    sel.entity,
+    sel.function_name,
+    sel.error_message,
+    sel.context,
+    sel.severity,
+    sel.created_at,
+    ((sel.context ->> 'user_id'::text))::uuid AS context_user_id,
+    u.email AS user_email,
+    u.full_name AS user_name,
+    ((sel.context ->> 'organization_id'::text))::uuid AS context_org_id,
+    o.name AS org_name,
+    pl.name AS plan_name,
+    ((sel.context ->> 'amount'::text))::numeric AS payment_amount,
+    (sel.context ->> 'currency'::text) AS payment_currency,
+    (sel.context ->> 'provider'::text) AS payment_provider,
+    (sel.context ->> 'course_id'::text) AS context_course_id,
+    (sel.context ->> 'step'::text) AS error_step
+   FROM (((system_error_logs sel
+     LEFT JOIN users u ON ((u.id = ((sel.context ->> 'user_id'::text))::uuid)))
+     LEFT JOIN organizations o ON ((o.id = ((sel.context ->> 'organization_id'::text))::uuid)))
+     LEFT JOIN plans pl ON ((pl.id = o.plan_id)));
 ```
 
 ### `task_costs_view`

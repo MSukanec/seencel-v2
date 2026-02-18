@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-17T17:51:37.665Z
+> Generated: 2026-02-17T23:22:11.037Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -462,6 +462,7 @@ All 185 functions/procedures:
 - **`material_payments_view`**
 - **`material_purchase_orders_view`**
 - **`materials_view`**
+- **`ops_alerts_enriched_view`**
 - **`organization_activity_logs_view`**
 - **`organization_currencies_view`**
 - **`organization_member_details`**
@@ -476,6 +477,7 @@ All 185 functions/procedures:
 - **`quotes_view`**
 - **`subcontract_payments_view`**
 - **`subcontracts_view`**
+- **`system_errors_enriched_view`**
 - **`task_costs_view`**
 - **`task_recipes_view`**
 - **`tasks_view`**

@@ -1,71 +1,41 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import {
     Building2, Truck, Plus, Users, Loader2, CheckCircle,
-    ArrowRight, ArrowLeft, Palette, HardHat, DollarSign, Package
+    ArrowRight, ArrowLeft, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
+import { ImageUploader } from "@/components/shared/image-uploader";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { createOrganization } from "@/features/organization/actions";
 import { acceptInvitationAction } from "@/features/team/actions";
 import type { PendingInvitationData } from "@/actions/invitation-actions";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceSetupViewProps {
     pendingInvitation: PendingInvitationData | null;
+    isNewOrg?: boolean;
+    isAdmin?: boolean;
 }
 
 type BusinessMode = "professional" | "supplier";
+type Step = "choose" | "type" | "name" | "accepted";
 
-// Module presets for professional organizations
-const MODULE_PRESETS = [
-    {
-        id: "design",
-        label: "Diseño / Proyecto",
-        description: "Gestión de diseño arquitectónico y proyectos de ingeniería",
-        icon: Palette,
-        modules: ["dashboard", "management"] as const,
-    },
-    {
-        id: "construction",
-        label: "Construcción / Dirección de Obra",
-        description: "Ejecución y supervisión de obras civiles",
-        icon: HardHat,
-        modules: ["dashboard", "management", "construction"] as const,
-    },
-    {
-        id: "finance",
-        label: "Gestión Financiera",
-        description: "Control de ingresos, egresos y capital",
-        icon: DollarSign,
-        modules: ["dashboard", "finance"] as const,
-    },
-    {
-        id: "materials",
-        label: "Gestión de Materiales",
-        description: "Catálogo, compras y stock de materiales",
-        icon: Package,
-        modules: ["dashboard", "management"] as const,
-    },
-] as const;
-
-type Step = "choose" | "type" | "preconfig" | "name" | "accepted";
-
-export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProps) {
+export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: WorkspaceSetupViewProps) {
     const router = useRouter();
-    const [step, setStep] = useState<Step>("choose");
+    const [step, setStep] = useState<Step>(isNewOrg ? "type" : "choose");
     const [businessMode, setBusinessMode] = useState<BusinessMode>("professional");
-    const [selectedPresets, setSelectedPresets] = useState<string[]>(
-        MODULE_PRESETS.map(p => p.id) // All selected by default
-    );
     const [orgName, setOrgName] = useState("");
     const [isPending, startTransition] = useTransition();
     const [isAccepting, setIsAccepting] = useState(false);
+    const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+    const logoFileRef = useRef<File | null>(null);
 
     // ── CREATE ORG ──
     const handleCreateOrg = () => {
@@ -73,7 +43,14 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
 
         startTransition(async () => {
             try {
-                const result = await createOrganization(orgName.trim(), businessMode);
+                // Build logo FormData if a file was selected
+                let logoFormData: FormData | undefined;
+                if (logoFileRef.current) {
+                    logoFormData = new FormData();
+                    logoFormData.append("file", logoFileRef.current);
+                }
+
+                const result = await createOrganization(orgName.trim(), businessMode, logoFormData);
                 if (!result.success) {
                     toast.error(result.error || "Error al crear la organización");
                 }
@@ -110,14 +87,6 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
         }
     };
 
-    const togglePreset = (presetId: string) => {
-        setSelectedPresets(prev =>
-            prev.includes(presetId)
-                ? prev.filter(id => id !== presetId)
-                : [...prev, presetId]
-        );
-    };
-
     // ── SUCCESS STATE ──
     if (step === "accepted") {
         return (
@@ -138,7 +107,7 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
         );
     }
 
-    // ── STEP 3: NAME ──
+    // ── STEP 2: NAME ──
     if (step === "name") {
         return (
             <AuthLayout
@@ -147,6 +116,31 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
                 mode="onboarding"
             >
                 <div className="space-y-6 w-full">
+                    {/* Logo Upload */}
+                    <div className="flex flex-col items-center gap-1">
+                        <ImageUploader
+                            currentImageUrl={logoPreviewUrl}
+                            fallback=""
+                            fallbackIcon={<Building2 className="w-8 h-8 text-muted-foreground" />}
+                            onUpload={async (file) => {
+                                logoFileRef.current = file;
+                                const previewUrl = URL.createObjectURL(file);
+                                setLogoPreviewUrl(previewUrl);
+                                return {
+                                    success: true,
+                                    url: previewUrl,
+                                };
+                            }}
+                            onRemove={() => {
+                                logoFileRef.current = null;
+                                setLogoPreviewUrl(null);
+                            }}
+                            compressionPreset="avatar"
+                            size="xl"
+                            hint="Logo de tu organización (opcional)"
+                        />
+                    </div>
+
                     <FormGroup
                         label="Nombre"
                         htmlFor="orgName"
@@ -174,30 +168,14 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
                         <p className="text-xs text-muted-foreground font-medium">Resumen</p>
                         <div className="flex items-center gap-2 text-sm">
                             {businessMode === "professional" ? (
-                                <Building2 className="w-4 h-4 text-primary" />
+                                <Building2 className="w-4 h-4" style={{ color: "var(--chart-1)" }} />
                             ) : (
-                                <Truck className="w-4 h-4 text-primary" />
+                                <Truck className="w-4 h-4" style={{ color: "var(--chart-2)" }} />
                             )}
                             <span>
                                 {businessMode === "professional" ? "Estudio Profesional / Constructora" : "Proveedor"}
                             </span>
                         </div>
-                        {businessMode === "professional" && selectedPresets.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-1">
-                                {selectedPresets.map(presetId => {
-                                    const preset = MODULE_PRESETS.find(p => p.id === presetId);
-                                    if (!preset) return null;
-                                    return (
-                                        <span
-                                            key={presetId}
-                                            className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
-                                        >
-                                            {preset.label}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-                        )}
                     </div>
 
                     <Button
@@ -209,82 +187,6 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
                         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Crear y Continuar
                     </Button>
-
-                    <button
-                        type="button"
-                        onClick={() => setStep(businessMode === "professional" ? "preconfig" : "type")}
-                        className="w-full text-sm text-muted-foreground hover:text-primary transition-colors text-center flex items-center justify-center gap-1"
-                    >
-                        <ArrowLeft className="w-3.5 h-3.5" />
-                        Volver
-                    </button>
-                </div>
-            </AuthLayout>
-        );
-    }
-
-    // ── STEP 2: PRECONFIG (professional only) ──
-    if (step === "preconfig") {
-        return (
-            <AuthLayout
-                title="¿Qué actividades realiza tu organización?"
-                description="Seleccioná las áreas relevantes para personalizar tu experiencia. Podrás cambiar esto después."
-                mode="onboarding"
-            >
-                <div className="space-y-4 w-full">
-                    {MODULE_PRESETS.map((preset) => {
-                        const isSelected = selectedPresets.includes(preset.id);
-                        const Icon = preset.icon;
-                        return (
-                            <button
-                                key={preset.id}
-                                onClick={() => togglePreset(preset.id)}
-                                className={cn(
-                                    "w-full rounded-xl border p-4 text-left transition-all group",
-                                    isSelected
-                                        ? "border-primary/50 bg-primary/5"
-                                        : "border-border hover:border-muted-foreground/30 hover:bg-accent/30"
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                        "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                        isSelected ? "bg-primary/20" : "bg-muted"
-                                    )}>
-                                        <Icon className={cn(
-                                            "w-4.5 h-4.5 transition-colors",
-                                            isSelected ? "text-primary" : "text-muted-foreground"
-                                        )} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-medium text-sm">{preset.label}</h3>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{preset.description}</p>
-                                    </div>
-                                    <div className={cn(
-                                        "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all",
-                                        isSelected
-                                            ? "border-primary bg-primary"
-                                            : "border-muted-foreground/30"
-                                    )}>
-                                        {isSelected && (
-                                            <CheckCircle className="w-3.5 h-3.5 text-primary-foreground" />
-                                        )}
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
-
-                    <div className="pt-2">
-                        <Button
-                            onClick={() => setStep("name")}
-                            size="lg"
-                            className="w-full"
-                        >
-                            Continuar
-                            <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                    </div>
 
                     <button
                         type="button"
@@ -312,53 +214,99 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
                     <button
                         onClick={() => {
                             setBusinessMode("professional");
-                            setStep("preconfig");
+                            setStep("name");
                         }}
-                        className="w-full rounded-xl border bg-card p-5 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
+                        className="w-full rounded-xl border bg-card p-6 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
                     >
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                                <Building2 className="w-5 h-5 text-primary" />
+                            <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                                style={{ backgroundColor: "color-mix(in srgb, var(--chart-1) 15%, transparent)" }}
+                            >
+                                <Building2 className="w-5 h-5" style={{ color: "var(--chart-1)" }} />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold text-sm">Estudio Profesional / Constructora</h3>
+                                    <h3 className="font-semibold text-base">Estudio Profesional / Constructora</h3>
                                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Arquitectura, ingeniería, diseño, dirección de obra o construcción.
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Organización que diseña, dirige o ejecuta proyectos de arquitectura, ingeniería o construcción.
                                 </p>
+                                <ul className="mt-2 space-y-0.5 text-sm text-muted-foreground/80">
+                                    <li className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                                        Estudio de arquitectura o ingeniería
+                                    </li>
+                                    <li className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                                        Constructora o empresa de dirección de obra
+                                    </li>
+                                    <li className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                                        Profesional independiente con equipo
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </button>
 
-                    {/* Supplier */}
+                    {/* Supplier — always looks locked, but admin can click through */}
                     <button
                         onClick={() => {
+                            if (!isAdmin) return;
                             setBusinessMode("supplier");
                             setStep("name");
                         }}
-                        className="w-full rounded-xl border bg-card p-5 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
+                        className={cn(
+                            "w-full rounded-xl border bg-card p-6 text-left transition-all group relative",
+                            isAdmin
+                                ? "hover:border-primary/50 hover:bg-accent/30 cursor-pointer opacity-60 hover:opacity-80"
+                                : "cursor-default opacity-50"
+                        )}
                     >
+                        {/* Coming Soon Badge */}
+                        <Badge
+                            variant="secondary"
+                            className="absolute top-3 right-3 text-[10px] gap-1 px-2 py-0.5"
+                        >
+                            <Lock className="w-2.5 h-2.5" />
+                            Próximamente
+                        </Badge>
+
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0 group-hover:bg-orange-500/20 transition-colors">
-                                <Truck className="w-5 h-5 text-orange-500" />
+                            <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                                style={{ backgroundColor: "color-mix(in srgb, var(--chart-2) 15%, transparent)" }}
+                            >
+                                <Truck className="w-5 h-5" style={{ color: "var(--chart-2)" }} />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold text-sm">Proveedor</h3>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                    <h3 className="font-semibold text-base">Proveedor</h3>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Proveedor de materiales, equipos o servicios para la construcción.
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Empresa que vende materiales, equipos o servicios para la industria de la construcción.
                                 </p>
+                                <ul className="mt-2 space-y-0.5 text-sm text-muted-foreground/80">
+                                    <li className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                                        Corralón de materiales
+                                    </li>
+                                    <li className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                                        Alquiler de maquinaria
+                                    </li>
+                                    <li className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                                        Proveedor de servicios especializados
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </button>
 
                     <button
                         type="button"
-                        onClick={() => setStep("choose")}
+                        onClick={() => isNewOrg ? router.back() : setStep("choose")}
                         className="w-full text-sm text-muted-foreground hover:text-primary transition-colors text-center flex items-center justify-center gap-1 pt-2"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
@@ -380,18 +328,18 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
                 {/* Option 1: Create Organization */}
                 <button
                     onClick={() => setStep("type")}
-                    className="w-full rounded-xl border bg-card p-5 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
+                    className="w-full rounded-xl border bg-card p-6 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
                 >
                     <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                             <Plus className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-sm">Crear una organización</h3>
+                                <h3 className="font-semibold text-base">Crear una organización</h3>
                                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 Empezá desde cero con tu propia empresa o equipo de trabajo.
                             </p>
                         </div>
@@ -400,20 +348,20 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
 
                 {/* Option 2: Pending Invitation */}
                 {pendingInvitation && (
-                    <div className="rounded-xl border bg-card p-5 space-y-4">
+                    <div className="rounded-xl border bg-card p-6 space-y-4">
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                            <div className="w-11 h-11 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                                 <Users className="w-5 h-5 text-blue-500" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-sm">Invitación pendiente</h3>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <h3 className="font-semibold text-base">Invitación pendiente</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
                                     {pendingInvitation.inviter_name
                                         ? `${pendingInvitation.inviter_name} te invitó a unirte a`
                                         : "Te invitaron a unirte a"
                                     }
                                 </p>
-                                <p className="text-sm font-medium mt-0.5">
+                                <p className="text-base font-medium mt-0.5">
                                     {pendingInvitation.organization_name}
                                 </p>
                             </div>
@@ -434,10 +382,10 @@ export function WorkspaceSetupView({ pendingInvitation }: WorkspaceSetupViewProp
 
                 {/* No invitation message */}
                 {!pendingInvitation && (
-                    <div className="rounded-xl border border-dashed bg-muted/20 p-5 text-center">
+                    <div className="rounded-xl border border-dashed bg-muted/20 p-6 text-center">
                         <div className="flex items-center justify-center gap-2 text-muted-foreground">
                             <Users className="w-4 h-4" />
-                            <span className="text-xs">
+                            <span className="text-sm">
                                 No tenés invitaciones pendientes a un equipo.
                             </span>
                         </div>

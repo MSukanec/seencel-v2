@@ -43,7 +43,7 @@ export function ProfileOrganizationsView({ organizations, activeOrgId, currentUs
     const router = useRouter();
 
     const handleCreate = () => {
-        router.push('/workspace-setup');
+        router.push({ pathname: '/workspace-setup', query: { new: 'true' } } as any);
     };
 
     return (

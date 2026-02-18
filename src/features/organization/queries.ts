@@ -100,6 +100,7 @@ export async function getDashboardData() {
                 `)
                 .eq('id', orgId)
                 .eq('created_by', publicUserId) // Legacy check
+                .eq('is_deleted', false)
                 .single();
 
             if (ownedOrg) {
@@ -174,6 +175,7 @@ export async function getDashboardData() {
                     )
                 `)
                 .eq('created_by', publicUserId)
+                .eq('is_deleted', false)
                 .limit(1)
                 .single();
 
@@ -296,6 +298,7 @@ export async function getUserOrganizations(authId?: string) {
                     name,
                     logo_url,
                     owner_id,
+                    is_deleted,
                     plans:plan_id (
                         id,
                         name,
@@ -328,7 +331,7 @@ export async function getUserOrganizations(authId?: string) {
     // Extract bare organizations
     const rawOrgs = (membershipsResult.data || [])
         .map((m: any) => m.organizations)
-        .filter((org: any) => !!org);
+        .filter((org: any) => !!org && org.is_deleted === false);
 
     const orgIds = rawOrgs.map((o: any) => o.id);
 
@@ -571,6 +574,7 @@ export async function getRecentOrganizationsCount(days: number = 30): Promise<nu
     const { count, error } = await supabase
         .from('organizations')
         .select('*', { count: 'exact', head: true })
+        .eq('is_deleted', false)
         .gte('created_at', sinceDate);
 
     if (error) {

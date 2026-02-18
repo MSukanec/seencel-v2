@@ -89,7 +89,8 @@ export async function switchOrganization(organizationId: string) {
 
 export async function createOrganization(
     organizationName: string,
-    businessMode: 'professional' | 'supplier' = 'professional'
+    businessMode: 'professional' | 'supplier' = 'professional',
+    logoFormData?: FormData
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
@@ -138,6 +139,18 @@ export async function createOrganization(
         }, {
             onConflict: 'user_id, organization_id'
         });
+
+    // 4b. Upload logo if provided
+    if (logoFormData) {
+        logoFormData.append('organizationId', newOrgId);
+        try {
+            const { uploadOrganizationLogo } = await import('@/actions/upload-logo');
+            await uploadOrganizationLogo(logoFormData);
+        } catch (logoError) {
+            // Non-blocking: org was created, logo upload failed silently
+            console.error("Logo upload during org creation failed:", logoError);
+        }
+    }
 
     // 5. Revalidate to refresh data across the app
     revalidatePath('/', 'layout');

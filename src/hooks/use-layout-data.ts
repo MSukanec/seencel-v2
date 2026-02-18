@@ -78,6 +78,7 @@ export function useLayoutData(): LayoutData {
                     .from('organizations')
                     .select('id, name, logo_url, settings')
                     .eq('id', orgId)
+                    .eq('is_deleted', false)
                     .single();
 
                 if (data) {
