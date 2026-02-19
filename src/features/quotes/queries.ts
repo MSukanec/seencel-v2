@@ -76,18 +76,10 @@ export async function getQuote(quoteId: string): Promise<QuoteView | null> {
 export async function getQuoteItems(quoteId: string) {
     const supabase = await createClient();
 
-    // Use table directly with joins instead of view (view may not exist yet)
-    const { data, error } = await supabase
+    // Query 1: quote_items desde construction schema (sin joins cross-schema)
+    const { data: items, error } = await supabase
         .schema("construction").from("quote_items")
-        .select(`
-            *,
-            tasks:task_id (
-                name,
-                custom_name,
-                task_divisions:task_division_id (name),
-                units:unit_id (symbol)
-            )
-        `)
+        .select("*")
         .eq("quote_id", quoteId)
         .eq("is_deleted", false)
         .order("sort_key", { ascending: true });
@@ -97,17 +89,46 @@ export async function getQuoteItems(quoteId: string) {
         return [];
     }
 
-    // Transform to match QuoteItemView interface
-    return (data || []).map(item => ({
+    if (!items || items.length === 0) return [];
+
+    // Query 2: enriquecer con datos de tasks desde public schema
+    const taskIds = [...new Set(items.map(i => i.task_id).filter(Boolean))];
+
+    let tasksMap: Record<string, { name: string | null; custom_name: string | null; division_name: string | null; unit: string | null }> = {};
+
+    if (taskIds.length > 0) {
+        const { data: tasks } = await supabase
+            .from("tasks")
+            .select(`
+                id,
+                name,
+                custom_name,
+                task_divisions:task_division_id (name),
+                units:unit_id (symbol)
+            `)
+            .in("id", taskIds);
+
+        if (tasks) {
+            tasksMap = Object.fromEntries(tasks.map(t => [t.id, {
+                name: t.name || null,
+                custom_name: t.custom_name || null,
+                division_name: (t.task_divisions as unknown as { name: string } | null)?.name || null,
+                unit: (t.units as unknown as { symbol: string } | null)?.symbol || null,
+            }]));
+        }
+    }
+
+    return items.map(item => ({
         ...item,
-        task_name: item.tasks?.name || null,
-        custom_name: item.tasks?.custom_name || null,
-        division_name: item.tasks?.task_divisions?.name || null,
-        unit: item.tasks?.units?.symbol || null,
+        task_name: tasksMap[item.task_id]?.name || null,
+        custom_name: tasksMap[item.task_id]?.custom_name || null,
+        division_name: tasksMap[item.task_id]?.division_name || null,
+        unit: tasksMap[item.task_id]?.unit || null,
         position: item.sort_key,
         subtotal: item.quantity * item.unit_price,
         subtotal_with_markup: item.quantity * item.unit_price * (1 + (item.markup_pct || 0) / 100),
     }));
+
 }
 
 // ============================================
