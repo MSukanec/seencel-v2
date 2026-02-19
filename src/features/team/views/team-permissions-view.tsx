@@ -43,6 +43,10 @@ const PermissionTranslations: Record<string, string> = {
     'commercial.view': 'Ver Área Comercial',
     'commercial.manage': 'Gestionar Área Comercial',
 
+    // Planner
+    'planner.view': 'Ver Planificador',
+    'planner.manage': 'Gestionar Planificador',
+
     // Contacts
     'contacts.view': 'Ver Contactos',
     'contacts.manage': 'Gestionar Contactos',
@@ -67,6 +71,7 @@ const CategoryTranslations: Record<string, string> = {
     'admin': 'Administración del Sistema',
     'organization': 'Configuración de Organización',
     'commercial': 'Área Comercial (Presupuestos y Clientes)',
+    'planner': 'Planificador (Calendario y Kanban)',
     'contacts': 'Gestión de Contactos',
     'projects': 'Gestión de Proyectos',
     'general_costs': 'Finanzas y Costos',

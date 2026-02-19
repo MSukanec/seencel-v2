@@ -236,3 +236,4 @@ Debe terminar con **Exit code: 0**.
 | Script | Fecha | Qué consolida |
 |--------|-------|---------------|
 | `DB/026_commercial_permissions.sql` | Feb 2026 | `quotes.view/manage` + `clients.view/manage` → `commercial.view/manage` |
+| `DB/027_planner_permissions.sql` | Feb 2026 | `calendar.view/manage` + `kanban.view/manage` → `planner.view/manage` |
