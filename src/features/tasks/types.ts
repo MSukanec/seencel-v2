@@ -21,6 +21,7 @@ export interface Task {
 
     // State
     is_published: boolean;
+    status: string | null;
 
     // Soft delete
     is_deleted: boolean;
@@ -171,6 +172,7 @@ export interface TaskRecipe {
     updated_by: string | null;
     is_deleted: boolean;
     import_batch_id: string | null;
+    status: string | null;
 }
 
 export interface TaskRecipeView extends TaskRecipe {

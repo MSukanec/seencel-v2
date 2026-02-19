@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "@/i18n/routing";
-import { Plus, Monitor, Building2, ClipboardList, Trash2, Pencil } from "lucide-react";
+import { Plus, Monitor, Building2, ClipboardList, Trash2, Pencil, Circle } from "lucide-react";
 
 import { TasksByDivision, Unit, TaskDivision, TaskAction, TaskElement } from "@/features/tasks/types";
 import { TaskCatalog } from "@/features/tasks/components/tasks-catalog";
@@ -58,6 +58,7 @@ export function TasksCatalogView({
     const { openModal, closeModal } = useModal();
     const [searchQuery, setSearchQuery] = useState("");
     const [originFilter, setOriginFilter] = useState<Set<string>>(new Set());
+    const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
 
     // Flatten all tasks for filtering / counting
     const serverTasks = useMemo(() => {
@@ -76,6 +77,15 @@ export function TasksCatalogView({
         const facets = new Map<string, number>();
         facets.set("system", allTasks.filter(t => t.is_system).length);
         facets.set("organization", allTasks.filter(t => !t.is_system).length);
+        return facets;
+    }, [allTasks]);
+
+    // Calculate facet counts for status filter
+    const statusFacets = useMemo(() => {
+        const facets = new Map<string, number>();
+        facets.set("active", allTasks.filter(t => (t.status ?? "active") === "active").length);
+        facets.set("draft", allTasks.filter(t => t.status === "draft").length);
+        facets.set("archived", allTasks.filter(t => t.status === "archived").length);
         return facets;
     }, [allTasks]);
 
@@ -104,6 +114,15 @@ export function TasksCatalogView({
     const handleOriginClear = () => {
         setOriginFilter(new Set());
     };
+
+    const handleStatusSelect = (value: string) => {
+        const newSet = new Set(statusFilter);
+        if (newSet.has(value)) newSet.delete(value);
+        else newSet.add(value);
+        setStatusFilter(newSet);
+    };
+
+    const handleStatusClear = () => setStatusFilter(new Set());
 
     // ========================================================================
     // Multi-select for bulk actions
@@ -420,6 +439,13 @@ export function TasksCatalogView({
         { label: "Propios", value: "organization", icon: Building2 },
     ];
 
+    // Status filter options
+    const statusOptions = [
+        { label: "Activa", value: "active", icon: Circle },
+        { label: "Borrador", value: "draft", icon: Circle },
+        { label: "Archivada", value: "archived", icon: Circle },
+    ];
+
     // ========================================================================
     // EmptyState: early return pattern (SKILL compliance)
     // ========================================================================
@@ -429,14 +455,24 @@ export function TasksCatalogView({
                 <Toolbar
                     portalToHeader={true}
                     leftActions={
-                        <FacetedFilter
-                            title="Origen"
-                            options={originOptions}
-                            selectedValues={originFilter}
-                            onSelect={handleOriginSelect}
-                            onClear={handleOriginClear}
-                            facets={originFacets}
-                        />
+                        <>
+                            <FacetedFilter
+                                title="Origen"
+                                options={originOptions}
+                                selectedValues={originFilter}
+                                onSelect={handleOriginSelect}
+                                onClear={handleOriginClear}
+                                facets={originFacets}
+                            />
+                            <FacetedFilter
+                                title="Estado"
+                                options={statusOptions}
+                                selectedValues={statusFilter}
+                                onSelect={handleStatusSelect}
+                                onClear={handleStatusClear}
+                                facets={statusFacets}
+                            />
+                        </>
                     }
                     actions={[
                         {
@@ -475,14 +511,24 @@ export function TasksCatalogView({
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 leftActions={
-                    <FacetedFilter
-                        title="Origen"
-                        options={originOptions}
-                        selectedValues={originFilter}
-                        onSelect={handleOriginSelect}
-                        onClear={handleOriginClear}
-                        facets={originFacets}
-                    />
+                    <>
+                        <FacetedFilter
+                            title="Origen"
+                            options={originOptions}
+                            selectedValues={originFilter}
+                            onSelect={handleOriginSelect}
+                            onClear={handleOriginClear}
+                            facets={originFacets}
+                        />
+                        <FacetedFilter
+                            title="Estado"
+                            options={statusOptions}
+                            selectedValues={statusFilter}
+                            onSelect={handleStatusSelect}
+                            onClear={handleStatusClear}
+                            facets={statusFacets}
+                        />
+                    </>
                 }
                 actions={[
                     {
@@ -509,6 +555,7 @@ export function TasksCatalogView({
                 isAdminMode={isAdminMode}
                 searchQuery={searchQuery}
                 originFilter={computedOriginFilter}
+                statusFilter={statusFilter}
                 isSelected={multiSelect.isSelected}
                 onToggleSelect={multiSelect.toggle}
             />

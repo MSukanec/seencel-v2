@@ -24,6 +24,7 @@ import {
     MoreHorizontal,
     Pencil,
     Trash2,
+    Circle,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -41,6 +42,7 @@ import {
     updateRecipeExternalService,
     deleteRecipeExternalService,
     deleteRecipe,
+    updateRecipeStatus,
 } from "@/features/tasks/actions";
 import { TasksRecipeForm, type EditRecipeData } from "@/features/tasks/forms/tasks-recipe-form";
 import { TasksRecipeResourceForm, type EditResourceData } from "@/features/tasks/forms/tasks-recipe-resource-form";
@@ -182,6 +184,17 @@ export function TasksDetailRecipeView({
             router.refresh();
         } else {
             toast.error(result.error || "Error al eliminar la receta");
+        }
+    }, [router]);
+
+    const handleStatusChangeRecipe = useCallback(async (recipeId: string, status: "draft" | "active" | "archived") => {
+        const result = await updateRecipeStatus(recipeId, status);
+        if (result.success) {
+            const labels = { draft: "Borrador", active: "Activa", archived: "Archivada" };
+            toast.success(`Estado cambiado a: ${labels[status]}`);
+            router.refresh();
+        } else {
+            toast.error(result.error || "Error al cambiar el estado");
         }
     }, [router]);
 
@@ -1054,6 +1067,19 @@ export function TasksDetailRecipeView({
 
                             {/* Badges */}
                             <div className="flex items-center gap-1.5 shrink-0">
+                                {/* Status badge */}
+                                {recipe.status === "draft" && (
+                                    <Badge variant="secondary" className="text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1">
+                                        <Circle className="h-2 w-2 fill-current" />
+                                        Borrador
+                                    </Badge>
+                                )}
+                                {recipe.status === "archived" && (
+                                    <Badge variant="secondary" className="text-xs text-muted-foreground gap-1">
+                                        <Circle className="h-2 w-2 fill-current" />
+                                        Archivada
+                                    </Badge>
+                                )}
                                 {recipe.is_public && (
                                     <Badge variant="outline" className="text-xs gap-1">
                                         <Eye className="h-3 w-3" />
@@ -1098,6 +1124,31 @@ export function TasksDetailRecipeView({
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar
                                     </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    {recipe.status !== "draft" && (
+                                        <DropdownMenuItem
+                                            onClick={(e) => { e.stopPropagation(); handleStatusChangeRecipe(recipe.id, "draft"); }}
+                                        >
+                                            <Circle className="mr-2 h-3 w-3 fill-amber-500 text-amber-500" />
+                                            Marcar como Borrador
+                                        </DropdownMenuItem>
+                                    )}
+                                    {recipe.status !== "active" && (
+                                        <DropdownMenuItem
+                                            onClick={(e) => { e.stopPropagation(); handleStatusChangeRecipe(recipe.id, "active"); }}
+                                        >
+                                            <Circle className="mr-2 h-3 w-3 fill-emerald-500 text-emerald-500" />
+                                            Marcar como Activa
+                                        </DropdownMenuItem>
+                                    )}
+                                    {recipe.status !== "archived" && (
+                                        <DropdownMenuItem
+                                            onClick={(e) => { e.stopPropagation(); handleStatusChangeRecipe(recipe.id, "archived"); }}
+                                        >
+                                            <Circle className="mr-2 h-3 w-3 fill-muted-foreground text-muted-foreground" />
+                                            Archivar
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                         className="text-destructive focus:text-destructive"

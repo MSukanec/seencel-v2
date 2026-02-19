@@ -31,6 +31,7 @@ export async function createTask(formData: FormData) {
     const unit_id = formData.get("unit_id") as string;
     const task_division_id = formData.get("task_division_id") as string | null;
     const is_published = formData.get("is_published") === "true";
+    const status = (formData.get("status") as string | null) || "draft";
 
     // Parametric task fields
     const is_parametric = formData.get("is_parametric") === "true";
@@ -59,6 +60,7 @@ export async function createTask(formData: FormData) {
             organization_id: isSystemTask ? null : (formOrgId || (await getUserOrganizations()).activeOrgId),
             is_system: isSystemTask,
             is_published,
+            status,
             is_deleted: false,
             // Parametric fields
             is_parametric,
@@ -94,6 +96,7 @@ export async function updateTask(formData: FormData) {
     const unit_id = formData.get("unit_id") as string;
     const task_division_id = formData.get("task_division_id") as string | null;
     const is_published = formData.get("is_published") === "true";
+    const status = (formData.get("status") as string | null) || null;
 
     if (!id) {
         return { error: "ID de tarea no proporcionado" };
@@ -113,6 +116,7 @@ export async function updateTask(formData: FormData) {
             unit_id,
             task_division_id: task_division_id || null,
             is_published,
+            ...(status ? { status } : {}),
         })
         .eq("id", id);
 
@@ -202,6 +206,38 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
 
     if (error) {
         console.error("Error deleting task:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/organization/catalog");
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+// ============================================
+// UPDATE TASK STATUS (quick change from list)
+// ============================================
+export async function updateTaskStatus(
+    taskId: string,
+    status: "draft" | "active" | "archived",
+    isAdminMode: boolean = false
+) {
+    const supabase = isAdminMode ? createServiceClient() : await createClient();
+
+    let query = supabase
+        .from("tasks")
+        .update({ status })
+        .eq("id", taskId);
+
+    if (!isAdminMode) {
+        const { activeOrgId } = await getUserOrganizations();
+        if (!activeOrgId) return { error: "No hay organización activa" };
+        query = query.eq("organization_id", activeOrgId).eq("is_system", false);
+    }
+
+    const { error } = await query;
+    if (error) {
+        console.error("Error updating task status:", error);
         return { error: sanitizeError(error) };
     }
 
@@ -1255,6 +1291,30 @@ export async function updateRecipeVisibility(
     }
 
     revalidatePath("/admin/catalog");
+    return { success: true };
+}
+
+/**
+ * Update recipe status (draft | active | archived) — quick change from list
+ */
+export async function updateRecipeStatus(
+    recipeId: string,
+    status: "draft" | "active" | "archived"
+) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("task_recipes")
+        .update({ status })
+        .eq("id", recipeId);
+
+    if (error) {
+        console.error("Error updating recipe status:", error);
+        return { success: false, error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    revalidatePath("/organization/catalog");
     return { success: true };
 }
 

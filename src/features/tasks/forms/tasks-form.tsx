@@ -10,6 +10,18 @@ import { createTask, updateTask } from "../actions";
 import { Task, Unit, TaskDivision } from "../types";
 
 // ============================================================================
+// Status
+// ============================================================================
+
+export type TaskCatalogStatus = "draft" | "active" | "archived";
+
+const STATUS_OPTIONS: SelectOption[] = [
+    { value: "draft", label: "Borrador" },
+    { value: "active", label: "Activa" },
+    { value: "archived", label: "Archivada" },
+];
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -59,6 +71,9 @@ export function TasksForm({
     const [unitId, setUnitId] = useState(initialData?.unit_id || "");
     const [divisionId, setDivisionId] = useState(
         initialData?.task_division_id || defaultDivisionId || ""
+    );
+    const [status, setStatus] = useState<TaskCatalogStatus>(
+        (initialData as any)?.status || "draft"
     );
 
     // Division source — detect from initial data or default to own if they exist
@@ -111,6 +126,7 @@ export function TasksForm({
 
         formData.set("name", name.trim());
         formData.set("code", code.trim());
+        formData.set("status", status);
         if (unitId) formData.set("unit_id", unitId);
         if (divisionId) formData.set("task_division_id", divisionId);
 
@@ -156,34 +172,40 @@ export function TasksForm({
 
             <div className="flex-1 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* División / Rubro — FIRST */}
-                    <div className="md:col-span-2">
-                        <SelectField
-                            label="Rubro / División"
-                            value={divisionId}
-                            onChange={setDivisionId}
-                            options={divisionOptions}
-                            placeholder="Sin rubro / división"
-                            searchable
-                            searchPlaceholder="Buscar rubro..."
-                            clearable
-                            filterTabs={!isAdminMode ? DIVISION_FILTER_TABS : undefined}
-                            activeFilterTab={divisionSource}
-                            onFilterTabChange={handleSourceChange}
-                            emptyState={{
-                                message: divisionSource === "own"
-                                    ? "No tenés rubros propios."
-                                    : "No hay rubros del sistema.",
-                                linkText: divisionSource === "own" ? "Ir a Catálogo Técnico > Rubros" : undefined,
-                                onLinkClick: divisionSource === "own" ? () => {
-                                    onCancel?.();
-                                    router.push("/organization/catalog");
-                                } : undefined,
-                            }}
-                        />
-                    </div>
+                    {/* Fila 1: Rubro (izquierda) | Código (derecha) */}
+                    <SelectField
+                        label="Rubro / División"
+                        value={divisionId}
+                        onChange={setDivisionId}
+                        options={divisionOptions}
+                        placeholder="Sin rubro / división"
+                        searchable
+                        searchPlaceholder="Buscar rubro..."
+                        clearable
+                        filterTabs={!isAdminMode ? DIVISION_FILTER_TABS : undefined}
+                        activeFilterTab={divisionSource}
+                        onFilterTabChange={handleSourceChange}
+                        emptyState={{
+                            message: divisionSource === "own"
+                                ? "No tenés rubros propios."
+                                : "No hay rubros del sistema.",
+                            linkText: divisionSource === "own" ? "Ir a Catálogo Técnico > Rubros" : undefined,
+                            onLinkClick: divisionSource === "own" ? () => {
+                                onCancel?.();
+                                router.push("/organization/catalog");
+                            } : undefined,
+                        }}
+                    />
 
-                    {/* Nombre — full width */}
+                    <TextField
+                        label="Código"
+                        value={code}
+                        onChange={setCode}
+                        placeholder="Ej: ALB-001"
+                        required={false}
+                    />
+
+                    {/* Fila 2: Nombre — full width */}
                     <div className="md:col-span-2">
                         <TextField
                             label="Nombre de la Tarea"
@@ -195,22 +217,21 @@ export function TasksForm({
                         />
                     </div>
 
-                    {/* Código — 1 col */}
-                    <TextField
-                        label="Código"
-                        value={code}
-                        onChange={setCode}
-                        placeholder="Ej: ALB-001"
-                        required={false}
-                    />
-
-                    {/* Unidad — 1 col */}
+                    {/* Fila 3: Unidad (izquierda) | Estado (derecha) */}
                     <SelectField
                         label="Unidad de Medida"
                         value={unitId}
                         onChange={setUnitId}
                         options={unitOptions}
                         placeholder="Seleccionar unidad..."
+                        required
+                    />
+
+                    <SelectField
+                        label="Estado"
+                        value={status}
+                        onChange={(v) => setStatus(v as TaskCatalogStatus)}
+                        options={STATUS_OPTIONS}
                         required
                     />
                 </div>

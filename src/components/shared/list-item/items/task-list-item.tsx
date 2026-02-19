@@ -9,8 +9,14 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Link2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Link2, Circle } from "lucide-react";
 import { ResourcePriceDisplay } from "@/components/shared/price-pulse-popover";
 import {
     Tooltip,
@@ -36,6 +42,7 @@ export interface TaskListItemData {
     is_published: boolean;
     is_deleted: boolean;
     task_division_id: string | null;
+    status?: string | null; // 'draft' | 'active' | 'archived'
     // Optional: parametric fields
     is_parametric?: boolean;
     action_name?: string | null;
@@ -67,7 +74,33 @@ export interface TaskListItemProps {
     onEdit?: (task: any) => void;
     /** Callback when delete is clicked */
     onDelete?: (task: any) => void;
+    /** Callback when status changes (quick-change from menu) */
+    onStatusChange?: (task: any, status: "draft" | "active" | "archived") => void;
+    /** Hide the division badge (used when tasks are grouped by division with section headers) */
+    hideDivisionBadge?: boolean;
 }
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+const STATUS_CONFIG = {
+    draft: {
+        label: "Borrador",
+        dotClass: "fill-amber-500 text-amber-500",
+        badgeClass: "text-amber-600 dark:text-amber-400 border-amber-500/30",
+    },
+    active: {
+        label: "Activa",
+        dotClass: "fill-emerald-500 text-emerald-500",
+        badgeClass: null, // No badge for active — it's the default visible state
+    },
+    archived: {
+        label: "Archivada",
+        dotClass: "fill-muted-foreground text-muted-foreground",
+        badgeClass: "text-muted-foreground",
+    },
+} as const;
 
 // ============================================================================
 // Component
@@ -82,11 +115,15 @@ export const TaskListItem = memo(function TaskListItem({
     onClick,
     onEdit,
     onDelete,
+    onStatusChange,
+    hideDivisionBadge = false,
 }: TaskListItemProps) {
     // System tasks are NEVER editable — they are immutable by design
     const isEditable = canEdit ?? !task.is_system;
     const displayName = task.name || task.custom_name || "Sin nombre";
     const unitDisplay = task.unit_symbol || task.unit_name || null;
+
+    const currentStatus = (task.status ?? "active") as "draft" | "active" | "archived";
 
     const handleToggle = useCallback(() => {
         onToggleSelect?.(task.id);
@@ -125,8 +162,8 @@ export const TaskListItem = memo(function TaskListItem({
                 </ListItem.Title>
                 {/* Line 2: Code + Badges */}
                 <ListItem.Badges>
-                    {/* Division (Rubro) badge */}
-                    {task.division_name && (
+                    {/* Division (Rubro) badge — hidden when using grouped section headers */}
+                    {!hideDivisionBadge && task.division_name && (
                         <Badge variant="secondary" className="text-xs">
                             {task.division_name}
                         </Badge>
@@ -149,10 +186,20 @@ export const TaskListItem = memo(function TaskListItem({
                             {task.action_name}
                         </Badge>
                     )}
-                    {/* Draft badge */}
-                    {!task.is_published && (
+                    {/* Legacy fallback: is_published=false without new status column */}
+                    {!task.is_published && !task.status && (
                         <Badge variant="secondary" className="text-xs text-muted-foreground">
                             Borrador
+                        </Badge>
+                    )}
+                    {/* Status badge — only shown for non-active states */}
+                    {task.status && task.status !== "active" && (
+                        <Badge
+                            variant="secondary"
+                            className={`text-xs gap-1 ${STATUS_CONFIG[currentStatus]?.badgeClass ?? ""}`}
+                        >
+                            <Circle className="h-2 w-2 fill-current" />
+                            {STATUS_CONFIG[currentStatus]?.label}
                         </Badge>
                     )}
                 </ListItem.Badges>
@@ -213,20 +260,62 @@ export const TaskListItem = memo(function TaskListItem({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            {/* Editar */}
                             {onEdit && (
                                 <DropdownMenuItem onClick={() => onEdit(task)}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Editar
                                 </DropdownMenuItem>
                             )}
+
+                            {/* Estado — submenú con radio al estilo GPT */}
+                            {onStatusChange && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                            <Circle
+                                                className={`mr-2 h-3 w-3 ${STATUS_CONFIG[currentStatus].dotClass}`}
+                                            />
+                                            Estado
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent>
+                                            <DropdownMenuRadioGroup
+                                                value={currentStatus}
+                                                onValueChange={(val) =>
+                                                    onStatusChange(task, val as "draft" | "active" | "archived")
+                                                }
+                                            >
+                                                <DropdownMenuRadioItem value="draft">
+                                                    <Circle className="mr-2 h-3 w-3 fill-amber-500 text-amber-500" />
+                                                    Borrador
+                                                </DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="active">
+                                                    <Circle className="mr-2 h-3 w-3 fill-emerald-500 text-emerald-500" />
+                                                    Activa
+                                                </DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="archived">
+                                                    <Circle className="mr-2 h-3 w-3 fill-muted-foreground text-muted-foreground" />
+                                                    Archivada
+                                                </DropdownMenuRadioItem>
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuSub>
+                                </>
+                            )}
+
+                            {/* Eliminar */}
                             {onDelete && (
-                                <DropdownMenuItem
-                                    onClick={() => onDelete(task)}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </DropdownMenuItem>
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        onClick={() => onDelete(task)}
+                                        className="text-destructive focus:text-destructive"
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Eliminar
+                                    </DropdownMenuItem>
+                                </>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>

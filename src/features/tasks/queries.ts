@@ -61,6 +61,7 @@ export async function getOrganizationTasks(organizationId: string) {
         is_published: t.is_published ?? true,
         is_deleted: t.is_deleted ?? false,
         deleted_at: null,
+        status: t.status ?? null,
         // From view joins
         unit_name: t.unit_name,
         unit_symbol: t.unit_symbol,
@@ -203,6 +204,7 @@ export async function getTaskById(taskId: string): Promise<TaskView | null> {
         is_published: data.is_published ?? true,
         is_deleted: data.is_deleted ?? false,
         deleted_at: null,
+        status: data.status ?? null,
         unit_name: data.unit_name,
         unit_symbol: data.unit_symbol,
         division_name: data.division_name,
