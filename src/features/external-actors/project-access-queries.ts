@@ -51,7 +51,7 @@ export async function getProjectCollaborators(projectId: string) {
         .from("project_access_view")
         .select("*")
         .eq("project_id", projectId)
-        .eq("is_active", true)
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
 
     if (error) {

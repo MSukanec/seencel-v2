@@ -2,15 +2,15 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { OrganizationMemberDetail, OrganizationInvitation, Role } from "@/features/team/types";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Mail, Users, UserPlus, Wrench, BookOpen, UserCheck, Lock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useModal } from "@/stores/modal-store";
 import { InviteMemberForm } from "@/features/team/forms/team-invite-member-form";
 import { removeMemberAction, updateMemberRoleAction, revokeInvitationAction, resendInvitationAction, removeExternalActorAction, reactivateExternalActorAction } from "@/features/team/actions";
-import { SeatStatus, ExternalActorDetail, EXTERNAL_ACTOR_TYPE_LABELS, CLIENT_ACTOR_TYPES, ADVISOR_ACTOR_TYPES } from "@/features/team/types";
+import { SeatStatus, ExternalActorDetail, EXTERNAL_ACTOR_TYPE_LABELS, ADVISOR_ACTOR_TYPES } from "@/features/team/types";
 import { useAccessContextStore } from "@/stores/access-context-store";
 import type { ExternalActorType } from "@/features/external-actors/types";
 
@@ -20,8 +20,6 @@ import { SettingsSection } from "@/components/shared/settings-section";
 import { ContentLayout } from "@/components/layout";
 import { toast } from "sonner";
 import { AddExternalCollaboratorForm } from "@/features/team/forms/team-add-external-form";
-import { AddClientForm } from "@/features/team/forms/team-add-client-form";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -78,13 +76,9 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         [invitations, removedInvitationIds]
     );
 
-    // Split invitations: member vs external
+    // Split invitations: member vs external (clients removed, advisors kept)
     const memberInvitations = useMemo(() =>
         activeInvitations.filter(inv => (inv as any).invitation_type !== 'external'),
-        [activeInvitations]
-    );
-    const clientInvitations = useMemo(() =>
-        activeInvitations.filter(inv => (inv as any).invitation_type === 'external' && (inv as any).actor_type === 'client'),
         [activeInvitations]
     );
     const advisorInvitations = useMemo(() =>
@@ -92,11 +86,7 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         [activeInvitations]
     );
 
-    // External actors split
-    const clientActors = useMemo(() =>
-        externalActors.filter(a => CLIENT_ACTOR_TYPES.includes(a.actor_type as any)),
-        [externalActors]
-    );
+    // External actors: only advisors (clients removed from this view)
     const advisorActors = useMemo(() =>
         externalActors.filter(a => ADVISOR_ACTOR_TYPES.includes(a.actor_type as any)),
         [externalActors]
@@ -109,7 +99,6 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
     const canAddAdvisor = isAdvisorUnlimited || advisorCount < maxExternalAdvisors;
 
     // External sections: locked for non-owners ("Próximamente")
-    // Owner sees the same locked UI but can still interact
     const isCurrentUserOwner = currentUserId === ownerId;
 
     // "View as" handler — sets viewingAs state in access-context-store
@@ -388,154 +377,6 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
                         </Card>
                     </SettingsSection>
                 )}
-
-                {/* ===== CLIENTS SECTION ===== */}
-                <SettingsSection
-                    icon={Users}
-                    title="Clientes"
-                    description={
-                        <>
-                            <span>Tus clientes pueden seguir el avance de sus obras, ver documentos y consultar estados de cuenta desde su propio portal.</span>
-                            <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-muted px-2.5 py-1 rounded-full">
-                                <Users className="h-3 w-3" />
-                                {clientActors.length} clientes · Ilimitados
-                            </span>
-                        </>
-                    }
-                    actions={[
-                        {
-                            label: "Agregar Cliente",
-                            icon: UserPlus,
-                            onClick: () => {
-                                openModal(
-                                    <AddClientForm organizationId={organizationId} />,
-                                    {
-                                        title: "Agregar Cliente",
-                                        description: "Agregá un cliente para que pueda acceder al portal de su obra.",
-                                        size: "md"
-                                    }
-                                );
-                            },
-                        },
-                        {
-                            label: "Documentación",
-                            icon: BookOpen,
-                            variant: "secondary",
-                            href: "/docs/equipo/clientes",
-                        },
-                    ]}
-                >
-                    {(() => {
-
-                        return (
-                            <>
-                                {clientActors.length === 0 && clientInvitations.length === 0 ? (
-                                    <ViewEmptyState
-                                        mode="empty"
-                                        icon={Users}
-                                        viewName="Clientes"
-                                        featureDescription="Invitá a tus clientes para que sigan el avance de sus obras, vean documentos y consulten estados de cuenta desde su propio portal. Los clientes son ilimitados y no ocupan asientos del plan."
-                                        onAction={() => {
-                                            openModal(
-                                                <AddClientForm organizationId={organizationId} />,
-                                                {
-                                                    title: "Agregar Cliente",
-                                                    description: "Agregá un cliente para que pueda acceder al portal de su obra.",
-                                                    size: "md"
-                                                }
-                                            );
-                                        }}
-                                        actionLabel="Agregar Cliente"
-                                        docsPath="/docs/equipo/clientes"
-                                    />
-                                ) : (
-                                    <>
-                                        {clientActors.length > 0 && (
-                                            <div className="space-y-2">
-                                                {clientActors.map((actor) => (
-                                                    <MemberListItem
-                                                        key={actor.id}
-                                                        member={{
-                                                            id: actor.id,
-                                                            user_id: actor.user_id,
-                                                            user_full_name: actor.user_full_name,
-                                                            user_email: actor.user_email,
-                                                            user_avatar_url: actor.user_avatar_url,
-                                                            role_id: '',
-                                                            role_name: null,
-                                                            role_type: null,
-                                                            joined_at: actor.created_at,
-                                                            is_active: actor.is_active,
-                                                        }}
-                                                        actorTypeLabel={EXTERNAL_ACTOR_TYPE_LABELS[actor.actor_type]?.label || 'Cliente'}
-                                                        isInactive={!actor.is_active}
-                                                        onViewAs={() => handleViewAs(actor)}
-                                                        onToggleActive={() => {
-                                                            startTransition(async () => {
-                                                                const result = await removeExternalActorAction(organizationId, actor.id);
-                                                                if (result.success) {
-                                                                    toast.success(`${actor.user_full_name || 'Cliente'} fue desactivado`);
-                                                                } else {
-                                                                    toast.error(result.error || "Error al desactivar");
-                                                                }
-                                                            });
-                                                        }}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {clientInvitations.length > 0 && (
-                                            <div className={clientActors.length > 0 ? "mt-4" : ""}>
-                                                <p className="text-xs font-medium text-muted-foreground mb-2">Invitaciones pendientes</p>
-                                                <Card className="border shadow-sm overflow-hidden bg-muted/10">
-                                                    <div className="divide-y">
-                                                        {clientInvitations.map((invite) => (
-                                                            <div key={invite.id} className="flex items-center justify-between p-4 px-5">
-                                                                <div className="flex items-center gap-4">
-                                                                    <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground">
-                                                                        <Mail className="w-5 h-5" />
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <p className="text-sm font-medium leading-none">{invite.email}</p>
-                                                                        <span className="text-xs text-muted-foreground">
-                                                                            Enviado el {new Date(invite.created_at).toLocaleDateString()}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                                    disabled={isPending}
-                                                                    onClick={() => {
-                                                                        const inviteId = invite.id;
-                                                                        setRemovedInvitationIds(prev => [...prev, inviteId]);
-                                                                        startTransition(async () => {
-                                                                            const result = await revokeInvitationAction(organizationId, inviteId);
-                                                                            if (result.success) {
-                                                                                toast.success("Invitación revocada");
-                                                                            } else {
-                                                                                setRemovedInvitationIds(prev => prev.filter(id => id !== inviteId));
-                                                                                toast.error(result.error || "Error al revocar");
-                                                                            }
-                                                                        });
-                                                                    }}
-                                                                >
-                                                                    Revocar
-                                                                </Button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </Card>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </>
-                        );
-                    })()}
-                </SettingsSection>
 
                 {/* ===== COLLABORATORS/ADVISORS SECTION ===== */}
                 <div className="relative">

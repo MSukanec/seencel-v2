@@ -62,6 +62,41 @@ export async function createClientAction(input: z.infer<typeof createClientSchem
         throw new Error("Error al crear el cliente.");
     }
 
+    // Auto-grant project_access if contact has a linked Seencel user
+    try {
+        const { data: contact } = await supabase
+            .from("contacts")
+            .select("linked_user_id")
+            .eq("id", input.contact_id)
+            .single();
+
+        if (contact?.linked_user_id) {
+            // Check if access already exists (e.g., from a previous project or manual link)
+            const { data: existingAccess } = await supabase
+                .from("project_access")
+                .select("id")
+                .eq("project_id", input.project_id)
+                .eq("user_id", contact.linked_user_id)
+                .eq("is_deleted", false)
+                .maybeSingle();
+
+            if (!existingAccess) {
+                const { linkCollaboratorToProjectAction } = await import("@/features/external-actors/project-access-actions");
+                await linkCollaboratorToProjectAction({
+                    project_id: input.project_id,
+                    organization_id: input.organization_id,
+                    user_id: contact.linked_user_id,
+                    access_type: "client",
+                    access_level: "viewer",
+                    client_id: data.id,
+                });
+            }
+        }
+    } catch (accessError) {
+        // Non-blocking: client was created successfully, access grant is best-effort
+        console.error("Error auto-granting project access:", accessError);
+    }
+
     revalidatePath('/organization/clients');
     return data;
 }
@@ -100,15 +135,80 @@ export async function updateClientAction(input: z.infer<typeof updateClientSchem
 export async function deleteClientAction(clientId: string) {
     const supabase = await createClient();
 
+    const now = new Date().toISOString();
+
+    // Soft-delete project_client
     const { error } = await supabase
         .from('project_clients')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .update({ is_deleted: true, deleted_at: now })
         .eq('id', clientId);
 
     if (error) {
         console.error("Error deleting client:", error);
         throw new Error("Error al eliminar el cliente.");
     }
+
+    // Also soft-delete any project_access linked to this client_id
+    await supabase
+        .from('project_access')
+        .update({ is_deleted: true, deleted_at: now, is_active: false })
+        .eq('client_id', clientId)
+        .eq('is_deleted', false);
+
+    revalidatePath('/organization/clients');
+}
+
+/**
+ * Deactivate a project client (revoke access but keep as historical record).
+ * Sets status = 'inactive' on project_clients and is_active = false on project_access.
+ */
+export async function deactivateClientAction(clientId: string) {
+    const supabase = await createClient();
+
+    // Set client as inactive (keeps the record visible)
+    const { error } = await supabase
+        .from('project_clients')
+        .update({ status: 'inactive' })
+        .eq('id', clientId);
+
+    if (error) {
+        console.error("Error deactivating client:", error);
+        throw new Error("Error al desvincular el cliente.");
+    }
+
+    // Revoke project_access linked to this client_id
+    await supabase
+        .from('project_access')
+        .update({ is_active: false })
+        .eq('client_id', clientId)
+        .eq('is_deleted', false);
+
+    revalidatePath('/organization/clients');
+}
+
+/**
+ * Reactivate a previously deactivated project client.
+ * Sets status = 'active' on project_clients and is_active = true on project_access.
+ */
+export async function reactivateClientAction(clientId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('project_clients')
+        .update({ status: 'active' })
+        .eq('id', clientId);
+
+    if (error) {
+        console.error("Error reactivating client:", error);
+        throw new Error("Error al reactivar el cliente.");
+    }
+
+    // Reactivate project_access linked to this client_id
+    await supabase
+        .from('project_access')
+        .update({ is_active: true })
+        .eq('client_id', clientId)
+        .eq('is_deleted', false);
 
     revalidatePath('/organization/clients');
 }
@@ -808,6 +908,220 @@ export async function deletePaymentAction(paymentId: string) {
     }
 
     revalidatePath('/organization/clients');
+}
+
+// ===============================================
+// Invite Client by Email (Unified Flow)
+// ===============================================
+
+const inviteClientSchema = z.object({
+    organization_id: z.string().uuid(),
+    project_id: z.string().uuid(),
+    email: z.string().email(),
+    contact_name: z.string().optional(),
+    client_role_id: z.string().uuid().optional(),
+    notes: z.string().optional(),
+});
+
+/**
+ * Unified action: invite a client to a project by email.
+ * 
+ * Flow:
+ * 1. Find or create contact by email
+ * 2. Create project_client
+ * 3. If user exists in Seencel → grant direct project_access
+ * 4. If user doesn't exist → send invitation email
+ * 
+ * Reuses existing actions — does NOT duplicate logic.
+ */
+export async function inviteClientToProjectAction(
+    input: z.infer<typeof inviteClientSchema>
+): Promise<{ success: boolean; error?: string; project_client_id?: string; invited?: boolean; access_granted?: boolean }> {
+    const supabase = await createClient();
+
+    // 1. Auth — get current user
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+        return { success: false, error: "No autenticado" };
+    }
+
+    const { data: currentUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", authUser.id)
+        .single();
+
+    if (!currentUser) {
+        return { success: false, error: "Usuario no encontrado" };
+    }
+
+    const normalizedEmail = input.email.toLowerCase().trim();
+
+    // 2. Find or create contact
+    let contactId: string;
+
+    // 2a. Check if contact already exists with this email in the org
+    const { data: existingContact } = await supabase
+        .from("contacts")
+        .select("id, linked_user_id")
+        .eq("organization_id", input.organization_id)
+        .eq("is_deleted", false)
+        .ilike("email", normalizedEmail)
+        .maybeSingle();
+
+    if (existingContact) {
+        contactId = existingContact.id;
+    } else {
+        // 2b. Auto-create contact
+        const contactName = input.contact_name?.trim() || normalizedEmail;
+        const nameParts = contactName.split(" ");
+        const firstName = nameParts[0];
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
+
+        const { data: newContact, error: contactError } = await supabase
+            .from("contacts")
+            .insert({
+                organization_id: input.organization_id,
+                email: normalizedEmail,
+                full_name: contactName,
+                first_name: firstName,
+                last_name: lastName,
+                contact_type: "person",
+            })
+            .select("id")
+            .single();
+
+        if (contactError) {
+            console.error("Error creating contact:", contactError);
+            return { success: false, error: "Error al crear el contacto automáticamente." };
+        }
+        contactId = newContact.id;
+    }
+
+    // 3. Check if already a project_client
+    const { data: existingClient } = await supabase
+        .from("project_clients")
+        .select("id")
+        .eq("project_id", input.project_id)
+        .eq("contact_id", contactId)
+        .eq("is_deleted", false)
+        .maybeSingle();
+
+    if (existingClient) {
+        return { success: false, error: "Este contacto ya es cliente de este proyecto." };
+    }
+
+    // 4. Create project_client
+    const { data: projectClient, error: clientError } = await supabase
+        .from("project_clients")
+        .insert({
+            project_id: input.project_id,
+            organization_id: input.organization_id,
+            contact_id: contactId,
+            client_role_id: input.client_role_id,
+            notes: input.notes,
+            is_primary: true,
+            status: "active",
+        })
+        .select("id")
+        .single();
+
+    if (clientError) {
+        console.error("Error creating project_client:", clientError);
+        return { success: false, error: "Error al vincular el cliente al proyecto." };
+    }
+
+    // 5. Check if user exists in Seencel
+    const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+    if (existingUser) {
+        // 5a. User exists → grant direct project_access via existing action
+        try {
+            const { linkCollaboratorToProjectAction } = await import("@/features/external-actors/project-access-actions");
+            await linkCollaboratorToProjectAction({
+                project_id: input.project_id,
+                organization_id: input.organization_id,
+                user_id: existingUser.id,
+                access_type: "client",
+                access_level: "viewer",
+                client_id: projectClient.id,
+            });
+
+            // Also auto-link contact to user if not already linked
+            if (!existingContact?.linked_user_id) {
+                await supabase
+                    .from("contacts")
+                    .update({ linked_user_id: existingUser.id })
+                    .eq("id", contactId);
+            }
+
+            revalidatePath("/organization/clients");
+            return {
+                success: true,
+                project_client_id: projectClient.id,
+                access_granted: true,
+                invited: false,
+            };
+        } catch (error) {
+            console.error("Error granting direct access:", error);
+            // Client was created successfully, just access failed
+            revalidatePath("/organization/clients");
+            return {
+                success: true,
+                project_client_id: projectClient.id,
+                access_granted: false,
+                invited: false,
+                error: "Cliente vinculado pero no se pudo dar acceso automático.",
+            };
+        }
+    } else {
+        // 5b. User doesn't exist → send invitation via existing action
+        try {
+            const { addExternalCollaboratorWithProjectAction } = await import("@/features/team/actions");
+            const result = await addExternalCollaboratorWithProjectAction({
+                organizationId: input.organization_id,
+                email: normalizedEmail,
+                actorType: "client",
+                projectId: input.project_id,
+                clientId: projectClient.id,
+            });
+
+            if (!result.success) {
+                // Invitation failed but client was created
+                console.error("Invitation failed:", result.error);
+                revalidatePath("/organization/clients");
+                return {
+                    success: true,
+                    project_client_id: projectClient.id,
+                    access_granted: false,
+                    invited: false,
+                    error: "Cliente vinculado pero no se pudo enviar la invitación: " + result.error,
+                };
+            }
+
+            revalidatePath("/organization/clients");
+            return {
+                success: true,
+                project_client_id: projectClient.id,
+                access_granted: false,
+                invited: true,
+            };
+        } catch (error) {
+            console.error("Error sending invitation:", error);
+            revalidatePath("/organization/clients");
+            return {
+                success: true,
+                project_client_id: projectClient.id,
+                access_granted: false,
+                invited: false,
+                error: "Cliente vinculado pero no se pudo enviar la invitación.",
+            };
+        }
+    }
 }
 
 // ===============================================

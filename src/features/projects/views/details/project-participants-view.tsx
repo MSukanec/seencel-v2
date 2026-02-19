@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Users, Wrench, UserPlus, UserCheck } from "lucide-react";
+import { Users, Wrench, UserPlus, UserCheck, Lock, BookOpen, History } from "lucide-react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { SettingsSection } from "@/components/shared/settings-section";
@@ -12,8 +12,16 @@ import { DeleteConfirmationDialog } from "@/components/shared/forms/general/dele
 import { ClientForm } from "@/features/clients/forms/clients-form";
 import { ContactForm } from "@/features/contact/forms/contact-form";
 import { CollaboratorForm } from "@/features/external-actors/forms/collaborator-form";
-import { deleteClientAction } from "@/features/clients/actions";
-import { unlinkCollaboratorFromProjectAction } from "@/features/external-actors/project-access-actions";
+import {
+    deleteClientAction,
+    deactivateClientAction,
+    reactivateClientAction,
+} from "@/features/clients/actions";
+import {
+    unlinkCollaboratorFromProjectAction,
+    deactivateCollaboratorAccessAction,
+    reactivateCollaboratorAccessAction,
+} from "@/features/external-actors/project-access-actions";
 import { EXTERNAL_ACTOR_TYPE_LABELS } from "@/features/team/types";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import {
@@ -35,6 +43,12 @@ interface ProjectParticipantsViewProps {
     projectCollaborators: ProjectAccessView[];
 }
 
+type ConfirmAction = {
+    data: ParticipantItemData;
+    type: "client" | "collaborator";
+    action: "delete" | "deactivate";
+};
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -50,11 +64,25 @@ export function ProjectParticipantsView({
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
-    // ── Unlink Dialog State ─────────────────────────────────────────────
-    const [unlinkTarget, setUnlinkTarget] = useState<{
-        data: ParticipantItemData;
-        type: "client" | "collaborator";
-    } | null>(null);
+    // ── Confirmation Dialog State ────────────────────────────────────────
+    const [confirmTarget, setConfirmTarget] = useState<ConfirmAction | null>(null);
+
+    // ── Derived state: split active vs inactive ─────────────────────────
+    const activeClients = projectClients.filter(
+        (c) => c.status === "active" && !c.is_deleted
+    );
+    const inactiveClients = projectClients.filter(
+        (c) => c.status === "inactive" && !c.is_deleted
+    );
+
+    const activeCollaborators = projectCollaborators.filter((c) => c.is_active);
+    const inactiveCollaborators = projectCollaborators.filter((c) => !c.is_active);
+
+    const hasActiveClients = activeClients.length > 0;
+    const hasInactiveClients = inactiveClients.length > 0;
+    const hasActiveCollaborators = activeCollaborators.length > 0;
+    const hasInactiveCollaborators = inactiveCollaborators.length > 0;
+    const hasHistory = hasInactiveClients || hasInactiveCollaborators;
 
     // ── Handlers: Vincular Cliente ──────────────────────────────────────
 
@@ -64,11 +92,10 @@ export function ProjectParticipantsView({
                 orgId={organizationId}
                 roles={clientRoles}
                 projectId={projectId}
-                submitLabel="Vincular Cliente"
             />,
             {
-                title: "Vincular Cliente",
-                description: "Vinculá un contacto como cliente de este proyecto.",
+                title: "Agregar Cliente",
+                description: "Vinculá un contacto existente o invitá un cliente por email.",
                 size: "md",
             }
         );
@@ -101,7 +128,6 @@ export function ProjectParticipantsView({
     const handleEditContact = async (participant: ParticipantItemData) => {
         if (!participant.contact_id) return;
 
-        // Fetch the full contact data for the form's initialData
         const supabase = createSupabaseClient();
         const { data: contact, error } = await supabase
             .from("contacts")
@@ -114,7 +140,6 @@ export function ProjectParticipantsView({
             return;
         }
 
-        // Open ContactForm in autonomous mode — no need to pass categories or companies
         openModal(
             <ContactForm
                 organizationId={organizationId}
@@ -128,10 +153,52 @@ export function ProjectParticipantsView({
         );
     };
 
-    // ── Handlers: Desvincular Cliente ──────────────────────────────────
+    // ── Handlers: Deactivate (desvincular sin borrar) ───────────────────
 
-    const handleUnlinkClient = (participant: ParticipantItemData) => {
-        setUnlinkTarget({ data: participant, type: "client" });
+    const handleDeactivateClient = (participant: ParticipantItemData) => {
+        setConfirmTarget({ data: participant, type: "client", action: "deactivate" });
+    };
+
+    const handleDeactivateCollaborator = (participant: ParticipantItemData) => {
+        setConfirmTarget({ data: participant, type: "collaborator", action: "deactivate" });
+    };
+
+    // ── Handlers: Delete (soft delete, disappears) ──────────────────────
+
+    const handleDeleteClient = (participant: ParticipantItemData) => {
+        setConfirmTarget({ data: participant, type: "client", action: "delete" });
+    };
+
+    const handleDeleteCollaborator = (participant: ParticipantItemData) => {
+        setConfirmTarget({ data: participant, type: "collaborator", action: "delete" });
+    };
+
+    // ── Handlers: Reactivate ────────────────────────────────────────────
+
+    const handleReactivateClient = (participant: ParticipantItemData) => {
+        const displayName = participant.contact_full_name || "el participante";
+        startTransition(async () => {
+            try {
+                await reactivateClientAction(participant.id);
+                toast.success(`${displayName} reactivado exitosamente`);
+                router.refresh();
+            } catch (error: any) {
+                toast.error(error.message || "Error al reactivar");
+            }
+        });
+    };
+
+    const handleReactivateCollaborator = (participant: ParticipantItemData) => {
+        const displayName = participant.contact_full_name || "el participante";
+        startTransition(async () => {
+            try {
+                await reactivateCollaboratorAccessAction(participant.id);
+                toast.success(`${displayName} reactivado exitosamente`);
+                router.refresh();
+            } catch (error: any) {
+                toast.error(error.message || "Error al reactivar");
+            }
+        });
     };
 
     // ── Handlers: Vincular Colaborador ──────────────────────────────────
@@ -150,44 +217,44 @@ export function ProjectParticipantsView({
         );
     };
 
-    // ── Handlers: Desvincular Colaborador ───────────────────────────────
+    // ── Confirm Action (unified) ────────────────────────────────────────
 
-    const handleUnlinkCollaborator = (participant: ParticipantItemData) => {
-        setUnlinkTarget({ data: participant, type: "collaborator" });
-    };
+    const handleConfirmAction = () => {
+        if (!confirmTarget) return;
+        const displayName = confirmTarget.data.contact_full_name || "este participante";
+        const { type, action, data } = confirmTarget;
 
-    // ── Confirm Unlink (unified) ────────────────────────────────────────
+        setConfirmTarget(null);
 
-    const handleConfirmUnlink = () => {
-        if (!unlinkTarget) return;
-        const displayName = unlinkTarget.data.contact_full_name || "este participante";
-        const isClient = unlinkTarget.type === "client";
-
-        setUnlinkTarget(null);
-        toast.success(`${displayName} desvinculado del proyecto`);
+        const label = action === "delete" ? "eliminado" : "desvinculado";
+        toast.success(`${displayName} ${label} del proyecto`);
 
         startTransition(async () => {
             try {
-                if (isClient) {
-                    await deleteClientAction(unlinkTarget.data.id);
+                if (type === "client") {
+                    if (action === "delete") {
+                        await deleteClientAction(data.id);
+                    } else {
+                        await deactivateClientAction(data.id);
+                    }
                 } else {
-                    await unlinkCollaboratorFromProjectAction(unlinkTarget.data.id);
+                    if (action === "delete") {
+                        await unlinkCollaboratorFromProjectAction(data.id);
+                    } else {
+                        await deactivateCollaboratorAccessAction(data.id);
+                    }
                 }
                 router.refresh();
             } catch (error: any) {
-                toast.error(error.message || "Error al desvincular");
+                toast.error(error.message || `Error al ${action === "delete" ? "eliminar" : "desvincular"}`);
                 router.refresh();
             }
         });
     };
 
-    // ── Derived state ───────────────────────────────────────────────────
+    // ── Map collaborators to ParticipantItemData ────────────────────────
 
-    const hasClients = projectClients.length > 0;
-    const hasCollaborators = projectCollaborators.length > 0;
-
-    // Map collaborators to ParticipantItemData
-    const collaboratorParticipants: ParticipantItemData[] = projectCollaborators.map((col) => ({
+    const mapCollaborator = (col: ProjectAccessView): ParticipantItemData => ({
         id: col.id,
         contact_full_name: col.contact_full_name || col.user_full_name,
         contact_email: col.contact_email || col.user_email,
@@ -199,7 +266,44 @@ export function ProjectParticipantsView({
             : null,
         contact_id: col.contact_id,
         notes: null,
-    }));
+    });
+
+    // ── Confirmation Dialog Labels ──────────────────────────────────────
+
+    const getConfirmDialogProps = () => {
+        if (!confirmTarget) return { title: "", description: <></>, confirmLabel: "" };
+
+        const name = confirmTarget.data.contact_full_name || "este participante";
+        const typeLabel = confirmTarget.type === "client" ? "cliente" : "colaborador";
+
+        if (confirmTarget.action === "delete") {
+            return {
+                title: `Eliminar ${typeLabel}`,
+                description: (
+                    <>
+                        ¿Estás seguro de que querés eliminar a{" "}
+                        <strong>{name}</strong> de este proyecto?
+                        Se eliminará de forma permanente y no aparecerá en el historial.
+                    </>
+                ),
+                confirmLabel: "Eliminar",
+            };
+        }
+
+        return {
+            title: `Desvincular ${typeLabel}`,
+            description: (
+                <>
+                    ¿Querés desvincular a <strong>{name}</strong> de este proyecto?
+                    Se le revocará el acceso pero quedará visible en el historial.
+                    Podrás reactivarlo en cualquier momento.
+                </>
+            ),
+            confirmLabel: "Desvincular",
+        };
+    };
+
+    const dialogProps = getConfirmDialogProps();
 
     return (
         <ContentLayout variant="wide">
@@ -212,21 +316,28 @@ export function ProjectParticipantsView({
                     description="Clientes vinculados a este proyecto. Pueden seguir el avance de la obra, ver documentos y consultar estados de cuenta desde su portal."
                     actions={[
                         {
-                            label: "Vincular Cliente",
+                            label: "Agregar Cliente",
                             icon: UserPlus,
                             onClick: handleLinkClient,
                         },
+                        {
+                            label: "Documentación",
+                            icon: BookOpen,
+                            variant: "secondary",
+                            href: "/docs/equipo/clientes",
+                        },
                     ]}
                 >
-                    {hasClients ? (
+                    {hasActiveClients ? (
                         <div className="space-y-2">
-                            {projectClients.map((client) => (
+                            {activeClients.map((client) => (
                                 <ParticipantListItem
                                     key={client.id}
                                     participant={client}
                                     onEdit={handleEditClient}
                                     onEditContact={handleEditContact}
-                                    onUnlink={handleUnlinkClient}
+                                    onDeactivate={handleDeactivateClient}
+                                    onDelete={handleDeleteClient}
                                 />
                             ))}
                         </div>
@@ -236,67 +347,107 @@ export function ProjectParticipantsView({
                             icon={Users}
                             viewName="Clientes del Proyecto"
                             featureDescription="Vinculá contactos como clientes de este proyecto para que puedan seguir el avance, ver documentos y consultar estados de cuenta."
-                            actionLabel="Vincular Cliente"
+                            actionLabel="Agregar Cliente"
                             onAction={handleLinkClient}
+                            docsPath="/docs/equipo/clientes"
                         />
                     )}
                 </SettingsSection>
 
-                {/* ===== COLABORADORES SECTION ===== */}
-                <SettingsSection
-                    icon={Wrench}
-                    title="Colaboradores"
-                    description="Profesionales que participan en este proyecto: contadores, directores de obra, subcontratistas, etc."
-                    actions={[
-                        {
-                            label: "Vincular Colaborador",
-                            icon: UserCheck,
-                            onClick: handleLinkCollaborator,
-                        },
-                    ]}
-                >
-                    {hasCollaborators ? (
+                {/* ===== COLABORADORES SECTION (LOCKED) ===== */}
+                <div className="relative">
+                    {/* Locked overlay */}
+                    <div className="absolute -top-1 -right-1 z-10 flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/80 border border-border/50 shadow-sm backdrop-blur-sm">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[10px] font-medium text-muted-foreground">Próximamente</span>
+                    </div>
+                    <div className="pointer-events-none opacity-50">
+                        <SettingsSection
+                            icon={Wrench}
+                            title="Colaboradores"
+                            description="Profesionales que participan en este proyecto: contadores, directores de obra, subcontratistas, etc."
+                            actions={[
+                                {
+                                    label: "Vincular Colaborador",
+                                    icon: UserCheck,
+                                    onClick: handleLinkCollaborator,
+                                },
+                                {
+                                    label: "Documentación",
+                                    icon: BookOpen,
+                                    variant: "secondary",
+                                    href: "/docs/equipo/colaboradores",
+                                },
+                            ]}
+                        >
+                            {hasActiveCollaborators ? (
+                                <div className="space-y-2">
+                                    {activeCollaborators.map((col) => (
+                                        <ParticipantListItem
+                                            key={col.id}
+                                            participant={mapCollaborator(col)}
+                                            onDeactivate={handleDeactivateCollaborator}
+                                            onDelete={handleDeleteCollaborator}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <ViewEmptyState
+                                    mode="empty"
+                                    icon={Wrench}
+                                    viewName="Colaboradores del Proyecto"
+                                    featureDescription="Vinculá colaboradores externos de tu organización a este proyecto: contadores, directores de obra, subcontratistas y otros profesionales involucrados."
+                                    actionLabel="Vincular Colaborador"
+                                    onAction={handleLinkCollaborator}
+                                    docsPath="/docs/equipo/colaboradores"
+                                />
+                            )}
+                        </SettingsSection>
+                    </div>
+                </div>
+
+                {/* ===== HISTORICAL SECTION ===== */}
+                {hasHistory && (
+                    <SettingsSection
+                        icon={History}
+                        title="Historial"
+                        description="Participantes que fueron desvinculados de este proyecto. Podés reactivarlos o eliminarlos definitivamente."
+                    >
                         <div className="space-y-2">
-                            {collaboratorParticipants.map((collaborator) => (
+                            {inactiveClients.map((client) => (
                                 <ParticipantListItem
-                                    key={collaborator.id}
-                                    participant={collaborator}
-                                    onUnlink={handleUnlinkCollaborator}
+                                    key={client.id}
+                                    participant={client}
+                                    isInactive
+                                    onReactivate={handleReactivateClient}
+                                    onDelete={handleDeleteClient}
+                                />
+                            ))}
+                            {inactiveCollaborators.map((col) => (
+                                <ParticipantListItem
+                                    key={col.id}
+                                    participant={mapCollaborator(col)}
+                                    isInactive
+                                    onReactivate={handleReactivateCollaborator}
+                                    onDelete={handleDeleteCollaborator}
                                 />
                             ))}
                         </div>
-                    ) : (
-                        <ViewEmptyState
-                            mode="empty"
-                            icon={Wrench}
-                            viewName="Colaboradores del Proyecto"
-                            featureDescription="Vinculá colaboradores externos de tu organización a este proyecto: contadores, directores de obra, subcontratistas y otros profesionales involucrados."
-                            actionLabel="Vincular Colaborador"
-                            onAction={handleLinkCollaborator}
-                        />
-                    )}
-                </SettingsSection>
+                    </SettingsSection>
+                )}
 
             </div>
 
-            {/* ===== UNLINK CONFIRMATION DIALOG ===== */}
+            {/* ===== CONFIRMATION DIALOG ===== */}
             <DeleteConfirmationDialog
-                open={!!unlinkTarget}
-                onOpenChange={(open) => { if (!open) setUnlinkTarget(null); }}
-                onConfirm={handleConfirmUnlink}
-                title={unlinkTarget?.type === "client" ? "Desvincular cliente" : "Desvincular colaborador"}
-                description={
-                    <>
-                        ¿Estás seguro de que querés desvincular a{" "}
-                        <strong>{unlinkTarget?.data.contact_full_name || "este participante"}</strong>{" "}
-                        de este proyecto? {unlinkTarget?.type === "client"
-                            ? "Esta acción no elimina el contacto."
-                            : "El colaborador seguirá siendo parte de la organización."}
-                    </>
-                }
-                confirmLabel="Desvincular"
+                open={!!confirmTarget}
+                onOpenChange={(open) => { if (!open) setConfirmTarget(null); }}
+                onConfirm={handleConfirmAction}
+                title={dialogProps.title}
+                description={dialogProps.description}
+                confirmLabel={dialogProps.confirmLabel}
                 isDeleting={isPending}
-                deletingLabel="Desvinculando..."
+                deletingLabel={confirmTarget?.action === "delete" ? "Eliminando..." : "Desvinculando..."}
             />
         </ContentLayout>
     );

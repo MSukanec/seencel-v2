@@ -22,6 +22,12 @@
 - [x] RPC `accept_external_invitation` actualizado para crear `project_access` automáticamente
 - [x] Documentación `user-journey.md` actualizada con flujo de 4 pasos
 
+### 4. Formulario Unificado de Clientes (Feb 2026)
+- [x] `ClientForm` refactorizado con dual mode (contacto existente / invitar por email)
+- [x] `inviteClientToProjectAction` — orquesta auto-create contact + project_client + access/invitación
+- [x] Eliminado formulario huérfano `team-add-client-form.tsx`
+- [x] Documentación actualizada (`technical-map.md`, `user-journey.md`)
+
 ---
 
 ## 🔲 Pendiente: Corto plazo

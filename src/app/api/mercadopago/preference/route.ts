@@ -94,10 +94,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Calculate final amount
-        const finalAmount = couponDiscount
-            ? Math.max(0, amount - couponDiscount)
-            : amount;
+        // The frontend sends `amount` = computed.finalPrice * exchangeRate (already discounted).
+        // couponDiscount is metadata only — DO NOT subtract it again.
+        const finalAmount = amount;
 
         if (sandboxMode) {
             console.log(`[MP SANDBOX] Using sandbox credentials, amount: ${finalAmount} ARS`);

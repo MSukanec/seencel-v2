@@ -113,7 +113,7 @@ export async function inviteContactToProjectAction(input: {
 }
 
 // ===============================================
-// Unlink Collaborator from Project (soft delete)
+// Delete Collaborator Access (soft delete - disappears from list)
 // ===============================================
 
 export async function unlinkCollaboratorFromProjectAction(accessId: string) {
@@ -129,8 +129,48 @@ export async function unlinkCollaboratorFromProjectAction(accessId: string) {
         .eq("id", accessId);
 
     if (error) {
-        console.error("Error unlinking collaborator:", error);
+        console.error("Error deleting collaborator access:", error);
+        throw new Error("Error al eliminar el colaborador.");
+    }
+
+    revalidatePath("/organization/projects");
+}
+
+// ===============================================
+// Deactivate Collaborator Access (revoke but keep as historical)
+// ===============================================
+
+export async function deactivateCollaboratorAccessAction(accessId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("project_access")
+        .update({ is_active: false })
+        .eq("id", accessId);
+
+    if (error) {
+        console.error("Error deactivating collaborator access:", error);
         throw new Error("Error al desvincular el colaborador.");
+    }
+
+    revalidatePath("/organization/projects");
+}
+
+// ===============================================
+// Reactivate Collaborator Access
+// ===============================================
+
+export async function reactivateCollaboratorAccessAction(accessId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("project_access")
+        .update({ is_active: true })
+        .eq("id", accessId);
+
+    if (error) {
+        console.error("Error reactivating collaborator access:", error);
+        throw new Error("Error al reactivar el colaborador.");
     }
 
     revalidatePath("/organization/projects");

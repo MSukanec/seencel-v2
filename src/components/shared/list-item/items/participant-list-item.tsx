@@ -17,6 +17,8 @@ import {
     Pencil,
     UserX,
     UserPen,
+    UserCheck,
+    Trash2,
     Building2,
     Mail,
     Phone,
@@ -57,12 +59,18 @@ export interface ParticipantItemData {
 export interface ParticipantListItemProps {
     /** The participant data to display */
     participant: ParticipantItemData;
+    /** Whether this participant is inactive (deactivated/unlinked) */
+    isInactive?: boolean;
     /** Callback: edit the participant relationship (e.g. change role) */
     onEdit?: (participant: ParticipantItemData) => void;
     /** Callback: edit the underlying contact record */
     onEditContact?: (participant: ParticipantItemData) => void;
-    /** Callback: unlink participant from project (soft delete) */
-    onUnlink?: (participant: ParticipantItemData) => void;
+    /** Callback: deactivate participant (revoke access, keep as historical) */
+    onDeactivate?: (participant: ParticipantItemData) => void;
+    /** Callback: delete participant permanently (soft delete) */
+    onDelete?: (participant: ParticipantItemData) => void;
+    /** Callback: reactivate a previously deactivated participant */
+    onReactivate?: (participant: ParticipantItemData) => void;
 }
 
 // ============================================================================
@@ -88,15 +96,18 @@ function formatPhoneForWhatsApp(phone: string): string {
 
 export const ParticipantListItem = memo(function ParticipantListItem({
     participant,
+    isInactive = false,
     onEdit,
     onEditContact,
-    onUnlink,
+    onDeactivate,
+    onDelete,
+    onReactivate,
 }: ParticipantListItemProps) {
     const displayName = participant.contact_full_name || "Sin nombre";
-    const hasActions = !!onEdit || !!onEditContact || !!onUnlink;
+    const hasActions = !!onEdit || !!onEditContact || !!onDeactivate || !!onDelete || !!onReactivate;
 
     return (
-        <ListItem variant="card">
+        <ListItem variant="card" className={isInactive ? "opacity-60" : undefined}>
             {/* Avatar */}
             <ListItem.Leading>
                 <Avatar className="h-10 w-10 border">
@@ -114,6 +125,11 @@ export const ParticipantListItem = memo(function ParticipantListItem({
                     {participant.role_name && (
                         <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-2 align-middle">
                             {participant.role_name}
+                        </Badge>
+                    )}
+                    {isInactive && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 ml-2 align-middle text-muted-foreground">
+                            Inactivo
                         </Badge>
                     )}
                 </ListItem.Title>
@@ -206,14 +222,29 @@ export const ParticipantListItem = memo(function ParticipantListItem({
                                     Editar Contacto
                                 </DropdownMenuItem>
                             )}
-                            {(onEdit || onEditContact) && onUnlink && <DropdownMenuSeparator />}
-                            {onUnlink && (
+                            {onReactivate && (
+                                <DropdownMenuItem onClick={() => onReactivate(participant)}>
+                                    <UserCheck className="w-4 h-4 mr-2" />
+                                    Reactivar
+                                </DropdownMenuItem>
+                            )}
+                            {(onEdit || onEditContact || onReactivate) && (onDeactivate || onDelete) && <DropdownMenuSeparator />}
+                            {onDeactivate && (
                                 <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => onUnlink(participant)}
+                                    className="text-amber-600 focus:text-amber-600"
+                                    onClick={() => onDeactivate(participant)}
                                 >
                                     <UserX className="w-4 h-4 mr-2" />
                                     Desvincular
+                                </DropdownMenuItem>
+                            )}
+                            {onDelete && (
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => onDelete(participant)}
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Eliminar
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>

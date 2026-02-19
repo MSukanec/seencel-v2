@@ -10,7 +10,7 @@
 
 ---
 
-## Paso 1: Crear los contactos ✅
+## Paso 1: Crear los contactos (opcional)
 
 Matías va a **Contactos** y crea dos registros:
 
@@ -26,68 +26,54 @@ Matías va a **Contactos** y crea dos registros:
 
 > Si Mariano ya tiene cuenta en Seencel, el sistema auto-linkea `contacts.linked_user_id` = mariano.users.id (pipeline `contact_auto_creation_pipeline`).
 
+> **¿Por qué es opcional?** Porque el Paso 2 puede auto-crear contactos por email.
+
 ---
 
-## Paso 2: Vincular el cliente al proyecto ✅
+## Paso 2: Agregar cliente al proyecto ✅
 
-Matías va al proyecto → pestaña **Participantes** → sección **Clientes** → **Vincular Cliente**.
+Matías va al proyecto → pestaña **Participantes** → sección **Clientes** → **Agregar Cliente**.
 
-Vincula **"Colegio Elumar S.A."** con rol **"Mandante"**.
+El formulario tiene **dos modos** (toggle visual):
 
-**Tabla involucrada**: `project_clients`
-- `project_clients.project_id` = Colegio Elumar
-- `project_clients.contact_id` = Colegio Elumar S.A. (contacto empresa)
-- `project_clients.client_role_id` = Mandante
+### Modo A: Contacto existente
+
+Selecciona un contacto que ya existe en la organización (ej: **"Colegio Elumar S.A."** o **"Mariano Pérez"**) y le asigna un rol.
+
+- Crea el vínculo `project_client`
+- Si el contacto tiene `linked_user_id` (cuenta Seencel) → **auto-crea `project_access`** para darle acceso al portal
+- Si el contacto NO tiene `linked_user_id` → solo queda como entidad financiera sin acceso
+
+**Action**: `createClientAction` (con auto-grant post-insert)
+
+### Modo B: Invitar por email
+
+Matías ingresa el email **mariano@colegio.com** y opcionalmente el nombre "Mariano Pérez".
+
+El sistema en un solo paso:
+1. **Auto-crea el contacto** si no existe en la org
+2. **Crea el `project_client`** con el rol asignado
+3. Si Mariano **ya tiene cuenta** en Seencel → le da `project_access` directamente
+4. Si Mariano **no tiene cuenta** → le envía una **invitación por email** con `project_id` + `client_id`
+
+**Action**: `inviteClientToProjectAction`
+(Reutiliza `linkCollaboratorToProjectAction` y `addExternalCollaboratorWithProjectAction` — no duplica lógica)
+
+> Con el Modo B, un admin vincula y da acceso al cliente **en un solo paso**, sin necesidad de ir a otra sección.
 
 **Archivos frontend**:
-- Form: `src/features/clients/forms/clients-form.tsx`
-- Action: `src/features/clients/actions.ts` → `createClientAction`
+- Form: `src/features/clients/forms/clients-form.tsx` (formulario unificado con toggle)
 
-> A partir de acá, los **pagos y compromisos** se cargan contra este `project_client`. Es la entidad financiera.
-
----
-
-## Paso 3: Dar acceso a Mariano al proyecto
-
-Matías va al proyecto → **Participantes** → sección **Colaboradores** → **Vincular Colaborador**.
-
-El formulario muestra los **contactos persona con email** de la organización.
-
-### Caso A: Mariano tiene cuenta en Seencel (✅ linked_user_id)
-
-El sistema:
-1. Auto-crea `organization_external_actors` para Mariano (si no existe)
-2. Crea `project_access` vinculando a Mariano al proyecto
-3. Mariano puede seleccionar un **cliente asociado** para scoping (ej: "Colegio Elumar S.A.")
-
-**Tablas involucradas**:
-- `organization_external_actors` → creado automáticamente
-- `project_access` → acceso al proyecto con `client_id` opcional
-
-### Caso B: Mariano NO tiene cuenta en Seencel
-
-El sistema:
-1. Envía **invitación por email** a mariano@colegio.com
-2. Crea registro en `organization_invitations` con `project_id` y `client_id`
-3. Crea **notificación in-app** si el email coincide con un usuario Seencel
-
-**Tablas involucradas**:
-- `organization_invitations` → con `project_id` y `client_id` para auto-vinculación
-
-**Archivos frontend**:
-- Form: `src/features/external-actors/forms/collaborator-form.tsx`
-- Actions: `src/features/external-actors/project-access-actions.ts`
-
-> El `client_id` determina que Mariano **solo vea datos financieros de ese cliente**. Si es NULL, vería todo el proyecto (caso de un director de obra externo).
+> Los **pagos y compromisos** se cargan contra el `project_client`. Es la entidad financiera.
 
 ---
 
-## Paso 4: Mariano acepta y entra al Portal
+## Paso 3: Mariano acepta y entra al Portal
 
-### Si ya tenía cuenta (Caso A):
+### Si ya tenía cuenta (Modo B, caso directo):
 Mariano inicia sesión y ya ve el proyecto en su Portal de Cliente.
 
-### Si fue invitado (Caso B):
+### Si fue invitado (Modo B, caso invitación):
 1. Mariano recibe email con link de invitación
 2. Se registra en Seencel (o inicia sesión si ya tenía cuenta)
 3. Acepta la invitación
@@ -111,18 +97,24 @@ Mariano inicia sesión y ya ve el proyecto en su Portal de Cliente.
 ```
 MATÍAS (org member de Constructora Lenga)
 │
-├── Crea contacto "Colegio Elumar S.A." ──→ contacts
-├── Crea contacto "Mariano Pérez" ──→ contacts
+├── [Opcional] Crea contactos previamente en CRM ──→ contacts
 │
-├── Vincula "Colegio Elumar S.A." al proyecto ──→ project_clients
-│   └── Carga pagos/compromisos contra este client
-│
-└── Da acceso a Mariano (desde Participantes del proyecto)
-    ├── Caso A (con cuenta): auto-crea actor externo + project_access
-    └── Caso B (sin cuenta): envía invitación → al aceptar auto-crea todo
+└── Agrega cliente al proyecto (Participantes → Clientes → Agregar)
+    │
+    ├── Modo A (contacto existente): crea project_client
+    │   ├── Si contacto tiene linked_user_id → auto-crea project_access
+    │   └── Si no tiene linked_user_id → solo queda como entidad financiera
+    │
+    └── Modo B (invitar por email): crea contacto + project_client + acceso
         │
-        └── MARIANO inicia sesión → Portal de Cliente
-            └── RLS filtra: can_view_client_data() → solo ve datos de "Colegio Elumar S.A."
+        ├── Si ya tiene cuenta → project_access directo
+        └── Si no tiene cuenta → organization_invitations → email
+            │
+            └── MARIANO acepta invitación
+                └── accept_external_invitation auto-crea:
+                    ├── organization_external_actors
+                    └── project_access (con client_id = scoping)
+                        └── RLS: can_view_client_data() → solo ve sus datos
 ```
 
 ---

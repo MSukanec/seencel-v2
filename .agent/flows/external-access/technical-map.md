@@ -115,14 +115,15 @@ Lógica:
 |---------|-----------|
 | `src/features/external-actors/project-access-actions.ts` | `linkCollaboratorToProjectAction()`, `unlinkCollaboratorFromProjectAction()` |
 | `src/features/external-actors/actions.ts` | `addExternalActorAction()`, `removeExternalActorAction()` |
-| `src/features/clients/actions.ts` | `createClientAction()`, `deleteClientAction()` |
+| `src/features/clients/actions.ts` | `createClientAction()`, `deleteClientAction()`, **`inviteClientToProjectAction()`** |
+| `src/features/team/actions.ts` | `addExternalCollaboratorWithProjectAction()` (reutilizada por inviteClient) |
 
 ### Forms
 | Archivo | Qué hace |
 |---------|----------|
 | `src/features/external-actors/forms/collaborator-form.tsx` | Vincular actor externo a un proyecto |
 | `src/features/external-actors/forms/external-actor-form.tsx` | Crear actor externo a nivel organización |
-| `src/features/clients/forms/clients-form.tsx` | Vincular contacto como cliente de un proyecto |
+| `src/features/clients/forms/clients-form.tsx` | **Formulario unificado**: vincular contacto existente O invitar por email |
 
 ### Views
 | Archivo | Qué muestra |

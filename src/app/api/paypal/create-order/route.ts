@@ -54,11 +54,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Calculate final amount (apply coupon discount if present)
-        // Uses real product price - no test price override
-        const finalAmount = couponDiscount
-            ? Math.max(0, amount - couponDiscount)
-            : amount;
+        // The frontend sends `amount` = computed.finalPrice (already discounted).
+        // couponDiscount is metadata only — DO NOT subtract it again.
+        const finalAmount = amount;
 
         // Generate a short unique ID for paypal_preferences (fits in PayPal's 127 char limit)
         const preferenceId = crypto.randomUUID().replace(/-/g, '').substring(0, 21); // 21 chars, URL-safe
