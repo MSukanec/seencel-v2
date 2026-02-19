@@ -88,7 +88,7 @@ export async function sendInvitationAction(
 
     // 5. Check for pending invitation
     const { data: existingInvitation } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .select('id')
         .eq('organization_id', organizationId)
         .eq('email', normalizedEmail)
@@ -125,7 +125,7 @@ export async function sendInvitationAction(
     const token = randomUUID();
 
     const { error: insertError } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .insert({
             organization_id: organizationId,
             email: normalizedEmail,
@@ -191,7 +191,7 @@ export async function getInvitationByToken(
 }> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.rpc('get_invitation_by_token', {
+    const { data, error } = await supabase.schema('iam').rpc('get_invitation_by_token', {
         p_token: token
     });
 
@@ -270,7 +270,7 @@ export async function revokeInvitationAction(
 
     // Delete the invitation
     const { error } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .delete()
         .eq('id', invitationId)
         .eq('organization_id', organizationId);
@@ -319,7 +319,7 @@ export async function resendInvitationAction(
 
     // Get invitation details
     const { data: invitation } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .select('id, email, role_id, organization_id')
         .eq('id', invitationId)
         .eq('organization_id', organizationId)
@@ -343,7 +343,7 @@ export async function resendInvitationAction(
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     const { error: updateError } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .update({
             token: newToken,
             expires_at: expiresAt.toISOString(),
@@ -412,18 +412,57 @@ export async function acceptInvitationAction(
         return { success: false, error: 'Usuario no encontrado' };
     }
 
-    // 3. Check if it's an external invitation first
+    // 3. Check if it's an external or client invitation first
     const { data: invitation } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .select('id, invitation_type, actor_type, organization_id, status')
         .eq('token', token)
         .eq('status', 'pending')
         .maybeSingle();
 
-    // Handle external invitation via SECURITY DEFINER RPC
+    // Handle CLIENT invitation via iam.accept_client_invitation RPC
+    if (invitation?.invitation_type === 'client') {
+        const { data: result, error } = await supabase.schema('iam').rpc('accept_client_invitation' as any, {
+            p_token: token,
+            p_user_id: publicUser.id,
+        });
+
+        if (error) {
+            console.error('Error accepting client invitation:', error);
+            return { success: false, error: sanitizeError(error) };
+        }
+
+        const res = result as {
+            success: boolean;
+            already_client?: boolean;
+            organization_id?: string;
+            org_name?: string;
+            project_id?: string;
+            error?: string;
+            message?: string;
+        };
+
+        if (!res.success) {
+            return {
+                success: false,
+                error: res.message || 'Error al aceptar la invitación de cliente',
+            };
+        }
+
+        revalidatePath('/[locale]/organization', 'layout');
+
+        return {
+            success: true,
+            organizationId: res.organization_id,
+            orgName: res.org_name,
+            alreadyMember: res.already_client || false,
+        };
+    }
+
+    // Handle EXTERNAL (collaborator) invitation via SECURITY DEFINER RPC
     // (bypasses RLS since the user is not a member of the org yet)
     if (invitation?.invitation_type === 'external') {
-        const { data: result, error } = await supabase.rpc('accept_external_invitation', {
+        const { data: result, error } = await supabase.schema('iam').rpc('accept_external_invitation', {
             p_token: token,
             p_user_id: publicUser.id,
         });
@@ -460,7 +499,7 @@ export async function acceptInvitationAction(
     }
 
     // 4. Member invitation — use existing RPC flow
-    const { data: result, error } = await supabase.rpc('accept_organization_invitation', {
+    const { data: result, error } = await supabase.schema('iam').rpc('accept_organization_invitation', {
         p_token: token,
         p_user_id: publicUser.id,
     });
@@ -938,7 +977,7 @@ export async function addExternalCollaboratorAction(
 
     // 5. Check for existing pending invitation (member or external)
     const { data: existingInvitation } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .select('id')
         .eq('organization_id', organizationId)
         .eq('email', normalizedEmail)
@@ -985,7 +1024,7 @@ export async function addExternalCollaboratorAction(
     const actorLabel = EXTERNAL_ACTOR_TYPE_LABELS[actorType]?.label || 'Colaborador';
 
     const { data: invitationData, error: insertError } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .insert({
             organization_id: organizationId,
             email: normalizedEmail,
@@ -1130,7 +1169,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
 
     // 4. Check for existing pending invitation
     const { data: existingInvitation } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .select('id')
         .eq('organization_id', input.organizationId)
         .eq('email', normalizedEmail)
@@ -1178,15 +1217,17 @@ export async function addExternalCollaboratorWithProjectAction(input: {
     const actorLabel = EXTERNAL_ACTOR_TYPE_LABELS[input.actorType]?.label || 'Colaborador';
 
     const { data: invitationData, error: insertError } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .insert({
             organization_id: input.organizationId,
             email: normalizedEmail,
             role_id: null,
+            // If the user already exists in Seencel, store their user_id for easier lookup
+            user_id: existingUser?.id ?? null,
             invited_by: callerMember.id,
             token,
             status: 'pending',
-            invitation_type: 'external',
+            invitation_type: input.actorType === 'client' ? 'client' : 'external',
             actor_type: input.actorType,
             expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             project_id: input.projectId,

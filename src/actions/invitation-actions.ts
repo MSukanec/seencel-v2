@@ -26,7 +26,7 @@ export async function checkPendingInvitation(email: string): Promise<PendingInvi
 
     // 1. Check for pending invitations
     const { data: invitations } = await supabase
-        .from('organization_invitations')
+        .schema('iam').from('organization_invitations')
         .select('id, token, role_id, organization_id, invited_by, invitation_type, actor_type')
         .eq('email', email.toLowerCase())
         .eq('status', 'pending')

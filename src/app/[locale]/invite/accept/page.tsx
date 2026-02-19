@@ -84,18 +84,22 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
     const supabase = await createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    // Get organization logo from invitation
+    // Get organization logo from invitation (two queries: iam → public, no cross-schema JOINs)
     let organizationLogo: string | null = null;
-    const { data: invitationWithOrg } = await supabase
-        .from('organization_invitations')
-        .select('organization_id, organizations!inner(logo_url)')
+    const { data: invitationData } = await supabase
+        .schema('iam').from('organization_invitations')
+        .select('organization_id')
         .eq('token', token)
         .single();
 
-    if (invitationWithOrg?.organizations) {
-        const org = invitationWithOrg.organizations as unknown as { logo_url: string | null };
-        if (org.logo_url) {
-            organizationLogo = org.logo_url;
+    if (invitationData?.organization_id) {
+        const { data: orgData } = await supabase
+            .from('organizations')
+            .select('logo_url')
+            .eq('id', invitationData.organization_id)
+            .single();
+        if (orgData?.logo_url) {
+            organizationLogo = orgData.logo_url;
         }
     }
 

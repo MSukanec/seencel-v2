@@ -250,6 +250,20 @@
   body[style*="overflow: hidden"] {
     padding-right: 0 !important;
   }
+
+  /* Cursor pointer en todos los elementos interactivos */
+  button,
+  [role="button"],
+  a[href],
+  label[for],
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /* ============================================================================

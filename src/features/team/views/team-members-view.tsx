@@ -76,9 +76,12 @@ export function TeamMembersView({ organizationId, planId, members, invitations, 
         [invitations, removedInvitationIds]
     );
 
-    // Split invitations: member vs external (clients removed, advisors kept)
+    // Split invitations: member vs external (clients and collaborators excluded)
     const memberInvitations = useMemo(() =>
-        activeInvitations.filter(inv => (inv as any).invitation_type !== 'external'),
+        activeInvitations.filter(inv => {
+            const type = (inv as any).invitation_type;
+            return type !== 'external' && type !== 'client';
+        }),
         [activeInvitations]
     );
     const advisorInvitations = useMemo(() =>

@@ -52,6 +52,7 @@ export async function getProjectCollaborators(projectId: string) {
         .select("*")
         .eq("project_id", projectId)
         .eq("is_deleted", false)
+        .neq("access_type", "client")
         .order("created_at", { ascending: false });
 
     if (error) {

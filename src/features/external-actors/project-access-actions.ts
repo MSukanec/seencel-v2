@@ -18,44 +18,85 @@ export async function linkCollaboratorToProjectAction(input: {
 }) {
     const supabase = await createClient();
 
-    // Auto-create external actor if not exists
-    const { data: existingActor } = await supabase
-        .from("organization_external_actors")
-        .select("id, is_active, is_deleted")
-        .eq("organization_id", input.organization_id)
-        .eq("user_id", input.user_id)
-        .maybeSingle();
+    // Auto-create actor record based on type:
+    // - Clients → iam.organization_clients (separated domain)
+    // - Collaborators → organization_external_actors (legacy)
+    const isClient = input.access_type === "client";
 
-    if (!existingActor) {
-        // Create new external actor
-        const { error: actorError } = await supabase
-            .from("organization_external_actors")
-            .insert({
-                organization_id: input.organization_id,
-                user_id: input.user_id,
-                actor_type: input.access_type === "client" ? "client" : "field_worker",
-                is_active: true,
-            });
+    if (isClient) {
+        // Use iam.organization_clients for client actors
+        // TODO: Remove 'as any' after running npm run db:schema to regenerate types
+        const { data: existingClient } = await supabase
+            .from("organization_clients" as any)
+            .select("id, is_active, is_deleted")
+            .eq("organization_id", input.organization_id)
+            .eq("user_id", input.user_id)
+            .maybeSingle();
 
-        if (actorError) {
-            console.error("Error auto-creating external actor:", actorError);
-            // Non-blocking: continue with project_access creation
+        if (!existingClient) {
+            const { error: clientError } = await supabase
+                .from("organization_clients" as any)
+                .insert({
+                    organization_id: input.organization_id,
+                    user_id: input.user_id,
+                    is_active: true,
+                });
+
+            if (clientError) {
+                console.error("Error auto-creating organization client:", clientError);
+            }
+        } else if (!existingClient.is_active || existingClient.is_deleted) {
+            const { error: reactivateError } = await supabase
+                .from("organization_clients" as any)
+                .update({
+                    is_active: true,
+                    is_deleted: false,
+                    deleted_at: null,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", existingClient.id);
+
+            if (reactivateError) {
+                console.error("Error reactivating organization client:", reactivateError);
+            }
         }
-    } else if (!existingActor.is_active || existingActor.is_deleted) {
-        // Reactivate existing actor
-        const { error: reactivateError } = await supabase
+    } else {
+        // Use organization_external_actors for collaborators
+        const { data: existingActor } = await supabase
             .from("organization_external_actors")
-            .update({
-                is_active: true,
-                is_deleted: false,
-                deleted_at: null,
-                actor_type: input.access_type === "client" ? "client" : "field_worker",
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingActor.id);
+            .select("id, is_active, is_deleted")
+            .eq("organization_id", input.organization_id)
+            .eq("user_id", input.user_id)
+            .maybeSingle();
 
-        if (reactivateError) {
-            console.error("Error reactivating external actor:", reactivateError);
+        if (!existingActor) {
+            const { error: actorError } = await supabase
+                .from("organization_external_actors")
+                .insert({
+                    organization_id: input.organization_id,
+                    user_id: input.user_id,
+                    actor_type: "field_worker",
+                    is_active: true,
+                });
+
+            if (actorError) {
+                console.error("Error auto-creating external actor:", actorError);
+            }
+        } else if (!existingActor.is_active || existingActor.is_deleted) {
+            const { error: reactivateError } = await supabase
+                .from("organization_external_actors")
+                .update({
+                    is_active: true,
+                    is_deleted: false,
+                    deleted_at: null,
+                    actor_type: "field_worker",
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", existingActor.id);
+
+            if (reactivateError) {
+                console.error("Error reactivating external actor:", reactivateError);
+            }
         }
     }
 

@@ -44,7 +44,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .order('joined_at', { ascending: false }),
 
         supabase
-            .from('organization_invitations')
+            .schema('iam').from('organization_invitations')
             .select('*')
             .eq('organization_id', organizationId)
             .eq('status', 'pending')

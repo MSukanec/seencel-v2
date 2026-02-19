@@ -90,6 +90,9 @@ export const projectClientViewSchema = projectClientSchema.extend({
     linked_user_avatar_url: z.string().nullable(),
     contact_avatar_url: z.string().nullable(),
     role_name: z.string().nullable(),
+    invitation_status: z.string().nullable(),
+    invitation_id: z.string().uuid().nullable(),
+    invitation_sent_at: z.string().nullable(),
 });
 
 export type ProjectClientView = z.infer<typeof projectClientViewSchema>;

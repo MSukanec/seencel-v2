@@ -12,7 +12,7 @@ import { SelectField } from "@/components/shared/forms/fields/select-field";
 import { NotesField } from "@/components/shared/forms/fields/notes-field";
 import { ProjectField, type Project } from "@/components/shared/forms/fields/project-field";
 import { Input } from "@/components/ui/input";
-import { createClientAction, updateClientAction, inviteClientToProjectAction } from "@/features/clients/actions";
+import { createClientAction, updateClientAction, inviteClientToProjectAction, checkContactByEmailAction } from "@/features/clients/actions";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { Info, UserPlus, Users } from "lucide-react";
 import type { ClientRole, ProjectClientView } from "../types";
@@ -69,6 +69,31 @@ export function ClientForm({
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
 
+    // Existing contact warning
+    const [existingContactWarning, setExistingContactWarning] = useState<{ id: string; name: string } | null>(null);
+
+    // Debounce check email
+    useEffect(() => {
+        if (mode !== "email" || !email.trim()) {
+            setExistingContactWarning(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            const result = await checkContactByEmailAction(orgId, email);
+            if (result.exists && result.contact) {
+                setExistingContactWarning({
+                    id: result.contact.id,
+                    name: result.contact.full_name || email,
+                });
+            } else {
+                setExistingContactWarning(null);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [email, mode, orgId]);
+
     // Fetch contacts (and projects if needed) on mount
     useEffect(() => {
         const fetchData = async () => {
@@ -76,8 +101,8 @@ export function ClientForm({
 
             // Fetch contacts (not deleted)
             const { data: contactsData } = await supabase
-                .from("contacts")
-                .select("id, full_name, company_name, email, image_url")
+                .from("contacts_view")
+                .select("id, full_name, company_name, email, resolved_avatar_url")
                 .eq("organization_id", orgId)
                 .eq("is_deleted", false)
                 .order("full_name");
@@ -88,7 +113,7 @@ export function ClientForm({
                         id: c.id,
                         name: c.full_name || c.email || "Sin nombre",
                         company_name: c.company_name,
-                        avatar_url: c.image_url,
+                        avatar_url: c.resolved_avatar_url,
                     }))
                 );
             }
@@ -223,8 +248,8 @@ export function ClientForm({
                             type="button"
                             onClick={() => setMode("contact")}
                             className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === "contact"
-                                    ? "bg-background text-foreground shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground"
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             <Users className="h-4 w-4" />
@@ -234,8 +259,8 @@ export function ClientForm({
                             type="button"
                             onClick={() => setMode("email")}
                             className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === "email"
-                                    ? "bg-background text-foreground shadow-sm"
-                                    : "text-muted-foreground hover:text-foreground"
+                                ? "bg-background text-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             <UserPlus className="h-4 w-4" />
@@ -280,6 +305,16 @@ export function ClientForm({
                                 autoComplete="off"
                                 autoFocus
                             />
+                            {existingContactWarning && (
+                                <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded-md border border-amber-200 mt-1 flex items-start gap-2">
+                                    <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                                    <span>
+                                        Este email corresponde a <strong>{existingContactWarning.name}</strong> (Contacto existente).
+                                        <br />
+                                        Se vinculará automáticamente sin crear un duplicado.
+                                    </span>
+                                </div>
+                            )}
                         </FormGroup>
 
                         <FormGroup label="Nombre (opcional)">

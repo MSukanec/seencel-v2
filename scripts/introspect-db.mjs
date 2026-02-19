@@ -37,6 +37,10 @@ async function main() {
     await client.connect();
     console.log('✅ Connected! Introspecting schema...\n');
 
+    // Schemas to introspect
+    const SCHEMAS = ['public', 'iam'];
+    const schemasSQL = SCHEMAS.map(s => `'${s}'`).join(', ');
+
     const sections = [];
 
     // Header
@@ -48,15 +52,16 @@ async function main() {
     // ── 1. TABLES + COLUMNS ──
     console.log('📋 Fetching tables and columns...');
     const tablesRes = await client.query(`
-        SELECT table_name
+        SELECT table_schema, table_name
         FROM information_schema.tables
-        WHERE table_schema = 'public'
+        WHERE table_schema IN (${schemasSQL})
           AND table_type = 'BASE TABLE'
-        ORDER BY table_name;
+        ORDER BY table_schema, table_name;
     `);
 
     const columnsRes = await client.query(`
         SELECT
+            c.table_schema,
             c.table_name,
             c.column_name,
             c.data_type,
@@ -66,20 +71,22 @@ async function main() {
             c.character_maximum_length,
             c.numeric_precision
         FROM information_schema.columns c
-        WHERE c.table_schema = 'public'
-        ORDER BY c.table_name, c.ordinal_position;
+        WHERE c.table_schema IN (${schemasSQL})
+        ORDER BY c.table_schema, c.table_name, c.ordinal_position;
     `);
 
     // Group columns by table
     const columnsByTable = {};
     for (const col of columnsRes.rows) {
-        if (!columnsByTable[col.table_name]) columnsByTable[col.table_name] = [];
-        columnsByTable[col.table_name].push(col);
+        const key = col.table_schema === 'public' ? col.table_name : `${col.table_schema}.${col.table_name}`;
+        if (!columnsByTable[key]) columnsByTable[key] = [];
+        columnsByTable[key].push(col);
     }
 
     // ── 1b. PRIMARY KEYS ──
     const pkRes = await client.query(`
         SELECT
+            tc.table_schema,
             tc.table_name,
             kcu.column_name
         FROM information_schema.table_constraints tc
@@ -87,20 +94,22 @@ async function main() {
             ON tc.constraint_name = kcu.constraint_name
             AND tc.table_schema = kcu.table_schema
         WHERE tc.constraint_type = 'PRIMARY KEY'
-          AND tc.table_schema = 'public'
-        ORDER BY tc.table_name, kcu.ordinal_position;
+          AND tc.table_schema IN (${schemasSQL})
+        ORDER BY tc.table_schema, tc.table_name, kcu.ordinal_position;
     `);
 
     const pkByTable = {};
     for (const pk of pkRes.rows) {
-        if (!pkByTable[pk.table_name]) pkByTable[pk.table_name] = new Set();
-        pkByTable[pk.table_name].add(pk.column_name);
+        const key = pk.table_schema === 'public' ? pk.table_name : `${pk.table_schema}.${pk.table_name}`;
+        if (!pkByTable[key]) pkByTable[key] = new Set();
+        pkByTable[key].add(pk.column_name);
     }
 
     // ── 1c. FOREIGN KEYS ──
     console.log('🔗 Fetching foreign keys...');
     const fkRes = await client.query(`
         SELECT
+            tc.table_schema,
             tc.table_name,
             kcu.column_name,
             ccu.table_name AS foreign_table,
@@ -113,19 +122,21 @@ async function main() {
             ON ccu.constraint_name = tc.constraint_name
             AND ccu.table_schema = tc.table_schema
         WHERE tc.constraint_type = 'FOREIGN KEY'
-          AND tc.table_schema = 'public'
-        ORDER BY tc.table_name;
+          AND tc.table_schema IN (${schemasSQL})
+        ORDER BY tc.table_schema, tc.table_name;
     `);
 
     const fkByTable = {};
     for (const fk of fkRes.rows) {
-        if (!fkByTable[fk.table_name]) fkByTable[fk.table_name] = [];
-        fkByTable[fk.table_name].push(fk);
+        const key = fk.table_schema === 'public' ? fk.table_name : `${fk.table_schema}.${fk.table_name}`;
+        if (!fkByTable[key]) fkByTable[key] = [];
+        fkByTable[key].push(fk);
     }
 
     // ── 1d. UNIQUE CONSTRAINTS ──
     const uniqueRes = await client.query(`
         SELECT
+            tc.table_schema,
             tc.table_name,
             kcu.column_name
         FROM information_schema.table_constraints tc
@@ -133,21 +144,26 @@ async function main() {
             ON tc.constraint_name = kcu.constraint_name
             AND tc.table_schema = kcu.table_schema
         WHERE tc.constraint_type = 'UNIQUE'
-          AND tc.table_schema = 'public'
-        ORDER BY tc.table_name;
+          AND tc.table_schema IN (${schemasSQL})
+        ORDER BY tc.table_schema, tc.table_name;
     `);
 
     const uniqueByTable = {};
     for (const u of uniqueRes.rows) {
-        if (!uniqueByTable[u.table_name]) uniqueByTable[u.table_name] = new Set();
-        uniqueByTable[u.table_name].add(u.column_name);
+        const key = u.table_schema === 'public' ? u.table_name : `${u.table_schema}.${u.table_name}`;
+        if (!uniqueByTable[key]) uniqueByTable[key] = new Set();
+        uniqueByTable[key].add(u.column_name);
     }
 
-    // Build tables section
-    sections.push(`## Tables (${tablesRes.rows.length})\n`);
+    // Build table display names with schema prefix for non-public
+    const tableDisplayNames = tablesRes.rows.map(t =>
+        t.table_schema === 'public' ? t.table_name : `${t.table_schema}.${t.table_name}`
+    );
 
-    for (const table of tablesRes.rows) {
-        const name = table.table_name;
+    // Build tables section
+    sections.push(`## Tables (${tableDisplayNames.length})\n`);
+
+    for (const name of tableDisplayNames) {
         const cols = columnsByTable[name] || [];
         const pks = pkByTable[name] || new Set();
         const fks = fkByTable[name] || [];
@@ -182,16 +198,17 @@ async function main() {
     // ── 2. VIEWS ──
     console.log('👁️ Fetching views...');
     const viewsRes = await client.query(`
-        SELECT table_name, view_definition
+        SELECT table_schema, table_name, view_definition
         FROM information_schema.views
-        WHERE table_schema = 'public'
-        ORDER BY table_name;
+        WHERE table_schema IN (${schemasSQL})
+        ORDER BY table_schema, table_name;
     `);
 
     if (viewsRes.rows.length > 0) {
         sections.push(`---\n## Views (${viewsRes.rows.length})\n`);
         for (const view of viewsRes.rows) {
-            sections.push(`### \`${view.table_name}\`\n`);
+            const displayName = view.table_schema === 'public' ? view.table_name : `${view.table_schema}.${view.table_name}`;
+            sections.push(`### \`${displayName}\`\n`);
             sections.push('```sql');
             sections.push(view.view_definition?.trim() || '-- (definition not available)');
             sections.push('```\n');
@@ -202,6 +219,7 @@ async function main() {
     console.log('⚙️ Fetching functions...');
     const funcsRes = await client.query(`
         SELECT
+            n.nspname AS schema_name,
             p.proname AS name,
             pg_get_function_arguments(p.oid) AS args,
             pg_get_function_result(p.oid) AS return_type,
@@ -221,16 +239,17 @@ async function main() {
             pg_get_functiondef(p.oid) AS definition
         FROM pg_proc p
         JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'public'
+        WHERE n.nspname IN (${schemasSQL})
           AND p.prokind IN ('f', 'p')
-        ORDER BY p.proname;
+        ORDER BY n.nspname, p.proname;
     `);
 
     if (funcsRes.rows.length > 0) {
         sections.push(`---\n## Functions & Procedures (${funcsRes.rows.length})\n`);
         for (const fn of funcsRes.rows) {
+            const fnDisplayName = fn.schema_name === 'public' ? fn.name : `${fn.schema_name}.${fn.name}`;
             const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
-            sections.push(`### \`${fn.name}(${fn.args})\`${badge}\n`);
+            sections.push(`### \`${fnDisplayName}(${fn.args})\`${badge}\n`);
             sections.push(`- **Returns**: ${fn.return_type}`);
             sections.push(`- **Kind**: ${fn.kind} | ${fn.volatility} | ${fn.security}\n`);
             sections.push('<details><summary>Source</summary>\n');
@@ -244,14 +263,15 @@ async function main() {
     console.log('⚡ Fetching triggers...');
     const triggersRes = await client.query(`
         SELECT
+            trigger_schema,
             trigger_name,
             event_object_table AS table_name,
             event_manipulation AS event,
             action_timing AS timing,
             action_statement
         FROM information_schema.triggers
-        WHERE trigger_schema = 'public'
-        ORDER BY event_object_table, trigger_name;
+        WHERE trigger_schema IN (${schemasSQL})
+        ORDER BY trigger_schema, event_object_table, trigger_name;
     `);
 
     if (triggersRes.rows.length > 0) {
@@ -298,16 +318,17 @@ async function main() {
             qual,
             with_check
         FROM pg_policies
-        WHERE schemaname = 'public'
-        ORDER BY tablename, policyname;
+        WHERE schemaname IN (${schemasSQL})
+        ORDER BY schemaname, tablename, policyname;
     `);
 
     if (rlsRes.rows.length > 0) {
         // Group by table
         const rlsByTable = {};
         for (const p of rlsRes.rows) {
-            if (!rlsByTable[p.tablename]) rlsByTable[p.tablename] = [];
-            rlsByTable[p.tablename].push(p);
+            const key = p.schemaname === 'public' ? p.tablename : `${p.schemaname}.${p.tablename}`;
+            if (!rlsByTable[key]) rlsByTable[key] = [];
+            rlsByTable[key].push(p);
         }
 
         sections.push(`---\n## RLS Policies (${rlsRes.rows.length})\n`);
@@ -339,14 +360,15 @@ async function main() {
     console.log('📦 Fetching enums...');
     const enumsRes = await client.query(`
         SELECT
+            n.nspname AS schema_name,
             t.typname AS enum_name,
             string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder) AS values
         FROM pg_type t
         JOIN pg_enum e ON t.oid = e.enumtypid
         JOIN pg_namespace n ON t.typnamespace = n.oid
-        WHERE n.nspname = 'public'
-        GROUP BY t.typname
-        ORDER BY t.typname;
+        WHERE n.nspname IN (${schemasSQL})
+        GROUP BY n.nspname, t.typname
+        ORDER BY n.nspname, t.typname;
     `);
 
     if (enumsRes.rows.length > 0) {
@@ -363,13 +385,14 @@ async function main() {
     console.log('📇 Fetching indexes...');
     const indexesRes = await client.query(`
         SELECT
+            schemaname,
             tablename,
             indexname,
             indexdef
         FROM pg_indexes
-        WHERE schemaname = 'public'
+        WHERE schemaname IN (${schemasSQL})
           AND indexname NOT LIKE '%_pkey'
-        ORDER BY tablename, indexname;
+        ORDER BY schemaname, tablename, indexname;
     `);
 
     if (indexesRes.rows.length > 0) {
@@ -391,19 +414,17 @@ async function main() {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // NOTE: Monolithic SCHEMA.md no longer generated.
-    // Only split files in DB/schema/ are written.
+    const schemaBaseDir = path.join(outputDir, 'schema');
+    if (!fs.existsSync(schemaBaseDir)) {
+        fs.mkdirSync(schemaBaseDir, { recursive: true });
+    }
 
-    // ── SPLIT INTO INDIVIDUAL FILES ──
-    // Write each section to a separate file for easier searching/reading
-    const schemaDir = path.join(outputDir, 'schema');
-    if (fs.existsSync(schemaDir)) {
-        // Clean old files
-        for (const f of fs.readdirSync(schemaDir)) {
-            fs.unlinkSync(path.join(schemaDir, f));
+    // Clean old flat files from schema root (backward compat)
+    for (const f of fs.readdirSync(schemaBaseDir)) {
+        const fullPath = path.join(schemaBaseDir, f);
+        if (fs.statSync(fullPath).isFile()) {
+            fs.unlinkSync(fullPath);
         }
-    } else {
-        fs.mkdirSync(schemaDir, { recursive: true });
     }
 
     const header = [
@@ -413,203 +434,270 @@ async function main() {
         `> ⚠️ This file is auto-generated. Do NOT edit manually.\n`,
     ].join('\n');
 
-    // 1. Tables — split into chunks of ~30 tables each for readability
-    const tableNames = tablesRes.rows.map(t => t.table_name);
-    const TABLES_PER_FILE = 30;
-    for (let i = 0; i < tableNames.length; i += TABLES_PER_FILE) {
-        const chunk = tableNames.slice(i, i + TABLES_PER_FILE);
-        const fileIndex = Math.floor(i / TABLES_PER_FILE) + 1;
-        const tableLines = [header, `## Tables (chunk ${fileIndex}: ${chunk[0]} — ${chunk[chunk.length - 1]})\n`];
-
-        for (const name of chunk) {
-            const cols = columnsByTable[name] || [];
-            const pks = pkByTable[name] || new Set();
-            const fks = fkByTable[name] || [];
-            const uniques = uniqueByTable[name] || new Set();
-
-            tableLines.push(`### \`${name}\`\n`);
-            tableLines.push(`| Column | Type | Nullable | Default | Constraints |`);
-            tableLines.push(`|--------|------|----------|---------|-------------|`);
-
-            for (const col of cols) {
-                const type = col.character_maximum_length
-                    ? `${col.udt_name}(${col.character_maximum_length})`
-                    : col.udt_name;
-                const nullable = col.is_nullable === 'YES' ? '✓' : '✗';
-                const def = col.column_default
-                    ? col.column_default.length > 40
-                        ? col.column_default.substring(0, 37) + '...'
-                        : col.column_default
-                    : '';
-
-                const constraints = [];
-                if (pks.has(col.column_name)) constraints.push('PK');
-                if (uniques.has(col.column_name)) constraints.push('UNIQUE');
-                const fk = fks.find(f => f.column_name === col.column_name);
-                if (fk) constraints.push(`FK → ${fk.foreign_table}.${fk.foreign_column}`);
-
-                tableLines.push(`| ${col.column_name} | ${type} | ${nullable} | ${def} | ${constraints.join(', ')} |`);
-            }
-            tableLines.push('');
-        }
-
-        fs.writeFileSync(path.join(schemaDir, `tables_${fileIndex}.md`), tableLines.join('\n'), 'utf-8');
-    }
-
-    // 2. Views
-    if (viewsRes.rows.length > 0) {
-        const viewLines = [header, `## Views (${viewsRes.rows.length})\n`];
-        for (const view of viewsRes.rows) {
-            viewLines.push(`### \`${view.table_name}\`\n`);
-            viewLines.push('```sql');
-            viewLines.push(view.view_definition?.trim() || '-- (definition not available)');
-            viewLines.push('```\n');
-        }
-        fs.writeFileSync(path.join(schemaDir, 'views.md'), viewLines.join('\n'), 'utf-8');
-    }
-
-    // 3. Functions — split into chunks for readability (same pattern as tables)
-    if (funcsRes.rows.length > 0) {
-        const FUNCS_PER_FILE = 20;
-        for (let i = 0; i < funcsRes.rows.length; i += FUNCS_PER_FILE) {
-            const chunk = funcsRes.rows.slice(i, i + FUNCS_PER_FILE);
-            const fileIndex = Math.floor(i / FUNCS_PER_FILE) + 1;
-            const funcLines = [header, `## Functions & Procedures (chunk ${fileIndex}: ${chunk[0].name} — ${chunk[chunk.length - 1].name})\n`];
-
-            for (const fn of chunk) {
-                const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
-                funcLines.push(`### \`${fn.name}(${fn.args})\`${badge}\n`);
-                funcLines.push(`- **Returns**: ${fn.return_type}`);
-                funcLines.push(`- **Kind**: ${fn.kind} | ${fn.volatility} | ${fn.security}\n`);
-                funcLines.push('<details><summary>Source</summary>\n');
-                funcLines.push('```sql');
-                funcLines.push(fn.definition?.trim() || '-- (source not available)');
-                funcLines.push('```\n</details>\n');
-            }
-            fs.writeFileSync(path.join(schemaDir, `functions_${fileIndex}.md`), funcLines.join('\n'), 'utf-8');
-        }
-    }
-
-    // 4. Triggers
-    if (triggersRes.rows.length > 0) {
-        const triggerEvents = {};
-        for (const t of triggersRes.rows) {
-            const key = `${t.table_name}.${t.trigger_name}`;
-            if (!triggerEvents[key]) triggerEvents[key] = { ...t, events: [] };
-            triggerEvents[key].events.push(t.event);
-        }
-
-        const trigLines = [header, `## Triggers (${Object.keys(triggerEvents).length})\n`];
-        trigLines.push(`| Table | Trigger | Timing | Events | Action |`);
-        trigLines.push(`|-------|---------|--------|--------|--------|`);
-        for (const t of Object.values(triggerEvents)) {
-            const action = t.action_statement.length > 60
-                ? t.action_statement.substring(0, 57) + '...'
-                : t.action_statement;
-            trigLines.push(`| ${t.table_name} | ${t.trigger_name} | ${t.timing} | ${t.events.join(', ')} | ${action} |`);
-        }
-        trigLines.push('');
-        fs.writeFileSync(path.join(schemaDir, 'triggers.md'), trigLines.join('\n'), 'utf-8');
-    }
-
-    // 5. RLS Policies
-    if (rlsRes.rows.length > 0) {
-        const rlsByTable = {};
-        for (const p of rlsRes.rows) {
-            if (!rlsByTable[p.tablename]) rlsByTable[p.tablename] = [];
-            rlsByTable[p.tablename].push(p);
-        }
-
-        const rlsLines = [header, `## RLS Policies (${rlsRes.rows.length})\n`];
-        for (const [table, policies] of Object.entries(rlsByTable)) {
-            rlsLines.push(`### \`${table}\` (${policies.length} policies)\n`);
-            for (const p of policies) {
-                rlsLines.push(`#### ${p.policyname}\n`);
-                rlsLines.push(`- **Command**: ${p.cmd} | **Permissive**: ${p.permissive}`);
-                rlsLines.push(`- **Roles**: ${p.roles}`);
-                if (p.qual) {
-                    rlsLines.push(`- **USING**:`);
-                    rlsLines.push('```sql');
-                    rlsLines.push(p.qual);
-                    rlsLines.push('```');
-                }
-                if (p.with_check) {
-                    rlsLines.push(`- **WITH CHECK**:`);
-                    rlsLines.push('```sql');
-                    rlsLines.push(p.with_check);
-                    rlsLines.push('```');
-                }
-                rlsLines.push('');
-            }
-        }
-        fs.writeFileSync(path.join(schemaDir, 'rls.md'), rlsLines.join('\n'), 'utf-8');
-    }
-
-    // 6. Enums
-    if (enumsRes.rows.length > 0) {
-        const enumLines = [header, `## Enums (${enumsRes.rows.length})\n`];
-        enumLines.push(`| Enum | Values |`);
-        enumLines.push(`|------|--------|`);
-        for (const e of enumsRes.rows) {
-            enumLines.push(`| ${e.enum_name} | ${e.values} |`);
-        }
-        enumLines.push('');
-        fs.writeFileSync(path.join(schemaDir, 'enums.md'), enumLines.join('\n'), 'utf-8');
-    }
-
-    // 7. Indexes
-    if (indexesRes.rows.length > 0) {
-        const idxLines = [header, `## Indexes (${indexesRes.rows.length}, excluding PKs)\n`];
-        idxLines.push(`| Table | Index | Definition |`);
-        idxLines.push(`|-------|-------|------------|`);
-        for (const idx of indexesRes.rows) {
-            const def = idx.indexdef.length > 80
-                ? idx.indexdef.substring(0, 77) + '...'
-                : idx.indexdef;
-            idxLines.push(`| ${idx.tablename} | ${idx.indexname} | \`${def}\` |`);
-        }
-        idxLines.push('');
-        fs.writeFileSync(path.join(schemaDir, 'indexes.md'), idxLines.join('\n'), 'utf-8');
-    }
-
-    // 8. Comprehensive index (quick reference for tables, functions, views)
-    const indexFileLines = [header, `## Table Index\n`, `All ${tableNames.length} tables, alphabetical:\n`];
-    for (const name of tableNames) {
+    // Helper: render table to markdown lines
+    function renderTable(name, lines) {
         const cols = columnsByTable[name] || [];
+        const pks = pkByTable[name] || new Set();
         const fks = fkByTable[name] || [];
-        const fkList = fks.map(f => `${f.column_name} → ${f.foreign_table}`).join(', ');
-        indexFileLines.push(`- **\`${name}\`** (${cols.length} cols${fkList ? ` | FK: ${fkList}` : ''})`);
-    }
-    indexFileLines.push('');
+        const uniques = uniqueByTable[name] || new Set();
 
-    // Function index
-    if (funcsRes.rows.length > 0) {
-        indexFileLines.push(`---\n## Function Index\n`);
-        indexFileLines.push(`All ${funcsRes.rows.length} functions/procedures:\n`);
-        const FUNCS_PER_FILE_IDX = 20;
-        for (let i = 0; i < funcsRes.rows.length; i++) {
-            const fn = funcsRes.rows[i];
-            const fileIndex = Math.floor(i / FUNCS_PER_FILE_IDX) + 1;
-            const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
-            indexFileLines.push(`- \`${fn.name}(${fn.args})\` → ${fn.return_type}${badge} *(functions_${fileIndex}.md)*`);
+        lines.push(`### \`${name}\`\n`);
+        lines.push(`| Column | Type | Nullable | Default | Constraints |`);
+        lines.push(`|--------|------|----------|---------|-------------|`);
+
+        for (const col of cols) {
+            const type = col.character_maximum_length
+                ? `${col.udt_name}(${col.character_maximum_length})`
+                : col.udt_name;
+            const nullable = col.is_nullable === 'YES' ? '✓' : '✗';
+            const def = col.column_default
+                ? col.column_default.length > 40
+                    ? col.column_default.substring(0, 37) + '...'
+                    : col.column_default
+                : '';
+
+            const constraints = [];
+            if (pks.has(col.column_name)) constraints.push('PK');
+            if (uniques.has(col.column_name)) constraints.push('UNIQUE');
+            const fk = fks.find(f => f.column_name === col.column_name);
+            if (fk) constraints.push(`FK → ${fk.foreign_table}.${fk.foreign_column}`);
+
+            lines.push(`| ${col.column_name} | ${type} | ${nullable} | ${def} | ${constraints.join(', ')} |`);
         }
-        indexFileLines.push('');
+        lines.push('');
     }
 
-    // View index
-    if (viewsRes.rows.length > 0) {
-        indexFileLines.push(`---\n## View Index\n`);
-        for (const view of viewsRes.rows) {
-            indexFileLines.push(`- **\`${view.table_name}\`**`);
+    // Helper: display name for an entity
+    const displayName = (schema, name) => schema === 'public' ? name : `${schema}.${name}`;
+
+    // ── PER-SCHEMA FILE WRITING ──
+    const allSchemaStats = {};
+
+    for (const schema of SCHEMAS) {
+        const schemaDir = path.join(schemaBaseDir, schema);
+        // Clean and recreate
+        if (fs.existsSync(schemaDir)) {
+            for (const f of fs.readdirSync(schemaDir)) {
+                fs.unlinkSync(path.join(schemaDir, f));
+            }
+        } else {
+            fs.mkdirSync(schemaDir, { recursive: true });
         }
-        indexFileLines.push('');
+
+        // Filter data for this schema
+        const schemaTables = tablesRes.rows.filter(t => t.table_schema === schema);
+        const schemaFuncs = funcsRes.rows.filter(f => f.schema_name === schema);
+        const schemaViews = viewsRes.rows.filter(v => v.table_schema === schema);
+        const schemaTriggers = triggersRes.rows.filter(t => t.trigger_schema === schema);
+        const schemaRls = rlsRes.rows.filter(p => p.schemaname === schema);
+        const schemaEnums = enumsRes.rows.filter(e => e.schema_name === schema);
+        const schemaIndexes = indexesRes.rows.filter(i => i.schemaname === schema);
+
+        allSchemaStats[schema] = {
+            tables: schemaTables.length,
+            functions: schemaFuncs.length,
+            views: schemaViews.length,
+            triggers: schemaTriggers.length,
+            rls: schemaRls.length,
+            enums: schemaEnums.length,
+            indexes: schemaIndexes.length,
+        };
+
+        const schemaLabel = schema.toUpperCase();
+
+        // 1. Tables
+        if (schemaTables.length > 0) {
+            const tableNames = schemaTables.map(t => displayName(schema, t.table_name));
+            const TABLES_PER_FILE = 30;
+            for (let i = 0; i < tableNames.length; i += TABLES_PER_FILE) {
+                const chunk = tableNames.slice(i, i + TABLES_PER_FILE);
+                const fileIndex = Math.floor(i / TABLES_PER_FILE) + 1;
+                const tableLines = [header, `## [${schemaLabel}] Tables (chunk ${fileIndex}: ${chunk[0]} — ${chunk[chunk.length - 1]})\n`];
+                for (const name of chunk) {
+                    renderTable(name, tableLines);
+                }
+                fs.writeFileSync(path.join(schemaDir, `tables_${fileIndex}.md`), tableLines.join('\n'), 'utf-8');
+            }
+        }
+
+        // 2. Views
+        if (schemaViews.length > 0) {
+            const viewLines = [header, `## [${schemaLabel}] Views (${schemaViews.length})\n`];
+            for (const view of schemaViews) {
+                viewLines.push(`### \`${displayName(schema, view.table_name)}\`\n`);
+                viewLines.push('```sql');
+                viewLines.push(view.view_definition?.trim() || '-- (definition not available)');
+                viewLines.push('```\n');
+            }
+            fs.writeFileSync(path.join(schemaDir, 'views.md'), viewLines.join('\n'), 'utf-8');
+        }
+
+        // 3. Functions
+        if (schemaFuncs.length > 0) {
+            const FUNCS_PER_FILE = 20;
+            for (let i = 0; i < schemaFuncs.length; i += FUNCS_PER_FILE) {
+                const chunk = schemaFuncs.slice(i, i + FUNCS_PER_FILE);
+                const fileIndex = Math.floor(i / FUNCS_PER_FILE) + 1;
+                const funcLines = [header, `## [${schemaLabel}] Functions (chunk ${fileIndex}: ${chunk[0].name} — ${chunk[chunk.length - 1].name})\n`];
+                for (const fn of chunk) {
+                    const fnName = displayName(schema, fn.name);
+                    const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
+                    funcLines.push(`### \`${fnName}(${fn.args})\`${badge}\n`);
+                    funcLines.push(`- **Returns**: ${fn.return_type}`);
+                    funcLines.push(`- **Kind**: ${fn.kind} | ${fn.volatility} | ${fn.security}\n`);
+                    funcLines.push('<details><summary>Source</summary>\n');
+                    funcLines.push('```sql');
+                    funcLines.push(fn.definition?.trim() || '-- (source not available)');
+                    funcLines.push('```\n</details>\n');
+                }
+                fs.writeFileSync(path.join(schemaDir, `functions_${fileIndex}.md`), funcLines.join('\n'), 'utf-8');
+            }
+        }
+
+        // 4. Triggers
+        if (schemaTriggers.length > 0) {
+            const triggerEvents = {};
+            for (const t of schemaTriggers) {
+                const key = `${t.table_name}.${t.trigger_name}`;
+                if (!triggerEvents[key]) triggerEvents[key] = { ...t, events: [] };
+                triggerEvents[key].events.push(t.event);
+            }
+
+            const trigLines = [header, `## [${schemaLabel}] Triggers (${Object.keys(triggerEvents).length})\n`];
+            trigLines.push(`| Table | Trigger | Timing | Events | Action |`);
+            trigLines.push(`|-------|---------|--------|--------|--------|`);
+            for (const t of Object.values(triggerEvents)) {
+                const action = t.action_statement.length > 60
+                    ? t.action_statement.substring(0, 57) + '...'
+                    : t.action_statement;
+                trigLines.push(`| ${t.table_name} | ${t.trigger_name} | ${t.timing} | ${t.events.join(', ')} | ${action} |`);
+            }
+            trigLines.push('');
+            fs.writeFileSync(path.join(schemaDir, 'triggers.md'), trigLines.join('\n'), 'utf-8');
+        }
+
+        // 5. RLS Policies
+        if (schemaRls.length > 0) {
+            const rlsByTable = {};
+            for (const p of schemaRls) {
+                if (!rlsByTable[p.tablename]) rlsByTable[p.tablename] = [];
+                rlsByTable[p.tablename].push(p);
+            }
+
+            const rlsLines = [header, `## [${schemaLabel}] RLS Policies (${schemaRls.length})\n`];
+            for (const [table, policies] of Object.entries(rlsByTable)) {
+                rlsLines.push(`### \`${table}\` (${policies.length} policies)\n`);
+                for (const p of policies) {
+                    rlsLines.push(`#### ${p.policyname}\n`);
+                    rlsLines.push(`- **Command**: ${p.cmd} | **Permissive**: ${p.permissive}`);
+                    rlsLines.push(`- **Roles**: ${p.roles}`);
+                    if (p.qual) {
+                        rlsLines.push(`- **USING**:`);
+                        rlsLines.push('```sql');
+                        rlsLines.push(p.qual);
+                        rlsLines.push('```');
+                    }
+                    if (p.with_check) {
+                        rlsLines.push(`- **WITH CHECK**:`);
+                        rlsLines.push('```sql');
+                        rlsLines.push(p.with_check);
+                        rlsLines.push('```');
+                    }
+                    rlsLines.push('');
+                }
+            }
+            fs.writeFileSync(path.join(schemaDir, 'rls.md'), rlsLines.join('\n'), 'utf-8');
+        }
+
+        // 6. Enums
+        if (schemaEnums.length > 0) {
+            const enumLines = [header, `## [${schemaLabel}] Enums (${schemaEnums.length})\n`];
+            enumLines.push(`| Enum | Values |`);
+            enumLines.push(`|------|--------|`);
+            for (const e of schemaEnums) {
+                enumLines.push(`| ${e.enum_name} | ${e.values} |`);
+            }
+            enumLines.push('');
+            fs.writeFileSync(path.join(schemaDir, 'enums.md'), enumLines.join('\n'), 'utf-8');
+        }
+
+        // 7. Indexes
+        if (schemaIndexes.length > 0) {
+            const idxLines = [header, `## [${schemaLabel}] Indexes (${schemaIndexes.length}, excluding PKs)\n`];
+            idxLines.push(`| Table | Index | Definition |`);
+            idxLines.push(`|-------|-------|------------|`);
+            for (const idx of schemaIndexes) {
+                const def = idx.indexdef.length > 80
+                    ? idx.indexdef.substring(0, 77) + '...'
+                    : idx.indexdef;
+                idxLines.push(`| ${idx.tablename} | ${idx.indexname} | \`${def}\` |`);
+            }
+            idxLines.push('');
+            fs.writeFileSync(path.join(schemaDir, 'indexes.md'), idxLines.join('\n'), 'utf-8');
+        }
+
+        console.log(`   📁 ${schema}/ — ${schemaTables.length} tables, ${schemaFuncs.length} funcs, ${schemaViews.length} views, ${schemaRls.length} RLS`);
     }
-    fs.writeFileSync(path.join(schemaDir, '_index.md'), indexFileLines.join('\n'), 'utf-8');
+
+    // ── UNIFIED _index.md ──
+    const indexFileLines = [header];
+
+    for (const schema of SCHEMAS) {
+        const schemaTables = tablesRes.rows.filter(t => t.table_schema === schema);
+        const schemaFuncs = funcsRes.rows.filter(f => f.schema_name === schema);
+        const schemaViews = viewsRes.rows.filter(v => v.table_schema === schema);
+
+        indexFileLines.push(`## Schema: \`${schema}\`\n`);
+
+        // Table index
+        if (schemaTables.length > 0) {
+            indexFileLines.push(`### Tables (${schemaTables.length})\n`);
+            for (const t of schemaTables) {
+                const name = displayName(schema, t.table_name);
+                const cols = columnsByTable[name] || [];
+                const fks = fkByTable[name] || [];
+                const fkList = fks.map(f => `${f.column_name} → ${f.foreign_table}`).join(', ');
+                indexFileLines.push(`- **\`${name}\`** (${cols.length} cols${fkList ? ` | FK: ${fkList}` : ''})`);
+            }
+            indexFileLines.push('');
+        }
+
+        // Function index
+        if (schemaFuncs.length > 0) {
+            indexFileLines.push(`### Functions (${schemaFuncs.length})\n`);
+            for (let i = 0; i < schemaFuncs.length; i++) {
+                const fn = schemaFuncs[i];
+                const fnName = displayName(schema, fn.name);
+                const fileIndex = Math.floor(i / 20) + 1;
+                const badge = fn.security === 'SECURITY DEFINER' ? ' 🔐' : '';
+                indexFileLines.push(`- \`${fnName}(${fn.args})\` → ${fn.return_type}${badge} *(${schema}/functions_${fileIndex}.md)*`);
+            }
+            indexFileLines.push('');
+        }
+
+        // View index
+        if (schemaViews.length > 0) {
+            indexFileLines.push(`### Views (${schemaViews.length})\n`);
+            for (const view of schemaViews) {
+                indexFileLines.push(`- **\`${displayName(schema, view.table_name)}\`**`);
+            }
+            indexFileLines.push('');
+        }
+
+        indexFileLines.push(`---\n`);
+    }
+
+    fs.writeFileSync(path.join(schemaBaseDir, '_index.md'), indexFileLines.join('\n'), 'utf-8');
 
     await client.end();
 
-    const splitFiles = fs.readdirSync(schemaDir);
-    console.log(`\n✅ Schema written to ${splitFiles.length} files in DB/schema/`);
+    // Count total files written
+    let totalFiles = 1; // _index.md
+    for (const schema of SCHEMAS) {
+        const dir = path.join(schemaBaseDir, schema);
+        if (fs.existsSync(dir)) totalFiles += fs.readdirSync(dir).length;
+    }
+    console.log(`\n✅ Schema written to ${totalFiles} files in DB/schema/`);
     console.log(`   📊 ${tablesRes.rows.length} tables`);
     console.log(`   👁️  ${viewsRes.rows.length} views`);
     console.log(`   ⚙️  ${funcsRes.rows.length} functions`);

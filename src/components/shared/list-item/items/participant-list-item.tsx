@@ -5,6 +5,7 @@ import { ListItem } from "../list-item-base";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,6 +25,10 @@ import {
     Phone,
     PhoneCall,
     MessageCircle,
+    RefreshCw,
+    ShieldX,
+    Clock,
+    BadgeCheck,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -54,6 +59,12 @@ export interface ParticipantItemData {
     contact_id: string | null;
     /** Optional notes */
     notes: string | null;
+    /** Invitation status (from iam.organization_invitations via view) */
+    invitation_status?: string | null;
+    /** When the invitation was created (for display) */
+    invitation_sent_at?: string | null;
+    /** Linked Seencel user ID — if set, this contact is a real Seencel user */
+    linked_user_id?: string | null;
 }
 
 export interface ParticipantListItemProps {
@@ -71,6 +82,10 @@ export interface ParticipantListItemProps {
     onDelete?: (participant: ParticipantItemData) => void;
     /** Callback: reactivate a previously deactivated participant */
     onReactivate?: (participant: ParticipantItemData) => void;
+    /** Callback: resend invitation email (only shown when invitation_status === "pending") */
+    onResendInvitation?: (participant: ParticipantItemData) => void;
+    /** Callback: revoke invitation (only shown when invitation_status === "pending") */
+    onRevokeInvitation?: (participant: ParticipantItemData) => void;
 }
 
 // ============================================================================
@@ -91,7 +106,95 @@ function formatPhoneForWhatsApp(phone: string): string {
 }
 
 // ============================================================================
-// Component
+// Pending Invitation Row (style matching team invitations)
+// ============================================================================
+
+function PendingInvitationRow({
+    participant,
+    onResendInvitation,
+    onRevokeInvitation,
+}: {
+    participant: ParticipantItemData;
+    onResendInvitation?: (p: ParticipantItemData) => void;
+    onRevokeInvitation?: (p: ParticipantItemData) => void;
+}) {
+    const sentDate = participant.invitation_sent_at
+        ? new Date(participant.invitation_sent_at).toLocaleDateString("es-AR", { day: "numeric", month: "long" })
+        : null;
+
+    return (
+        <Card className="border shadow-sm overflow-hidden bg-muted/20">
+            <CardContent className="p-0">
+                <div className="flex items-center justify-between px-5 py-4">
+                    {/* Left: Icon + info */}
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-background border flex items-center justify-center text-muted-foreground shrink-0">
+                            <Mail className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium leading-none">
+                                {participant.contact_full_name || participant.contact_email}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                {participant.role_name && (
+                                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                        {participant.role_name}
+                                    </Badge>
+                                )}
+                                <Badge
+                                    variant="outline"
+                                    className="text-[10px] h-5 px-1.5 font-normal text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-400 gap-1"
+                                >
+                                    <Clock className="h-2.5 w-2.5" />
+                                    Invitación pendiente
+                                </Badge>
+                                {sentDate && (
+                                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                                        Enviado el {sentDate}
+                                    </span>
+                                )}
+                            </div>
+                            {participant.contact_email && participant.contact_full_name && (
+                                <p className="text-xs text-muted-foreground">{participant.contact_email}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    {(onResendInvitation || onRevokeInvitation) && (
+                        <div className="flex items-center gap-2 shrink-0">
+                            {onResendInvitation && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1.5"
+                                    onClick={() => onResendInvitation(participant)}
+                                >
+                                    <RefreshCw className="h-3 w-3" />
+                                    Reenviar
+                                </Button>
+                            )}
+                            {onRevokeInvitation && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                    onClick={() => onRevokeInvitation(participant)}
+                                >
+                                    <ShieldX className="h-3 w-3" />
+                                    Revocar
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+// ============================================================================
+// Main Component
 // ============================================================================
 
 export const ParticipantListItem = memo(function ParticipantListItem({
@@ -102,20 +205,47 @@ export const ParticipantListItem = memo(function ParticipantListItem({
     onDeactivate,
     onDelete,
     onReactivate,
+    onResendInvitation,
+    onRevokeInvitation,
 }: ParticipantListItemProps) {
+    const isPendingInvitation = participant.invitation_status === "pending";
+    const isSeencelUser = !!participant.linked_user_id;
+
+    // Render invitation-style row for pending clients
+    if (isPendingInvitation) {
+        return (
+            <PendingInvitationRow
+                participant={participant}
+                onResendInvitation={onResendInvitation}
+                onRevokeInvitation={onRevokeInvitation}
+            />
+        );
+    }
+
+    // Normal participant row
     const displayName = participant.contact_full_name || "Sin nombre";
     const hasActions = !!onEdit || !!onEditContact || !!onDeactivate || !!onDelete || !!onReactivate;
 
     return (
         <ListItem variant="card" className={isInactive ? "opacity-60" : undefined}>
-            {/* Avatar */}
+            {/* Avatar with Seencel user indicator */}
             <ListItem.Leading>
-                <Avatar className="h-10 w-10 border">
-                    <AvatarImage src={participant.contact_avatar_url || undefined} alt={displayName} />
-                    <AvatarFallback className="text-xs font-medium">
-                        {getInitials(participant.contact_full_name)}
-                    </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                    <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={participant.contact_avatar_url || undefined} alt={displayName} />
+                        <AvatarFallback className="text-xs font-medium">
+                            {getInitials(participant.contact_full_name)}
+                        </AvatarFallback>
+                    </Avatar>
+                    {isSeencelUser && (
+                        <div
+                            className="absolute -bottom-0.5 -right-0.5 rounded-full bg-background p-px ring-1 ring-background"
+                            title="Usuario activo en Seencel"
+                        >
+                            <BadgeCheck className="h-3.5 w-3.5 text-blue-500" fill="rgb(59,130,246)" color="white" />
+                        </div>
+                    )}
+                </div>
             </ListItem.Leading>
 
             {/* Name + Company */}
@@ -134,14 +264,22 @@ export const ParticipantListItem = memo(function ParticipantListItem({
                     )}
                 </ListItem.Title>
                 <ListItem.Description>
-                    {participant.contact_company_name ? (
-                        <span className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3 shrink-0" />
-                            {participant.contact_company_name}
-                        </span>
-                    ) : (
-                        participant.contact_email || participant.notes || null
-                    )}
+                    <span className="flex items-center gap-1.5">
+                        {participant.contact_company_name ? (
+                            <span className="flex items-center gap-1">
+                                <Building2 className="h-3 w-3 shrink-0" />
+                                {participant.contact_company_name}
+                            </span>
+                        ) : (
+                            participant.contact_email || participant.notes || null
+                        )}
+                        {isSeencelUser && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-full px-1.5 py-0 leading-4">
+                                <BadgeCheck className="h-2.5 w-2.5" />
+                                En Seencel
+                            </span>
+                        )}
+                    </span>
                 </ListItem.Description>
             </ListItem.Content>
 

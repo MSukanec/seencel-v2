@@ -18,6 +18,10 @@ import {
     reactivateClientAction,
 } from "@/features/clients/actions";
 import {
+    revokeInvitationAction,
+    resendInvitationAction,
+} from "@/features/team/actions";
+import {
     unlinkCollaboratorFromProjectAction,
     deactivateCollaboratorAccessAction,
     reactivateCollaboratorAccessAction,
@@ -200,6 +204,40 @@ export function ProjectParticipantsView({
             }
         });
     };
+    // ── Handlers: Invitation (Reenviar / Revocar) ──────────────────────
+
+    const handleResendInvitation = (participant: ParticipantItemData) => {
+        const invitationId = (participant as any).invitation_id as string | undefined;
+        if (!invitationId) {
+            toast.error("No se encontró la invitación pendiente");
+            return;
+        }
+        startTransition(async () => {
+            const result = await resendInvitationAction(organizationId, invitationId);
+            if (result.success) {
+                toast.success("Invitación reenviada correctamente");
+            } else {
+                toast.error(result.error || "Error al reenviar la invitación");
+            }
+        });
+    };
+
+    const handleRevokeInvitation = (participant: ParticipantItemData) => {
+        const invitationId = (participant as any).invitation_id as string | undefined;
+        if (!invitationId) {
+            toast.error("No se encontró la invitación pendiente");
+            return;
+        }
+        startTransition(async () => {
+            const result = await revokeInvitationAction(organizationId, invitationId);
+            if (result.success) {
+                toast.success("Invitación revocada");
+                router.refresh();
+            } else {
+                toast.error(result.error || "Error al revocar la invitación");
+            }
+        });
+    };
 
     // ── Handlers: Vincular Colaborador ──────────────────────────────────
 
@@ -333,11 +371,20 @@ export function ProjectParticipantsView({
                             {activeClients.map((client) => (
                                 <ParticipantListItem
                                     key={client.id}
-                                    participant={client}
-                                    onEdit={handleEditClient}
-                                    onEditContact={handleEditContact}
-                                    onDeactivate={handleDeactivateClient}
-                                    onDelete={handleDeleteClient}
+                                    participant={{
+                                        ...client,
+                                        invitation_sent_at: client.invitation_sent_at ?? null,
+                                        // Pass invitation_id as extended data for handlers
+                                        ...(client.invitation_status === 'pending' && client.invitation_id
+                                            ? { invitation_id: client.invitation_id }
+                                            : {}),
+                                    }}
+                                    onEdit={client.invitation_status === 'pending' ? undefined : handleEditClient}
+                                    onEditContact={client.invitation_status === 'pending' ? undefined : handleEditContact}
+                                    onDeactivate={client.invitation_status === 'pending' ? undefined : handleDeactivateClient}
+                                    onDelete={client.invitation_status === 'pending' ? undefined : handleDeleteClient}
+                                    onResendInvitation={client.invitation_status === 'pending' ? handleResendInvitation : undefined}
+                                    onRevokeInvitation={client.invitation_status === 'pending' ? handleRevokeInvitation : undefined}
                                 />
                             ))}
                         </div>
