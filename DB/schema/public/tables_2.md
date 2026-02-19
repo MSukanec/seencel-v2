@@ -1,102 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 2: course_details — founder_portal_events)
-
-### `course_details`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| course_id | uuid | ✗ |  | UNIQUE, FK → courses.id |
-| badge_text | text | ✓ |  |  |
-| highlights | _text | ✓ |  |  |
-| preview_video_id | text | ✓ |  |  |
-| seo_keywords | _text | ✓ |  |  |
-| landing_sections | jsonb | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| instructor_id | uuid | ✓ |  | FK → course_instructors.id |
-| endorsement_image_path | text | ✓ |  |  |
-| endorsement_title | text | ✓ | 'Avalado por...'::text |  |
-| endorsement_description | text | ✓ |  |  |
-
-### `course_enrollments`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
-| course_id | uuid | ✗ |  | UNIQUE, FK → courses.id |
-| status | text | ✗ | 'active'::text |  |
-| started_at | timestamptz | ✗ | now() |  |
-| expires_at | timestamptz | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-
-### `course_faqs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| course_id | uuid | ✗ |  | FK → courses.id |
-| question | text | ✗ |  |  |
-| answer | text | ✗ |  |  |
-| sort_index | int4 | ✗ | 0 |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-
-### `course_instructors`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| title | text | ✓ |  |  |
-| bio | text | ✓ |  |  |
-| avatar_path | text | ✓ |  |  |
-| credentials | _text | ✓ |  |  |
-| linkedin_url | text | ✓ |  |  |
-| youtube_url | text | ✓ |  |  |
-| instagram_url | text | ✓ |  |  |
-| website_url | text | ✓ |  |  |
-| user_id | uuid | ✓ |  | FK → users.id |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  | FK → users.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `course_lesson_notes`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✗ |  | FK → users.id |
-| lesson_id | uuid | ✗ |  | FK → course_lessons.id |
-| body | text | ✗ |  |  |
-| time_sec | int4 | ✓ |  |  |
-| is_pinned | bool | ✗ | false |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| note_type | text | ✗ | 'marker'::text |  |
-
-### `course_lesson_progress`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
-| lesson_id | uuid | ✗ |  | UNIQUE, FK → course_lessons.id |
-| progress_pct | numeric | ✗ | 0 |  |
-| last_position_sec | int4 | ✗ | 0 |  |
-| completed_at | timestamptz | ✓ |  |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_completed | bool | ✗ | false |  |
-| is_favorite | bool | ✗ | false |  |
-| created_at | timestamptz | ✗ | now() |  |
+## [PUBLIC] Tables (chunk 2: course_lessons — general_costs)
 
 ### `course_lessons`
 
@@ -444,3 +351,83 @@
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
 | is_deleted | bool | ✓ | false |  |
+
+### `founder_vote_ballots`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| topic_id | uuid | ✗ |  | UNIQUE, FK → founder_vote_topics.id |
+| option_id | uuid | ✗ |  | FK → founder_vote_options.id |
+| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| voted_at | timestamptz | ✓ | now() |  |
+
+### `founder_vote_options`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| topic_id | uuid | ✗ |  | FK → founder_vote_topics.id |
+| option_text | text | ✗ |  |  |
+| option_order | int4 | ✓ | 0 |  |
+
+### `founder_vote_topics`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| title | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| status | text | ✗ | 'active'::text |  |
+| voting_deadline | timestamptz | ✓ |  |  |
+| allow_multiple_votes | bool | ✓ | false |  |
+| created_by | uuid | ✗ |  | FK → users.id |
+| created_at | timestamptz | ✓ | now() |  |
+| closed_at | timestamptz | ✓ |  |  |
+| is_deleted | bool | ✓ | false |  |
+
+### `general_cost_categories`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| is_system | bool | ✗ | false |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+
+### `general_cost_payment_allocations`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| payment_id | uuid | ✗ |  | FK → general_costs_payments.id |
+| project_id | uuid | ✗ |  | FK → projects.id |
+| percentage | numeric | ✗ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+
+### `general_costs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| category_id | uuid | ✓ |  | FK → general_cost_categories.id |
+| is_recurring | bool | ✗ | false |  |
+| recurrence_interval | text | ✓ |  |  |
+| expected_day | int2 | ✓ |  |  |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |

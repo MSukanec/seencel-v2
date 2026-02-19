@@ -35,7 +35,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
 
         // 2. Obtener estadísticas de tareas
         const { data: tasks, error: tasksError } = await supabase
-            .from('construction_tasks')
+            .schema('construction').from('construction_tasks')
             .select('status')
             .eq('project_id', projectId)
             .eq('is_deleted', false);
@@ -52,7 +52,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
 
         // 3. Obtener presupuesto total (suma de quotes aprobados)
         const { data: quotes, error: quotesError } = await supabase
-            .from('quotes_view')
+            .schema('construction').from('quotes_view')
             .select('total_with_tax')
             .eq('project_id', projectId)
             .eq('is_deleted', false)

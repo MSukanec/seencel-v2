@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 1: admin_cleanup_test_purchase — dismiss_home_banner)
+## [PUBLIC] Functions (chunk 1: admin_cleanup_test_purchase — documents_validate_project_org)
 
 ### `admin_cleanup_test_purchase(p_user_email text, p_org_id uuid)` 🔐
 
@@ -288,157 +288,6 @@ BEGIN
         current_view = EXCLUDED.current_view,
         status = 'online',
         updated_at = now();
-END;
-$function$
-```
-</details>
-
-### `approve_quote_and_create_tasks(p_quote_id uuid, p_member_id uuid DEFAULT NULL::uuid)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.approve_quote_and_create_tasks(p_quote_id uuid, p_member_id uuid DEFAULT NULL::uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    v_quote RECORD;
-    v_tasks_created INTEGER := 0;
-    v_result JSONB;
-BEGIN
-    -- ========================================
-    -- 1. VALIDATE: Quote exists and is valid
-    -- ========================================
-    SELECT 
-        q.id,
-        q.status,
-        q.project_id,
-        q.organization_id,
-        q.approved_at
-    INTO v_quote
-    FROM quotes q
-    WHERE q.id = p_quote_id
-      AND q.is_deleted = false;
-    
-    -- Quote not found
-    IF v_quote.id IS NULL THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'QUOTE_NOT_FOUND',
-            'message', 'El presupuesto no existe o fue eliminado'
-        );
-    END IF;
-    
-    -- Quote already approved (idempotency check)
-    IF v_quote.status = 'approved' OR v_quote.approved_at IS NOT NULL THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'QUOTE_ALREADY_APPROVED',
-            'message', 'Este presupuesto ya fue aprobado',
-            'approved_at', v_quote.approved_at
-        );
-    END IF;
-    
-    -- Quote must have a project to create construction tasks
-    IF v_quote.project_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'QUOTE_NO_PROJECT',
-            'message', 'El presupuesto debe estar asociado a un proyecto para generar tareas de construcción'
-        );
-    END IF;
-    
-    -- ========================================
-    -- 2. IDEMPOTENCY: Check no tasks already exist for this quote
-    -- ========================================
-    IF EXISTS (
-        SELECT 1 
-        FROM construction_tasks ct
-        INNER JOIN quote_items qi ON ct.quote_item_id = qi.id
-        WHERE qi.quote_id = p_quote_id
-          AND ct.is_deleted = false
-    ) THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'TASKS_ALREADY_EXIST',
-            'message', 'Ya existen tareas de construcción para este presupuesto'
-        );
-    END IF;
-    
-    -- ========================================
-    -- 3. CREATE CONSTRUCTION TASKS from quote_items
-    -- ========================================
-    INSERT INTO construction_tasks (
-        project_id,
-        organization_id,
-        task_id,
-        quote_item_id,
-        quantity,
-        original_quantity,
-        description,
-        cost_scope,
-        markup_pct,
-        status,
-        progress_percent,
-        created_by
-    )
-    SELECT
-        qi.project_id,
-        qi.organization_id,
-        qi.task_id,                     -- May be NULL for custom items
-        qi.id AS quote_item_id,         -- Traceability
-        qi.quantity,                    -- Working quantity (can be modified)
-        qi.quantity AS original_quantity, -- Preserve original from quote
-        qi.description,
-        qi.cost_scope,
-        qi.markup_pct,
-        'pending'::text,                -- Initial status
-        0,                              -- Initial progress
-        p_member_id                     -- Who created
-    FROM quote_items qi
-    WHERE qi.quote_id = p_quote_id;
-    
-    GET DIAGNOSTICS v_tasks_created = ROW_COUNT;
-    
-    -- ========================================
-    -- 4. UPDATE QUOTE STATUS to approved
-    -- ========================================
-    UPDATE quotes
-    SET 
-        status = 'approved',
-        approved_at = NOW(),
-        approved_by = p_member_id,
-        updated_at = NOW(),
-        updated_by = p_member_id
-    WHERE id = p_quote_id;
-    
-    -- ========================================
-    -- 5. RETURN SUCCESS
-    -- ========================================
-    RETURN jsonb_build_object(
-        'success', true,
-        'quote_id', p_quote_id,
-        'project_id', v_quote.project_id,
-        'tasks_created', v_tasks_created,
-        'approved_at', NOW(),
-        'approved_by', p_member_id
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        -- Rollback happens automatically
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'UNEXPECTED_ERROR',
-            'message', SQLERRM,
-            'detail', SQLSTATE
-        );
 END;
 $function$
 ```
@@ -858,30 +707,6 @@ $function$
 ```
 </details>
 
-### `can_view_org(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-    SELECT
-        is_admin()
-        OR is_demo_org(p_organization_id)
-        OR is_org_member(p_organization_id)
-        OR is_external_actor(p_organization_id)
-        OR iam.is_organization_client(p_organization_id);
-$function$
-```
-</details>
-
 ### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
@@ -904,6 +729,30 @@ AS $function$
       AND has_permission(p_organization_id, p_permission_key)
     )
     OR external_has_scope(p_organization_id, p_permission_key);
+$function$
+```
+</details>
+
+### `can_view_org(p_organization_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+    SELECT
+        is_admin()
+        OR is_demo_org(p_organization_id)
+        OR is_org_member(p_organization_id)
+        OR is_external_actor(p_organization_id)
+        OR iam.is_organization_client(p_organization_id);
 $function$
 ```
 </details>
@@ -1127,6 +976,41 @@ begin
   where up.user_id = v_user_id;
 
   return true;
+end;
+$function$
+```
+</details>
+
+### `documents_validate_project_org()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.documents_validate_project_org()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  proj_org uuid;
+begin
+  -- Validar que el proyecto pertenezca a la organización
+  if new.project_id is not null then
+    select p.organization_id
+    into proj_org
+    from public.projects p
+    where p.id = new.project_id;
+
+    if proj_org is null or proj_org <> new.organization_id then
+      raise exception 'El proyecto no pertenece a la organización.';
+    end if;
+  end if;
+
+  return new;
 end;
 $function$
 ```

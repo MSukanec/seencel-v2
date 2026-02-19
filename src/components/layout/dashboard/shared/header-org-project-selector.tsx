@@ -94,12 +94,15 @@ export function HeaderOrgProjectSelector() {
     // Project detail pages (/organization/projects/[id]) ARE project-scoped, so exclude from org-only
     const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/[^/]+/.test(pathWithoutLocale);
 
+    // Quote detail pages (/organization/quotes/[id]) hide the selector — project is implicit in the quote
+    const isQuoteDetailPage = /\/(?:organization|organizacion)\/(?:quotes|cotizaciones)\/[^/]+/.test(pathWithoutLocale);
+
     const isOrgOnly = !isProjectDetailPage && ORG_ONLY_PREFIXES.some(prefix =>
         pathWithoutLocale === prefix || pathWithoutLocale.startsWith(prefix + '/')
     );
 
-    // Hide if: not an org route at all, or it's an org-only page
-    if (!isOrgRoute || isOrgOnly || !currentOrg) return null;
+    // Hide if: not an org route at all, org-only page, or quote detail page
+    if (!isOrgRoute || isOrgOnly || isQuoteDetailPage || !currentOrg) return null;
 
     const activeProjects = (projects || []).filter((p: ProjectLike) => !p.status || p.status === 'active');
     const selectedProject = activeProjectId

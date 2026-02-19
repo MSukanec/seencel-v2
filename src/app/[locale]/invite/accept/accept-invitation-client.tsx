@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Users, Shield, User, Briefcase } from "lucide-react";
+import { CheckCircle, Shield, User, Briefcase } from "lucide-react";
 import { acceptInvitationAction } from "@/features/team/actions";
 
 /** Labels for actor types — duplicated here to avoid importing server-only code */
@@ -26,6 +26,8 @@ interface Props {
     inviterName: string | null;
     email: string;
     isAuthenticated: boolean;
+    /** True if the invited email already has a Seencel account but is not logged in */
+    emailAlreadyRegistered: boolean;
 }
 
 export function AcceptInvitationClient({
@@ -38,6 +40,7 @@ export function AcceptInvitationClient({
     inviterName,
     email,
     isAuthenticated,
+    emailAlreadyRegistered,
 }: Props) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
@@ -56,16 +59,14 @@ export function AcceptInvitationClient({
     const roleLabel = isExternal
         ? (actorLabel || 'Colaborador externo')
         : roleName;
-    const roleSectionTitle = isExternal ? 'Rol asignado' : 'Rol asignado';
+
+    // Footer text: context-aware per invitation type
     const footerText = isExternal
         ? `Al aceptar, colaborarás con esta organización como ${roleLabel?.toLowerCase()}.`
         : 'Al aceptar, te unirás como miembro de esta organización.';
-    const successTitle = isExternal
-        ? '¡Colaboración aceptada!'
-        : '¡Bienvenido al equipo!';
-    const successText = isExternal
-        ? `Ahora colaborás con`
-        : 'Te uniste a';
+
+    const successTitle = isExternal ? '¡Colaboración aceptada!' : '¡Bienvenido al equipo!';
+    const successText = isExternal ? 'Ahora colaborás con' : 'Te uniste a';
 
     const handleAccept = async () => {
         setIsLoading(true);
@@ -91,11 +92,8 @@ export function AcceptInvitationClient({
                 );
             }
 
-            // Redirect to dashboard after brief delay
-            setTimeout(() => {
-                router.push("/hub");
-            }, 2000);
-        } catch (error) {
+            setTimeout(() => { router.push("/hub"); }, 2000);
+        } catch {
             toast.error("Error inesperado");
         } finally {
             setIsLoading(false);
@@ -118,7 +116,6 @@ export function AcceptInvitationClient({
         );
     }
 
-    // Invitation details + action
     return (
         <div className="rounded-xl border bg-card p-8 space-y-6">
             {/* Header */}
@@ -137,9 +134,7 @@ export function AcceptInvitationClient({
                     )}
                 </div>
                 <h1 className="text-xl font-semibold">{headerTitle}</h1>
-                <p className="text-muted-foreground text-sm">
-                    {headerSubtext}
-                </p>
+                <p className="text-muted-foreground text-sm">{headerSubtext}</p>
                 <p className="text-lg font-semibold">{organizationName}</p>
             </div>
 
@@ -148,7 +143,7 @@ export function AcceptInvitationClient({
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-2">
                         {isExternal ? <Briefcase className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                        {roleSectionTitle}
+                        Rol asignado
                     </span>
                     <span className="font-medium">{roleLabel}</span>
                 </div>
@@ -161,34 +156,42 @@ export function AcceptInvitationClient({
                 </div>
             </div>
 
-            {/* Action */}
+            {/* Smart CTA — 3 states */}
             {isAuthenticated ? (
+                // ✅ Logged in → accept directly
                 <Button
                     onClick={handleAccept}
                     disabled={isLoading}
                     className="w-full"
                     size="lg"
                 >
-                    {isLoading ? "Aceptando..." : "Aceptar Invitación"}
+                    {isLoading ? "Aceptando..." : "Aceptar Invitación →"}
                 </Button>
+            ) : emailAlreadyRegistered ? (
+                // 🔑 Has account but not logged in → only Login
+                <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground text-center">
+                        Iniciá sesión con <span className="font-medium text-foreground">{email}</span> para aceptar esta invitación.
+                    </p>
+                    <a href={`/login?redirect=/invite/accept?token=${token}`} className="w-full block">
+                        <Button variant="default" className="w-full" size="lg">
+                            Iniciar Sesión
+                        </Button>
+                    </a>
+                </div>
             ) : (
+                // 🆕 New user → Login + Register
                 <div className="space-y-3">
                     <p className="text-sm text-muted-foreground text-center">
                         Necesitás una cuenta en SEENCEL para aceptar esta invitación.
                     </p>
                     <div className="flex flex-col gap-2">
-                        <a
-                            href={`/login?redirect=/invite/accept?token=${token}`}
-                            className="w-full"
-                        >
+                        <a href={`/login?redirect=/invite/accept?token=${token}`} className="w-full">
                             <Button variant="default" className="w-full" size="lg">
                                 Iniciar Sesión
                             </Button>
                         </a>
-                        <a
-                            href={`/signup?redirect=/invite/accept?token=${token}`}
-                            className="w-full"
-                        >
+                        <a href={`/signup?email=${encodeURIComponent(email)}&redirect=/invite/accept?token=${token}`} className="w-full">
                             <Button variant="outline" className="w-full" size="lg">
                                 Crear Cuenta
                             </Button>
@@ -197,9 +200,7 @@ export function AcceptInvitationClient({
                 </div>
             )}
 
-            <p className="text-xs text-muted-foreground text-center">
-                {footerText}
-            </p>
+            <p className="text-xs text-muted-foreground text-center">{footerText}</p>
         </div>
     );
 }

@@ -54,8 +54,8 @@ const ListItemRoot = React.forwardRef<HTMLDivElement, ListItemProps>(
                         "flex items-center gap-3 transition-colors group overflow-hidden",
                         // Variant styles
                         variant === "card" && [
-                            "p-3 rounded-lg border bg-sidebar",
-                            !disabled && "hover:bg-muted/50",
+                            "p-3 rounded-lg border bg-card",
+                            !disabled && "hover:bg-accent",
                         ],
                         variant === "flat" && [
                             "py-2 px-1",
@@ -338,10 +338,12 @@ ListItemActions.displayName = "ListItem.Actions";
 // ============================================================================
 
 interface ListItemColorStripProps extends React.HTMLAttributes<HTMLDivElement> {
-    color?: "slate" | "indigo" | "green" | "amber" | "red" | "blue" | "terracotta" | "pewter" | "sage" | "sand" | "system";
+    color?: "slate" | "indigo" | "green" | "amber" | "red" | "blue" | "terracotta" | "pewter" | "sage" | "sand" | "system"
+    | "chart-1" | "chart-2" | "chart-3" | "chart-4" | "chart-5" | "chart-6" | "chart-7" | "chart-8";
 }
 
 const colorClasses = {
+    // Legacy named colors
     slate: "bg-slate-500",
     indigo: "bg-indigo-500",
     green: "bg-green-500",
@@ -352,7 +354,16 @@ const colorClasses = {
     pewter: "bg-[#9B8E8A]",
     sage: "bg-[#8A9A7B]",
     sand: "bg-[#C4B590]",
-    system: "bg-system", // Uses CSS variable --system
+    system: "bg-system",
+    // Chart palette (armoniosa, consistent con charts de la app)
+    "chart-1": "bg-chart-1",  // Oliva
+    "chart-2": "bg-chart-2",  // Lavanda
+    "chart-3": "bg-chart-3",  // Naranja cálido
+    "chart-4": "bg-chart-4",  // Oro
+    "chart-5": "bg-chart-5",  // Cyan
+    "chart-6": "bg-chart-6",  // Violeta
+    "chart-7": "bg-chart-7",  // Índigo
+    "chart-8": "bg-chart-8",  // Rosa
 };
 
 const ListItemColorStrip = React.forwardRef<HTMLDivElement, ListItemColorStripProps>(

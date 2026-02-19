@@ -1,40 +1,46 @@
+/**
+ * QuoteForm — Formulario semi-autónomo para crear/editar presupuestos
+ *
+ * Según skill seencel-forms-modals:
+ * - Semi-autónomo: maneja closeModal() y router.refresh() internamente
+ * - NO recibe onSuccess ni onCancel como props
+ * - Usa Field Factories para campos estándar (ProjectField)
+ * - Sticky footer con flex flex-col h-full min-h-0
+ */
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/routing";
+import { useModal } from "@/stores/modal-store";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Combobox } from "@/components/ui/combobox";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { ProjectField } from "@/components/shared/forms/fields";
+import { ContactField } from "@/components/shared/forms/fields/contact-field";
+import { TextField } from "@/components/shared/forms/fields/text-field";
 import { toast } from "sonner";
 import { createQuote, updateQuote, createChangeOrder } from "../actions";
-import { QuoteView, QuoteType, QuoteStatus, QUOTE_TYPE_LABELS, QUOTE_STATUS_LABELS } from "../types";
+import { QuoteView } from "../types";
 import { OrganizationFinancialData } from "@/features/clients/types";
-import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
 
 interface QuoteFormProps {
+    // Datos — pasados como props (no hay access a Context Providers en el Portal)
     mode: "create" | "edit";
     initialData?: QuoteView;
     organizationId: string;
     financialData: OrganizationFinancialData;
-    clients: { id: string; name: string }[];
-    projects?: { id: string; name: string }[]; // Optional: not available in project context
-    projectId?: string; // If provided, we're in project context (no project selector)
-    onCancel?: () => void;
-    onSuccess?: (quoteId?: string) => void;
-    // New props for Change Orders
+    clients: { id: string; name: string; resolved_avatar_url?: string | null }[];
+
+    projects?: { id: string; name: string; image_url?: string | null; color?: string | null }[];
+    projectId?: string;
+
+    // Change Orders
     parentQuoteId?: string;
     parentQuoteName?: string;
+
+    // ❌ NO HAY onSuccess ni onCancel — el form es semi-autónomo
 }
 
 export function QuoteForm({
@@ -45,410 +51,231 @@ export function QuoteForm({
     clients,
     projects,
     projectId,
-    onCancel,
-    onSuccess,
     parentQuoteId,
-    parentQuoteName
+    parentQuoteName,
 }: QuoteFormProps) {
-    // Is this a Change Order?
-    const isChangeOrder = !!parentQuoteId || initialData?.quote_type === 'change_order';
+    // Ciclo de vida manejado internamente — regla seencel-forms-modals §Semi-Autónomo
+    const router = useRouter();
+    const { closeModal } = useModal();
+    const [isLoading, setIsLoading] = useState(false);
+    const [clientId, setClientId] = useState<string>(initialData?.client_id || "");
+    const [projectIdState, setProjectIdState] = useState<string>(
+        initialData?.project_id || "none"
+    );
 
-    // Extract currencies from financialData
-    const { currencies, defaultCurrencyId } = financialData;
-    const hasMultipleCurrencies = currencies.length > 1;
-    const t = useTranslations("FormHelp.quotes");
+    const isChangeOrder = !!parentQuoteId || initialData?.quote_type === "change_order";
+    const isProjectContext = !!projectId;
+    const { defaultCurrencyId, currencies, defaultTaxLabel } = financialData;
 
-    /**
-     * Parse a date string (YYYY-MM-DD) as LOCAL date, not UTC
-     * This prevents the "off by one day" issue when displaying dates
-     */
-    const parseDateLocal = (dateStr: string): Date => {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day); // month is 0-indexed
+    const [name, setName] = useState<string>(initialData?.name || "");
+
+    const handleSuccess = () => {
+        closeModal();
+        router.refresh();
     };
 
-    // Form states for controlled inputs
-    const [quoteDate, setQuoteDate] = useState<Date | undefined>(
-        initialData?.quote_date ? parseDateLocal(initialData.quote_date.split('T')[0]) : new Date()
-    );
-    const [validUntil, setValidUntil] = useState<Date | undefined>(
-        initialData?.valid_until ? parseDateLocal(initialData.valid_until.split('T')[0]) : undefined
-    );
-    const [currencyId, setCurrencyId] = useState<string>(
-        initialData?.currency_id || defaultCurrencyId || currencies[0]?.id || ""
-    );
-    const [exchangeRate, setExchangeRate] = useState<string>(
-        initialData?.exchange_rate?.toString() || "1"
-    );
-    const [clientId, setClientId] = useState<string>(
-        initialData?.client_id || ""
-    );
-
-    // Determine if exchange rate field should be shown (only if multiple currencies)
-    const selectedCurrency = currencies.find((c: any) => c.id === currencyId);
-    // Always allow editing exchange rate if there are multiple currencies
-    const showExchangeRate = hasMultipleCurrencies;
-
-    // Context: are we in project context?
-    const isProjectContext = !!projectId;
+    const handleCancel = () => {
+        closeModal();
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
+        setIsLoading(true);
         const formData = new FormData(e.currentTarget);
 
-        // SPECIAL HANDLING FOR CHANGE ORDERS - use optimistic pattern
-        if (parentQuoteId && mode === "create") {
-            const name = formData.get("name") as string;
-            const description = formData.get("description") as string;
-
-            // ✅ OPTIMISTIC: Close and show success immediately
-            onSuccess?.();
-            toast.success("¡Adicional creado!");
-
-            // 🔄 BACKGROUND: Submit to server
-            try {
+        try {
+            // ── CHANGE ORDER ──────────────────────────────────────────────
+            if (parentQuoteId && mode === "create") {
+                const name = formData.get("name") as string;
+                const description = formData.get("description") as string;
                 const result = await createChangeOrder(parentQuoteId, { name, description });
                 if (result.error) {
                     toast.error(result.error);
+                    return;
                 }
-            } catch (error: any) {
-                toast.error("Error al crear adicional: " + error.message);
+                toast.success("Adicional creado");
+                handleSuccess();
+                return;
             }
-            return;
-        }
 
-        // Currency/exchange needs manual set
-        formData.set("currency_id", currencyId);
-        formData.set("exchange_rate", exchangeRate);
-
-        // If project context, set the project_id explicitly
-        if (isProjectContext && projectId) {
-            formData.set("project_id", projectId);
-        } else {
-            const projectIdValue = formData.get("project_id");
-            if (projectIdValue === "none") {
-                formData.delete("project_id");
+            // ── CREATE ────────────────────────────────────────────────────
+            if (mode === "create") {
+                formData.set("status", "draft");
+                formData.set("exchange_rate", "1");
+                formData.set("tax_pct", "0");
+                formData.set("tax_label", defaultTaxLabel || "IVA");
+                formData.set("discount_pct", "0");
+                // Moneda: usa la default de la org (no se selecciona en el form)
+                formData.set("currency_id", defaultCurrencyId || currencies[0]?.id || "");
+                // Fecha de hoy como default
+                const today = new Date();
+                const pad = (n: number) => String(n).padStart(2, "0");
+                formData.set("quote_date", `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`);
             }
-        }
 
-        if (mode === "edit" && initialData?.id) {
-            formData.append("id", initialData.id);
-        }
+            // ── Proyecto ──────────────────────────────────────────────────
+            if (isProjectContext && projectId) {
+                formData.set("project_id", projectId);
+            } else {
+                if (projectIdState === "none") {
+                    formData.delete("project_id");
+                } else {
+                    formData.set("project_id", projectIdState);
+                }
+            }
 
-        // ✅ OPTIMISTIC: Close and show success immediately
-        onSuccess?.();
-        toast.success(mode === "create" ? "¡Presupuesto creado!" : "¡Cambios guardados!");
+            formData.set("client_id", clientId);
 
-        // 🔄 BACKGROUND: Submit to server
-        try {
-            const result = mode === "create"
-                ? await createQuote(formData)
-                : await updateQuote(formData);
+            // ── EDIT ──────────────────────────────────────────────────────
+            if (mode === "edit" && initialData?.id) {
+                formData.append("id", initialData.id);
+                // Preservar campos del documento que no están en este form
+                formData.set("currency_id", initialData.currency_id);
+                formData.set("exchange_rate", String(initialData.exchange_rate ?? 1));
+                formData.set("tax_pct", String(initialData.tax_pct ?? 0));
+                formData.set("tax_label", initialData.tax_label || "IVA");
+                formData.set("discount_pct", String(initialData.discount_pct ?? 0));
+                formData.set("quote_date", initialData.quote_date || "");
+                formData.set("valid_until", initialData.valid_until || "");
+                formData.set("status", initialData.status || "draft");
+                formData.set("description", initialData.description || "");
 
+                const result = await updateQuote(formData);
+                if (result.error) {
+                    toast.error(result.error);
+                    return;
+                }
+                toast.success("Cambios guardados");
+                handleSuccess();
+                return;
+            }
+
+            const result = await createQuote(formData);
             if (result.error) {
                 toast.error(result.error);
+                return;
             }
+            toast.success("Presupuesto creado");
+            handleSuccess();
         } catch (error: any) {
-            console.error("Quote form error:", error);
+            console.error("QuoteForm error:", error);
             toast.error("Error al guardar: " + error.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
+        // Estructura obligatoria — skill seencel-forms-modals §Footer Sticky
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <input type="hidden" name="organization_id" value={organizationId} />
+            <input type="hidden" name="quote_type" value={isChangeOrder ? "change_order" : (initialData?.quote_type ?? "quote")} />
+            <input type="hidden" name="version" value={initialData?.version || 1} />
 
-            {/* Context Badge for Change Orders */}
+            {/* Banner: Change Order */}
             {parentQuoteId && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6 border border-blue-200 dark:border-blue-800 flex items-start gap-3">
-                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-5 border border-blue-200 dark:border-blue-800 flex items-start gap-3">
+                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                     <div>
-                        <h4 className="font-medium text-blue-900 dark:text-blue-100">Creando Adicional</h4>
-                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                            Este adicional estará vinculado al contrato <strong>{parentQuoteName}</strong>.
-                            Heredará el cliente, proyecto, moneda y configuración de impuestos.
+                        <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">Creando Adicional</h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                            Vinculado a <strong>{parentQuoteName}</strong>.
+                            Hereda cliente, proyecto, moneda e impuestos del contrato.
                         </p>
                     </div>
                 </div>
             )}
 
+            {/* Contenido scrolleable */}
             <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="grid grid-cols-1 gap-4">
 
                     {parentQuoteId ? (
-                        // SIMPLIFIED FORM FOR CHANGE ORDERS
+                        // ── CHANGE ORDER: Nombre + Descripción ────────────────────────
                         <>
-                            {/* Name (full width) */}
-                            <div className="md:col-span-12">
-                                <FormGroup label="Nombre del Adicional" htmlFor="name" required>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        placeholder="Ej: Adicional #1 - Cambio de pisos"
-                                        // Auto-generate logic handled in backend if empty, but good to prompt user
-                                        autoFocus
-                                    />
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Si lo dejas vacío, se generará como "CO #[N]: Adicional"
-                                    </p>
-                                </FormGroup>
-                            </div>
+                            <FormGroup label="Nombre del Adicional" htmlFor="name">
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    placeholder="Ej: Adicional #1 – Cambio de pisos"
+                                    autoFocus
+                                    disabled={isLoading}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Si lo dejás vacío se genera automáticamente como "CO #N"
+                                </p>
+                            </FormGroup>
 
-                            {/* Description (full width) */}
-                            <div className="md:col-span-12">
-                                <FormGroup label="Descripción / Motivo del cambio" htmlFor="description">
-                                    <Textarea
-                                        id="description"
-                                        name="description"
-                                        placeholder="Describe por qué se realiza este adicional..."
-                                        rows={4}
-                                    />
-                                </FormGroup>
-                            </div>
+                            <FormGroup label="Descripción / Motivo del cambio" htmlFor="description">
+                                <Textarea
+                                    id="description"
+                                    name="description"
+                                    placeholder="Describe por qué se realiza este adicional..."
+                                    rows={4}
+                                    disabled={isLoading}
+                                />
+                            </FormGroup>
                         </>
                     ) : (
-                        // REGULAR FORM
+                        // ── FORM REGULAR: solo Nombre + Proyecto + Cliente ────────────
                         <>
+                            {/* Fila 1: Nombre */}
+                            <TextField
+                                label="Nombre del Presupuesto"
+                                value={name}
+                                onChange={setName}
+                                placeholder='Ej: "Presupuesto General" o "Llave en Mano – Planta Baja"'
+                                required
+                                autoFocus
+                                disabled={isLoading}
+                            />
+                            {/* Hidden input para que FormData incluya el name (TextField es controlled) */}
+                            <input type="hidden" name="name" value={name} />
 
-                            {/* Row 1: Fecha | Vencimiento */}
-                            <div className="md:col-span-6">
-                                <FormGroup label="Fecha del Presupuesto" htmlFor="quote_date" required>
-                                    <DatePicker
-                                        id="quote_date"
-                                        name="quote_date"
-                                        value={quoteDate}
-                                        onChange={setQuoteDate}
-                                        placeholder="Seleccionar fecha"
-                                        required
-                                    />
-                                </FormGroup>
-                            </div>
-                            <div className="md:col-span-6">
-                                <FormGroup label="Válido hasta" htmlFor="valid_until">
-                                    <DatePicker
-                                        id="valid_until"
-                                        name="valid_until"
-                                        value={validUntil}
-                                        onChange={setValidUntil}
-                                        placeholder="Sin vencimiento"
-                                        minDate={quoteDate}
-                                    />
-                                </FormGroup>
-                            </div>
+                            {/* Fila 2: Proyecto + Cliente — 2 columnas en desktop */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* ProjectField:
+                                    - Org context  → editable, muestra proyectos activos
+                                    - Project ctx  → visible pero locked (disabled) con el proyecto actual
+                                */}
+                                <ProjectField
+                                    value={isProjectContext ? projectId! : projectIdState}
+                                    onChange={setProjectIdState}
+                                    projects={projects ?? []}
+                                    label="Proyecto"
+                                    required={false}
+                                    disabled={isLoading || isProjectContext}
+                                    placeholder="Sin proyecto"
+                                />
 
-                            {/* Row 2: Nombre (full width) */}
-                            <div className="md:col-span-12">
-                                <FormGroup label="Nombre del Presupuesto" htmlFor="name" required>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        placeholder="Ej: Presupuesto de construcción principal"
-                                        defaultValue={initialData?.name || ""}
-                                        required
-                                        autoFocus
-                                    />
-                                </FormGroup>
-                            </div>
-
-                            {/* Row 3: Proyecto | Cliente */}
-                            {!isProjectContext && projects && (
-                                <div className="md:col-span-6">
-                                    <FormGroup
-                                        label="Proyecto"
-                                        htmlFor="project_id"
-                                        tooltip={t("project")}
-                                    >
-                                        <Select name="project_id" defaultValue={initialData?.project_id || "none"}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={t("projectEmpty")} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="none">
-                                                    <span className="text-muted-foreground">{t("projectEmpty")}</span>
-                                                </SelectItem>
-                                                {projects.map((project) => (
-                                                    <SelectItem key={project.id} value={project.id}>
-                                                        {project.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </FormGroup>
-                                </div>
-                            )}
-
-                            <div className={isProjectContext ? "md:col-span-12" : "md:col-span-6"}>
-                                <FormGroup
+                                {/* Según skill §Field Factories: ContactField, no Combobox manual */}
+                                <ContactField
+                                    value={clientId}
+                                    onChange={setClientId}
+                                    contacts={clients}
                                     label="Cliente"
-                                    htmlFor="client_id"
-                                    tooltip={
-                                        <span>
-                                            {t("client")}{" "}
-                                            <a href="/organization/contacts" target="_blank" rel="noopener noreferrer">
-                                                {t("clientLink")}
-                                            </a>
-                                        </span>
-                                    }
-                                >
-                                    <Combobox
-                                        name="client_id"
-                                        value={clientId}
-                                        onValueChange={setClientId}
-                                        placeholder="Seleccionar cliente"
-                                        searchPlaceholder="Buscar cliente..."
-                                        emptyMessage="No se encontraron clientes"
-                                        options={clients.map((client) => ({
-                                            value: client.id,
-                                            label: client.name,
-                                        }))}
-                                    />
-                                </FormGroup>
+                                    required={false}
+                                    disabled={isLoading}
+                                    placeholder="Seleccionar cliente"
+                                    searchPlaceholder="Buscar cliente..."
+                                    emptyMessage="No se encontraron clientes"
+                                    allowNone
+                                    noneLabel="Sin cliente asignado"
+                                />
                             </div>
-
-                            {/* Row 4: Estado (Half width, or full if preferred, leaving as 6 to keep grid tight) */}
-                            <div className="md:col-span-6">
-                                <FormGroup label="Estado" htmlFor="status" required>
-                                    <Select name="status" defaultValue={initialData?.status || "draft"}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {(Object.keys(QUOTE_STATUS_LABELS) as QuoteStatus[]).map((status) => (
-                                                <SelectItem key={status} value={status}>
-                                                    {QUOTE_STATUS_LABELS[status]}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </FormGroup>
-                            </div>
-
-                            {/* Empty spacer if we want strict rows, or let Currency float up? 
-                                User asked for "Estado" then "Moneda/Cotizacion". 
-                                If I just close the div here, Currency will float next to Status. 
-                                To force new line, I can wrap in fragments or just use col-span.
-                                If I want Status ALONE on that row (visual break), I might need an empty div or use col-span-12 for Status.
-                                But col-span-12 for a small select is ugly.
-                                Let's assume flow: Dates(6,6) -> Name(12) -> Proj/Client(6,6) -> Status(6) [Empty(6)] -> Currency(6)/Exch(6).
-                            */}
-                            <div className="md:col-span-6 md:block hidden"></div>
-
-                            {/* Row 5: Moneda | Cotización (only if multi) */}
-                            {hasMultipleCurrencies && (
-                                <>
-                                    <div className="md:col-span-6">
-                                        <FormGroup label="Moneda" htmlFor="currency_id" required>
-                                            <Select value={currencyId} onValueChange={setCurrencyId}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Seleccionar moneda" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {currencies.map((currency: any) => (
-                                                        <SelectItem key={currency.id} value={currency.id}>
-                                                            {currency.symbol} - {currency.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </FormGroup>
-                                    </div>
-                                    <div className="md:col-span-6">
-                                        <FormGroup label="Cotización" htmlFor="exchange_rate">
-                                            <Input
-                                                id="exchange_rate"
-                                                name="exchange_rate"
-                                                type="number"
-                                                step="0.000001"
-                                                min="0"
-                                                placeholder="1.0"
-                                                value={exchangeRate}
-                                                onChange={(e) => setExchangeRate(e.target.value)}
-                                                disabled={!showExchangeRate}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* Row 6: Etiqueta (4) | Impuesto (4) | Descuento (4) */}
-                            <div className="md:col-span-4">
-                                <FormGroup label="Etiqueta impuesto" htmlFor="tax_label">
-                                    <Select name="tax_label" defaultValue={initialData?.tax_label || financialData.defaultTaxLabel || "IVA"}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="IVA">IVA</SelectItem>
-                                            <SelectItem value="VAT">VAT</SelectItem>
-                                            <SelectItem value="Sales Tax">Sales Tax</SelectItem>
-                                            <SelectItem value="GST">GST</SelectItem>
-                                            <SelectItem value="ICMS">ICMS</SelectItem>
-                                            <SelectItem value="Tax">Tax</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormGroup>
-                            </div>
-                            <div className="md:col-span-4">
-                                <FormGroup label="Impuesto %" htmlFor="tax_pct">
-                                    <Input
-                                        id="tax_pct"
-                                        name="tax_pct"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        max="100"
-                                        placeholder="0"
-                                        defaultValue={initialData?.tax_pct || 0}
-                                    />
-                                </FormGroup>
-                            </div>
-                            <div className="md:col-span-4">
-                                <FormGroup label="Descuento %" htmlFor="discount_pct">
-                                    <Input
-                                        id="discount_pct"
-                                        name="discount_pct"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        max="100"
-                                        placeholder="0"
-                                        defaultValue={initialData?.discount_pct || 0}
-                                    />
-                                </FormGroup>
-                            </div>
-
-                            {/* Row 7: Descripción (full width) */}
-                            <div className="md:col-span-12">
-                                <FormGroup label="Descripción" htmlFor="description">
-                                    <Textarea
-                                        id="description"
-                                        name="description"
-                                        placeholder="Describe brevemente el alcance de este presupuesto..."
-                                        defaultValue={initialData?.description || ""}
-                                        rows={3}
-                                    />
-                                </FormGroup>
-                            </div>
-
-                            {/* Hidden Input for Type */}
-                            <input type="hidden" name="quote_type" value={mode === 'create' ? 'quote' : initialData?.quote_type} />
-
-                            {/* Hidden: Version (auto-managed) */}
-                            <input type="hidden" name="version" value={initialData?.version || 1} />
-
                         </>
                     )}
+
                 </div>
             </div>
 
+            {/* Footer sticky fuera del div scrolleable — seencel-forms-modals §Footer Sticky */}
             <FormFooter
-                onCancel={onCancel}
-                cancelLabel="Cancelar"
-                submitLabel={mode === "create" ? "Crear Presupuesto" : "Guardar Cambios"}
                 className="-mx-4 -mb-4 mt-6"
+                isLoading={isLoading}
+                onCancel={handleCancel}
+                submitLabel={mode === "create" ? (isChangeOrder ? "Crear Adicional" : "Crear Presupuesto") : "Guardar Cambios"}
             />
         </form>
     );
 }
-

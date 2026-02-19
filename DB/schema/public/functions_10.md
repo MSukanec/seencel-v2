@@ -1,41 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 10: unaccent — validate_coupon_universal)
-
-### `unaccent(regdictionary, text)`
-
-- **Returns**: text
-- **Kind**: function | STABLE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent(regdictionary, text)
- RETURNS text
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/unaccent', $function$unaccent_dict$function$
-```
-</details>
-
-### `unaccent_init(internal)`
-
-- **Returns**: internal
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent_init(internal)
- RETURNS internal
- LANGUAGE c
- PARALLEL SAFE
-AS '$libdir/unaccent', $function$unaccent_init$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 10: unaccent_lexize — validate_coupon_universal)
 
 ### `unaccent_lexize(internal, internal, internal, internal)`
 

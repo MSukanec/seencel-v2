@@ -37,115 +37,8 @@ const createClientSchema = z.object({
 export async function createClientAction(input: z.infer<typeof createClientSchema>) {
     const supabase = await createClient();
 
-    // 1. Fetch contact to get email and details
-    const { data: contact, error: contactError } = await supabase
-        .from('contacts')
-        .select('email, full_name')
-        .eq('id', input.contact_id)
-        .single();
-
-    if (contactError || !contact) {
-        throw new Error("Contacto no encontrado.");
-    }
-
-    if (!contact.email) {
-        throw new Error("El contacto debe tener un email para ser invitado como cliente.");
-    }
-
-    // 2. Delegate to Universal Invitation Action
-    // This handles:
-    // - Creating/Reactivating iam.organization_clients
-    // - Creating/Reactivating project_access
-    // - Creating/Sending Invitation (if not already verified)
-    // - Linking project_client (via internal logic or we might need to verify if it creates the project_client record?)
-
-    // WAIT: addExternalCollaboratorWithProjectAction creates project_access, but does it create `project_clients`?
-    // Let's check `addExternalCollaboratorWithProjectAction` implementation in `src/features/team/actions.ts`.
-    // It calls `invite_user_to_project` RPC or similar?
-    // Actually, `addExternalCollaboratorWithProjectAction` calls `iam.create_organization_invitation`.
-    // When that invitation is ACCEPTED, `iam.accept_client_invitation` creates the `project_clients` record?
-    // NO. `iam.accept_client_invitation` creates `organization_clients`.
-    // We still need `project_clients` record for the specific project-level data (notes, role, etc).
-
-    // RE-READING STRATEGY:
-    // The previous strategy was: "One Single Action to Adds Them All".
-    // If we use `addExternalCollaboratorWithProjectAction`, it sends an email.
-    // The user accepts.
-    // The `accept_client_invitation` function needs to know which project to add them to?
-    // The `organization_invitations` table has `project_id`.
-    // So `accept_client_invitation` SHOULD create the `project_access` AND `project_clients`?
-
-    // Let's verify `iam.accept_client_invitation` in the DB/schema again.
-    // If it doesn't create `project_clients`, we have a gap.
-
-    // However, `project_clients` table links `contact_id` + `project_id`.
-    // `organization_clients` links `user_id` + `organization_id`.
-
-    // HYBRID APPROACH for "Existing Contact":
-    // 1. Check if user is ALREADY an `organization_client` (active).
-    //    If YES -> We can just create `project_clients` and `project_access` directly (Silent add? Or still invite?)
-    //    User said: "Deberia aparecer como que tiene invitacion pendiente".
-    //    So NO silent add. ALWAYS INVITE.
-
-    // So Action:
-    // 1. Call `addExternalCollaboratorWithProjectAction`.
-    // 2. This creates an invitation with `invitation_type='client'` and `project_id`.
-    // 3. It DOES NOT create `project_clients` row yet?
-    //    The `project_clients` view/table is what displays the list.
-    //    If the row doesn't exist, they won't show up in the list!
-
-    // CRITICAL: The `project_clients` table is the "List of Clients".
-    // If we want them to show as "Pending", we need a record in `project_clients` OR the view must pull from `invitations`.
-    // The `project_clients_view` WAS modified to join `organization_invitations`.
-    // BUT `project_clients_view` selects from `project_clients` primarily?
-    // Let's check `project_clients_view` definition in `DB/024_add_invitation_status_to_clients_view.sql`.
-
-    // IT SELECTS FROM `project_clients` pc!
-    // So we MUST create a `project_clients` record for them to appear in the list.
-    // But `project_clients` requires a `contact_id`.
-    // We have it.
-
-    // So the flow is:
-    // 1. Create `project_clients` record (Status = 'pending_invite'?? Or just 'active' but logical status is pending?)
-    //    The view calculates `invitation_status` by joining `organization_invitations`.
-    //    So we create the `project_clients` row.
-    // 2. THEN Call `addExternalCollaboratorWithProjectAction` to send the invite.
-
-    // PROBLEM: `addExternalCollaboratorWithProjectAction` expects to create the logic.
-    // If we do both, we might duplicate or conflict?
-    // `addExternalCollaboratorWithProjectAction` handles `organization_invitations`.
-    // It matches by Email.
-
-    // So:
-    // Step 1: Create `project_clients` row (so they show up in UI).
-    // Step 2: Call `addExternalCollaboratorWithProjectAction` (to send email and create `invitation` record).
-    //         Pass `clientId` (project_client_id) to it? 
-    //         `organization_invitations` has a `client_id` column. Is it `organization_client_id` or `project_client_id`?
-    //         The schema says `client_id uuid`. In IAM context, usually `organization_clients`.
-    //         But here we are in a Project context.
-
-    // Let's look at `project_clients_view` join again.
-    /*
-    LEFT JOIN LATERAL (
-        SELECT status, sent_at
-        FROM iam.organization_invitations
-        WHERE email = c.email  <-- Joins by EMAIL!
-        AND organization_id = pc.organization_id
-        AND project_id = pc.project_id
-        AND status = 'pending'
-        ORDER BY created_at DESC LIMIT 1
-    ) inv ON true
-    */
-    // It joins by EMAIL and PROJECT_ID.
-
-    // Conclusion:
-    // We MUST create the `project_clients` row (so the view has something to show).
-    // AND we MUST create the `organization_invitation` (so the view finds the 'pending' status).
-
-    // Implementation:
-    const { addExternalCollaboratorWithProjectAction } = await import("@/features/team/actions");
-
-    // 1. Create project_clients record (List entry)
+    // Simply insert the project_clients record. No invitation is sent here.
+    // Invitations are sent explicitly via sendClientInvitationAction.
     const { data: newClient, error } = await supabase
         .from('project_clients')
         .insert({
@@ -155,7 +48,7 @@ export async function createClientAction(input: z.infer<typeof createClientSchem
             client_role_id: input.client_role_id,
             notes: input.notes,
             is_primary: input.is_primary ?? true,
-            status: 'active' // The record is active, but the USER status is pending via invitation
+            status: 'active',
         })
         .select()
         .single();
@@ -163,23 +56,6 @@ export async function createClientAction(input: z.infer<typeof createClientSchem
     if (error) {
         if (error.code === '23505') throw new Error("Este contacto ya es cliente de este proyecto.");
         throw new Error("Error al crear el cliente.");
-    }
-
-    // 2. Trigger Invitation
-    try {
-        await addExternalCollaboratorWithProjectAction({
-            organizationId: input.organization_id,
-            email: contact.email,
-            actorType: 'client',
-            projectId: input.project_id,
-            clientId: newClient.id,
-        });
-    } catch (inviteError) {
-        console.error("Error sending invitation:", inviteError);
-        // Do not rollback client creation? Or warning?
-        // User said "No aparece como pendiente".
-        // If invitation fails, it won't appear as pending.
-        // We should probably throw or return warning.
     }
 
     revalidatePath('/organization/clients');
@@ -996,7 +872,7 @@ export async function deletePaymentAction(paymentId: string) {
 }
 
 // ===============================================
-// Invite Client by Email (Unified Flow)
+// Link Client by Email (Vinculación — NO envía invitación)
 // ===============================================
 
 const inviteClientSchema = z.object({
@@ -1009,15 +885,14 @@ const inviteClientSchema = z.object({
 });
 
 /**
- * Unified action: invite a client to a project by email.
- * 
+ * Link a client to a project by email — WITHOUT sending an invitation.
+ *
  * Flow:
  * 1. Find or create contact by email
- * 2. Create project_client
- * 3. If user exists in Seencel → grant direct project_access
- * 4. If user doesn't exist → send invitation email
- * 
- * Reuses existing actions — does NOT duplicate logic.
+ * 2. Create project_client record
+ *
+ * The invitation must be sent explicitly via sendClientInvitationAction.
+ * This allows teams to register clients internally before notifying them.
  */
 export async function inviteClientToProjectAction(
     input: z.infer<typeof inviteClientSchema>
@@ -1116,77 +991,111 @@ export async function inviteClientToProjectAction(
         return { success: false, error: "Error al vincular el cliente al proyecto." };
     }
 
-    // 5. Always invite (whether user exists or not)
-    // Existing user check is only to prevent inviting someone who ALREADY has access
-    const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", normalizedEmail)
+    revalidatePath("/organization/clients");
+    return {
+        success: true,
+        project_client_id: projectClient.id,
+    };
+}
+
+// ===============================================
+// Send Client Invitation (Flujo explícito — separado del alta)
+// ===============================================
+
+/**
+ * Send a portal invitation to an already-linked project client.
+ *
+ * This is called EXPLICITLY by the user from the client list item,
+ * after the client has been linked to the project (via linkClientByEmailAction
+ * or createClientAction). It does NOT create or modify the project_client record.
+ *
+ * The invitation gives the client access to the project portal.
+ */
+export async function sendClientInvitationAction(
+    clientId: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createClient();
+
+    // 1. Auth
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return { success: false, error: "No autenticado" };
+
+    // 2. Load the project_client + contact email
+    const { data: projectClient, error: pcError } = await supabase
+        .from("project_clients")
+        .select(`
+            id,
+            project_id,
+            organization_id,
+            client_role_id,
+            contact:contacts(id, email, linked_user_id)
+        `)
+        .eq("id", clientId)
+        .eq("is_deleted", false)
         .maybeSingle();
 
-    if (existingUser) {
-        // Check if already has access to THIS project
+    if (pcError || !projectClient) {
+        return { success: false, error: "No se encontró el cliente." };
+    }
+
+    const contact = Array.isArray(projectClient.contact)
+        ? projectClient.contact[0]
+        : projectClient.contact;
+
+    if (!contact?.email) {
+        return { success: false, error: "Este cliente no tiene un email registrado. Editá el contacto y agregá un email antes de invitarlo." };
+    }
+
+    const normalizedEmail = contact.email.toLowerCase().trim();
+
+    // 3. Check if already has an active invitation
+    const { data: existingInv } = await supabase
+        .from("iam.organization_invitations" as any)
+        .select("id, status")
+        .eq("client_id", clientId)
+        .in("status", ["pending", "accepted"])
+        .maybeSingle();
+
+    if (existingInv) {
+        return { success: false, error: "Este cliente ya tiene una invitación enviada o activa." };
+    }
+
+    // 4. If already has project_access, no need to invite
+    if (contact.linked_user_id) {
         const { data: existingAccess } = await supabase
             .from("project_access")
             .select("id")
-            .eq("project_id", input.project_id)
-            .eq("user_id", existingUser.id)
+            .eq("project_id", projectClient.project_id)
+            .eq("user_id", contact.linked_user_id)
             .eq("is_deleted", false)
             .maybeSingle();
 
         if (existingAccess) {
-            return { success: false, error: "Este usuario ya tiene acceso a este proyecto" };
-        }
-
-        // Ensure contact is linked
-        if (!existingContact?.linked_user_id) {
-            await supabase
-                .from("contacts")
-                .update({ linked_user_id: existingUser.id })
-                .eq("id", contactId);
+            return { success: false, error: "Este usuario ya tiene acceso al proyecto." };
         }
     }
 
-    // 6. Send Invitation via addExternalCollaboratorWithProjectAction
+    // 5. Send invitation
     try {
         const { addExternalCollaboratorWithProjectAction } = await import("@/features/team/actions");
         const result = await addExternalCollaboratorWithProjectAction({
-            organizationId: input.organization_id,
+            organizationId: projectClient.organization_id,
             email: normalizedEmail,
             actorType: "client",
-            projectId: input.project_id,
+            projectId: projectClient.project_id,
             clientId: projectClient.id,
         });
 
+        revalidatePath("/organization/clients");
+
         if (!result.success) {
-            console.error("Invitation failed:", result.error);
-            revalidatePath("/organization/clients");
-            return {
-                success: true,
-                project_client_id: projectClient.id,
-                access_granted: false,
-                invited: false,
-                error: "Cliente vinculado pero no se pudo enviar la invitación: " + result.error,
-            };
+            return { success: false, error: result.error || "Error al enviar la invitación." };
         }
 
-        revalidatePath("/organization/clients");
-        return {
-            success: true,
-            project_client_id: projectClient.id,
-            access_granted: false,
-            invited: true,
-        };
+        return { success: true };
     } catch (error) {
-        console.error("Error sending invitation:", error);
-        revalidatePath("/organization/clients");
-        return {
-            success: true,
-            project_client_id: projectClient.id,
-            access_granted: false,
-            invited: false,
-            error: "Cliente vinculado pero no se pudo enviar la invitación.",
-        };
+        console.error("Error sending client invitation:", error);
+        return { success: false, error: "Error inesperado al enviar la invitación." };
     }
 }
 

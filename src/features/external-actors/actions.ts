@@ -90,3 +90,45 @@ export async function removeExternalActorAction(actorId: string) {
 
     revalidatePath("/organization/team");
 }
+
+// ===============================================
+// Check External Actor Access (used by RevokedAccessChecker)
+// ===============================================
+
+/**
+ * Checks if the current user still has active external actor access
+ * to the given organization.
+ * 
+ * Called by RevokedAccessChecker on mount and on tab visibility change.
+ * Returns { isActive: false } if the actor record is revoked or deleted,
+ * which triggers the blocking overlay.
+ */
+export async function checkExternalActorAccess(orgId: string): Promise<{ isActive: boolean }> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { isActive: false };
+
+    // Resolve internal user id
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", user.id)
+        .single();
+
+    if (!userData?.id) return { isActive: false };
+
+    const { data: actor } = await supabase
+        .from("organization_external_actors")
+        .select("id, is_active")
+        .eq("organization_id", orgId)
+        .eq("user_id", userData.id)
+        .eq("is_deleted", false)
+        .maybeSingle();
+
+    // No actor found = access was fully removed
+    if (!actor) return { isActive: false };
+
+    return { isActive: actor.is_active === true };
+}
+

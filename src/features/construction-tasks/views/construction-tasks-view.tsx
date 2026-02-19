@@ -63,9 +63,9 @@ interface ConstructionTasksViewProps {
 // Colores por estado para el dot indicador del Gantt
 const STATUS_DOT_COLORS: Record<ConstructionTaskStatus, string> = {
     pending: "var(--muted-foreground)",
-    in_progress: "var(--gantt-progress)",
-    completed: "var(--gantt-complete)",
-    paused: "var(--warning)",
+    in_progress: "var(--semantic-info)",
+    completed: "var(--semantic-positive)",
+    paused: "var(--semantic-warning)",
 };
 
 function taskToGanttItem(task: ConstructionTaskView): GanttItem | null {

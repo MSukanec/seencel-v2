@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { FilePlus2, Plus, FileText, MoreHorizontal, Pencil, Trash2, Calendar, Hash, Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -76,34 +76,18 @@ export function QuoteChangeOrdersView({
     const approvedCount = changeOrders.filter(co => co.status === 'approved').length;
 
     const handleCreateChangeOrder = () => {
-        const fullCurrencies = currencies.map(c => ({
-            ...c,
-            code: c.symbol,
-            is_default: c.id === contract.currency_id,
-            exchange_rate: 1
-        }));
-
         openModal(
             <QuoteForm
                 mode="create"
                 organizationId={contract.organization_id}
                 projectId={contract.project_id || undefined}
-                initialData={{
-                    quote_type: 'change_order',
-                    parent_quote_id: contract.id,
-                    project_id: contract.project_id,
-                    client_id: contract.client_id,
-                    currency_id: contract.currency_id,
-                    version: 1,
-                    name: "",
-                    status: 'draft',
-                    organization_id: contract.organization_id,
-                    tax_pct: contract.tax_pct,
-                    created_at: '',
-                    updated_at: ''
-                } as any}
                 financialData={{
-                    currencies: fullCurrencies,
+                    currencies: currencies.map(c => ({
+                        ...c,
+                        code: c.symbol,
+                        is_default: c.id === contract.currency_id,
+                        exchange_rate: 1
+                    })),
                     defaultCurrencyId: contract.currency_id,
                     defaultTaxLabel: contract.tax_label || "IVA",
                     defaultWalletId: "",
@@ -112,31 +96,18 @@ export function QuoteChangeOrdersView({
                 }}
                 clients={[]}
                 projects={[]}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    toast.success("Orden de cambio creada");
-                    router.refresh();
-                }}
                 parentQuoteId={contract.id}
                 parentQuoteName={contract.name}
             />,
             {
                 title: "Nueva Orden de Cambio",
                 description: `Para contrato: ${contract.name}`,
-                size: "lg"
+                size: "md"
             }
         );
     };
 
     const handleEdit = (co: QuoteView) => {
-        const fullCurrencies = currencies.map(c => ({
-            ...c,
-            code: c.symbol,
-            is_default: c.id === contract.currency_id,
-            exchange_rate: 1
-        }));
-
         openModal(
             <QuoteForm
                 mode="edit"
@@ -144,7 +115,12 @@ export function QuoteChangeOrdersView({
                 projectId={contract.project_id || undefined}
                 initialData={co as any}
                 financialData={{
-                    currencies: fullCurrencies,
+                    currencies: currencies.map(c => ({
+                        ...c,
+                        code: c.symbol,
+                        is_default: c.id === contract.currency_id,
+                        exchange_rate: 1
+                    })),
                     defaultCurrencyId: contract.currency_id,
                     defaultTaxLabel: contract.tax_label || "IVA",
                     defaultWalletId: "",
@@ -153,16 +129,11 @@ export function QuoteChangeOrdersView({
                 }}
                 clients={[]}
                 projects={[]}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    toast.success("Orden de cambio actualizada");
-                    router.refresh();
-                }}
             />,
             {
                 title: "Editar Orden de Cambio",
-                size: "lg"
+                description: "Modificar nombre o descripción del adicional",
+                size: "md"
             }
         );
     };
@@ -230,7 +201,7 @@ export function QuoteChangeOrdersView({
     }
 
     return (
-        <div className="space-y-6 p-4">
+        <div className="space-y-6">
             <Toolbar
                 portalToHeader
                 actions={[{ label: "Nueva Orden de Cambio", icon: Plus, onClick: handleCreateChangeOrder }]}
@@ -271,7 +242,8 @@ export function QuoteChangeOrdersView({
                     <Card
                         key={co.id}
                         className="hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/organization/quotes/${co.id}`)}
+                        onClick={() => router.push(`/organization/quotes/${co.id}` as any)}
+
                     >
                         <CardContent className="p-4">
                             <div className="flex items-center gap-4">

@@ -1,4 +1,4 @@
-import { getUserProfile, checkUserRoles } from "@/features/users/queries";
+import { getUserProfile, checkUserRoles, checkUserAccessContext } from "@/features/users/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { LayoutSwitcher } from "@/components/layout";
 import { getFeatureFlags } from "@/actions/feature-flags";
@@ -9,6 +9,8 @@ import { OrganizationStoreHydrator } from "@/stores/organization-store";
 import MaintenancePage from "./maintenance/page";
 import { MemberRemovedOverlay } from "@/features/organization/components/member-removed-overlay";
 import { PendingInvitationChecker } from "@/features/team/components/pending-invitation-checker";
+import { RevokedAccessChecker } from "@/features/external-actors/components/revoked-access-checker";
+import type { ExternalActorType } from "@/features/external-actors/types";
 import { createClient } from "@/lib/supabase/server";
 
 // Next.js detects this layout as dynamic automatically because it uses
@@ -40,6 +42,10 @@ export default async function DashboardLayout({
     const { isAdmin, isBetaTester } = roles;
     const { profile } = userResult;
     const { organizations, activeOrgId } = orgsResult;
+
+    // Phase 1b: Access context (member vs external) — runs in parallel with above
+    // Needed immediately so the sidebar renders with the correct nav from the start.
+    const initialAccessContext = await checkUserAccessContext(authUser.id, activeOrgId || null);
 
     // Maintenance mode check
     const isMaintenanceMode = flags.find(f => f.key === "dashboard_maintenance_mode")?.value ?? false;
@@ -85,6 +91,11 @@ export default async function DashboardLayout({
                 activeOrgId={activeOrgId || null}
                 isImpersonating={isImpersonating}
                 impersonationOrgName={impersonationOrgName}
+                initialAccessContext={{
+                    isMember: initialAccessContext.isMember,
+                    isExternal: initialAccessContext.isExternal,
+                    externalActorType: initialAccessContext.externalActorType as ExternalActorType | null,
+                }}
             />
             <ThemeCustomizationHydrator />
             <FeatureFlagsProvider flags={flags} isAdmin={isAdmin} isBetaTester={isBetaTester}>
@@ -98,6 +109,13 @@ export default async function DashboardLayout({
                     )}
                     {!wasRemoved && (
                         <PendingInvitationChecker email={profile?.email} />
+                    )}
+                    {/* Guard: shows overlay if external actor's access was revoked while logged in */}
+                    {initialAccessContext.isExternal && !initialAccessContext.isMember && (
+                        <RevokedAccessChecker
+                            orgId={activeOrgId || null}
+                            externalActorType={initialAccessContext.externalActorType}
+                        />
                     )}
                 </LayoutSwitcher>
             </FeatureFlagsProvider>

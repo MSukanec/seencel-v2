@@ -29,6 +29,7 @@ import {
     ShieldX,
     Clock,
     BadgeCheck,
+    SendHorizonal,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -86,6 +87,8 @@ export interface ParticipantListItemProps {
     onResendInvitation?: (participant: ParticipantItemData) => void;
     /** Callback: revoke invitation (only shown when invitation_status === "pending") */
     onRevokeInvitation?: (participant: ParticipantItemData) => void;
+    /** Callback: send invitation for the first time (client linked but never invited) */
+    onSendInvitation?: (participant: ParticipantItemData) => void;
 }
 
 // ============================================================================
@@ -119,11 +122,11 @@ function PendingInvitationRow({
     onRevokeInvitation?: (p: ParticipantItemData) => void;
 }) {
     const sentDate = participant.invitation_sent_at
-        ? new Date(participant.invitation_sent_at).toLocaleDateString("es-AR", { day: "numeric", month: "long" })
+        ? new Date(participant.invitation_sent_at).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
         : null;
 
     return (
-        <Card className="border shadow-sm overflow-hidden bg-muted/20">
+        <Card className="border overflow-hidden bg-card transition-colors hover:bg-accent">
             <CardContent className="p-0">
                 <div className="flex items-center justify-between px-5 py-4">
                     {/* Left: Icon + info */}
@@ -148,14 +151,14 @@ function PendingInvitationRow({
                                     <Clock className="h-2.5 w-2.5" />
                                     Invitación pendiente
                                 </Badge>
-                                {sentDate && (
-                                    <span className="text-xs text-muted-foreground hidden sm:inline">
-                                        Enviado el {sentDate}
-                                    </span>
-                                )}
                             </div>
                             {participant.contact_email && participant.contact_full_name && (
                                 <p className="text-xs text-muted-foreground">{participant.contact_email}</p>
+                            )}
+                            {sentDate && (
+                                <p className="text-xs text-muted-foreground">
+                                    Enviada el {sentDate}
+                                </p>
                             )}
                         </div>
                     </div>
@@ -176,9 +179,9 @@ function PendingInvitationRow({
                             )}
                             {onRevokeInvitation && (
                                 <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
-                                    className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                    className="h-8 text-xs gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10 hover:border-destructive hover:text-destructive"
                                     onClick={() => onRevokeInvitation(participant)}
                                 >
                                     <ShieldX className="h-3 w-3" />
@@ -207,9 +210,15 @@ export const ParticipantListItem = memo(function ParticipantListItem({
     onReactivate,
     onResendInvitation,
     onRevokeInvitation,
+    onSendInvitation,
 }: ParticipantListItemProps) {
     const isPendingInvitation = participant.invitation_status === "pending";
     const isSeencelUser = !!participant.linked_user_id;
+    // Badge "Sin invitación": contacto sin cuenta Seencel y sin invitación activa
+    const isUninvited = !isPendingInvitation && !isSeencelUser && !isInactive;
+    // Puede invitarse al portal: cualquier cliente activo sin invitación pendiente
+    // (incluyendo usuarios de Seencel que pueden no tener acceso al portal de este proyecto)
+    const canInviteToPortal = !isPendingInvitation && !isInactive && !!onSendInvitation;
 
     // Render invitation-style row for pending clients
     if (isPendingInvitation) {
@@ -224,7 +233,7 @@ export const ParticipantListItem = memo(function ParticipantListItem({
 
     // Normal participant row
     const displayName = participant.contact_full_name || "Sin nombre";
-    const hasActions = !!onEdit || !!onEditContact || !!onDeactivate || !!onDelete || !!onReactivate;
+    const hasActions = !!onEdit || !!onEditContact || !!onDeactivate || !!onDelete || !!onReactivate || !!onSendInvitation;
 
     return (
         <ListItem variant="card" className={isInactive ? "opacity-60" : undefined}>
@@ -257,6 +266,15 @@ export const ParticipantListItem = memo(function ParticipantListItem({
                             {participant.role_name}
                         </Badge>
                     )}
+                    {isUninvited && onSendInvitation && (
+                        <Badge
+                            variant="outline"
+                            className="text-[10px] h-4 px-1.5 ml-2 align-middle text-muted-foreground border-dashed gap-1"
+                        >
+                            <Mail className="h-2.5 w-2.5" />
+                            Sin invitación
+                        </Badge>
+                    )}
                     {isInactive && (
                         <Badge variant="outline" className="text-[10px] h-4 px-1.5 ml-2 align-middle text-muted-foreground">
                             Inactivo
@@ -286,18 +304,6 @@ export const ParticipantListItem = memo(function ParticipantListItem({
             {/* Contact details (Trailing) */}
             <ListItem.Trailing className="hidden md:flex items-center gap-3">
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {participant.contact_email && (
-                        <a
-                            href={`mailto:${participant.contact_email}`}
-                            className="flex items-center gap-1 hover:text-primary transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Mail className="h-3 w-3" />
-                            <span className="hidden lg:inline max-w-[180px] truncate">
-                                {participant.contact_email}
-                            </span>
-                        </a>
-                    )}
                     {participant.contact_phone && (
                         <Popover>
                             <PopoverTrigger asChild>
@@ -348,6 +354,18 @@ export const ParticipantListItem = memo(function ParticipantListItem({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            {canInviteToPortal && (
+                                <>
+                                    <DropdownMenuItem
+                                        className="text-primary focus:text-primary"
+                                        onClick={() => onSendInvitation!(participant)}
+                                    >
+                                        <SendHorizonal className="w-4 h-4 mr-2" />
+                                        Invitar al Portal
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                </>
+                            )}
                             {onEdit && (
                                 <DropdownMenuItem onClick={() => onEdit(participant)}>
                                     <Pencil className="w-4 h-4 mr-2" />

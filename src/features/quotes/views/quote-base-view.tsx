@@ -22,8 +22,9 @@ import {
 import { toast } from "sonner";
 
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
-import { createMoneyColumn } from "@/components/shared/data-table/columns";
+import { createMoneyColumn, createTextColumn } from "@/components/shared/data-table/columns";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
+import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ViewEmptyState } from "@/components/shared/empty-state";
@@ -83,6 +84,8 @@ export function QuoteBaseView({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<QuoteItemView | null>(null);
     const [isDeleting, startDeleteTransition] = useTransition();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [rubroFilter, setRubroFilter] = useState<Set<string>>(new Set());
 
     // Create division lookup map
     const divisionMap = useMemo(() => {
@@ -122,6 +125,24 @@ export function QuoteBaseView({
             totals.set(rubro, current + (item.subtotal_with_markup || item.subtotal || 0));
         });
         return totals;
+    }, [items, divisionMap, tasks]);
+
+    // Filtered items based on search + rubro filter
+    const filteredItems = useMemo(() => {
+        return items.filter(item => {
+            const name = (item.task_name || item.custom_name || item.description || "").toLowerCase();
+            const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase());
+            const divName = getDivisionName(item) || "Sin rubro";
+            const matchesRubro = rubroFilter.size === 0 || rubroFilter.has(divName);
+            return matchesSearch && matchesRubro;
+        });
+    }, [items, searchQuery, rubroFilter, divisionMap, tasks]);
+
+    // Unique rubros for filter
+    const uniqueRubros = useMemo(() => {
+        const set = new Set<string>();
+        items.forEach(item => set.add(getDivisionName(item) || "Sin rubro"));
+        return Array.from(set).sort().map(r => ({ label: r, value: r }));
     }, [items, divisionMap, tasks]);
 
     // Create rubro indices map (rubro name -> rubro index 01, 02, etc.)
@@ -312,20 +333,12 @@ export function QuoteBaseView({
                 );
             },
         },
-        {
+        createTextColumn<QuoteItemView>({
             accessorKey: "task_name",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Tarea" />,
-            cell: ({ row }) => (
-                <div className="min-w-[200px]">
-                    <p className="font-medium">
-                        {row.original.task_name || row.original.custom_name || row.original.description || "Sin nombre"}
-                    </p>
-                    {row.original.description && row.original.task_name && (
-                        <p className="text-xs text-muted-foreground">{row.original.description}</p>
-                    )}
-                </div>
-            ),
-        },
+            title: "Tarea",
+            truncate: 260,
+            subtitle: (row) => (row.description && row.task_name ? row.description : null) ?? null,
+        }),
         {
             id: "cost_scope",
             accessorKey: "cost_scope",
@@ -451,6 +464,25 @@ export function QuoteBaseView({
         <div className="space-y-4">
             <Toolbar
                 portalToHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Buscar ítems..."
+                filterContent={
+                    uniqueRubros.length > 1 ? (
+                        <FacetedFilter
+                            title="Rubro"
+                            options={uniqueRubros}
+                            selectedValues={rubroFilter}
+                            onSelect={(value) => {
+                                const next = new Set(rubroFilter);
+                                if (next.has(value)) next.delete(value);
+                                else next.add(value);
+                                setRubroFilter(next);
+                            }}
+                            onClear={() => setRubroFilter(new Set())}
+                        />
+                    ) : undefined
+                }
                 actions={[
                     // Acción principal: Agregar Ítem (siempre visible, disabled si es contrato)
                     {
@@ -518,7 +550,7 @@ export function QuoteBaseView({
 
             <DataTable
                 columns={columns}
-                data={items}
+                data={filteredItems}
                 showPagination={false}
                 pageSize={100}
                 enableRowActions={quote.status !== 'approved'}

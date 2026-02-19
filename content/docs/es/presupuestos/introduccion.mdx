@@ -1,0 +1,161 @@
+---
+title: Presupuestos y Contratos
+description: Cómo gestionar cotizaciones, contratos y órdenes de cambio en SEENCEL.
+---
+
+# Presupuestos y Contratos
+
+El módulo de **Presupuestos** es el núcleo comercial de SEENCEL. Acá gestionás todo el ciclo de vida de tus documentos comerciales: desde una cotización inicial hasta el contrato firmado y sus ajustes posteriores.
+
+<Callout type="important" title="Un sistema de tres capas">
+SEENCEL ordena tus documentos comerciales en tres tipos:
+- **Cotización** → el presupuesto que enviás a tu cliente antes de cerrar
+- **Contrato** → el documento firmado, con monto comprometido y plazo
+- **Orden de Cambio** → modificación a un contrato existente (ampliación, reducción, adicional)
+
+Cada tipo tiene su propio flujo de estados y funcionalidades.
+</Callout>
+
+---
+
+## ¿Para qué sirve?
+
+El módulo de Presupuestos te permite:
+
+- **Crear cotizaciones** con desglose de ítems, precios, márgenes y notas
+- **Convertir cotizaciones en contratos** con un solo click
+- **Gestionar el estado** de cada documento (Borrador → Enviado → Aprobado / Rechazado)
+- **Trabajar en dos monedas** simultáneamente con tipo de cambio configurable
+- **Vincular a proyectos y clientes** para tener todo el contexto comercial en un lugar
+- **Agregar órdenes de cambio** a contratos para reflejar modificaciones y adicionales
+
+---
+
+## Tipos de documentos
+
+| Tipo | Uso principal | ¿Puede tener Órdenes de Cambio? |
+|------|--------------|:-:|
+| **Cotización** | Propuesta comercial antes del cierre | No |
+| **Contrato** | Acuerdo firmado con el cliente | ✅ Sí |
+| **Orden de Cambio** | Modificación a un contrato existente | No |
+
+---
+
+## Estados de un documento
+
+| Estado | Significado |
+|--------|-------------|
+| **Borrador** | En preparación, todavía no se envió |
+| **Enviado** | El cliente ya lo recibió |
+| **Aprobado** | El cliente aceptó |
+| **Rechazado** | El cliente rechazó |
+
+Podés actualizar el estado desde el menú de acciones en la lista, o desde la vista de detalle del documento.
+
+---
+
+## ¿Necesito un proyecto para crear un presupuesto?
+
+**No.** El proyecto es un campo **opcional**.
+
+Un presupuesto puede existir de forma independiente, sin estar vinculado a ningún proyecto. Esto es especialmente útil cuando:
+
+- Todavía estás negociando y no sabés si vas a ganar la obra
+- Estás cotizando para un cliente antes de decidir si abrís un proyecto
+- El trabajo es pequeño y no justifica crear un proyecto completo
+
+Si ganás la licitación y abrís el proyecto, podés editar el presupuesto y vincularlo en ese momento.
+
+<Callout type="tip" title="Un presupuesto puede preceder al proyecto">
+No es necesario tener un proyecto creado para hacer un presupuesto. Primero cotizás, si ganás, creás el proyecto.
+</Callout>
+
+---
+
+## El cliente es un Contacto
+
+En Seencel, **los clientes son Contactos**. No hay una entidad separada llamada "cliente" — cualquier persona, empresa o estudio registrado en tu [agenda de Contactos](/organization/contacts) puede ser el destinatario de un presupuesto.
+
+Esto significa que:
+
+- Si el cliente ya está en tus contactos, simplemente lo seleccionás en el formulario
+- Si es alguien nuevo, primero tenés que [crearlo como Contacto](/organization/contacts) y luego volvés a crear el presupuesto
+- El campo **Cliente** en el formulario muestra directamente tu lista de contactos
+
+<Callout type="info" title="¿Qué tipos de contactos pueden ser clientes?">
+Cualquier contacto de tu organización puede ser cliente de un presupuesto: personas físicas, empresas, otros estudios profesionales, organismos públicos, etc.
+</Callout>
+
+---
+
+## Crear un presupuesto
+
+1. Hacé click en **"Nuevo Presupuesto"** desde la barra de herramientas
+2. Completá los campos del formulario:
+   - **Nombre** — Identificador interno del documento (ej: "Llave en Mano – Planta Baja")
+   - **Proyecto** — *(Opcional)* Vinculá a un proyecto activo de tu organización
+   - **Cliente** — *(Opcional)* Seleccioná un Contacto existente como destinatario
+3. Hacé click en **"Crear"** — el documento se crea en estado **Borrador**
+4. Dentro del presupuesto, completá los detalles: moneda, tipo de cambio, ítems, márgenes y fechas
+
+<Callout type="tip" title="Trabajo con dos monedas">
+SEENCEL soporta presupuestos en moneda local y moneda extranjera simultáneamente. Si configurás el tipo de cambio, el sistema calcula automáticamente los totales en ambas monedas. Esto es especialmente útil en contratos con componentes dolarizados.
+</Callout>
+
+---
+
+## Vista de detalle
+
+Al abrir un presupuesto, encontrás tres pestañas:
+
+| Pestaña | Contenido |
+|---------|-----------|
+| **Resumen** | Totales, información general, estado y datos del cliente |
+| **Ítems** | Desglose línea por línea con precios, márgenes y cantidades |
+| **Órdenes de Cambio** | *(Solo contratos)* Modificaciones y adicionales al contrato base |
+
+---
+
+## Ítems de presupuesto
+
+Desde la pestaña **Ítems** podés armar el desglose detallado del presupuesto:
+
+- **Agregar ítems** desde el catálogo de tareas de tu organización
+- **Definir cantidad y precio unitario** para cada ítem
+- **Aplicar un margen** (markup) por ítem o global
+- **Reordenar ítems** arrastrando las filas
+- **Ver subtotales** automáticos con y sin margen
+
+<Callout type="info" title="Ítems del catálogo técnico">
+Los ítems se vinculan a tareas de tu **Catálogo Técnico**. Esto significa que podés reutilizar los análisis de precio de cada tarea y mantener consistencia entre tus presupuestos y tus costos reales de obra.
+</Callout>
+
+---
+
+## Contexto de proyecto
+
+Podés acceder a los presupuestos desde:
+
+- **La organización completa** → ves todos los presupuestos de todos tus proyectos
+- **Un proyecto específico** → el selector del header filtra automáticamente y solo muestra los presupuestos de ese proyecto
+
+Cuando creás un presupuesto dentro de un proyecto, el campo "Proyecto" se completa automáticamente.
+
+---
+
+## Búsqueda y filtros
+
+Desde la barra de herramientas podés:
+
+- **Buscar por texto** — nombre del presupuesto, cliente o proyecto
+- **Filtrar por Estado** — Borrador, Enviado, Aprobado, Rechazado
+- **Filtrar por Tipo** — Cotización, Contrato, Adicional
+
+---
+
+## Próximos pasos
+
+- Creá tu primer presupuesto desde **Nuevo Presupuesto**
+- Agregá los ítems desde tu catálogo técnico
+- Cuando el cliente apruebe, actualizá el estado a **Aprobado**
+- Si el documento es un contrato, podés agregar **Órdenes de Cambio** desde la pestaña correspondiente

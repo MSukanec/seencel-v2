@@ -231,16 +231,24 @@ interface OrganizationStoreHydratorProps {
     activeOrgId: string | null;
     isImpersonating?: boolean;
     impersonationOrgName?: string | null;
+    /** Provided by server layout (Phase 1) to avoid sidebar flash for external users */
+    initialAccessContext?: {
+        isMember: boolean;
+        isExternal: boolean;
+        externalActorType: ExternalActorType | null;
+    } | null;
 }
 
 import { useEffect, useRef } from 'react';
 import { fetchOrganizationStoreData } from '@/actions/organization-store-actions';
 import { useAccessContextStore } from '@/stores/access-context-store';
+import type { ExternalActorType } from '@/features/external-actors/types';
 
 export function OrganizationStoreHydrator({
     activeOrgId,
     isImpersonating = false,
     impersonationOrgName = null,
+    initialAccessContext = null,
 }: OrganizationStoreHydratorProps) {
     const prevActiveOrgId = useRef(activeOrgId);
     const hydrated = useRef(false);
@@ -266,7 +274,12 @@ export function OrganizationStoreHydrator({
                 useOrganizationStore.getState().clearImpersonating();
             }
 
-            // Reset access context on org change
+            // Hydrate access context immediately if server provided it (eliminates sidebar flash)
+            if (initialAccessContext) {
+                useAccessContextStore.getState().hydrate(initialAccessContext);
+            }
+
+            // Reset access context on org change (Phase 2 will re-hydrate)
             if (orgChanged) {
                 useAccessContextStore.getState().reset();
             }

@@ -39,6 +39,10 @@ const PermissionTranslations: Record<string, string> = {
     'roles.view': 'Ver Roles',
     'roles.manage': 'Gestionar Roles',
 
+    // Commercial
+    'commercial.view': 'Ver Área Comercial',
+    'commercial.manage': 'Gestionar Área Comercial',
+
     // Contacts
     'contacts.view': 'Ver Contactos',
     'contacts.manage': 'Gestionar Contactos',
@@ -62,6 +66,7 @@ const PermissionTranslations: Record<string, string> = {
 const CategoryTranslations: Record<string, string> = {
     'admin': 'Administración del Sistema',
     'organization': 'Configuración de Organización',
+    'commercial': 'Área Comercial (Presupuestos y Clientes)',
     'contacts': 'Gestión de Contactos',
     'projects': 'Gestión de Proyectos',
     'general_costs': 'Finanzas y Costos',

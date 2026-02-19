@@ -1,193 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 7: notify_quote_status_change — redeem_coupon_universal)
-
-### `notify_quote_status_change()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_quote_status_change()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_project_name TEXT;
-    v_client_name TEXT;
-    v_quote_name TEXT;
-    v_notification_type TEXT;
-    v_notification_title TEXT;
-    v_notification_body TEXT;
-    v_project_id UUID;
-BEGIN
-    -- Solo procesar si el status cambió a 'approved' o 'rejected'
-    IF NEW.status IN ('approved', 'rejected') AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
-        
-        -- Obtener datos del proyecto y cliente para el mensaje
-        SELECT p.name, c.name, NEW.name, p.id
-        INTO v_project_name, v_client_name, v_quote_name, v_project_id
-        FROM projects p
-        LEFT JOIN clients c ON NEW.client_id = c.id
-        WHERE p.id = NEW.project_id;
-        
-        -- Configurar mensaje según el tipo de acción
-        IF NEW.status = 'approved' THEN
-            v_notification_type := 'success';
-            v_notification_title := '✅ Presupuesto Aprobado';
-            v_notification_body := COALESCE(v_client_name, 'Un cliente') || ' aprobó el presupuesto "' || COALESCE(v_quote_name, 'Sin nombre') || '" del proyecto ' || COALESCE(v_project_name, 'Sin nombre') || '.';
-        ELSE
-            v_notification_type := 'warning';
-            v_notification_title := '❌ Presupuesto Rechazado';
-            v_notification_body := COALESCE(v_client_name, 'Un cliente') || ' rechazó el presupuesto "' || COALESCE(v_quote_name, 'Sin nombre') || '" del proyecto ' || COALESCE(v_project_name, 'Sin nombre') || '.';
-            
-            -- Agregar motivo de rechazo si existe
-            IF NEW.rejection_reason IS NOT NULL AND NEW.rejection_reason != '' THEN
-                v_notification_body := v_notification_body || ' Motivo: "' || NEW.rejection_reason || '"';
-            END IF;
-        END IF;
-        
-        -- Llamar a la función MAESTRA - notificar a todos los admins
-        PERFORM public.send_notification(
-            NULL,                              -- 1. Destinatario (NULL = broadcast)
-            v_notification_type,               -- 2. Tipo: 'success' o 'warning'
-            v_notification_title,              -- 3. Título
-            v_notification_body,               -- 4. Cuerpo
-            jsonb_build_object(                -- 5. DATA (Deep Linking)
-                'quote_id', NEW.id,
-                'project_id', v_project_id,
-                'client_id', NEW.client_id,
-                'status', NEW.status,
-                'url', '/project/' || v_project_id || '/quotes'
-            ), 
-            'admins'                           -- 6. Audiencia: 'admins' para todos los admins
-        );
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `notify_subscription_activated()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_subscription_activated()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_plan_name text;
-    v_owner_id uuid;
-    v_is_upgrade boolean := false;
-    v_previous_plan text;
-    v_title_owner text;
-    v_body_owner text;
-    v_title_admin text;
-    v_body_admin text;
-    v_billing_label text;
-BEGIN
-    -- Solo notificar cuando la suscripción se crea activa
-    IF NEW.status = 'active' THEN
-        
-        -- Obtener nombre del plan
-        SELECT name INTO v_plan_name
-        FROM public.plans
-        WHERE id = NEW.plan_id;
-        
-        -- Obtener el owner de la organización
-        SELECT owner_id INTO v_owner_id
-        FROM public.organizations
-        WHERE id = NEW.organization_id;
-
-        -- Etiqueta del período
-        v_billing_label := CASE 
-            WHEN NEW.billing_period = 'annual' THEN 'anual'
-            ELSE 'mensual'
-        END;
-        
-        -- Detectar si es upgrade: ¿hay una suscripción anterior para esta org?
-        SELECT p.name INTO v_previous_plan
-        FROM public.organization_subscriptions s
-        JOIN public.plans p ON p.id = s.plan_id
-        WHERE s.organization_id = NEW.organization_id
-          AND s.id != NEW.id
-          AND s.status IN ('expired', 'cancelled')
-        ORDER BY s.created_at DESC
-        LIMIT 1;
-        
-        v_is_upgrade := (v_previous_plan IS NOT NULL);
-        
-        -- Construir mensajes según sea upgrade o nueva suscripción
-        IF v_is_upgrade THEN
-            v_title_owner := '⬆️ ¡Plan Mejorado!';
-            v_body_owner := 'Tu plan fue mejorado a ' || COALESCE(v_plan_name, '') || '. ¡A disfrutarlo! 🚀';
-            v_title_admin := '⬆️ Upgrade de Plan';
-            v_body_admin := 'Organización mejoró de ' || COALESCE(v_previous_plan, '?') || ' a ' || COALESCE(v_plan_name, '') || ' (' || v_billing_label || ') por ' || NEW.amount || ' ' || NEW.currency;
-        ELSE
-            v_title_owner := '¡Plan Activado!';
-            v_body_owner := 'Tu plan ' || COALESCE(v_plan_name, '') || ' está activo. ¡Hora de construir! 🚀';
-            v_title_admin := '💰 Nueva Suscripción';
-            v_body_admin := 'Organización activó plan ' || COALESCE(v_plan_name, '') || ' (' || v_billing_label || ') por ' || NEW.amount || ' ' || NEW.currency;
-        END IF;
-        
-        -- Notificación al dueño de la organización
-        IF v_owner_id IS NOT NULL THEN
-            PERFORM public.send_notification(
-                v_owner_id,
-                'success',
-                v_title_owner,
-                v_body_owner,
-                jsonb_build_object(
-                    'subscription_id', NEW.id,
-                    'plan_id', NEW.plan_id,
-                    'plan_name', v_plan_name,
-                    'billing_period', NEW.billing_period,
-                    'is_upgrade', v_is_upgrade,
-                    'url', '/organization/settings?tab=billing'
-                ),
-                'direct'
-            );
-        END IF;
-        
-        -- Notificar a admins de la plataforma
-        PERFORM public.send_notification(
-            NULL,
-            'info',
-            v_title_admin,
-            v_body_admin,
-            jsonb_build_object(
-                'subscription_id', NEW.id,
-                'organization_id', NEW.organization_id,
-                'plan_name', v_plan_name,
-                'billing_period', NEW.billing_period,
-                'amount', NEW.amount,
-                'currency', NEW.currency,
-                'is_upgrade', v_is_upgrade,
-                'previous_plan', v_previous_plan
-            ),
-            'admins'
-        );
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 7: notify_system_error — refresh_material_avg_prices)
 
 ### `notify_system_error()` 🔐
 
@@ -1339,6 +1155,48 @@ BEGIN
     'is_free', (v_validation->>'is_free')::boolean
   );
 END;
+$function$
+```
+</details>
+
+### `refresh_labor_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_labor_avg_prices()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  refresh materialized view public.labor_avg_prices;
+end;
+$function$
+```
+</details>
+
+### `refresh_material_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_material_avg_prices()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  refresh materialized view public.material_avg_prices;
+end;
 $function$
 ```
 </details>

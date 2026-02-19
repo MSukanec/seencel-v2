@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Indexes (535, excluding PKs)
+## [PUBLIC] Indexes (503, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -58,23 +58,6 @@
 | client_payments | idx_client_payments_view_project | `CREATE INDEX idx_client_payments_view_project ON public.client_payments USING...` |
 | client_portal_branding | client_portal_branding_project_id_key | `CREATE UNIQUE INDEX client_portal_branding_project_id_key ON public.client_po...` |
 | client_portal_settings | idx_client_portal_settings_org | `CREATE INDEX idx_client_portal_settings_org ON public.client_portal_settings ...` |
-| construction_dependencies | construction_dependencies_unique | `CREATE UNIQUE INDEX construction_dependencies_unique ON public.construction_d...` |
-| construction_dependencies | idx_construction_dependencies_organization | `CREATE INDEX idx_construction_dependencies_organization ON public.constructio...` |
-| construction_dependencies | idx_construction_dependencies_predecessor | `CREATE INDEX idx_construction_dependencies_predecessor ON public.construction...` |
-| construction_dependencies | idx_construction_dependencies_successor | `CREATE INDEX idx_construction_dependencies_successor ON public.construction_d...` |
-| construction_phase_tasks | unique_phase_task | `CREATE UNIQUE INDEX unique_phase_task ON public.construction_phase_tasks USIN...` |
-| construction_task_material_snapshots | ctms_unique_material | `CREATE UNIQUE INDEX ctms_unique_material ON public.construction_task_material...` |
-| construction_task_material_snapshots | idx_ctms_construction_task | `CREATE INDEX idx_ctms_construction_task ON public.construction_task_material_...` |
-| construction_task_material_snapshots | idx_ctms_material | `CREATE INDEX idx_ctms_material ON public.construction_task_material_snapshots...` |
-| construction_task_material_snapshots | idx_ctms_organization | `CREATE INDEX idx_ctms_organization ON public.construction_task_material_snaps...` |
-| construction_task_material_snapshots | idx_ctms_project | `CREATE INDEX idx_ctms_project ON public.construction_task_material_snapshots ...` |
-| construction_tasks | construction_tasks_id_key | `CREATE UNIQUE INDEX construction_tasks_id_key ON public.construction_tasks US...` |
-| construction_tasks | idx_construction_tasks_not_deleted | `CREATE INDEX idx_construction_tasks_not_deleted ON public.construction_tasks ...` |
-| construction_tasks | idx_construction_tasks_organization_id | `CREATE INDEX idx_construction_tasks_organization_id ON public.construction_ta...` |
-| construction_tasks | idx_construction_tasks_project_id | `CREATE INDEX idx_construction_tasks_project_id ON public.construction_tasks U...` |
-| construction_tasks | idx_construction_tasks_quote_item_id | `CREATE INDEX idx_construction_tasks_quote_item_id ON public.construction_task...` |
-| construction_tasks | idx_construction_tasks_recipe_id | `CREATE INDEX idx_construction_tasks_recipe_id ON public.construction_tasks US...` |
-| construction_tasks | idx_construction_tasks_status | `CREATE INDEX idx_construction_tasks_status ON public.construction_tasks USING...` |
 | contact_categories | idx_contact_categories_global_name_active | `CREATE UNIQUE INDEX idx_contact_categories_global_name_active ON public.conta...` |
 | contact_categories | idx_contact_categories_org_name_active | `CREATE UNIQUE INDEX idx_contact_categories_org_name_active ON public.contact_...` |
 | contact_category_links | contact_category_links_contact_id_contact_category_id_key | `CREATE UNIQUE INDEX contact_category_links_contact_id_contact_category_id_key...` |
@@ -403,21 +386,6 @@
 | provider_products | provider_products_organization_id_product_id_key | `CREATE UNIQUE INDEX provider_products_organization_id_product_id_key ON publi...` |
 | push_subscriptions | idx_push_subscriptions_user_id | `CREATE INDEX idx_push_subscriptions_user_id ON public.push_subscriptions USIN...` |
 | push_subscriptions | push_subscriptions_user_endpoint_key | `CREATE UNIQUE INDEX push_subscriptions_user_endpoint_key ON public.push_subsc...` |
-| quote_items | idx_quote_items_not_deleted | `CREATE INDEX idx_quote_items_not_deleted ON public.quote_items USING btree (i...` |
-| quote_items | idx_quote_items_sort | `CREATE INDEX idx_quote_items_sort ON public.quote_items USING btree (quote_id...` |
-| quote_items | idx_quote_items_updated_by | `CREATE INDEX idx_quote_items_updated_by ON public.quote_items USING btree (up...` |
-| quote_items | quote_items_id_key | `CREATE UNIQUE INDEX quote_items_id_key ON public.quote_items USING btree (id)` |
-| quotes | idx_quotes_client | `CREATE INDEX idx_quotes_client ON public.quotes USING btree (client_id)` |
-| quotes | idx_quotes_created | `CREATE INDEX idx_quotes_created ON public.quotes USING btree (created_by)` |
-| quotes | idx_quotes_not_deleted | `CREATE INDEX idx_quotes_not_deleted ON public.quotes USING btree (is_deleted)...` |
-| quotes | idx_quotes_org | `CREATE INDEX idx_quotes_org ON public.quotes USING btree (organization_id)` |
-| quotes | idx_quotes_org_active | `CREATE INDEX idx_quotes_org_active ON public.quotes USING btree (organization...` |
-| quotes | idx_quotes_parent_quote | `CREATE INDEX idx_quotes_parent_quote ON public.quotes USING btree (parent_quo...` |
-| quotes | idx_quotes_project | `CREATE INDEX idx_quotes_project ON public.quotes USING btree (project_id)` |
-| quotes | idx_quotes_status | `CREATE INDEX idx_quotes_status ON public.quotes USING btree (status)` |
-| quotes | idx_quotes_type | `CREATE INDEX idx_quotes_type ON public.quotes USING btree (quote_type)` |
-| quotes | idx_quotes_updated_by | `CREATE INDEX idx_quotes_updated_by ON public.quotes USING btree (updated_by)` |
-| quotes | ux_quotes_project_name_version | `CREATE UNIQUE INDEX ux_quotes_project_name_version ON public.quotes USING btr...` |
 | role_permissions | idx_role_permissions_organization_id | `CREATE INDEX idx_role_permissions_organization_id ON public.role_permissions ...` |
 | role_permissions | idx_role_permissions_permission_id | `CREATE INDEX idx_role_permissions_permission_id ON public.role_permissions US...` |
 | role_permissions | idx_role_permissions_role_id | `CREATE INDEX idx_role_permissions_role_id ON public.role_permissions USING bt...` |

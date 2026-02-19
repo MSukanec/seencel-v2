@@ -1,89 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 3: founder_vote_ballots — kanban_comments)
-
-### `founder_vote_ballots`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| topic_id | uuid | ✗ |  | UNIQUE, FK → founder_vote_topics.id |
-| option_id | uuid | ✗ |  | FK → founder_vote_options.id |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
-| voted_at | timestamptz | ✓ | now() |  |
-
-### `founder_vote_options`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| topic_id | uuid | ✗ |  | FK → founder_vote_topics.id |
-| option_text | text | ✗ |  |  |
-| option_order | int4 | ✓ | 0 |  |
-
-### `founder_vote_topics`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| title | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| status | text | ✗ | 'active'::text |  |
-| voting_deadline | timestamptz | ✓ |  |  |
-| allow_multiple_votes | bool | ✓ | false |  |
-| created_by | uuid | ✗ |  | FK → users.id |
-| created_at | timestamptz | ✓ | now() |  |
-| closed_at | timestamptz | ✓ |  |  |
-| is_deleted | bool | ✓ | false |  |
-
-### `general_cost_categories`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| is_system | bool | ✗ | false |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `general_cost_payment_allocations`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| payment_id | uuid | ✗ |  | FK → general_costs_payments.id |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| percentage | numeric | ✗ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-
-### `general_costs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| category_id | uuid | ✓ |  | FK → general_cost_categories.id |
-| is_recurring | bool | ✗ | false |  |
-| recurrence_interval | text | ✓ |  |  |
-| expected_day | int2 | ✓ |  |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
+## [PUBLIC] Tables (chunk 3: general_costs_payments — labor_levels)
 
 ### `general_costs_payments`
 
@@ -440,3 +360,98 @@
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ |  |  |
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
+
+### `kanban_labels`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
+| name | text | ✗ |  | UNIQUE |
+| color | text | ✗ | '#6366f1'::text |  |
+| description | text | ✓ |  |  |
+| position | int4 | ✓ | 0 |  |
+| is_default | bool | ✓ | false |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+
+### `kanban_lists`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| board_id | uuid | ✓ |  | FK → kanban_boards.id |
+| name | text | ✗ |  |  |
+| position | int4 | ✗ | 0 |  |
+| created_at | timestamptz | ✓ | now() |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_at | timestamptz | ✓ | now() |  |
+| color | text | ✓ |  |  |
+| limit_wip | int4 | ✓ |  |  |
+| auto_complete | bool | ✓ | false |  |
+| is_collapsed | bool | ✓ | false |  |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `kanban_mentions`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| comment_id | uuid | ✗ |  | FK → kanban_comments.id |
+| mentioned_member_id | uuid | ✗ |  | FK → organization_members.id |
+| is_read | bool | ✓ | false |  |
+| read_at | timestamptz | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+
+### `labor_categories`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| is_system | bool | ✗ | false |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+
+### `labor_insurances`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| project_id | uuid | ✓ |  | FK → projects.id |
+| labor_id | uuid | ✗ |  | FK → project_labor.id |
+| insurance_type | text | ✗ |  |  |
+| policy_number | text | ✓ |  |  |
+| provider | text | ✓ |  |  |
+| coverage_start | date | ✗ |  |  |
+| coverage_end | date | ✗ |  |  |
+| reminder_days | _int2 | ✓ | ARRAY[30, 15, 7] |  |
+| certificate_attachment_id | uuid | ✓ |  |  |
+| notes | text | ✓ |  |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| coverage_range | daterange | ✓ |  |  |
+
+### `labor_levels`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| sort_order | int4 | ✗ | 0 |  |

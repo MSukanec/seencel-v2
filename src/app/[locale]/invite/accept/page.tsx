@@ -84,6 +84,18 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
     const supabase = await createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
+    // Check if the invited email is already registered in Seencel
+    // (to show only "Iniciar Sesión" instead of both buttons)
+    let emailAlreadyRegistered = false;
+    if (!authUser && inv.email) {
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', inv.email.toLowerCase())
+            .maybeSingle();
+        emailAlreadyRegistered = !!existingUser;
+    }
+
     // Get organization logo from invitation (two queries: iam → public, no cross-schema JOINs)
     let organizationLogo: string | null = null;
     const { data: invitationData } = await supabase
@@ -115,6 +127,7 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
                 inviterName={inv.inviter_name}
                 email={inv.email}
                 isAuthenticated={!!authUser}
+                emailAlreadyRegistered={emailAlreadyRegistered}
             />
         </InvitationLayout>
     );

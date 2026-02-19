@@ -123,6 +123,10 @@ export const routing = defineRouting({
             en: '/organization/quotes',
             es: '/organizacion/cotizaciones'
         },
+        '/organization/quotes/[quoteId]': {
+            en: '/organization/quotes/[quoteId]',
+            es: '/organizacion/cotizaciones/[quoteId]'
+        },
 
         // ===== Organization General Costs =====
         '/organization/general-costs': {

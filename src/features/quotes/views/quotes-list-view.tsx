@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { ColumnDef } from "@tanstack/react-table";
-import { FileText, Plus, Building2, Calendar, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "@/i18n/routing";
+import { FileText, Plus, Circle, FileCheck, Send as SendIcon, XCircle as XCircleIcon, FileSpreadsheet, FileSignature, FilePlus2, Loader2 } from "lucide-react";
+import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 import { toast } from "sonner";
 
-import { PageWrapper, ContentLayout } from "@/components/layout";
-import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+import { QuoteListItem } from "@/components/shared/list-item/items/quote-list-item";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,28 +20,31 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Circle, FileCheck, Send as SendIcon, XCircle as XCircleIcon, FileSpreadsheet, FileSignature, FilePlus2 } from "lucide-react";
 
 import { useModal } from "@/stores/modal-store";
 import { useMoney } from "@/hooks/use-money";
+import { useOptimisticList } from "@/hooks/use-optimistic-action";
 import { QuoteForm } from "../forms/quote-form";
 import { deleteQuote } from "../actions";
-import { QuoteView, QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, QUOTE_TYPE_LABELS, QUOTE_TYPE_COLORS } from "../types";
+import { QuoteView } from "../types";
 import { OrganizationFinancialData } from "@/features/clients/types";
 
 // ============================================================================
-// QUOTES PAGE
+// QUOTES LIST VIEW
 // ============================================================================
-// Shared page for Quotes that works in both Organization and Project contexts
+// Shared view for Quotes — works in both Organization and Project contexts.
+// The PageWrapper/header lives in the server page (app/quotes/page.tsx).
+// When projectId is set, filteredQuotes only shows quotes for that project.
 // ============================================================================
 
 interface QuotesListViewProps {
     organizationId: string;
+    /** When set, only shows quotes for this project (project context) */
     projectId?: string | null;
     quotes: QuoteView[];
     financialData: OrganizationFinancialData;
-    clients: { id: string; name: string }[];
-    projects: { id: string; name: string }[];
+    clients: { id: string; name: string; resolved_avatar_url?: string | null }[];
+    projects: { id: string; name: string; image_url?: string | null; color?: string | null }[];
     defaultTab?: string;
 }
 
@@ -59,79 +59,112 @@ export function QuotesListView({
     const router = useRouter();
     const { openModal, closeModal } = useModal();
     const money = useMoney();
-    const [searchQuery, setSearchQuery] = useState("");
 
-    // Delete dialog state
+    // — Búsqueda con debounce de 300ms —
+    const [rawSearch, setRawSearch] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleSearchChange = (value: string) => {
+        setRawSearch(value);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => setSearchQuery(value), 300);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+    }, []);
+
+    // — Optimistic delete —
+    const { optimisticItems, removeItem, isPending: isDeleting } = useOptimisticList({
+        items: quotes,
+        getItemId: (q) => q.id,
+    });
+
+    // — Delete dialog state —
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [quoteToDelete, setQuoteToDelete] = useState<QuoteView | null>(null);
-    const [isDeleting, startDeleteTransition] = useTransition();
 
-    // Filter states
+    // — Filter states —
     const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
     const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
 
-    const isProjectContext = !!projectId;
-    const showProjectColumn = !isProjectContext;
+    // Lee el proyecto activo del layout-store (selector de contexto del header)
+    const activeProjectId = useActiveProjectId();
+    const { setActiveProjectId } = useLayoutActions();
+    const isProjectContext = !!activeProjectId || !!projectId;
+    const effectiveProjectId = projectId || activeProjectId;
 
-    // Filter options
+    // Nombre del proyecto activo para mostrar en el empty state
+    const activeProjectName = projects.find(p => p.id === effectiveProjectId)?.name;
+
+    const hasActiveFilters = statusFilter.size > 0 || typeFilter.size > 0 || searchQuery.length > 0;
+
+    // — Filter options —
     const statusOptions = [
-        { label: 'Borrador', value: 'draft', icon: Circle },
-        { label: 'Enviado', value: 'sent', icon: SendIcon },
-        { label: 'Aprobado', value: 'approved', icon: FileCheck },
-        { label: 'Rechazado', value: 'rejected', icon: XCircleIcon },
+        { label: "Borrador", value: "draft", icon: Circle },
+        { label: "Enviado", value: "sent", icon: SendIcon },
+        { label: "Aprobado", value: "approved", icon: FileCheck },
+        { label: "Rechazado", value: "rejected", icon: XCircleIcon },
     ];
-
     const typeOptions = [
-        { label: 'Cotización', value: 'quote', icon: FileSpreadsheet },
-        { label: 'Contrato', value: 'contract', icon: FileSignature },
-        { label: 'Adicional', value: 'change_order', icon: FilePlus2 },
+        { label: "Cotización", value: "quote", icon: FileSpreadsheet },
+        { label: "Contrato", value: "contract", icon: FileSignature },
+        { label: "Adicional", value: "change_order", icon: FilePlus2 },
     ];
 
-    // Filter quotes
-    const filteredQuotes = quotes.filter(quote => {
+    // — Filter quotes (with project context) —
+    const filteredQuotes = optimisticItems.filter((quote) => {
         const query = searchQuery.toLowerCase();
-        const matchesSearch = (
+        const matchesSearch =
+            !query ||
             quote.name?.toLowerCase().includes(query) ||
             quote.description?.toLowerCase().includes(query) ||
             quote.client_name?.toLowerCase().includes(query) ||
-            quote.project_name?.toLowerCase().includes(query)
-        );
+            quote.project_name?.toLowerCase().includes(query);
 
         const matchesStatus = statusFilter.size === 0 || statusFilter.has(quote.status);
         const matchesType = typeFilter.size === 0 || typeFilter.has(quote.quote_type);
 
-        return matchesSearch && matchesStatus && matchesType;
+        // 🔑 Context filter: selector de contexto del header (layout-store)
+        const matchesProject = !effectiveProjectId || quote.project_id === effectiveProjectId;
+
+        return matchesSearch && matchesStatus && matchesType && matchesProject;
     });
 
-    // Handlers
+    // — Handlers —
     const handleCreateQuote = () => {
+        // Garantiza que el proyecto activo esté en la lista, aunque no sea 'activo'
+        // (ej: puede estar en estado 'completed' o no estar en la lista de activos del server)
+        const projectsForForm = effectiveProjectId && !projects.find(p => p.id === effectiveProjectId)
+            ? [{ id: effectiveProjectId, name: activeProjectName || "Proyecto actual" }, ...projects]
+            : projects;
+
         openModal(
             <QuoteForm
                 mode="create"
                 organizationId={organizationId}
                 financialData={financialData}
                 clients={clients}
-                projects={projects}
-                projectId={projectId ?? undefined}
-                onCancel={closeModal}
-                onSuccess={(quoteId) => {
-                    closeModal();
-                    if (projectId) {
-                        router.refresh();
-                    } else {
-                        router.push(`/organization/quotes/${quoteId}`);
-                    }
-                }}
+                projects={projectsForForm}
+                projectId={effectiveProjectId ?? undefined}
             />,
             {
                 title: "Nuevo Presupuesto",
-                description: "Crear un nuevo presupuesto o cotización",
-                size: "lg"
+                description: "Completá los campos para crear un presupuesto",
+                size: "md",
             }
         );
     };
 
     const handleEdit = (quote: QuoteView) => {
+        // Mismo fix que handleCreateQuote: garantiza que el proyecto actual esté en la lista
+        const projectsForForm = effectiveProjectId && !projects.find(p => p.id === effectiveProjectId)
+            ? [{ id: effectiveProjectId, name: activeProjectName || "Proyecto actual" }, ...projects]
+            : projects;
+
         openModal(
             <QuoteForm
                 mode="edit"
@@ -139,18 +172,13 @@ export function QuotesListView({
                 organizationId={organizationId}
                 financialData={financialData}
                 clients={clients}
-                projects={projects}
-                projectId={projectId ?? undefined}
-                onCancel={closeModal}
-                onSuccess={() => {
-                    closeModal();
-                    router.refresh();
-                }}
+                projects={projectsForForm}
+                projectId={effectiveProjectId ?? undefined}
             />,
             {
                 title: "Editar Presupuesto",
-                description: "Modificar información del presupuesto",
-                size: "lg"
+                description: "Modificar nombre, proyecto o cliente del presupuesto",
+                size: "md",
             }
         );
     };
@@ -163,214 +191,174 @@ export function QuotesListView({
     const confirmDelete = () => {
         if (!quoteToDelete) return;
 
-        startDeleteTransition(async () => {
-            const result = await deleteQuote(quoteToDelete.id);
+        const idToDelete = quoteToDelete.id;
+        const nameToShow = quoteToDelete.name;
+        setIsDeleteDialogOpen(false);
+        setQuoteToDelete(null);
+
+        removeItem(idToDelete, async () => {
+            const result = await deleteQuote(idToDelete);
             if (result.error) {
                 toast.error(result.error);
-            } else {
-                toast.success("Presupuesto eliminado");
                 router.refresh();
+            } else {
+                toast.success(`Presupuesto "${nameToShow}" eliminado`);
             }
-            setIsDeleteDialogOpen(false);
-            setQuoteToDelete(null);
         });
     };
 
     const handleRowClick = (quote: QuoteView) => {
-        router.push(`/organization/quotes/${quote.id}`);
+        router.push(`/organization/quotes/${quote.id}` as any);
     };
 
-    // Column definitions
-    const columns: ColumnDef<QuoteView>[] = [
-        {
-            accessorKey: "name",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Nombre" />,
-            cell: ({ row }) => (
-                <div className="min-w-[200px]">
-                    <p className="font-medium truncate">{row.original.name}</p>
-                    {row.original.description && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[300px]">
-                            {row.original.description}
-                        </p>
-                    )}
-                </div>
-            ),
-        },
-        {
-            id: "quote_type",
-            accessorKey: "quote_type",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
-            cell: ({ row }) => (
-                <Badge variant="outline" className={`text-xs ${QUOTE_TYPE_COLORS[row.original.quote_type]}`}>
-                    {QUOTE_TYPE_LABELS[row.original.quote_type]}
-                </Badge>
-            ),
-            filterFn: (row, id, value) => value.includes(row.getValue(id)),
-        },
-        {
-            id: "status",
-            accessorKey: "status",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
-            cell: ({ row }) => (
-                <Badge variant="outline" className={`text-xs ${QUOTE_STATUS_COLORS[row.original.status]}`}>
-                    {QUOTE_STATUS_LABELS[row.original.status]}
-                </Badge>
-            ),
-            filterFn: (row, id, value) => value.includes(row.getValue(id)),
-        },
-        {
-            id: "client",
-            accessorFn: (row) => row.client_name,
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
-            cell: ({ row }) => row.original.client_name ? (
-                <span className="flex items-center gap-1 text-sm">
-                    <Building2 className="h-3 w-3 text-muted-foreground" />
-                    {row.original.client_name}
-                </span>
-            ) : (
-                <span className="text-muted-foreground">-</span>
-            ),
-        },
-        ...(showProjectColumn ? [{
-            id: "project",
-            accessorFn: (row: QuoteView) => row.project_name,
-            header: ({ column }: any) => <DataTableColumnHeader column={column} title="Proyecto" />,
-            cell: ({ row }: any) => row.original.project_name ? (
-                <span className="text-sm truncate max-w-[150px] block">{row.original.project_name}</span>
-            ) : (
-                <span className="text-muted-foreground">-</span>
-            ),
-        }] : []) as ColumnDef<QuoteView>[],
-        {
-            id: "item_count",
-            accessorKey: "item_count",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Ítems" />,
-            cell: ({ row }) => (
-                <span className="font-mono text-center">{row.original.item_count}</span>
-            ),
-        },
-        {
-            id: "total",
-            accessorKey: "total_with_tax",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
-            cell: ({ row }) => (
-                <span className="font-mono font-medium">
-                    {money.format(row.original.total_with_tax || 0)}
-                </span>
-            ),
-        },
-        {
-            id: "date",
-            accessorKey: "created_at",
-            header: ({ column }) => <DataTableColumnHeader column={column} title="Fecha" />,
-            cell: ({ row }) => (
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    {row.original.created_at?.split('T')[0]}
-                </span>
-            ),
-        },
-    ];
+    const handleResetFilters = () => {
+        setRawSearch("");
+        setSearchQuery("");
+        setStatusFilter(new Set());
+        setTypeFilter(new Set());
+    };
 
-    // Early return: Empty State
-    if (quotes.length === 0) {
-        return (
-            <PageWrapper type="page" title="Presupuestos" icon={<FileText />}>
-                <Toolbar
-                    portalToHeader
-                    actions={[{ label: "Nuevo Presupuesto", icon: Plus, onClick: handleCreateQuote }]}
-                />
-                <div className="flex-1 flex items-center justify-center">
-                    <ViewEmptyState
-                        mode="empty"
-                        icon={FileText}
-                        viewName="Presupuestos"
-                        featureDescription="Creá tu primer presupuesto para comenzar a gestionar cotizaciones y contratos."
-                        onAction={handleCreateQuote}
-                        actionLabel="Nuevo Presupuesto"
+    // — Toolbar: siempre se renderiza (portal to header) —
+    const toolbar = (
+        <Toolbar
+            portalToHeader
+            searchQuery={rawSearch}
+            onSearchChange={handleSearchChange}
+            searchPlaceholder="Buscar por nombre, cliente o proyecto..."
+            filterContent={
+                <>
+                    <FacetedFilter
+                        title="Estado"
+                        options={statusOptions}
+                        selectedValues={statusFilter}
+                        onSelect={(value) => {
+                            const next = new Set(statusFilter);
+                            if (next.has(value)) next.delete(value);
+                            else next.add(value);
+                            setStatusFilter(next);
+                        }}
+                        onClear={() => setStatusFilter(new Set())}
                     />
-                </div>
-            </PageWrapper>
+                    <FacetedFilter
+                        title="Tipo"
+                        options={typeOptions}
+                        selectedValues={typeFilter}
+                        onSelect={(value) => {
+                            const next = new Set(typeFilter);
+                            if (next.has(value)) next.delete(value);
+                            else next.add(value);
+                            setTypeFilter(next);
+                        }}
+                        onClear={() => setTypeFilter(new Set())}
+                    />
+                </>
+            }
+            actions={[{ label: "Nuevo Presupuesto", icon: Plus, onClick: handleCreateQuote }]}
+        />
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RETURNS — todos los empty states son early returns con fragment.
+    // ViewEmptyState como hijo directo del fragment → flex item del PageWrapper
+    // content area (flex-1 overflow-hidden flex flex-col) → flex-1 expande.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Case 1: Org completamente vacía
+    if (optimisticItems.length === 0) {
+        return (
+            <>
+                {toolbar}
+                <ViewEmptyState
+                    mode="empty"
+                    icon={FileText}
+                    viewName="Presupuestos"
+                    featureDescription="Gestioná las cotizaciones y contratos de tu organización. Convertí presupuestos en contratos, agregá órdenes de cambio y hacé seguimiento del estado de cada documento comercial."
+                    onAction={handleCreateQuote}
+                    actionLabel="Nuevo Presupuesto"
+                    docsPath="/docs/presupuestos/introduccion"
+                />
+            </>
         );
     }
 
+    // Case 2: Proyecto seleccionado sin presupuestos
+    if (filteredQuotes.length === 0 && isProjectContext && !hasActiveFilters) {
+        return (
+            <>
+                {toolbar}
+                <ViewEmptyState
+                    mode="context-empty"
+                    icon={FileText}
+                    viewName="presupuestos"
+                    projectName={activeProjectName}
+                    onAction={handleCreateQuote}
+                    actionLabel="Nuevo Presupuesto"
+                    onSwitchToOrg={activeProjectId ? () => setActiveProjectId(null) : undefined}
+                />
+            </>
+        );
+    }
+
+    // Case 3: Filtros activos sin resultados
+    if (filteredQuotes.length === 0) {
+        return (
+            <>
+                {toolbar}
+                <ViewEmptyState
+                    mode="no-results"
+                    icon={FileText}
+                    viewName="presupuestos"
+                    filterContext="con esos filtros"
+                    onResetFilters={handleResetFilters}
+                />
+            </>
+        );
+    }
+
+    // Case 4: Lista con datos
     return (
-        <PageWrapper type="page" title="Presupuestos" icon={<FileText />}>
-            <ContentLayout variant="wide">
-                <Toolbar
-                    portalToHeader
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    searchPlaceholder="Buscar por nombre, cliente o proyecto..."
-                    filterContent={
-                        <>
-                            <FacetedFilter
-                                title="Estado"
-                                options={statusOptions}
-                                selectedValues={statusFilter}
-                                onSelect={(value) => {
-                                    const next = new Set(statusFilter);
-                                    if (next.has(value)) next.delete(value);
-                                    else next.add(value);
-                                    setStatusFilter(next);
-                                }}
-                                onClear={() => setStatusFilter(new Set())}
-                            />
-                            <FacetedFilter
-                                title="Tipo"
-                                options={typeOptions}
-                                selectedValues={typeFilter}
-                                onSelect={(value) => {
-                                    const next = new Set(typeFilter);
-                                    if (next.has(value)) next.delete(value);
-                                    else next.add(value);
-                                    setTypeFilter(next);
-                                }}
-                                onClear={() => setTypeFilter(new Set())}
-                            />
-                        </>
-                    }
-                    actions={[{ label: "Nuevo Presupuesto", icon: Plus, onClick: handleCreateQuote }]}
-                />
+        <>
+            {toolbar}
+            <div className="flex flex-col gap-2">
+                {filteredQuotes.map((quote) => (
+                    <QuoteListItem
+                        key={quote.id}
+                        quote={quote}
+                        canEdit={true}
+                        isProjectContext={isProjectContext}
+                        formatMoney={money.format}
+                        onEdit={handleEdit}
+                        onDelete={handleDeleteClick}
+                        onClick={handleRowClick}
+                    />
+                ))}
+            </div>
 
-                <DataTable
-                    columns={columns}
-                    data={filteredQuotes}
-                    showPagination={true}
-                    pageSize={15}
-                    enableRowActions={true}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteClick}
-                    onRowClick={handleRowClick}
-                />
-
-                {/* Delete Confirmation Dialog */}
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Se eliminará el presupuesto
-                                <strong> {quoteToDelete?.name}</strong>.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    confirmDelete();
-                                }}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                disabled={isDeleting}
-                            >
-                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Eliminar
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </ContentLayout>
-        </PageWrapper>
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará el presupuesto{" "}
+                            <strong>{quoteToDelete?.name}</strong>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmDelete();
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

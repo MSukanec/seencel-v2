@@ -1,0 +1,79 @@
+---
+title: Órdenes de Cambio
+description: Cómo gestionar modificaciones y adicionales a contratos existentes en SEENCEL.
+---
+
+# Órdenes de Cambio
+
+Una **Orden de Cambio** (OC) es una modificación formal a un contrato existente. En la industria de la construcción, es habitual que el alcance original de un contrato cambie durante la ejecución: aparecen trabajos no previstos, se modifican especificaciones, o el cliente solicita adicionales.
+
+SEENCEL te permite registrar cada cambio de forma ordenada, con su propio número correlativo, monto y estado.
+
+---
+
+## ¿Cuándo usar una Orden de Cambio?
+
+Usá una OC cuando necesitás:
+
+- **Agregar trabajos no contemplados** en el contrato original
+- **Modificar el precio** de ítems ya contratados
+- **Reducir alcance** (descuentos o quitas)
+- **Documentar formalmente** cualquier cambio acordado con el cliente
+
+<Callout type="important">
+Las Órdenes de Cambio solo se pueden crear sobre documentos de tipo **Contrato**. No existen OC sobre cotizaciones.
+</Callout>
+
+---
+
+## Crear una Orden de Cambio
+
+1. Abrí el **Contrato** al que querés agregar la OC
+2. Andá a la pestaña **"Órdenes de Cambio"**
+3. Hacé click en **"Nueva Orden de Cambio"**
+4. Completá la información:
+   - **Nombre** — Descripción corta del cambio (ej: "Adicional zanjeo norte")
+   - **Moneda** y **tipo de cambio** si corresponde
+   - **Fecha** y **Válido hasta**
+5. Una vez creada, desde la vista de detalle de la OC podés agregar los **ítems** del adicional
+
+<Callout type="tip">
+Cada OC recibe un **número correlativo automático** (OC #1, OC #2, etc.) dentro del contrato. Esto te permite referenciarlas fácilmente en comunicaciones con el cliente.
+</Callout>
+
+---
+
+## Estructura de una Orden de Cambio
+
+La OC tiene exactamente la misma estructura que un presupuesto:
+
+| Pestaña | Contenido |
+|---------|-----------|
+| **Resumen** | Totales, estado y datos generales de la OC |
+| **Ítems** | Desglose del adicional (con precios y márgenes) |
+
+---
+
+## Estados de una Orden de Cambio
+
+| Estado | Significado |
+|--------|-------------|
+| **Borrador** | En preparación, no formalizada |
+| **Enviada** | El cliente la recibió para revisión |
+| **Aprobada** | El cliente aceptó el adicional → se suma al total del contrato |
+| **Rechazada** | El cliente no aceptó el cambio |
+
+<Callout type="info" title="Impacto en el total del contrato">
+Solo las OC en estado **Aprobada** se suman al monto total del contrato. Las OC en Borrador, Enviada o Rechazada no modifican el total revisado del contrato.
+</Callout>
+
+---
+
+## Navegación
+
+Desde la lista de OC dentro del contrato podés:
+
+- Hacer click en una OC para ir a su detalle
+- Volver al contrato usando el breadcrumb o el botón de retroceso
+
+Las OC también aparecen en la lista global de presupuestos de la organización, pero están ocultas por defecto (se muestran solo cuando entrás al contrato padre).

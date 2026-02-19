@@ -10,7 +10,7 @@ export async function getOrganizationQuotes(organizationId: string): Promise<Quo
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("quotes_view")
+        .schema("construction").from("quotes_view")
         .select("*")
         .eq("organization_id", organizationId)
         .eq("is_deleted", false)
@@ -33,7 +33,7 @@ export async function getProjectQuotes(projectId: string): Promise<QuoteView[]> 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("quotes_view")
+        .schema("construction").from("quotes_view")
         .select("*")
         .eq("project_id", projectId)
         .eq("is_deleted", false)
@@ -56,7 +56,7 @@ export async function getQuote(quoteId: string): Promise<QuoteView | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("quotes_view")
+        .schema("construction").from("quotes_view")
         .select("*")
         .eq("id", quoteId)
         .eq("is_deleted", false)
@@ -78,7 +78,7 @@ export async function getQuoteItems(quoteId: string) {
 
     // Use table directly with joins instead of view (view may not exist yet)
     const { data, error } = await supabase
-        .from("quote_items")
+        .schema("construction").from("quote_items")
         .select(`
             *,
             tasks:task_id (
@@ -121,7 +121,7 @@ export async function getChangeOrdersByContract(contractId: string): Promise<Quo
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("quotes_view")
+        .schema("construction").from("quotes_view")
         .select("*")
         .eq("parent_quote_id", contractId)
         .eq("quote_type", "change_order")
@@ -143,7 +143,7 @@ export async function getContractSummary(contractId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("contract_summary_view")
+        .schema("construction").from("contract_summary_view")
         .select("*")
         .eq("id", contractId)
         .single();
@@ -180,7 +180,7 @@ export async function getNextChangeOrderNumber(contractId: string): Promise<numb
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .select("change_order_number")
         .eq("parent_quote_id", contractId)
         .eq("quote_type", "change_order")

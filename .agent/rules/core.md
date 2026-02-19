@@ -220,3 +220,5 @@ claridad
 visión de Seencel a largo plazo
 
 Si algo funciona pero rompe eso, se descarta.
+
+16. Cada vez que hagas algo PORUQE una regla lo dice, quiero que especifiques "Segun la regla XXX, voy a hacer al cosa". "Estoy lo hago por la regla XXX", "La reglla XXX dice XXX y esto no lo cumple", etc. Es decir, quiero saber CADA VEZ QUE HACES ALGO TENIENDO EN CUENTA UNA REGLA. La idea es que me lo digas VINULANDOLA, ej "Según layout-pattern.md" (y que yo al clickearla pueda ir).

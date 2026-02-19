@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Views (70)
+## [PUBLIC] Views (67)
 
 ### `admin_organizations_view`
 
@@ -246,7 +246,7 @@ SELECT bi.id,
             ELSE initcap(replace((bi.cost_scope)::text, '_'::text, ' '::text))
         END AS cost_scope_label,
     bi.sort_key AS "position"
-   FROM (((quote_items bi
+   FROM (((construction.quote_items bi
      LEFT JOIN tasks t ON ((t.id = bi.task_id)))
      LEFT JOIN task_divisions td ON ((td.id = t.task_division_id)))
      LEFT JOIN units u ON ((u.id = t.unit_id)));
@@ -538,8 +538,8 @@ SELECT cp.id,
     cur.code AS currency_code,
     cc.concept AS commitment_concept,
     cps.notes AS schedule_notes,
-    u.full_name AS creator_full_name,
-    u.avatar_url AS creator_avatar_url,
+    u_creator.full_name AS creator_full_name,
+    u_creator.avatar_url AS creator_avatar_url,
     p.name AS project_name,
     p.image_url AS project_image_url,
     p.color AS project_color
@@ -554,75 +554,9 @@ SELECT cp.id,
      LEFT JOIN client_commitments cc ON ((cc.id = cp.commitment_id)))
      LEFT JOIN client_payment_schedule cps ON ((cps.id = cp.schedule_id)))
      LEFT JOIN organization_members om ON ((om.id = cp.created_by)))
-     LEFT JOIN users u ON ((u.id = om.user_id)))
+     LEFT JOIN users u_creator ON ((u_creator.id = om.user_id)))
      LEFT JOIN projects p ON ((p.id = cp.project_id)))
   WHERE (cp.is_deleted = false);
-```
-
-### `construction_tasks_view`
-
-```sql
-SELECT ct.id,
-    ct.organization_id,
-    ct.project_id,
-    ct.task_id,
-    ct.recipe_id,
-    ct.quote_item_id,
-    COALESCE(t.custom_name, t.name, ct.custom_name) AS task_name,
-    COALESCE(u.name, ct.custom_unit) AS unit,
-    td.name AS division_name,
-    ct.cost_scope,
-        CASE ct.cost_scope
-            WHEN 'materials_and_labor'::cost_scope_enum THEN 'M.O. + MAT.'::text
-            WHEN 'labor_only'::cost_scope_enum THEN 'M.O.'::text
-            WHEN 'materials_only'::cost_scope_enum THEN 'MAT'::text
-            ELSE 'M.O. + MAT.'::text
-        END AS cost_scope_label,
-    ct.quantity,
-    ct.original_quantity,
-        CASE
-            WHEN ((ct.original_quantity IS NOT NULL) AND (ct.original_quantity > (0)::double precision)) THEN (ct.quantity - ct.original_quantity)
-            ELSE NULL::real
-        END AS quantity_variance,
-    ct.planned_start_date,
-    ct.planned_end_date,
-    ct.actual_start_date,
-    ct.actual_end_date,
-        CASE
-            WHEN ((ct.actual_end_date IS NOT NULL) AND (ct.planned_end_date IS NOT NULL)) THEN (ct.actual_end_date - ct.planned_end_date)
-            ELSE NULL::integer
-        END AS schedule_variance_days,
-    ct.duration_in_days,
-    ct.progress_percent,
-    ct.status,
-    ct.description,
-    ct.notes,
-    ct.custom_name,
-    ct.custom_unit,
-    ct.created_at,
-    ct.updated_at,
-    ct.created_by,
-    ct.updated_by,
-    ct.is_deleted,
-    qi.quote_id,
-    q.name AS quote_name,
-    qi.markup_pct AS quote_markup_pct,
-    ph.phase_name,
-    tr.name AS recipe_name
-   FROM (((((((construction_tasks ct
-     LEFT JOIN tasks t ON ((t.id = ct.task_id)))
-     LEFT JOIN units u ON ((u.id = t.unit_id)))
-     LEFT JOIN task_divisions td ON ((td.id = t.task_division_id)))
-     LEFT JOIN quote_items qi ON ((qi.id = ct.quote_item_id)))
-     LEFT JOIN quotes q ON ((q.id = qi.quote_id)))
-     LEFT JOIN task_recipes tr ON ((tr.id = ct.recipe_id)))
-     LEFT JOIN LATERAL ( SELECT cp.name AS phase_name
-           FROM (construction_phase_tasks cpt
-             JOIN construction_phases cp ON ((cp.id = cpt.project_phase_id)))
-          WHERE (cpt.construction_task_id = ct.id)
-          ORDER BY cpt.created_at DESC
-         LIMIT 1) ph ON (true))
-  WHERE (ct.is_deleted = false);
 ```
 
 ### `contacts_summary_view`
@@ -696,40 +630,6 @@ SELECT c.id,
      LEFT JOIN users u ON ((u.id = c.linked_user_id)))
      LEFT JOIN contacts company ON (((company.id = c.company_id) AND (company.is_deleted = false))))
   WHERE (c.is_deleted = false);
-```
-
-### `contract_summary_view`
-
-```sql
-SELECT c.id,
-    c.name,
-    c.project_id,
-    c.organization_id,
-    c.client_id,
-    c.status,
-    c.currency_id,
-    c.original_contract_value,
-    c.created_at,
-    c.updated_at,
-    COALESCE(co_stats.total_cos, (0)::bigint) AS change_order_count,
-    COALESCE(co_stats.approved_cos, (0)::bigint) AS approved_change_order_count,
-    COALESCE(co_stats.pending_cos, (0)::bigint) AS pending_change_order_count,
-    COALESCE(co_stats.approved_changes_value, (0)::numeric) AS approved_changes_value,
-    COALESCE(co_stats.pending_changes_value, (0)::numeric) AS pending_changes_value,
-    (COALESCE(c.original_contract_value, (0)::numeric) + COALESCE(co_stats.approved_changes_value, (0)::numeric)) AS revised_contract_value,
-    ((COALESCE(c.original_contract_value, (0)::numeric) + COALESCE(co_stats.approved_changes_value, (0)::numeric)) + COALESCE(co_stats.pending_changes_value, (0)::numeric)) AS potential_contract_value
-   FROM (quotes c
-     LEFT JOIN ( SELECT co.parent_quote_id,
-            count(*) AS total_cos,
-            count(*) FILTER (WHERE (co.status = 'approved'::text)) AS approved_cos,
-            count(*) FILTER (WHERE (co.status = ANY (ARRAY['draft'::text, 'sent'::text]))) AS pending_cos,
-            COALESCE(sum(qv.total_with_tax) FILTER (WHERE (co.status = 'approved'::text)), (0)::numeric) AS approved_changes_value,
-            COALESCE(sum(qv.total_with_tax) FILTER (WHERE (co.status = ANY (ARRAY['draft'::text, 'sent'::text]))), (0)::numeric) AS pending_changes_value
-           FROM (quotes co
-             JOIN quotes_view qv ON ((qv.id = co.id)))
-          WHERE ((co.quote_type = 'change_order'::text) AND (co.is_deleted = false))
-          GROUP BY co.parent_quote_id) co_stats ON ((co_stats.parent_quote_id = c.id)))
-  WHERE ((c.quote_type = 'contract'::text) AND (c.is_deleted = false));
 ```
 
 ### `course_lesson_completions_view`
@@ -1579,7 +1479,17 @@ SELECT pc.id,
            FROM iam.organization_invitations inv
           WHERE ((inv.client_id = pc.id) AND (inv.organization_id = pc.organization_id) AND (inv.status = 'pending'::text))
           ORDER BY inv.created_at DESC
-         LIMIT 1) AS invitation_status
+         LIMIT 1) AS invitation_status,
+    ( SELECT inv.id
+           FROM iam.organization_invitations inv
+          WHERE ((inv.client_id = pc.id) AND (inv.organization_id = pc.organization_id) AND (inv.status = 'pending'::text))
+          ORDER BY inv.created_at DESC
+         LIMIT 1) AS invitation_id,
+    ( SELECT inv.created_at
+           FROM iam.organization_invitations inv
+          WHERE ((inv.client_id = pc.id) AND (inv.organization_id = pc.organization_id) AND (inv.status = 'pending'::text))
+          ORDER BY inv.created_at DESC
+         LIMIT 1) AS invitation_sent_at
    FROM (((project_clients pc
      LEFT JOIN contacts c ON ((c.id = pc.contact_id)))
      LEFT JOIN users u ON ((u.id = c.linked_user_id)))
@@ -1650,8 +1560,8 @@ SELECT ctms.project_id,
     (sum(ctms.quantity_planned))::numeric(20,4) AS total_required,
     count(DISTINCT ctms.construction_task_id) AS task_count,
     array_agg(DISTINCT ctms.construction_task_id) AS construction_task_ids
-   FROM ((((construction_task_material_snapshots ctms
-     JOIN construction_tasks ct ON ((ct.id = ctms.construction_task_id)))
+   FROM ((((construction.construction_task_material_snapshots ctms
+     JOIN construction.construction_tasks ct ON ((ct.id = ctms.construction_task_id)))
      JOIN materials m ON ((m.id = ctms.material_id)))
      LEFT JOIN units u ON ((u.id = m.unit_id)))
      LEFT JOIN material_categories mc ON ((mc.id = m.category_id)))
@@ -1695,61 +1605,6 @@ SELECT p.id,
      LEFT JOIN project_types pt ON (((pt.id = p.project_type_id) AND (pt.is_deleted = false))))
      LEFT JOIN project_modalities pm ON (((pm.id = p.project_modality_id) AND (pm.is_deleted = false))))
   WHERE (p.is_deleted = false);
-```
-
-### `quotes_view`
-
-```sql
-SELECT q.id,
-    q.organization_id,
-    q.project_id,
-    q.client_id,
-    q.name,
-    q.description,
-    q.status,
-    q.quote_type,
-    q.version,
-    q.currency_id,
-    q.exchange_rate,
-    q.tax_pct,
-    q.tax_label,
-    q.discount_pct,
-    q.quote_date,
-    q.valid_until,
-    q.approved_at,
-    q.approved_by,
-    q.created_at,
-    q.updated_at,
-    q.created_by,
-    q.is_deleted,
-    q.deleted_at,
-    q.updated_by,
-    q.parent_quote_id,
-    q.original_contract_value,
-    q.change_order_number,
-    c.name AS currency_name,
-    c.symbol AS currency_symbol,
-    p.name AS project_name,
-    concat_ws(' '::text, cl.first_name, cl.last_name) AS client_name,
-    parent.name AS parent_contract_name,
-    COALESCE(stats.item_count, (0)::bigint) AS item_count,
-    COALESCE(stats.subtotal, (0)::numeric) AS subtotal,
-    COALESCE(stats.subtotal_with_markup, (0)::numeric) AS subtotal_with_markup,
-    round((COALESCE(stats.subtotal_with_markup, (0)::numeric) * ((1)::numeric - (COALESCE(q.discount_pct, (0)::numeric) / 100.0))), 2) AS total_after_discount,
-    round(((COALESCE(stats.subtotal_with_markup, (0)::numeric) * ((1)::numeric - (COALESCE(q.discount_pct, (0)::numeric) / 100.0))) * ((1)::numeric + (COALESCE(q.tax_pct, (0)::numeric) / 100.0))), 2) AS total_with_tax
-   FROM (((((quotes q
-     LEFT JOIN currencies c ON ((q.currency_id = c.id)))
-     LEFT JOIN projects p ON ((q.project_id = p.id)))
-     LEFT JOIN contacts cl ON ((q.client_id = cl.id)))
-     LEFT JOIN quotes parent ON ((q.parent_quote_id = parent.id)))
-     LEFT JOIN ( SELECT quote_items.quote_id,
-            count(*) AS item_count,
-            sum((quote_items.quantity * quote_items.unit_price)) AS subtotal,
-            sum(((quote_items.quantity * quote_items.unit_price) * ((1)::numeric + (COALESCE(quote_items.markup_pct, (0)::numeric) / 100.0)))) AS subtotal_with_markup
-           FROM quote_items
-          WHERE (quote_items.is_deleted = false)
-          GROUP BY quote_items.quote_id) stats ON ((q.id = stats.quote_id)))
-  WHERE (q.is_deleted = false);
 ```
 
 ### `subcontract_payments_view`

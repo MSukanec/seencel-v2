@@ -12,6 +12,10 @@ export interface PendingInvitationData {
     inviter_name: string | null;
     /** When true, this is a client/collaborator invitation, not a member invitation */
     is_external: boolean;
+    /** Raw actor_type for context-aware display in the overlay */
+    actor_type: string | null;
+    /** Raw invitation_type: 'internal' | 'external' */
+    invitation_type: string;
 }
 
 /**
@@ -60,13 +64,21 @@ export async function checkPendingInvitation(email: string): Promise<PendingInvi
             : Promise.resolve(null),
     ]);
 
-    // Determine role_name: for external invitations, use actor_type label
+    // Determine role_name: for external invitations, use actor_type label FIRST
     const isExternal = (inv as any).invitation_type === 'external';
     const actorType = (inv as any).actor_type as string | null;
-    let roleName = roleDataResult?.data?.name || 'Miembro';
+    const invitationType = (inv as any).invitation_type as string ?? 'internal';
 
+    let roleName: string;
     if (isExternal && actorType && EXTERNAL_ACTOR_TYPE_LABELS[actorType]) {
+        // External invitation: use actor type label (Cliente, Contador, etc.)
         roleName = EXTERNAL_ACTOR_TYPE_LABELS[actorType].label;
+    } else if (isExternal) {
+        // External but unknown actor type
+        roleName = 'Colaborador externo';
+    } else {
+        // Internal member invitation: use role name from DB
+        roleName = roleDataResult?.data?.name || 'Miembro';
     }
 
     return {
@@ -77,5 +89,7 @@ export async function checkPendingInvitation(email: string): Promise<PendingInvi
         role_name: roleName,
         inviter_name: inviterResult as string | null,
         is_external: isExternal,
+        actor_type: actorType,
+        invitation_type: invitationType,
     };
 }

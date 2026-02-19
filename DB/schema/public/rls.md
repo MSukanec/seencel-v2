@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] RLS Policies (371)
+## [PUBLIC] RLS Policies (352)
 
 ### `app_settings` (4 policies)
 
@@ -256,7 +256,7 @@ can_view_project(project_id)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS EDITAN CLIENT_COMMITMENTS
@@ -265,7 +265,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS VEN CLIENT_COMMITMENTS
@@ -274,7 +274,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'clients.view'::text)
+can_view_org(organization_id, 'commercial.view'::text)
 ```
 
 ### `client_payment_schedule` (3 policies)
@@ -285,7 +285,7 @@ can_view_org(organization_id, 'clients.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS EDITAN CLIENT_PAYMENT_SCHEDULE
@@ -294,7 +294,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS VEN CLIENT_PAYMENT_SCHEDULE
@@ -303,7 +303,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'clients.view'::text)
+can_view_org(organization_id, 'commercial.view'::text)
 ```
 
 ### `client_payments` (4 policies)
@@ -323,7 +323,7 @@ can_view_project(project_id)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS EDITAN CLIENT_PAYMENTS
@@ -332,7 +332,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS VEN CLIENT_PAYMENTS
@@ -341,7 +341,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'clients.view'::text)
+can_view_org(organization_id, 'commercial.view'::text)
 ```
 
 ### `client_portal_settings` (3 policies)
@@ -352,7 +352,7 @@ can_view_org(organization_id, 'clients.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS EDITAN CLIENT_PORTAL_SETTINGS
@@ -361,7 +361,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 #### MIEMBROS VEN CLIENT_PORTAL_SETTINGS
@@ -370,7 +370,7 @@ can_mutate_org(organization_id, 'clients.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'clients.view'::text)
+can_view_org(organization_id, 'commercial.view'::text)
 ```
 
 ### `client_roles` (3 policies)
@@ -381,7 +381,7 @@ can_view_org(organization_id, 'clients.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'clients.manage'::text))
+((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'commercial.manage'::text))
 ```
 
 #### MIEMBROS EDITAN CLIENT_ROLES
@@ -390,7 +390,7 @@ can_view_org(organization_id, 'clients.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'clients.manage'::text))
+((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'commercial.manage'::text))
 ```
 
 #### MIEMBROS VEN CLIENT_ROLES
@@ -399,112 +399,7 @@ can_view_org(organization_id, 'clients.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NULL) OR can_view_org(organization_id, 'clients.view'::text))
-```
-
-### `construction_dependencies` (4 policies)
-
-#### MIEMBROS BORRAN CONSTRUCTION_DEPENDENCIES
-
-- **Command**: DELETE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS CREAN CONSTRUCTION_DEPENDENCIES
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS EDITAN CONSTRUCTION_DEPENDENCIES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS VEN CONSTRUCTION_DEPENDENCIES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_org(organization_id, 'projects.view'::text)
-```
-
-### `construction_task_material_snapshots` (3 policies)
-
-#### MIEMBROS CREAN CONSTRUCTION_TASK_MATERIAL_SNAPSHOTS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS EDITAN CONSTRUCTION_TASK_MATERIAL_SNAPSHOTS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS VEN CONSTRUCTION_TASK_MATERIAL_SNAPSHOTS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_org(organization_id, 'projects.view'::text)
-```
-
-### `construction_tasks` (4 policies)
-
-#### ACTORES VEN TAREAS DEL PROYECTO
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_project(project_id)
-```
-
-#### MIEMBROS CREAN CONSTRUCTION_TASKS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS EDITAN CONSTRUCTION_TASKS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS VEN CONSTRUCTION_TASKS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_org(organization_id, 'projects.view'::text)
+((organization_id IS NULL) OR can_view_org(organization_id, 'commercial.view'::text))
 ```
 
 ### `contact_categories` (3 policies)
@@ -1651,7 +1546,7 @@ can_view_org(organization_id, 'labor.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'catalog.manage'::text)
+can_mutate_org(organization_id, 'tasks.manage'::text)
 ```
 
 #### MIEMBROS CREAN LABOR_PRICES
@@ -1660,7 +1555,7 @@ can_mutate_org(organization_id, 'catalog.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'catalog.manage'::text)
+can_mutate_org(organization_id, 'tasks.manage'::text)
 ```
 
 #### MIEMBROS EDITAN LABOR_PRICES
@@ -1669,7 +1564,7 @@ can_mutate_org(organization_id, 'catalog.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'catalog.manage'::text)
+can_mutate_org(organization_id, 'tasks.manage'::text)
 ```
 
 #### MIEMBROS VEN LABOR_PRICES
@@ -1678,7 +1573,7 @@ can_mutate_org(organization_id, 'catalog.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'catalog.view'::text)
+can_view_org(organization_id, 'tasks.view'::text)
 ```
 
 ### `labor_roles` (2 policies)
@@ -2749,86 +2644,6 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 (can_view_org(organization_id, 'projects.view'::text) OR (EXISTS ( SELECT 1
    FROM project_data pd
   WHERE ((pd.project_id = projects.id) AND (pd.is_public = true)))))
-```
-
-### `quote_items` (4 policies)
-
-#### ACTORES VEN ITEMS PRESUPUESTO DEL PROYECTO
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_project(project_id)
-```
-
-#### MIEMBROS CREAN QUOTE_ITEMS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'quotes.manage'::text)
-```
-
-#### MIEMBROS EDITAN QUOTE_ITEMS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'quotes.manage'::text)
-```
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'quotes.manage'::text)
-```
-
-#### MIEMBROS VEN QUOTE_ITEMS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_org(organization_id, 'quotes.view'::text)
-```
-
-### `quotes` (4 policies)
-
-#### ACTORES VEN PRESUPUESTOS DEL PROYECTO
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_project(project_id)
-```
-
-#### MIEMBROS ACTUALIZAN QUOTES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'quotes.manage'::text)
-```
-
-#### MIEMBROS CREAN QUOTES
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'quotes.manage'::text)
-```
-
-#### MIEMBROS VEN QUOTES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_org(organization_id, 'quotes.view'::text)
 ```
 
 ### `role_permissions` (4 policies)

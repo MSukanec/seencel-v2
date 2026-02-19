@@ -194,3 +194,67 @@ export async function getUserTimezone(): Promise<string | null> {
 
     return prefs?.timezone || null;
 }
+
+// ============================================================================
+// Access Context Check (lightweight — for Phase 1 hydration in layout)
+// ============================================================================
+
+/**
+ * Checks if the user is a member and/or external actor of the active org.
+ * This runs in the server layout (Phase 1) so the access-context-store is
+ * hydrated immediately on first render — eliminating the sidebar flash for
+ * external users who would otherwise momentarily see the member sidebar.
+ */
+export async function checkUserAccessContext(
+    authId: string,
+    orgId: string | null
+): Promise<{
+    isMember: boolean;
+    isExternal: boolean;
+    externalActorType: string | null;
+    isExternalActorActive: boolean;
+}> {
+    if (!orgId) {
+        return { isMember: false, isExternal: false, externalActorType: null, isExternalActorActive: false };
+    }
+
+    const supabase = await createClient();
+
+    // Resolve internal user id
+    const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', authId)
+        .single();
+
+    const internalUserId = userData?.id;
+    if (!internalUserId) {
+        return { isMember: true, isExternal: false, externalActorType: null, isExternalActorActive: false };
+    }
+
+    const [memberResult, actorResult] = await Promise.all([
+        supabase
+            .from('organization_members')
+            .select('id')
+            .eq('organization_id', orgId)
+            .eq('user_id', internalUserId)
+            .eq('is_active', true)
+            .maybeSingle(),
+        supabase
+            .from('organization_external_actors')
+            .select('id, actor_type, is_active')
+            .eq('organization_id', orgId)
+            .eq('user_id', internalUserId)
+            .eq('is_deleted', false)
+            .maybeSingle(),
+    ]);
+
+    const isMember = !!memberResult.data;
+    const actor = actorResult.data as any;
+    const isExternal = !!actor;
+    const isExternalActorActive = actor?.is_active === true;
+    const externalActorType = actor?.actor_type || null;
+
+    return { isMember, isExternal, externalActorType, isExternalActorActive };
+}
+

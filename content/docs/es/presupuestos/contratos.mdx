@@ -1,0 +1,88 @@
+---
+title: Contratos
+description: Cómo funcionan los contratos en SEENCEL y qué los diferencia de una cotización.
+---
+
+# Contratos
+
+Un **Contrato** en SEENCEL es un documento comercial vinculante que refleja el acuerdo formal con un cliente. A diferencia de una cotización, un contrato tiene monto comprometido, plazo definido y puede recibir **Órdenes de Cambio**.
+
+---
+
+## ¿Qué diferencia un Contrato de una Cotización?
+
+| Característica | Cotización | Contrato |
+|----------------|:----------:|:--------:|
+| Monto comprometido | No | ✅ Sí |
+| Órdenes de Cambio | No | ✅ Sí |
+| Resumen financiero | No | ✅ Sí |
+| Plazo contractual | No | ✅ Sí |
+| Conversión a contrato | — | Desde cotización |
+
+---
+
+## Crear un contrato
+
+Podés crear un contrato de dos formas:
+
+### Directamente como contrato
+1. Hacé click en **"Nuevo Presupuesto"**
+2. En el campo **Tipo**, seleccioná **"Contrato"**
+3. Completá el resto del formulario normalmente
+
+### Convirtiendo una cotización
+Si ya tenés una cotización aprobada:
+1. Abrí la cotización
+2. Desde el menú de acciones, seleccioná **"Convertir a Contrato"**
+3. Los ítems, el cliente y los montos se copian automáticamente
+
+<Callout type="tip">
+Convertir una cotización en contrato es la forma recomendada cuando ya tenés el desglose de ítems aprobado por el cliente. Así mantenés un historial claro del proceso.
+</Callout>
+
+---
+
+## Resumen financiero del contrato
+
+La pestaña **Resumen** de un contrato muestra:
+
+| Campo | Descripción |
+|-------|-------------|
+| **Monto base** | El total del contrato original (ítems + márgenes) |
+| **Órdenes de Cambio** | Total acumulado de todos los adicionales aprobados |
+| **Monto total revisado** | Monto base + Órdenes de Cambio aprobadas |
+
+<Callout type="info" title="Moneda dual">
+Si el contrato tiene tipo de cambio configurado, el resumen muestra los totales en ambas monedas simultáneamente.
+</Callout>
+
+---
+
+## Órdenes de Cambio
+
+Las Órdenes de Cambio son modificaciones formales al contrato. Representan trabajos adicionales, reducciones de alcance o ajustes de precio que se producen durante la ejecución.
+
+Desde la pestaña **Órdenes de Cambio** podés:
+
+- Ver todas las OC del contrato con su número correlativo
+- Ver el monto y estado de cada una
+- Acceder al detalle de cada OC
+
+Para agregar una nueva OC, hacé click en **"Nueva Orden de Cambio"** dentro de la pestaña.
+
+Consultá la documentación de **Órdenes de Cambio** para más detalles.
+
+---
+
+## Estados del contrato
+
+Los contratos siguen el mismo flujo de estados que las cotizaciones:
+
+1. **Borrador** → En preparación
+2. **Enviado** → Enviado al cliente para revisión
+3. **Aprobado** → Firmado y vigente
+4. **Rechazado** → No se llegó a un acuerdo
+
+<Callout type="important">
+Un contrato en estado **Aprobado** puede seguir recibiendo Órdenes de Cambio. El estado del contrato base no bloquea la gestión de adicionales.
+</Callout>

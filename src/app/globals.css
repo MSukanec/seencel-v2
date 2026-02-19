@@ -28,7 +28,7 @@
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.38 0.01 260);
+  --primary: #7eaf3a;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -42,45 +42,32 @@
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.50 0.02 270);
 
-  /* ── Gantt Chart ──
-     Colores de la barra de progreso del Gantt.
-     gantt-progress = relleno parcial (1-99%)
-     gantt-complete = barra llena (100%) */
-  --gantt-progress: oklch(0.55 0.15 250);
-  /* Azul medio */
-  --gantt-complete: oklch(0.60 0.17 150);
-  /* Verde lima */
+  /* ── Sidebar ── */
+  --sidebar: oklch(0.97 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.42 0.02 270);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.705 0.015 286.067);
 
-  /* ── Semantic Status Colors ──
-     Usar estas variables en TODA la app para representar estados.
-     Cambiar ACA cambia en TODOS lados: badges, dots, barras, textos, etc. */
-  --success: oklch(0.60 0.15 145);
-  /* Verde — Completado, Activo, Cobrado */
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.75 0.15 75);
-  /* Ámbar — Pausado, Pendiente de pago */
-  --warning-foreground: oklch(0.20 0.02 75);
-  --info: oklch(0.60 0.15 250);
-  /* Azul — En progreso, Info */
-  --info-foreground: oklch(0.985 0 0);
+  /* ── Semantic Colors ── */
+  --semantic-positive: #576642;
+  --semantic-positive-fg: oklch(0.985 0 0);
+  --semantic-negative: oklch(0.54 0.19 24);
+  --semantic-negative-fg: oklch(0.985 0 0);
+  --semantic-warning: oklch(0.75 0.15 75);
+  --semantic-warning-fg: oklch(0.20 0.02 75);
+  --semantic-info: oklch(0.60 0.15 250);
+  --semantic-info-fg: oklch(0.985 0 0);
+  --semantic-neutral: oklch(0.60 0.12 235);
+  --semantic-neutral-fg: oklch(0.985 0 0);
 
-  /* ── Financial Semantic Colors ──
-     Para montos: ingresos/egresos/balance.
-     Tablas, charts, KPIs, badges, etc. */
-  --amount-positive: oklch(69.766% 0.16285 126.686);
-  /* Lima suave — Ingresos, Cobrado */
-  --amount-negative: oklch(54.392% 0.19137 24.073);
-  /* Terracota — Egresos, Deuda */
-  --amount-neutral: oklch(60.209% 0.12049 235.006);
-  /* Gris azulado — Balance neutral */
-
-  /* ── System Indicator ──
-     Para items "de sistema" (catálog, unidades, etc.) */
+  /* ── System Indicator ── */
   --system: oklch(50% 0 0);
 
-  /* ── Chart Palette ──
-     Colores secuenciales para visualización de datos.
-     El orden importa: se usan en serie en charts multi-series. */
+  /* ── Chart Palette ── */
   --chart-1: #758a57;
   /* Oliva — Primary */
   --chart-2: #7c72ab;
@@ -97,16 +84,6 @@
   /* Índigo */
   --chart-8: #F43F5E;
   /* Rosa — Alert */
-
-  /* ── Sidebar ── */
-  --sidebar: oklch(0.97 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.42 0.02 270);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
 
   /* ── Plan Colors (universales, no cambian por tema) ── */
   --plan-free: oklch(0.55 0 0);
@@ -128,7 +105,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: #242424;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.55 0.01 260);
+  --primary: oklch(60% 0.05 134.135);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -141,15 +118,6 @@
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.62 0.02 270);
 
-  /* ── Semantic Status Colors (dark overrides) ── */
-  --success: oklch(0.65 0.17 145);
-  --warning: oklch(0.78 0.14 75);
-  --info: oklch(0.65 0.17 250);
-
-  /* ── Gantt Chart (dark overrides) ── */
-  --gantt-progress: oklch(0.60 0.17 250);
-  --gantt-complete: #647343;
-
   /* ── Sidebar ── */
   --sidebar: #303030;
   --sidebar-foreground: oklch(0.985 0 0);
@@ -159,6 +127,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+
+  /* ── Semantic Colors (dark overrides) ── */
+  --semantic-positive: oklch(0.65 0.17 145);
+  --semantic-negative: oklch(0.65 0.20 24);
+  --semantic-warning: oklch(0.78 0.14 75);
+  --semantic-info: oklch(0.65 0.17 250);
+  --semantic-neutral: oklch(0.65 0.10 235);
 }
 
 /* ============================================================================
@@ -201,17 +176,25 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Semantic Status → Tailwind (bg-success, text-success, etc.) */
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
+  /* Semantic Colors → Tailwind (bg-semantic-positive, text-semantic-negative, etc.) */
+  --color-semantic-positive: var(--semantic-positive);
+  --color-semantic-positive-fg: var(--semantic-positive-fg);
+  --color-semantic-negative: var(--semantic-negative);
+  --color-semantic-negative-fg: var(--semantic-negative-fg);
+  --color-semantic-warning: var(--semantic-warning);
+  --color-semantic-warning-fg: var(--semantic-warning-fg);
+  --color-semantic-info: var(--semantic-info);
+  --color-semantic-info-fg: var(--semantic-info-fg);
+  --color-semantic-neutral: var(--semantic-neutral);
+  --color-semantic-neutral-fg: var(--semantic-neutral-fg);
 
-  /* Gantt → Tailwind (bg-gantt-progress, bg-gantt-complete) */
-  --color-gantt-progress: var(--gantt-progress);
-  --color-gantt-complete: var(--gantt-complete);
+  /* Aliases de compatibilidad — los viejos nombres siguen funcionando en Tailwind */
+  --color-success: var(--semantic-positive);
+  --color-success-foreground: var(--semantic-positive-fg);
+  --color-warning: var(--semantic-warning);
+  --color-warning-foreground: var(--semantic-warning-fg);
+  --color-info: var(--semantic-info);
+  --color-info-foreground: var(--semantic-info-fg);
 
   /* Charts → Tailwind */
   --color-chart-1: var(--chart-1);
@@ -233,6 +216,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+
 
 /* ============================================================================
    4. @layer base — Estilos globales
@@ -362,41 +346,43 @@
    6. UTILITY CLASSES
    ============================================================================ */
 
-/* ── Financial Amount Utilities ── */
+/* ── Financial Amount Utilities ──
+   Mantienen sus nombres originales para compatibilidad con los 50+ usos en la app.
+   Internamente apuntan al sistema semántico unificado. */
 .text-amount-positive {
-  color: var(--amount-positive);
+  color: var(--semantic-positive);
 }
 
 .text-amount-negative {
-  color: var(--amount-negative);
+  color: var(--semantic-negative);
 }
 
 .text-amount-neutral {
-  color: var(--amount-neutral);
+  color: var(--semantic-neutral);
 }
 
 .bg-amount-positive {
-  background-color: var(--amount-positive);
+  background-color: var(--semantic-positive);
 }
 
 .bg-amount-negative {
-  background-color: var(--amount-negative);
+  background-color: var(--semantic-negative);
 }
 
 .bg-amount-positive\/10 {
-  background-color: color-mix(in srgb, var(--amount-positive) 10%, transparent);
+  background-color: color-mix(in srgb, var(--semantic-positive) 10%, transparent);
 }
 
 .bg-amount-negative\/10 {
-  background-color: color-mix(in srgb, var(--amount-negative) 10%, transparent);
+  background-color: color-mix(in srgb, var(--semantic-negative) 10%, transparent);
 }
 
 .border-amount-positive\/20 {
-  border-color: color-mix(in srgb, var(--amount-positive) 20%, transparent);
+  border-color: color-mix(in srgb, var(--semantic-positive) 20%, transparent);
 }
 
 .border-amount-negative\/20 {
-  border-color: color-mix(in srgb, var(--amount-negative) 20%, transparent);
+  border-color: color-mix(in srgb, var(--semantic-negative) 20%, transparent);
 }
 
 /* ── System Indicator Utilities ── */
@@ -410,13 +396,13 @@
 
 /* ── Glow Effects ── */
 .glow-positive {
-  box-shadow: 0 0 12px color-mix(in srgb, var(--amount-positive) 40%, transparent),
-    0 0 4px color-mix(in srgb, var(--amount-positive) 20%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--semantic-positive) 40%, transparent),
+    0 0 4px color-mix(in srgb, var(--semantic-positive) 20%, transparent);
 }
 
 .glow-negative {
-  box-shadow: 0 0 12px color-mix(in srgb, var(--amount-negative) 40%, transparent),
-    0 0 4px color-mix(in srgb, var(--amount-negative) 20%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--semantic-negative) 40%, transparent),
+    0 0 4px color-mix(in srgb, var(--semantic-negative) 20%, transparent);
 }
 
 .glow-primary {
@@ -425,14 +411,15 @@
 }
 
 .dark .glow-positive {
-  box-shadow: 0 0 16px color-mix(in srgb, var(--amount-positive) 50%, transparent),
-    0 0 6px color-mix(in srgb, var(--amount-positive) 30%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--semantic-positive) 50%, transparent),
+    0 0 6px color-mix(in srgb, var(--semantic-positive) 30%, transparent);
 }
 
 .dark .glow-negative {
-  box-shadow: 0 0 16px color-mix(in srgb, var(--amount-negative) 50%, transparent),
-    0 0 6px color-mix(in srgb, var(--amount-negative) 30%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--semantic-negative) 50%, transparent),
+    0 0 6px color-mix(in srgb, var(--semantic-negative) 30%, transparent);
 }
+
 
 /* ── Scrollbar — Minimalist & Theme Aware ── */
 ::-webkit-scrollbar {

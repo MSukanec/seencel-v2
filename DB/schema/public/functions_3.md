@@ -1,272 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 3: handle_payment_course_success — log_activity)
-
-### `handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$DECLARE
-    v_payment_id uuid;
-    v_course_name text;
-    v_step text := 'start';
-BEGIN
-    -- ============================================================
-    -- 1) Idempotencia
-    -- ============================================================
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
-
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
-    v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        NULL,
-        'course',
-        NULL,
-        p_course_id,
-        p_amount,
-        p_currency,
-        p_metadata
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
-    END IF;
-
-    -- ============================================================
-    -- 3) Enroll anual al curso
-    -- ============================================================
-    v_step := 'course_enrollment_annual';
-    PERFORM public.step_course_enrollment_annual(
-        p_user_id,
-        p_course_id
-    );
-
-    -- ============================================================
-    -- 4) NUEVO: Enviar emails de confirmación
-    -- ============================================================
-    v_step := 'send_purchase_email';
-    
-    -- Obtener nombre del curso
-    SELECT title INTO v_course_name
-    FROM public.courses
-    WHERE id = p_course_id;
-    
-    PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'course',
-        COALESCE(v_course_name, 'Curso'),
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
-    );
-
-    -- ============================================================
-    -- DONE
-    -- ============================================================
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'course',
-            'handle_payment_course_success',
-            SQLERRM,
-            jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
-                'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'course_id', p_course_id,
-                'amount', p_amount,
-                'currency', p_currency
-            ),
-            'critical'
-        );
-
-        RETURN jsonb_build_object(
-            'status', 'ok_with_warning',
-            'payment_id', v_payment_id,
-            'warning_step', v_step
-        );
-END;$function$
-```
-</details>
-
-### `handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$DECLARE
-    v_payment_id uuid;
-    v_subscription_id uuid;
-    v_plan_name text;
-    v_step text := 'start';
-BEGIN
-    -- ============================================================
-    -- 1) Idempotencia fuerte
-    -- ============================================================
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
-
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
-    v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        p_organization_id,
-        'subscription',
-        p_plan_id,
-        NULL,
-        p_amount,
-        p_currency,
-        p_metadata
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
-    END IF;
-
-    -- ============================================================
-    -- 3) Expirar suscripción anterior
-    -- ============================================================
-    v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(
-        p_organization_id
-    );
-
-    -- ============================================================
-    -- 4) Crear nueva suscripción activa
-    -- ============================================================
-    v_step := 'create_active_subscription';
-    v_subscription_id := public.step_subscription_create_active(
-        p_organization_id,
-        p_plan_id,
-        p_billing_period,
-        v_payment_id,
-        p_amount,
-        p_currency
-    );
-
-    -- ============================================================
-    -- 5) Actualizar plan activo
-    -- ============================================================
-    v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(
-        p_organization_id,
-        p_plan_id
-    );
-
-    -- ============================================================
-    -- 6) Fundadores (solo anual)
-    -- ============================================================
-    IF p_billing_period = 'annual' THEN
-        v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(
-            p_user_id,
-            p_organization_id
-        );
-    END IF;
-
-    -- ============================================================
-    -- 7) NUEVO: Enviar emails de confirmación
-    -- ============================================================
-    v_step := 'send_purchase_email';
-    
-    -- Obtener nombre del plan
-    SELECT name INTO v_plan_name
-    FROM public.plans
-    WHERE id = p_plan_id;
-    
-    PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'subscription',
-        COALESCE(v_plan_name, 'Plan') || ' (' || p_billing_period || ')',
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
-    );
-
-    -- ============================================================
-    -- OK
-    -- ============================================================
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id,
-        'subscription_id', v_subscription_id
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'subscription',
-            'handle_payment_subscription_success',
-            SQLERRM,
-            jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
-                'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'organization_id', p_organization_id,
-                'plan_id', p_plan_id,
-                'billing_period', p_billing_period
-            ),
-            'critical'
-        );
-
-        RETURN jsonb_build_object(
-            'status', 'ok_with_warning',
-            'payment_id', v_payment_id,
-            'subscription_id', v_subscription_id,
-            'warning_step', v_step
-        );
-END;$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 3: handle_registered_invitation — log_client_commitment_activity)
 
 ### `handle_registered_invitation()` 🔐
 
@@ -931,5 +668,100 @@ begin
   );
 end;
 $function$
+```
+</details>
+
+### `log_calendar_event_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.log_calendar_event_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD;
+        audit_action := 'delete_calendar_event';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        -- AQUI ESTA EL CAMBIO: Chequeamos deleted_at en vez de is_deleted
+        IF (OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL) THEN
+            audit_action := 'delete_calendar_event';
+        ELSE
+            audit_action := 'update_calendar_event';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW;
+        audit_action := 'create_calendar_event';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    audit_metadata := jsonb_build_object(
+        'title', target_record.title,
+        'start_at', target_record.start_at,
+        'source_type', target_record.source_type
+    );
+
+    BEGIN
+        INSERT INTO public.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id,
+            resolved_member_id,
+            audit_action,
+            target_record.id,
+            'calendar_events',
+            audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN
+        NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
+
+### `log_client_commitment_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.log_client_commitment_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    resolved_member_id uuid; audit_action text; audit_metadata jsonb; target_record RECORD;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN target_record := OLD; audit_action := 'delete_commitment'; resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN target_record := NEW; 
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN audit_action := 'delete_commitment'; ELSE audit_action := 'update_commitment'; END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN target_record := NEW; audit_action := 'create_commitment'; resolved_member_id := NEW.created_by; END IF;
+    audit_metadata := jsonb_build_object('amount', target_record.amount, 'currency_id', target_record.currency_id);
+    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
+    VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_commitments', audit_metadata);
+    EXCEPTION WHEN OTHERS THEN NULL; END;
+    RETURN NULL;
+END; $function$
 ```
 </details>

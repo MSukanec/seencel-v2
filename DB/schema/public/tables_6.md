@@ -1,107 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 6: pin_boards — system_error_logs)
-
-### `pin_boards`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| project_id | uuid | ✓ |  | FK → projects.id |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| created_by | uuid | ✗ |  | FK → organization_members.id |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-
-### `pins`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| title | text | ✓ |  |  |
-| source_url | text | ✓ |  |  |
-| image_url | text | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| project_id | uuid | ✓ |  | FK → projects.id |
-| media_file_id | uuid | ✓ |  | FK → media_files.id |
-
-### `plans`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  | UNIQUE |
-| features | jsonb | ✓ |  |  |
-| is_active | bool | ✓ | true |  |
-| billing_type | text | ✓ | 'per_user'::text |  |
-| slug | text | ✓ |  |  |
-| monthly_amount | numeric | ✓ |  |  |
-| annual_amount | numeric | ✓ |  |  |
-| paypal_product_id | text | ✓ |  |  |
-| paypal_plan_monthly_id | text | ✓ |  |  |
-| paypal_plan_annual_id | text | ✓ |  |  |
-| mp_plan_monthly_id | text | ✓ |  |  |
-| mp_plan_annual_id | text | ✓ |  |  |
-| status | text | ✗ | 'available'::text |  |
-| paypal_product_id_sandbox | text | ✓ |  |  |
-| paypal_plan_monthly_id_sandbox | text | ✓ |  |  |
-| paypal_plan_annual_id_sandbox | text | ✓ |  |  |
-| annual_discount_percent | numeric | ✓ | 0 |  |
-
-### `product_prices`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| provider_product_id | uuid | ✗ |  | FK → provider_products.id |
-| price | numeric | ✓ |  |  |
-| currency_id | uuid | ✓ |  | FK → currencies.id |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-
-### `products`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| material_id | uuid | ✓ |  | FK → materials.id |
-| brand_id | uuid | ✓ |  | FK → brands.id |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| image_url | text | ✓ |  |  |
-| specs | jsonb | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-| unit_id | uuid | ✓ |  |  |
-| default_price | numeric | ✓ |  |  |
-| default_provider | text | ✓ |  |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| url | text | ✓ |  |  |
-| is_system | bool | ✓ | true |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-
-### `project_access`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | UNIQUE, FK → projects.id |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
-| access_type | text | ✗ |  |  |
-| access_level | text | ✗ | 'viewer'::text |  |
-| granted_by | uuid | ✓ |  | FK → organization_members.id |
-| is_active | bool | ✗ | true |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| client_id | uuid | ✓ |  | FK → project_clients.id |
+## [PUBLIC] Tables (chunk 6: project_clients — task_element_parameters)
 
 ### `project_clients`
 
@@ -263,62 +165,6 @@
 | user_agent | text | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
 
-### `quote_items`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| quote_id | uuid | ✗ |  | FK → quotes.id |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| task_id | uuid | ✓ |  | FK → tasks.id |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| project_id | uuid | ✓ |  | FK → projects.id |
-| description | text | ✓ |  |  |
-| quantity | numeric | ✗ | 1 |  |
-| unit_price | numeric | ✗ | 0 |  |
-| currency_id | uuid | ✗ |  | FK → currencies.id |
-| markup_pct | numeric | ✗ | 0 |  |
-| tax_pct | numeric | ✗ | 0 |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| cost_scope | cost_scope_enum | ✗ | 'materials_and_labor'::cost_scope_enum |  |
-| sort_key | numeric | ✗ | 0 |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `quotes`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  | UNIQUE |
-| description | text | ✓ |  |  |
-| project_id | uuid | ✓ |  | UNIQUE, FK → projects.id |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| status | text | ✗ | 'draft'::text |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| version | int4 | ✗ | 1 | UNIQUE |
-| currency_id | uuid | ✗ |  | FK → currencies.id |
-| exchange_rate | numeric | ✓ |  |  |
-| tax_pct | numeric | ✗ | 0 |  |
-| tax_label | text | ✓ | '''IVA''::text'::text |  |
-| discount_pct | numeric | ✗ | 0 |  |
-| client_id | uuid | ✓ |  | FK → contacts.id |
-| quote_type | text | ✗ | 'quote'::text |  |
-| valid_until | date | ✓ |  |  |
-| approved_at | timestamptz | ✓ |  |  |
-| approved_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| quote_date | date | ✓ |  |  |
-| parent_quote_id | uuid | ✓ |  | FK → quotes.id |
-| original_contract_value | numeric | ✓ |  |  |
-| change_order_number | int4 | ✓ |  |  |
-
 ### `role_permissions`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -462,7 +308,7 @@
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
 | subcontract_id | uuid | ✗ |  | FK → subcontracts.id |
-| task_id | uuid | ✗ |  | FK → construction_tasks.id |
+| task_id | uuid | ✗ |  |  |
 | unit | text | ✓ |  |  |
 | amount | numeric | ✓ |  |  |
 | notes | text | ✓ |  |  |
@@ -529,3 +375,97 @@
 | context | jsonb | ✓ |  |  |
 | severity | text | ✗ | 'error'::text |  |
 | created_at | timestamptz | ✗ | now() |  |
+
+### `system_job_logs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| subscription_id | uuid | ✓ |  |  |
+| job_type | text | ✗ |  |  |
+| details | jsonb | ✓ |  |  |
+| status | text | ✗ |  |  |
+| error_message | text | ✓ |  |  |
+| processed_at | timestamptz | ✓ | now() |  |
+
+### `task_actions`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| name | text | ✓ |  | UNIQUE |
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| description | text | ✓ |  |  |
+| short_code | varchar(10) | ✓ |  |  |
+
+### `task_construction_systems`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| name | text | ✗ |  | UNIQUE |
+| slug | text | ✗ |  | UNIQUE |
+| description | text | ✓ |  |  |
+| code | varchar(10) | ✓ |  |  |
+| icon | text | ✓ |  |  |
+| order | int4 | ✓ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `task_division_actions`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| division_id | uuid | ✗ |  | PK, FK → task_divisions.id |
+| action_id | uuid | ✗ |  | PK, FK → task_actions.id |
+| created_at | timestamptz | ✓ | now() |  |
+
+### `task_division_elements`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| division_id | uuid | ✗ |  | PK, FK → task_divisions.id |
+| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
+| created_at | timestamptz | ✓ | now() |  |
+
+### `task_divisions`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| order | int4 | ✓ |  |  |
+| code | text | ✓ |  |  |
+| parent_id | uuid | ✓ |  | FK → task_divisions.id |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| is_system | bool | ✗ | true |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+| import_batch_id | uuid | ✓ |  | FK → import_batches.id |
+
+### `task_element_actions`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| action_id | uuid | ✗ |  | PK, FK → task_actions.id |
+| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
+| created_at | timestamptz | ✓ | now() |  |
+
+### `task_element_parameters`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
+| parameter_id | uuid | ✗ |  | PK, FK → task_parameters.id |
+| order | int4 | ✓ | 0 |  |
+| is_required | bool | ✓ | true |  |
+| created_at | timestamptz | ✓ | now() |  |

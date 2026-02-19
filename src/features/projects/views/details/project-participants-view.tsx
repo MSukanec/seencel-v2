@@ -10,6 +10,7 @@ import { ContentLayout } from "@/components/layout";
 import { useModal } from "@/stores/modal-store";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { ClientForm } from "@/features/clients/forms/clients-form";
+import { InviteClientPortalForm } from "@/features/clients/forms/invite-client-portal-form";
 import { ContactForm } from "@/features/contact/forms/contact-form";
 import { CollaboratorForm } from "@/features/external-actors/forms/collaborator-form";
 import {
@@ -99,7 +100,7 @@ export function ProjectParticipantsView({
             />,
             {
                 title: "Agregar Cliente",
-                description: "Vinculá un contacto existente o invitá un cliente por email.",
+                description: "Vinculá un contacto existente al proyecto.",
                 size: "md",
             }
         );
@@ -175,6 +176,25 @@ export function ProjectParticipantsView({
 
     const handleDeleteCollaborator = (participant: ParticipantItemData) => {
         setConfirmTarget({ data: participant, type: "collaborator", action: "delete" });
+    };
+
+    // ── Handlers: Send Invitation ───────────────────────────────────────
+
+    const handleSendInvitation = (participant: ParticipantItemData) => {
+        openModal(
+            <InviteClientPortalForm
+                clientId={participant.id}
+                contactName={participant.contact_full_name}
+                contactEmail={participant.contact_email}
+                contactAvatarUrl={participant.contact_avatar_url}
+                isSeencelUser={!!participant.linked_user_id}
+            />,
+            {
+                title: "Invitar al Portal",
+                description: `Enviá una invitación a ${participant.contact_full_name || participant.contact_email || 'el cliente'} para acceder al portal del proyecto.`,
+                size: "lg",
+            }
+        );
     };
 
     // ── Handlers: Reactivate ────────────────────────────────────────────
@@ -309,7 +329,13 @@ export function ProjectParticipantsView({
     // ── Confirmation Dialog Labels ──────────────────────────────────────
 
     const getConfirmDialogProps = () => {
-        if (!confirmTarget) return { title: "", description: <></>, confirmLabel: "" };
+        if (!confirmTarget) return {
+            title: "",
+            description: <></>,
+            confirmLabel: "",
+            validationText: undefined as string | undefined,
+            validationPrompt: undefined as string | undefined,
+        };
 
         const name = confirmTarget.data.contact_full_name || "este participante";
         const typeLabel = confirmTarget.type === "client" ? "cliente" : "colaborador";
@@ -318,26 +344,57 @@ export function ProjectParticipantsView({
             return {
                 title: `Eliminar ${typeLabel}`,
                 description: (
-                    <>
-                        ¿Estás seguro de que querés eliminar a{" "}
-                        <strong>{name}</strong> de este proyecto?
-                        Se eliminará de forma permanente y no aparecerá en el historial.
-                    </>
+                    <div className="space-y-3 text-sm">
+                        <p>
+                            Estás a punto de <strong>eliminar permanentemente</strong> a{" "}
+                            <strong>{name}</strong> de este proyecto.
+                        </p>
+                        <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-1.5">
+                            <p className="font-medium text-destructive">⚠️ Esta acción tiene consecuencias importantes:</p>
+                            <ul className="space-y-1 text-muted-foreground list-disc list-inside">
+                                <li>El {typeLabel} <strong>desaparecerá</strong> de la lista del proyecto.</li>
+                                <li>Perderá acceso inmediato al portal del cliente.</li>
+                                <li><strong>No podrás recuperar esta vinculación</strong> desde el producto.</li>
+                                <li>Los pagos y compromisos ya registrados <strong>se mantienen</strong> en el sistema, pero quedarán sin un {typeLabel} activo.</li>
+                            </ul>
+                        </div>
+                        <p className="text-muted-foreground">
+                            Si solo querés revocarle el acceso temporalmente, usá <strong>Desvincular</strong> en su lugar — es reversible.
+                        </p>
+                    </div>
                 ),
-                confirmLabel: "Eliminar",
+                confirmLabel: "Eliminar definitivamente",
+                validationText: name,
+                validationPrompt: `Escribí {text} para confirmar que querés eliminar a esta persona:`,
             };
         }
 
+        // Deactivate / Desvincular
         return {
             title: `Desvincular ${typeLabel}`,
             description: (
-                <>
-                    ¿Querés desvincular a <strong>{name}</strong> de este proyecto?
-                    Se le revocará el acceso pero quedará visible en el historial.
-                    Podrás reactivarlo en cualquier momento.
-                </>
+                <div className="space-y-3 text-sm">
+                    <p>
+                        Estás a punto de <strong>desvincular</strong> a{" "}
+                        <strong>{name}</strong> de este proyecto.
+                    </p>
+                    <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 space-y-1.5">
+                        <p className="font-medium text-amber-600 dark:text-amber-400">Qué significa desvincular:</p>
+                        <ul className="space-y-1 text-muted-foreground list-disc list-inside">
+                            <li>El {typeLabel} <strong>perderá acceso al portal</strong> del proyecto.</li>
+                            <li>Seguirá apareciendo en el <strong>historial</strong> del proyecto.</li>
+                            <li>Podés <strong>reactivarlo en cualquier momento</strong> desde el historial.</li>
+                            <li>Sus pagos y compromisos registrados <strong>no se modifican</strong>.</li>
+                        </ul>
+                    </div>
+                    <p className="text-muted-foreground">
+                        Usá esta opción si la relación con el cliente terminó o querés revocar su acceso temporalmente.
+                    </p>
+                </div>
             ),
             confirmLabel: "Desvincular",
+            validationText: undefined,
+            validationPrompt: undefined,
         };
     };
 
@@ -383,6 +440,7 @@ export function ProjectParticipantsView({
                                     onEditContact={client.invitation_status === 'pending' ? undefined : handleEditContact}
                                     onDeactivate={client.invitation_status === 'pending' ? undefined : handleDeactivateClient}
                                     onDelete={client.invitation_status === 'pending' ? undefined : handleDeleteClient}
+                                    onSendInvitation={client.invitation_status === 'pending' ? undefined : handleSendInvitation}
                                     onResendInvitation={client.invitation_status === 'pending' ? handleResendInvitation : undefined}
                                     onRevokeInvitation={client.invitation_status === 'pending' ? handleRevokeInvitation : undefined}
                                 />
@@ -493,6 +551,8 @@ export function ProjectParticipantsView({
                 title={dialogProps.title}
                 description={dialogProps.description}
                 confirmLabel={dialogProps.confirmLabel}
+                validationText={dialogProps.validationText}
+                validationPrompt={dialogProps.validationPrompt}
                 isDeleting={isPending}
                 deletingLabel={confirmTarget?.action === "delete" ? "Eliminando..." : "Desvinculando..."}
             />

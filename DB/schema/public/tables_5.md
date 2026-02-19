@@ -1,101 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 5: ops_check_runs — pin_board_items)
-
-### `ops_check_runs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✗ | now() |  |
-| check_suite | text | ✗ | 'ops_core'::text |  |
-| status | text | ✗ | 'success'::text |  |
-| duration_ms | int4 | ✓ |  |  |
-| stats | jsonb | ✗ | '{}'::jsonb |  |
-| error_message | text | ✓ |  |  |
-
-### `ops_repair_actions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | text | ✗ |  | PK |
-| alert_type | text | ✗ |  |  |
-| label | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| requires_confirmation | bool | ✓ | true |  |
-| is_dangerous | bool | ✓ | false |  |
-| is_active | bool | ✓ | true |  |
-| metadata | jsonb | ✓ | '{}'::jsonb |  |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `ops_repair_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| alert_id | uuid | ✓ |  | FK → ops_alerts.id |
-| action_id | text | ✗ |  |  |
-| executed_by | uuid | ✓ |  |  |
-| result | text | ✓ |  |  |
-| details | jsonb | ✓ | '{}'::jsonb |  |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `organization_activity_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| action | text | ✗ |  |  |
-| target_table | text | ✗ |  |  |
-| target_id | uuid | ✓ |  |  |
-| metadata | jsonb | ✓ | '{}'::jsonb |  |
-| created_at | timestamptz | ✗ | now() |  |
-| member_id | uuid | ✓ |  | FK → organization_members.id |
-
-### `organization_billing_cycles`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| subscription_id | uuid | ✓ |  | FK → organization_subscriptions.id |
-| plan_id | uuid | ✗ |  | FK → plans.id |
-| seats | int4 | ✗ |  |  |
-| amount_per_seat | numeric | ✗ |  |  |
-| seat_price_source | text | ✓ |  |  |
-| base_amount | numeric | ✗ |  |  |
-| proration_adjustment | numeric | ✓ | 0 |  |
-| total_amount | numeric | ✗ |  |  |
-| billing_period | text | ✗ |  |  |
-| period_start | timestamptz | ✗ |  |  |
-| period_end | timestamptz | ✗ |  |  |
-| paid | bool | ✓ | false |  |
-| status | text | ✓ | 'pending'::text |  |
-| payment_provider | text | ✓ |  |  |
-| payment_id | text | ✓ |  |  |
-| currency_code | text | ✗ | 'USD'::text |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| billed_seats | int4 | ✗ | 1 |  |
-| payment_uuid | uuid | ✓ |  | FK → payments.id |
-
-### `organization_currencies`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| currency_id | uuid | ✗ |  | UNIQUE, FK → currencies.id |
-| is_active | bool | ✗ | true |  |
-| is_default | bool | ✗ | false |  |
-| created_at | timestamptz | ✓ | timezone('utc'::text, now()) |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✓ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
+## [PUBLIC] Tables (chunk 5: organization_data — project_access)
 
 ### `organization_data`
 
@@ -532,3 +440,101 @@
 | pin_id | uuid | ✗ |  | UNIQUE, FK → pins.id |
 | position | int4 | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
+
+### `pin_boards`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| project_id | uuid | ✓ |  | FK → projects.id |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| created_by | uuid | ✗ |  | FK → organization_members.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+
+### `pins`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| title | text | ✓ |  |  |
+| source_url | text | ✓ |  |  |
+| image_url | text | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| project_id | uuid | ✓ |  | FK → projects.id |
+| media_file_id | uuid | ✓ |  | FK → media_files.id |
+
+### `plans`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| name | text | ✗ |  | UNIQUE |
+| features | jsonb | ✓ |  |  |
+| is_active | bool | ✓ | true |  |
+| billing_type | text | ✓ | 'per_user'::text |  |
+| slug | text | ✓ |  |  |
+| monthly_amount | numeric | ✓ |  |  |
+| annual_amount | numeric | ✓ |  |  |
+| paypal_product_id | text | ✓ |  |  |
+| paypal_plan_monthly_id | text | ✓ |  |  |
+| paypal_plan_annual_id | text | ✓ |  |  |
+| mp_plan_monthly_id | text | ✓ |  |  |
+| mp_plan_annual_id | text | ✓ |  |  |
+| status | text | ✗ | 'available'::text |  |
+| paypal_product_id_sandbox | text | ✓ |  |  |
+| paypal_plan_monthly_id_sandbox | text | ✓ |  |  |
+| paypal_plan_annual_id_sandbox | text | ✓ |  |  |
+| annual_discount_percent | numeric | ✓ | 0 |  |
+
+### `product_prices`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| provider_product_id | uuid | ✗ |  | FK → provider_products.id |
+| price | numeric | ✓ |  |  |
+| currency_id | uuid | ✓ |  | FK → currencies.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+
+### `products`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| material_id | uuid | ✓ |  | FK → materials.id |
+| brand_id | uuid | ✓ |  | FK → brands.id |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| image_url | text | ✓ |  |  |
+| specs | jsonb | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| unit_id | uuid | ✓ |  |  |
+| default_price | numeric | ✓ |  |  |
+| default_provider | text | ✓ |  |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| url | text | ✓ |  |  |
+| is_system | bool | ✓ | true |  |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+
+### `project_access`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✗ |  | UNIQUE, FK → projects.id |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| access_type | text | ✗ |  |  |
+| access_level | text | ✗ | 'viewer'::text |  |
+| granted_by | uuid | ✓ |  | FK → organization_members.id |
+| is_active | bool | ✗ | true |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| client_id | uuid | ✓ |  | FK → project_clients.id |

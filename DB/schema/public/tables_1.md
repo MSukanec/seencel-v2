@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 1: app_settings — coupons)
+## [PUBLIC] Tables (chunk 1: app_settings — course_lesson_progress)
 
 ### `app_settings`
 
@@ -188,7 +188,7 @@
 | concept | text | ✓ |  |  |
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
 | description | text | ✓ |  |  |
-| quote_id | uuid | ✓ |  | FK → quotes.id |
+| quote_id | uuid | ✓ |  |  |
 
 ### `client_payment_schedule`
 
@@ -290,105 +290,6 @@
 | deleted_at | timestamptz | ✓ |  |  |
 | created_by | uuid | ✓ |  | FK → organization_members.id |
 | updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `construction_dependencies`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| predecessor_task_id | uuid | ✗ |  | UNIQUE, FK → construction_tasks.id |
-| successor_task_id | uuid | ✗ |  | UNIQUE, FK → construction_tasks.id |
-| type | text | ✗ | 'FS'::text | UNIQUE |
-| lag_days | int4 | ✗ | 0 |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `construction_phase_tasks`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| construction_task_id | uuid | ✗ |  | UNIQUE, FK → construction_tasks.id |
-| project_phase_id | uuid | ✗ |  | UNIQUE, FK → construction_project_phases.id |
-| created_at | timestamptz | ✓ | now() |  |
-| progress_percent | int4 | ✓ | 0 |  |
-| project_id | uuid | ✓ |  | FK → projects.id |
-
-### `construction_phases`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| project_id | uuid | ✓ |  | FK → projects.id |
-
-### `construction_project_phases`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| phase_id | uuid | ✗ |  | FK → construction_phases.id |
-| start_date | date | ✓ |  |  |
-| end_date | date | ✓ |  |  |
-| position | int4 | ✓ | 1 |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-
-### `construction_task_material_snapshots`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| construction_task_id | uuid | ✗ |  | UNIQUE, FK → construction_tasks.id |
-| material_id | uuid | ✗ |  | UNIQUE, FK → materials.id |
-| quantity_planned | numeric | ✗ |  |  |
-| amount_per_unit | numeric | ✗ |  |  |
-| unit_id | uuid | ✓ |  | FK → units.id |
-| source_task_id | uuid | ✓ |  | FK → tasks.id |
-| snapshot_at | timestamptz | ✗ | now() |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| created_at | timestamptz | ✗ | now() |  |
-
-### `construction_tasks`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| created_at | timestamptz | ✗ | now() |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| updated_at | timestamptz | ✓ | now() |  |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| task_id | uuid | ✓ |  | FK → tasks.id |
-| quantity | float4 | ✓ |  |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| planned_start_date | date | ✓ |  |  |
-| planned_end_date | date | ✓ |  |  |
-| duration_in_days | int4 | ✓ |  |  |
-| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| progress_percent | int4 | ✓ | 0 |  |
-| description | text | ✓ |  |  |
-| cost_scope | cost_scope_enum | ✗ | 'materials_and_labor'::cost_scope_enum |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| quote_item_id | uuid | ✓ |  | FK → quote_items.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| status | text | ✗ | 'pending'::text |  |
-| notes | text | ✓ |  |  |
-| original_quantity | float4 | ✓ |  |  |
-| custom_name | text | ✓ |  |  |
-| custom_unit | text | ✓ |  |  |
-| actual_start_date | date | ✓ |  |  |
-| actual_end_date | date | ✓ |  |  |
-| recipe_id | uuid | ✓ |  | FK → task_recipes.id |
 
 ### `contact_categories`
 
@@ -508,3 +409,96 @@
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✗ | now() |  |
 | applies_to | text | ✓ | 'courses'::text |  |
+
+### `course_details`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| course_id | uuid | ✗ |  | UNIQUE, FK → courses.id |
+| badge_text | text | ✓ |  |  |
+| highlights | _text | ✓ |  |  |
+| preview_video_id | text | ✓ |  |  |
+| seo_keywords | _text | ✓ |  |  |
+| landing_sections | jsonb | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| instructor_id | uuid | ✓ |  | FK → course_instructors.id |
+| endorsement_image_path | text | ✓ |  |  |
+| endorsement_title | text | ✓ | 'Avalado por...'::text |  |
+| endorsement_description | text | ✓ |  |  |
+
+### `course_enrollments`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| course_id | uuid | ✗ |  | UNIQUE, FK → courses.id |
+| status | text | ✗ | 'active'::text |  |
+| started_at | timestamptz | ✗ | now() |  |
+| expires_at | timestamptz | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+
+### `course_faqs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| course_id | uuid | ✗ |  | FK → courses.id |
+| question | text | ✗ |  |  |
+| answer | text | ✗ |  |  |
+| sort_index | int4 | ✗ | 0 |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+
+### `course_instructors`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| name | text | ✗ |  |  |
+| title | text | ✓ |  |  |
+| bio | text | ✓ |  |  |
+| avatar_path | text | ✓ |  |  |
+| credentials | _text | ✓ |  |  |
+| linkedin_url | text | ✓ |  |  |
+| youtube_url | text | ✓ |  |  |
+| instagram_url | text | ✓ |  |  |
+| website_url | text | ✓ |  |  |
+| user_id | uuid | ✓ |  | FK → users.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  | FK → users.id |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `course_lesson_notes`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | FK → users.id |
+| lesson_id | uuid | ✗ |  | FK → course_lessons.id |
+| body | text | ✗ |  |  |
+| time_sec | int4 | ✓ |  |  |
+| is_pinned | bool | ✗ | false |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| note_type | text | ✗ | 'marker'::text |  |
+
+### `course_lesson_progress`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| lesson_id | uuid | ✗ |  | UNIQUE, FK → course_lessons.id |
+| progress_pct | numeric | ✗ | 0 |  |
+| last_position_sec | int4 | ✗ | 0 |  |
+| completed_at | timestamptz | ✓ |  |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_completed | bool | ✗ | false |  |
+| is_favorite | bool | ✗ | false |  |
+| created_at | timestamptz | ✗ | now() |  |

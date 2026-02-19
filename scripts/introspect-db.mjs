@@ -38,7 +38,7 @@ async function main() {
     console.log('✅ Connected! Introspecting schema...\n');
 
     // Schemas to introspect
-    const SCHEMAS = ['public', 'iam'];
+    const SCHEMAS = ['public', 'iam', 'construction'];
     const schemasSQL = SCHEMAS.map(s => `'${s}'`).join(', ');
 
     const sections = [];

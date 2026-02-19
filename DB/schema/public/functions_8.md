@@ -1,51 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 8: refresh_labor_avg_prices — step_create_organization_data)
-
-### `refresh_labor_avg_prices()` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.refresh_labor_avg_prices()
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  refresh materialized view public.labor_avg_prices;
-end;
-$function$
-```
-</details>
-
-### `refresh_material_avg_prices()` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.refresh_material_avg_prices()
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  refresh materialized view public.material_avg_prices;
-end;
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 8: refresh_product_avg_prices — step_create_organization_roles)
 
 ### `refresh_product_avg_prices()` 🔐
 
@@ -453,7 +411,8 @@ CREATE OR REPLACE FUNCTION public.step_assign_org_role_permissions(p_org_id uuid
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $function$DECLARE
+AS $function$
+DECLARE
   v_admin_role_id  uuid;
   v_editor_role_id uuid;
   v_viewer_role_id uuid;
@@ -466,13 +425,13 @@ BEGIN
   WHERE organization_id = p_org_id
     AND name = 'Administrador'
     AND is_system = false;
-    
+
   SELECT id INTO v_editor_role_id
   FROM public.roles
   WHERE organization_id = p_org_id
     AND name = 'Editor'
     AND is_system = false;
-    
+
   SELECT id INTO v_viewer_role_id
   FROM public.roles
   WHERE organization_id = p_org_id
@@ -482,9 +441,8 @@ BEGIN
   ----------------------------------------------------------------
   -- ADMIN → todos los permisos system
   ----------------------------------------------------------------
-  DELETE FROM public.role_permissions
-  WHERE role_id = v_admin_role_id;
-  
+  DELETE FROM public.role_permissions WHERE role_id = v_admin_role_id;
+
   INSERT INTO public.role_permissions (role_id, permission_id)
   SELECT v_admin_role_id, p.id
   FROM public.permissions p
@@ -493,9 +451,8 @@ BEGIN
   ----------------------------------------------------------------
   -- EDITOR
   ----------------------------------------------------------------
-  DELETE FROM public.role_permissions
-  WHERE role_id = v_editor_role_id;
-  
+  DELETE FROM public.role_permissions WHERE role_id = v_editor_role_id;
+
   INSERT INTO public.role_permissions (role_id, permission_id)
   SELECT v_editor_role_id, p.id
   FROM public.permissions p
@@ -510,32 +467,29 @@ BEGIN
     'contacts.manage',
     'kanban.view',
     'kanban.manage',
-    'clients.view',
-    'clients.manage',
+    'commercial.view',    -- reemplaza clients.view + quotes.view
+    'commercial.manage',  -- reemplaza clients.manage + quotes.manage
     'sitelog.view',
     'sitelog.manage',
     'media.view',
     'media.manage',
     'tasks.view',
     'tasks.manage',
-    'quotes.view',
-    'quotes.manage',
     'materials.view',
     'materials.manage',
     'calendar.view',
     'calendar.manage',
     'subcontracts.view',
     'subcontracts.manage',
-    'labor.view',    -- ADDED
-    'labor.manage'   -- ADDED
+    'labor.view',
+    'labor.manage'
   );
 
   ----------------------------------------------------------------
   -- LECTOR
   ----------------------------------------------------------------
-  DELETE FROM public.role_permissions
-  WHERE role_id = v_viewer_role_id;
-  
+  DELETE FROM public.role_permissions WHERE role_id = v_viewer_role_id;
+
   INSERT INTO public.role_permissions (role_id, permission_id)
   SELECT v_viewer_role_id, p.id
   FROM public.permissions p
@@ -546,15 +500,14 @@ BEGIN
     'roles.view',
     'contacts.view',
     'kanban.view',
-    'clients.view',
+    'commercial.view',    -- reemplaza clients.view + quotes.view
     'sitelog.view',
     'media.view',
     'tasks.view',
-    'quotes.view',
     'materials.view',
     'calendar.view',
     'subcontracts.view',
-    'labor.view'    -- ADDED
+    'labor.view'
   );
 
 EXCEPTION
@@ -568,7 +521,8 @@ EXCEPTION
       'critical'
     );
     RAISE;
-END;$function$
+END;
+$function$
 ```
 </details>
 
@@ -839,5 +793,143 @@ EXCEPTION
     RAISE;
 END;
 $function$
+```
+</details>
+
+### `step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.organization_preferences (
+    organization_id, default_currency_id, default_wallet_id, default_pdf_template_id,
+    use_currency_exchange, created_at, updated_at
+  )
+  VALUES (
+    p_org_id, p_currency_id, p_wallet_id, p_pdf_template_id,
+    false, now(), now()
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_preferences',
+      'signup',
+      SQLERRM,
+      jsonb_build_object(
+        'org_id', p_org_id,
+        'currency_id', p_currency_id,
+        'wallet_id', p_wallet_id,
+        'pdf_template_id', p_pdf_template_id
+      ),
+      'critical'
+    );
+    RAISE;
+END;
+$function$
+```
+</details>
+
+### `step_create_organization_roles(p_org_id uuid)` 🔐
+
+- **Returns**: jsonb
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_roles(p_org_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$DECLARE
+  v_admin_id  uuid;
+  v_editor_id uuid;
+  v_viewer_id uuid;
+BEGIN
+  ----------------------------------------------------------------
+  -- ADMIN
+  ----------------------------------------------------------------
+  SELECT id
+  INTO v_admin_id
+  FROM public.roles
+  WHERE organization_id = p_org_id
+    AND name = 'Administrador'
+    AND is_system = false
+  LIMIT 1;
+
+  IF v_admin_id IS NULL THEN
+    INSERT INTO public.roles (name, description, type, organization_id, is_system)
+    VALUES ('Administrador', 'Acceso total', 'organization', p_org_id, false)
+    RETURNING id INTO v_admin_id;
+  END IF;
+
+  ----------------------------------------------------------------
+  -- EDITOR
+  ----------------------------------------------------------------
+  SELECT id
+  INTO v_editor_id
+  FROM public.roles
+  WHERE organization_id = p_org_id
+    AND name = 'Editor'
+    AND is_system = false
+  LIMIT 1;
+
+  IF v_editor_id IS NULL THEN
+    INSERT INTO public.roles (name, description, type, organization_id, is_system)
+    VALUES ('Editor', 'Puede editar', 'organization', p_org_id, false)
+    RETURNING id INTO v_editor_id;
+  END IF;
+
+  ----------------------------------------------------------------
+  -- VIEWER
+  ----------------------------------------------------------------
+  SELECT id
+  INTO v_viewer_id
+  FROM public.roles
+  WHERE organization_id = p_org_id
+    AND name = 'Lector'
+    AND is_system = false
+  LIMIT 1;
+
+  IF v_viewer_id IS NULL THEN
+    INSERT INTO public.roles (name, description, type, organization_id, is_system)
+    VALUES ('Lector', 'Solo lectura', 'organization', p_org_id, false)
+    RETURNING id INTO v_viewer_id;
+  END IF;
+
+  ----------------------------------------------------------------
+  -- RETURN
+  ----------------------------------------------------------------
+  RETURN jsonb_build_object(
+    'admin',  v_admin_id,
+    'editor', v_editor_id,
+    'viewer', v_viewer_id
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'trigger',
+      'step_create_organization_roles',
+      'signup',
+      SQLERRM,
+      jsonb_build_object('org_id', p_org_id),
+      'critical'
+    );
+    RAISE;
+END;$function$
 ```
 </details>

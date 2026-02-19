@@ -1,0 +1,18 @@
+{
+    "order": [
+        "introduccion",
+        "contratos",
+        "ordenes-de-cambio"
+    ],
+    "items": {
+        "introduccion": {
+            "title": "Introducción"
+        },
+        "contratos": {
+            "title": "Contratos"
+        },
+        "ordenes-de-cambio": {
+            "title": "Órdenes de Cambio"
+        }
+    }
+}

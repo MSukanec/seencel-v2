@@ -1,103 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T12:56:55.329Z
+> Generated: 2026-02-19T19:04:24.438Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 7: system_job_logs — user_view_history)
-
-### `system_job_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| subscription_id | uuid | ✓ |  |  |
-| job_type | text | ✗ |  |  |
-| details | jsonb | ✓ |  |  |
-| status | text | ✗ |  |  |
-| error_message | text | ✓ |  |  |
-| processed_at | timestamptz | ✓ | now() |  |
-
-### `task_actions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| name | text | ✓ |  | UNIQUE |
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| description | text | ✓ |  |  |
-| short_code | varchar(10) | ✓ |  |  |
-
-### `task_construction_systems`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| name | text | ✗ |  | UNIQUE |
-| slug | text | ✗ |  | UNIQUE |
-| description | text | ✓ |  |  |
-| code | varchar(10) | ✓ |  |  |
-| icon | text | ✓ |  |  |
-| order | int4 | ✓ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `task_division_actions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| division_id | uuid | ✗ |  | PK, FK → task_divisions.id |
-| action_id | uuid | ✗ |  | PK, FK → task_actions.id |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `task_division_elements`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| division_id | uuid | ✗ |  | PK, FK → task_divisions.id |
-| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `task_divisions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| order | int4 | ✓ |  |  |
-| code | text | ✓ |  |  |
-| parent_id | uuid | ✓ |  | FK → task_divisions.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| is_system | bool | ✗ | true |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| import_batch_id | uuid | ✓ |  | FK → import_batches.id |
-
-### `task_element_actions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| action_id | uuid | ✗ |  | PK, FK → task_actions.id |
-| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `task_element_parameters`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
-| parameter_id | uuid | ✗ |  | PK, FK → task_parameters.id |
-| order | int4 | ✓ | 0 |  |
-| is_required | bool | ✓ | true |  |
-| created_at | timestamptz | ✓ | now() |  |
+## [PUBLIC] Tables (chunk 7: task_element_systems — wallets)
 
 ### `task_element_systems`
 
@@ -235,7 +141,7 @@
 | rating | int4 | ✗ |  |  |
 | comment | text | ✓ |  |  |
 | is_verified_usage | bool | ✗ | false |  |
-| construction_task_id | uuid | ✓ |  | FK → construction_tasks.id |
+| construction_task_id | uuid | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✗ | now() |  |
 
@@ -457,3 +363,29 @@
 | duration_seconds | int4 | ✓ |  |  |
 | created_at | timestamptz | ✓ | now() |  |
 | session_id | uuid | ✓ |  |  |
+
+### `users`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
+| created_at | timestamptz | ✗ | now() |  |
+| auth_id | uuid | ✗ |  | UNIQUE |
+| email | text | ✗ |  |  |
+| avatar_url | text | ✓ |  |  |
+| avatar_source | avatar_source_t | ✓ | 'email'::avatar_source_t |  |
+| full_name | text | ✓ |  |  |
+| role_id | uuid | ✗ | 'e6cc68d2-fc28-421b-8bd3-303326ef91b8... | FK → roles.id |
+| updated_at | timestamptz | ✓ | now() |  |
+| is_active | bool | ✗ | true |  |
+| signup_completed | bool | ✗ | false |  |
+
+### `wallets`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
+| name | text | ✗ |  | UNIQUE |
+| created_at | timestamptz | ✗ | now() |  |
+| is_active | bool | ✗ | true |  |
+| updated_at | timestamptz | ✗ | now() |  |

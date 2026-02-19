@@ -41,7 +41,7 @@ export async function createQuote(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .insert({
             name: name.trim(),
             description: description?.trim() || null,
@@ -91,7 +91,7 @@ export async function createChangeOrder(
 
     // 1. Get the parent contract
     const { data: contract, error: contractError } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .select("*")
         .eq("id", contractId)
         .eq("organization_id", activeOrgId)
@@ -109,7 +109,7 @@ export async function createChangeOrder(
 
     // 3. Get next change order number
     const { data: lastCO } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .select("change_order_number")
         .eq("parent_quote_id", contractId)
         .eq("quote_type", "change_order")
@@ -124,7 +124,7 @@ export async function createChangeOrder(
 
     // 5. Create the change order, inheriting from parent contract
     const { data: changeOrder, error } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .insert({
             name: coName,
             description: data.description || null,
@@ -194,7 +194,7 @@ export async function updateQuote(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .update({
             name: name.trim(),
             description: description?.trim() || null,
@@ -237,7 +237,7 @@ export async function deleteQuote(id: string) {
     }
 
     const { error } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -274,7 +274,7 @@ export async function updateQuoteStatus(id: string, status: string) {
     }
 
     const { error } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .update(updateData)
         .eq("id", id)
         .eq("organization_id", activeOrgId);
@@ -311,7 +311,7 @@ export async function approveQuote(quoteId: string) {
     // Verify quote belongs to this org before calling function
     // Also get quote_type to check if we need to freeze original_contract_value
     const { data: quote, error: fetchError } = await supabase
-        .from("quotes_view") // Use view to get total_with_tax
+        .schema("construction").from("quotes_view") // Use view to get total_with_tax
         .select("id, project_id, status, quote_type, total_with_tax, original_contract_value")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
@@ -362,7 +362,7 @@ export async function approveQuote(quoteId: string) {
     // If this is a CONTRACT and original_contract_value is not set, freeze it now
     if (quote.quote_type === 'contract' && !quote.original_contract_value) {
         const { error: freezeError } = await supabase
-            .from("quotes")
+            .schema("construction").from("quotes")
             .update({
                 original_contract_value: quote.total_with_tax || 0
             })
@@ -404,7 +404,7 @@ export async function duplicateQuote(id: string) {
 
     // Get original quote
     const { data: original, error: fetchError } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .select("*")
         .eq("id", id)
         .eq("organization_id", activeOrgId)
@@ -419,7 +419,7 @@ export async function duplicateQuote(id: string) {
     const { id: _originalId, created_at: _createdAt, updated_at: _updatedAt, approved_at: _approvedAt, approved_by: _approvedBy, ...quoteData } = original;
 
     const { data: newQuote, error: createError } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .insert({
             ...quoteData,
             name: `${original.name} (copia ${timestamp})`,
@@ -436,7 +436,7 @@ export async function duplicateQuote(id: string) {
 
     // Duplicate quote_items
     const { data: originalItems, error: itemsFetchError } = await supabase
-        .from("quote_items")
+        .schema("construction").from("quote_items")
         .select("*")
         .eq("quote_id", id)
         .is("deleted_at", null);
@@ -456,7 +456,7 @@ export async function duplicateQuote(id: string) {
         });
 
         const { error: itemsInsertError } = await supabase
-            .from("quote_items")
+            .schema("construction").from("quote_items")
             .insert(newItems);
 
         if (itemsInsertError) {
@@ -500,7 +500,7 @@ export async function createQuoteItem(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("quote_items")
+        .schema("construction").from("quote_items")
         .insert({
             quote_id,
             organization_id: organization_id || activeOrgId,
@@ -547,7 +547,7 @@ export async function updateQuoteItem(id: string, formData: FormData) {
     const cost_scope = formData.get("cost_scope") as string || "materials_and_labor";
 
     const { data, error } = await supabase
-        .from("quote_items")
+        .schema("construction").from("quote_items")
         .update({
             task_id: task_id || null,
             description: description?.trim() || null,
@@ -587,7 +587,7 @@ export async function deleteQuoteItem(id: string, quoteId?: string) {
     }
 
     const { error } = await supabase
-        .from("quote_items")
+        .schema("construction").from("quote_items")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -621,7 +621,7 @@ export async function convertQuoteToContract(quoteId: string) {
 
     // 1. Get quote details (using view for totals)
     const { data: quote, error: fetchError } = await supabase
-        .from("quotes_view")
+        .schema("construction").from("quotes_view")
         .select("id, status, quote_type, project_id, total_with_tax")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
@@ -646,7 +646,7 @@ export async function convertQuoteToContract(quoteId: string) {
 
     // 3. Update to contract and freeze value
     const { error: updateError } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .update({
             quote_type: 'contract',
             original_contract_value: quote.total_with_tax || 0,
@@ -680,7 +680,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
 
     // Get the quote
     const { data: quote, error: quoteError } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .select("*")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
@@ -728,7 +728,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
 
     // Update quote: link to project and change type to 'contract'
     const { error: updateError } = await supabase
-        .from("quotes")
+        .schema("construction").from("quotes")
         .update({
             project_id: project.id,
             quote_type: 'contract',
@@ -744,7 +744,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
 
     // Also update quote_items to link to project
     await supabase
-        .from("quote_items")
+        .schema("construction").from("quote_items")
         .update({ project_id: project.id })
         .eq("quote_id", quoteId);
 
@@ -789,7 +789,7 @@ export async function generateCommitmentsFromQuote(
 
     // Get quote with totals from view
     const { data: quote, error: quoteError } = await supabase
-        .from("quotes_view")
+        .schema("construction").from("quotes_view")
         .select("*")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
@@ -889,3 +889,43 @@ export async function generateCommitmentsFromQuote(
     return { data, error: null };
 }
 
+// ============================================
+// UPDATE QUOTE DOCUMENT TERMS
+// Edición inline de los términos del documento
+// (fechas, impuesto, descuento, descripción, TC)
+// No toca los campos identitarios (nombre, cliente, proyecto, moneda)
+// ============================================
+export async function updateQuoteDocumentTerms(
+    quoteId: string,
+    terms: {
+        quote_date?: string | null;
+        valid_until?: string | null;
+        tax_pct?: number;
+        tax_label?: string;
+        discount_pct?: number;
+        description?: string | null;
+        exchange_rate?: number;
+    }
+) {
+    const supabase = await createClient();
+    const { activeOrgId } = await getUserOrganizations();
+
+    if (!activeOrgId) {
+        return { error: "No hay organización activa" };
+    }
+
+    const { error } = await supabase
+        .schema("construction").from("quotes")
+        .update(terms)
+        .eq("id", quoteId)
+        .eq("organization_id", activeOrgId);
+
+    if (error) {
+        console.error("Error updating quote document terms:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/organization/quotes");
+    revalidatePath(`/organization/quotes/${quoteId}`);
+    return { success: true, error: null };
+}

@@ -126,10 +126,10 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
 };
 
 export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
-    draft: 'text-amber-500 border-amber-500/30',
-    sent: 'text-blue-500 border-blue-500/30',
-    approved: 'text-green-500 border-green-500/30',
-    rejected: 'text-red-500 border-red-500/30'
+    draft: 'text-[#c9a03e] border-[#c9a03e]/30',   /* chart-4 — Oro */
+    sent: 'text-[#6366F1] border-[#6366F1]/30',   /* chart-7 — Índigo */
+    approved: 'text-[#758a57] border-[#758a57]/30',   /* chart-1 — Oliva */
+    rejected: 'text-[#b04912] border-[#b04912]/30',   /* chart-3 — Naranja cálido */
 };
 
 export const QUOTE_TYPE_LABELS: Record<QuoteType, string> = {
@@ -139,8 +139,10 @@ export const QUOTE_TYPE_LABELS: Record<QuoteType, string> = {
 };
 
 export const QUOTE_TYPE_COLORS: Record<QuoteType, string> = {
-    quote: 'text-purple-500 border-purple-500/30',
-    contract: 'text-emerald-500 border-emerald-500/30',
-    change_order: 'text-orange-500 border-orange-500/30'
+    quote: 'text-[#7c72ab] border-[#7c72ab]/30',   /* chart-2 — Lavanda */
+    contract: 'text-[#758a57] border-[#758a57]/30',   /* chart-1 — Oliva */
+    change_order: 'text-[#c9a03e] border-[#c9a03e]/30',   /* chart-4 — Oro */
 };
+
+
 

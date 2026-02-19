@@ -1,12 +1,9 @@
 /**
  * Contact Field Factory
  * Standard 19.13 - Reusable Contact/Provider Selector
- * 
- * Provides a standardized contact selector with:
- * - Combobox with search functionality
- * - Avatar + full name display
- * - Alphabetical ordering
- * - Support for different contact types (clients/providers/contacts)
+ *
+ * Avatar: prioridad resolved_avatar_url (Google OAuth) > avatar_url (legacy)
+ * Tooltip: explica que "Cliente = Contacto", incluye link a la página de Contactos
  */
 
 "use client";
@@ -15,46 +12,34 @@ import { FormGroup } from "@/components/ui/form-group";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { FactoryLabel } from "./field-wrapper";
 import { useMemo } from "react";
+import { Link } from "@/i18n/routing";
 
 export interface Contact {
     id: string;
     name: string;
+    /** URL directa (Google, upload, etc) — legacy */
     avatar_url?: string | null;
+    /** Campo resuelto por la contacts_view: combina Google + uploads propios */
+    resolved_avatar_url?: string | null;
     company_name?: string | null;
 }
 
 export interface ContactFieldProps {
-    /** Current selected contact ID */
     value: string;
-    /** Callback when contact changes */
     onChange: (value: string) => void;
-    /** List of available contacts */
     contacts: Contact[];
-    /** Field label (default: "Contacto") */
     label?: string;
-    /** Tooltip help content */
     tooltip?: React.ReactNode;
-    /** Is field required? (default: false) */
     required?: boolean;
-    /** Is field disabled? */
     disabled?: boolean;
-    /** Custom className for FormGroup */
     className?: string;
-    /** Placeholder text */
     placeholder?: string;
-    /** Search placeholder */
     searchPlaceholder?: string;
-    /** Empty state message */
     emptyMessage?: string;
-    /** Allow selecting "none" option */
     allowNone?: boolean;
-    /** "None" option label */
     noneLabel?: string;
 }
 
-/**
- * Get initials from a name for avatar fallback
- */
 function getInitials(name: string): string {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
@@ -63,12 +48,33 @@ function getInitials(name: string): string {
     return name.substring(0, 2).toUpperCase();
 }
 
+/**
+ * Tooltip por defecto para el campo Cliente/Contacto.
+ * Explica la relación "Cliente = Contacto" y que el presupuesto no requiere proyecto.
+ */
+const DEFAULT_CONTACT_TOOLTIP = (
+    <span className="flex flex-col gap-1.5 text-xs leading-relaxed">
+        <span>
+            En Seencel, los <strong>clientes</strong> son{" "}
+            <Link href="/organization/contacts" className="underline">
+                Contactos
+            </Link>
+            . Las personas, empresas o estudios a quienes les hacés un presupuesto
+            deben estar registrados como contactos primero.
+        </span>
+        <span className="text-muted-foreground">
+            Este campo es opcional. Un presupuesto puede existir sin cliente asignado,
+            por ejemplo cuando todavía estás estructurando la propuesta internamente.
+        </span>
+    </span>
+);
+
 export function ContactField({
     value,
     onChange,
     contacts,
-    label = "Contacto",
-    tooltip,
+    label = "Cliente",
+    tooltip = DEFAULT_CONTACT_TOOLTIP,
     required = false,
     disabled = false,
     className,
@@ -76,10 +82,9 @@ export function ContactField({
     searchPlaceholder = "Buscar contacto...",
     emptyMessage = "No se encontraron contactos.",
     allowNone = true,
-    noneLabel = "Sin contacto asignado",
+    noneLabel = "Sin cliente asignado",
 }: ContactFieldProps) {
 
-    // Transform contacts to combobox options with avatar support
     const options: ComboboxOption[] = useMemo(() => {
         const sortedContacts = [...contacts].sort((a, b) =>
             a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
@@ -88,9 +93,9 @@ export function ContactField({
         const contactOptions: ComboboxOption[] = sortedContacts.map((contact) => ({
             value: contact.id,
             label: contact.name,
-            image: contact.avatar_url,
+            // Prioridad: resolved_avatar_url (contiene foto de Google OAuth) > avatar_url (legacy)
+            image: contact.resolved_avatar_url || contact.avatar_url,
             fallback: getInitials(contact.name),
-            // Include company name in search terms
             searchTerms: contact.company_name || undefined,
         }));
 
@@ -105,7 +110,12 @@ export function ContactField({
     }, [contacts, allowNone, noneLabel]);
 
     return (
-        <FormGroup label={<FactoryLabel label={label} />} required={required} tooltip={tooltip} className={className}>
+        <FormGroup
+            label={<FactoryLabel label={label} />}
+            required={required}
+            tooltip={tooltip}
+            className={className}
+        >
             <Combobox
                 value={value || "none"}
                 onValueChange={(val) => onChange(val === "none" ? "" : val)}

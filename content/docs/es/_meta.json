@@ -11,6 +11,7 @@
         "ejecucion-de-obra",
         "equipo",
         "finanzas",
+        "presupuestos",
         "proyectos"
     ],
     "items": {
@@ -61,6 +62,10 @@
         "proyectos": {
             "title": "Proyectos",
             "icon": "building"
+        },
+        "presupuestos": {
+            "title": "Presupuestos",
+            "icon": "file-text"
         }
     }
 }
