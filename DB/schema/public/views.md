@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Views (67)
+## [PUBLIC] Views (62)
 
 ### `admin_organizations_view`
 
@@ -247,9 +247,9 @@ SELECT bi.id,
         END AS cost_scope_label,
     bi.sort_key AS "position"
    FROM (((construction.quote_items bi
-     LEFT JOIN tasks t ON ((t.id = bi.task_id)))
-     LEFT JOIN task_divisions td ON ((td.id = t.task_division_id)))
-     LEFT JOIN units u ON ((u.id = t.unit_id)));
+     LEFT JOIN catalog.tasks t ON ((t.id = bi.task_id)))
+     LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
 ### `capital_ledger_view`
@@ -893,7 +893,7 @@ SELECT lp.organization_id,
     count(*) AS payments_count
    FROM ((labor_payments lp
      LEFT JOIN project_labor pl ON ((pl.id = lp.labor_id)))
-     LEFT JOIN labor_categories lt ON ((lt.id = pl.labor_type_id)))
+     LEFT JOIN catalog.labor_categories lt ON ((lt.id = pl.labor_type_id)))
   WHERE ((lp.status = 'confirmed'::text) AND ((lp.is_deleted IS NULL) OR (lp.is_deleted = false)))
   GROUP BY lp.organization_id, lp.project_id, (date_trunc('month'::text, (lp.payment_date)::timestamp with time zone)), pl.labor_type_id, lt.name;
 ```
@@ -931,7 +931,7 @@ SELECT li.id,
    FROM ((((labor_insurances li
      LEFT JOIN project_labor pl ON ((pl.id = li.labor_id)))
      LEFT JOIN contacts ct ON ((ct.id = pl.contact_id)))
-     LEFT JOIN labor_categories lt ON ((lt.id = pl.labor_type_id)))
+     LEFT JOIN catalog.labor_categories lt ON ((lt.id = pl.labor_type_id)))
      LEFT JOIN projects proj ON ((proj.id = li.project_id)));
 ```
 
@@ -1002,48 +1002,11 @@ SELECT lp.id,
      LEFT JOIN wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN project_labor pl ON ((pl.id = lp.labor_id)))
      LEFT JOIN contacts ct ON ((ct.id = pl.contact_id)))
-     LEFT JOIN labor_categories lc ON ((lc.id = pl.labor_type_id)))
+     LEFT JOIN catalog.labor_categories lc ON ((lc.id = pl.labor_type_id)))
      LEFT JOIN projects proj ON ((proj.id = lp.project_id)))
      LEFT JOIN organization_members om_created ON ((om_created.id = lp.created_by)))
      LEFT JOIN users u_created ON ((u_created.id = om_created.user_id)))
   WHERE ((lp.is_deleted = false) OR (lp.is_deleted IS NULL));
-```
-
-### `labor_view`
-
-```sql
-SELECT lt.id AS labor_id,
-    lt.name AS labor_name,
-    lt.description AS labor_description,
-    lt.unit_id,
-    u.name AS unit_name,
-    u.symbol AS unit_symbol,
-    lpc.organization_id,
-    lpc.unit_price AS current_price,
-    lpc.currency_id AS current_currency_id,
-    c.code AS current_currency_code,
-    c.symbol AS current_currency_symbol,
-    lpc.valid_from,
-    lpc.valid_to,
-    lpc.updated_at,
-    lap.avg_price,
-    lap.price_count,
-    lap.min_price,
-    lap.max_price
-   FROM ((((labor_types lt
-     LEFT JOIN units u ON ((u.id = lt.unit_id)))
-     LEFT JOIN ( SELECT DISTINCT ON (lp.labor_type_id, lp.organization_id) lp.labor_type_id AS labor_id,
-            lp.organization_id,
-            lp.currency_id,
-            lp.unit_price,
-            lp.valid_from,
-            lp.valid_to,
-            lp.updated_at
-           FROM labor_prices lp
-          WHERE ((lp.valid_to IS NULL) OR (lp.valid_to >= CURRENT_DATE))
-          ORDER BY lp.labor_type_id, lp.organization_id, lp.valid_from DESC) lpc ON ((lpc.labor_id = lt.id)))
-     LEFT JOIN currencies c ON ((c.id = lpc.currency_id)))
-     LEFT JOIN labor_avg_prices lap ON ((lap.labor_id = lt.id)));
 ```
 
 ### `material_invoices_view`
@@ -1161,46 +1124,6 @@ SELECT po.id,
            FROM material_purchase_order_items poi
           WHERE (poi.purchase_order_id = po.id)) items ON (true))
   WHERE (po.is_deleted = false);
-```
-
-### `materials_view`
-
-```sql
-SELECT m.id,
-    m.name,
-    m.code,
-    m.description,
-    m.material_type,
-    m.is_system,
-    m.organization_id,
-    m.is_deleted,
-    m.created_at,
-    m.updated_at,
-    m.unit_id,
-    u.name AS unit_of_computation,
-    u.symbol AS unit_symbol,
-    m.category_id,
-    mc.name AS category_name,
-    m.default_provider_id,
-    m.default_sale_unit_id,
-    m.default_sale_unit_quantity,
-    su.name AS sale_unit_name,
-    su.symbol AS sale_unit_symbol,
-    mp.unit_price AS org_unit_price,
-    mp.currency_id AS org_price_currency_id,
-    mp.valid_from AS org_price_valid_from
-   FROM ((((materials m
-     LEFT JOIN units u ON ((m.unit_id = u.id)))
-     LEFT JOIN material_categories mc ON ((m.category_id = mc.id)))
-     LEFT JOIN units su ON ((m.default_sale_unit_id = su.id)))
-     LEFT JOIN LATERAL ( SELECT mp_inner.unit_price,
-            mp_inner.currency_id,
-            mp_inner.valid_from
-           FROM material_prices mp_inner
-          WHERE ((mp_inner.material_id = m.id) AND (mp_inner.organization_id = m.organization_id) AND (mp_inner.valid_from <= CURRENT_DATE) AND ((mp_inner.valid_to IS NULL) OR (mp_inner.valid_to >= CURRENT_DATE)))
-          ORDER BY mp_inner.valid_from DESC
-         LIMIT 1) mp ON (true))
-  WHERE (m.is_deleted = false);
 ```
 
 ### `ops_alerts_enriched_view`
@@ -1357,9 +1280,9 @@ SELECT p.id,
     p.created_at,
     p.updated_at
    FROM (((organization_task_prices p
-     LEFT JOIN tasks t ON ((t.id = p.task_id)))
-     LEFT JOIN task_divisions td ON ((td.id = t.task_division_id)))
-     LEFT JOIN units u ON ((u.id = t.unit_id)));
+     LEFT JOIN catalog.tasks t ON ((t.id = p.task_id)))
+     LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
 ### `organization_wallets_view`
@@ -1536,7 +1459,7 @@ SELECT pl.id,
     COALESCE(payment_stats.total_amount, (0)::numeric) AS total_amount_paid
    FROM ((((((project_labor pl
      LEFT JOIN contacts ct ON ((ct.id = pl.contact_id)))
-     LEFT JOIN labor_categories lc ON ((lc.id = pl.labor_type_id)))
+     LEFT JOIN catalog.labor_categories lc ON ((lc.id = pl.labor_type_id)))
      LEFT JOIN projects proj ON ((proj.id = pl.project_id)))
      LEFT JOIN organization_members om_created ON ((om_created.id = pl.created_by)))
      LEFT JOIN users u_created ON ((u_created.id = om_created.user_id)))
@@ -1562,9 +1485,9 @@ SELECT ctms.project_id,
     array_agg(DISTINCT ctms.construction_task_id) AS construction_task_ids
    FROM ((((construction.construction_task_material_snapshots ctms
      JOIN construction.construction_tasks ct ON ((ct.id = ctms.construction_task_id)))
-     JOIN materials m ON ((m.id = ctms.material_id)))
-     LEFT JOIN units u ON ((u.id = m.unit_id)))
-     LEFT JOIN material_categories mc ON ((mc.id = m.category_id)))
+     JOIN catalog.materials m ON ((m.id = ctms.material_id)))
+     LEFT JOIN catalog.units u ON ((u.id = m.unit_id)))
+     LEFT JOIN catalog.material_categories mc ON ((mc.id = m.category_id)))
   WHERE ((ct.is_deleted = false) AND (ct.status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'paused'::text])))
   GROUP BY ctms.project_id, ctms.organization_id, ctms.material_id, m.name, u.name, m.category_id, mc.name;
 ```
@@ -1713,151 +1636,6 @@ SELECT sel.id,
      LEFT JOIN plans pl ON ((pl.id = o.plan_id)));
 ```
 
-### `task_costs_view`
-
-```sql
-WITH recipe_material_costs AS (
-         SELECT trm.recipe_id,
-            tr.task_id,
-            tr.organization_id,
-            sum(((trm.total_quantity * COALESCE(mp.unit_price, (0)::numeric)) / GREATEST(COALESCE(mat.default_sale_unit_quantity, (1)::numeric), (1)::numeric))) AS mat_cost,
-            min(mp.valid_from) AS oldest_mat_price_date
-           FROM (((task_recipe_materials trm
-             JOIN task_recipes tr ON (((tr.id = trm.recipe_id) AND (tr.is_deleted = false))))
-             LEFT JOIN materials mat ON ((mat.id = trm.material_id)))
-             LEFT JOIN LATERAL ( SELECT mp_inner.unit_price,
-                    mp_inner.valid_from
-                   FROM material_prices mp_inner
-                  WHERE ((mp_inner.material_id = trm.material_id) AND (mp_inner.organization_id = tr.organization_id) AND (mp_inner.valid_from <= CURRENT_DATE) AND ((mp_inner.valid_to IS NULL) OR (mp_inner.valid_to >= CURRENT_DATE)))
-                  ORDER BY mp_inner.valid_from DESC
-                 LIMIT 1) mp ON (true))
-          WHERE (trm.is_deleted = false)
-          GROUP BY trm.recipe_id, tr.task_id, tr.organization_id
-        ), recipe_labor_costs AS (
-         SELECT trl.recipe_id,
-            tr.task_id,
-            tr.organization_id,
-            sum((trl.quantity * COALESCE(lp.unit_price, (0)::numeric))) AS lab_cost,
-            min(lp.valid_from) AS oldest_lab_price_date
-           FROM ((task_recipe_labor trl
-             JOIN task_recipes tr ON (((tr.id = trl.recipe_id) AND (tr.is_deleted = false))))
-             LEFT JOIN LATERAL ( SELECT lp_inner.unit_price,
-                    lp_inner.valid_from
-                   FROM labor_prices lp_inner
-                  WHERE ((lp_inner.labor_type_id = trl.labor_type_id) AND (lp_inner.organization_id = tr.organization_id) AND ((lp_inner.valid_to IS NULL) OR (lp_inner.valid_to >= CURRENT_DATE)))
-                  ORDER BY lp_inner.valid_from DESC
-                 LIMIT 1) lp ON (true))
-          WHERE (trl.is_deleted = false)
-          GROUP BY trl.recipe_id, tr.task_id, tr.organization_id
-        ), recipe_ext_service_costs AS (
-         SELECT tres.recipe_id,
-            tr.task_id,
-            tr.organization_id,
-            sum(tres.unit_price) AS ext_cost
-           FROM (task_recipe_external_services tres
-             JOIN task_recipes tr ON (((tr.id = tres.recipe_id) AND (tr.is_deleted = false))))
-          WHERE (tres.is_deleted = false)
-          GROUP BY tres.recipe_id, tr.task_id, tr.organization_id
-        ), recipe_totals AS (
-         SELECT tr.id AS recipe_id,
-            tr.task_id,
-            tr.organization_id,
-            COALESCE(rmc.mat_cost, (0)::numeric) AS mat_cost,
-            COALESCE(rlc.lab_cost, (0)::numeric) AS lab_cost,
-            COALESCE(rec.ext_cost, (0)::numeric) AS ext_cost,
-            ((COALESCE(rmc.mat_cost, (0)::numeric) + COALESCE(rlc.lab_cost, (0)::numeric)) + COALESCE(rec.ext_cost, (0)::numeric)) AS total_cost,
-            LEAST(rmc.oldest_mat_price_date, rlc.oldest_lab_price_date) AS oldest_price_date
-           FROM (((task_recipes tr
-             LEFT JOIN recipe_material_costs rmc ON ((rmc.recipe_id = tr.id)))
-             LEFT JOIN recipe_labor_costs rlc ON ((rlc.recipe_id = tr.id)))
-             LEFT JOIN recipe_ext_service_costs rec ON ((rec.recipe_id = tr.id)))
-          WHERE (tr.is_deleted = false)
-        )
- SELECT rt.task_id,
-    rt.organization_id,
-    (round(avg(rt.total_cost), 2))::numeric(14,4) AS unit_cost,
-    (round(avg(rt.mat_cost), 2))::numeric(14,4) AS mat_unit_cost,
-    (round(avg(rt.lab_cost), 2))::numeric(14,4) AS lab_unit_cost,
-    (round(avg(rt.ext_cost), 2))::numeric(14,4) AS ext_unit_cost,
-    (count(rt.recipe_id))::integer AS recipe_count,
-    (round(min(rt.total_cost), 2))::numeric(14,4) AS min_cost,
-    (round(max(rt.total_cost), 2))::numeric(14,4) AS max_cost,
-    min(rt.oldest_price_date) AS oldest_price_date
-   FROM recipe_totals rt
-  GROUP BY rt.task_id, rt.organization_id;
-```
-
-### `task_recipes_view`
-
-```sql
-SELECT tr.id,
-    tr.task_id,
-    tr.organization_id,
-    tr.name,
-    tr.is_public,
-    tr.region,
-    tr.rating_avg,
-    tr.rating_count,
-    tr.usage_count,
-    tr.created_at,
-    tr.updated_at,
-    tr.is_deleted,
-    tr.import_batch_id,
-    t.name AS task_name,
-    t.custom_name AS task_custom_name,
-    COALESCE(t.custom_name, t.name) AS task_display_name,
-    td.name AS division_name,
-    u.name AS unit_name,
-    o.name AS org_name,
-    (( SELECT count(*) AS count
-           FROM task_recipe_materials trm
-          WHERE (trm.recipe_id = tr.id)) + ( SELECT count(*) AS count
-           FROM task_recipe_labor trl
-          WHERE (trl.recipe_id = tr.id))) AS item_count
-   FROM ((((task_recipes tr
-     LEFT JOIN tasks t ON ((t.id = tr.task_id)))
-     LEFT JOIN task_divisions td ON ((td.id = t.task_division_id)))
-     LEFT JOIN units u ON ((u.id = t.unit_id)))
-     LEFT JOIN organizations o ON ((o.id = tr.organization_id)))
-  WHERE (tr.is_deleted = false);
-```
-
-### `tasks_view`
-
-```sql
-SELECT t.id,
-    t.code,
-    t.name,
-    t.custom_name,
-    t.description,
-    t.is_system,
-    t.is_published,
-    t.is_deleted,
-    t.organization_id,
-    t.unit_id,
-    t.task_division_id,
-    t.task_action_id,
-    t.task_element_id,
-    t.is_parametric,
-    t.parameter_values,
-    t.import_batch_id,
-    t.created_at,
-    t.updated_at,
-    t.created_by,
-    t.updated_by,
-    u.name AS unit_name,
-    u.symbol AS unit_symbol,
-    d.name AS division_name,
-    ta.name AS action_name,
-    ta.short_code AS action_short_code,
-    te.name AS element_name
-   FROM ((((tasks t
-     LEFT JOIN units u ON ((u.id = t.unit_id)))
-     LEFT JOIN task_divisions d ON ((d.id = t.task_division_id)))
-     LEFT JOIN task_actions ta ON ((ta.id = t.task_action_id)))
-     LEFT JOIN task_elements te ON ((te.id = t.task_element_id)));
-```
-
 ### `unified_financial_movements_view`
 
 ```sql
@@ -1984,7 +1762,7 @@ UNION ALL
      LEFT JOIN wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN project_labor pl ON ((pl.id = lp.labor_id)))
      LEFT JOIN contacts ct ON ((ct.id = pl.contact_id)))
-     LEFT JOIN labor_categories lc ON ((lc.id = pl.labor_type_id)))
+     LEFT JOIN catalog.labor_categories lc ON ((lc.id = pl.labor_type_id)))
      LEFT JOIN organization_members om_created ON ((om_created.id = lp.created_by)))
      LEFT JOIN users u_created ON ((u_created.id = om_created.user_id)))
   WHERE ((lp.is_deleted = false) OR (lp.is_deleted IS NULL))

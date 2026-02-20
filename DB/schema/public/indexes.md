@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Indexes (503, excluding PKs)
+## [PUBLIC] Indexes (427, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -140,18 +140,6 @@
 | general_costs_payments | idx_gc_payments_status_org | `CREATE INDEX idx_gc_payments_status_org ON public.general_costs_payments USIN...` |
 | general_costs_payments | idx_gc_payments_wallet | `CREATE INDEX idx_gc_payments_wallet ON public.general_costs_payments USING bt...` |
 | hero_sections | idx_hero_sections_is_deleted | `CREATE INDEX idx_hero_sections_is_deleted ON public.hero_sections USING btree...` |
-| ia_context_snapshots | idx_ia_context_snapshots_type | `CREATE INDEX idx_ia_context_snapshots_type ON public.ia_context_snapshots USI...` |
-| ia_context_snapshots | idx_ia_context_snapshots_user_org | `CREATE INDEX idx_ia_context_snapshots_user_org ON public.ia_context_snapshots...` |
-| ia_import_mapping_patterns | ia_import_mapping_patterns_unique_mapping | `CREATE UNIQUE INDEX ia_import_mapping_patterns_unique_mapping ON public.ia_im...` |
-| ia_import_value_patterns | ia_import_value_patterns_unique_source | `CREATE UNIQUE INDEX ia_import_value_patterns_unique_source ON public.ia_impor...` |
-| ia_messages | idx_ia_messages_context_type | `CREATE INDEX idx_ia_messages_context_type ON public.ia_messages USING btree (...` |
-| ia_messages | idx_ia_messages_user_id | `CREATE INDEX idx_ia_messages_user_id ON public.ia_messages USING btree (user_id)` |
-| ia_usage_logs | idx_ia_usage_logs_context_type | `CREATE INDEX idx_ia_usage_logs_context_type ON public.ia_usage_logs USING btr...` |
-| ia_usage_logs | idx_ia_usage_logs_user_id | `CREATE INDEX idx_ia_usage_logs_user_id ON public.ia_usage_logs USING btree (u...` |
-| ia_user_greetings | ia_user_greetings_unique | `CREATE UNIQUE INDEX ia_user_greetings_unique ON public.ia_user_greetings USIN...` |
-| ia_user_preferences | idx_ia_user_preferences_language | `CREATE INDEX idx_ia_user_preferences_language ON public.ia_user_preferences U...` |
-| ia_user_usage_limits | idx_ia_user_usage_limits_last_reset | `CREATE INDEX idx_ia_user_usage_limits_last_reset ON public.ia_user_usage_limi...` |
-| ia_user_usage_limits | idx_ia_user_usage_limits_plan | `CREATE INDEX idx_ia_user_usage_limits_plan ON public.ia_user_usage_limits USI...` |
 | import_batches | idx_import_batches_member_id | `CREATE INDEX idx_import_batches_member_id ON public.import_batches USING btre...` |
 | indirect_costs | indirect_costs_id_key | `CREATE UNIQUE INDEX indirect_costs_id_key ON public.indirect_costs USING btre...` |
 | indirect_costs_payments | idx_indirect_costs_payments_date | `CREATE INDEX idx_indirect_costs_payments_date ON public.indirect_costs_paymen...` |
@@ -181,8 +169,6 @@
 | kanban_labels | kanban_labels_name_org_unique | `CREATE UNIQUE INDEX kanban_labels_name_org_unique ON public.kanban_labels USI...` |
 | kanban_lists | idx_kanban_lists_active | `CREATE INDEX idx_kanban_lists_active ON public.kanban_lists USING btree (boar...` |
 | kanban_lists | idx_kanban_lists_org | `CREATE INDEX idx_kanban_lists_org ON public.kanban_lists USING btree (organiz...` |
-| labor_categories | labor_categories_id_key | `CREATE UNIQUE INDEX labor_categories_id_key ON public.labor_categories USING ...` |
-| labor_categories | labor_categories_system_name_unique | `CREATE UNIQUE INDEX labor_categories_system_name_unique ON public.labor_categ...` |
 | labor_payments | idx_labor_payments_date | `CREATE INDEX idx_labor_payments_date ON public.labor_payments USING btree (pa...` |
 | labor_payments | idx_labor_payments_import_batch_id | `CREATE INDEX idx_labor_payments_import_batch_id ON public.labor_payments USIN...` |
 | labor_payments | idx_labor_payments_labor | `CREATE INDEX idx_labor_payments_labor ON public.labor_payments USING btree (l...` |
@@ -190,9 +176,7 @@
 | labor_payments | idx_labor_payments_org_project | `CREATE INDEX idx_labor_payments_org_project ON public.labor_payments USING bt...` |
 | labor_payments | idx_labor_payments_view_org | `CREATE INDEX idx_labor_payments_view_org ON public.labor_payments USING btree...` |
 | labor_payments | idx_labor_payments_view_project | `CREATE INDEX idx_labor_payments_view_project ON public.labor_payments USING b...` |
-| labor_prices | labor_prices_type_org_idx | `CREATE INDEX labor_prices_type_org_idx ON public.labor_prices USING btree (la...` |
 | linked_accounts | linked_accounts_auth_id_key | `CREATE UNIQUE INDEX linked_accounts_auth_id_key ON public.linked_accounts USI...` |
-| material_categories | material_categories_unique_name | `CREATE UNIQUE INDEX material_categories_unique_name ON public.material_catego...` |
 | material_invoice_items | idx_material_invoice_items_material | `CREATE INDEX idx_material_invoice_items_material ON public.material_invoice_i...` |
 | material_invoice_items | material_purchase_items_org_idx | `CREATE INDEX material_purchase_items_org_idx ON public.material_invoice_items...` |
 | material_invoice_items | material_purchase_items_org_project_idx | `CREATE INDEX material_purchase_items_org_project_idx ON public.material_invoi...` |
@@ -206,19 +190,10 @@
 | material_payments | material_payments_organization_id_project_id_idx | `CREATE INDEX material_payments_organization_id_project_id_idx ON public.mater...` |
 | material_payments | material_payments_payment_date_idx | `CREATE INDEX material_payments_payment_date_idx ON public.material_payments U...` |
 | material_payments | material_payments_project_id_payment_date_idx | `CREATE INDEX material_payments_project_id_payment_date_idx ON public.material...` |
-| material_prices | material_prices_material_org_idx | `CREATE INDEX material_prices_material_org_idx ON public.material_prices USING...` |
 | material_purchase_order_items | idx_mpo_items_material | `CREATE INDEX idx_mpo_items_material ON public.material_purchase_order_items U...` |
 | material_types | idx_material_types_list | `CREATE INDEX idx_material_types_list ON public.material_types USING btree (is...` |
 | material_types | uq_material_types_org_name | `CREATE UNIQUE INDEX uq_material_types_org_name ON public.material_types USING...` |
 | material_types | uq_material_types_system_name | `CREATE UNIQUE INDEX uq_material_types_system_name ON public.material_types US...` |
-| materials | idx_materials_code_org | `CREATE INDEX idx_materials_code_org ON public.materials USING btree (code, or...` |
-| materials | idx_materials_default_provider | `CREATE INDEX idx_materials_default_provider ON public.materials USING btree (...` |
-| materials | idx_materials_import_batch | `CREATE INDEX idx_materials_import_batch ON public.materials USING btree (impo...` |
-| materials | idx_materials_is_deleted | `CREATE INDEX idx_materials_is_deleted ON public.materials USING btree (is_del...` |
-| materials | idx_materials_org_deleted | `CREATE INDEX idx_materials_org_deleted ON public.materials USING btree (organ...` |
-| materials | materials_id_key | `CREATE UNIQUE INDEX materials_id_key ON public.materials USING btree (id)` |
-| materials | materials_name_org_unique | `CREATE UNIQUE INDEX materials_name_org_unique ON public.materials USING btree...` |
-| materials | materials_name_system_unique | `CREATE UNIQUE INDEX materials_name_system_unique ON public.materials USING bt...` |
 | media_file_folders | idx_media_file_folders_organization_id | `CREATE INDEX idx_media_file_folders_organization_id ON public.media_file_fold...` |
 | media_file_folders | idx_media_file_folders_parent_id | `CREATE INDEX idx_media_file_folders_parent_id ON public.media_file_folders US...` |
 | media_file_folders | idx_media_file_folders_project_id | `CREATE INDEX idx_media_file_folders_project_id ON public.media_file_folders U...` |
@@ -270,7 +245,6 @@
 | organization_external_actors | idx_oea_organization | `CREATE INDEX idx_oea_organization ON public.organization_external_actors USIN...` |
 | organization_external_actors | idx_oea_user | `CREATE INDEX idx_oea_user ON public.organization_external_actors USING btree ...` |
 | organization_external_actors | oea_unique_org_user | `CREATE UNIQUE INDEX oea_unique_org_user ON public.organization_external_actor...` |
-| organization_material_prices | unique_org_material | `CREATE UNIQUE INDEX unique_org_material ON public.organization_material_price...` |
 | organization_member_events | idx_member_events_date | `CREATE INDEX idx_member_events_date ON public.organization_member_events USIN...` |
 | organization_member_events | idx_member_events_member | `CREATE INDEX idx_member_events_member ON public.organization_member_events US...` |
 | organization_member_events | idx_member_events_org | `CREATE INDEX idx_member_events_org ON public.organization_member_events USING...` |
@@ -431,62 +405,12 @@
 | system_error_logs | idx_system_error_logs_created | `CREATE INDEX idx_system_error_logs_created ON public.system_error_logs USING ...` |
 | system_error_logs | idx_system_error_logs_domain | `CREATE INDEX idx_system_error_logs_domain ON public.system_error_logs USING b...` |
 | system_error_logs | idx_system_error_logs_severity | `CREATE INDEX idx_system_error_logs_severity ON public.system_error_logs USING...` |
-| task_actions | task_kind_name_key | `CREATE UNIQUE INDEX task_kind_name_key ON public.task_actions USING btree (name)` |
-| task_construction_systems | task_construction_systems_name_key | `CREATE UNIQUE INDEX task_construction_systems_name_key ON public.task_constru...` |
-| task_construction_systems | task_construction_systems_slug_key | `CREATE UNIQUE INDEX task_construction_systems_slug_key ON public.task_constru...` |
-| task_divisions | idx_task_divisions_import_batch_id | `CREATE INDEX idx_task_divisions_import_batch_id ON public.task_divisions USIN...` |
-| task_divisions | idx_task_divisions_not_deleted | `CREATE INDEX idx_task_divisions_not_deleted ON public.task_divisions USING bt...` |
-| task_divisions | idx_task_divisions_org | `CREATE INDEX idx_task_divisions_org ON public.task_divisions USING btree (org...` |
-| task_elements | idx_task_elements_not_deleted | `CREATE INDEX idx_task_elements_not_deleted ON public.task_elements USING btre...` |
-| task_elements | task_elements_slug_uniq | `CREATE UNIQUE INDEX task_elements_slug_uniq ON public.task_elements USING btr...` |
-| task_parameter_options | idx_task_parameter_options_not_deleted | `CREATE INDEX idx_task_parameter_options_not_deleted ON public.task_parameter_...` |
-| task_parameter_options | idx_task_parameter_options_parameter_id | `CREATE INDEX idx_task_parameter_options_parameter_id ON public.task_parameter...` |
-| task_parameters | idx_task_parameters_not_deleted | `CREATE INDEX idx_task_parameters_not_deleted ON public.task_parameters USING ...` |
-| task_parameters | idx_task_parameters_slug_unique | `CREATE UNIQUE INDEX idx_task_parameters_slug_unique ON public.task_parameters...` |
-| task_recipe_external_services | idx_task_recipe_ext_services_org | `CREATE INDEX idx_task_recipe_ext_services_org ON public.task_recipe_external_...` |
-| task_recipe_external_services | idx_task_recipe_ext_services_recipe | `CREATE INDEX idx_task_recipe_ext_services_recipe ON public.task_recipe_extern...` |
-| task_recipe_labor | idx_trl_import_batch_id | `CREATE INDEX idx_trl_import_batch_id ON public.task_recipe_labor USING btree ...` |
-| task_recipe_labor | idx_trl_labor_type | `CREATE INDEX idx_trl_labor_type ON public.task_recipe_labor USING btree (labo...` |
-| task_recipe_labor | idx_trl_org | `CREATE INDEX idx_trl_org ON public.task_recipe_labor USING btree (organizatio...` |
-| task_recipe_labor | idx_trl_recipe | `CREATE INDEX idx_trl_recipe ON public.task_recipe_labor USING btree (recipe_i...` |
-| task_recipe_materials | idx_trm_import_batch_id | `CREATE INDEX idx_trm_import_batch_id ON public.task_recipe_materials USING bt...` |
-| task_recipe_materials | idx_trm_material | `CREATE INDEX idx_trm_material ON public.task_recipe_materials USING btree (ma...` |
-| task_recipe_materials | idx_trm_org | `CREATE INDEX idx_trm_org ON public.task_recipe_materials USING btree (organiz...` |
-| task_recipe_materials | idx_trm_recipe | `CREATE INDEX idx_trm_recipe ON public.task_recipe_materials USING btree (reci...` |
-| task_recipe_ratings | idx_task_recipe_ratings_org | `CREATE INDEX idx_task_recipe_ratings_org ON public.task_recipe_ratings USING ...` |
-| task_recipe_ratings | idx_task_recipe_ratings_recipe | `CREATE INDEX idx_task_recipe_ratings_recipe ON public.task_recipe_ratings USI...` |
-| task_recipe_ratings | task_recipe_ratings_unique | `CREATE UNIQUE INDEX task_recipe_ratings_unique ON public.task_recipe_ratings ...` |
-| task_recipes | idx_task_recipes_import_batch_id | `CREATE INDEX idx_task_recipes_import_batch_id ON public.task_recipes USING bt...` |
-| task_recipes | idx_task_recipes_org | `CREATE INDEX idx_task_recipes_org ON public.task_recipes USING btree (organiz...` |
-| task_recipes | idx_task_recipes_public | `CREATE INDEX idx_task_recipes_public ON public.task_recipes USING btree (is_p...` |
-| task_recipes | idx_task_recipes_task | `CREATE INDEX idx_task_recipes_task ON public.task_recipes USING btree (task_i...` |
-| task_task_parameters | idx_task_task_parameters_not_deleted | `CREATE INDEX idx_task_task_parameters_not_deleted ON public.task_task_paramet...` |
-| task_task_parameters | idx_task_task_parameters_parameter_id | `CREATE INDEX idx_task_task_parameters_parameter_id ON public.task_task_parame...` |
-| task_task_parameters | idx_task_task_parameters_task_id | `CREATE INDEX idx_task_task_parameters_task_id ON public.task_task_parameters ...` |
-| task_task_parameters | task_task_parameters_unique | `CREATE UNIQUE INDEX task_task_parameters_unique ON public.task_task_parameter...` |
-| tasks | idx_tasks_import_batch_id | `CREATE INDEX idx_tasks_import_batch_id ON public.tasks USING btree (import_ba...` |
-| tasks | tasks_active_idx | `CREATE INDEX tasks_active_idx ON public.tasks USING btree (organization_id, i...` |
-| tasks | tasks_code_lower_uniq | `CREATE UNIQUE INDEX tasks_code_lower_uniq ON public.tasks USING btree (organi...` |
-| tasks | tasks_custom_name_org_uniq | `CREATE UNIQUE INDEX tasks_custom_name_org_uniq ON public.tasks USING btree (o...` |
-| tasks | tasks_custom_name_system_uniq | `CREATE UNIQUE INDEX tasks_custom_name_system_uniq ON public.tasks USING btree...` |
-| tasks | tasks_division_idx | `CREATE INDEX tasks_division_idx ON public.tasks USING btree (task_division_id)` |
-| tasks | tasks_org_idx | `CREATE INDEX tasks_org_idx ON public.tasks USING btree (organization_id)` |
-| tasks | tasks_parametric_signature_uniq | `CREATE UNIQUE INDEX tasks_parametric_signature_uniq ON public.tasks USING btr...` |
-| tasks | tasks_unit_idx | `CREATE INDEX tasks_unit_idx ON public.tasks USING btree (unit_id)` |
 | tax_labels | tax_labels_code_key | `CREATE UNIQUE INDEX tax_labels_code_key ON public.tax_labels USING btree (code)` |
 | testimonials | idx_testimonials_active | `CREATE INDEX idx_testimonials_active ON public.testimonials USING btree (is_a...` |
 | testimonials | idx_testimonials_course | `CREATE INDEX idx_testimonials_course ON public.testimonials USING btree (cour...` |
 | testimonials | idx_testimonials_course_user | `CREATE INDEX idx_testimonials_course_user ON public.testimonials USING btree ...` |
 | testimonials | idx_testimonials_org | `CREATE INDEX idx_testimonials_org ON public.testimonials USING btree (organiz...` |
 | testimonials | idx_testimonials_user | `CREATE INDEX idx_testimonials_user ON public.testimonials USING btree (user_i...` |
-| unit_categories | idx_unit_categories_name | `CREATE INDEX idx_unit_categories_name ON public.unit_categories USING btree (...` |
-| unit_categories | unit_categories_code_unique | `CREATE UNIQUE INDEX unit_categories_code_unique ON public.unit_categories USI...` |
-| units | idx_units_category | `CREATE INDEX idx_units_category ON public.units USING btree (unit_category_id)` |
-| units | idx_units_list | `CREATE INDEX idx_units_list ON public.units USING btree (is_system, organizat...` |
-| units | idx_units_organization | `CREATE INDEX idx_units_organization ON public.units USING btree (organization...` |
-| units | units_id_key1 | `CREATE UNIQUE INDEX units_id_key1 ON public.units USING btree (id)` |
-| units | uq_units_org_name | `CREATE UNIQUE INDEX uq_units_org_name ON public.units USING btree (organizati...` |
-| units | uq_units_system_name | `CREATE UNIQUE INDEX uq_units_system_name ON public.units USING btree (lower(n...` |
 | user_acquisition | uniq_user_acquisition_user | `CREATE UNIQUE INDEX uniq_user_acquisition_user ON public.user_acquisition USI...` |
 | user_data | user_data_id_key | `CREATE UNIQUE INDEX user_data_id_key ON public.user_data USING btree (id)` |
 | user_data | user_data_user_id_key | `CREATE UNIQUE INDEX user_data_user_id_key ON public.user_data USING btree (us...` |

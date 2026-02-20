@@ -32,6 +32,7 @@ import {
     ScrollText,
     MessageSquareText,
     Receipt,
+    Layers,
 } from "lucide-react";
 import { NavigationContext } from "@/stores/layout-store";
 import { useFeatureFlags } from "@/providers/feature-flags-provider";
@@ -227,6 +228,15 @@ export function useSidebarNavigation() {
                         { title: 'Facturación', href: '/admin/billing', icon: Receipt },
                     ],
                 },
+                // Catálogo Técnico — Tareas y Recursos
+                {
+                    id: 'catalogo-tecnico',
+                    label: 'Catálogo Técnico',
+                    items: [
+                        { title: 'Tareas', href: '/admin/catalog', icon: ClipboardList },
+                        { title: 'Recursos', href: '/admin/recursos', icon: Layers },
+                    ],
+                },
                 // Contenido
                 {
                     id: 'contenido',
@@ -234,7 +244,6 @@ export function useSidebarNavigation() {
                     items: [
                         { title: 'Academia', href: '/admin/academy', icon: GraduationCap },
                         { title: 'Contenido HUB', href: '/admin/hub-content', icon: Sparkles },
-                        { title: 'Catálogo Técnico', href: '/admin/catalog', icon: Package },
                         { title: 'Changelog', href: '/admin/changelog', icon: FileText },
                     ],
                 },

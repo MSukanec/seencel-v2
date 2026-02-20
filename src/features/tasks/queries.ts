@@ -26,7 +26,7 @@ export async function getOrganizationTasks(organizationId: string) {
     const supabase = await createClient();
 
     let query = supabase
-        .from('tasks_view')
+        .schema('catalog').from('tasks_view')
         .select('*')
         .eq('is_deleted', false)
         .order('name', { ascending: true });
@@ -122,7 +122,7 @@ export async function getTaskDivisions(organizationId?: string) {
     const supabase = await createClient();
 
     let query = supabase
-        .from('task_divisions')
+        .schema('catalog').from('task_divisions')
         .select('*')
         .eq('is_deleted', false)
         .order('order', { ascending: true, nullsFirst: false })
@@ -152,7 +152,7 @@ export async function getUnits() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('*')
         .order('name', { ascending: true });
 
@@ -177,7 +177,7 @@ export async function getTaskById(taskId: string): Promise<TaskView | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('tasks_view')
+        .schema('catalog').from('tasks_view')
         .select('*')
         .eq('id', taskId)
         .single();
@@ -220,7 +220,7 @@ export async function getTaskParameters() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_parameters')
+        .schema('catalog').from('task_parameters')
         .select(`
             *,
             options:task_parameter_options(*)
@@ -252,7 +252,7 @@ export async function getElementParameterLinks() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_element_parameters')
+        .schema('catalog').from('task_element_parameters')
         .select('element_id, parameter_id');
 
     if (error) {
@@ -270,7 +270,7 @@ export async function getLinkedParametersForElement(elementId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_element_parameters')
+        .schema('catalog').from('task_element_parameters')
         .select('parameter_id')
         .eq('element_id', elementId);
 
@@ -292,7 +292,7 @@ export async function getTaskActions() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_actions')
+        .schema('catalog').from('task_actions')
         .select('*')
         .order('name', { ascending: true });
 
@@ -311,10 +311,9 @@ export async function getTaskElements() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_elements')
+        .schema('catalog').from('task_elements')
         .select('*')
         .eq('is_deleted', false)
-        .order('order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true });
 
     if (error) {
@@ -333,7 +332,7 @@ export async function getCompatibleElements(actionId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_element_actions')
+        .schema('catalog').from('task_element_actions')
         .select(`
             element_id,
             task_elements!inner (
@@ -341,8 +340,8 @@ export async function getCompatibleElements(actionId: string) {
                 name,
                 slug,
                 description,
-                icon,
-                "order"
+                code,
+                element_type
             )
         `)
         .eq('action_id', actionId);
@@ -352,24 +351,20 @@ export async function getCompatibleElements(actionId: string) {
         return { data: [], error };
     }
 
-    // Flatten the nested structure
+    // Flatten the nested structure, sort alphabetically
     const elements = (data || []).map((row: any) => ({
         id: row.task_elements.id,
         name: row.task_elements.name,
         slug: row.task_elements.slug,
         description: row.task_elements.description,
-        icon: row.task_elements.icon,
-        order: row.task_elements.order,
+        code: row.task_elements.code,
+        element_type: row.task_elements.element_type,
+        default_unit_id: null,
+        is_system: true,
         is_deleted: false,
     })) as TaskElement[];
 
-    // Sort by order then name
-    elements.sort((a, b) => {
-        const orderA = a.order ?? 999999;
-        const orderB = b.order ?? 999999;
-        if (orderA !== orderB) return orderA - orderB;
-        return a.name.localeCompare(b.name);
-    });
+    elements.sort((a, b) => a.name.localeCompare(b.name));
 
     return { data: elements, error: null };
 }
@@ -382,7 +377,7 @@ export async function getCompatibleActionsForElement(elementId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_element_actions')
+        .schema('catalog').from('task_element_actions')
         .select(`
             action_id,
             task_actions!inner (
@@ -418,57 +413,12 @@ export async function getCompatibleActionsForElement(elementId: string) {
  * Used in parametric task wizard to show parameter inputs
  */
 export async function getElementParameters(elementId: string) {
-    const supabase = await createClient();
-
-    // First get the parameter IDs linked to this element
-    const { data: links, error: linksError } = await supabase
-        .from('task_element_parameters')
-        .select('parameter_id, order, is_required')
-        .eq('element_id', elementId)
-        .order('order', { ascending: true });
-
-    if (linksError || !links || links.length === 0) {
-        return { data: [], error: linksError };
-    }
-
-    // Get the actual parameters
-    const parameterIds = links.map(l => l.parameter_id);
-    const { data: parameters, error: paramsError } = await supabase
-        .from('task_parameters')
-        .select('*')
-        .in('id', parameterIds)
-        .eq('is_deleted', false);
-
-    if (paramsError || !parameters) {
-        return { data: [], error: paramsError };
-    }
-
-    // Get options for all parameters
-    const { data: allOptions, error: optionsError } = await supabase
-        .from('task_parameter_options')
-        .select('*')
-        .in('parameter_id', parameterIds)
-        .eq('is_deleted', false)
-        .order('order', { ascending: true });
-
-    if (optionsError) {
-        console.error('Error fetching parameter options:', optionsError);
-    }
-
-    // Build the result with options nested
-    const result = parameters.map(param => {
-        const link = links.find(l => l.parameter_id === param.id);
-        const options = (allOptions || []).filter(o => o.parameter_id === param.id);
-        return {
-            ...param,
-            order: link?.order ?? param.order,
-            is_required: link?.is_required ?? param.is_required,
-            options
-        };
-    }).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-
-    return { data: result, error: null };
+    // task_element_parameters was removed from the DB.
+    // Parameters now belong to construction systems, not elements.
+    // Use getSystemParameters(systemId) instead.
+    return { data: [], error: null };
 }
+
 
 // ============================================================================
 // DIVISION COMPATIBILITY QUERIES
@@ -481,10 +431,10 @@ export async function getAllElements() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_elements')
+        .schema('catalog').from('task_elements')
         .select('*')
         .eq('is_deleted', false)
-        .order('order', { ascending: true });
+        .order('name', { ascending: true });
 
     if (error) {
         console.error('Error fetching elements:', error);
@@ -501,7 +451,7 @@ export async function getElementById(elementId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_elements')
+        .schema('catalog').from('task_elements')
         .select('*')
         .eq('id', elementId)
         .eq('is_deleted', false)
@@ -522,7 +472,7 @@ export async function getDivisionElementIds(divisionId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_division_elements')
+        .schema('catalog').from('task_division_elements')
         .select('element_id')
         .eq('division_id', divisionId);
 
@@ -544,7 +494,7 @@ export async function getDivisionActionIds(divisionId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_division_actions')
+        .schema('catalog').from('task_division_actions')
         .select('action_id')
         .eq('division_id', divisionId);
 
@@ -566,7 +516,7 @@ export async function getDivisionById(divisionId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_divisions')
+        .schema('catalog').from('task_divisions')
         .select('*')
         .eq('id', divisionId)
         .single();
@@ -587,7 +537,7 @@ export async function getTaskCosts(organizationId: string): Promise<Map<string, 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('task_costs_view')
+        .schema('catalog').from('task_costs_view')
         .select('*')
         .eq('organization_id', organizationId);
 
@@ -674,3 +624,82 @@ export async function getTaskUsageCounts(organizationId: string): Promise<Map<st
     return map;
 }
 
+// ============================================================================
+// CONSTRUCTION SYSTEMS QUERIES
+// ============================================================================
+
+/**
+ * Get all construction systems (admin catalog)
+ */
+export async function getAllConstructionSystems() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_construction_systems')
+        .select('*')
+        .eq('is_deleted', false)
+        .order('order', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching construction systems:', error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}
+
+/**
+ * Get all system-parameter links for the admin view
+ */
+export async function getSystemParameterLinks() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_system_parameters')
+        .select('system_id, parameter_id');
+
+    if (error) {
+        console.error('Error fetching system-parameter links:', error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}
+
+/**
+ * Get all element-system links for the admin view
+ */
+export async function getElementSystemLinks() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_element_systems')
+        .select('element_id, system_id');
+
+    if (error) {
+        console.error('Error fetching element-system links:', error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}
+
+/**
+ * Get all element-action links for the admin catalog view
+ * Used by actions tab to show which elements each action is compatible with
+ */
+export async function getElementActionLinks() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_element_actions')
+        .select('action_id, element_id');
+
+    if (error) {
+        console.error('Error fetching element-action links:', error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}

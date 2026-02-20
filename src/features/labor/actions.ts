@@ -16,7 +16,7 @@ import { LaborPaymentView, LaborCategory, LaborType, LaborTypeWithPrice, Project
 export async function getLaborCategories(organizationId: string): Promise<LaborCategory[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .select('*')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false)
@@ -42,7 +42,7 @@ export async function getLaborCategories(organizationId: string): Promise<LaborC
 export async function getLaborTypes(): Promise<LaborType[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('labor_types')
+        .schema('catalog').from('labor_types')
         .select(`
             id,
             labor_category_id,
@@ -95,7 +95,7 @@ export async function getLaborTypesWithPrices(organizationId: string): Promise<L
 
     // Then get prices for this organization
     const { data: prices, error } = await supabase
-        .from('labor_prices')
+        .schema('catalog').from('labor_prices')
         .select(`
             id,
             labor_type_id,
@@ -150,7 +150,7 @@ export async function upsertLaborPrice(input: {
 
     // First, invalidate any existing price by setting valid_to
     await supabase
-        .from('labor_prices')
+        .schema('catalog').from('labor_prices')
         .update({ valid_to: new Date().toISOString().split('T')[0] })
         .eq('organization_id', input.organization_id)
         .eq('labor_type_id', input.labor_type_id)
@@ -158,7 +158,7 @@ export async function upsertLaborPrice(input: {
 
     // Insert new price
     const { error } = await supabase
-        .from('labor_prices')
+        .schema('catalog').from('labor_prices')
         .insert({
             organization_id: input.organization_id,
             labor_type_id: input.labor_type_id,
@@ -188,7 +188,7 @@ export async function createLaborCategory(input: CreateLaborCategoryInput): Prom
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .insert({
             organization_id: input.organization_id,
             name: input.name,
@@ -221,7 +221,7 @@ export async function updateLaborCategory(input: UpdateLaborCategoryInput): Prom
     if (input.unit_id !== undefined) updateData.unit_id = input.unit_id;
 
     const { data, error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .update(updateData)
         .eq('id', input.id)
         .eq('is_system', false) // Prevent updating system categories
@@ -241,7 +241,7 @@ export async function deleteLaborCategory(id: string): Promise<{ success: boolea
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id)
         .eq('is_system', false); // Prevent deleting system categories
@@ -271,7 +271,7 @@ export async function createSystemLaborCategory(input: CreateSystemLaborCategory
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .insert({
             name: input.name,
             description: input.description || null,
@@ -305,7 +305,7 @@ export async function updateSystemLaborCategory(input: UpdateSystemLaborCategory
     if (input.description !== undefined) updateData.description = input.description;
 
     const { data, error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .update(updateData)
         .eq('id', input.id)
         .eq('is_system', true)
@@ -328,7 +328,7 @@ export async function deleteSystemLaborCategory(id: string): Promise<{ success: 
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id)
         .eq('is_system', true);
@@ -358,7 +358,7 @@ export async function createSystemLaborLevel(input: CreateSystemLaborLevelInput)
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_levels')
+        .schema('catalog').from('labor_levels')
         .insert({
             name: input.name,
             description: input.description || null,
@@ -391,7 +391,7 @@ export async function updateSystemLaborLevel(input: UpdateSystemLaborLevelInput)
     if (input.description !== undefined) updateData.description = input.description;
 
     const { data, error } = await supabase
-        .from('labor_levels')
+        .schema('catalog').from('labor_levels')
         .update(updateData)
         .eq('id', input.id)
         .eq('is_system', true)
@@ -414,7 +414,7 @@ export async function deleteSystemLaborLevel(id: string): Promise<{ success: boo
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('labor_levels')
+        .schema('catalog').from('labor_levels')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id)
         .eq('is_system', true);
@@ -444,7 +444,7 @@ export async function createSystemLaborRole(input: CreateSystemLaborRoleInput): 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_roles')
+        .schema('catalog').from('labor_roles')
         .insert({
             name: input.name,
             description: input.description || null,
@@ -477,7 +477,7 @@ export async function updateSystemLaborRole(input: UpdateSystemLaborRoleInput): 
     if (input.description !== undefined) updateData.description = input.description;
 
     const { data, error } = await supabase
-        .from('labor_roles')
+        .schema('catalog').from('labor_roles')
         .update(updateData)
         .eq('id', input.id)
         .eq('is_system', true)
@@ -500,7 +500,7 @@ export async function deleteSystemLaborRole(id: string): Promise<{ success: bool
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('labor_roles')
+        .schema('catalog').from('labor_roles')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id)
         .eq('is_system', true);
@@ -534,7 +534,7 @@ export async function createSystemLaborType(input: CreateSystemLaborTypeInput): 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_types')
+        .schema('catalog').from('labor_types')
         .insert({
             name: input.name,
             description: input.description || null,
@@ -576,7 +576,7 @@ export async function updateSystemLaborType(input: UpdateSystemLaborTypeInput): 
     if (input.unit_id !== undefined) updateData.unit_id = input.unit_id;
 
     const { data, error } = await supabase
-        .from('labor_types')
+        .schema('catalog').from('labor_types')
         .update(updateData)
         .eq('id', input.id)
         .eq('is_system', true)
@@ -599,7 +599,7 @@ export async function deleteSystemLaborType(id: string): Promise<{ success: bool
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('labor_types')
+        .schema('catalog').from('labor_types')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id)
         .eq('is_system', true);

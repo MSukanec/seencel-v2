@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -154,7 +154,7 @@ can_view_org(organization_id, 'commercial.view'::text)
 
 ### `quotes` (4 policies)
 
-#### ACTORES VEN PRESUPUESTOS DEL PROYECTO
+#### EXTERNOS VEN QUOTES
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}

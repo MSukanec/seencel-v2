@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -175,7 +175,7 @@
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
-| recipe_external_service_id | uuid | ✗ |  | FK → task_recipe_external_services.id |
+| recipe_external_service_id | uuid | ✗ |  |  |
 | organization_id | uuid | ✗ |  | FK → organizations.id |
 | currency_id | uuid | ✗ |  | FK → currencies.id |
 | unit_price | numeric | ✗ |  |  |

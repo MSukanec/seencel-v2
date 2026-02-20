@@ -319,7 +319,7 @@ export async function getSystemMaterials(): Promise<SystemMaterial[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('materials')
+        .schema('catalog').from('materials')
         .select(`
             id,
             name,
@@ -365,7 +365,7 @@ export async function getAllMaterialsAdmin(): Promise<SystemMaterial[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('materials')
+        .schema('catalog').from('materials')
         .select(`
             id,
             name,
@@ -377,8 +377,7 @@ export async function getAllMaterialsAdmin(): Promise<SystemMaterial[]> {
             created_at,
             organization_id,
             units!materials_unit_id_fkey (name),
-            material_categories (name),
-            organizations (name, logo_url)
+            material_categories (name)
         `)
         .eq('is_deleted', false)
         .order('name', { ascending: true });
@@ -400,8 +399,8 @@ export async function getAllMaterialsAdmin(): Promise<SystemMaterial[]> {
         is_deleted: m.is_deleted,
         created_at: m.created_at,
         organization_id: m.organization_id || null,
-        organization_name: m.organizations?.name || null,
-        organization_logo_url: m.organizations?.logo_url || null,
+        organization_name: null,
+        organization_logo_url: null,
     }));
 }
 
@@ -412,7 +411,7 @@ export async function getMaterialCategories(): Promise<MaterialCategory[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_categories')
+        .schema('catalog').from('material_categories')
         .select('id, name')
         .order('name', { ascending: true });
 
@@ -431,7 +430,7 @@ export async function getUnitsForMaterials(): Promise<Unit[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name')
         .order('name', { ascending: true });
 
@@ -457,7 +456,7 @@ export async function getMaterialCategoriesHierarchy(): Promise<MaterialCategory
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_categories')
+        .schema('catalog').from('material_categories')
         .select('id, name, parent_id, created_at')
         .order('name', { ascending: true });
 
@@ -489,7 +488,7 @@ export async function getSystemLaborCategories(): Promise<SystemLaborCategory[]>
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_categories')
+        .schema('catalog').from('labor_categories')
         .select(`
             id,
             name,
@@ -537,7 +536,7 @@ export async function getSystemLaborLevels(): Promise<SystemLaborLevel[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_levels')
+        .schema('catalog').from('labor_levels')
         .select(`
             id,
             name,
@@ -581,7 +580,7 @@ export async function getSystemLaborRoles(): Promise<SystemLaborRole[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_roles')
+        .schema('catalog').from('labor_roles')
         .select(`
             id,
             name,
@@ -637,7 +636,7 @@ export async function getSystemLaborTypes(): Promise<SystemLaborType[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('labor_types')
+        .schema('catalog').from('labor_types')
         .select(`
             id,
             name,
@@ -682,7 +681,7 @@ export async function getUnitsForLabor(): Promise<Unit[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, applicable_to')
         .contains('applicable_to', ['labor'])
         .order('name', { ascending: true });
@@ -726,7 +725,7 @@ export async function getSystemUnits(): Promise<SystemUnit[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, symbol, applicable_to, unit_category_id, organization_id')
         .is('organization_id', null)
         .order('name', { ascending: true });
@@ -754,7 +753,7 @@ export async function getSystemUnitCategories(): Promise<SystemUnitCategory[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('unit_categories')
+        .schema('catalog').from('unit_categories')
         .select('id, code, name, description')
         .order('name', { ascending: true });
 

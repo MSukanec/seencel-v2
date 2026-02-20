@@ -28,7 +28,7 @@ export async function importTasksCatalogBatch(
 
     // 1. Get divisions for name lookup (filter by org + system)
     const { data: divisions, error: divError } = await supabase
-        .from('task_divisions')
+        .schema('catalog').from('task_divisions')
         .select('id, name, code')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false);
@@ -46,7 +46,7 @@ export async function importTasksCatalogBatch(
 
     // 2. Get units for name/symbol lookup (system + org)
     const { data: units } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, symbol, organization_id')
         .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
         .eq('is_deleted', false);
@@ -59,7 +59,7 @@ export async function importTasksCatalogBatch(
 
     // 3. Get existing task names for duplicate detection
     const { data: existingTasks } = await supabase
-        .from('tasks')
+        .schema('catalog').from('tasks')
         .select('name, code')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false);
@@ -173,7 +173,7 @@ export async function importTasksCatalogBatch(
         console.log(`[Import] Creating ${divisionInserts.length} new divisions:`, divisionInserts.map(d => d.name));
 
         const { data: newDivisions, error: divisionError } = await supabase
-            .from('task_divisions')
+            .schema('catalog').from('task_divisions')
             .insert(divisionInserts)
             .select('id, name');
 
@@ -199,7 +199,7 @@ export async function importTasksCatalogBatch(
         }));
 
         const { data: newUnits, error: unitError } = await supabase
-            .from('units')
+            .schema('catalog').from('units')
             .insert(unitInserts)
             .select('id, name');
 
@@ -256,7 +256,7 @@ export async function importTasksCatalogBatch(
     const insertedTasks: any[] = [];
     if (records.length > 0) {
         const { data: inserted, error } = await supabase
-            .from('tasks')
+            .schema('catalog').from('tasks')
             .insert(records)
             .select('id, name');
 

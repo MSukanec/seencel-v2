@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -465,10 +465,10 @@ BEGIN
     'roles.view',
     'contacts.view',
     'contacts.manage',
-    'kanban.view',
-    'kanban.manage',
-    'commercial.view',    -- reemplaza clients.view + quotes.view
-    'commercial.manage',  -- reemplaza clients.manage + quotes.manage
+    'planner.view',    -- reemplaza calendar.view + kanban.view
+    'planner.manage',  -- reemplaza calendar.manage + kanban.manage
+    'commercial.view',
+    'commercial.manage',
     'sitelog.view',
     'sitelog.manage',
     'media.view',
@@ -477,8 +477,6 @@ BEGIN
     'tasks.manage',
     'materials.view',
     'materials.manage',
-    'calendar.view',
-    'calendar.manage',
     'subcontracts.view',
     'subcontracts.manage',
     'labor.view',
@@ -499,13 +497,12 @@ BEGIN
     'members.view',
     'roles.view',
     'contacts.view',
-    'kanban.view',
-    'commercial.view',    -- reemplaza clients.view + quotes.view
+    'planner.view',    -- reemplaza calendar.view + kanban.view
+    'commercial.view',
     'sitelog.view',
     'media.view',
     'tasks.view',
     'materials.view',
-    'calendar.view',
     'subcontracts.view',
     'labor.view'
   );

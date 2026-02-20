@@ -27,7 +27,7 @@ export async function createUnit(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .insert({
             name: name.trim(),
             symbol: symbol?.trim() || null,
@@ -81,7 +81,7 @@ export async function updateUnit(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .update(updateData)
         .eq('id', id)
         .select()
@@ -100,7 +100,7 @@ export async function deleteUnit(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),

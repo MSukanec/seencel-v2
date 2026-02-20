@@ -1,306 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 6: project_clients — task_element_parameters)
-
-### `project_clients`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| contact_id | uuid | ✓ |  | FK → contacts.id |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| is_primary | bool | ✗ | true |  |
-| notes | text | ✓ |  |  |
-| status | text | ✗ | 'active'::text |  |
-| client_role_id | uuid | ✓ |  | FK → client_roles.id |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `project_data`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| project_id | uuid | ✗ |  | PK, FK → projects.id |
-| surface_total | numeric | ✓ |  |  |
-| surface_covered | numeric | ✓ |  |  |
-| surface_semi | numeric | ✓ |  |  |
-| lat | numeric | ✓ |  |  |
-| lng | numeric | ✓ |  |  |
-| zip_code | text | ✓ |  |  |
-| description | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| country | text | ✓ |  |  |
-| state | text | ✓ |  |  |
-| address | text | ✓ |  |  |
-| city | text | ✓ |  |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| accessibility_notes | text | ✓ |  |  |
-| address_full | text | ✓ |  |  |
-| location_type | text | ✓ |  |  |
-| place_id | text | ✓ |  |  |
-| timezone | text | ✓ |  |  |
-| is_public | bool | ✗ | false |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `project_labor`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| contact_id | uuid | ✗ |  | FK → contacts.id |
-| notes | text | ✓ |  |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| labor_type_id | uuid | ✓ |  | FK → labor_categories.id |
-| start_date | date | ✓ |  |  |
-| end_date | date | ✓ |  |  |
-| status | text | ✗ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `project_modalities`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| is_system | bool | ✗ | true |  |
-| created_at | timestamptz | ✓ | now() |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `project_settings`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | UNIQUE, FK → projects.id |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| work_days | _int4 | ✗ | '{1,2,3,4,5}'::integer[] |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| use_palette_theme | bool | ✗ | false |  |
-| use_custom_color | bool | ✗ | false |  |
-| custom_color_h | int4 | ✓ |  |  |
-| custom_color_hex | text | ✓ |  |  |
-
-### `project_types`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-| is_system | bool | ✗ | false |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `projects`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| created_at | timestamptz | ✗ | now() |  |
-| name | text | ✗ |  |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| is_active | bool | ✗ | true |  |
-| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| status | project_status | ✗ | 'active'::project_status |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| color | text | ✓ |  |  |
-| code | text | ✓ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| last_active_at | timestamptz | ✓ |  |  |
-| is_over_limit | bool | ✓ | false |  |
-| image_url | text | ✓ |  |  |
-| project_type_id | uuid | ✓ |  | FK → project_types.id |
-| project_modality_id | uuid | ✓ |  | FK → project_modalities.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| image_palette | jsonb | ✓ |  |  |
-
-### `provider_products`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| product_id | uuid | ✗ |  | UNIQUE, FK → products.id |
-| provider_code | text | ✓ |  |  |
-| is_active | bool | ✗ | true |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-
-### `push_subscriptions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
-| endpoint | text | ✗ |  | UNIQUE |
-| p256dh | text | ✗ |  |  |
-| auth | text | ✗ |  |  |
-| user_agent | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-
-### `role_permissions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| role_id | uuid | ✗ |  | UNIQUE, FK → roles.id |
-| permission_id | uuid | ✗ |  | UNIQUE, FK → permissions.id |
-| created_at | timestamptz | ✗ | now() |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-
-### `roles`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| type | text | ✓ |  |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| is_system | bool | ✗ | false |  |
-
-### `signatures`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| document_type | text | ✗ |  |  |
-| document_id | uuid | ✗ |  |  |
-| signer_name | text | ✗ |  |  |
-| signer_email | text | ✓ |  |  |
-| signer_user_id | uuid | ✓ |  |  |
-| signature_url | text | ✗ |  |  |
-| signature_method | text | ✗ |  |  |
-| ip_address | inet | ✓ |  |  |
-| user_agent | text | ✓ |  |  |
-| signed_at | timestamptz | ✗ | now() |  |
-| created_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✓ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `site_log_types`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| is_system | bool | ✗ | false |  |
-| created_at | timestamptz | ✓ | now() |  |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| updated_at | timestamptz | ✓ | now() |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
-### `site_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| log_date | date | ✗ |  |  |
-| comments | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| is_public | bool | ✓ | false |  |
-| status | site_log_status | ✓ | 'approved'::site_log_status |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_favorite | bool | ✓ | false |  |
-| weather | weather_enum | ✓ | 'none'::weather_enum |  |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| entry_type_id | uuid | ✓ |  | FK → site_log_types.id |
-| severity | site_log_severity | ✓ | 'low'::site_log_severity |  |
-| ai_summary | text | ✓ |  |  |
-| ai_tags | _text | ✓ |  |  |
-| ai_analyzed | bool | ✗ | false |  |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `subcontract_bid_tasks`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| subcontract_bid_id | uuid | ✓ |  | FK → subcontract_bids.id |
-| subcontract_task_id | uuid | ✓ |  | FK → subcontract_tasks.id |
-| quantity | numeric | ✓ |  |  |
-| unit | text | ✓ |  |  |
-| unit_price | numeric | ✓ |  |  |
-| amount | numeric | ✓ |  |  |
-| notes | text | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-
-### `subcontract_bids`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| contact_id | uuid | ✗ |  | FK → contacts.id |
-| amount | numeric | ✓ |  |  |
-| currency_id | uuid | ✓ |  | FK → currencies.id |
-| exchange_rate | numeric | ✓ |  |  |
-| notes | text | ✓ |  |  |
-| submitted_at | date | ✓ |  |  |
-| status | text | ✓ | 'pending'::text |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| subcontract_id | uuid | ✓ |  | FK → subcontracts.id |
-
-### `subcontract_payments`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✗ |  | FK → projects.id |
-| subcontract_id | uuid | ✓ |  | FK → subcontracts.id |
-| organization_id | uuid | ✗ |  | FK → organizations.id |
-| amount | numeric | ✗ |  |  |
-| currency_id | uuid | ✗ |  | FK → currencies.id |
-| exchange_rate | numeric | ✗ |  |  |
-| payment_date | date | ✗ | now() |  |
-| notes | text | ✓ |  |  |
-| reference | text | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
-| status | text | ✗ | 'confirmed'::text |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| is_deleted | bool | ✓ | false |  |
-| import_batch_id | uuid | ✓ |  | FK → import_batches.id |
+## [PUBLIC] Tables (chunk 6: subcontract_tasks — wallets)
 
 ### `subcontract_tasks`
 
@@ -389,83 +92,155 @@
 | error_message | text | ✓ |  |  |
 | processed_at | timestamptz | ✓ | now() |  |
 
-### `task_actions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| name | text | ✓ |  | UNIQUE |
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| description | text | ✓ |  |  |
-| short_code | varchar(10) | ✓ |  |  |
-
-### `task_construction_systems`
+### `tax_labels`
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| name | text | ✗ |  | UNIQUE |
-| slug | text | ✗ |  | UNIQUE |
-| description | text | ✓ |  |  |
-| code | varchar(10) | ✓ |  |  |
-| icon | text | ✓ |  |  |
-| order | int4 | ✓ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `task_division_actions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| division_id | uuid | ✗ |  | PK, FK → task_divisions.id |
-| action_id | uuid | ✗ |  | PK, FK → task_actions.id |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `task_division_elements`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| division_id | uuid | ✗ |  | PK, FK → task_divisions.id |
-| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `task_divisions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
+| code | text | ✗ |  | UNIQUE |
 | name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| order | int4 | ✓ |  |  |
-| code | text | ✓ |  |  |
-| parent_id | uuid | ✓ |  | FK → task_divisions.id |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
+| country_codes | _text | ✓ |  |  |
+| is_system | bool | ✓ | true |  |
+
+### `testimonials`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| course_id | uuid | ✓ |  | FK → courses.id |
 | organization_id | uuid | ✓ |  | FK → organizations.id |
-| is_system | bool | ✗ | true |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-| import_batch_id | uuid | ✓ |  | FK → import_batches.id |
+| product_id | uuid | ✓ |  |  |
+| author_name | text | ✗ |  |  |
+| author_title | text | ✓ |  |  |
+| author_avatar_url | text | ✓ |  |  |
+| content | text | ✗ |  |  |
+| rating | int4 | ✓ |  |  |
+| is_featured | bool | ✓ | false |  |
+| is_active | bool | ✓ | true |  |
+| sort_index | int4 | ✓ | 0 |  |
+| is_deleted | bool | ✓ | false |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| user_id | uuid | ✓ |  | FK → users.id |
 
-### `task_element_actions`
+### `user_acquisition`
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
-| action_id | uuid | ✗ |  | PK, FK → task_actions.id |
-| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
-| created_at | timestamptz | ✓ | now() |  |
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | FK → users.id |
+| source | text | ✗ |  |  |
+| medium | text | ✓ |  |  |
+| campaign | text | ✓ |  |  |
+| content | text | ✓ |  |  |
+| landing_page | text | ✓ |  |  |
+| referrer | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
 
-### `task_element_parameters`
+### `user_data`
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
-| element_id | uuid | ✗ |  | PK, FK → task_elements.id |
-| parameter_id | uuid | ✗ |  | PK, FK → task_parameters.id |
-| order | int4 | ✓ | 0 |  |
-| is_required | bool | ✓ | true |  |
+| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| country | uuid | ✓ |  | FK → countries.id |
 | created_at | timestamptz | ✓ | now() |  |
+| birthdate | date | ✓ |  |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| first_name | text | ✓ |  |  |
+| last_name | text | ✓ |  |  |
+| phone_e164 | text | ✓ |  |  |
+
+### `user_notifications`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| notification_id | uuid | ✗ |  | UNIQUE, FK → notifications.id |
+| delivered_at | timestamptz | ✗ | now() |  |
+| read_at | timestamptz | ✓ |  |  |
+| clicked_at | timestamptz | ✓ |  |  |
+
+### `user_organization_preferences`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
+| last_project_id | uuid | ✓ |  | FK → projects.id |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+
+### `user_preferences`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | UNIQUE, FK → users.id |
+| last_organization_id | uuid | ✓ |  | FK → organizations.id |
+| theme | text | ✓ | 'dark'::text |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| home_checklist | jsonb | ✗ | '{"create_contact": false, "create_pr... |  |
+| home_banner_dismissed | bool | ✗ | false |  |
+| layout | text | ✗ | 'classic'::text |  |
+| language | text | ✗ | 'es'::text |  |
+| sidebar_mode | text | ✗ | 'docked'::text |  |
+| timezone | text | ✓ | 'UTC'::text |  |
+
+### `user_presence`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| user_id | uuid | ✗ |  | PK, FK → users.id |
+| organization_id | uuid | ✓ |  |  |
+| last_seen_at | timestamptz | ✗ | now() |  |
+| status | text | ✗ | 'online'::text |  |
+| user_agent | text | ✓ |  |  |
+| locale | text | ✓ |  |  |
+| updated_from | text | ✓ |  |  |
+| current_view | text | ✓ |  |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| session_id | uuid | ✓ |  |  |
+
+### `user_view_history`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | FK → users.id |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| view_name | text | ✗ |  |  |
+| entered_at | timestamptz | ✗ | now() |  |
+| exited_at | timestamptz | ✓ |  |  |
+| duration_seconds | int4 | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| session_id | uuid | ✓ |  |  |
+
+### `users`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
+| created_at | timestamptz | ✗ | now() |  |
+| auth_id | uuid | ✗ |  | UNIQUE |
+| email | text | ✗ |  |  |
+| avatar_url | text | ✓ |  |  |
+| avatar_source | avatar_source_t | ✓ | 'email'::avatar_source_t |  |
+| full_name | text | ✓ |  |  |
+| role_id | uuid | ✗ | 'e6cc68d2-fc28-421b-8bd3-303326ef91b8... | FK → roles.id |
+| updated_at | timestamptz | ✓ | now() |  |
+| is_active | bool | ✗ | true |  |
+| signup_completed | bool | ✗ | false |  |
+
+### `wallets`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
+| name | text | ✗ |  | UNIQUE |
+| created_at | timestamptz | ✗ | now() |  |
+| is_active | bool | ✗ | true |  |
+| updated_at | timestamptz | ✗ | now() |  |

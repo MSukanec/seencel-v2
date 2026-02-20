@@ -94,16 +94,6 @@ export function TasksElementForm({ initialData, units = [], onSuccess, onCancel 
                         />
                     </FormGroup>
 
-                    {/* Order */}
-                    <FormGroup label="Orden" helpText="Para ordenar en listados">
-                        <Input
-                            name="order"
-                            type="number"
-                            placeholder="1"
-                            defaultValue={initialData?.order?.toString() || ""}
-                            min={0}
-                        />
-                    </FormGroup>
 
                     {/* Default Unit */}
                     {units.length > 0 && (

@@ -202,7 +202,7 @@ export async function importMaterialsCatalogBatch(
 
     // 1. Get categories for name lookup (filter by org)
     const { data: categories, error: catError } = await supabase
-        .from('material_categories')
+        .schema('catalog').from('material_categories')
         .select('id, name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false);
@@ -219,7 +219,7 @@ export async function importMaterialsCatalogBatch(
 
     // 2. Get units for name/symbol lookup (system + org)
     const { data: units } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, symbol, organization_id')
         .or(`organization_id.is.null,organization_id.eq.${organizationId}`);
 
@@ -255,7 +255,7 @@ export async function importMaterialsCatalogBatch(
 
     // 5. Get existing material names for duplicate detection
     const { data: existingMaterials } = await supabase
-        .from('materials')
+        .schema('catalog').from('materials')
         .select('name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false);
@@ -466,7 +466,7 @@ export async function importMaterialsCatalogBatch(
         console.log(`[Import] Creating ${categoryInserts.length} new categories:`, categoryInserts.map(c => c.name));
 
         const { data: newCategories, error: categoryError } = await supabase
-            .from('material_categories')
+            .schema('catalog').from('material_categories')
             .insert(categoryInserts)
             .select('id, name');
 
@@ -491,7 +491,7 @@ export async function importMaterialsCatalogBatch(
         }));
 
         const { data: newUnits, error: unitError } = await supabase
-            .from('units')
+            .schema('catalog').from('units')
             .insert(unitInserts)
             .select('id, name');
 
@@ -599,7 +599,7 @@ export async function importMaterialsCatalogBatch(
         const cleanRecords = records.map(({ _unit_price, _currency_code, _price_date, ...rest }) => rest);
 
         const { data: inserted, error } = await supabase
-            .from('materials')
+            .schema('catalog').from('materials')
             .insert(cleanRecords)
             .select('id, name');
 
@@ -661,7 +661,7 @@ export async function importMaterialsCatalogBatch(
         console.log(`[Import] Inserting ${priceInserts.length} prices for materials`);
 
         const { error: priceError } = await supabase
-            .from('material_prices')
+            .schema('catalog').from('material_prices')
             .insert(priceInserts);
 
         if (priceError) {

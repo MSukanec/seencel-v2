@@ -125,6 +125,9 @@ export interface TaskAction {
     name: string;
     short_code: string | null;
     description: string | null;
+    action_type: string | null;
+    sort_order: number | null;
+    is_system: boolean;
 }
 
 // Task Element (Object: Contrapiso, Muro, etc.)
@@ -134,9 +137,26 @@ export interface TaskElement {
     slug: string;
     code: string | null; // Short code like MUR, CTR, VIG
     description: string | null;
+    element_type: string;
+    default_unit_id: string | null;
+    is_system: boolean;
+    is_deleted: boolean;
+}
+
+// Task Construction System (Sistema Constructivo: Estructura, Mampostería, etc.)
+export interface TaskConstructionSystem {
+    id: string;
+    name: string;
+    slug: string;
+    code: string | null; // Short code like EST, MAM, REV
+    description: string | null;
     icon: string | null;
+    category: string | null;
     order: number | null;
     is_deleted: boolean;
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string | null;
 }
 
 // Extended Task with parametric fields

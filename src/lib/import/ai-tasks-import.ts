@@ -44,7 +44,7 @@ export async function importAITasksBatch(
 
     // Units
     const { data: units } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, symbol')
         .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
         .eq('is_deleted', false);
@@ -57,7 +57,7 @@ export async function importAITasksBatch(
 
     // Materials
     const { data: materials } = await supabase
-        .from('materials')
+        .schema('catalog').from('materials')
         .select('id, name, code')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false);
@@ -70,7 +70,7 @@ export async function importAITasksBatch(
 
     // Labor types
     const { data: laborTypes } = await supabase
-        .from('labor_types')
+        .schema('catalog').from('labor_types')
         .select('id, name')
         .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
         .eq('is_deleted', false);
@@ -82,7 +82,7 @@ export async function importAITasksBatch(
 
     // Existing tasks for duplicate detection
     const { data: existingTasks } = await supabase
-        .from('tasks')
+        .schema('catalog').from('tasks')
         .select('name, code')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false);
@@ -96,7 +96,7 @@ export async function importAITasksBatch(
 
     // Divisions
     const { data: divisions } = await supabase
-        .from('task_divisions')
+        .schema('catalog').from('task_divisions')
         .select('id, name, code')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false);
@@ -166,7 +166,7 @@ export async function importAITasksBatch(
     // ========================================================================
 
     const { data: insertedTasks, error: taskError } = await supabase
-        .from('tasks')
+        .schema('catalog').from('tasks')
         .insert(tasksToInsert)
         .select('id, name');
 
@@ -206,7 +206,7 @@ export async function importAITasksBatch(
 
     if (recipesToInsert.length > 0) {
         const { data: insertedRecipes, error: recipeError } = await supabase
-            .from('task_recipes')
+            .schema('catalog').from('task_recipes')
             .insert(recipesToInsert)
             .select('id, task_id');
 
@@ -294,7 +294,7 @@ export async function importAITasksBatch(
             // Batch insert materials
             if (materialsToInsert.length > 0) {
                 const { error: matError } = await supabase
-                    .from('task_recipe_materials')
+                    .schema('catalog').from('task_recipe_materials')
                     .insert(materialsToInsert);
 
                 if (matError) {
@@ -306,7 +306,7 @@ export async function importAITasksBatch(
             // Batch insert labor
             if (laborToInsert.length > 0) {
                 const { error: labError } = await supabase
-                    .from('task_recipe_labor')
+                    .schema('catalog').from('task_recipe_labor')
                     .insert(laborToInsert);
 
                 if (labError) {

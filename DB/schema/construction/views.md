@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -56,12 +56,12 @@ SELECT ct.id,
     ph.phase_name,
     tr.name AS recipe_name
    FROM (((((((construction.construction_tasks ct
-     LEFT JOIN tasks t ON ((t.id = ct.task_id)))
-     LEFT JOIN units u ON ((u.id = t.unit_id)))
-     LEFT JOIN task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.tasks t ON ((t.id = ct.task_id)))
+     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)))
+     LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
      LEFT JOIN construction.quote_items qi ON ((qi.id = ct.quote_item_id)))
      LEFT JOIN construction.quotes q ON ((q.id = qi.quote_id)))
-     LEFT JOIN task_recipes tr ON ((tr.id = ct.recipe_id)))
+     LEFT JOIN catalog.task_recipes tr ON ((tr.id = ct.recipe_id)))
      LEFT JOIN LATERAL ( SELECT cp.name AS phase_name
            FROM (construction.construction_phase_tasks cpt
              JOIN construction.construction_phases cp ON ((cp.id = cpt.project_phase_id)))

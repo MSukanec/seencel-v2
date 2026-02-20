@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getElementParameterLinks } from "@/features/tasks/queries";
-import { getSystemMaterials, getAllMaterialsAdmin, getMaterialCategories, getUnitsForMaterials, getMaterialCategoriesHierarchy, getSystemLaborCategories, getSystemLaborLevels, getSystemLaborRoles, getSystemLaborTypes, getUnitsForLabor, getSystemUnits, getSystemUnitCategories } from "@/features/admin/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getAllConstructionSystems, getSystemParameterLinks, getElementSystemLinks, getElementActionLinks } from "@/features/tasks/queries";
+import { getSystemMaterials } from "@/features/admin/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
 import { TasksParametersView } from "@/features/tasks/views/tasks-parameters-view";
 import { TasksElementsView } from "@/features/tasks/views/tasks-elements-view";
-import { MaterialsCatalogView } from "@/features/materials/views/materials-catalog-view";
-import { LaborCatalogView } from "@/features/labor/views/labor-catalog-view";
-import { UnitsCatalogView } from "@/features/units/views/units-catalog-view";
+import { TasksSistemasView } from "@/features/tasks/views/tasks-sistemas-view";
+import { TasksAccionesView } from "@/features/tasks/views/tasks-acciones-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { Wrench, ClipboardList, Package, Shield, FolderTree, Settings2, Boxes, HardHat, Ruler } from "lucide-react";
+import { Zap, Wrench, ClipboardList, Shield, FolderTree, Settings2, Boxes } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,15 +27,11 @@ export async function generateMetadata({
     const t = await getTranslations({ locale, namespace: 'Catalog' });
 
     return {
-        title: `Admin - ${t('title')} | Seencel`,
+        title: `Admin - Tareas | Seencel`,
         description: t('subtitle'),
         robots: "noindex, nofollow",
     };
 }
-
-// ============================================================================
-// Types
-// ============================================================================
 
 // Reusable tab trigger style
 const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transparent bg-transparent px-0 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground";
@@ -46,14 +41,14 @@ const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transp
 // ============================================================================
 
 /**
- * Admin Technical Catalog Page
- * Uses the SAME views as organization catalog but with isAdminMode=true:
- * - Tasks: can edit/delete ALL tasks including system tasks
- * - Materials: can create/edit/delete system materials
+ * Admin Tasks Catalog Page
+ * Tab order: Rubros > Acciones > Elementos > Sistemas > Parámetros > Tareas
+ * 
+ * Full hierarchy:
+ * Acciones → [task_element_actions] → Elementos → [task_element_systems] → Sistemas → [task_system_parameters] → Parámetros
  */
 export default async function AdminCatalogPage() {
     try {
-        // Fetch all data in parallel
         const [
             groupedTasks,
             taskUnitsResult,
@@ -61,67 +56,24 @@ export default async function AdminCatalogPage() {
             parametersResult,
             actionsResult,
             elementsResult,
-            elementParameterLinksResult,
+            systemsResult,
+            systemParameterLinksResult,
+            elementSystemLinksResult,
+            elementActionLinksResult,
             systemMaterials,
-            allMaterials,
-            materialCategories,
-            materialUnits,
-            categoryHierarchy,
-            systemLaborCategories,
-            systemLaborLevels,
-            systemLaborRoles,
-            systemLaborTypes,
-            laborUnits,
-            systemUnits,
-            systemUnitCategories
         ] = await Promise.all([
-            getTasksGroupedByDivision("__SYSTEM__"), // Special flag for system-only tasks
+            getTasksGroupedByDivision("__SYSTEM__"),
             getUnits(),
-            getTaskDivisions("__SYSTEM__"), // Only system divisions in admin
-            getTaskParameters(), // Get all parameters with options
-            getTaskActions(), // Get all actions for parametric tasks
-            getAllElements(), // Get all elements for sidebar
-            getElementParameterLinks(), // Get element-parameter links for filtering
+            getTaskDivisions("__SYSTEM__"),
+            getTaskParameters(),
+            getTaskActions(),
+            getAllElements(),
+            getAllConstructionSystems(),
+            getSystemParameterLinks(),
+            getElementSystemLinks(),
+            getElementActionLinks(),
             getSystemMaterials(),
-            getAllMaterialsAdmin(),
-            getMaterialCategories(),
-            getUnitsForMaterials(),
-            getMaterialCategoriesHierarchy(),
-            getSystemLaborCategories(),
-            getSystemLaborLevels(),
-            getSystemLaborRoles(),
-            getSystemLaborTypes(),
-            getUnitsForLabor(),
-            getSystemUnits(),
-            getSystemUnitCategories()
         ]);
-
-        // Transform system materials to match MaterialsCatalogView expected type
-        const materialsForView = systemMaterials.map(m => ({
-            ...m,
-            organization_id: null as string | null
-        }));
-
-        // Transform categories to include parent_id
-        const categoriesForView = materialCategories.map(c => ({
-            ...c,
-            name: c.name || '',
-            parent_id: null as string | null
-        }));
-
-        // Transform units with abbreviation
-        const unitsForView = materialUnits.map(u => ({
-            id: u.id,
-            name: u.name,
-            abbreviation: ''
-        }));
-
-
-        // Transform category hierarchy to ensure name is string
-        const categoryHierarchyForView = categoryHierarchy.map(c => ({
-            ...c,
-            name: c.name || ''
-        }));
 
         // Calculate task counts by division for the Rubros view
         const taskCounts: Record<string, number> = {};
@@ -132,11 +84,11 @@ export default async function AdminCatalogPage() {
         });
 
         return (
-            <Tabs defaultValue="tasks" className="h-full flex flex-col">
+            <Tabs defaultValue="divisions" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
-                    title="Catálogo Técnico"
-                    icon={<Wrench />}
+                    title="Tareas"
+                    icon={<ClipboardList />}
                     actions={
                         <Badge variant="destructive" className="gap-1">
                             <Shield className="h-3 w-3" />
@@ -149,59 +101,29 @@ export default async function AdminCatalogPage() {
                                 <FolderTree className="h-4 w-4 mr-2" />
                                 Rubros
                             </TabsTrigger>
-                            <TabsTrigger value="tasks" className={tabTriggerClass}>
-                                <ClipboardList className="h-4 w-4 mr-2" />
-                                Tareas
+                            <TabsTrigger value="actions" className={tabTriggerClass}>
+                                <Zap className="h-4 w-4 mr-2" />
+                                Acciones
                             </TabsTrigger>
                             <TabsTrigger value="elements" className={tabTriggerClass}>
                                 <Boxes className="h-4 w-4 mr-2" />
                                 Elementos
                             </TabsTrigger>
+                            <TabsTrigger value="systems" className={tabTriggerClass}>
+                                <Wrench className="h-4 w-4 mr-2" />
+                                Sistemas
+                            </TabsTrigger>
                             <TabsTrigger value="parameters" className={tabTriggerClass}>
                                 <Settings2 className="h-4 w-4 mr-2" />
                                 Parámetros
                             </TabsTrigger>
-                            <TabsTrigger value="materials" className={tabTriggerClass}>
-                                <Package className="h-4 w-4 mr-2" />
-                                Materiales
-                            </TabsTrigger>
-                            <TabsTrigger value="labor" className={tabTriggerClass}>
-                                <HardHat className="h-4 w-4 mr-2" />
-                                Mano de Obra
-                            </TabsTrigger>
-                            <TabsTrigger value="units" className={tabTriggerClass}>
-                                <Ruler className="h-4 w-4 mr-2" />
-                                Unidades
+                            <TabsTrigger value="tasks" className={tabTriggerClass}>
+                                <ClipboardList className="h-4 w-4 mr-2" />
+                                Tareas
                             </TabsTrigger>
                         </TabsList>
                     }
                 >
-                    <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <TasksCatalogView
-                                groupedTasks={groupedTasks}
-                                orgId="" // No org - admin mode
-                                units={taskUnitsResult.data}
-                                divisions={divisionsResult.data}
-                                kinds={actionsResult.data}
-                                elements={elementsResult.data}
-                                isAdminMode={true}
-                            />
-                        </ContentLayout>
-                    </TabsContent>
-
-                    <TabsContent value="materials" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <MaterialsCatalogView
-                            materials={materialsForView}
-                            allMaterials={allMaterials}
-                            units={unitsForView}
-                            categories={categoriesForView}
-                            categoryHierarchy={categoryHierarchyForView}
-                            orgId="" // No org - admin mode
-                            isAdminMode={true}
-                        />
-                    </TabsContent>
-
                     <TabsContent value="divisions" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <TasksDivisionsView
@@ -212,13 +134,38 @@ export default async function AdminCatalogPage() {
                         </ContentLayout>
                     </TabsContent>
 
+                    {/* Acciones → Elementos (via task_element_actions) */}
+                    <TabsContent value="actions" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <TasksAccionesView
+                                actions={actionsResult.data}
+                                elements={elementsResult.data}
+                                elementActionLinks={elementActionLinksResult.data}
+                                isAdminMode={true}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    {/* Elementos → Sistemas (via task_element_systems) */}
                     <TabsContent value="elements" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <TasksElementsView
                                 elements={elementsResult.data}
-                                parameters={parametersResult.data}
-                                elementParameterLinks={elementParameterLinksResult.data}
+                                systems={systemsResult.data}
+                                elementSystemLinks={elementSystemLinksResult.data}
                                 units={taskUnitsResult.data}
+                                isAdminMode={true}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    {/* Sistemas → Parámetros (via task_system_parameters) */}
+                    <TabsContent value="systems" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <TasksSistemasView
+                                systems={systemsResult.data}
+                                parameters={parametersResult.data}
+                                systemParameterLinks={systemParameterLinksResult.data}
                                 isAdminMode={true}
                             />
                         </ContentLayout>
@@ -229,32 +176,22 @@ export default async function AdminCatalogPage() {
                             <TasksParametersView
                                 parameters={parametersResult.data}
                                 elements={elementsResult.data}
-                                elementParameterLinks={elementParameterLinksResult.data}
+                                elementParameterLinks={[]}
                                 materials={systemMaterials}
                                 isAdminMode={true}
                             />
                         </ContentLayout>
                     </TabsContent>
 
-                    <TabsContent value="labor" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <TabsContent value="tasks" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
-                            <LaborCatalogView
-                                laborCategories={systemLaborCategories}
-                                laborLevels={systemLaborLevels}
-                                laborRoles={systemLaborRoles}
-                                laborTypes={systemLaborTypes}
-                                units={laborUnits}
-                                isAdminMode={true}
-                            />
-                        </ContentLayout>
-                    </TabsContent>
-
-                    <TabsContent value="units" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
-                        <ContentLayout variant="wide">
-                            <UnitsCatalogView
-                                units={systemUnits}
-                                categories={systemUnitCategories}
+                            <TasksCatalogView
+                                groupedTasks={groupedTasks}
                                 orgId=""
+                                units={taskUnitsResult.data}
+                                divisions={divisionsResult.data}
+                                kinds={actionsResult.data}
+                                elements={elementsResult.data}
                                 isAdminMode={true}
                             />
                         </ContentLayout>
@@ -266,7 +203,7 @@ export default async function AdminCatalogPage() {
         return (
             <div className="h-full w-full flex items-center justify-center">
                 <ErrorDisplay
-                    title="Error al cargar el catálogo"
+                    title="Error al cargar tareas"
                     message={error instanceof Error ? error.message : "Error desconocido"}
                     retryLabel="Reintentar"
                 />

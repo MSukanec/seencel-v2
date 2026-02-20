@@ -34,7 +34,7 @@ export async function getUnitCategories(): Promise<UnitCategory[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('unit_categories')
+        .schema('catalog').from('unit_categories')
         .select('id, code, name, description')
         .order('name', { ascending: true });
 
@@ -54,7 +54,7 @@ export async function getUnitsForOrganization(organizationId: string): Promise<C
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, symbol, applicable_to, unit_category_id, organization_id, is_system')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)

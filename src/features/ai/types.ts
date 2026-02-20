@@ -80,3 +80,49 @@ export interface AIAnalysisResult {
 export type AIActionResult<T> =
     | { success: true; data: T }
     | { success: false; error: string };
+
+// ============================================================================
+// Recipe Suggester Types
+// ============================================================================
+
+/** Un material sugerido por la IA para una receta */
+export interface AIRecipeSuggestedMaterial {
+    /** Nombre del material tal como lo conoce la IA */
+    name: string;
+    /** ID del item del catálogo si hubo match, null si no existe */
+    catalogId: string | null;
+    /** Nombre del item del catálogo si hubo match */
+    catalogName: string | null;
+    /** Cantidad por 1 unidad de la tarea */
+    quantity: number;
+    /** Símbolo de unidad (m², kg, l, un…) */
+    unit: string;
+    /** % de desperdicio sugerido (0-20) */
+    wastePercentage: number;
+}
+
+/** Un tipo de mano de obra sugerido por la IA para una receta */
+export interface AIRecipeSuggestedLabor {
+    /** Nombre del tipo de MO tal como lo conoce la IA */
+    name: string;
+    /** ID del item del catálogo si hubo match, null si no existe */
+    catalogId: string | null;
+    /** Nombre del item del catálogo si hubo match */
+    catalogName: string | null;
+    /** Cantidad (horas u otra unidad) por 1 unidad de la tarea */
+    quantity: number;
+    /** Símbolo de unidad */
+    unit: string;
+}
+
+/** Resultado completo de la sugerencia de receta */
+export interface AIRecipeSuggestion {
+    /** Nivel de confianza de la IA en la sugerencia */
+    confidence: "high" | "medium" | "low";
+    /** Explicación breve de la sugerencia (en español) */
+    reasoning: string;
+    /** Materiales sugeridos */
+    materials: AIRecipeSuggestedMaterial[];
+    /** Mano de obra sugerida */
+    labor: AIRecipeSuggestedLabor[];
+}

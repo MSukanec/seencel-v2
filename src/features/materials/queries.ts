@@ -176,7 +176,7 @@ export async function getMaterialsForOrganization(organizationId: string): Promi
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('materials_view')
+        .schema('catalog').from('materials_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('name', { ascending: true });
@@ -222,7 +222,7 @@ export async function getMaterialCategoriesForCatalog(): Promise<MaterialCategor
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_categories')
+        .schema('catalog').from('material_categories')
         .select('id, name, parent_id')
         .order('name', { ascending: true });
 
@@ -245,7 +245,7 @@ export async function getUnitsForMaterialCatalog(): Promise<MaterialUnit[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('units')
+        .schema('catalog').from('units')
         .select('id, name, symbol, applicable_to')
         .eq('is_deleted', false)
         .order('name', { ascending: true });
@@ -271,7 +271,7 @@ export async function getMaterialCategoryHierarchy(): Promise<MaterialCategoryNo
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_categories')
+        .schema('catalog').from('material_categories')
         .select('id, name, parent_id')
         .order('name', { ascending: true });
 

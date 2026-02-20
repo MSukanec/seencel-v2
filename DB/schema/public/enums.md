@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Enums (18)
+## [PUBLIC] Enums (19)
 
 | Enum | Values |
 |------|--------|
@@ -20,6 +20,7 @@
 | project_status | active, completed, planning, inactive |
 | site_log_severity | low, medium, high, critical |
 | site_log_status | pending, review, approved, closed |
+| task_catalog_status | draft, active, archived |
 | team_size | Trabajo solo/a, 2–5 personas, 6–15 personas, Más de 15 personas |
 | user_role | Arquitecto/a, Ingeniero/a, Maestro Mayor de Obras, Estudiante, Estudio de arquitectura, Empresa constructora, Proveedor de materiales, Oficio profesional (instalador, herrero, carpintero, etc.), Otro |
 | user_type | professional, provider, worker, visitor, learner |

@@ -156,14 +156,14 @@ export function TasksParametricForm({
             const supabase = createClient();
 
             const { data: actionLinks } = await supabase
-                .from('task_element_actions')
+                .schema('catalog').from('task_element_actions')
                 .select('action_id')
                 .eq('element_id', selectedElementId);
 
             if (actionLinks && actionLinks.length > 0) {
                 const actionIds = actionLinks.map(l => l.action_id);
                 const { data: actionsData } = await supabase
-                    .from('task_actions')
+                    .schema('catalog').from('task_actions')
                     .select('*')
                     .in('id', actionIds)
                     .order('name', { ascending: true });
@@ -172,7 +172,7 @@ export function TasksParametricForm({
             } else {
                 // If no links, show all actions
                 const { data: allActions } = await supabase
-                    .from('task_actions')
+                    .schema('catalog').from('task_actions')
                     .select('*')
                     .order('name', { ascending: true });
 
@@ -188,62 +188,12 @@ export function TasksParametricForm({
     }, [selectedElementId]);
 
     // Load parameters when element changes
+    // NOTE: task_element_parameters was removed. Parameters now belong to
+    // construction systems. For now, no params are loaded at element selection.
+    // This will be updated when the parametric form is refactored to select
+    // element → action → system → parameters.
     useEffect(() => {
-        if (!selectedElementId) {
-            setElementParameters([]);
-            return;
-        }
-
-        const loadParameters = async () => {
-            setIsLoadingParameters(true);
-            const supabase = createClient();
-
-            // Get parameter links for this element
-            const { data: links } = await supabase
-                .from('task_element_parameters')
-                .select('parameter_id, order, is_required')
-                .eq('element_id', selectedElementId)
-                .order('order', { ascending: true });
-
-            if (!links || links.length === 0) {
-                setElementParameters([]);
-                setIsLoadingParameters(false);
-                return;
-            }
-
-            // Get parameters
-            const paramIds = links.map(l => l.parameter_id);
-            const { data: params } = await supabase
-                .from('task_parameters')
-                .select('*')
-                .in('id', paramIds)
-                .eq('is_deleted', false);
-
-            // Get options for all parameters
-            const { data: options } = await supabase
-                .from('task_parameter_options')
-                .select('*')
-                .in('parameter_id', paramIds)
-                .eq('is_deleted', false)
-                .order('order', { ascending: true });
-
-            // Build result
-            const result: ParameterWithOptions[] = (params || []).map(param => {
-                const link = links.find(l => l.parameter_id === param.id);
-                const paramOptions = (options || []).filter(o => o.parameter_id === param.id);
-                return {
-                    ...param,
-                    order: link?.order ?? param.order,
-                    is_required: link?.is_required ?? param.is_required,
-                    options: paramOptions
-                };
-            }).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-
-            setElementParameters(result);
-            setIsLoadingParameters(false);
-        };
-
-        loadParameters();
+        setElementParameters([]);
         setParameterValues({});
     }, [selectedElementId]);
 
@@ -268,7 +218,7 @@ export function TasksParametricForm({
             }
 
             const { data } = await supabase
-                .from('tasks')
+                .schema('catalog').from('tasks')
                 .select('id, name, code')
                 .eq('code', generatedCode)
                 .eq('is_deleted', false)
@@ -425,7 +375,7 @@ export function TasksParametricForm({
                                     "w-10 h-10 rounded-lg flex items-center justify-center text-lg",
                                     selectedElementId === element.id ? "bg-primary text-primary-foreground" : "bg-muted"
                                 )}>
-                                    {element.icon || element.name.charAt(0)}
+                                    {element.code || element.name.charAt(0)}
                                 </div>
                                 <div className="flex-1">
                                     <div className="font-medium">{element.name}</div>

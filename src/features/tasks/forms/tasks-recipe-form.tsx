@@ -8,6 +8,7 @@ import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
 import { createRecipe, updateRecipe } from "@/features/tasks/actions";
+import { RecipeSuggestionPanel } from "@/features/ai/components/recipe-suggestion-panel";
 
 // ============================================================================
 // Types
@@ -19,17 +20,29 @@ export interface EditRecipeData {
     name: string;
 }
 
+/** Context about the parent task — used to power AI suggestions */
+export interface TaskContext {
+    name: string;
+    unit?: string | null;
+    division?: string | null;
+    organizationId?: string | null;
+    catalogMaterials?: { id: string; name: string; unit_symbol?: string | null }[];
+    catalogLaborTypes?: { id: string; name: string; unit_symbol?: string | null }[];
+}
+
 interface TasksRecipeFormProps {
     taskId: string;
     /** When provided, the form operates in edit mode */
     editData?: EditRecipeData;
+    /** Task context used to power AI recipe suggestions (only in create mode) */
+    taskContext?: TaskContext;
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export function TasksRecipeForm({ taskId, editData }: TasksRecipeFormProps) {
+export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFormProps) {
     const router = useRouter();
     const { closeModal } = useModal();
     const [isLoading, setIsLoading] = useState(false);
@@ -111,6 +124,18 @@ export function TasksRecipeForm({ taskId, editData }: TasksRecipeFormProps) {
                         />
                     </FormGroup>
                 </div>
+
+                {/* AI Suggestion Panel — solo en modo crear y con contexto disponible */}
+                {!isEditMode && taskContext && (
+                    <RecipeSuggestionPanel
+                        taskName={taskContext.name}
+                        taskUnit={taskContext.unit}
+                        taskDivision={taskContext.division}
+                        organizationId={taskContext.organizationId}
+                        catalogMaterials={taskContext.catalogMaterials}
+                        catalogLaborTypes={taskContext.catalogLaborTypes}
+                    />
+                )}
             </div>
 
             <FormFooter

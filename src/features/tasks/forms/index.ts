@@ -1,6 +1,7 @@
 // Forms barrel export
 export { TasksDivisionForm } from "./tasks-division-form";
 export { TasksElementForm } from "./tasks-element-form";
+export { TasksSystemForm } from "./tasks-system-form";
 export { TasksOptionForm } from "./tasks-option-form";
 export { TasksParameterForm } from "./tasks-parameter-form";
 export { TasksForm } from "./tasks-form";

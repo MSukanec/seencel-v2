@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-19T19:04:24.438Z
+> Generated: 2026-02-20T00:26:33.263Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Tables (chunk 3: general_costs_payments — labor_levels)
+## [PUBLIC] Tables (chunk 3: general_costs_payments — media_files)
 
 ### `general_costs_payments`
 
@@ -69,102 +69,6 @@
 | media_url | text | ✓ |  |  |
 | media_type | text | ✓ | 'image'::text |  |
 | is_deleted | bool | ✗ | false |  |
-
-### `ia_context_snapshots`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✓ |  | FK → users.id |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| type | text | ✗ |  |  |
-| content | text | ✗ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `ia_import_mapping_patterns`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| entity | text | ✗ |  | UNIQUE |
-| source_header | text | ✗ |  | UNIQUE |
-| target_field | text | ✗ |  | UNIQUE |
-| usage_count | int4 | ✗ | 1 |  |
-| last_used_at | timestamptz | ✗ | now() |  |
-| created_at | timestamptz | ✗ | now() |  |
-
-### `ia_import_value_patterns`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | UNIQUE, FK → organizations.id |
-| entity | text | ✗ |  | UNIQUE |
-| comp_field | text | ✗ |  | UNIQUE |
-| source_value | text | ✗ |  | UNIQUE |
-| target_id | text | ✗ |  |  |
-| usage_count | int4 | ✗ | 1 |  |
-| last_used_at | timestamptz | ✗ | now() |  |
-| created_at | timestamptz | ✗ | now() |  |
-
-### `ia_messages`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✓ |  | FK → users.id |
-| role | text | ✗ |  |  |
-| content | text | ✗ |  |  |
-| context_type | text | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `ia_usage_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✓ |  | FK → users.id |
-| provider | text | ✓ | 'openai'::text |  |
-| model | text | ✓ | 'gpt-4o'::text |  |
-| prompt_tokens | int4 | ✓ |  |  |
-| completion_tokens | int4 | ✓ |  |  |
-| total_tokens | int4 | ✓ |  |  |
-| cost_usd | numeric | ✓ |  |  |
-| context_type | text | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `ia_user_greetings`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| user_id | uuid | ✓ |  | UNIQUE, FK → users.id |
-| period | text | ✗ |  | UNIQUE |
-| greeting | text | ✗ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-
-### `ia_user_preferences`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| user_id | uuid | ✗ |  | PK, FK → users.id |
-| display_name | text | ✓ |  |  |
-| tone | text | ✓ | 'amistoso'::text |  |
-| language | text | ✓ | 'es'::text |  |
-| personality | text | ✓ |  |  |
-| updated_at | timestamptz | ✓ | now() |  |
-
-### `ia_user_usage_limits`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| user_id | uuid | ✗ |  | PK, FK → users.id |
-| plan | text | ✗ | 'free'::text |  |
-| daily_limit | int4 | ✗ | 3 |  |
-| prompts_used_today | int4 | ✗ | 0 |  |
-| last_prompt_at | timestamptz | ✓ |  |  |
-| last_reset_at | date | ✓ | CURRENT_DATE |  |
 
 ### `import_batches`
 
@@ -408,22 +312,6 @@
 | read_at | timestamptz | ✓ |  |  |
 | created_at | timestamptz | ✓ | now() |  |
 
-### `labor_categories`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| organization_id | uuid | ✓ |  | FK → organizations.id |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| is_system | bool | ✗ | false |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| created_by | uuid | ✓ |  | FK → organization_members.id |
-| updated_by | uuid | ✓ |  | FK → organization_members.id |
-
 ### `labor_insurances`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -445,13 +333,193 @@
 | updated_at | timestamptz | ✗ | now() |  |
 | coverage_range | daterange | ✓ |  |  |
 
-### `labor_levels`
+### `labor_payments`
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✗ |  | FK → projects.id |
+| labor_id | uuid | ✓ |  | FK → project_labor.id |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| amount | numeric | ✗ |  |  |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| exchange_rate | numeric | ✗ |  |  |
+| payment_date | date | ✗ | now() |  |
+| notes | text | ✓ |  |  |
+| reference | text | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
+| status | text | ✗ | 'confirmed'::text |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| is_deleted | bool | ✓ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+| import_batch_id | uuid | ✓ |  | FK → import_batches.id |
+
+### `linked_accounts`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| user_id | uuid | ✗ |  | FK → users.id |
+| auth_id | uuid | ✗ |  | UNIQUE |
+| provider_source | text | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+
+### `material_invoice_items`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| invoice_id | uuid | ✗ |  | FK → material_invoices.id |
+| product_id | uuid | ✓ |  | FK → products.id |
+| description | text | ✗ |  |  |
+| quantity | numeric | ✗ | 1 |  |
+| unit_price | numeric | ✗ |  |  |
+| total_price | numeric | ✓ |  |  |
+| unit_id | uuid | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| project_id | uuid | ✗ |  | FK → projects.id |
+| material_id | uuid | ✓ |  |  |
+
+### `material_invoices`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| project_id | uuid | ✗ |  | FK → projects.id |
+| provider_id | uuid | ✓ |  | FK → contacts.id |
+| invoice_number | text | ✓ |  |  |
+| document_type | text | ✗ | 'invoice'::text |  |
+| purchase_date | date | ✗ | now() |  |
+| subtotal | numeric | ✗ | 0 |  |
+| tax_amount | numeric | ✗ | 0 |  |
+| total_amount | numeric | ✓ |  |  |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| exchange_rate | numeric | ✓ |  |  |
+| status | text | ✗ | 'pending'::text |  |
+| notes | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| purchase_order_id | uuid | ✓ |  | FK → material_purchase_orders.id |
+
+### `material_payments`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✗ |  | FK → projects.id |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| amount | numeric | ✗ |  |  |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| exchange_rate | numeric | ✓ |  |  |
+| payment_date | date | ✗ | now() |  |
+| notes | text | ✓ |  |  |
+| reference | text | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| wallet_id | uuid | ✗ |  | FK → organization_wallets.id |
+| status | text | ✗ | 'confirmed'::text |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| purchase_id | uuid | ✓ |  | FK → material_invoices.id |
+| is_deleted | bool | ✓ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+| material_type_id | uuid | ✓ |  | FK → material_types.id |
+| import_batch_id | uuid | ✓ |  | FK → import_batches.id |
+
+### `material_purchase_order_items`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| purchase_order_id | uuid | ✗ |  | FK → material_purchase_orders.id |
+| description | text | ✗ |  |  |
+| quantity | numeric | ✗ | 1 |  |
+| unit_id | uuid | ✓ |  |  |
+| notes | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| project_id | uuid | ✓ |  | FK → projects.id |
+| material_id | uuid | ✓ |  |  |
+| unit_price | numeric | ✓ |  |  |
+
+### `material_purchase_orders`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| project_id | uuid | ✗ |  | FK → projects.id |
+| requested_by | uuid | ✓ |  | FK → organization_members.id |
+| approved_by | uuid | ✓ |  | FK → organization_members.id |
+| provider_id | uuid | ✓ |  | FK → contacts.id |
+| order_date | date | ✗ | now() |  |
+| status | text | ✗ | 'draft'::text |  |
+| notes | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| order_number | text | ✓ |  |  |
+| expected_delivery_date | date | ✓ |  |  |
+| currency_id | uuid | ✓ |  | FK → currencies.id |
+| subtotal | numeric | ✗ | 0 |  |
+| tax_amount | numeric | ✗ | 0 |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `material_types`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
 | name | text | ✗ |  |  |
 | description | text | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
+| is_system | bool | ✗ | false |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 | updated_at | timestamptz | ✗ | now() |  |
-| sort_order | int4 | ✗ | 0 |  |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+
+### `media_file_folders`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | FK → organizations.id |
+| project_id | uuid | ✓ |  | FK → projects.id |
+| name | text | ✗ |  |  |
+| parent_id | uuid | ✓ |  | FK → media_file_folders.id |
+| created_by | uuid | ✓ |  | FK → organization_members.id |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |
+
+### `media_files`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✓ |  | FK → organizations.id |
+| created_by | uuid | ✓ |  |  |
+| bucket | text | ✗ |  |  |
+| file_path | text | ✗ |  |  |
+| file_name | text | ✓ |  |  |
+| file_type | text | ✗ |  |  |
+| file_size | int8 | ✓ |  |  |
+| is_public | bool | ✗ | false |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  | FK → organization_members.id |

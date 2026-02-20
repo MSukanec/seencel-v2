@@ -895,7 +895,7 @@ export async function upsertMaterialPrice(input: {
 
     // Find and close current active price
     await supabase
-        .from('material_prices')
+        .schema('catalog').from('material_prices')
         .update({ valid_to: yesterdayStr })
         .eq('material_id', input.material_id)
         .eq('organization_id', input.organization_id)
@@ -906,7 +906,7 @@ export async function upsertMaterialPrice(input: {
     const validFrom = input.valid_from || new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabase
-        .from('material_prices')
+        .schema('catalog').from('material_prices')
         .insert({
             material_id: input.material_id,
             organization_id: input.organization_id,
@@ -937,7 +937,7 @@ export async function getMaterialCurrentPrice(materialId: string, organizationId
     const today = new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabase
-        .from('material_prices')
+        .schema('catalog').from('material_prices')
         .select('*, currencies(code, symbol)')
         .eq('material_id', materialId)
         .eq('organization_id', organizationId)

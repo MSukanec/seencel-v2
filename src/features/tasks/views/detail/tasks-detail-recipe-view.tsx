@@ -44,7 +44,7 @@ import {
     deleteRecipe,
     updateRecipeStatus,
 } from "@/features/tasks/actions";
-import { TasksRecipeForm, type EditRecipeData } from "@/features/tasks/forms/tasks-recipe-form";
+import { TasksRecipeForm, type EditRecipeData, type TaskContext } from "@/features/tasks/forms/tasks-recipe-form";
 import { TasksRecipeResourceForm, type EditResourceData } from "@/features/tasks/forms/tasks-recipe-resource-form";
 import type { TaskView, TaskRecipeView, RecipeResources } from "@/features/tasks/types";
 import { RecipeCard } from "@/features/tasks/components/recipe-card";
@@ -143,15 +143,31 @@ export function TasksDetailRecipeView({
     // ========================================================================
 
     const handleCreateRecipe = useCallback(() => {
+        const taskContext: TaskContext = {
+            name: task.name ?? task.code ?? "Tarea sin nombre",
+            unit: task.unit_symbol ?? task.unit_name ?? null,
+            division: task.division_name ?? null,
+            organizationId: organizationId,
+            catalogMaterials: catalogMaterials?.map((m) => ({
+                id: m.id,
+                name: m.name,
+                unit_symbol: m.unit_symbol ?? null,
+            })),
+            catalogLaborTypes: catalogLaborTypes?.map((l) => ({
+                id: l.id,
+                name: l.name,
+                unit_symbol: l.unit_symbol ?? null,
+            })),
+        };
         openModal(
-            <TasksRecipeForm taskId={task.id} />,
+            <TasksRecipeForm taskId={task.id} taskContext={taskContext} />,
             {
                 title: "Nueva Receta",
-                description: "Definí un nombre descriptivo para la nueva receta.",
-                size: "md",
+                description: "Definí un nombre o usá la IA para sugerir materiales.",
+                size: "lg",
             }
         );
-    }, [task.id, openModal]);
+    }, [task, catalogMaterials, catalogLaborTypes, openModal]);
 
     // ========================================================================
     // Edit Recipe — opens form with name pre-filled

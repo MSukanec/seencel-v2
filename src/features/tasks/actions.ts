@@ -1968,14 +1968,14 @@ export async function getCompatibleActionsForElementAction(elementId: string) {
         const supabase = await createClient();
 
         const { data: actionLinks } = await supabase
-            .from('task_element_actions')
+            .schema('catalog').from('task_element_actions')
             .select('action_id')
             .eq('element_id', elementId);
 
         if (actionLinks && actionLinks.length > 0) {
             const actionIds = actionLinks.map(l => l.action_id);
             const { data: actionsData } = await supabase
-                .from('task_actions')
+                .schema('catalog').from('task_actions')
                 .select('*')
                 .in('id', actionIds)
                 .order('name', { ascending: true });
@@ -1984,7 +1984,7 @@ export async function getCompatibleActionsForElementAction(elementId: string) {
         } else {
             // If no links, show all actions
             const { data: allActions } = await supabase
-                .from('task_actions')
+                .schema('catalog').from('task_actions')
                 .select('*')
                 .order('name', { ascending: true });
 
@@ -2005,7 +2005,7 @@ export async function getElementParametersAction(elementId: string) {
 
         // Get parameter links for this element
         const { data: links } = await supabase
-            .from('task_element_parameters')
+            .schema('catalog').from('task_element_parameters')
             .select('parameter_id, order, is_required')
             .eq('element_id', elementId)
             .order('order', { ascending: true });
@@ -2017,14 +2017,14 @@ export async function getElementParametersAction(elementId: string) {
         // Get parameters
         const paramIds = links.map(l => l.parameter_id);
         const { data: params } = await supabase
-            .from('task_parameters')
+            .schema('catalog').from('task_parameters')
             .select('*')
             .in('id', paramIds)
             .eq('is_deleted', false);
 
         // Get options for all parameters
         const { data: options } = await supabase
-            .from('task_parameter_options')
+            .schema('catalog').from('task_parameter_options')
             .select('*')
             .in('parameter_id', paramIds)
             .eq('is_deleted', false)
@@ -2057,7 +2057,7 @@ export async function checkDuplicateTaskAction(code: string) {
         const supabase = await createClient();
 
         const { data } = await supabase
-            .from('tasks')
+            .schema('catalog').from('tasks')
             .select('id, name, code')
             .eq('code', code)
             .eq('is_deleted', false)
@@ -2067,4 +2067,245 @@ export async function checkDuplicateTaskAction(code: string) {
     } catch (error) {
         return { duplicate: null, error: sanitizeError(error) };
     }
+}
+
+// ============================================
+// TASK CONSTRUCTION SYSTEMS CRUD (Admin Only)
+// ============================================
+
+/**
+ * Create a new construction system (admin only)
+ */
+export async function createConstructionSystem(formData: FormData) {
+    const supabase = await createClient();
+
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string | null;
+    const description = formData.get("description") as string | null;
+    const category = formData.get("category") as string | null;
+    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
+
+    if (!name?.trim()) {
+        return { error: "El nombre es requerido" };
+    }
+
+    // Generate slug from name
+    const slug = name.trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-");
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_construction_systems')
+        .insert({
+            name: name.trim(),
+            slug,
+            code: code?.trim().toUpperCase() || null,
+            description: description?.trim() || null,
+            category: category?.trim() || null,
+            order,
+            is_deleted: false,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error creating construction system:", error);
+        if (error.code === "23505") {
+            return { error: "Ya existe un sistema con ese nombre o código" };
+        }
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { data, error: null };
+}
+
+/**
+ * Update a construction system (admin only)
+ */
+export async function updateConstructionSystem(formData: FormData) {
+    const supabase = await createClient();
+
+    const id = formData.get("id") as string;
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string | null;
+    const description = formData.get("description") as string | null;
+    const category = formData.get("category") as string | null;
+    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
+
+    if (!id) {
+        return { error: "ID no proporcionado" };
+    }
+
+    if (!name?.trim()) {
+        return { error: "El nombre es requerido" };
+    }
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_construction_systems')
+        .update({
+            name: name.trim(),
+            code: code?.trim().toUpperCase() || null,
+            description: description?.trim() || null,
+            category: category?.trim() || null,
+            order,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating construction system:", error);
+        if (error.code === "23505") {
+            return { error: "Ya existe un sistema con ese nombre o código" };
+        }
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { data, error: null };
+}
+
+/**
+ * Soft delete a construction system (admin only)
+ */
+export async function deleteConstructionSystem(id: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .schema('catalog').from('task_construction_systems')
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+    if (error) {
+        console.error("Error deleting construction system:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+/**
+ * Toggle a parameter link for a construction system
+ * Uses catalog.task_system_parameters
+ */
+export async function toggleSystemParameter(
+    systemId: string,
+    parameterId: string,
+    shouldLink: boolean
+) {
+    const supabase = await createClient();
+
+    if (shouldLink) {
+        const { error } = await supabase
+            .schema('catalog').from('task_system_parameters')
+            .insert({ system_id: systemId, parameter_id: parameterId });
+
+        if (error) {
+            if (!sanitizeError(error).includes("duplicate")) {
+                console.error("Error linking parameter to system:", error);
+                return { error: sanitizeError(error) };
+            }
+        }
+    } else {
+        const { error } = await supabase
+            .schema('catalog').from('task_system_parameters')
+            .delete()
+            .eq("system_id", systemId)
+            .eq("parameter_id", parameterId);
+
+        if (error) {
+            console.error("Error unlinking parameter from system:", error);
+            return { error: sanitizeError(error) };
+        }
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+/**
+ * Toggle a system link for an element
+ * Uses catalog.task_element_systems
+ */
+export async function toggleElementSystem(
+    elementId: string,
+    systemId: string,
+    shouldLink: boolean
+) {
+    const supabase = await createClient();
+
+    if (shouldLink) {
+        const { error } = await supabase
+            .schema('catalog').from('task_element_systems')
+            .insert({ element_id: elementId, system_id: systemId });
+
+        if (error) {
+            if (!sanitizeError(error).includes("duplicate")) {
+                console.error("Error linking system to element:", error);
+                return { error: sanitizeError(error) };
+            }
+        }
+    } else {
+        const { error } = await supabase
+            .schema('catalog').from('task_element_systems')
+            .delete()
+            .eq("element_id", elementId)
+            .eq("system_id", systemId);
+
+        if (error) {
+            console.error("Error unlinking system from element:", error);
+            return { error: sanitizeError(error) };
+        }
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+/**
+ * Toggle an element link for an action
+ * Uses catalog.task_element_actions
+ */
+export async function toggleElementAction(
+    actionId: string,
+    elementId: string,
+    shouldLink: boolean
+) {
+    const supabase = await createClient();
+
+    if (shouldLink) {
+        const { error } = await supabase
+            .schema('catalog').from('task_element_actions')
+            .insert({ action_id: actionId, element_id: elementId });
+
+        if (error) {
+            if (!sanitizeError(error).includes("duplicate")) {
+                console.error("Error linking element to action:", error);
+                return { error: sanitizeError(error) };
+            }
+        }
+    } else {
+        const { error } = await supabase
+            .schema('catalog').from('task_element_actions')
+            .delete()
+            .eq("action_id", actionId)
+            .eq("element_id", elementId);
+
+        if (error) {
+            console.error("Error unlinking element from action:", error);
+            return { error: sanitizeError(error) };
+        }
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
 }

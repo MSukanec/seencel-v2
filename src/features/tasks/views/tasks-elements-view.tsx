@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { TaskElement, TaskParameter, Unit } from "@/features/tasks/types";
+import { TaskElement, TaskConstructionSystem, Unit } from "@/features/tasks/types";
 import { TasksElementForm } from "../forms";
-import { deleteTaskElement, toggleElementParameter } from "../actions";
+import { deleteTaskElement, toggleElementSystem } from "../actions";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Boxes, ChevronDown, ChevronRight, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Boxes, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,15 +19,15 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 // Types
 // ============================================================================
 
-interface ElementParameterLink {
+interface ElementSystemLink {
     element_id: string;
-    parameter_id: string;
+    system_id: string;
 }
 
 interface ElementsCatalogViewProps {
     elements: TaskElement[];
-    parameters?: TaskParameter[];
-    elementParameterLinks?: ElementParameterLink[];
+    systems?: TaskConstructionSystem[];
+    elementSystemLinks?: ElementSystemLink[];
     units?: Unit[];
     isAdminMode?: boolean;
 }
@@ -38,8 +38,8 @@ interface ElementsCatalogViewProps {
 
 export function TasksElementsView({
     elements,
-    parameters = [],
-    elementParameterLinks = [],
+    systems = [],
+    elementSystemLinks = [],
     units = [],
     isAdminMode = false,
 }: ElementsCatalogViewProps) {
@@ -50,17 +50,17 @@ export function TasksElementsView({
     const [isDeleting, setIsDeleting] = useState(false);
     const [expandedElements, setExpandedElements] = useState<Set<string>>(new Set());
 
-    // Build parameter IDs set per element
-    const parametersByElement = useMemo(() => {
+    // Build system IDs set per element
+    const systemsByElement = useMemo(() => {
         const map: Record<string, Set<string>> = {};
-        elementParameterLinks.forEach(link => {
+        elementSystemLinks.forEach(link => {
             if (!map[link.element_id]) {
                 map[link.element_id] = new Set();
             }
-            map[link.element_id].add(link.parameter_id);
+            map[link.element_id].add(link.system_id);
         });
         return map;
-    }, [elementParameterLinks]);
+    }, [elementSystemLinks]);
 
     // Filter elements by search query
     const filteredElements = useMemo(() => {
@@ -77,6 +77,11 @@ export function TasksElementsView({
     const sortedElements = useMemo(() => {
         return [...filteredElements].sort((a, b) => a.name.localeCompare(b.name));
     }, [filteredElements]);
+
+    // Sort systems alphabetically
+    const sortedSystemsList = useMemo(() => {
+        return [...systems].sort((a, b) => a.name.localeCompare(b.name));
+    }, [systems]);
 
     // ========================================================================
     // Toggle expand
@@ -128,13 +133,13 @@ export function TasksElementsView({
     };
 
     // ========================================================================
-    // Toggle parameter association
+    // Toggle system association (Elemento → Sistema)
     // ========================================================================
 
-    const handleToggleParameter = async (elementId: string, parameterId: string, isLinked: boolean) => {
+    const handleToggleSystem = async (elementId: string, systemId: string, isLinked: boolean) => {
         if (!isAdminMode) return;
 
-        const result = await toggleElementParameter(elementId, parameterId, !isLinked);
+        const result = await toggleElementSystem(elementId, systemId, !isLinked);
         if (result.error) {
             toast.error(result.error);
         }
@@ -201,7 +206,7 @@ export function TasksElementsView({
                         mode="empty"
                         icon={Boxes}
                         viewName="Elementos"
-                        featureDescription="Los elementos representan componentes constructivos como Contrapiso, Muro, Losa."
+                        featureDescription="Los elementos representan componentes constructivos como Contrapiso, Muro, Losa. Cada elemento se puede vincular a uno o varios Sistemas Constructivos."
                         onAction={isAdminMode ? handleCreateElement : undefined}
                         actionLabel={isAdminMode ? "Nuevo Elemento" : undefined}
                     />
@@ -210,8 +215,8 @@ export function TasksElementsView({
                 <div className="space-y-3">
                     {sortedElements.map((element) => {
                         const isExpanded = expandedElements.has(element.id);
-                        const linkedParamIds = parametersByElement[element.id] || new Set();
-                        const paramCount = linkedParamIds.size;
+                        const linkedSystemIds = systemsByElement[element.id] || new Set();
+                        const systemCount = linkedSystemIds.size;
 
                         return (
                             <Card key={element.id} className="overflow-hidden">
@@ -247,7 +252,7 @@ export function TasksElementsView({
                                                     </Badge>
                                                 )}
                                                 <span className="text-xs text-muted-foreground">
-                                                    {paramCount} parámetro{paramCount !== 1 ? 's' : ''}
+                                                    {systemCount} sistema{systemCount !== 1 ? 's' : ''}
                                                 </span>
                                             </div>
                                             {element.description && (
@@ -281,25 +286,25 @@ export function TasksElementsView({
                                     )}
                                 </div>
 
-                                {/* Parameters list (collapsible) */}
+                                {/* Systems list (collapsible) */}
                                 {isExpanded && (
                                     <div className="border-t p-4">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <Settings2 className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm font-medium">Parámetros Asociados</span>
+                                            <Wrench className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-sm font-medium">Sistemas Asociados</span>
                                         </div>
 
-                                        {parameters.length === 0 ? (
+                                        {systems.length === 0 ? (
                                             <p className="text-sm text-muted-foreground text-center py-4">
-                                                No hay parámetros disponibles
+                                                No hay sistemas constructivos definidos. Creá algunos en la pestaña Sistemas.
                                             </p>
                                         ) : (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                {parameters.map((param) => {
-                                                    const isLinked = linkedParamIds.has(param.id);
+                                                {sortedSystemsList.map((system) => {
+                                                    const isLinked = linkedSystemIds.has(system.id);
                                                     return (
                                                         <label
-                                                            key={param.id}
+                                                            key={system.id}
                                                             className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${isLinked
                                                                 ? 'bg-primary/10 border border-primary/30'
                                                                 : 'bg-muted/30 hover:bg-muted/50'
@@ -308,9 +313,14 @@ export function TasksElementsView({
                                                             <Checkbox
                                                                 checked={isLinked}
                                                                 disabled={!isAdminMode}
-                                                                onCheckedChange={() => handleToggleParameter(element.id, param.id, isLinked)}
+                                                                onCheckedChange={() => handleToggleSystem(element.id, system.id, isLinked)}
                                                             />
-                                                            <span className="text-sm truncate">{param.label}</span>
+                                                            <span className="text-sm truncate">{system.name}</span>
+                                                            {system.code && (
+                                                                <span className="text-xs font-mono text-muted-foreground shrink-0">
+                                                                    {system.code}
+                                                                </span>
+                                                            )}
                                                         </label>
                                                     );
                                                 })}
@@ -331,7 +341,7 @@ export function TasksElementsView({
                         <AlertDialogTitle>Eliminar Elemento</AlertDialogTitle>
                         <AlertDialogDescription>
                             ¿Estás seguro de que querés eliminar &quot;{itemToDelete?.name}&quot;?
-                            Esta acción desvinculará el elemento de todas las tareas.
+                            Esta acción desvinculará el elemento de todos sus sistemas.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

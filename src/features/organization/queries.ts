@@ -228,7 +228,7 @@ export async function getDashboardData() {
     // Manual Counts (Safe fallback)
     const [docsCount, tasksCount, teamCount] = await Promise.all([
         supabase.from('design_documents').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).gte('created_at', thirtyDaysAgo),
-        supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+        supabase.schema('catalog').from('tasks').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
         supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('organization_id', orgId)
     ]);
 
