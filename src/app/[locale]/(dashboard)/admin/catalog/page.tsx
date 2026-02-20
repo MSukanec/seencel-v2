@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getAllConstructionSystems, getSystemParameterLinks, getElementSystemLinks, getElementActionLinks } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getAllConstructionSystems, getTaskTemplates, getTemplateParameterLinks, getElementSystemLinks, getElementActionLinks } from "@/features/tasks/queries";
 import { getSystemMaterials } from "@/features/admin/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
@@ -8,9 +8,10 @@ import { TasksParametersView } from "@/features/tasks/views/tasks-parameters-vie
 import { TasksElementsView } from "@/features/tasks/views/tasks-elements-view";
 import { TasksSistemasView } from "@/features/tasks/views/tasks-sistemas-view";
 import { TasksAccionesView } from "@/features/tasks/views/tasks-acciones-view";
+import { TasksTemplatesView } from "@/features/tasks/views/tasks-templates-view";
 import { PageWrapper, ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
-import { Zap, Wrench, ClipboardList, Shield, FolderTree, Settings2, Boxes } from "lucide-react";
+import { Zap, Wrench, ClipboardList, Shield, FolderTree, Settings2, Boxes, LayoutTemplate } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,10 +43,11 @@ const tabTriggerClass = "relative h-8 pb-2 rounded-none border-b-2 border-transp
 
 /**
  * Admin Tasks Catalog Page
- * Tab order: Rubros > Acciones > Elementos > Sistemas > Parámetros > Tareas
- * 
+ * Tab order: Rubros > Acciones > Elementos > Sistemas > Plantillas > Parámetros > Tareas
+ *
  * Full hierarchy:
- * Acciones → [task_element_actions] → Elementos → [task_element_systems] → Sistemas → [task_system_parameters] → Parámetros
+ * Acciones → [task_element_actions] → Elementos → [task_element_systems] → Sistemas
+ * Plantillas = acción + elemento + sistema + parámetros activados
  */
 export default async function AdminCatalogPage() {
     try {
@@ -57,7 +59,8 @@ export default async function AdminCatalogPage() {
             actionsResult,
             elementsResult,
             systemsResult,
-            systemParameterLinksResult,
+            templatesResult,
+            templateParameterLinksResult,
             elementSystemLinksResult,
             elementActionLinksResult,
             systemMaterials,
@@ -69,7 +72,8 @@ export default async function AdminCatalogPage() {
             getTaskActions(),
             getAllElements(),
             getAllConstructionSystems(),
-            getSystemParameterLinks(),
+            getTaskTemplates(),
+            getTemplateParameterLinks(),
             getElementSystemLinks(),
             getElementActionLinks(),
             getSystemMaterials(),
@@ -112,6 +116,10 @@ export default async function AdminCatalogPage() {
                             <TabsTrigger value="systems" className={tabTriggerClass}>
                                 <Wrench className="h-4 w-4 mr-2" />
                                 Sistemas
+                            </TabsTrigger>
+                            <TabsTrigger value="templates" className={tabTriggerClass}>
+                                <LayoutTemplate className="h-4 w-4 mr-2" />
+                                Plantillas
                             </TabsTrigger>
                             <TabsTrigger value="parameters" className={tabTriggerClass}>
                                 <Settings2 className="h-4 w-4 mr-2" />
@@ -159,14 +167,28 @@ export default async function AdminCatalogPage() {
                         </ContentLayout>
                     </TabsContent>
 
-                    {/* Sistemas → Parámetros (via task_system_parameters) */}
+                    {/* Sistemas Constructivos */}
                     <TabsContent value="systems" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
                         <ContentLayout variant="wide">
                             <TasksSistemasView
                                 systems={systemsResult.data}
-                                parameters={parametersResult.data}
-                                systemParameterLinks={systemParameterLinksResult.data}
                                 isAdminMode={true}
+                            />
+                        </ContentLayout>
+                    </TabsContent>
+
+                    {/* Plantillas → Parámetros (via task_template_parameters) */}
+                    <TabsContent value="templates" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                        <ContentLayout variant="wide">
+                            <TasksTemplatesView
+                                templates={templatesResult.data}
+                                parameters={parametersResult.data}
+                                templateParameterLinks={templateParameterLinksResult.data}
+                                actions={actionsResult.data}
+                                elements={elementsResult.data}
+                                systems={systemsResult.data}
+                                divisions={divisionsResult.data}
+                                units={taskUnitsResult.data}
                             />
                         </ContentLayout>
                     </TabsContent>

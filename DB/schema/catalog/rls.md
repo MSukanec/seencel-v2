@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T00:26:33.263Z
+> Generated: 2026-02-20T14:40:38.399Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] RLS Policies (50)
+## [CATALOG] RLS Policies (53)
 
 ### `labor_categories` (3 policies)
 
@@ -422,18 +422,57 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 (can_view_org(organization_id, 'projects.view'::text) OR ((is_public = true) AND (is_deleted = false)))
 ```
 
-### `tasks` (4 policies)
+### `task_template_parameters` (2 policies)
 
-#### MIEMBROS VEN TASKS
+#### ADMINS GESTIONAN TASK_TEMPLATE_PARAMETERS
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TASK_TEMPLATE_PARAMETERS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_system = true) OR can_view_org(organization_id, 'tasks.view'::text))
+true
 ```
 
-#### MIEMBROS Y ADMINS ACTUALIZAN TASKS
+### `task_templates` (2 policies)
+
+#### ADMINS GESTIONAN TASK_TEMPLATES
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TASK_TEMPLATES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(is_deleted = false)
+```
+
+### `tasks` (3 policies)
+
+#### MIEMBROS ACTUALIZAN TASKS
 
 - **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {public}
@@ -442,7 +481,7 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 (((is_system = false) AND can_mutate_org(organization_id, 'tasks.manage'::text)) OR ((is_system = true) AND is_admin()))
 ```
 
-#### MIEMBROS Y ADMINS CREAN TASKS
+#### MIEMBROS CREAN TASKS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
@@ -451,13 +490,13 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 (((is_system = false) AND can_mutate_org(organization_id, 'tasks.manage'::text)) OR ((is_system = true) AND is_admin()))
 ```
 
-#### MIEMBROS Y ADMINS ELIMINAN TASKS
+#### MIEMBROS VEN TASKS
 
-- **Command**: DELETE | **Permissive**: PERMISSIVE
+- **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((is_system = false) AND can_mutate_org(organization_id, 'tasks.manage'::text)) OR ((is_system = true) AND is_admin()))
+(((is_system = true) AND (is_admin() OR ((status <> 'draft'::task_catalog_status) AND (is_deleted = false)))) OR ((is_system = false) AND can_view_org(organization_id, 'tasks.view'::text)))
 ```
 
 ### `unit_categories` (2 policies)

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TextField, NotesField } from "@/components/shared/forms/fields";
 import { createTaskElement, updateTaskElement } from "../actions";
 import { TaskElement, Unit } from "../types";
 
@@ -16,6 +15,7 @@ import { TaskElement, Unit } from "../types";
 
 interface TasksElementFormProps {
     initialData?: TaskElement | null;
+    /** Units list — accepted for backward compatibility with caller views */
     units?: Unit[];
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -25,19 +25,43 @@ interface TasksElementFormProps {
 // Component
 // ============================================================================
 
-export function TasksElementForm({ initialData, units = [], onSuccess, onCancel }: TasksElementFormProps) {
+export function TasksElementForm({ initialData, onSuccess, onCancel }: TasksElementFormProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [name, setName] = useState(initialData?.name || "");
+    const [code, setCode] = useState(initialData?.code || "");
+    const [template, setTemplate] = useState(initialData?.expression_template || "");
+    const [description, setDescription] = useState(initialData?.description || "");
+    const templateRef = useRef<HTMLInputElement>(null);
     const isEditing = !!initialData;
 
     // ========================================================================
     // Handlers
     // ========================================================================
 
+    const insertValue = () => {
+        const input = templateRef.current;
+        if (!input) return;
+        const start = input.selectionStart ?? template.length;
+        const end = input.selectionEnd ?? template.length;
+        const next = template.slice(0, start) + "{value}" + template.slice(end);
+        setTemplate(next);
+        requestAnimationFrame(() => {
+            input.focus();
+            const pos = start + 7;
+            input.setSelectionRange(pos, pos);
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
 
-        const formData = new FormData(e.currentTarget);
+        const formData = new FormData();
+        if (isEditing) formData.set("id", initialData.id);
+        formData.set("name", name);
+        formData.set("code", code);
+        formData.set("expression_template", template);
+        formData.set("description", description);
 
         try {
             const result = isEditing
@@ -65,67 +89,57 @@ export function TasksElementForm({ initialData, units = [], onSuccess, onCancel 
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto">
-                {/* Hidden ID for edit mode */}
-                {isEditing && (
-                    <input type="hidden" name="id" value={initialData.id} />
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     {/* Name */}
-                    <FormGroup label="Nombre" required className="md:col-span-2">
-                        <Input
-                            name="name"
-                            placeholder="ej: Muro, Cañería, Tomacorriente"
-                            defaultValue={initialData?.name || ""}
-                            autoFocus
-                        />
-                    </FormGroup>
+                    <TextField
+                        label="Nombre"
+                        value={name}
+                        onChange={setName}
+                        placeholder="ej: Muro, Cañería, Tomacorriente"
+                        autoFocus
+                    />
 
                     {/* Code */}
-                    <FormGroup label="Código" helpText="Se usará para generar códigos de tarea">
-                        <Input
-                            name="code"
-                            placeholder="ej: MUR, CAN, TOM"
-                            defaultValue={initialData?.code || ""}
-                            className="uppercase font-mono"
-                            maxLength={10}
-                        />
+                    <TextField
+                        label="Código"
+                        required={false}
+                        value={code}
+                        onChange={(v) => setCode(v.toUpperCase())}
+                        placeholder="ej: MUR, CAN, TOM"
+                    />
+
+                    {/* Expression Template */}
+                    <FormGroup label="Template de expresión" required={false} className="col-span-2">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                ref={templateRef}
+                                placeholder="de {value}"
+                                value={template}
+                                onChange={(e) => setTemplate(e.target.value)}
+                            />
+                            <button
+                                type="button"
+                                onClick={insertValue}
+                                className="shrink-0 rounded-md border border-dashed border-muted-foreground/40 px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary cursor-pointer"
+                                title="Insertar {value} en la posición del cursor"
+                            >
+                                {"{value}"}
+                            </button>
+                        </div>
                     </FormGroup>
-
-
-                    {/* Default Unit */}
-                    {units.length > 0 && (
-                        <FormGroup label="Unidad por defecto" helpText="Unidad predeterminada para tareas">
-                            <Select name="default_unit_id" defaultValue={(initialData as any)?.default_unit_id || ""}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar unidad..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {units.map((unit) => (
-                                        <SelectItem key={unit.id} value={unit.id}>
-                                            {unit.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormGroup>
-                    )}
 
                     {/* Description */}
-                    <FormGroup label="Descripción" className="md:col-span-2">
-                        <Textarea
-                            name="description"
-                            placeholder="Descripción opcional del elemento..."
-                            defaultValue={initialData?.description || ""}
-                            rows={3}
-                        />
-                    </FormGroup>
+                    <NotesField
+                        label="Descripción"
+                        value={description}
+                        onChange={setDescription}
+                        placeholder="Descripción opcional del elemento..."
+                        className="col-span-2"
+                    />
                 </div>
             </div>
 
-            {/* Sticky footer */}
             <FormFooter
                 className="-mx-4 -mb-4 mt-6"
                 isLoading={isLoading}

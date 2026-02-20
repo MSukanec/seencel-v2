@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T00:26:33.263Z
+> Generated: 2026-02-20T14:40:38.399Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -143,6 +143,19 @@
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
 
+### `catalog.task_action_categories`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| name | text | ✗ |  | UNIQUE |
+| code | varchar(20) | ✗ |  | UNIQUE |
+| description | text | ✓ |  |  |
+| sort_order | int4 | ✗ | 0 |  |
+| is_system | bool | ✗ | true |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+
 ### `catalog.task_actions`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -153,9 +166,8 @@
 | updated_at | timestamptz | ✓ | now() |  |
 | description | text | ✓ |  |  |
 | short_code | varchar(10) | ✓ |  |  |
-| action_type | text | ✗ |  |  |
-| sort_order | int4 | ✗ | 0 |  |
 | is_system | bool | ✗ | true |  |
+| action_category_id | uuid | ✓ |  | FK → task_action_categories.id |
 
 ### `catalog.task_construction_systems`
 
@@ -168,11 +180,10 @@
 | slug | text | ✗ |  | UNIQUE |
 | description | text | ✓ |  |  |
 | code | varchar(10) | ✓ |  |  |
-| icon | text | ✓ |  |  |
-| order | int4 | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
 | category | text | ✓ |  |  |
+| expression_template | text | ✓ |  |  |
 
 ### `catalog.task_divisions`
 
@@ -220,15 +231,12 @@
 | name | text | ✗ |  |  |
 | slug | text | ✗ |  |  |
 | description | text | ✓ |  |  |
-| icon | text | ✓ |  |  |
-| order | int4 | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
 | code | varchar(4) | ✓ |  |  |
-| default_unit_id | uuid | ✓ |  | FK → units.id |
 | element_type | text | ✗ |  |  |
-| sort_order | int4 | ✗ | 0 |  |
 | is_system | bool | ✗ | true |  |
+| expression_template | text | ✓ |  |  |
 
 ### `catalog.task_parameter_options`
 
@@ -261,12 +269,12 @@
 | expression_template | text | ✓ |  |  |
 | updated_at | timestamptz | ✓ | now() |  |
 | is_required | bool | ✓ | true |  |
-| order | int4 | ✓ |  |  |
 | description | text | ✓ |  |  |
-| default_value | text | ✓ |  |  |
-| validation_rules | jsonb | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
+| value_unit | text | ✓ |  |  |
+| semantic_group | text | ✓ |  |  |
+| affects_recipe | bool | ✗ | true |  |
 
 ### `catalog.task_recipe_external_services`
 
@@ -378,6 +386,39 @@
 | is_required | bool | ✓ | true |  |
 | created_at | timestamptz | ✓ | now() |  |
 
+### `catalog.task_template_parameters`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| template_id | uuid | ✗ |  | PK, FK → task_templates.id |
+| parameter_id | uuid | ✗ |  | PK, FK → task_parameters.id |
+| order | int4 | ✗ | 0 |  |
+| is_required | bool | ✗ | true |  |
+| created_at | timestamptz | ✗ | now() |  |
+| default_value | text | ✓ |  |  |
+
+### `catalog.task_templates`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| task_action_id | uuid | ✗ |  | FK → task_actions.id |
+| task_element_id | uuid | ✗ |  | FK → task_elements.id |
+| task_construction_system_id | uuid | ✗ |  | FK → task_construction_systems.id |
+| task_division_id | uuid | ✓ |  | FK → task_divisions.id |
+| unit_id | uuid | ✗ |  | FK → units.id |
+| is_system | bool | ✗ | true |  |
+| status | task_catalog_status | ✗ | 'draft'::task_catalog_status |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+| code | varchar(20) | ✓ |  |  |
+
 ### `catalog.tasks`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -405,6 +446,7 @@
 | import_batch_id | uuid | ✓ |  |  |
 | status | task_catalog_status | ✗ | 'draft'::task_catalog_status |  |
 | task_construction_system_id | uuid | ✓ |  | FK → task_construction_systems.id |
+| template_id | uuid | ✓ |  | FK → task_templates.id |
 
 ### `catalog.unit_categories`
 

@@ -148,15 +148,31 @@ export function TasksDetailRecipeView({
             unit: task.unit_symbol ?? task.unit_name ?? null,
             division: task.division_name ?? null,
             organizationId: organizationId,
-            catalogMaterials: catalogMaterials?.map((m) => ({
-                id: m.id,
-                name: m.name,
-                unit_symbol: m.unit_symbol ?? null,
-            })),
+            // Contexto técnico estructurado (acción + elemento + parámetros)
+            action: task.action_name ?? null,
+            element: task.element_name ?? null,
+            parameterValues: task.parameter_values ?? undefined,
+            // Materiales con precios para inferencia económica
+            catalogMaterials: catalogMaterials?.map((m) => {
+                const saleQty = m.default_sale_unit_quantity ?? 1;
+                const effectiveUnitPrice = m.org_unit_price != null && m.org_unit_price > 0
+                    ? m.org_unit_price / (saleQty > 0 ? saleQty : 1)
+                    : null;
+                return {
+                    id: m.id,
+                    name: m.name,
+                    unit_symbol: m.unit_symbol ?? null,
+                    unit_price: effectiveUnitPrice,
+                    currency_symbol: null, // CatalogMaterialOption no expone currency_symbol directamente
+                };
+            }),
+            // Tipos de MO con precios para inferencia económica
             catalogLaborTypes: catalogLaborTypes?.map((l) => ({
                 id: l.id,
                 name: l.name,
                 unit_symbol: l.unit_symbol ?? null,
+                unit_price: l.current_price ?? null,
+                currency_symbol: l.currency_symbol ?? null,
             })),
         };
         openModal(

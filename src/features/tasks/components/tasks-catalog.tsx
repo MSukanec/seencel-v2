@@ -333,7 +333,7 @@ export function TaskCatalog({
                                             onClick={handleViewTask}
                                             onEdit={handleEditTask}
                                             onDelete={handleDeleteClick}
-                                            onStatusChange={!task.is_system ? handleStatusChange : undefined}
+                                            onStatusChange={(isAdminMode || !task.is_system) ? handleStatusChange : undefined}
                                         />
                                     ))}
                                 </div>
@@ -356,7 +356,7 @@ export function TaskCatalog({
                                             onClick={handleViewTask}
                                             onEdit={handleEditTask}
                                             onDelete={handleDeleteClick}
-                                            onStatusChange={!task.is_system ? handleStatusChange : undefined}
+                                            onStatusChange={(isAdminMode || !task.is_system) ? handleStatusChange : undefined}
                                         />
                                     ))}
                                 </div>

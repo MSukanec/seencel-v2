@@ -1,6 +1,8 @@
 # Catalog Atlas — Sistema Universal de Tareas de Construcción
 
 > **Alcance**: Define la arquitectura conceptual y técnica del atlas de tareas de construcción de Seencel: cómo se clasifican, parametrizan y extienden las tareas del catálogo técnico.
+> 
+> **Última actualización**: 2026-02-20 — task_action_categories introducida; columnas eliminadas de task_actions y task_parameters; task_templates operativo.
 
 ---
 
@@ -13,7 +15,7 @@ Y luego mostrarle recetas de materiales + mano de obra con precios de mercado ac
 Sin este sistema, dos organizaciones distintas llaman "revoque de paredes" a cosas técnicamente distintas, haciendo imposible la comparación de precios o el benchmarking entre obras.
 
 **El Catalog Atlas resuelve** la comparabilidad global de tareas de construcción mediante una jerarquía estricta:  
-`ACTION + ELEMENT + SYSTEM + PARAMETERS → TASK VARIANT → RECIPE`
+`ACTION (+ ACTION_CATEGORY) + ELEMENT + SYSTEM + PARAMETERS → TASK VARIANT → RECIPE`
 
 ---
 
@@ -26,11 +28,12 @@ El sistema es:
 
 ---
 
-## Las 6 capas del modelo
+## Las 7 capas del modelo
 
 | Capa | Entidad | Responsabilidad | Tabla |
 |------|---------|-----------------|-------|
-| **1. Action** | Verbo técnico | Qué se hace: Construir, Demoler, Reparar | `catalog.task_actions` |
+| **0. Action Category** | Categoría de intervención | Metadato de clasificación: Construcción, Demolición, Reparación... | `catalog.task_action_categories` |
+| **1. Action** | Verbo técnico | Qué se hace: "Ejecución de", "Aplicación de", "Demolición de" | `catalog.task_actions` |
 | **2. Element** | Componente físico | Sobre qué objeto: Muro, Losa, Cielorraso | `catalog.task_elements` |
 | **3. System** | Método técnico | Cómo se hace: Mampostería cerámica, Drywall | `catalog.task_construction_systems` |
 | **4. Parameters** | Variantes | Qué diferencia variantes: espesor, tipo de ladrillo | `catalog.task_parameters` + `catalog.task_system_parameters` |
@@ -39,23 +42,66 @@ El sistema es:
 
 ---
 
+## Distinción crítica: Action vs. Action Category
+
+> 🚨 `task_actions` NO son "verbos genéricos". Son verbos técnicos específicos del lenguaje de la construcción.
+> `task_action_categories` son **categorías de intervención** — metadatos que agrupan acciones para filtros, dashboards, AI y estadísticas.
+
+### Las 5 categorías de intervención (task_action_categories)
+
+| Nombre | Propósito |
+|--------|-----------|
+| **Construcción / Ejecución** | Trabajos que crean o materializan un elemento nuevo |
+| **Provisión / Suministro** | Trabajos de entrega o instalación de productos |
+| **Demolición** | Trabajos de remoción o desmantelamiento |
+| **Limpieza / Preparación** | Trabajos previos o de acondicionamiento de superficie |
+| **Reparación / Mantenimiento** | Trabajos sobre elementos existentes deteriorados |
+
+### Para qué sirven las categorías
+- **Filtros** en listados de tareas y presupuestos
+- **Dashboards** de distribución de tipos de trabajo en un proyecto
+- **IA** para contextualizar qué tipo de tarea está siendo estimada
+- **Estadísticas** y clasificación económica (cuánto % de una obra es ejecución vs. reparación)
+- **Búsqueda semántica** en el motor de búsqueda del catálogo
+
+### Ejemplos concretos
+
+| Categoría | Acción (task_action) | Ejemplo de tarea |
+|-----------|----------------------|-----------------|
+| Construcción / Ejecución | Ejecución | Ejecución de muro de mampostería cerámica |
+| Construcción / Ejecución | Construcción | Construcción de losa nervurada |
+| Provisión / Suministro | Aplicación | Aplicación de pintura látex |
+| Demolición | Demolición | Demolición de tabique de yeso |
+| Limpieza / Preparación | Preparación | Preparación de superficie para pintura |
+| Reparación / Mantenimiento | Reparación | Reparación de fisuras en muro |
+
+---
+
 ## Jerarquía de vinculaciones
 
 ```
-task_actions  ──→ task_element_actions ──→  task_elements
-                                                   │
-                                     task_element_systems
-                                                   │
-                                       task_construction_systems
-                                                   │
-                                       task_system_parameters
-                                                   │
-                                           task_parameters
+task_action_categories
+        │
+        └─→ task_actions  ──→ task_element_actions ──→  task_elements
+                                                               │
+                                                 task_element_systems
+                                                               │
+                                                   task_construction_systems
+                                                               │
+                                                   task_system_parameters
+                                                               │
+                                                       task_parameters
 ```
 
 Las **tareas** (`catalog.tasks`) resultan de combinar:
 ```
 task_action_id + task_element_id + task_construction_system_id + parameter_values
+```
+
+Las **plantillas** (`catalog.task_templates`) predefinen esa combinación para acelerar la creación de variantes:
+```
+task_template → task_action_id + task_element_id + task_construction_system_id
+             → task_template_parameters (parameters de la plantilla, ordenados)
 ```
 
 ---
@@ -75,13 +121,18 @@ task_action_id + task_element_id + task_construction_system_id + parameter_value
 ## Flujo resumido
 
 ```
-catalog.task_actions          (cerrado, sistema is_system=true)
+catalog.task_action_categories   (5 categorías fijas de intervención)
+        ↓
+catalog.task_actions              (catálogo cerrado, is_system=true)
         +
-catalog.task_elements         (físico, ~20 elementos con soft-delete)
+catalog.task_elements             (físico, ~20 elementos con soft-delete)
         +
-catalog.task_construction_systems  (técnico, extensible, con CRUD)
+catalog.task_construction_systems (técnico, extensible, con CRUD)
         |
         └─→ catalog.task_system_parameters  ← parámetros propios del sistema
+                    |
+                    ↓
+        catalog.task_templates    (plantillas preconfiguradas: acción+elemento+sistema+parámetros)
                     |
                     ↓
             catalog.tasks  (variantes: action + element + system + param_values)

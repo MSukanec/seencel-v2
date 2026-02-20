@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { createRecipe, updateRecipe } from "@/features/tasks/actions";
 import { RecipeSuggestionPanel } from "@/features/ai/components/recipe-suggestion-panel";
 
@@ -26,8 +27,28 @@ export interface TaskContext {
     unit?: string | null;
     division?: string | null;
     organizationId?: string | null;
-    catalogMaterials?: { id: string; name: string; unit_symbol?: string | null }[];
-    catalogLaborTypes?: { id: string; name: string; unit_symbol?: string | null }[];
+    /** Acción técnica (ej: "Revocar", "Ejecutar") */
+    action?: string | null;
+    /** Elemento constructivo (ej: "Pared", "Losa") */
+    element?: string | null;
+    /** Parámetros seleccionados por el usuario */
+    parameterValues?: Record<string, string | number | boolean>;
+    /** Materiales del catálogo con precios para matching e inferencia económica */
+    catalogMaterials?: {
+        id: string;
+        name: string;
+        unit_symbol?: string | null;
+        unit_price?: number | null;
+        currency_symbol?: string | null;
+    }[];
+    /** Tipos de MO del catálogo con precios */
+    catalogLaborTypes?: {
+        id: string;
+        name: string;
+        unit_symbol?: string | null;
+        unit_price?: number | null;
+        currency_symbol?: string | null;
+    }[];
 }
 
 interface TasksRecipeFormProps {
@@ -51,6 +72,9 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
 
     // State — initialized from editData when editing
     const [name, setName] = useState(editData?.name || "");
+
+    // Contexto libre del profesional para la IA
+    const [userContext, setUserContext] = useState("");
 
     // ========================================================================
     // Callbacks internos (semi-autónomo)
@@ -125,12 +149,34 @@ export function TasksRecipeForm({ taskId, editData, taskContext }: TasksRecipeFo
                     </FormGroup>
                 </div>
 
+                {/* Contexto libre para la IA — solo en modo crear */}
+                {!isEditMode && taskContext && (
+                    <div className="mt-4">
+                        <FormGroup
+                            label="Contexto para la IA (opcional)"
+                            helpText="Describí zona geográfica, tipo de proyecto, nivel de calidad o condiciones ambientales. La IA lo tendrá en cuenta al sugerir materiales."
+                        >
+                            <Textarea
+                                value={userContext}
+                                onChange={(e) => setUserContext(e.target.value)}
+                                placeholder="Ej: Zona costera, alta humedad. Edificio de departamentos en altura. Terminaciones de nivel medio-alto..."
+                                className="resize-none text-sm"
+                                rows={3}
+                            />
+                        </FormGroup>
+                    </div>
+                )}
+
                 {/* AI Suggestion Panel — solo en modo crear y con contexto disponible */}
                 {!isEditMode && taskContext && (
                     <RecipeSuggestionPanel
                         taskName={taskContext.name}
                         taskUnit={taskContext.unit}
                         taskDivision={taskContext.division}
+                        taskAction={taskContext.action}
+                        taskElement={taskContext.element}
+                        parameterValues={taskContext.parameterValues}
+                        userContext={userContext || null}
                         organizationId={taskContext.organizationId}
                         catalogMaterials={taskContext.catalogMaterials}
                         catalogLaborTypes={taskContext.catalogLaborTypes}

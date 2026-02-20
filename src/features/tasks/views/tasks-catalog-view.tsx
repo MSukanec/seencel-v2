@@ -383,8 +383,8 @@ export function TasksCatalogView({
             // Open parametric task wizard
             openModal(
                 <TasksParametricForm
-                    elements={elements}
                     units={units}
+                    isAdminMode={isAdminMode}
                     onCancel={closeModal}
                     onSuccess={() => {
                         closeModal();

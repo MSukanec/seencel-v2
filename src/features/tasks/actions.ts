@@ -37,6 +37,8 @@ export async function createTask(formData: FormData) {
     const is_parametric = formData.get("is_parametric") === "true";
     const task_action_id = formData.get("task_action_id") as string | null;
     const task_element_id = formData.get("task_element_id") as string | null;
+    const task_construction_system_id = formData.get("task_construction_system_id") as string | null;
+    const template_id = formData.get("template_id") as string | null;
     const parameter_values_raw = formData.get("parameter_values") as string | null;
     const parameter_values = parameter_values_raw ? JSON.parse(parameter_values_raw) : {};
 
@@ -49,7 +51,7 @@ export async function createTask(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .insert({
             name: name.trim(),
             custom_name: name.trim(), // Keep in sync for compatibility
@@ -66,6 +68,8 @@ export async function createTask(formData: FormData) {
             is_parametric,
             task_action_id: task_action_id || null,
             task_element_id: task_element_id || null,
+            task_construction_system_id: task_construction_system_id || null,
+            template_id: template_id || null,
             parameter_values: is_parametric ? parameter_values : {},
         })
         .select()
@@ -107,7 +111,7 @@ export async function updateTask(formData: FormData) {
     }
 
     let query = supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .update({
             name: name.trim(),
             custom_name: name.trim(),
@@ -120,12 +124,9 @@ export async function updateTask(formData: FormData) {
         })
         .eq("id", id);
 
-    // In admin mode, we can edit system tasks
+    // In admin mode, we can edit system tasks and org tasks
     // In normal mode, we can only edit our org's non-system tasks
-    if (isAdminMode) {
-        // Admin mode: only edit system tasks
-        query = query.eq("is_system", true);
-    } else {
+    if (!isAdminMode) {
         const { activeOrgId } = await getUserOrganizations();
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
@@ -162,7 +163,7 @@ export async function updateTaskOrganization(
         : { organization_id: null, is_system: true };
 
     const { data, error } = await supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .update(updateData)
         .eq("id", taskId)
         .select()
@@ -185,7 +186,7 @@ export async function deleteTask(id: string, isAdminMode: boolean = false) {
     const supabase = isAdminMode ? createServiceClient() : await createClient();
 
     let query = supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -225,7 +226,7 @@ export async function updateTaskStatus(
     const supabase = isAdminMode ? createServiceClient() : await createClient();
 
     let query = supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .update({ status })
         .eq("id", taskId);
 
@@ -255,17 +256,16 @@ export async function deleteTasksBulk(ids: string[], isAdminMode: boolean = fals
     const supabase = isAdminMode ? createServiceClient() : await createClient();
 
     let query = supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
         })
         .in("id", ids);
 
-    // Safety: only delete the correct type of task
-    if (isAdminMode) {
-        query = query.eq("is_system", true);
-    } else {
+    // In admin mode, can delete any task type (system or org-owned)
+    // In normal mode, only delete our org's non-system tasks
+    if (!isAdminMode) {
         const { activeOrgId } = await getUserOrganizations();
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
@@ -307,14 +307,13 @@ export async function updateTasksBulk(
     const supabase = isAdminMode ? createServiceClient() : await createClient();
 
     let query = supabase
-        .from("tasks")
+        .schema('catalog').from("tasks")
         .update(payload)
         .in("id", ids);
 
-    // Safety: only update the correct type of task
-    if (isAdminMode) {
-        query = query.eq("is_system", true);
-    } else {
+    // In admin mode, can update any task type (system or org-owned)
+    // In normal mode, only update our org's non-system tasks
+    if (!isAdminMode) {
         const { activeOrgId } = await getUserOrganizations();
         if (!activeOrgId) {
             return { error: "No hay organización activa" };
@@ -374,7 +373,7 @@ export async function createTaskDivision(formData: FormData) {
     // Calculate next order position among siblings at the same level
     let nextOrder = 1;
     let siblingsQuery = supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .select("order")
         .is("parent_id", parent_id || null)
         .order("order", { ascending: false, nullsFirst: false })
@@ -394,7 +393,7 @@ export async function createTaskDivision(formData: FormData) {
     } else {
         // Count existing siblings to determine position
         let countQuery = supabase
-            .from("task_divisions")
+            .schema('catalog').from("task_divisions")
             .select("id", { count: "exact", head: true })
             .is("parent_id", parent_id || null);
 
@@ -409,7 +408,7 @@ export async function createTaskDivision(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .insert({
             name: name.trim(),
             description: description?.trim() || null,
@@ -455,7 +454,7 @@ export async function updateTaskDivision(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .update({
             name: name.trim(),
             description: description?.trim() || null,
@@ -496,7 +495,7 @@ export async function deleteTaskDivision(
         // Recursively find all descendant divisions
         const collectDescendants = async (parentIds: string[]): Promise<string[]> => {
             const { data: children } = await supabase
-                .from("task_divisions")
+                .schema('catalog').from("task_divisions")
                 .select("id")
                 .in("parent_id", parentIds)
                 .eq("is_deleted", false);
@@ -517,7 +516,7 @@ export async function deleteTaskDivision(
         if (replacementId && !deleteChildren) {
             // Only reassign for the main division when replacing
             const { error: reassignError } = await supabase
-                .from("tasks")
+                .schema('catalog').from("tasks")
                 .update({ task_division_id: replacementId })
                 .eq("task_division_id", id);
 
@@ -528,7 +527,7 @@ export async function deleteTaskDivision(
         } else {
             // Set tasks to null division
             const { error: nullifyError } = await supabase
-                .from("tasks")
+                .schema('catalog').from("tasks")
                 .update({ task_division_id: null })
                 .eq("task_division_id", id);
 
@@ -542,7 +541,7 @@ export async function deleteTaskDivision(
     // Also orphan any child divisions that aren't being deleted
     if (!deleteChildren) {
         const { error: orphanError } = await supabase
-            .from("task_divisions")
+            .schema('catalog').from("task_divisions")
             .update({ parent_id: null })
             .eq("parent_id", divisionId)
             .eq("is_deleted", false);
@@ -555,7 +554,7 @@ export async function deleteTaskDivision(
 
     // Soft delete all targeted divisions
     const { error } = await supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -581,7 +580,7 @@ export async function reorderTaskDivisions(
     // Update each division's order based on its position in the array
     const updates = orderedIds.map((id, index) =>
         supabase
-            .from("task_divisions")
+            .schema('catalog').from("task_divisions")
             .update({ order: index + 1 })
             .eq("id", id)
     );
@@ -610,9 +609,8 @@ export async function createTaskParameter(formData: FormData) {
     const label = formData.get("label") as string;
     const type = formData.get("type") as string;
     const description = formData.get("description") as string | null;
-    const default_value = formData.get("default_value") as string | null;
     const is_required = formData.get("is_required") === "true";
-    const order = formData.get("order") as string | null;
+    const expression_template = formData.get("expression_template") as string | null;
 
     if (!slug?.trim()) {
         return { error: "El slug es requerido" };
@@ -627,15 +625,14 @@ export async function createTaskParameter(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_parameters")
+        .schema('catalog').from("task_parameters")
         .insert({
             slug: slug.trim().toLowerCase().replace(/\s+/g, '_'),
             label: label.trim(),
             type,
             description: description?.trim() || null,
-            default_value: default_value?.trim() || null,
             is_required,
-            order: order ? parseInt(order, 10) : null,
+            expression_template: expression_template?.trim() || null,
         })
         .select()
         .single();
@@ -659,9 +656,8 @@ export async function updateTaskParameter(id: string, formData: FormData) {
     const label = formData.get("label") as string;
     const type = formData.get("type") as string;
     const description = formData.get("description") as string | null;
-    const default_value = formData.get("default_value") as string | null;
     const is_required = formData.get("is_required") === "true";
-    const order = formData.get("order") as string | null;
+    const expression_template = formData.get("expression_template") as string | null;
 
     if (!slug?.trim()) {
         return { error: "El slug es requerido" };
@@ -672,15 +668,14 @@ export async function updateTaskParameter(id: string, formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_parameters")
+        .schema('catalog').from("task_parameters")
         .update({
             slug: slug.trim().toLowerCase().replace(/\s+/g, '_'),
             label: label.trim(),
             type,
             description: description?.trim() || null,
-            default_value: default_value?.trim() || null,
             is_required,
-            order: order ? parseInt(order, 10) : null,
+            expression_template: expression_template?.trim() || null,
         })
         .eq("id", id)
         .select()
@@ -703,7 +698,7 @@ export async function deleteTaskParameter(id: string) {
 
     // Soft delete the parameter
     const { error } = await supabase
-        .from("task_parameters")
+        .schema('catalog').from("task_parameters")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -749,7 +744,7 @@ export async function createParameterOption(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_parameter_options")
+        .schema('catalog').from("task_parameter_options")
         .insert({
             parameter_id,
             label: label.trim(),
@@ -799,7 +794,7 @@ export async function updateParameterOption(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_parameter_options")
+        .schema('catalog').from("task_parameter_options")
         .update({
             label: label.trim(),
             value: value.trim(),
@@ -830,7 +825,7 @@ export async function deleteParameterOption(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_parameter_options")
+        .schema('catalog').from("task_parameter_options")
         .delete()
         .eq("id", id);
 
@@ -857,20 +852,20 @@ export async function createTaskElement(formData: FormData) {
     const code = formData.get("code") as string | null;
     const description = formData.get("description") as string | null;
     const default_unit_id = formData.get("default_unit_id") as string | null;
-    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
+    const expression_template = formData.get("expression_template") as string | null;
 
     if (!name?.trim()) {
         return { error: "El nombre es requerido" };
     }
 
     const { data, error } = await supabase
-        .from("task_elements")
+        .schema('catalog').from("task_elements")
         .insert({
             name: name.trim(),
             code: code?.trim().toUpperCase() || null,
             description: description?.trim() || null,
             default_unit_id: default_unit_id || null,
-            order,
+            expression_template: expression_template?.trim() || null,
         })
         .select()
         .single();
@@ -898,7 +893,7 @@ export async function updateTaskElement(formData: FormData) {
     const code = formData.get("code") as string | null;
     const description = formData.get("description") as string | null;
     const default_unit_id = formData.get("default_unit_id") as string | null;
-    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
+    const expression_template = formData.get("expression_template") as string | null;
 
     if (!id) {
         return { error: "ID de elemento no proporcionado" };
@@ -909,13 +904,13 @@ export async function updateTaskElement(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("task_elements")
+        .schema('catalog').from("task_elements")
         .update({
             name: name.trim(),
             code: code?.trim().toUpperCase() || null,
             description: description?.trim() || null,
             default_unit_id: default_unit_id || null,
-            order,
+            expression_template: expression_template?.trim() || null,
         })
         .eq("id", id)
         .select()
@@ -940,7 +935,7 @@ export async function deleteTaskElement(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_elements")
+        .schema('catalog').from("task_elements")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -969,7 +964,7 @@ export async function toggleDivisionElement(
     if (shouldLink) {
         // Add link
         const { error } = await supabase
-            .from("task_division_elements")
+            .schema('catalog').from("task_division_elements")
             .insert({ division_id: divisionId, element_id: elementId });
 
         if (error) {
@@ -982,7 +977,7 @@ export async function toggleDivisionElement(
     } else {
         // Remove link
         const { error } = await supabase
-            .from("task_division_elements")
+            .schema('catalog').from("task_division_elements")
             .delete()
             .eq("division_id", divisionId)
             .eq("element_id", elementId);
@@ -1009,7 +1004,7 @@ export async function toggleDivisionAction(
 
     if (shouldLink) {
         const { error } = await supabase
-            .from("task_division_actions")
+            .schema('catalog').from("task_division_actions")
             .insert({ division_id: divisionId, action_id: actionId });
 
         if (error) {
@@ -1020,7 +1015,7 @@ export async function toggleDivisionAction(
         }
     } else {
         const { error } = await supabase
-            .from("task_division_actions")
+            .schema('catalog').from("task_division_actions")
             .delete()
             .eq("division_id", divisionId)
             .eq("action_id", actionId);
@@ -1047,7 +1042,7 @@ export async function toggleActionElement(
 
     if (shouldLink) {
         const { error } = await supabase
-            .from("task_element_actions")
+            .schema('catalog').from("task_element_actions")
             .insert({ action_id: actionId, element_id: elementId });
 
         if (error) {
@@ -1058,7 +1053,7 @@ export async function toggleActionElement(
         }
     } else {
         const { error } = await supabase
-            .from("task_element_actions")
+            .schema('catalog').from("task_element_actions")
             .delete()
             .eq("action_id", actionId)
             .eq("element_id", elementId);
@@ -1086,7 +1081,7 @@ export async function toggleElementParameter(
 
     if (shouldLink) {
         const { error } = await supabase
-            .from("task_element_parameters")
+            .schema('catalog').from("task_element_parameters")
             .insert({
                 element_id: elementId,
                 parameter_id: parameterId,
@@ -1101,7 +1096,7 @@ export async function toggleElementParameter(
         }
     } else {
         const { error } = await supabase
-            .from("task_element_parameters")
+            .schema('catalog').from("task_element_parameters")
             .delete()
             .eq("element_id", elementId)
             .eq("parameter_id", parameterId);
@@ -1141,7 +1136,7 @@ export async function getMyRecipes(taskId: string): Promise<TaskRecipeView[]> {
     const { activeOrgId } = await getUserOrganizations();
 
     const { data, error } = await supabase
-        .from("task_recipes_view")
+        .schema('catalog').from("task_recipes_view")
         .select("*")
         .eq("task_id", taskId)
         .eq("organization_id", activeOrgId)
@@ -1162,7 +1157,7 @@ export async function getPublicRecipes(taskId: string): Promise<TaskRecipeView[]
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("task_recipes_view")
+        .schema('catalog').from("task_recipes_view")
         .select("*")
         .eq("task_id", taskId)
         .eq("is_public", true)
@@ -1203,7 +1198,7 @@ export async function getRecipeById(recipeId: string): Promise<TaskRecipeView | 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("task_recipes_view")
+        .schema('catalog').from("task_recipes_view")
         .select("*")
         .eq("id", recipeId)
         .single();
@@ -1224,7 +1219,7 @@ export async function createRecipe(data: TaskRecipeFormData) {
     const { activeOrgId } = await getUserOrganizations();
 
     const { data: result, error } = await supabase
-        .from("task_recipes")
+        .schema('catalog').from("task_recipes")
         .insert({
             task_id: data.task_id,
             organization_id: activeOrgId,
@@ -1254,7 +1249,7 @@ export async function updateRecipe(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipes")
+        .schema('catalog').from("task_recipes")
         .update({
             ...(data.name !== undefined && { name: data.name }),
             ...(data.is_public !== undefined && { is_public: data.is_public }),
@@ -1281,7 +1276,7 @@ export async function updateRecipeVisibility(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipes")
+        .schema('catalog').from("task_recipes")
         .update({ is_public: isPublic })
         .eq("id", recipeId);
 
@@ -1304,7 +1299,7 @@ export async function updateRecipeStatus(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipes")
+        .schema('catalog').from("task_recipes")
         .update({ status })
         .eq("id", recipeId);
 
@@ -1325,7 +1320,7 @@ export async function deleteRecipe(recipeId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipes")
+        .schema('catalog').from("task_recipes")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -1352,7 +1347,7 @@ export async function getRecipeMaterials(recipeId: string): Promise<TaskRecipeMa
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("task_recipe_materials")
+        .schema('catalog').from("task_recipe_materials")
         .select(`
             *,
             materials!inner(name, code),
@@ -1385,7 +1380,7 @@ export async function addRecipeMaterial(data: TaskRecipeMaterialFormData) {
     const { activeOrgId } = await getUserOrganizations();
 
     const { data: result, error } = await supabase
-        .from("task_recipe_materials")
+        .schema('catalog').from("task_recipe_materials")
         .insert({
             recipe_id: data.recipe_id,
             material_id: data.material_id,
@@ -1418,7 +1413,7 @@ export async function updateRecipeMaterial(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_materials")
+        .schema('catalog').from("task_recipe_materials")
         .update({
             material_id: data.material_id,
             quantity: data.quantity,
@@ -1445,7 +1440,7 @@ export async function deleteRecipeMaterial(itemId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_materials")
+        .schema('catalog').from("task_recipe_materials")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -1472,7 +1467,7 @@ export async function getRecipeLabor(recipeId: string): Promise<TaskRecipeLabor[
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("task_recipe_labor")
+        .schema('catalog').from("task_recipe_labor")
         .select(`
             *,
             labor_types!inner(name),
@@ -1504,7 +1499,7 @@ export async function addRecipeLabor(data: TaskRecipeLaborFormData) {
     const { activeOrgId } = await getUserOrganizations();
 
     const { data: result, error } = await supabase
-        .from("task_recipe_labor")
+        .schema('catalog').from("task_recipe_labor")
         .insert({
             recipe_id: data.recipe_id,
             labor_type_id: data.labor_type_id,
@@ -1536,7 +1531,7 @@ export async function updateRecipeLabor(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_labor")
+        .schema('catalog').from("task_recipe_labor")
         .update({
             labor_type_id: data.labor_type_id,
             quantity: data.quantity,
@@ -1562,7 +1557,7 @@ export async function deleteRecipeLabor(itemId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_labor")
+        .schema('catalog').from("task_recipe_labor")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -1583,24 +1578,21 @@ export async function deleteRecipeLabor(itemId: string) {
 // ============================================
 
 /**
- * Get external services for a recipe (with joined contact names)
+ * Get external services for a recipe.
+ *
+ * NOTA: contacts, currencies y external_service_prices están en el schema `public`.
+ * PostgREST no resuelve cross-schema FK joins cuando se usa .schema('catalog'),
+ * por lo que se fetchean con queries separadas y se joinean en JS.
  */
 export async function getRecipeExternalServices(
     recipeId: string
 ): Promise<TaskRecipeExternalService[]> {
     const supabase = await createClient();
 
+    // 1. Fetch the external services (catalog schema — solo units tiene FK dentro de catalog)
     const { data, error } = await supabase
-        .from("task_recipe_external_services")
-        .select(`
-            *,
-            contacts(full_name),
-            units(name, symbol),
-            currencies(symbol),
-            external_service_prices!external_service_prices_recipe_external_service_id_fkey(
-                valid_from
-            )
-        `)
+        .schema('catalog').from("task_recipe_external_services")
+        .select(`*, units(name, symbol)`)
         .eq("recipe_id", recipeId)
         .eq("is_deleted", false);
 
@@ -1609,27 +1601,59 @@ export async function getRecipeExternalServices(
         return [];
     }
 
-    return (data || []).map((row: any) => {
-        // Get the latest price valid_from from external_service_prices
-        const prices = row.external_service_prices || [];
-        const latestPrice = prices.sort((a: any, b: any) =>
-            (b.valid_from || "").localeCompare(a.valid_from || "")
-        )[0];
+    const rows = data || [];
+    if (rows.length === 0) return [];
 
+    // 2. Coleccionar IDs únicos para las queries separadas
+    const serviceIds = rows.map((r: any) => r.id);
+    const currencyIds = [...new Set(rows.map((r: any) => r.currency_id).filter(Boolean))];
+    const contactIds = [...new Set(rows.map((r: any) => r.contact_id).filter(Boolean))];
+
+    // 3. Fetch desde public schema en paralelo
+    const [pricesRes, currenciesRes, contactsRes] = await Promise.all([
+        supabase
+            .from("external_service_prices")
+            .select("recipe_external_service_id, valid_from")
+            .in("recipe_external_service_id", serviceIds),
+        currencyIds.length > 0
+            ? supabase.from("currencies").select("id, symbol").in("id", currencyIds)
+            : Promise.resolve({ data: [] }),
+        contactIds.length > 0
+            ? supabase.from("contacts").select("id, full_name").in("id", contactIds)
+            : Promise.resolve({ data: [] }),
+    ]);
+
+    // 4. Construir mapas para Join en JS
+    const pricesByService: Record<string, string[]> = {};
+    for (const p of (pricesRes.data || []) as any[]) {
+        if (!pricesByService[p.recipe_external_service_id]) {
+            pricesByService[p.recipe_external_service_id] = [];
+        }
+        pricesByService[p.recipe_external_service_id].push(p.valid_from);
+    }
+
+    const currencyMap: Record<string, string> = Object.fromEntries(
+        (currenciesRes.data || []).map((c: any) => [c.id, c.symbol])
+    );
+    const contactMap: Record<string, string> = Object.fromEntries(
+        (contactsRes.data || []).map((c: any) => [c.id, c.full_name])
+    );
+
+    // 5. Mapear y enriquecer cada row
+    return rows.map((row: any) => {
+        const prices = (pricesByService[row.id] || []).sort((a, b) => b.localeCompare(a));
         return {
             ...row,
-            contact_name: row.contacts?.full_name || null,
+            contact_name: contactMap[row.contact_id] || null,
             unit_name: row.units?.name || null,
             unit_symbol: row.units?.symbol || null,
-            currency_symbol: row.currencies?.symbol || null,
-            price_valid_from: latestPrice?.valid_from || null,
-            contacts: undefined,
+            currency_symbol: currencyMap[row.currency_id] || null,
+            price_valid_from: prices[0] || null,
             units: undefined,
-            currencies: undefined,
-            external_service_prices: undefined,
         };
     }).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")) as TaskRecipeExternalService[];
 }
+
 
 /**
  * Add external service to recipe
@@ -1641,7 +1665,7 @@ export async function addRecipeExternalService(
     const { activeOrgId } = await getUserOrganizations();
 
     const { data: result, error } = await supabase
-        .from("task_recipe_external_services")
+        .schema('catalog').from("task_recipe_external_services")
         .insert({
             recipe_id: data.recipe_id,
             name: data.name,
@@ -1664,7 +1688,7 @@ export async function addRecipeExternalService(
     // Insert initial price in external_service_prices (aligned with material_prices/labor_type_prices pattern)
     if (result && data.unit_price != null && data.unit_price > 0) {
         const { error: priceError } = await supabase
-            .from("external_service_prices")
+            .schema('catalog').from("external_service_prices")
             .insert({
                 recipe_external_service_id: result.id,
                 organization_id: activeOrgId,
@@ -1693,7 +1717,7 @@ export async function updateRecipeExternalService(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_external_services")
+        .schema('catalog').from("task_recipe_external_services")
         .update({
             name: data.name,
             unit_id: data.unit_id,
@@ -1718,7 +1742,7 @@ export async function updateRecipeExternalService(
         let currencyId = data.currency_id;
         if (!currencyId) {
             const { data: current } = await supabase
-                .from("task_recipe_external_services")
+                .schema('catalog').from("task_recipe_external_services")
                 .select("currency_id")
                 .eq("id", itemId)
                 .single();
@@ -1728,14 +1752,14 @@ export async function updateRecipeExternalService(
         if (currencyId) {
             // Close any existing open price record
             await supabase
-                .from("external_service_prices")
+                .schema('catalog').from("external_service_prices")
                 .update({ valid_to: new Date().toISOString().split("T")[0] })
                 .eq("recipe_external_service_id", itemId)
                 .is("valid_to", null);
 
             // Insert new price record with current date
             const { error: priceError } = await supabase
-                .from("external_service_prices")
+                .schema('catalog').from("external_service_prices")
                 .insert({
                     recipe_external_service_id: itemId,
                     organization_id: activeOrgId,
@@ -1761,7 +1785,7 @@ export async function deleteRecipeExternalService(itemId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_external_services")
+        .schema('catalog').from("task_recipe_external_services")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -1785,7 +1809,7 @@ export async function removeAllRecipeMaterials(recipeId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_materials")
+        .schema('catalog').from("task_recipe_materials")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -1810,7 +1834,7 @@ export async function removeAllRecipeLabor(recipeId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("task_recipe_labor")
+        .schema('catalog').from("task_recipe_labor")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -1874,7 +1898,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
 
     // Upsert rating (one per org per recipe)
     const { error } = await supabase
-        .from("task_recipe_ratings")
+        .schema('catalog').from("task_recipe_ratings")
         .upsert(
             {
                 recipe_id: data.recipe_id,
@@ -1910,7 +1934,7 @@ export async function adoptRecipe(taskId: string, recipeId: string) {
 
     // Upsert preference (one per org per task)
     const { error } = await supabase
-        .from("organization_recipe_preferences")
+        .schema('catalog').from("organization_recipe_preferences")
         .upsert(
             {
                 organization_id: activeOrgId,
@@ -1940,7 +1964,7 @@ export async function getAdoptedRecipe(taskId: string): Promise<string | null> {
     const { activeOrgId } = await getUserOrganizations();
 
     const { data, error } = await supabase
-        .from("organization_recipe_preferences")
+        .schema('catalog').from("organization_recipe_preferences")
         .select("recipe_id")
         .eq("organization_id", activeOrgId)
         .eq("task_id", taskId)
@@ -2083,7 +2107,7 @@ export async function createConstructionSystem(formData: FormData) {
     const code = formData.get("code") as string | null;
     const description = formData.get("description") as string | null;
     const category = formData.get("category") as string | null;
-    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
+    const expression_template = formData.get("expression_template") as string | null;
 
     if (!name?.trim()) {
         return { error: "El nombre es requerido" };
@@ -2106,7 +2130,7 @@ export async function createConstructionSystem(formData: FormData) {
             code: code?.trim().toUpperCase() || null,
             description: description?.trim() || null,
             category: category?.trim() || null,
-            order,
+            expression_template: expression_template?.trim() || null,
             is_deleted: false,
         })
         .select()
@@ -2135,7 +2159,7 @@ export async function updateConstructionSystem(formData: FormData) {
     const code = formData.get("code") as string | null;
     const description = formData.get("description") as string | null;
     const category = formData.get("category") as string | null;
-    const order = formData.get("order") ? parseInt(formData.get("order") as string) : null;
+    const expression_template = formData.get("expression_template") as string | null;
 
     if (!id) {
         return { error: "ID no proporcionado" };
@@ -2152,7 +2176,7 @@ export async function updateConstructionSystem(formData: FormData) {
             code: code?.trim().toUpperCase() || null,
             description: description?.trim() || null,
             category: category?.trim() || null,
-            order,
+            expression_template: expression_template?.trim() || null,
         })
         .eq("id", id)
         .select()
@@ -2304,6 +2328,193 @@ export async function toggleElementAction(
             console.error("Error unlinking element from action:", error);
             return { error: sanitizeError(error) };
         }
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+// ============================================================================
+// TASK TEMPLATES CRUD (Admin Only)
+// ============================================================================
+
+/**
+ * Create a new task template
+ */
+export async function createTaskTemplate(formData: FormData) {
+    const supabase = await createClient();
+
+    const name = formData.get("name") as string;
+    const code = (formData.get("code") as string | null)?.trim().toUpperCase() || null;
+    const description = formData.get("description") as string | null;
+    const task_action_id = formData.get("task_action_id") as string;
+    const task_element_id = formData.get("task_element_id") as string;
+    const task_construction_system_id = formData.get("task_construction_system_id") as string;
+    const task_division_id = formData.get("task_division_id") as string | null;
+    const unit_id = formData.get("unit_id") as string;
+    const status = (formData.get("status") as string) || "draft";
+
+    if (!name?.trim()) return { error: "El nombre es requerido" };
+    if (!task_action_id) return { error: "La acción es requerida" };
+    if (!task_element_id) return { error: "El elemento es requerido" };
+    if (!task_construction_system_id) return { error: "El sistema constructivo es requerido" };
+    if (!unit_id) return { error: "La unidad es requerida" };
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_templates')
+        .insert({
+            name: name.trim(),
+            code: code || null,
+            description: description?.trim() || null,
+            task_action_id,
+            task_element_id,
+            task_construction_system_id,
+            task_division_id: task_division_id || null,
+            unit_id,
+            status,
+            is_system: true,
+            is_deleted: false,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error creating task template:", error);
+        if (error.code === "23505") return { error: "Ya existe una plantilla con ese nombre o código" };
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { data, error: null };
+}
+
+/**
+ * Update a task template
+ */
+export async function updateTaskTemplate(id: string, formData: FormData) {
+    const supabase = await createClient();
+
+    const name = formData.get("name") as string;
+    const code = (formData.get("code") as string | null)?.trim().toUpperCase() || null;
+    const description = formData.get("description") as string | null;
+    const task_action_id = formData.get("task_action_id") as string;
+    const task_element_id = formData.get("task_element_id") as string;
+    const task_construction_system_id = formData.get("task_construction_system_id") as string;
+    const task_division_id = formData.get("task_division_id") as string | null;
+    const unit_id = formData.get("unit_id") as string;
+    const status = formData.get("status") as string;
+
+    if (!id) return { error: "ID de plantilla no proporcionado" };
+    if (!name?.trim()) return { error: "El nombre es requerido" };
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_templates')
+        .update({
+            name: name.trim(),
+            code: code || null,
+            description: description?.trim() || null,
+            task_action_id,
+            task_element_id,
+            task_construction_system_id,
+            task_division_id: task_division_id || null,
+            unit_id,
+            status,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating task template:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { data, error: null };
+}
+
+/**
+ * Soft delete a task template
+ */
+export async function deleteTaskTemplate(id: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .schema('catalog').from('task_templates')
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .eq("id", id);
+
+    if (error) {
+        console.error("Error deleting task template:", error);
+        return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+/**
+ * Toggle a parameter link for a template (task_template_parameters)
+ * shouldLink = true → INSERT, false → DELETE
+ */
+export async function toggleTemplateParameter(
+    templateId: string,
+    parameterId: string,
+    shouldLink: boolean,
+    order?: number
+) {
+    const supabase = await createClient();
+
+    if (shouldLink) {
+        const { error } = await supabase
+            .schema('catalog').from('task_template_parameters')
+            .insert({ template_id: templateId, parameter_id: parameterId, order: order ?? 0, is_required: true });
+
+        if (error && !sanitizeError(error).includes("duplicate")) {
+            console.error("Error linking parameter to template:", error);
+            return { error: sanitizeError(error) };
+        }
+    } else {
+        const { error } = await supabase
+            .schema('catalog').from('task_template_parameters')
+            .delete()
+            .eq("template_id", templateId)
+            .eq("parameter_id", parameterId);
+
+        if (error) {
+            console.error("Error unlinking parameter from template:", error);
+            return { error: sanitizeError(error) };
+        }
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+/**
+ * Reorder parameters for a template — saves the full ordered list in one call.
+ * Receives an ordered array of { parameterId, isRequired } and upserts the order field.
+ */
+export async function reorderTemplateParameters(
+    templateId: string,
+    orderedParams: { parameterId: string; isRequired: boolean }[]
+) {
+    const supabase = await createClient();
+
+    const rows = orderedParams.map((p, index) => ({
+        template_id: templateId,
+        parameter_id: p.parameterId,
+        order: index,
+        is_required: p.isRequired,
+    }));
+
+    const { error } = await supabase
+        .schema('catalog').from('task_template_parameters')
+        .upsert(rows, { onConflict: 'template_id,parameter_id' });
+
+    if (error) {
+        console.error("Error reordering template parameters:", error);
+        return { error: sanitizeError(error) };
     }
 
     revalidatePath("/admin/catalog");

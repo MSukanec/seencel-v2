@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T00:26:33.263Z
+> Generated: 2026-02-20T14:40:38.399Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Indexes (67, excluding PKs)
+## [CATALOG] Indexes (78, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -21,7 +21,9 @@
 | materials | materials_name_org_unique | `CREATE UNIQUE INDEX materials_name_org_unique ON catalog.materials USING btre...` |
 | materials | materials_name_system_unique | `CREATE UNIQUE INDEX materials_name_system_unique ON catalog.materials USING b...` |
 | organization_material_prices | unique_org_material | `CREATE UNIQUE INDEX unique_org_material ON catalog.organization_material_pric...` |
-| task_actions | idx_task_actions_action_type | `CREATE UNIQUE INDEX idx_task_actions_action_type ON catalog.task_actions USIN...` |
+| task_action_categories | task_action_categories_code_key | `CREATE UNIQUE INDEX task_action_categories_code_key ON catalog.task_action_ca...` |
+| task_action_categories | task_action_categories_name_key | `CREATE UNIQUE INDEX task_action_categories_name_key ON catalog.task_action_ca...` |
+| task_actions | idx_task_actions_category_id | `CREATE INDEX idx_task_actions_category_id ON catalog.task_actions USING btree...` |
 | task_actions | task_kind_name_key | `CREATE UNIQUE INDEX task_kind_name_key ON catalog.task_actions USING btree (n...` |
 | task_construction_systems | idx_task_construction_systems_not_deleted | `CREATE INDEX idx_task_construction_systems_not_deleted ON catalog.task_constr...` |
 | task_construction_systems | task_construction_systems_name_key | `CREATE UNIQUE INDEX task_construction_systems_name_key ON catalog.task_constr...` |
@@ -36,6 +38,7 @@
 | task_parameter_options | idx_task_parameter_options_not_deleted | `CREATE INDEX idx_task_parameter_options_not_deleted ON catalog.task_parameter...` |
 | task_parameter_options | idx_task_parameter_options_parameter_id | `CREATE INDEX idx_task_parameter_options_parameter_id ON catalog.task_paramete...` |
 | task_parameters | idx_task_parameters_not_deleted | `CREATE INDEX idx_task_parameters_not_deleted ON catalog.task_parameters USING...` |
+| task_parameters | idx_task_parameters_slug | `CREATE INDEX idx_task_parameters_slug ON catalog.task_parameters USING btree ...` |
 | task_parameters | idx_task_parameters_slug_unique | `CREATE UNIQUE INDEX idx_task_parameters_slug_unique ON catalog.task_parameter...` |
 | task_recipe_external_services | idx_task_recipe_ext_services_org | `CREATE INDEX idx_task_recipe_ext_services_org ON catalog.task_recipe_external...` |
 | task_recipe_external_services | idx_task_recipe_ext_services_recipe | `CREATE INDEX idx_task_recipe_ext_services_recipe ON catalog.task_recipe_exter...` |
@@ -56,8 +59,16 @@
 | task_recipes | idx_task_recipes_task | `CREATE INDEX idx_task_recipes_task ON catalog.task_recipes USING btree (task_...` |
 | task_system_parameters | idx_task_system_parameters_parameter_id | `CREATE INDEX idx_task_system_parameters_parameter_id ON catalog.task_system_p...` |
 | task_system_parameters | idx_task_system_parameters_system_id | `CREATE INDEX idx_task_system_parameters_system_id ON catalog.task_system_para...` |
+| task_template_parameters | idx_task_template_parameters_template_id | `CREATE INDEX idx_task_template_parameters_template_id ON catalog.task_templat...` |
+| task_templates | idx_task_templates_action_id | `CREATE INDEX idx_task_templates_action_id ON catalog.task_templates USING btr...` |
+| task_templates | idx_task_templates_code | `CREATE UNIQUE INDEX idx_task_templates_code ON catalog.task_templates USING b...` |
+| task_templates | idx_task_templates_element_id | `CREATE INDEX idx_task_templates_element_id ON catalog.task_templates USING bt...` |
+| task_templates | idx_task_templates_status | `CREATE INDEX idx_task_templates_status ON catalog.task_templates USING btree ...` |
+| task_templates | idx_task_templates_system_id | `CREATE INDEX idx_task_templates_system_id ON catalog.task_templates USING btr...` |
+| task_templates | idx_task_templates_unique_combination | `CREATE UNIQUE INDEX idx_task_templates_unique_combination ON catalog.task_tem...` |
 | tasks | idx_tasks_construction_system_id | `CREATE INDEX idx_tasks_construction_system_id ON catalog.tasks USING btree (t...` |
 | tasks | idx_tasks_import_batch_id | `CREATE INDEX idx_tasks_import_batch_id ON catalog.tasks USING btree (import_b...` |
+| tasks | idx_tasks_template_id | `CREATE INDEX idx_tasks_template_id ON catalog.tasks USING btree (template_id)...` |
 | tasks | tasks_active_idx | `CREATE INDEX tasks_active_idx ON catalog.tasks USING btree (organization_id, ...` |
 | tasks | tasks_code_lower_uniq | `CREATE UNIQUE INDEX tasks_code_lower_uniq ON catalog.tasks USING btree (organ...` |
 | tasks | tasks_custom_name_org_uniq | `CREATE UNIQUE INDEX tasks_custom_name_org_uniq ON catalog.tasks USING btree (...` |

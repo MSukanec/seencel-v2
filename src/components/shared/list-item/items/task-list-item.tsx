@@ -118,8 +118,9 @@ export const TaskListItem = memo(function TaskListItem({
     onStatusChange,
     hideDivisionBadge = false,
 }: TaskListItemProps) {
-    // System tasks are NEVER editable — they are immutable by design
-    const isEditable = canEdit ?? !task.is_system;
+    // Admins can edit ANY task (including system tasks)
+    // Regular users can only edit their own org tasks (not system)
+    const isEditable = canEdit ?? (isAdminMode ? true : !task.is_system);
     const displayName = task.name || task.custom_name || "Sin nombre";
     const unitDisplay = task.unit_symbol || task.unit_name || null;
 

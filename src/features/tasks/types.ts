@@ -138,9 +138,9 @@ export interface TaskElement {
     code: string | null; // Short code like MUR, CTR, VIG
     description: string | null;
     element_type: string;
-    default_unit_id: string | null;
     is_system: boolean;
     is_deleted: boolean;
+    expression_template: string | null; // Ej: "de {value}", "{value}", "con {value}"
 }
 
 // Task Construction System (Sistema Constructivo: Estructura, Mampostería, etc.)
@@ -150,13 +150,56 @@ export interface TaskConstructionSystem {
     slug: string;
     code: string | null; // Short code like EST, MAM, REV
     description: string | null;
-    icon: string | null;
     category: string | null;
-    order: number | null;
     is_deleted: boolean;
     deleted_at: string | null;
     created_at: string;
     updated_at: string | null;
+    expression_template: string | null; // Ej: "de {value}", "{value}", "con {value}"
+}
+
+// Task Template (admin-defined shape: action + element + system + which params)
+export interface TaskTemplate {
+    id: string;
+    name: string;
+    code: string | null;
+    description: string | null;
+    task_action_id: string;
+    task_element_id: string;
+    task_construction_system_id: string;
+    task_division_id: string | null;
+    unit_id: string;
+    is_system: boolean;
+    status: string;
+    is_deleted: boolean;
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+    created_by: string | null;
+    updated_by: string | null;
+    // Joined names (from query)
+    action_name?: string | null;
+    action_short_code?: string | null;
+    element_name?: string | null;
+    element_code?: string | null;
+    system_name?: string | null;
+    system_code?: string | null;
+    division_name?: string | null;
+    unit_name?: string | null;
+    unit_symbol?: string | null;
+}
+
+export interface TaskTemplateParameter {
+    template_id: string;
+    parameter_id: string;
+    order: number;
+    is_required: boolean;
+    created_at: string;
+}
+
+// Compuesto para la UI: template + parámetros resueltos con sus opciones
+export interface TaskTemplateWithParameters extends TaskTemplate {
+    parameters: TaskParameter[];
 }
 
 // Extended Task with parametric fields

@@ -1,5 +1,7 @@
 # Design Decisions — Catalog Atlas
 
+> Última actualización: **2026-02-20**
+
 ---
 
 ## Decisiones de Diseño
@@ -28,15 +30,22 @@ Vincular parámetros al sistema garantiza que:
 
 ---
 
-### D3: Actions como catálogo cerrado
+### D3: Actions como catálogo cerrado, Action Categories como metadato de clasificación
 
-**Elegimos**: Catálogo cerrado de ~6 acciones sistema (`is_system = true`).
+**Elegimos**: Separar en dos conceptos:
+1. `task_actions` — catálogo cerrado de verbos técnicos específicos (is_system = true)
+2. `task_action_categories` — 5 categorías de intervención como metadato de agrupación
 
-**Alternativa descartada**: Permitir que cada organización defina sus propias acciones.
+**Lo que NO funcionaba antes**: Usar acciones genéricas como "Ejecución" para tareas de pintura que deberían ser "Aplicación". El sistema tenía ~4 verbos demasiado genéricos y no había forma de distinguir el **tipo de intervención** del **verbo técnico**.
 
-**Razón**: La acción es el verbo técnico. "Construcción", "Demolición", "Reparación" son universales. Permitir variantes libres destruiría la comparabilidad del atlas. Las organizaciones pueden tener tareas con cualquier combinación, pero los verbos deben ser los mismos.
+**La solución**:
+- Las `task_action_categories` agrupan por tipo de intervención: Construcción / Ejecución, Provisión / Suministro, Demolición, Limpieza / Preparación, Reparación / Mantenimiento.
+- Las `task_actions` son los verbos específicos: "Ejecución de", "Aplicación de", "Demolición de", "Preparación de".
+- La categoría no define el nombre de la tarea — la acción sí.
 
-> No hay form de creación/edición de acciones desde el frontend — se gestionan directamente en Supabase.
+**Para qué sirven las categorías**: filtros, dashboards, IA, estadísticas, clasificación económica de obras.
+
+> No hay form de creación/edición de acciones ni de categorías desde el frontend — ambas se gestionan desde Supabase.
 
 ---
 
@@ -81,15 +90,43 @@ Vincular parámetros al sistema garantiza que:
 
 ---
 
+### D8: expression_template en Elements, Systems y Parameters
+
+**Elegimos**: Cada entidad de clasificación tiene su propio `expression_template` para controlar cómo contribuye al nombre auto-generado de la tarea.
+
+**Patrón**: El template usa `{value}` como placeholder:
+- Element: `"de {value}"` → "de muro"
+- System: `"de {value}"` → "de mampostería cerámica"
+- Parameter: `"de {value}"` → "de ladrillo cerámico 18x33", o `"con {value}"` → "con mortero cal-cemento"
+
+**Resultado**: El wizard parametrico construye el nombre completo concatenando los templates, en vez de hardcodear "de" entre cada componente.
+
+**Fallback**: Si no hay template definido, se usa `"de {value}"` por defecto.
+
+---
+
+### D9: Eliminación de columnas sin uso en task_parameters y task_actions
+
+**Eliminamos**:
+- `task_parameters.order` → el orden se maneja en `task_system_parameters.order` y `task_template_parameters.order`
+- `task_parameters.default_value` → sin uso real en el sistema
+- `task_parameters.validation_rules` → sin implementación en el frontend
+- `task_actions.sort_order` → las acciones se muestran por nombre
+- `task_actions.action_type` → reemplazado conceptualmente por `action_category_id`
+
+**Razón**: Columnas que nunca se usaron y que contaminaban el modelo. La Regla 14 ("nada provisional") aplica retroactivamente: se limpian en cuanto se detecta que no tienen uso.
+
+---
+
 ## Edge Cases y Gotchas
 
 ### E1: Elementos sin sistema asignado
 
 **Escenario**: Se crea un elemento sin asociarlo a ningún sistema constructivo.
 
-**Impacto**: Técnicamente posible (la FK es nullable en tasks), pero genera tareas "sin sistema" = no comparables.
+**Impacto**: El wizard parametrico no puede continuar al paso 2 sin sistema seleccionado.
 
-**Solución futura**: Validación en el formulario de creación de tareas que exija seleccionar un sistema cuando el elemento tiene sistemas disponibles.
+**Solución actual**: El formulario requiere seleccionar un sistema al crear una tarea parametrizada.
 
 ---
 
@@ -97,19 +134,27 @@ Vincular parámetros al sistema garantiza que:
 
 **Escenario**: Dos sistemas distintos (ej: "Revoque grueso" y "Revoque fino") comparten el parámetro `espesor`.
 
-**Impacto**: No es un problema técnico — cada sistema tiene su propia fila en `task_system_parameters` con el mismo `parameter_id`. Son independientes.
-
-**Solución**: No hace falta nada. La tabla `task_system_parameters` permite que el mismo `parameter_id` aparezca para múltiples sistemas, con su propio `order` e `is_required` por sistema.
+**Impacto**: No es un problema técnico — cada sistema tiene su propia fila en `task_system_parameters` con el mismo `parameter_id`. Son independientes, con su propio `order` e `is_required` por sistema.
 
 ---
 
-### E3: Acciones aplicables sin restricción si no hay elementos vinculados
+### E3: Acciones sin elementos vinculados
 
 **Escenario**: Una acción no tiene ningún elemento vinculado en `task_element_actions`.
 
-**Impacto**: La acción queda "libre" — no hay forma de crear tareas con esa acción si la aplicación valida la combinación.
+**Impacto**: La acción queda "libre" — no aparecerá en el wizard si se valida la combinación.
 
 **Solución actual**: El admin debe vincular acciones a elementos desde la vista "Acciones" del catálogo de admin antes de poder crear tareas parametrizadas.
+
+---
+
+### E4: Action sin category asignada
+
+**Escenario**: Una acción tiene `action_category_id = null`.
+
+**Impacto**: La acción no aparece en filtros por categoría. Funciona para crear tareas, pero pierde metadato de clasificación.
+
+**Solución**: Garantizar en Supabase que todas las acciones del catálogo tengan `action_category_id` asignada.
 
 ---
 
@@ -121,3 +166,39 @@ Vincular parámetros al sistema garantiza que:
 | `ai-recipe-suggester` | El AI suggester recibe el task_id + system_id para generar recetas |
 | `import-system` | Las tareas se pueden importar masivamente respetando la jerarquía del atlas |
 | `admin-catalog` | Los admins gestionan el atlas desde las páginas de admin |
+
+---
+
+### D10: Backfill en lugar de Versionado de Definiciones (task_definitions rechazada)
+
+**Problema planteado**: al agregar un parámetro nuevo a un template que ya tiene tasks generadas, las tasks viejas no tienen ese parámetro y dejan de ser comparables con las nuevas.
+
+Ejemplo concreto:
+- Template "Ejecución de muro" tiene params: `tipo_ladrillo + tipo_mortero`
+- Se agrega `refuerzo` (boolean) como nuevo parámetro
+- Task vieja: `{ladrillo: LCH12, mortero: CC}` — sin `refuerzo`
+- Task nueva: `{ladrillo: LCH12, mortero: CC, refuerzo: false}` — misma realidad física
+- **Problema**: no son comparables en dashboards ni benchmarks aunque describan lo mismo
+
+**Alternativa rechazada**: `catalog.task_definitions` — capa de definición técnica versionada e inmutable entre templates y tasks (propuesta al estilo SAP/Oracle).
+
+**Por qué se rechazó**:
+1. Los snapshots en `construction.construction_tasks` ya protegen el historial de obra — los cambios en el catálogo no afectan proyectos en ejecución.
+2. Las tasks ya tienen `parameter_values` JSONB congelado al momento de creación.
+3. La complejidad de versionar definiciones no tiene contrapartida real en el escenario actual de Seencel.
+4. El versionado enterprise (SAP-style) aplica cuando hay auditoría legal, multi-tenant en versiones distintas simultáneas, y proyectos de 10+ años. Seencel no está en ese punto.
+
+**Solución elegida: Backfill con `default_value`**:
+- Se agrega `default_value text` a `task_template_parameters`.
+- Al agregar un parámetro nuevo a un template, se especifica el default: `false`, `"0"`, etc.
+- Un script de backfill actualiza las tasks existentes del template con ese valor:
+  ```sql
+  UPDATE catalog.tasks
+  SET parameter_values = parameter_values || jsonb_build_object('refuerzo', 'false')
+  WHERE template_id = '<uuid>'
+    AND NOT (parameter_values ? 'refuerzo');
+  ```
+- Las tasks viejas quedan idénticas a las nuevas sin el parámetro activo → comparabilidad restaurada.
+- Los snapshots históricos no se tocan.
+
+**Cuándo revisar esta decisión**: si Seencel requiere auditoría de cambios retroactiva por tipo de obra o exigencias legales, se puede introducir `task_definitions` en ese momento sin romper el modelo actual.

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T00:26:33.263Z
+> Generated: 2026-02-20T14:40:38.399Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -71,58 +71,6 @@ begin
   end if;
 
   return null;
-end;
-$function$
-```
-</details>
-
-### `update_name_rendered_on_task_parametric()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_name_rendered_on_task_parametric()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  tipo_tarea_id uuid;
-begin
-  -- Generar nombre renderizado a partir de parámetros
-  new.name_rendered :=
-    public.render_parametric_task_name(new.param_order, new.param_values);
-
-  -- Validar param_values
-  if new.param_values is null then
-    raise exception 'param_values no puede ser NULL';
-  end if;
-
-  -- Extraer tipo_tarea (clave esperada)
-  tipo_tarea_id := (new.param_values ->> 'tipo_tarea')::uuid;
-
-  if tipo_tarea_id is null then
-    raise exception 'param_values.tipo_tarea es requerido';
-  end if;
-
-  -- Asignar unidad y categoría desde opciones del parámetro
-  select tpo.unit_id, tpo.category_id
-  into new.unit_id, new.category_id
-  from public.task_parameter_options tpo
-  where tpo.id = tipo_tarea_id;
-
-  -- Validación fuerte
-  if new.unit_id is null or new.category_id is null then
-    raise exception
-      'No se pudo resolver unit_id / category_id para tipo_tarea %',
-      tipo_tarea_id;
-  end if;
-
-  return new;
 end;
 $function$
 ```

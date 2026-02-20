@@ -34,10 +34,30 @@ interface RecipeSuggestionPanelProps {
     taskUnit?: string | null;
     /** Rubro/división de la tarea */
     taskDivision?: string | null;
-    /** Catálogo de materiales disponibles en la org */
-    catalogMaterials?: { id: string; name: string; unit_symbol?: string | null }[];
-    /** Catálogo de tipos de MO disponibles en la org */
-    catalogLaborTypes?: { id: string; name: string; unit_symbol?: string | null }[];
+    /** Acción técnica (ej: "Revocar", "Ejecutar") */
+    taskAction?: string | null;
+    /** Elemento constructivo (ej: "Pared", "Losa") */
+    taskElement?: string | null;
+    /** Parámetros seleccionados por el usuario */
+    parameterValues?: Record<string, string | number | boolean>;
+    /** Contexto libre del profesional (zona, proyecto, etc.) */
+    userContext?: string | null;
+    /** Catálogo de materiales con precios para matching e inferencia económica */
+    catalogMaterials?: {
+        id: string;
+        name: string;
+        unit_symbol?: string | null;
+        unit_price?: number | null;
+        currency_symbol?: string | null;
+    }[];
+    /** Catálogo de tipos de MO con precios */
+    catalogLaborTypes?: {
+        id: string;
+        name: string;
+        unit_symbol?: string | null;
+        unit_price?: number | null;
+        currency_symbol?: string | null;
+    }[];
     /** ID de la organización — requerido para crear items faltantes */
     organizationId?: string | null;
     /** Callback cuando el usuario acepta un material sugerido (ya existe en catálogo) */
@@ -71,6 +91,10 @@ export function RecipeSuggestionPanel({
     taskName,
     taskUnit,
     taskDivision,
+    taskAction,
+    taskElement,
+    parameterValues,
+    userContext,
     catalogMaterials,
     catalogLaborTypes,
     organizationId,
@@ -99,6 +123,10 @@ export function RecipeSuggestionPanel({
                 taskName,
                 taskUnit,
                 taskDivision,
+                taskAction,
+                taskElement,
+                parameterValues,
+                userContext,
                 catalogMaterials,
                 catalogLaborTypes,
             });

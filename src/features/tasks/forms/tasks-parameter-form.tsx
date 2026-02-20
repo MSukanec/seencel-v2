@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { FormGroup } from "@/components/ui/form-group";
 import { FormFooter } from "@/components/shared/forms/form-footer";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TextField, NotesField, SwitchField, SelectField, type SelectOption } from "@/components/shared/forms/fields";
 import { createTaskParameter, updateTaskParameter } from "../actions";
 import { TaskParameter, ParameterType } from "../types";
 import { toast } from "sonner";
@@ -21,7 +19,7 @@ interface TasksParameterFormProps {
     onCancel?: () => void;
 }
 
-const PARAMETER_TYPES: { value: ParameterType; label: string }[] = [
+const PARAMETER_TYPE_OPTIONS: SelectOption[] = [
     { value: "text", label: "Texto" },
     { value: "number", label: "Número" },
     { value: "select", label: "Selección" },
@@ -35,15 +33,49 @@ const PARAMETER_TYPES: { value: ParameterType; label: string }[] = [
 
 export function TasksParameterForm({ initialData, onSuccess, onCancel }: TasksParameterFormProps) {
     const [isLoading, setIsLoading] = useState(false);
+    const [label, setLabel] = useState(initialData?.label ?? "");
+    const [slug, setSlug] = useState(initialData?.slug ?? "");
+    const [type, setType] = useState<string>(initialData?.type ?? "number");
     const [isRequired, setIsRequired] = useState(initialData?.is_required ?? true);
+    const [template, setTemplate] = useState(initialData?.expression_template ?? "");
+    const [description, setDescription] = useState(initialData?.description ?? "");
+    const templateRef = useRef<HTMLInputElement>(null);
     const isEditing = !!initialData?.id;
+
+    // Auto-generate slug from label (only for new params)
+    const handleLabelChange = (value: string) => {
+        setLabel(value);
+        if (!isEditing) {
+            setSlug(value.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""));
+        }
+    };
+
+    // Insert {value} at cursor position in expression template
+    const insertValue = () => {
+        const input = templateRef.current;
+        if (!input) return;
+        const start = input.selectionStart ?? template.length;
+        const end = input.selectionEnd ?? template.length;
+        const next = template.slice(0, start) + "{value}" + template.slice(end);
+        setTemplate(next);
+        requestAnimationFrame(() => {
+            input.focus();
+            const pos = start + 7;
+            input.setSelectionRange(pos, pos);
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsLoading(true);
 
-        const formData = new FormData(e.currentTarget);
+        const formData = new FormData();
+        formData.set("label", label);
+        formData.set("slug", slug);
+        formData.set("type", type);
         formData.set("is_required", isRequired ? "true" : "false");
+        formData.set("expression_template", template);
+        formData.set("description", description);
 
         try {
             const result = isEditing
@@ -67,89 +99,72 @@ export function TasksParameterForm({ initialData, onSuccess, onCancel }: TasksPa
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Label (nombre visible) */}
-                    <FormGroup label="Nombre" required>
-                        <Input
-                            name="label"
-                            defaultValue={initialData?.label ?? ""}
-                            placeholder="Espesor"
-                            required
-                        />
-                    </FormGroup>
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Nombre → auto-genera slug */}
+                    <TextField
+                        label="Nombre"
+                        value={label}
+                        onChange={handleLabelChange}
+                        placeholder="ej: Tipo de Mortero"
+                        autoFocus
+                    />
 
-                    {/* Slug (identificador para fórmulas) */}
+                    {/* Slug */}
                     <FormGroup label="Slug" required helpText="Identificador para fórmulas (sin espacios)">
                         <Input
-                            name="slug"
-                            defaultValue={initialData?.slug ?? ""}
-                            placeholder="espesor"
+                            value={slug}
+                            onChange={(e) => setSlug(e.target.value)}
+                            placeholder="tipo_mortero"
                             pattern="^[a-z][a-z0-9_]*$"
                             title="Solo letras minúsculas, números y guiones bajos"
                             required
                         />
                     </FormGroup>
 
-                    {/* Type */}
-                    <FormGroup label="Tipo" required>
-                        <Select name="type" defaultValue={initialData?.type ?? "number"}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PARAMETER_TYPES.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                        {type.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </FormGroup>
+                    {/* Tipo + Obligatorio en la misma fila */}
+                    <SelectField
+                        label="Tipo"
+                        value={type}
+                        onChange={setType}
+                        options={PARAMETER_TYPE_OPTIONS}
+                        placeholder="Seleccionar tipo"
+                    />
 
-                    {/* Order */}
-                    <FormGroup label="Orden" helpText="Posición en el formulario">
-                        <Input
-                            name="order"
-                            type="number"
-                            defaultValue={initialData?.order ?? ""}
-                            placeholder="1"
-                            min={1}
-                        />
-                    </FormGroup>
+                    <SwitchField
+                        label="¿Obligatorio?"
+                        value={isRequired}
+                        onChange={setIsRequired}
+                        description={isRequired ? "Sí" : "No"}
+                    />
 
-                    {/* Default Value */}
-                    <FormGroup label="Valor por defecto">
-                        <Input
-                            name="default_value"
-                            defaultValue={initialData?.default_value ?? ""}
-                            placeholder="10"
-                        />
-                    </FormGroup>
-
-                    {/* Is Required */}
-                    <FormGroup label="¿Obligatorio?">
-                        <div className="flex items-center gap-2 h-9">
-                            <Switch
-                                checked={isRequired}
-                                onCheckedChange={setIsRequired}
+                    {/* Expression template — ancho completo, entre Tipo y Descripción */}
+                    <FormGroup label="Template de expresión" required={false} className="col-span-2">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                ref={templateRef}
+                                placeholder="de {value}"
+                                value={template}
+                                onChange={(e) => setTemplate(e.target.value)}
                             />
-                            <span className="text-sm text-muted-foreground">
-                                {isRequired ? "Sí" : "No"}
-                            </span>
+                            <button
+                                type="button"
+                                onClick={insertValue}
+                                className="shrink-0 rounded-md border border-dashed border-muted-foreground/40 px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary cursor-pointer"
+                                title="Insertar {value} en la posición del cursor"
+                            >
+                                {"{value}"}
+                            </button>
                         </div>
                     </FormGroup>
-                </div>
 
-                {/* Description - full width */}
-                <div className="mt-4">
-                    <FormGroup label="Descripción">
-                        <Textarea
-                            name="description"
-                            defaultValue={initialData?.description ?? ""}
-                            placeholder="Descripción del parámetro..."
-                            rows={3}
-                        />
-                    </FormGroup>
+                    {/* Descripción — ancho completo */}
+                    <NotesField
+                        label="Descripción"
+                        value={description}
+                        onChange={setDescription}
+                        placeholder="Descripción opcional del parámetro..."
+                        className="col-span-2"
+                    />
                 </div>
             </div>
 

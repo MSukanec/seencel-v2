@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { TaskView, TasksByDivision, TaskDivision, Unit, TaskParameter, TaskAction, TaskElement } from "./types";
+import { TaskView, TasksByDivision, TaskDivision, Unit, TaskParameter, TaskAction, TaskElement, TaskTemplate, TaskTemplateParameter, TaskTemplateWithParameters } from "./types";
 
 // ============================================================================
 // Types for task costs
@@ -226,7 +226,6 @@ export async function getTaskParameters() {
             options:task_parameter_options(*)
         `)
         .eq('is_deleted', false)
-        .order('order', { ascending: true, nullsFirst: false })
         .order('label', { ascending: true });
 
     if (error) {
@@ -359,9 +358,9 @@ export async function getCompatibleElements(actionId: string) {
         description: row.task_elements.description,
         code: row.task_elements.code,
         element_type: row.task_elements.element_type,
-        default_unit_id: null,
         is_system: true,
         is_deleted: false,
+        expression_template: row.task_elements.expression_template ?? null,
     })) as TaskElement[];
 
     elements.sort((a, b) => a.name.localeCompare(b.name));
@@ -638,7 +637,6 @@ export async function getAllConstructionSystems() {
         .schema('catalog').from('task_construction_systems')
         .select('*')
         .eq('is_deleted', false)
-        .order('order', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true });
 
     if (error) {
@@ -702,4 +700,177 @@ export async function getElementActionLinks() {
     }
 
     return { data: data || [], error: null };
+}
+
+// ============================================================================
+// TASK TEMPLATES QUERIES
+// ============================================================================
+
+/**
+ * Get all task templates with resolved names (action, element, system, unit).
+ * All related tables live in the catalog schema.
+ */
+export async function getTaskTemplates() {
+    const supabase = await createClient();
+
+    const { data: rawTemplates, error } = await supabase
+        .schema('catalog').from('task_templates')
+        .select(`
+            id, name, description,
+            task_action_id, task_element_id,
+            task_construction_system_id, task_division_id,
+            unit_id, is_system, status, is_deleted, deleted_at,
+            created_at, updated_at, created_by, updated_by,
+            system:task_construction_systems!task_construction_system_id ( name, code ),
+            unit:units!unit_id ( name, symbol )
+        `)
+        .eq('is_deleted', false)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching task templates:', error);
+        return { data: [] as TaskTemplate[], error };
+    }
+    if (!rawTemplates || rawTemplates.length === 0) {
+        return { data: [] as TaskTemplate[], error: null };
+    }
+
+    // Collect IDs to enrich (also in catalog schema)
+    const actionIds = [...new Set(rawTemplates.map((t: any) => t.task_action_id).filter(Boolean))];
+    const elementIds = [...new Set(rawTemplates.map((t: any) => t.task_element_id).filter(Boolean))];
+    const divisionIds = [...new Set(rawTemplates.map((t: any) => t.task_division_id).filter(Boolean))];
+
+    const [actionsRes, elementsRes, divisionsRes] = await Promise.all([
+        actionIds.length > 0
+            ? supabase.schema('catalog').from('task_actions').select('id, name, short_code').in('id', actionIds)
+            : Promise.resolve({ data: [] }),
+        elementIds.length > 0
+            ? supabase.schema('catalog').from('task_elements').select('id, name, code').in('id', elementIds)
+            : Promise.resolve({ data: [] }),
+        divisionIds.length > 0
+            ? supabase.schema('catalog').from('task_divisions').select('id, name').in('id', divisionIds)
+            : Promise.resolve({ data: [] }),
+    ]);
+
+    const actionsMap = Object.fromEntries((actionsRes.data || []).map((a: any) => [a.id, a]));
+    const elementsMap = Object.fromEntries((elementsRes.data || []).map((e: any) => [e.id, e]));
+    const divisionsMap = Object.fromEntries((divisionsRes.data || []).map((d: any) => [d.id, d]));
+
+    const templates: TaskTemplate[] = rawTemplates.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        code: row.code ?? null,
+        description: row.description,
+        task_action_id: row.task_action_id,
+        task_element_id: row.task_element_id,
+        task_construction_system_id: row.task_construction_system_id,
+        task_division_id: row.task_division_id,
+        unit_id: row.unit_id,
+        is_system: row.is_system,
+        status: row.status,
+        is_deleted: row.is_deleted,
+        deleted_at: row.deleted_at,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        created_by: row.created_by,
+        updated_by: row.updated_by,
+        action_name: actionsMap[row.task_action_id]?.name ?? null,
+        action_short_code: actionsMap[row.task_action_id]?.short_code ?? null,
+        element_name: elementsMap[row.task_element_id]?.name ?? null,
+        element_code: elementsMap[row.task_element_id]?.code ?? null,
+        system_name: (row.system as any)?.name ?? null,
+        system_code: (row.system as any)?.code ?? null,
+        division_name: divisionsMap[row.task_division_id]?.name ?? null,
+        unit_name: (row.unit as any)?.name ?? null,
+        unit_symbol: (row.unit as any)?.symbol ?? null,
+    }));
+
+    return { data: templates, error: null };
+}
+
+/**
+ * Get all template-parameter links for the admin toggle view.
+ */
+export async function getTemplateParameterLinks() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_template_parameters')
+        .select('template_id, parameter_id, "order", is_required, created_at');
+
+    if (error) {
+        console.error('Error fetching template-parameter links:', error);
+        return { data: [] as TaskTemplateParameter[], error };
+    }
+
+    return { data: (data || []) as TaskTemplateParameter[], error: null };
+}
+
+/**
+ * Get a single template with its fully-resolved parameters (including options).
+ * Used in the user-facing parametric form when a template is selected.
+ */
+export async function getTemplateWithParameters(templateId: string): Promise<TaskTemplateWithParameters | null> {
+    const supabase = await createClient();
+
+    const { data: templateData, error: templateError } = await supabase
+        .schema('catalog').from('task_templates')
+        .select(`
+            *,
+            action:task_actions ( name, short_code ),
+            element:task_elements ( name, code ),
+            system:task_construction_systems ( name, code ),
+            unit:units ( name, symbol ),
+            division:task_divisions ( name )
+        `)
+        .eq('id', templateId)
+        .eq('is_deleted', false)
+        .single();
+
+    if (templateError || !templateData) return null;
+
+    const { data: paramLinks } = await supabase
+        .schema('catalog').from('task_template_parameters')
+        .select('parameter_id, order, is_required')
+        .eq('template_id', templateId)
+        .order('order', { ascending: true });
+
+    if (!paramLinks || paramLinks.length === 0) return buildTemplate(templateData, []);
+
+    const paramIds = paramLinks.map((l: any) => l.parameter_id);
+
+    const { data: paramsData } = await supabase
+        .schema('catalog').from('task_parameters')
+        .select(`*, options:task_parameter_options(*)`)
+        .in('id', paramIds)
+        .eq('is_deleted', false);
+
+    const orderMap = new Map(paramLinks.map((l: any) => [l.parameter_id, l.order]));
+    const params: TaskParameter[] = (paramsData || [])
+        .map((p: any) => ({
+            ...p,
+            is_required: paramLinks.find((l: any) => l.parameter_id === p.id)?.is_required ?? true,
+            options: (p.options || []).sort((a: any, b: any) => (a.label || '').localeCompare(b.label || '')),
+        }))
+        .sort((a: any, b: any) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+
+    return buildTemplate(templateData, params);
+}
+
+function buildTemplate(row: any, parameters: TaskParameter[]): TaskTemplateWithParameters {
+    return {
+        id: row.id, name: row.name, code: row.code ?? null, description: row.description,
+        task_action_id: row.task_action_id, task_element_id: row.task_element_id,
+        task_construction_system_id: row.task_construction_system_id,
+        task_division_id: row.task_division_id, unit_id: row.unit_id,
+        is_system: row.is_system, status: row.status, is_deleted: row.is_deleted,
+        deleted_at: row.deleted_at, created_at: row.created_at, updated_at: row.updated_at,
+        created_by: row.created_by, updated_by: row.updated_by,
+        action_name: row.action?.name ?? null, action_short_code: row.action?.short_code ?? null,
+        element_name: row.element?.name ?? null, element_code: row.element?.code ?? null,
+        system_name: row.system?.name ?? null, system_code: row.system?.code ?? null,
+        division_name: row.division?.name ?? null,
+        unit_name: row.unit?.name ?? null, unit_symbol: row.unit?.symbol ?? null,
+        parameters,
+    };
 }
