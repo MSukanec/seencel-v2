@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
         let couponId: string | null = null;
         if (couponCode) {
             const { data: coupon } = await supabase
-                .from('coupons')
+                .schema('billing').from('coupons')
                 .select('id')
                 .ilike('code', couponCode)
                 .single();
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
         // Store preference in mp_preferences table
         if (preference.id) {
-            await supabase.from('mp_preferences').insert({
+            await supabase.schema('billing').from('mp_preferences').insert({
                 id: preference.id,
                 user_id: internalUser.id,
                 organization_id: organizationId || null,

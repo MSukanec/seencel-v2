@@ -310,6 +310,8 @@ export interface MaterialCategory {
 export interface Unit {
     id: string;
     name: string;
+    symbol?: string | null;
+    applicable_to?: string[];
 }
 
 /**
@@ -431,15 +433,21 @@ export async function getUnitsForMaterials(): Promise<Unit[]> {
 
     const { data, error } = await supabase
         .schema('catalog').from('units')
-        .select('id, name')
+        .select('id, name, symbol, applicable_to')
+        .contains('applicable_to', ['material'])
         .order('name', { ascending: true });
 
     if (error) {
-        console.error("Error fetching units:", error);
+        console.error("Error fetching units for materials:", error);
         return [];
     }
 
-    return data || [];
+    return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        symbol: u.symbol || null,
+        applicable_to: u.applicable_to || [],
+    }));
 }
 
 /**
@@ -1188,7 +1196,7 @@ export async function getPlansForAdmin(): Promise<AdminPlan[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('plans')
+        .schema('billing').from('plans')
         .select('id, name, slug, is_active, status')
         .eq('is_active', true)
         .order('name', { ascending: true });

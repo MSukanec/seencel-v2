@@ -38,7 +38,7 @@ export async function getEnrollableCourses() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("courses")
+        .schema('academy').from('courses')
         .select("id, title, slug")
         .eq("is_deleted", false)
         .eq("is_active", true)
@@ -57,7 +57,7 @@ export async function getExistingEnrollments() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .select("user_id, course_id");
 
     if (error) {
@@ -73,7 +73,7 @@ export async function createEnrollment(data: CreateEnrollmentData) {
     const supabase = await createClient();
 
     const { data: enrollment, error } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .insert({
             user_id: data.user_id,
             course_id: data.course_id,
@@ -98,7 +98,7 @@ export async function updateEnrollment(id: string, data: UpdateEnrollmentData) {
     const supabase = await createClient();
 
     const { data: enrollment, error } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .update({
             status: data.status,
             expires_at: data.expires_at,
@@ -121,7 +121,7 @@ export async function deleteEnrollment(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .delete()
         .eq("id", id);
 
@@ -153,7 +153,7 @@ export async function isUserEnrolledInCourse(courseId: string): Promise<boolean>
 
     // Check enrollment
     const { data: enrollment, error } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .select("id")
         .eq("user_id", userData.id)
         .eq("course_id", courseId)

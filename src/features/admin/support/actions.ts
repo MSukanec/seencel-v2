@@ -320,7 +320,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
         // 4. Obtener enrollments
         console.log("[getTestUserStatus] Querying enrollments for user.id:", user.id);
         const { data: enrollments, error: enrollmentsError } = await supabase
-            .from("course_enrollments")
+            .schema('academy').from("course_enrollments")
             .select(`
                 id,
                 started_at,

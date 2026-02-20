@@ -299,11 +299,7 @@ export async function getUserOrganizations(authId?: string) {
                     logo_url,
                     owner_id,
                     is_deleted,
-                    plans:plan_id (
-                        id,
-                        name,
-                        slug
-                    )
+                    plan_id
                 )
             `)
             .eq('user_id', publicUserId)
@@ -334,6 +330,17 @@ export async function getUserOrganizations(authId?: string) {
         .filter((org: any) => !!org && org.is_deleted === false);
 
     const orgIds = rawOrgs.map((o: any) => o.id);
+
+    // Fetch plans from billing schema separately (cross-schema FK can't be embedded)
+    const planIds = [...new Set(rawOrgs.map((o: any) => o.plan_id).filter(Boolean))] as string[];
+    const planMap = new Map<string, { id: string; name: string; slug: string }>();
+    if (planIds.length > 0) {
+        const { data: plansData } = await supabase
+            .schema('billing').from('plans')
+            .select('id, name, slug')
+            .in('id', planIds);
+        plansData?.forEach((p: any) => planMap.set(p.id, p));
+    }
 
     // 4. Fetch member avatars (only if orgs exist — can't parallelize with step 3 because we need orgIds)
     let orgMembers: any[] = [];
@@ -370,7 +377,7 @@ export async function getUserOrganizations(authId?: string) {
             slug: org.name.toLowerCase().replace(/\s+/g, '-'),
             role: 'member',
             updated_at: lastAccessMap.get(org.id) || 0,
-            plans: org.plans || null,
+            plans: org.plan_id ? (planMap.get(org.plan_id) || null) : null,
             members: theseMembers.map((mem: any) => ({
                 name: mem.user?.full_name || mem.user?.email || 'User',
                 image: mem.user?.avatar_url || null,

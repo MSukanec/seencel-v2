@@ -16,7 +16,7 @@ export async function updateOrganizationPlan(
 
         // Find the org's active subscription
         const { data: subscription, error: subError } = await supabase
-            .from('organization_subscriptions')
+            .schema('billing').from('organization_subscriptions')
             .select('id')
             .eq('organization_id', orgId)
             .eq('status', 'active')
@@ -30,7 +30,7 @@ export async function updateOrganizationPlan(
         if (subscription) {
             // Update existing subscription
             const { error: updateError } = await supabase
-                .from('organization_subscriptions')
+                .schema('billing').from('organization_subscriptions')
                 .update({ plan_id: planId })
                 .eq('id', subscription.id);
 
@@ -41,7 +41,7 @@ export async function updateOrganizationPlan(
         } else {
             // Create new subscription
             const { error: insertError } = await supabase
-                .from('organization_subscriptions')
+                .schema('billing').from('organization_subscriptions')
                 .insert({
                     organization_id: orgId,
                     plan_id: planId,

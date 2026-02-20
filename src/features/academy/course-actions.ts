@@ -28,7 +28,7 @@ export async function updateCourseGeneral(
     try {
         // 1. Update main course table
         const { error: courseError } = await supabase
-            .from("courses")
+            .schema('academy').from('courses')
             .update({
                 title: formData.title,
                 slug: formData.slug,
@@ -42,7 +42,7 @@ export async function updateCourseGeneral(
 
         // 2. Update instructor and endorsement in course_details
         const { error: detailsError } = await supabase
-            .from("course_details")
+            .schema('academy').from('course_details')
             .update({
                 instructor_id: formData.instructor_id,
                 endorsement_title: formData.endorsement_title,
@@ -81,7 +81,7 @@ export async function updateCourseMarketing(
     try {
         // 1. Update image in courses table
         const { error: courseError } = await supabase
-            .from("courses")
+            .schema('academy').from('courses')
             .update({
                 image_path: formData.image_path,
             })
@@ -91,7 +91,7 @@ export async function updateCourseMarketing(
 
         // 2. Fetch existing details to merge landing_sections (safe update)
         const { data: currentDetails } = await supabase
-            .from("course_details")
+            .schema('academy').from('course_details')
             .select("landing_sections")
             .eq("course_id", courseId)
             .single();
@@ -103,7 +103,7 @@ export async function updateCourseMarketing(
 
         // 3. Update course_details
         const { error: detailsError } = await supabase
-            .from("course_details")
+            .schema('academy').from('course_details')
             .update({
                 badge_text: formData.badge_text,
                 preview_video_id: formData.preview_video_id,
@@ -143,7 +143,7 @@ export async function createCourse(formData: {
     try {
         // 1. Create course
         const { data: course, error: courseError } = await supabase
-            .from("courses")
+            .schema('academy').from('courses')
             .insert({
                 title: formData.title,
                 slug: formData.slug,
@@ -159,7 +159,7 @@ export async function createCourse(formData: {
 
         // 2. Create course_details (required for instructor linkage)
         const { error: detailsError } = await supabase
-            .from("course_details")
+            .schema('academy').from('course_details')
             .insert({
                 course_id: course.id,
                 instructor_id: formData.instructor_id,
@@ -168,7 +168,7 @@ export async function createCourse(formData: {
         if (detailsError) {
             // Rollback course creation if details fail (manual, since no transactions in Supabase HTTP)
             // Or just log it, as the course exists. Better to try cleaning up.
-            await supabase.from("courses").delete().eq("id", course.id);
+            await supabase.schema('academy').from('courses').delete().eq("id", course.id);
             throw detailsError;
         }
 
@@ -188,7 +188,7 @@ export async function deleteCourse(courseId: string): Promise<UpdateCourseState>
 
     try {
         const { error } = await supabase
-            .from("courses")
+            .schema('academy').from('courses')
             .update({
                 is_deleted: true,
                 deleted_at: new Date().toISOString()
@@ -214,7 +214,7 @@ export async function createModule(courseId: string, title: string) {
     const supabase = await createClient();
     try {
         const { data: max } = await supabase
-            .from("course_modules")
+            .schema('academy').from('course_modules')
             .select("sort_index")
             .eq("course_id", courseId)
             .order("sort_index", { ascending: false })
@@ -223,7 +223,7 @@ export async function createModule(courseId: string, title: string) {
 
         const nextIndex = (max?.sort_index || 0) + 1;
 
-        const { error } = await supabase.from("course_modules").insert({
+        const { error } = await supabase.schema('academy').from('course_modules').insert({
             course_id: courseId,
             title,
             sort_index: nextIndex
@@ -240,7 +240,7 @@ export async function createModule(courseId: string, title: string) {
 export async function updateModule(moduleId: string, title: string, courseId: string) {
     const supabase = await createClient();
     const { error } = await supabase
-        .from("course_modules")
+        .schema('academy').from('course_modules')
         .update({ title })
         .eq("id", moduleId);
 
@@ -252,7 +252,7 @@ export async function updateModule(moduleId: string, title: string, courseId: st
 export async function deleteModule(moduleId: string, courseId: string) {
     const supabase = await createClient();
     const { error } = await supabase
-        .from("course_modules")
+        .schema('academy').from('course_modules')
         // Check if soft delete supported, otherwise hard delete
         .delete()
         .eq("id", moduleId);
@@ -266,7 +266,7 @@ export async function createLesson(moduleId: string, title: string, courseId: st
     const supabase = await createClient();
     try {
         const { data: max } = await supabase
-            .from("course_lessons")
+            .schema('academy').from('course_lessons')
             .select("sort_index")
             .eq("module_id", moduleId)
             .order("sort_index", { ascending: false })
@@ -275,7 +275,7 @@ export async function createLesson(moduleId: string, title: string, courseId: st
 
         const nextIndex = (max?.sort_index || 0) + 1;
 
-        const { error } = await supabase.from("course_lessons").insert({
+        const { error } = await supabase.schema('academy').from('course_lessons').insert({
             module_id: moduleId,
             title,
             sort_index: nextIndex,
@@ -300,7 +300,7 @@ export async function updateLesson(lessonId: string, data: { title?: string; dur
     if (data.free_preview !== undefined) updateData.free_preview = data.free_preview;
 
     const { error } = await supabase
-        .from("course_lessons")
+        .schema('academy').from('course_lessons')
         .update(updateData)
         .eq("id", lessonId);
 
@@ -312,7 +312,7 @@ export async function updateLesson(lessonId: string, data: { title?: string; dur
 export async function deleteLesson(lessonId: string, courseId: string) {
     const supabase = await createClient();
     const { error } = await supabase
-        .from("course_lessons")
+        .schema('academy').from('course_lessons')
         .delete()
         .eq("id", lessonId);
 

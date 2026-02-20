@@ -12,7 +12,7 @@ export type InstructorState = {
 export async function getInstructors() {
     const supabase = await createClient();
     const { data } = await supabase
-        .from("course_instructors")
+        .schema('academy').from('course_instructors')
         .select("*")
         .eq("is_deleted", false)
         .order("created_at", { ascending: false });
@@ -33,7 +33,7 @@ export async function createInstructor(formData: {
     const supabase = await createClient();
 
     try {
-        const { error } = await supabase.from("course_instructors").insert({
+        const { error } = await supabase.schema('academy').from('course_instructors').insert({
             name: formData.name,
             title: formData.title,
             bio: formData.bio,
@@ -71,7 +71,7 @@ export async function updateInstructor(
 
     try {
         const { error } = await supabase
-            .from("course_instructors")
+            .schema('academy').from('course_instructors')
             .update({
                 name: formData.name,
                 title: formData.title,
@@ -100,7 +100,7 @@ export async function deleteInstructor(id: string): Promise<InstructorState> {
     try {
         // Soft delete
         const { error } = await supabase
-            .from("course_instructors")
+            .schema('academy').from('course_instructors')
             .update({
                 is_deleted: true,
                 deleted_at: new Date().toISOString(),

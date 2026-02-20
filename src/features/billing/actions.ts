@@ -49,7 +49,7 @@ export async function updateBillingProfile(formData: FormData) {
 
     // Check if billing profile exists
     const { data: existingProfile } = await supabase
-        .from('billing_profiles')
+        .schema('billing').from('billing_profiles')
         .select('id')
         .eq('user_id', userData.id)
         .single();
@@ -58,13 +58,13 @@ export async function updateBillingProfile(formData: FormData) {
     if (existingProfile) {
         // Update existing
         result = await supabase
-            .from('billing_profiles')
+            .schema('billing').from('billing_profiles')
             .update(billingData)
             .eq('id', existingProfile.id);
     } else {
         // Insert new
         result = await supabase
-            .from('billing_profiles')
+            .schema('billing').from('billing_profiles')
             .insert(billingData);
     }
 

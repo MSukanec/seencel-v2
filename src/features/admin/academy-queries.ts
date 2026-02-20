@@ -92,30 +92,27 @@ export interface CoursesDashboardData {
 export async function getAdminCourseEnrollments(): Promise<AdminCourseEnrollment[]> {
     const supabase = await createClient();
 
-    // Get enrollments with user and course data
+    // Get enrollments — sin FK expansion cross-schema (users en public, enrollments en academy)
     const { data: enrollments, error } = await supabase
-        .from("course_enrollments")
-        .select(`
-            id,
-            user_id,
-            course_id,
-            status,
-            started_at,
-            expires_at,
-            created_at,
-            user:users!course_enrollments_user_id_fkey (
-                id,
-                full_name,
-                email,
-                avatar_url
-            ),
-            course:courses!course_enrollments_course_id_fkey (
-                id,
-                title,
-                slug
-            )
-        `)
+        .schema('academy').from('course_enrollments')
+        .select(`id, user_id, course_id, status, started_at, expires_at, created_at`)
         .order("created_at", { ascending: false });
+
+    // Get user data from public schema separately (cross-schema FK expansion no soportado por PostgREST)
+    const userIds = [...new Set(enrollments?.map(e => e.user_id) ?? [])];
+    const { data: usersData } = userIds.length
+        ? await supabase.from('users').select('id, full_name, email, avatar_url').in('id', userIds)
+        : { data: [] };
+    const userMap = new Map<string, { id: string; full_name: string | null; email: string; avatar_url: string | null }>();
+    usersData?.forEach(u => userMap.set(u.id, u));
+
+    // Get course data from academy schema separately
+    const courseIds = [...new Set(enrollments?.map(e => e.course_id) ?? [])];
+    const { data: coursesData } = courseIds.length
+        ? await supabase.schema('academy').from('courses').select('id, title, slug').in('id', courseIds)
+        : { data: [] };
+    const courseMap = new Map<string, { id: string; title: string; slug: string }>();
+    coursesData?.forEach(c => courseMap.set(c.id, c));
 
     if (error) {
         console.error("Error fetching enrollments:", error);
@@ -124,8 +121,8 @@ export async function getAdminCourseEnrollments(): Promise<AdminCourseEnrollment
 
     // Get progress for each enrollment
     const { data: progressData } = await supabase
-        .from("course_progress_view")
-        .select("user_id, course_id, progress_pct, done_lessons, total_lessons");
+        .schema('academy').from('course_progress_view')
+        .select(`user_id, course_id, progress_pct, done_lessons, total_lessons`);
 
     const progressMap = new Map<string, { progress_pct: number; done_lessons: number; total_lessons: number }>();
     progressData?.forEach((p) => {
@@ -161,10 +158,8 @@ export async function getAdminCourseEnrollments(): Promise<AdminCourseEnrollment
     return (enrollments || []).map((e) => {
         const progress = progressMap.get(`${e.user_id}-${e.course_id}`);
         const payment = paymentMap.get(`${e.user_id}-${e.course_id}`);
-
-        // Supabase returns single objects for foreign key relations
-        const userData = e.user as unknown as AdminCourseEnrollment["user"];
-        const courseData = e.course as unknown as AdminCourseEnrollment["course"];
+        const userData = userMap.get(e.user_id) ?? null;
+        const courseData = courseMap.get(e.course_id) ?? null;
 
         return {
             ...e,
@@ -182,7 +177,7 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
     const supabase = await createClient();
 
     const { data: courses, error } = await supabase
-        .from("courses")
+        .schema('academy').from('courses')
         .select(`
             id,
             slug,
@@ -210,7 +205,7 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
 
     // Get enrollment counts
     const { data: enrollmentCounts } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .select("course_id")
         .in("course_id", courses?.map((c) => c.id) || []);
 
@@ -221,7 +216,7 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
 
     // Get module counts
     const { data: moduleCounts } = await supabase
-        .from("course_modules")
+        .schema('academy').from('course_modules')
         .select("course_id")
         .eq("is_deleted", false)
         .in("course_id", courses?.map((c) => c.id) || []);
@@ -233,7 +228,7 @@ export async function getAdminCourses(): Promise<AdminCourse[]> {
 
     // Get lesson counts from view
     const { data: lessonCounts } = await supabase
-        .from("course_lessons_total_view")
+        .schema('academy').from('course_lessons_total_view')
         .select("course_id, total_lessons");
 
     const lessonCountMap = new Map<string, number>();
@@ -270,7 +265,7 @@ export async function getCoursesDashboardData(): Promise<CoursesDashboardData> {
 
     // Get all enrollments
     const { data: enrollments } = await supabase
-        .from("course_enrollments")
+        .schema('academy').from('course_enrollments')
         .select("id, user_id, course_id, status, expires_at, created_at");
 
     const now = new Date();
@@ -300,7 +295,7 @@ export async function getCoursesDashboardData(): Promise<CoursesDashboardData> {
 
     // Get average progress
     const { data: progressData } = await supabase
-        .from("course_progress_view")
+        .schema('academy').from('course_progress_view')
         .select("progress_pct");
 
     const avgProgress = progressData?.length
@@ -320,7 +315,7 @@ export async function getCoursesDashboardData(): Promise<CoursesDashboardData> {
 
     // Course revenue stats
     const courseRevenueMap = new Map<string, { revenue: number; title: string }>();
-    const { data: coursesData } = await supabase.from("courses").select("id, title");
+    const { data: coursesData } = await supabase.schema('academy').from('courses').select("id, title");
     coursesData?.forEach((c) => courseRevenueMap.set(c.id, { revenue: 0, title: c.title }));
 
     payments?.forEach((p) => {
@@ -340,7 +335,7 @@ export async function getCoursesDashboardData(): Promise<CoursesDashboardData> {
 
     // Average progress per course
     const { data: courseProgress } = await supabase
-        .from("course_progress_view")
+        .schema('academy').from('course_progress_view')
         .select("course_id, progress_pct");
 
     const courseProgressMap = new Map<string, { sum: number; count: number }>();

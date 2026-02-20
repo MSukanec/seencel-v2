@@ -93,8 +93,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
             .select(`
                 name,
                 plan_id,
-                logo_url,
-                plans ( slug, features )
+                logo_url
             `)
             .eq('id', orgId)
             .single(),
@@ -107,14 +106,23 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
             .eq('organization_id', orgId)
             .order('created_at', { ascending: false }),
         supabase.from('organization_data')
-            .select('address, city, state, country, phone, email, current_plan:plans(name)')
+            .select('address, city, state, country, phone, email')
             .eq('organization_id', orgId)
             .single()
     ]);
 
-    const planData = orgRes.data?.plans as any;
-    const planSlug = (Array.isArray(planData) ? planData[0]?.slug : planData?.slug)?.toLowerCase() || 'free';
-    const planFeatures = (Array.isArray(planData) ? planData[0]?.features : planData?.features) || {};
+    // Fetch plan from billing schema separately (cross-schema FK can't be embedded)
+    let planSlug = 'free';
+    let planFeatures: Record<string, unknown> = {};
+    if (orgRes.data?.plan_id) {
+        const { data: planData } = await supabase
+            .schema('billing').from('plans')
+            .select('slug, features')
+            .eq('id', orgRes.data.plan_id)
+            .single();
+        planSlug = planData?.slug?.toLowerCase() || 'free';
+        planFeatures = (planData?.features as Record<string, unknown>) || {};
+    }
 
     const isPro = !planSlug.includes('free') && !planSlug.includes('basic');
     const canCreateCustomTemplates = planFeatures.custom_pdf_templates === true;

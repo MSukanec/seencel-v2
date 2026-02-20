@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
         // Look up preference from database (new pattern using paypal_preferences table)
         const { data: preference, error: prefError } = await adminSupabase
-            .from('paypal_preferences')
+            .schema('billing').from('paypal_preferences')
             .select('*')
             .eq('id', preferenceId)
             .single();
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         const internalUserId = preference.user_id;
 
         // Log payment event
-        await adminSupabase.from('payment_events').insert({
+        await adminSupabase.schema('billing').from('payment_events').insert({
             provider: 'paypal',
             provider_event_id: orderId,
             provider_event_type: 'PAYMENT.CAPTURE.COMPLETED',
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
         // Update preference status
         await adminSupabase
-            .from('paypal_preferences')
+            .schema('billing').from('paypal_preferences')
             .update({
                 status: 'completed',
                 captured_at: new Date().toISOString(),

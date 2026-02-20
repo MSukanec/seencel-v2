@@ -9,7 +9,7 @@ export async function getCourses(): Promise<CourseWithDetails[]> {
     // Fetch courses with their details
     // We're doing a left join on course_details
     const { data, error } = await supabase
-        .from('courses')
+        .schema('academy').from('courses')
         .select(`
       *,
       details:course_details(*)
@@ -30,7 +30,7 @@ export async function getLatestCourses(limit: number = 3): Promise<CourseWithDet
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('courses')
+        .schema('academy').from('courses')
         .select(`
         *,
         details:course_details(*)
@@ -52,7 +52,7 @@ export async function getCourseBySlug(slug: string): Promise<CourseWithDetails |
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('courses')
+        .schema('academy').from('courses')
         .select(`
       *,
       details:course_details(*)
@@ -75,7 +75,7 @@ export async function getCourseContent(courseId: string) {
 
     // Fetch modules and lessons
     const { data: modules, error: modulesError } = await supabase
-        .from('course_modules')
+        .schema('academy').from('course_modules')
         .select(`
       *,
       lessons:course_lessons(*)
@@ -126,7 +126,7 @@ export async function getUserEnrollments(): Promise<Set<string>> {
     }
 
     const { data: enrollments, error } = await supabase
-        .from('course_enrollments')
+        .schema('academy').from('course_enrollments')
         .select('course_id')
         .eq('user_id', internalUser.id)
         .in('status', ['active', 'completed']);
@@ -164,7 +164,7 @@ export async function getUserLessonMarkers(courseId: string) {
 
     // Get all lesson IDs for this course
     const { data: lessons } = await supabase
-        .from('course_lessons')
+        .schema('academy').from('course_lessons')
         .select('id, module_id!inner(course_id)')
         .eq('module_id.course_id', courseId);
 
@@ -176,7 +176,7 @@ export async function getUserLessonMarkers(courseId: string) {
 
     // Fetch markers for all lessons in the course
     const { data: markers, error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .select('*')
         .eq('user_id', internalUser.id)
         .eq('note_type', 'marker')
@@ -216,7 +216,7 @@ export async function getUserLessonProgress(courseId: string) {
 
     // Get all lesson IDs for this course via modules
     const { data: lessons } = await supabase
-        .from('course_lessons')
+        .schema('academy').from('course_lessons')
         .select('id, module_id!inner(course_id)')
         .eq('module_id.course_id', courseId);
 
@@ -228,7 +228,7 @@ export async function getUserLessonProgress(courseId: string) {
 
     // Fetch progress for all lessons
     const { data: progress, error } = await supabase
-        .from('course_lesson_progress')
+        .schema('academy').from('course_lesson_progress')
         .select('*')
         .eq('user_id', internalUser.id)
         .in('lesson_id', lessonIds);
@@ -265,7 +265,7 @@ export async function getLastViewedLesson(courseId: string) {
 
     // Get the most recently updated progress entry for this course
     const { data: progress, error } = await supabase
-        .from('course_lesson_progress')
+        .schema('academy').from('course_lesson_progress')
         .select(`
             *,
             lesson:course_lessons!inner(
@@ -313,7 +313,7 @@ export async function markLessonCompleted(lessonId: string) {
 
     // Upsert progress record
     const { error } = await supabase
-        .from('course_lesson_progress')
+        .schema('academy').from('course_lesson_progress')
         .upsert({
             user_id: internalUser.id,
             lesson_id: lessonId,
@@ -356,7 +356,7 @@ export async function toggleLessonCompleted(lessonId: string) {
 
     // Check current status
     const { data: current } = await supabase
-        .from('course_lesson_progress')
+        .schema('academy').from('course_lesson_progress')
         .select('is_completed')
         .eq('user_id', internalUser.id)
         .eq('lesson_id', lessonId)
@@ -366,7 +366,7 @@ export async function toggleLessonCompleted(lessonId: string) {
 
     // Upsert progress record
     const { error } = await supabase
-        .from('course_lesson_progress')
+        .schema('academy').from('course_lesson_progress')
         .upsert({
             user_id: internalUser.id,
             lesson_id: lessonId,
@@ -409,7 +409,7 @@ export async function updateLessonPosition(lessonId: string, positionSec: number
 
     // Upsert progress record with position
     const { error } = await supabase
-        .from('course_lesson_progress')
+        .schema('academy').from('course_lesson_progress')
         .upsert({
             user_id: internalUser.id,
             lesson_id: lessonId,
@@ -450,7 +450,7 @@ export async function getUserLessonSummaries(courseId: string) {
 
     // Get all lesson IDs for this course via modules
     const { data: lessons } = await supabase
-        .from('course_lessons')
+        .schema('academy').from('course_lessons')
         .select('id, module_id!inner(course_id)')
         .eq('module_id.course_id', courseId);
 
@@ -462,7 +462,7 @@ export async function getUserLessonSummaries(courseId: string) {
 
     // Fetch summaries for all lessons
     const { data: summaries, error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .select('*')
         .eq('user_id', internalUser.id)
         .eq('note_type', 'summary')
@@ -519,7 +519,7 @@ export async function getUserLessonSummariesWithDetails(courseId: string): Promi
 
     // Fetch summaries with lesson and module info
     const { data: summaries, error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .select(`
             id,
             lesson_id,
@@ -576,7 +576,7 @@ export async function saveLessonSummary(lessonId: string, body: string) {
 
     // Check if summary already exists
     const { data: existing } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .select('id')
         .eq('user_id', internalUser.id)
         .eq('lesson_id', lessonId)
@@ -586,7 +586,7 @@ export async function saveLessonSummary(lessonId: string, body: string) {
     if (existing) {
         // Update existing summary
         const { error } = await supabase
-            .from('course_lesson_notes')
+            .schema('academy').from('course_lesson_notes')
             .update({ body })
             .eq('id', existing.id);
 
@@ -597,7 +597,7 @@ export async function saveLessonSummary(lessonId: string, body: string) {
     } else {
         // Insert new summary
         const { error } = await supabase
-            .from('course_lesson_notes')
+            .schema('academy').from('course_lesson_notes')
             .insert({
                 user_id: internalUser.id,
                 lesson_id: lessonId,
@@ -638,7 +638,7 @@ export async function createLessonMarker(lessonId: string, body: string, timeSec
     }
 
     const { data, error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .insert({
             user_id: internalUser.id,
             lesson_id: lessonId,
@@ -669,7 +669,7 @@ export async function updateLessonMarker(markerId: string, body: string) {
     }
 
     const { error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .update({ body })
         .eq('id', markerId);
 
@@ -693,7 +693,7 @@ export async function deleteLessonMarker(markerId: string) {
     }
 
     const { error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .delete()
         .eq('id', markerId);
 
@@ -737,7 +737,7 @@ export async function getCourseOverviewData(courseId: string): Promise<CourseOve
 
     // 1. Get progress from view
     const { data: progressData } = await supabase
-        .from('course_progress_view')
+        .schema('academy').from('course_progress_view')
         .select('progress_pct, done_lessons, total_lessons')
         .eq('course_id', courseId)
         .eq('user_id', internalUser.id)
@@ -745,7 +745,7 @@ export async function getCourseOverviewData(courseId: string): Promise<CourseOve
 
     // 2. Get study time from view (global for user - we filter by course lessons)
     const { data: studyTimeData } = await supabase
-        .from('course_user_study_time_view')
+        .schema('academy').from('course_user_study_time_view')
         .select('seconds_lifetime, seconds_this_month')
         .eq('user_id', internalUser.id)
         .maybeSingle();
@@ -792,7 +792,7 @@ export async function getLatestUserMarkersWithDetails(courseId: string, limit: n
     }
 
     const { data: markers, error } = await supabase
-        .from('course_lesson_notes')
+        .schema('academy').from('course_lesson_notes')
         .select(`
             id,
             body,

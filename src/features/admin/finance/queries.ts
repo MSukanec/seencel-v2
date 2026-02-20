@@ -42,7 +42,7 @@ export async function getAdminPayments(): Promise<AdminPayment[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("payments")
+        .schema('billing').from("payments")
         .select(`
             id,
             provider,
@@ -138,7 +138,7 @@ export async function getAdminBankTransfers(): Promise<AdminBankTransfer[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("bank_transfer_payments")
+        .schema('billing').from("bank_transfer_payments")
         .select(`
             id,
             order_id,

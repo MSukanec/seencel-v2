@@ -46,7 +46,7 @@ export async function getCoupons(): Promise<Coupon[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("coupons")
+        .schema('billing').from("coupons")
         .select(`
             *,
             redemption_count:coupon_redemptions(count)
@@ -86,7 +86,7 @@ export async function createCoupon(input: CreateCouponInput): Promise<{ success:
     }
 
     const { data, error } = await supabase
-        .from("coupons")
+        .schema('billing').from("coupons")
         .insert({
             code: input.code.toUpperCase().trim(),
             type: input.type,
@@ -142,7 +142,7 @@ export async function updateCoupon(
     if (input.is_active !== undefined) updateData.is_active = input.is_active;
 
     const { error } = await supabase
-        .from("coupons")
+        .schema('billing').from("coupons")
         .update(updateData)
         .eq("id", id);
 
@@ -162,7 +162,7 @@ export async function deleteCoupon(id: string): Promise<{ success: boolean; erro
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("coupons")
+        .schema('billing').from("coupons")
         .delete()
         .eq("id", id);
 
@@ -182,7 +182,7 @@ export async function toggleCouponStatus(id: string, isActive: boolean): Promise
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("coupons")
+        .schema('billing').from("coupons")
         .update({ is_active: isActive })
         .eq("id", id);
 

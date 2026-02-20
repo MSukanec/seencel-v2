@@ -69,14 +69,14 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .limit(50),
 
         supabase
-            .from('organization_subscriptions')
+            .schema('billing').from('organization_subscriptions')
             .select('*, plan:plans(*)')
             .eq('organization_id', organizationId)
             .eq('status', 'active')
             .maybeSingle(),
         // Historial de suscripciones - usar organization_subscriptions con joins
         supabase
-            .from('organization_subscriptions')
+            .schema('billing').from('organization_subscriptions')
             .select('id, created_at, started_at, expires_at, amount, currency, status, billing_period, payer_email, plan:plan_id(name), payment:payment_id(provider)')
             .eq('organization_id', organizationId)
             .order('created_at', { ascending: false })
@@ -108,13 +108,13 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         // Fallback: Get organization with its plan directly
         supabase
             .from('organizations')
-            .select('*, plan:plans(*)')
+            .select('*')
             .eq('id', organizationId)
             .single(),
 
         // Seat purchase payments
         supabase
-            .from('payments')
+            .schema('billing').from('payments')
             .select('id, created_at, amount, currency, status, provider, product_type, metadata')
             .eq('organization_id', organizationId)
             .eq('product_type', 'seat_purchase')
@@ -146,9 +146,20 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         }
     }
 
+    // Fetch plan separately from billing schema (cross-schema FK can't be embedded)
+    let orgWithPlan = organizationRes.data as any;
+    if (orgWithPlan?.plan_id) {
+        const { data: planData } = await supabase
+            .schema('billing').from('plans')
+            .select('*')
+            .eq('id', orgWithPlan.plan_id)
+            .single();
+        if (planData) orgWithPlan = { ...orgWithPlan, plan: planData };
+    }
+
     // If no active subscription but org has a plan, create a virtual subscription for display
-    if (!subscription && organizationRes.data?.plan) {
-        const org = organizationRes.data;
+    if (!subscription && orgWithPlan?.plan) {
+        const org = orgWithPlan;
         subscription = {
             id: 'virtual-' + organizationId,
             status: 'active',

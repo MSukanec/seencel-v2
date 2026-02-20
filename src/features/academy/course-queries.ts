@@ -6,7 +6,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
 
     // 1. Fetch main course data
     const { data: course, error: courseError } = await supabase
-        .from("courses")
+        .schema('academy').from('courses')
         .select(`
             id,
             slug,
@@ -27,7 +27,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
 
     // 2. Fetch course details
     const { data: details, error: detailsError } = await supabase
-        .from("course_details")
+        .schema('academy').from('course_details')
         .select(`
             badge_text,
             preview_video_id,
@@ -59,7 +59,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
 
     if (details?.instructor_id) {
         const { data: instructorData } = await supabase
-            .from("course_instructors")
+            .schema('academy').from('course_instructors')
             .select("*")
             .eq("id", details.instructor_id)
             .single();
@@ -83,7 +83,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
 
     // 4. Fetch modules and lessons
     const { data: modulesData } = await supabase
-        .from("course_modules")
+        .schema('academy').from('course_modules')
         .select(`
             id,
             title,
@@ -120,7 +120,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
 
     // 5. Fetch FAQs
     const { data: faqsData } = await supabase
-        .from("course_faqs")
+        .schema('academy').from('course_faqs')
         .select("*")
         .eq("course_id", course.id)
         .order("sort_index");
@@ -206,7 +206,7 @@ export async function getCourseById(id: string, options: { includeContent?: bool
 
     // 1. Fetch main course data (reusing logic but by ID)
     const { data: course, error: courseError } = await supabase
-        .from("courses")
+        .schema('academy').from('courses')
         .select(`
             id,
             slug,
@@ -225,7 +225,7 @@ export async function getCourseById(id: string, options: { includeContent?: bool
 
     // 2. Fetch course details
     const { data: details } = await supabase
-        .from("course_details")
+        .schema('academy').from('course_details')
         .select("*")
         .eq("course_id", course.id)
         .single();
@@ -249,7 +249,7 @@ export async function getCourseById(id: string, options: { includeContent?: bool
 
     if (details?.instructor_id) {
         const { data: instructorData } = await supabase
-            .from("course_instructors")
+            .schema('academy').from('course_instructors')
             .select("*")
             .eq("id", details.instructor_id)
             .single();
@@ -283,13 +283,13 @@ export async function getCourseById(id: string, options: { includeContent?: bool
     // 4. Fetch Modules & Lessons ONLY if requested
     if (options.includeContent) {
         const { data: modulesData } = await supabase
-            .from("course_modules")
+            .schema('academy').from('course_modules')
             .select("*, image_path")
             .eq("course_id", course.id)
             .order("sort_index", { ascending: true });
 
         const { data: lessonsData } = await supabase
-            .from("course_lessons")
+            .schema('academy').from('course_lessons')
             .select("*")
             .in("module_id", (modulesData || []).map(m => m.id))
             .order("sort_index", { ascending: true });
@@ -350,7 +350,7 @@ export async function getAllCourseSlugs(): Promise<string[]> {
     );
 
     const { data } = await supabase
-        .from("courses")
+        .schema('academy').from('courses')
         .select("slug")
         .eq("is_active", true)
         .eq("is_deleted", false);
@@ -361,7 +361,7 @@ export async function getAllCourseSlugs(): Promise<string[]> {
 export async function getAllInstructors() {
     const supabase = await createClient();
     const { data } = await supabase
-        .from("course_instructors")
+        .schema('academy').from('course_instructors')
         .select("id, name, avatar_path")
         .order("name");
 
@@ -376,7 +376,7 @@ export async function getRecentPublicCourses(limit: number = 2) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("courses")
+        .schema('academy').from('courses')
         .select("id, slug, title, status, created_at")
         .eq("visibility", "public")
         .eq("is_active", true)

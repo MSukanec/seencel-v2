@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         let couponId: string | null = null;
         if (couponCode) {
             const { data: coupon } = await supabase
-                .from('coupons')
+                .schema('billing').from('coupons')
                 .select('id')
                 .ilike('code', couponCode)
                 .single();
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         let planSlug: string | null = null;
         if (productType === 'subscription' || productType === 'upgrade') {
             const { data: plan } = await supabase
-                .from('plans')
+                .schema('billing').from('plans')
                 .select('slug')
                 .eq('id', productId)
                 .single();
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
         // Save preference to database (similar to mp_preferences pattern)
         const { error: insertError } = await supabase
-            .from('paypal_preferences')
+            .schema('billing').from('paypal_preferences')
             .insert({
                 id: preferenceId,
                 user_id: internalUser.id,
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
         // Update preference with PayPal order ID
         await supabase
-            .from('paypal_preferences')
+            .schema('billing').from('paypal_preferences')
             .update({ order_id: order.id })
             .eq('id', preferenceId);
 

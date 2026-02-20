@@ -585,7 +585,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         // Org info (name, logo, plan, settings) for pulse widget
         supabase
             .from("organizations")
-            .select("name, logo_url, settings, plans(name, slug)")
+            .select("name, logo_url, settings, plan_id")
             .eq("id", orgId)
             .single(),
 
@@ -706,13 +706,24 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
             email: m.users.email || undefined,
         }));
 
-    // Build pulse data (must match HeroData interface in overview-widget.tsx)
+    // Fetch plan from billing schema separately (cross-schema FK can't be embedded)
     const orgData = orgResult.data as any;
+    let orgPlan: { name: string; slug: string; plan_features: any } | null = null;
+    if (orgData?.plan_id) {
+        const { data: planData } = await supabase
+            .schema('billing').from('plans')
+            .select('name, slug, plan_features(max_storage_mb)')
+            .eq('id', orgData.plan_id)
+            .single();
+        orgPlan = planData;
+    }
+
+    // Build pulse data (must match HeroData interface in overview-widget.tsx)
     const pulseData = {
         name: orgData?.name || "Organización",
         avatarUrl: orgData?.logo_url || null,
-        planName: orgData?.plans?.name || null,
-        planSlug: orgData?.plans?.slug || null,
+        planName: orgPlan?.name || null,
+        planSlug: orgPlan?.slug || null,
         isFounder: (orgData?.settings as any)?.is_founder === true,
         memberCount: membersResult.count || 0,
         projectCount: projectCountResult.count || 0,
@@ -779,20 +790,12 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         storageTypeAgg[type].bytes += size;
     }
 
-    // Get max_storage_mb from plan (orgData already has plan info)
-    const planSlug = orgData?.plans?.slug || 'free';
-    let maxStorageMb = 500; // default
-    const { data: planFeaturesData } = await supabase
-        .from('plans')
-        .select('plan_features(max_storage_mb)')
-        .eq('slug', planSlug)
-        .single();
-    if (planFeaturesData?.plan_features) {
-        const pf = Array.isArray(planFeaturesData.plan_features)
-            ? (planFeaturesData.plan_features as any)[0]
-            : planFeaturesData.plan_features;
-        maxStorageMb = pf?.max_storage_mb ?? 500;
-    }
+    const maxStorageMb = (() => {
+        const pf = orgPlan?.plan_features;
+        if (!pf) return 500;
+        const pfObj = Array.isArray(pf) ? pf[0] : pf;
+        return pfObj?.max_storage_mb ?? 500;
+    })();
 
     return {
         activity_kpi: (activityResult.data || []) as ActivityFeedItem[],
@@ -1020,7 +1023,7 @@ export async function getOverviewHeroData(
         // ── ORGANIZATION MODE ──
         const [orgResult, membersResult, projectCountResult, locationsResult, membersAvatarResult] = await Promise.all([
             supabase.from("organizations")
-                .select("name, logo_url, settings, plans(name, slug)")
+                .select("name, logo_url, settings, plan_id")
                 .eq("id", orgId)
                 .single(),
             supabase.from("organization_members")
@@ -1044,6 +1047,18 @@ export async function getOverviewHeroData(
         ]);
 
         const orgData = orgResult.data as any;
+
+        // Fetch plan from billing schema separately (cross-schema FK can't be embedded)
+        let orgPlan: { name: string; slug: string } | null = null;
+        if (orgData?.plan_id) {
+            const { data: planData } = await supabase
+                .schema('billing').from('plans')
+                .select('name, slug')
+                .eq('id', orgData.plan_id)
+                .single();
+            orgPlan = planData;
+        }
+
         const projectLocations = (locationsResult.data || [])
             .filter((pd: any) => pd.projects && !pd.projects.is_deleted)
             .map((pd: any) => {
@@ -1064,8 +1079,8 @@ export async function getOverviewHeroData(
         return {
             name: orgData?.name || "Organización",
             avatarUrl: orgData?.logo_url || null,
-            planName: orgData?.plans?.name || null,
-            planSlug: orgData?.plans?.slug || null,
+            planName: orgPlan?.name || null,
+            planSlug: orgPlan?.slug || null,
             isFounder: (orgData?.settings as any)?.is_founder === true,
             memberCount: membersResult.count || 0,
             projectStatus: null,

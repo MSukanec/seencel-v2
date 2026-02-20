@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         const xRequestId = request.headers.get('x-request-id') || '';
 
         try {
-            await supabase.from('payment_events').insert({
+            await supabase.schema('billing').from('payment_events').insert({
                 provider: 'mercadopago',
                 provider_event_id: xRequestId || `ipn-${paymentId}`,
                 provider_event_type: eventType,

@@ -8,7 +8,7 @@ export async function debugCourseFetch(slug: string) {
 
     // 1. Try exact match
     const { data: exact, error: exactError } = await supabase
-        .from('courses')
+        .schema('academy').from('courses')
         .select('*')
         .eq('slug', slug)
         .maybeSingle();
@@ -25,7 +25,7 @@ export async function debugCourseFetch(slug: string) {
 
     // 3. Check if list view finds it
     const { data: listData } = await supabase
-        .from('courses')
+        .schema('academy').from('courses')
         .select('slug, title')
         .eq('is_deleted', false)
         .eq('is_active', true);

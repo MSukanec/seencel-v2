@@ -71,11 +71,13 @@ export default async function AdminRecursosPage() {
             parent_id: null as string | null
         }));
 
-        // Transform units
+        // Transform units (preserve symbol and applicable_to for MaterialForm filtering)
         const unitsForView = materialUnits.map(u => ({
             id: u.id,
             name: u.name,
-            abbreviation: ''
+            abbreviation: u.symbol || '',
+            symbol: u.symbol || null,
+            applicable_to: u.applicable_to || [],
         }));
 
         // Transform category hierarchy

@@ -38,7 +38,7 @@ export async function getBillingProfile(): Promise<{ profile: BillingProfile | n
 
     // Get billing profile with country relation
     const { data: profile, error } = await supabase
-        .from('billing_profiles')
+        .schema('billing').from('billing_profiles')
         .select(`
             *,
             country:country_id (
