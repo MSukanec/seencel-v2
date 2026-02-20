@@ -101,8 +101,7 @@ export async function getLaborTypesWithPrices(organizationId: string): Promise<L
             labor_type_id,
             unit_price,
             currency_id,
-            valid_from,
-            currencies (code, symbol)
+            valid_from
         `)
         .eq('organization_id', organizationId)
         .or('valid_to.is.null,valid_to.gte.' + new Date().toISOString().split('T')[0]);
@@ -112,13 +111,14 @@ export async function getLaborTypesWithPrices(organizationId: string): Promise<L
     }
 
     // Map prices by labor_type_id for quick lookup
+    // Note: currency code/symbol not joined (cross-schema join not supported by PostgREST)
     const priceMap = new Map<string, { unit_price: number; currency_id: string; code: string; symbol: string; valid_from: string | null }>();
     (prices || []).forEach((p: any) => {
         priceMap.set(p.labor_type_id, {
             unit_price: p.unit_price,
             currency_id: p.currency_id,
-            code: p.currencies?.code || '',
-            symbol: p.currencies?.symbol || '',
+            code: '',
+            symbol: '',
             valid_from: p.valid_from ?? null,
         });
     });

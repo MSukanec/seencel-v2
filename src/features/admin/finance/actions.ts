@@ -296,3 +296,51 @@ export async function deleteBankTransfer(id: string) {
     return { success: true };
 }
 
+
+
+// ============================================================================
+// USERS
+// ============================================================================
+
+/**
+ * Fetch all users for admin selectors
+ */
+export async function getAdminUsers(): Promise<{ id: string; email: string; full_name: string | null }[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .order('full_name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching admin users:', error);
+        return [];
+    }
+
+    return data ?? [];
+}
+
+
+// ============================================================================
+// CURRENCIES
+// ============================================================================
+
+/**
+ * Fetch all active system currencies for admin selectors
+ */
+export async function getAdminCurrencies(): Promise<{ id: string; code: string; name: string; symbol: string }[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('currencies')
+        .select('id, code, name, symbol')
+        .order('code', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching currencies:', error);
+        return [];
+    }
+
+    return data ?? [];
+}

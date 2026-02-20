@@ -2,9 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Home, Globe, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 // ============================================================================
 // Types
@@ -15,7 +13,7 @@ export type TaskCreationType = "own" | "parametric";
 interface TasksTypeSelectorProps {
     onSelect: (type: TaskCreationType) => void;
     onCancel?: () => void;
-    /** Only admins can use parametric creation */
+    /** Kept for compatibility, pero el form paramétrico ya no está bloqueado */
     isAdmin?: boolean;
 }
 
@@ -26,8 +24,7 @@ interface TasksTypeSelectorProps {
 /**
  * Modal content for selecting between creating own task vs parametric task
  */
-export function TasksTypeSelector({ onSelect, onCancel, isAdmin = false }: TasksTypeSelectorProps) {
-    const isParametricLocked = !isAdmin;
+export function TasksTypeSelector({ onSelect, onCancel }: TasksTypeSelectorProps) {
     return (
         <div className="flex flex-col gap-6">
             <div className="text-center">
@@ -39,10 +36,7 @@ export function TasksTypeSelector({ onSelect, onCancel, isAdmin = false }: Tasks
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Tarea Propia */}
                 <Card
-                    className={cn(
-                        "cursor-pointer transition-all hover:border-primary hover:shadow-md",
-                        "group"
-                    )}
+                    className="cursor-pointer transition-all hover:border-primary hover:shadow-md group"
                     onClick={() => onSelect("own")}
                 >
                     <CardHeader className="pb-3">
@@ -67,26 +61,13 @@ export function TasksTypeSelector({ onSelect, onCancel, isAdmin = false }: Tasks
                     </CardContent>
                 </Card>
 
-                {/* Tarea Paramétrica - Sistema */}
+                {/* Tarea Paramétrica */}
                 <Card
-                    className={cn(
-                        "transition-all group relative",
-                        isParametricLocked
-                            ? "opacity-60 cursor-not-allowed"
-                            : "cursor-pointer hover:border-primary hover:shadow-md"
-                    )}
-                    onClick={() => !isParametricLocked && onSelect("parametric")}
+                    className="cursor-pointer transition-all hover:border-primary hover:shadow-md group"
+                    onClick={() => onSelect("parametric")}
                 >
-                    {isParametricLocked && (
-                        <Badge variant="secondary" className="absolute top-3 right-3 text-xs">
-                            Próximamente
-                        </Badge>
-                    )}
                     <CardHeader className="pb-3">
-                        <div className={cn(
-                            "w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-2 transition-colors",
-                            !isParametricLocked && "group-hover:bg-emerald-500/20"
-                        )}>
+                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-2 group-hover:bg-emerald-500/20 transition-colors">
                             <Globe className="h-6 w-6 text-emerald-500" />
                         </div>
                         <CardTitle className="text-lg">Tarea Paramétrica</CardTitle>
@@ -100,11 +81,7 @@ export function TasksTypeSelector({ onSelect, onCancel, isAdmin = false }: Tasks
                             <li>• Recetas reutilizables</li>
                             <li>• Contribuye al catálogo global</li>
                         </ul>
-                        <Button
-                            variant="ghost"
-                            className={cn("w-full mt-4", !isParametricLocked && "group-hover:bg-emerald-500/10")}
-                            disabled={isParametricLocked}
-                        >
+                        <Button variant="ghost" className="w-full mt-4 group-hover:bg-emerald-500/10">
                             Crear Tarea Paramétrica
                             <ArrowRight className="h-4 w-4 ml-2" />
                         </Button>

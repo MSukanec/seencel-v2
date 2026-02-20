@@ -17,7 +17,7 @@ import { ViewEmptyState } from "@/components/shared/empty-state";
 import { useModal } from "@/stores/modal-store";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
 
-import { PaymentForm } from "../components/payment-form";
+import { AdminPaymentForm } from "../forms/admin-payment-form";
 import { BankTransferForm } from "../components/bank-transfer-form";
 import { BankTransferDetailModal } from "../components/bank-transfer-detail-modal";
 import { deletePayment, deleteBankTransfer } from "../actions";
@@ -30,7 +30,6 @@ import type { AdminPayment, AdminBankTransfer } from "../queries";
 interface AdminFinancePaymentsViewProps {
     payments: AdminPayment[];
     bankTransfers: AdminBankTransfer[];
-    users?: { id: string; email: string; full_name: string | null }[];
 }
 
 // ============================================================================
@@ -131,7 +130,7 @@ function TabSwitcher({ activeTab, onTabChange, paymentsCount, transfersCount }: 
 // MAIN COMPONENT
 // ============================================================================
 
-export function AdminFinancePaymentsView({ payments, bankTransfers, users = [] }: AdminFinancePaymentsViewProps) {
+export function AdminFinancePaymentsView({ payments, bankTransfers }: AdminFinancePaymentsViewProps) {
     const { openModal, closeModal } = useModal();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<"payments" | "transfers">("payments");
@@ -160,14 +159,14 @@ export function AdminFinancePaymentsView({ payments, bankTransfers, users = [] }
 
     const handleCreatePayment = () => {
         openModal(
-            <PaymentForm users={users} onSuccess={() => router.refresh()} />,
+            <AdminPaymentForm />,
             { title: "Nuevo Pago", description: "Registra un pago manualmente.", size: "md" }
         );
     };
 
     const handleEditPayment = (payment: AdminPayment) => {
         openModal(
-            <PaymentForm initialData={payment} onSuccess={() => router.refresh()} />,
+            <AdminPaymentForm initialData={payment} />,
             { title: "Editar Pago", description: `Modificando pago de ${payment.user?.full_name || payment.user?.email}`, size: "md" }
         );
     };

@@ -1,77 +1,118 @@
 "use client";
 
-import { useState } from "react";
+// ============================================================
+// ADMIN PAYMENT FORM
+// ============================================================
+// Crea/edita pagos manualmente.
+// Usa shared fields y fetchea usuarios internamente.
+// ============================================================
+
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
+import { SelectField } from "@/components/shared/forms/fields/select-field";
+import { AmountField } from "@/components/shared/forms/fields/amount-field";
 
-import { createPayment, updatePayment } from "../actions";
+import { createPayment, updatePayment, getAdminUsers } from "../actions";
 import type { AdminPayment } from "../queries";
 import { useModal } from "@/stores/modal-store";
 
+// ============================================================
+// SCHEMA
+// ============================================================
+
 const formSchema = z.object({
     provider: z.string().min(1, "Proveedor requerido"),
-    provider_payment_id: z.string().optional(),
     user_id: z.string().min(1, "Usuario requerido"),
-    amount: z.number().min(0, "Monto debe ser positivo"),
     currency: z.string().min(1, "Moneda requerida"),
+    amount: z.number().min(0, "Monto debe ser positivo"),
     status: z.enum(["pending", "completed", "rejected", "refunded"]),
-    gateway: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+// ============================================================
+// PROPS
+// ============================================================
+
 interface PaymentFormProps {
     initialData?: AdminPayment;
-    users?: { id: string; email: string; full_name: string | null }[];
     onSuccess?: () => void;
 }
 
-/**
- * Payment Form for Create/Edit operations
- * Follows Seencel Forms & Modals Standard
- */
-export function PaymentForm({ initialData, users = [], onSuccess }: PaymentFormProps) {
+// ============================================================
+// OPTIONS
+// ============================================================
+
+const PROVIDER_OPTIONS = [
+    { value: "manual", label: "Manual" },
+    { value: "paypal", label: "PayPal" },
+    { value: "stripe", label: "Stripe" },
+    { value: "mercadopago", label: "MercadoPago" },
+    { value: "transfer", label: "Transferencia" },
+];
+
+const CURRENCY_OPTIONS = [
+    { value: "USD", label: "USD — Dólar" },
+    { value: "ARS", label: "ARS — Peso Argentino" },
+    { value: "EUR", label: "EUR — Euro" },
+    { value: "MXN", label: "MXN — Peso Mexicano" },
+];
+
+const STATUS_OPTIONS = [
+    { value: "pending", label: "Pendiente" },
+    { value: "completed", label: "Completado" },
+    { value: "rejected", label: "Rechazado" },
+    { value: "refunded", label: "Reembolsado" },
+];
+
+// ============================================================
+// COMPONENT
+// ============================================================
+
+export function PaymentForm({ initialData, onSuccess }: PaymentFormProps) {
     const router = useRouter();
     const { closeModal } = useModal();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [users, setUsers] = useState<{ id: string; email: string; full_name: string | null }[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(true);
 
     const isEditing = !!initialData;
 
+    // ── Fetch users on mount ──────────────────────────────
+    useEffect(() => {
+        getAdminUsers().then((data) => {
+            setUsers(data);
+            setLoadingUsers(false);
+        });
+    }, []);
+
+    // ── Form ─────────────────────────────────────────────
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             provider: initialData?.provider || "manual",
-            provider_payment_id: initialData?.provider_payment_id || "",
             user_id: initialData?.user_id || "",
+            currency: initialData?.currency || "ARS",
             amount: initialData?.amount || 0,
-            currency: initialData?.currency || "USD",
             status: (initialData?.status as FormValues["status"]) || "completed",
-            gateway: initialData?.gateway || "",
         },
     });
 
+    const {
+        control,
+        handleSubmit,
+        formState: { errors },
+    } = form;
+
+    // ── Submit ───────────────────────────────────────────
     const onSubmit = async (values: FormValues) => {
         setIsSubmitting(true);
         try {
@@ -82,187 +123,126 @@ export function PaymentForm({ initialData, users = [], onSuccess }: PaymentFormP
                     amount: values.amount,
                     currency: values.currency,
                     status: values.status,
-                    gateway: values.gateway,
                 });
                 toast.success("Pago actualizado");
             } else {
                 await createPayment({
                     provider: values.provider,
-                    provider_payment_id: values.provider_payment_id,
                     user_id: values.user_id,
                     amount: values.amount,
                     currency: values.currency,
                     status: values.status,
-                    gateway: values.gateway,
                 });
                 toast.success("Pago creado");
             }
             router.refresh();
             closeModal();
             onSuccess?.();
-        } catch (error) {
+        } catch {
             toast.error(isEditing ? "Error al actualizar pago" : "Error al crear pago");
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    // ── Build user options ────────────────────────────────
+    const userOptions = users.map((u) => ({
+        value: u.id,
+        label: u.full_name || u.email,
+        searchTerms: `${u.email} ${u.full_name ?? ""}`,
+    }));
+
+    // ── Render ────────────────────────────────────────────
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto min-h-0 space-y-4 p-1">
-                    {/* Provider */}
-                    <FormField
-                        control={form.control}
+
+                    {/* Proveedor */}
+                    <Controller
+                        control={control}
                         name="provider"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Proveedor</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar proveedor" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="manual">Manual</SelectItem>
-                                        <SelectItem value="paypal">PayPal</SelectItem>
-                                        <SelectItem value="stripe">Stripe</SelectItem>
-                                        <SelectItem value="mercadopago">MercadoPago</SelectItem>
-                                        <SelectItem value="transfer">Transferencia</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
+                            <SelectField
+                                label="Proveedor"
+                                options={PROVIDER_OPTIONS}
+                                value={field.value}
+                                onChange={field.onChange}
+                                required
+                                error={errors.provider?.message}
+                            />
                         )}
                     />
 
-                    {/* User Selection (only for create) */}
+                    {/* Usuario (solo al crear) */}
                     {!isEditing && (
-                        <FormField
-                            control={form.control}
+                        <Controller
+                            control={control}
                             name="user_id"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Usuario</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar usuario" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {users.map((user) => (
-                                                <SelectItem key={user.id} value={user.id}>
-                                                    {user.full_name || user.email}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
+                                <SelectField
+                                    label="Usuario"
+                                    options={userOptions}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    required
+                                    searchable
+                                    searchPlaceholder="Buscar usuario..."
+                                    loading={loadingUsers}
+                                    error={errors.user_id?.message}
+                                    emptyState={{ message: "No hay usuarios registrados." }}
+                                />
                             )}
                         />
                     )}
 
-                    {/* Amount & Currency */}
+                    {/* Moneda + Monto (Moneda primero) */}
                     <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="amount"
+                        <Controller
+                            control={control}
+                            name="currency"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Monto</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" step="0.01" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                                <SelectField
+                                    label="Moneda"
+                                    options={CURRENCY_OPTIONS}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    required
+                                    error={errors.currency?.message}
+                                />
                             )}
                         />
 
-                        <FormField
-                            control={form.control}
-                            name="currency"
+                        <Controller
+                            control={control}
+                            name="amount"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Moneda</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="USD">USD</SelectItem>
-                                            <SelectItem value="ARS">ARS</SelectItem>
-                                            <SelectItem value="EUR">EUR</SelectItem>
-                                            <SelectItem value="MXN">MXN</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
+                                <AmountField
+                                    label="Monto"
+                                    value={field.value}
+                                    onChange={(val) => field.onChange(parseFloat(val) || 0)}
+                                    required
+                                />
                             )}
                         />
                     </div>
 
-                    {/* Status */}
-                    <FormField
-                        control={form.control}
+                    {/* Estado */}
+                    <Controller
+                        control={control}
                         name="status"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Estado</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="pending">Pendiente</SelectItem>
-                                        <SelectItem value="completed">Completado</SelectItem>
-                                        <SelectItem value="rejected">Rechazado</SelectItem>
-                                        <SelectItem value="refunded">Reembolsado</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
+                            <SelectField
+                                label="Estado"
+                                options={STATUS_OPTIONS}
+                                value={field.value}
+                                onChange={field.onChange}
+                                required
+                                error={errors.status?.message}
+                            />
                         )}
                     />
-
-                    {/* Gateway (optional) */}
-                    <FormField
-                        control={form.control}
-                        name="gateway"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Gateway (opcional)</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="ej: stripe, paypal" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    {/* Provider Payment ID (optional) */}
-                    {!isEditing && (
-                        <FormField
-                            control={form.control}
-                            name="provider_payment_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>ID Proveedor (opcional)</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="ej: pi_123abc..." {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    )}
                 </div>
 
                 {/* Sticky Footer */}
