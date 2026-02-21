@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T03:04:42.923Z
+> Generated: 2026-02-21T12:04:42.647Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -11,10 +11,10 @@
 | client_roles | set_audit_client_roles | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
 | contact_categories | on_contact_category_audit | AFTER | INSERT, DELETE, UPDATE | EXECUTE FUNCTION audit.log_contact_category_activity() |
 | contact_categories | set_updated_by_contact_categories | BEFORE | UPDATE | EXECUTE FUNCTION handle_updated_by() |
-| contact_category_links | trigger_contact_category_links_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION update_contact_category_links_updated_at() |
+| contact_category_links | trigger_contact_category_links_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION iam.update_contact_category_links_update... |
 | contacts | on_contact_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_contact_activity() |
 | contacts | set_updated_by_contacts | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
-| contacts | trigger_protect_linked_contact_delete | BEFORE | UPDATE | EXECUTE FUNCTION protect_linked_contact_delete() |
+| contacts | trigger_protect_linked_contact_delete | BEFORE | UPDATE | EXECUTE FUNCTION iam.protect_linked_contact_delete() |
 | project_clients | on_project_client_audit | AFTER | INSERT, DELETE, UPDATE | EXECUTE FUNCTION audit.log_project_client_activity() |
 | project_clients | set_audit_project_clients | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
 | project_data | on_project_data_audit | AFTER | UPDATE | EXECUTE FUNCTION audit.log_project_data_activity() |

@@ -1,62 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T03:04:42.923Z
+> Generated: 2026-02-21T12:04:42.647Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 1: analytics_track_navigation — external_has_scope)
-
-### `analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_user_id uuid;
-BEGIN
-    SELECT u.id INTO v_user_id FROM public.users u WHERE u.auth_id = auth.uid() LIMIT 1;
-    IF v_user_id IS NULL THEN RETURN; END IF;
-
-    -- A. Cerrar vista anterior de ESTA sesión
-    UPDATE public.user_view_history
-    SET
-        exited_at = now(),
-        duration_seconds = EXTRACT(EPOCH FROM (now() - entered_at))::integer
-    WHERE user_id = v_user_id
-      AND session_id = p_session_id
-      AND exited_at IS NULL;
-
-    -- B. Abrir nueva vista
-    INSERT INTO public.user_view_history (
-        user_id, organization_id, session_id, view_name, entered_at
-    ) VALUES (
-        v_user_id, p_org_id, p_session_id, p_view_name, now()
-    );
-
-    -- C. Actualizar Presencia en tiempo real
-    INSERT INTO public.user_presence (
-        user_id, organization_id, session_id, last_seen_at, current_view, status, updated_from, updated_at
-    ) VALUES (
-        v_user_id, p_org_id, p_session_id, now(), p_view_name, 'online', 'navigation', now()
-    )
-    ON CONFLICT (user_id) DO UPDATE SET
-        organization_id = COALESCE(EXCLUDED.organization_id, user_presence.organization_id),
-        session_id = EXCLUDED.session_id,
-        last_seen_at = EXCLUDED.last_seen_at,
-        current_view = EXCLUDED.current_view,
-        status = 'online',
-        updated_at = now();
-END;
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 1: assert_project_is_active — generate_po_order_number)
 
 ### `assert_project_is_active(p_project_id uuid)` 🔐
 
@@ -82,25 +29,6 @@ BEGIN
             USING ERRCODE = 'P0001';
     END IF;
 END;
-$function$
-```
-</details>
-
-### `assign_default_permissions_to_org_roles(p_organization_id uuid)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.assign_default_permissions_to_org_roles(p_organization_id uuid)
- RETURNS void
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.assign_default_permissions_to_org_roles(p_organization_id);
 $function$
 ```
 </details>
@@ -375,25 +303,6 @@ $function$
 ```
 </details>
 
-### `can_view_org(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.can_view_org(p_organization_id);
-$function$
-```
-</details>
-
 ### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
@@ -409,6 +318,25 @@ CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid, p_permiss
  SET search_path TO 'public', 'iam'
 AS $function$
   SELECT iam.can_view_org(p_organization_id, p_permission_key);
+$function$
+```
+</details>
+
+### `can_view_org(p_organization_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.can_view_org(p_organization_id);
 $function$
 ```
 </details>
@@ -572,25 +500,6 @@ $function$
 ```
 </details>
 
-### `dismiss_home_banner()` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.dismiss_home_banner()
- RETURNS boolean
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.dismiss_home_banner();
-$function$
-```
-</details>
-
 ### `documents_validate_project_org()` 🔐
 
 - **Returns**: trigger
@@ -626,25 +535,6 @@ $function$
 ```
 </details>
 
-### `ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)
- RETURNS uuid
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.ensure_contact_for_user(p_organization_id, p_user_id);
-$function$
-```
-</details>
-
 ### `external_has_scope(p_organization_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
@@ -660,6 +550,223 @@ CREATE OR REPLACE FUNCTION public.external_has_scope(p_organization_id uuid, p_p
  SET search_path TO 'public', 'iam'
 AS $function$
   SELECT iam.external_has_scope(p_organization_id, p_permission_key);
+$function$
+```
+</details>
+
+### `fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)` 🔐
+
+- **Returns**: TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text)
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)
+ RETURNS TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    v_func_currency_id UUID;
+    v_symbol TEXT := '$';
+    v_code TEXT := 'ARS';
+BEGIN
+    -- 1. Get functional currency
+    SELECT op.functional_currency_id 
+    INTO v_func_currency_id
+    FROM organization_preferences op
+    WHERE op.organization_id = p_org_id;
+    
+    IF v_func_currency_id IS NOT NULL THEN
+        SELECT c.symbol, c.code 
+        INTO v_symbol, v_code
+        FROM currencies c
+        WHERE c.id = v_func_currency_id;
+    END IF;
+
+    -- 2. Calculate income/expenses in one pass
+    RETURN QUERY
+    SELECT
+        COALESCE(SUM(CASE WHEN m.amount_sign = 1 THEN m.functional_amount ELSE 0 END), 0) AS income,
+        COALESCE(SUM(CASE WHEN m.amount_sign = -1 THEN m.functional_amount ELSE 0 END), 0) AS expenses,
+        COALESCE(SUM(CASE WHEN m.amount_sign = 1 THEN m.functional_amount ELSE 0 END), 0)
+        + COALESCE(SUM(CASE WHEN m.amount_sign = -1 THEN m.functional_amount ELSE 0 END), 0) AS balance,
+        v_symbol AS currency_symbol,
+        v_code AS currency_code
+    FROM unified_financial_movements_view m
+    WHERE m.organization_id = p_org_id
+      AND m.amount_sign != 0
+      AND (p_project_id IS NULL OR m.project_id = p_project_id);
+END;
+$function$
+```
+</details>
+
+### `fn_storage_overview(p_org_id uuid)` 🔐
+
+- **Returns**: TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb)
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.fn_storage_overview(p_org_id uuid)
+ RETURNS TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    v_plan_id UUID;
+    v_max_storage INT := 500;
+BEGIN
+    -- 1. Get plan storage limit
+    SELECT o.plan_id INTO v_plan_id
+    FROM organizations o
+    WHERE o.id = p_org_id;
+    
+    IF v_plan_id IS NOT NULL THEN
+        SELECT pf.max_storage_mb INTO v_max_storage
+        FROM plan_features pf
+        WHERE pf.plan_id = v_plan_id;
+    END IF;
+
+    -- 2. Single aggregation query
+    RETURN QUERY
+    WITH file_stats AS (
+        SELECT 
+            COALESCE(SUM(mf.file_size), 0)::BIGINT AS total_bytes,
+            COUNT(*)::BIGINT AS file_count,
+            COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'type', COALESCE(mf.file_type, 'other'),
+                        'count', type_count,
+                        'bytes', type_bytes
+                    )
+                ) FILTER (WHERE type_count IS NOT NULL),
+                '[]'::JSONB
+            ) AS by_type
+        FROM (
+            SELECT 
+                COALESCE(file_type, 'other') AS file_type,
+                file_size,
+                COUNT(*) OVER (PARTITION BY COALESCE(file_type, 'other')) AS type_count,
+                SUM(file_size) OVER (PARTITION BY COALESCE(file_type, 'other')) AS type_bytes
+            FROM media_files
+            WHERE organization_id = p_org_id
+              AND is_deleted = false
+        ) mf
+    ),
+    folder_stats AS (
+        SELECT COUNT(*)::BIGINT AS folder_count
+        FROM media_file_folders
+        WHERE organization_id = p_org_id
+    ),
+    type_breakdown AS (
+        SELECT 
+            jsonb_agg(
+                jsonb_build_object(
+                    'type', ft.file_type,
+                    'count', ft.cnt,
+                    'bytes', ft.total
+                )
+                ORDER BY ft.total DESC
+            ) AS by_type
+        FROM (
+            SELECT 
+                COALESCE(file_type, 'other') AS file_type,
+                COUNT(*) AS cnt,
+                COALESCE(SUM(file_size), 0) AS total
+            FROM media_files
+            WHERE organization_id = p_org_id
+              AND is_deleted = false
+            GROUP BY COALESCE(file_type, 'other')
+        ) ft
+    )
+    SELECT 
+        COALESCE((SELECT SUM(mf.file_size) FROM media_files mf WHERE mf.organization_id = p_org_id AND mf.is_deleted = false), 0)::BIGINT,
+        (SELECT COUNT(*) FROM media_files mf WHERE mf.organization_id = p_org_id AND mf.is_deleted = false)::BIGINT,
+        fs.folder_count,
+        v_max_storage,
+        COALESCE(tb.by_type, '[]'::JSONB)
+    FROM folder_stats fs
+    CROSS JOIN type_breakdown tb;
+END;
+$function$
+```
+</details>
+
+### `generate_next_document_group_name(p_folder_id uuid)` 🔐
+
+- **Returns**: text
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.generate_next_document_group_name(p_folder_id uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  latest_name text;
+  latest_version int := 0;
+  next_name text;
+begin
+  -- Buscar la última versión existente (vN)
+  select d.name
+  into latest_name
+  from public.design_document_groups d
+  where d.folder_id = p_folder_id
+    and d.name ~ '^v[0-9]+$'
+  order by cast(substring(d.name from 2) as int) desc
+  limit 1;
+
+  -- Extraer número de versión
+  if latest_name is not null then
+    latest_version := cast(substring(latest_name from 2) as int);
+  end if;
+
+  -- Generar siguiente nombre
+  next_name := 'v' || (latest_version + 1);
+  return next_name;
+end;
+$function$
+```
+</details>
+
+### `generate_po_order_number()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.generate_po_order_number()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_count INTEGER;
+    v_year TEXT;
+BEGIN
+    IF NEW.order_number IS NULL THEN
+        v_year := TO_CHAR(CURRENT_DATE, 'YYYY');
+        
+        SELECT COUNT(*) + 1 INTO v_count
+        FROM material_purchase_orders
+        WHERE organization_id = NEW.organization_id
+          AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE);
+        
+        NEW.order_number := 'PO-' || v_year || '-' || LPAD(v_count::TEXT, 4, '0');
+    END IF;
+    
+    RETURN NEW;
+END;
 $function$
 ```
 </details>

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T03:04:42.923Z
+> Generated: 2026-02-21T12:04:42.647Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -46,87 +46,64 @@
 - **`system_job_logs`** (8 cols)
 - **`testimonials`** (16 cols)
 
-### Functions (79)
+### Functions (56)
 
-- `analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)` → void 🔐 *(public/functions_1.md)*
 - `assert_project_is_active(p_project_id uuid)` → void 🔐 *(public/functions_1.md)*
-- `assign_default_permissions_to_org_roles(p_organization_id uuid)` → void 🔐 *(public/functions_1.md)*
 - `audit_subcontract_payments()` → trigger 🔐 *(public/functions_1.md)*
 - `budget_item_move(p_budget_id uuid, p_item_id uuid, p_prev_item_id uuid, p_next_item_id uuid)` → void 🔐 *(public/functions_1.md)*
 - `budget_item_set_default_sort_key()` → trigger 🔐 *(public/functions_1.md)*
 - `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
+- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `check_active_project_limit(p_organization_id uuid, p_excluded_project_id uuid DEFAULT NULL::uuid)` → json 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `create_construction_task_material_snapshot()` → trigger *(public/functions_1.md)*
 - `current_user_id()` → uuid 🔐 *(public/functions_1.md)*
-- `dismiss_home_banner()` → boolean 🔐 *(public/functions_1.md)*
 - `documents_validate_project_org()` → trigger 🔐 *(public/functions_1.md)*
-- `ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)` → uuid 🔐 *(public/functions_1.md)*
 - `external_has_scope(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
-- `fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)` → TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text) 🔐 *(public/functions_2.md)*
-- `fn_storage_overview(p_org_id uuid)` → TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb) 🔐 *(public/functions_2.md)*
-- `generate_next_document_group_name(p_folder_id uuid)` → text 🔐 *(public/functions_2.md)*
-- `generate_po_order_number()` → trigger *(public/functions_2.md)*
+- `fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)` → TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text) 🔐 *(public/functions_1.md)*
+- `fn_storage_overview(p_org_id uuid)` → TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb) 🔐 *(public/functions_1.md)*
+- `generate_next_document_group_name(p_folder_id uuid)` → text 🔐 *(public/functions_1.md)*
+- `generate_po_order_number()` → trigger *(public/functions_1.md)*
 - `get_organization_seat_status(p_organization_id uuid)` → jsonb 🔐 *(public/functions_2.md)*
 - `get_upgrade_proration(p_organization_id uuid, p_target_plan_id uuid)` → jsonb 🔐 *(public/functions_2.md)*
 - `get_user()` → json 🔐 *(public/functions_2.md)*
 - `handle_import_batch_member_id()` → trigger 🔐 *(public/functions_2.md)*
-- `handle_new_external_actor_contact()` → trigger 🔐 *(public/functions_2.md)*
-- `handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(public/functions_2.md)*
-- `handle_new_user()` → trigger 🔐 *(public/functions_2.md)*
-- `handle_registered_invitation()` → trigger 🔐 *(public/functions_2.md)*
 - `handle_updated_by()` → trigger 🔐 *(public/functions_2.md)*
 - `has_permission(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_2.md)*
-- `heartbeat(p_org_id uuid DEFAULT NULL::uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)` → void 🔐 *(public/functions_2.md)*
 - `increment_recipe_usage()` → trigger *(public/functions_2.md)*
 - `is_admin()` → boolean 🔐 *(public/functions_2.md)*
 - `is_demo_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_2.md)*
 - `is_external_actor(p_organization_id uuid)` → boolean 🔐 *(public/functions_2.md)*
 - `is_org_member(p_organization_id uuid)` → boolean 🔐 *(public/functions_2.md)*
-- `is_self(p_user_id uuid)` → boolean 🔐 *(public/functions_3.md)*
-- `is_system_row(p_is_system boolean)` → boolean 🔐 *(public/functions_3.md)*
-- `lock_org_task_on_update()` → trigger 🔐 *(public/functions_3.md)*
-- `merge_contacts(p_source_contact_id uuid, p_target_contact_id uuid, p_organization_id uuid)` → jsonb 🔐 *(public/functions_3.md)*
-- `protect_linked_contact_delete()` → trigger 🔐 *(public/functions_3.md)*
-- `quote_item_set_default_sort_key()` → trigger *(public/functions_3.md)*
-- `recalculate_po_totals()` → trigger 🔐 *(public/functions_3.md)*
-- `recalculate_recipe_rating()` → trigger *(public/functions_3.md)*
-- `refresh_labor_avg_prices()` → void 🔐 *(public/functions_3.md)*
-- `refresh_material_avg_prices()` → void 🔐 *(public/functions_3.md)*
-- `refresh_product_avg_prices()` → void 🔐 *(public/functions_3.md)*
+- `is_self(p_user_id uuid)` → boolean 🔐 *(public/functions_2.md)*
+- `is_system_row(p_is_system boolean)` → boolean 🔐 *(public/functions_2.md)*
+- `lock_org_task_on_update()` → trigger 🔐 *(public/functions_2.md)*
+- `quote_item_set_default_sort_key()` → trigger *(public/functions_2.md)*
+- `recalculate_po_totals()` → trigger 🔐 *(public/functions_2.md)*
+- `recalculate_recipe_rating()` → trigger *(public/functions_2.md)*
+- `refresh_labor_avg_prices()` → void 🔐 *(public/functions_2.md)*
+- `refresh_material_avg_prices()` → void 🔐 *(public/functions_2.md)*
+- `refresh_product_avg_prices()` → void 🔐 *(public/functions_2.md)*
 - `set_budget_task_organization()` → trigger 🔐 *(public/functions_3.md)*
 - `set_task_labor_organization()` → trigger *(public/functions_3.md)*
 - `set_task_material_organization()` → trigger 🔐 *(public/functions_3.md)*
 - `set_timestamp()` → trigger 🔐 *(public/functions_3.md)*
 - `set_updated_at()` → trigger 🔐 *(public/functions_3.md)*
 - `set_updated_at_ia_user_preferences()` → trigger 🔐 *(public/functions_3.md)*
-- `step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(public/functions_3.md)*
-- `step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(public/functions_3.md)*
-- `step_create_organization_roles(p_org_id uuid)` → jsonb 🔐 *(public/functions_3.md)*
-- `step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)` → uuid 🔐 *(public/functions_4.md)*
-- `step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)` → void 🔐 *(public/functions_4.md)*
-- `step_create_user_data(p_user_id uuid)` → void 🔐 *(public/functions_4.md)*
-- `step_create_user_organization_preferences(p_user_id uuid, p_org_id uuid)` → void 🔐 *(public/functions_4.md)*
-- `step_create_user_preferences(p_user_id uuid)` → void 🔐 *(public/functions_4.md)*
-- `step_organization_increment_seats(p_organization_id uuid, p_seats_to_add integer)` → void 🔐 *(public/functions_4.md)*
-- `sync_role_permission_org_id()` → trigger *(public/functions_4.md)*
-- `sync_task_status_progress()` → trigger *(public/functions_4.md)*
-- `tick_home_checklist(p_key text, p_value boolean)` → boolean 🔐 *(public/functions_4.md)*
-- `unaccent(regdictionary, text)` → text *(public/functions_4.md)*
-- `unaccent(text)` → text *(public/functions_4.md)*
-- `unaccent_init(internal)` → internal *(public/functions_4.md)*
-- `unaccent_lexize(internal, internal, internal, internal)` → internal *(public/functions_4.md)*
-- `update_contact_category_links_updated_at()` → trigger *(public/functions_4.md)*
-- `update_forum_thread_activity()` → trigger 🔐 *(public/functions_4.md)*
-- `update_partner_balance_after_capital_change()` → trigger *(public/functions_4.md)*
-- `update_testimonials_updated_at()` → trigger 🔐 *(public/functions_4.md)*
-- `update_timestamp()` → trigger 🔐 *(public/functions_4.md)*
-- `update_updated_at_column()` → trigger *(public/functions_4.md)*
+- `sync_task_status_progress()` → trigger *(public/functions_3.md)*
+- `unaccent(regdictionary, text)` → text *(public/functions_3.md)*
+- `unaccent(text)` → text *(public/functions_3.md)*
+- `unaccent_init(internal)` → internal *(public/functions_3.md)*
+- `unaccent_lexize(internal, internal, internal, internal)` → internal *(public/functions_3.md)*
+- `update_forum_thread_activity()` → trigger 🔐 *(public/functions_3.md)*
+- `update_partner_balance_after_capital_change()` → trigger *(public/functions_3.md)*
+- `update_testimonials_updated_at()` → trigger 🔐 *(public/functions_3.md)*
+- `update_timestamp()` → trigger 🔐 *(public/functions_3.md)*
+- `update_updated_at_column()` → trigger *(public/functions_3.md)*
 
 ### Views (2)
 
@@ -165,11 +142,12 @@
 - **`iam.user_view_history`** (9 cols | FK: user_id → users, organization_id → organizations)
 - **`iam.users`** (11 cols | FK: role_id → roles)
 
-### Functions (51)
+### Functions (57)
 
 - `iam.accept_client_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
 - `iam.accept_external_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
 - `iam.accept_organization_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
+- `iam.analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)` → void 🔐 *(iam/functions_1.md)*
 - `iam.assign_default_permissions_to_org_roles(p_organization_id uuid)` → void 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
@@ -185,12 +163,14 @@
 - `iam.forbid_user_id_change()` → trigger 🔐 *(iam/functions_1.md)*
 - `iam.get_invitation_by_token(p_token text)` → jsonb 🔐 *(iam/functions_1.md)*
 - `iam.get_user()` → json 🔐 *(iam/functions_1.md)*
-- `iam.handle_new_org_member_contact()` → trigger 🔐 *(iam/functions_1.md)*
-- `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_1.md)*
+- `iam.handle_new_external_actor_contact()` → trigger 🔐 *(iam/functions_1.md)*
+- `iam.handle_new_org_member_contact()` → trigger 🔐 *(iam/functions_2.md)*
+- `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
 - `iam.handle_new_user()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.handle_registered_invitation()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.handle_updated_by_organizations()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.has_permission(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_2.md)*
+- `iam.heartbeat(p_org_id uuid DEFAULT NULL::uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.is_admin()` → boolean 🔐 *(iam/functions_2.md)*
 - `iam.is_demo_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_2.md)*
 - `iam.is_external_actor(p_organization_id uuid)` → boolean 🔐 *(iam/functions_2.md)*
@@ -198,15 +178,17 @@
 - `iam.is_organization_client(p_organization_id uuid)` → boolean 🔐 *(iam/functions_2.md)*
 - `iam.is_self(p_user_id uuid)` → boolean 🔐 *(iam/functions_2.md)*
 - `iam.is_system_row(p_is_system boolean)` → boolean 🔐 *(iam/functions_2.md)*
+- `iam.merge_contacts(p_source_contact_id uuid, p_target_contact_id uuid, p_organization_id uuid)` → jsonb 🔐 *(iam/functions_2.md)*
+- `iam.protect_linked_contact_delete()` → trigger 🔐 *(iam/functions_2.md)*
 - `iam.step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_create_default_kanban_board(p_org_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
 - `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization_data(p_org_id uuid)` → void 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization_roles(p_org_id uuid)` → jsonb 🔐 *(iam/functions_2.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization_data(p_org_id uuid)` → void 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization_roles(p_org_id uuid)` → jsonb 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_wallets(p_org_id uuid, p_wallet_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)` → uuid 🔐 *(iam/functions_3.md)*
 - `iam.step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)` → void 🔐 *(iam/functions_3.md)*
@@ -217,6 +199,7 @@
 - `iam.sync_contact_on_user_update()` → trigger 🔐 *(iam/functions_3.md)*
 - `iam.sync_role_permission_org_id()` → trigger *(iam/functions_3.md)*
 - `iam.tick_home_checklist(p_key text, p_value boolean)` → boolean 🔐 *(iam/functions_3.md)*
+- `iam.update_contact_category_links_updated_at()` → trigger *(iam/functions_3.md)*
 - `iam.users_normalize_email()` → trigger 🔐 *(iam/functions_3.md)*
 
 ### Views (6)

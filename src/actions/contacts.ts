@@ -249,7 +249,7 @@ export async function deleteContact(contactId: string, replacementId?: string) {
     // 1. If replacement requested, use merge_contacts RPC
     // This atomically moves ALL FK references (12 tables) and soft-deletes the source
     if (replacementId) {
-        const { data: result, error } = await supabase.rpc('merge_contacts', {
+        const { data: result, error } = await supabase.schema('iam').rpc('merge_contacts', {
             p_source_contact_id: contactId,
             p_target_contact_id: replacementId,
             p_organization_id: contact.organization_id,

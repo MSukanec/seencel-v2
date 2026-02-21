@@ -236,7 +236,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
 
         const sendHeartbeat = async () => {
             try {
-                await supabase.rpc('heartbeat', {
+                await supabase.schema('iam').rpc('heartbeat', {
                     p_org_id: activeOrgId || null,
                     p_session_id: sessionIdRef.current,
                     p_status: 'online',
@@ -276,7 +276,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
 
         const trackNavigation = async () => {
             try {
-                await supabase.rpc('analytics_track_navigation', {
+                await supabase.schema('iam').rpc('analytics_track_navigation', {
                     p_org_id: activeOrgId || null,
                     p_session_id: sessionIdRef.current,
                     p_view_name: viewName,
@@ -303,7 +303,7 @@ export function PresenceProvider({ children, userId }: PresenceProviderProps) {
             const status = document.hidden ? 'away' : 'online';
 
             try {
-                await supabase.rpc('heartbeat', {
+                await supabase.schema('iam').rpc('heartbeat', {
                     p_org_id: activeOrgId || null,
                     p_session_id: sessionIdRef.current,
                     p_status: status,

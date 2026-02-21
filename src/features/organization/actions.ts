@@ -114,7 +114,7 @@ export async function createOrganization(
     // 3. Call handle_new_organization RPC
     // The function creates the org, roles, member, currencies, wallets, preferences
     // and sets it as the active organization in user_preferences
-    const { data: newOrgId, error: rpcError } = await supabase.rpc('handle_new_organization', {
+    const { data: newOrgId, error: rpcError } = await supabase.schema('iam').rpc('handle_new_organization', {
         p_user_id: publicUser.id,
         p_organization_name: organizationName.trim(),
         p_business_mode: businessMode,

@@ -1,226 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T03:04:42.923Z
+> Generated: 2026-02-21T12:04:42.647Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 2: fn_financial_kpi_summary — is_org_member)
-
-### `fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)` 🔐
-
-- **Returns**: TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text)
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.fn_financial_kpi_summary(p_org_id uuid, p_project_id uuid DEFAULT NULL::uuid)
- RETURNS TABLE(income numeric, expenses numeric, balance numeric, currency_symbol text, currency_code text)
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_func_currency_id UUID;
-    v_symbol TEXT := '$';
-    v_code TEXT := 'ARS';
-BEGIN
-    -- 1. Get functional currency
-    SELECT op.functional_currency_id 
-    INTO v_func_currency_id
-    FROM organization_preferences op
-    WHERE op.organization_id = p_org_id;
-    
-    IF v_func_currency_id IS NOT NULL THEN
-        SELECT c.symbol, c.code 
-        INTO v_symbol, v_code
-        FROM currencies c
-        WHERE c.id = v_func_currency_id;
-    END IF;
-
-    -- 2. Calculate income/expenses in one pass
-    RETURN QUERY
-    SELECT
-        COALESCE(SUM(CASE WHEN m.amount_sign = 1 THEN m.functional_amount ELSE 0 END), 0) AS income,
-        COALESCE(SUM(CASE WHEN m.amount_sign = -1 THEN m.functional_amount ELSE 0 END), 0) AS expenses,
-        COALESCE(SUM(CASE WHEN m.amount_sign = 1 THEN m.functional_amount ELSE 0 END), 0)
-        + COALESCE(SUM(CASE WHEN m.amount_sign = -1 THEN m.functional_amount ELSE 0 END), 0) AS balance,
-        v_symbol AS currency_symbol,
-        v_code AS currency_code
-    FROM unified_financial_movements_view m
-    WHERE m.organization_id = p_org_id
-      AND m.amount_sign != 0
-      AND (p_project_id IS NULL OR m.project_id = p_project_id);
-END;
-$function$
-```
-</details>
-
-### `fn_storage_overview(p_org_id uuid)` 🔐
-
-- **Returns**: TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb)
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.fn_storage_overview(p_org_id uuid)
- RETURNS TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb)
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_plan_id UUID;
-    v_max_storage INT := 500;
-BEGIN
-    -- 1. Get plan storage limit
-    SELECT o.plan_id INTO v_plan_id
-    FROM organizations o
-    WHERE o.id = p_org_id;
-    
-    IF v_plan_id IS NOT NULL THEN
-        SELECT pf.max_storage_mb INTO v_max_storage
-        FROM plan_features pf
-        WHERE pf.plan_id = v_plan_id;
-    END IF;
-
-    -- 2. Single aggregation query
-    RETURN QUERY
-    WITH file_stats AS (
-        SELECT 
-            COALESCE(SUM(mf.file_size), 0)::BIGINT AS total_bytes,
-            COUNT(*)::BIGINT AS file_count,
-            COALESCE(
-                jsonb_agg(
-                    jsonb_build_object(
-                        'type', COALESCE(mf.file_type, 'other'),
-                        'count', type_count,
-                        'bytes', type_bytes
-                    )
-                ) FILTER (WHERE type_count IS NOT NULL),
-                '[]'::JSONB
-            ) AS by_type
-        FROM (
-            SELECT 
-                COALESCE(file_type, 'other') AS file_type,
-                file_size,
-                COUNT(*) OVER (PARTITION BY COALESCE(file_type, 'other')) AS type_count,
-                SUM(file_size) OVER (PARTITION BY COALESCE(file_type, 'other')) AS type_bytes
-            FROM media_files
-            WHERE organization_id = p_org_id
-              AND is_deleted = false
-        ) mf
-    ),
-    folder_stats AS (
-        SELECT COUNT(*)::BIGINT AS folder_count
-        FROM media_file_folders
-        WHERE organization_id = p_org_id
-    ),
-    type_breakdown AS (
-        SELECT 
-            jsonb_agg(
-                jsonb_build_object(
-                    'type', ft.file_type,
-                    'count', ft.cnt,
-                    'bytes', ft.total
-                )
-                ORDER BY ft.total DESC
-            ) AS by_type
-        FROM (
-            SELECT 
-                COALESCE(file_type, 'other') AS file_type,
-                COUNT(*) AS cnt,
-                COALESCE(SUM(file_size), 0) AS total
-            FROM media_files
-            WHERE organization_id = p_org_id
-              AND is_deleted = false
-            GROUP BY COALESCE(file_type, 'other')
-        ) ft
-    )
-    SELECT 
-        COALESCE((SELECT SUM(mf.file_size) FROM media_files mf WHERE mf.organization_id = p_org_id AND mf.is_deleted = false), 0)::BIGINT,
-        (SELECT COUNT(*) FROM media_files mf WHERE mf.organization_id = p_org_id AND mf.is_deleted = false)::BIGINT,
-        fs.folder_count,
-        v_max_storage,
-        COALESCE(tb.by_type, '[]'::JSONB)
-    FROM folder_stats fs
-    CROSS JOIN type_breakdown tb;
-END;
-$function$
-```
-</details>
-
-### `generate_next_document_group_name(p_folder_id uuid)` 🔐
-
-- **Returns**: text
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.generate_next_document_group_name(p_folder_id uuid)
- RETURNS text
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-declare
-  latest_name text;
-  latest_version int := 0;
-  next_name text;
-begin
-  -- Buscar la última versión existente (vN)
-  select d.name
-  into latest_name
-  from public.design_document_groups d
-  where d.folder_id = p_folder_id
-    and d.name ~ '^v[0-9]+$'
-  order by cast(substring(d.name from 2) as int) desc
-  limit 1;
-
-  -- Extraer número de versión
-  if latest_name is not null then
-    latest_version := cast(substring(latest_name from 2) as int);
-  end if;
-
-  -- Generar siguiente nombre
-  next_name := 'v' || (latest_version + 1);
-  return next_name;
-end;
-$function$
-```
-</details>
-
-### `generate_po_order_number()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.generate_po_order_number()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-    v_count INTEGER;
-    v_year TEXT;
-BEGIN
-    IF NEW.order_number IS NULL THEN
-        v_year := TO_CHAR(CURRENT_DATE, 'YYYY');
-        
-        SELECT COUNT(*) + 1 INTO v_count
-        FROM material_purchase_orders
-        WHERE organization_id = NEW.organization_id
-          AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE);
-        
-        NEW.order_number := 'PO-' || v_year || '-' || LPAD(v_count::TEXT, 4, '0');
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 2: get_organization_seat_status — refresh_product_avg_prices)
 
 ### `get_organization_seat_status(p_organization_id uuid)` 🔐
 
@@ -551,6 +334,7 @@ CREATE OR REPLACE FUNCTION public.handle_import_batch_member_id()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
 AS $function$
 DECLARE
     current_uid uuid;
@@ -562,7 +346,7 @@ BEGIN
     -- Resolver member_id: auth.uid() -> users.auth_id -> users.id -> organization_members.user_id
     SELECT om.id INTO resolved_member_id
     FROM iam.organization_members om
-    JOIN public.users u ON u.id = om.user_id
+    JOIN iam.users u ON u.id = om.user_id
     WHERE u.auth_id = current_uid 
       AND om.organization_id = NEW.organization_id
     LIMIT 1;
@@ -573,88 +357,6 @@ BEGIN
     
     RETURN NEW;
 END;
-$function$
-```
-</details>
-
-### `handle_new_external_actor_contact()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_external_actor_contact()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  perform public.ensure_contact_for_user(new.organization_id, new.user_id);
-  return new;
-end;
-$function$
-```
-</details>
-
-### `handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
- RETURNS uuid
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.handle_new_organization(p_user_id, p_organization_name, p_business_mode);
-$function$
-```
-</details>
-
-### `handle_new_user()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$ BEGIN RETURN iam.handle_new_user(); END; $function$
-```
-</details>
-
-### `handle_registered_invitation()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_registered_invitation()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-begin
-  if new.user_id is not null then
-    perform iam.ensure_contact_for_user(new.organization_id, new.user_id);
-  end if;
-  return new;
-end;
 $function$
 ```
 </details>
@@ -671,6 +373,7 @@ CREATE OR REPLACE FUNCTION public.handle_updated_by()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
 AS $function$
 DECLARE
     current_uid uuid;
@@ -685,7 +388,7 @@ BEGIN
     -- Buscamos el ID del miembro dentro de la organización
     SELECT om.id INTO resolved_member_id
     FROM iam.organization_members om
-    JOIN public.users u ON u.id = om.user_id
+    JOIN iam.users u ON u.id = om.user_id
     WHERE u.auth_id = current_uid
       AND om.organization_id = NEW.organization_id
     LIMIT 1;
@@ -719,58 +422,6 @@ CREATE OR REPLACE FUNCTION public.has_permission(p_organization_id uuid, p_permi
  SET search_path TO 'public', 'iam'
 AS $function$
   SELECT iam.has_permission(p_organization_id, p_permission_key);
-$function$
-```
-</details>
-
-### `heartbeat(p_org_id uuid DEFAULT NULL::uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.heartbeat(p_org_id uuid DEFAULT NULL::uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_auth_id uuid;
-    v_user_id uuid;
-BEGIN
-    -- Auth check
-    v_auth_id := auth.uid();
-    IF v_auth_id IS NULL THEN RAISE EXCEPTION 'Unauthenticated'; END IF;
-
-    SELECT u.id INTO v_user_id FROM public.users u WHERE u.auth_id = v_auth_id LIMIT 1;
-    IF v_user_id IS NULL THEN RAISE EXCEPTION 'User not provisioned'; END IF;
-
-    -- Upsert presencia
-    INSERT INTO public.user_presence (
-        user_id, organization_id, session_id, last_seen_at, status, updated_from, updated_at
-    ) VALUES (
-        v_user_id, p_org_id, p_session_id, now(), COALESCE(p_status, 'online'), 'heartbeat', now()
-    )
-    ON CONFLICT (user_id) DO UPDATE SET
-        organization_id = COALESCE(EXCLUDED.organization_id, user_presence.organization_id),
-        session_id = EXCLUDED.session_id,
-        last_seen_at = EXCLUDED.last_seen_at,
-        status = EXCLUDED.status,
-        updated_at = now();
-
-    -- Actualizar duración de la sesión actual (si existe)
-    IF p_session_id IS NOT NULL THEN
-        UPDATE public.user_view_history
-        SET
-            exited_at = now(),
-            duration_seconds = EXTRACT(EPOCH FROM (now() - entered_at))::integer
-        WHERE user_id = v_user_id
-          AND session_id = p_session_id
-          AND exited_at IS NULL;
-    END IF;
-END;
 $function$
 ```
 </details>
@@ -873,5 +524,219 @@ CREATE OR REPLACE FUNCTION public.is_org_member(p_organization_id uuid)
 AS $function$
   SELECT iam.is_org_member(p_organization_id);
 $function$
+```
+</details>
+
+### `is_self(p_user_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_self(p_user_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.is_self(p_user_id);
+$function$
+```
+</details>
+
+### `is_system_row(p_is_system boolean)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_system_row(p_is_system boolean)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.is_system_row(p_is_system);
+$function$
+```
+</details>
+
+### `lock_org_task_on_update()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.lock_org_task_on_update()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  -- organization_id es inmutable
+  if new.organization_id is distinct from old.organization_id then
+    raise exception 'organization_id is immutable';
+  end if;
+
+  -- task_id es inmutable
+  if new.task_id is distinct from old.task_id then
+    raise exception 'task_id is immutable';
+  end if;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `quote_item_set_default_sort_key()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.quote_item_set_default_sort_key()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    IF NEW.sort_key IS NULL OR NEW.sort_key = 0 THEN
+        SELECT COALESCE(MAX(sort_key), 0) + 1 INTO NEW.sort_key
+        FROM public.quote_items
+        WHERE quote_id = NEW.quote_id;
+    END IF;
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
+### `recalculate_po_totals()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.recalculate_po_totals()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    UPDATE material_purchase_orders
+    SET subtotal = COALESCE((
+        SELECT SUM(quantity * COALESCE(unit_price, 0))
+        FROM material_purchase_order_items
+        WHERE purchase_order_id = COALESCE(NEW.purchase_order_id, OLD.purchase_order_id)
+    ), 0),
+    updated_at = NOW()
+    WHERE id = COALESCE(NEW.purchase_order_id, OLD.purchase_order_id);
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$
+```
+</details>
+
+### `recalculate_recipe_rating()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.recalculate_recipe_rating()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+    update task_recipes
+    set 
+        rating_avg = (
+            select round(avg(rating)::numeric, 2)
+            from task_recipe_ratings
+            where recipe_id = coalesce(new.recipe_id, old.recipe_id)
+        ),
+        rating_count = (
+            select count(*)
+            from task_recipe_ratings
+            where recipe_id = coalesce(new.recipe_id, old.recipe_id)
+        ),
+        updated_at = now()
+    where id = coalesce(new.recipe_id, old.recipe_id);
+    
+    return coalesce(new, old);
+end;
+$function$
+```
+</details>
+
+### `refresh_labor_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_labor_avg_prices()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  refresh materialized view public.labor_avg_prices;
+end;
+$function$
+```
+</details>
+
+### `refresh_material_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_material_avg_prices()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  refresh materialized view public.material_avg_prices;
+end;
+$function$
+```
+</details>
+
+### `refresh_product_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_product_avg_prices()
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+AS $function$refresh materialized view concurrently public.product_avg_prices;$function$
 ```
 </details>

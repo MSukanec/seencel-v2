@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T03:04:42.923Z
+> Generated: 2026-02-21T12:04:42.647Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [IAM] Functions (chunk 1: accept_client_invitation — handle_new_organization)
+## [IAM] Functions (chunk 1: accept_client_invitation — handle_new_external_actor_contact)
 
 ### `iam.accept_client_invitation(p_token text, p_user_id uuid)` 🔐
 
@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION iam.accept_client_invitation(p_token text, p_user_id 
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'public'
 AS $function$
 DECLARE
     v_invitation RECORD;
@@ -95,7 +95,7 @@ BEGIN
 
         v_client_record_id := v_existing_client.id;
 
-        PERFORM public.ensure_contact_for_user(
+        PERFORM iam.ensure_contact_for_user(
             v_invitation.organization_id,
             p_user_id
         );
@@ -116,7 +116,7 @@ BEGIN
         )
         RETURNING id INTO v_client_record_id;
 
-        PERFORM public.ensure_contact_for_user(
+        PERFORM iam.ensure_contact_for_user(
             v_invitation.organization_id,
             p_user_id
         );
@@ -188,7 +188,7 @@ CREATE OR REPLACE FUNCTION iam.accept_external_invitation(p_token text, p_user_i
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'public'
 AS $function$
 DECLARE
     v_invitation RECORD;
@@ -243,7 +243,7 @@ BEGIN
     -- 4. Verificar si ya es actor externo (activo o inactivo)
     SELECT id, is_active
     INTO v_existing_actor
-    FROM public.organization_external_actors
+    FROM iam.organization_external_actors
     WHERE organization_id = v_invitation.organization_id
       AND user_id = p_user_id;
 
@@ -256,7 +256,7 @@ BEGIN
 
     ELSIF v_existing_actor IS NOT NULL AND NOT v_existing_actor.is_active THEN
         -- 5a. Reactivar actor soft-deleted
-        UPDATE public.organization_external_actors
+        UPDATE iam.organization_external_actors
         SET
             is_active = true,
             actor_type = v_invitation.actor_type,
@@ -267,7 +267,7 @@ BEGIN
 
         v_actor_id := v_existing_actor.id;
 
-        PERFORM public.ensure_contact_for_user(
+        PERFORM iam.ensure_contact_for_user(
             v_invitation.organization_id,
             p_user_id
         );
@@ -277,7 +277,7 @@ BEGIN
         WHERE id = v_invitation.id;
     ELSE
         -- 5b. Insertar nuevo actor externo
-        INSERT INTO public.organization_external_actors (
+        INSERT INTO iam.organization_external_actors (
             organization_id,
             user_id,
             actor_type,
@@ -538,6 +538,60 @@ BEGIN
         'member_id', v_new_member_id,
         'message', 'Invitación aceptada correctamente'
     );
+END;
+$function$
+```
+</details>
+
+### `iam.analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'iam'
+AS $function$
+DECLARE
+    v_user_id uuid;
+BEGIN
+    SELECT u.id INTO v_user_id FROM iam.users u WHERE u.auth_id = auth.uid() LIMIT 1;
+    IF v_user_id IS NULL THEN RETURN; END IF;
+
+    -- A. Cerrar vista anterior de ESTA sesión
+    UPDATE iam.user_view_history
+    SET
+        exited_at = now(),
+        duration_seconds = EXTRACT(EPOCH FROM (now() - entered_at))::integer
+    WHERE user_id = v_user_id
+      AND session_id = p_session_id
+      AND exited_at IS NULL;
+
+    -- B. Abrir nueva vista
+    INSERT INTO iam.user_view_history (
+        user_id, organization_id, session_id, view_name, entered_at
+    ) VALUES (
+        v_user_id, p_org_id, p_session_id, p_view_name, now()
+    );
+
+    -- C. Actualizar Presencia en tiempo real
+    INSERT INTO iam.user_presence (
+        user_id, organization_id, session_id, last_seen_at, current_view, status, updated_from, updated_at
+    ) VALUES (
+        v_user_id, p_org_id, p_session_id, now(), p_view_name, 'online', 'navigation', now()
+    )
+    ON CONFLICT (user_id) DO UPDATE SET
+        organization_id = COALESCE(EXCLUDED.organization_id, iam.user_presence.organization_id),
+        session_id = EXCLUDED.session_id,
+        last_seen_at = EXCLUDED.last_seen_at,
+        current_view = EXCLUDED.current_view,
+        status = 'online',
+        updated_at = now();
 END;
 $function$
 ```
@@ -807,10 +861,10 @@ CREATE OR REPLACE FUNCTION iam.current_user_id()
  RETURNS uuid
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam'
 AS $function$
   select u.id
-  from public.users u
+  from iam.users u
   where u.auth_id = auth.uid()
   limit 1;
 $function$
@@ -870,7 +924,7 @@ declare
 begin
   select u.id, u.full_name, u.email, u.avatar_url
   into v_user
-  from public.users u
+  from iam.users u
   where u.id = p_user_id
   limit 1;
 
@@ -884,7 +938,7 @@ begin
 
   select ud.first_name, ud.last_name
   into v_user_data
-  from public.user_data ud
+  from iam.user_data ud
   where ud.user_id = p_user_id
   limit 1;
 
@@ -998,7 +1052,7 @@ CREATE OR REPLACE FUNCTION iam.fill_user_data_user_id_from_auth()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam'
 AS $function$
 declare
   v_user_id uuid;
@@ -1011,7 +1065,7 @@ begin
   -- Resolver user_id desde auth.uid()
   select u.id
   into v_user_id
-  from public.users u
+  from iam.users u
   where u.auth_id = auth.uid()
   limit 1;
 
@@ -1085,10 +1139,10 @@ BEGIN
         u.full_name AS inviter_name
     INTO v_invitation
     FROM iam.organization_invitations i
-    JOIN public.organizations o ON o.id = i.organization_id
-    LEFT JOIN public.roles r ON r.id = i.role_id
+    JOIN iam.organizations o ON o.id = i.organization_id
+    LEFT JOIN iam.roles r ON r.id = i.role_id
     LEFT JOIN iam.organization_members m ON m.id = i.invited_by
-    LEFT JOIN public.users u ON u.id = m.user_id
+    LEFT JOIN iam.users u ON u.id = m.user_id
     WHERE i.token = p_token
     LIMIT 1;
 
@@ -1152,7 +1206,7 @@ begin
   if current_user_auth_id is null then return null; end if;
 
   select u.id into current_user_internal_id
-  from public.users u where u.auth_id = current_user_auth_id limit 1;
+  from iam.users u where u.auth_id = current_user_auth_id limit 1;
 
   if current_user_internal_id is null then return null; end if;
 
@@ -1174,9 +1228,9 @@ begin
       uop.last_project_id,
       om.role_id
     from iam.user_preferences up
-    join public.organizations o on o.id = up.last_organization_id
+    join iam.organizations o on o.id = up.last_organization_id
     left join billing.plans p on p.id = o.plan_id
-    left join public.organization_preferences op on op.organization_id = o.id
+    left join iam.organization_preferences op on op.organization_id = o.id
     left join iam.user_organization_preferences uop
       on uop.user_id = up.user_id and uop.organization_id = o.id
     join iam.organization_members om
@@ -1209,7 +1263,7 @@ begin
       )
     ) as memberships
     from iam.organization_members om
-    join public.organizations org on org.id = om.organization_id
+    join iam.organizations org on org.id = om.organization_id
     join iam.roles r on r.id = om.role_id
     where om.user_id = current_user_internal_id and om.is_active = true
   ),
@@ -1266,7 +1320,7 @@ begin
       ) from user_pref up limit 1
     )
   ) into result
-  from public.users u
+  from iam.users u
   where u.id = current_user_internal_id;
 
   return result;
@@ -1275,7 +1329,7 @@ $function$
 ```
 </details>
 
-### `iam.handle_new_org_member_contact()` 🔐
+### `iam.handle_new_external_actor_contact()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -1283,93 +1337,16 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION iam.handle_new_org_member_contact()
+CREATE OR REPLACE FUNCTION iam.handle_new_external_actor_contact()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'public'
 AS $function$
 begin
-  perform public.ensure_contact_for_user(new.organization_id, new.user_id);
+  perform iam.ensure_contact_for_user(new.organization_id, new.user_id);
   return new;
 end;
-$function$
-```
-</details>
-
-### `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-DECLARE
-  v_org_id uuid;
-  v_admin_role_id uuid;
-  v_recent_count integer;
-  v_plan_free_id uuid := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
-  v_default_currency_id uuid := '58c50aa7-b8b1-4035-b509-58028dd0e33f';
-  v_default_wallet_id uuid := '2658c575-0fa8-4cf6-85d7-6430ded7e188';
-  v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
-BEGIN
-  SELECT count(*) INTO v_recent_count
-  FROM public.organizations
-  WHERE created_by = p_user_id AND created_at > now() - interval '1 hour';
-
-  IF v_recent_count >= 3 THEN
-    RAISE EXCEPTION 'Has alcanzado el límite de creación de organizaciones. Intentá de nuevo más tarde.'
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  v_org_id := public.step_create_organization(p_user_id, p_organization_name, v_plan_free_id, p_business_mode);
-
-  PERFORM public.step_create_organization_data(v_org_id);
-  PERFORM public.step_create_organization_roles(v_org_id);
-
-  SELECT id INTO v_admin_role_id
-  FROM iam.roles
-  WHERE organization_id = v_org_id AND name = 'Administrador' AND is_system = false
-  LIMIT 1;
-
-  IF v_admin_role_id IS NULL THEN
-    RAISE EXCEPTION 'Admin role not found for organization %', v_org_id;
-  END IF;
-
-  PERFORM public.step_add_org_member(p_user_id, v_org_id, v_admin_role_id);
-  PERFORM public.step_assign_org_role_permissions(v_org_id);
-  PERFORM public.step_create_organization_currencies(v_org_id, v_default_currency_id);
-  PERFORM public.step_create_organization_wallets(v_org_id, v_default_wallet_id);
-  PERFORM public.step_create_organization_preferences(
-    v_org_id, v_default_currency_id, v_default_wallet_id, v_default_pdf_template_id
-  );
-
-  UPDATE iam.user_preferences
-  SET last_organization_id = v_org_id, updated_at = now()
-  WHERE user_id = p_user_id;
-
-  RETURN v_org_id;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-      'function', 'handle_new_organization', 'organization',
-      SQLERRM, jsonb_build_object(
-        'user_id', p_user_id,
-        'organization_name', p_organization_name,
-        'business_mode', p_business_mode
-      ),
-      'critical'
-    );
-    RAISE;
-END;
 $function$
 ```
 </details>
