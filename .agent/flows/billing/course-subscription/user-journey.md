@@ -90,7 +90,7 @@ María es arquitecta. Quiere comprar el curso "Gestión de Obra" (precio: USD 49
 **Datos de la preferencia** (columnas de `mp_preferences`):
 - `user_id`, `course_id`, `product_type: 'course'`
 - `amount`, `currency`, `exchange_rate`
-- `coupon_id`, `discount_amount` (si aplica)
+- `coupon_id`, `discount_amount`, `coupon_code` (si aplica)
 - `init_point` (URL de redirección a MP)
 - `status: 'pending'`
 
@@ -132,7 +132,7 @@ course|{userId}|x|{courseId}|x|{couponCode}|{isTest}|x|x
 **Archivos**:
 - Action: `src/features/billing/actions.ts` → `activateFreeSubscription()`
 
-**Flujo**: (solo aplica a subscriptions hoy, NO a cursos. Ver roadmap.)
+**Flujo**: Solo aplica a subscriptions hoy, NO a cursos. Ver roadmap.
 
 **Estado**: ⚠️ Solo funciona para suscripciones, no para cursos con cupón 100%
 
@@ -151,30 +151,38 @@ course|{userId}|x|{courseId}|x|{couponCode}|{isTest}|x|x
 **Flujo del webhook handler** (`handlePaymentEvent`):
 1. Fetch datos del pago desde API de MP
 2. Solo procesa pagos `status === 'approved'`
-3. Parsea `external_reference` → identifica `productType: 'course'`
-4. Llama a `handle_payment_course_success` (RPC)
-5. Si hay cupón, llama a `redeem_coupon` ⚠️ **BUG: debería llamar a `redeem_coupon_universal`**
+3. Parsea `external_reference` → identifica `productType`
+4. Según `productType`:
+   - `course` → `handle_payment_course_success` (RPC)
+   - `subscription` → `handle_payment_subscription_success` (RPC)
+   - `upgrade` → `handle_payment_upgrade_success` (RPC)
+   - `seats` → `handle_payment_seat_success` (RPC)
+5. Si hay `couponCode` → `redeem_coupon_universal` (universal para cursos + subs + upgrades)
 
-**Estado**: ⚠️ Funciona con bug en cupones (ver design-decisions.md)
+**Estado**: ✅ Funciona (coupon redemption corregida — antes solo se redimía para cursos)
 
 ---
 
 ## Paso 6: SQL orquesta el fulfillment
 
-**Qué hace**: La función `handle_payment_course_success` ejecuta toda la lógica de negocio dentro de una transacción.
+**Qué hace**: La función handler ejecuta toda la lógica de negocio dentro de una transacción.
 
 **Función**: `billing.handle_payment_course_success()` (SECURITY DEFINER)
 
 **Pasos internos**:
 1. **Idempotency lock**: `pg_advisory_xact_lock` evita procesamiento duplicado
-2. **Insert payment**: `step_payment_insert_idempotent()` → ON CONFLICT DO NOTHING
-3. **Enrollment**: `step_course_enrollment_annual()` → INSERT con ON CONFLICT UPSERT, 1 año de acceso
-4. **Send email**: `step_send_purchase_email()` → encola email de confirmación + notifica admins
+2. **Enriquecer metadata**: Pre-fetch nombre del curso → agrega `product_name` a metadata
+3. **Insert payment**: `step_payment_insert_idempotent()` → ON CONFLICT DO NOTHING
+4. **Enrollment**: `step_course_enrollment_annual()` → INSERT con ON CONFLICT UPSERT, 1 año de acceso
+5. **Email + Activity Log**: ~~`step_send_purchase_email()`~~ → **Ahora son TRIGGERS automáticos** en `billing.payments` (disparan al INSERT)
 
 **Tablas tocadas**:
-- `billing.payments` (INSERT)
+- `billing.payments` (INSERT) → dispara triggers:
+  - `notifications.queue_purchase_email()` → INSERT `email_queue` (x2: comprador + admin)
+  - `audit.log_payment_activity()` → INSERT `organization_activity_logs`
+  - `notifications.notify_admin_on_payment()` → INSERT notification (campanita admin)
+  - `notifications.notify_user_payment_completed()` → INSERT notification (campanita user)
 - `academy.course_enrollments` (INSERT/UPSERT)
-- `email_queue` (INSERT x2)
 
 **Error handling**: EXCEPTION captura errores, los loguea en `ops.log_system_error()`, y retorna `ok_with_warning` en vez de fallar (para que el webhook devuelva 200).
 
@@ -221,12 +229,19 @@ course|{userId}|x|{courseId}|x|{couponCode}|{isTest}|x|x
     billing.handle_payment_course_success (SQL)
                    │
          ┌─────────┼─────────┐
-         │         │         │
-    step_payment  step_     step_send_
-    _insert_      course_   purchase_
-    idempotent    enroll    email
-         │         │         │
-    billing.   academy.   email_queue
-    payments   course_    (comprador
-               enrollments + admin)
+         │                   │
+    step_payment_       step_course_
+    insert_             enrollment_
+    idempotent          annual
+         │                   │
+    billing.           academy.
+    payments           course_enrollments
+         │
+    ┌────┴────────────────────┐
+    │   TRIGGERS AUTOMÁTICOS  │
+    ├── queue_purchase_email   │ → email_queue (x2)
+    ├── log_payment_activity   │ → activity_logs
+    ├── notify_admin           │ → campanita
+    └── notify_user            │ → campanita
+    └─────────────────────────┘
 ```

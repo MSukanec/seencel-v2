@@ -1,4 +1,4 @@
-# Design Decisions: Suscripción a Cursos
+# Design Decisions: Billing (Course + Subscription + Seats)
 
 > Por qué se hizo así, alternativas descartadas, edge cases y gotchas.
 
@@ -8,11 +8,13 @@
 
 ### D1: Orquestación SQL con steps modulares
 
-**Elegimos**: Función orquestadora (`handle_payment_course_success`) que llama a `step_*` functions internas.
+**Elegimos**: Función handler (`handle_payment_{product}_success`) que llama a `step_*` functions internas.
 
 **Alternativa descartada**: Lógica de fulfillment en el backend Node.js (API route).
 
 **Razón**: Al estar TODO en SQL dentro de una transacción, garantizamos atomicidad. Si falla el enrollment, se revierte el payment. Si se hiciera en Node, habría riesgo de estados parciales (pago registrado pero no enrollado).
+
+**Justificación de mantener steps separados**: Los `step_*` son reutilizados por múltiples consumidores: los handlers SQL Y `bank-transfer-actions.ts` los llama directamente via RPC. Inlinearlos generaría duplicación.
 
 ---
 
@@ -36,13 +38,25 @@
 
 ---
 
-### D4: Email via cola (email_queue) en vez de envío síncrono
+### D4: Email y Activity Log via triggers automáticos
 
-**Elegimos**: INSERT en `email_queue` dentro de la transacción SQL.
+**Elegimos**: Triggers en `billing.payments` que disparan automáticamente al INSERT con status='completed'.
 
-**Alternativa descartada**: Llamar a un servicio de email desde el API route.
+**Alternativa anterior (descartada)**: Funciones `step_send_purchase_email()` y `step_log_seat_purchase_event()` llamadas manualmente en cada handler.
 
-**Razón**: El email no debe bloquear ni fallar el fulfillment. Al encolar, se procesa de forma asíncrona. Si el email falla, el enrollment sigue vigente.
+**Razón del cambio**: 
+1. **Consistencia**: Antes se podía olvidar llamar al step en un handler nuevo. Con triggers, SIEMPRE se dispara.
+2. **DRY**: La lógica de email/logging estaba duplicada en cada handler.
+3. **Alineación con pattern**: Las notificaciones push ya usaban el patrón de triggers (`notify_admin_on_payment`, `notify_user_payment_completed`).
+4. **Desacoplamiento**: El handler solo se ocupa del fulfillment de negocio, no de cross-cutting concerns.
+
+**Triggers actuales en `billing.payments`**:
+| Trigger | Función | Qué hace |
+|---------|---------|----------|
+| `trg_queue_purchase_email` | `notifications.queue_purchase_email()` | Encola email comprador + admin |
+| `trg_log_payment_activity` | `audit.log_payment_activity()` | Registra en activity_logs |
+| `trg_notify_admin_payment` | `notifications.notify_admin_on_payment()` | Campanita admin |
+| `trg_notify_user_payment` | `notifications.notify_user_payment_completed()` | Campanita usuario |
 
 ---
 
@@ -58,11 +72,46 @@
 
 ### D6: Doble gateway (MP + PayPal) con lógica unificada
 
-**Elegimos**: Ambos gateways convergen en la misma RPC (`handle_payment_course_success`).
+**Elegimos**: Ambos gateways convergen en la misma RPC (`handle_payment_{product}_success`).
 
 **Alternativa descartada**: Handlers separados para cada gateway.
 
-**Razón**: La lógica de negocio (payment + enrollment + email) es idéntica independientemente del gateway. Solo cambia cómo se recibe la confirmación (webhook vs. capture API).
+**Razón**: La lógica de negocio es idéntica independientemente del gateway. Solo cambia cómo se recibe la confirmación (webhook vs. capture API).
+
+---
+
+### D7: Naming uniforme de handlers
+
+**Elegimos**: Patrón `handle_payment_{product_type}_success` para todos los handlers.
+
+**Nombres anteriores (eliminados)**:
+- `handle_member_seat_purchase` → `handle_payment_seat_success`
+- `handle_upgrade_subscription_success` → `handle_payment_upgrade_success`
+
+**Razón**: Consistencia. Todas las funciones siguen el mismo patrón, facilitando descubrimiento y mantenimiento.
+
+---
+
+### D8: Unificación de subscription + upgrade en una sola función
+
+**Elegimos**: `handle_payment_subscription_success` con parámetro `p_is_upgrade` (default false).
+
+**Alternativa anterior**: Dos funciones separadas (`handle_payment_subscription_success` + `handle_upgrade_subscription_success`) con lógica casi idéntica.
+
+**Razón**: El 95% de la lógica es idéntica. La única diferencia es:
+- `product_type`: 'subscription' vs 'upgrade'
+- Metadata adicional: `previous_plan_id`, `previous_plan_name`
+- `handle_payment_upgrade_success` ahora es un wrapper de una línea.
+
+---
+
+### D9: Coupon redemption universal en webhooks
+
+**Elegimos**: La redención de cupones se ejecuta para TODOS los product types (course, subscription, upgrade) en los webhooks de MP y PayPal.
+
+**Decisión anterior (bug corregido)**: Solo se redimía para cursos. Suscripciones y upgrades con cupón no registraban la redención.
+
+**Impacto del fix**: Ahora `redeem_coupon_universal` se llama universalmente con el `productType` correcto mapeado (`upgrade` → `subscription` para coupon purposes).
 
 ---
 
@@ -86,56 +135,19 @@
 
 ---
 
-### E3: Cupón redimido con función legacy `redeem_coupon`
+### ~~E3: Cupón redimido con función legacy `redeem_coupon`~~ ✅ CORREGIDO
 
-**Impacto**: ⚠️ **BUG ACTIVO**. El webhook handler de MP llama a `redeem_coupon` que NO EXISTE como función en la DB (solo existe `redeem_coupon_universal`). Esto significa que la redención de cupones NO se registra cuando el pago viene por MercadoPago.
-
-**Archivos afectados**: `src/lib/mercadopago/webhook-handler.ts` línea ~109
-
-**Solución**: Cambiar a `redeem_coupon_universal` con los parámetros correctos.
+**Resolución**: El webhook handler ahora llama a `redeem_coupon_universal` universalmente para cursos, suscripciones y upgrades. Ver D9.
 
 ---
 
-### E4: PayPal capture también llama a `redeem_coupon` legacy
+### ~~E4: PayPal capture también llama a `redeem_coupon` legacy~~ ✅ CORREGIDO
 
-**Impacto**: ⚠️ **BUG ACTIVO** (mismo que E3). El handler de PayPal capture en `route.ts` línea ~230 llama a `redeem_coupon` con parámetros de la versión vieja.
-
-**Archivos afectados**: `src/app/api/paypal/capture-order/route.ts` línea ~230
-
-**Solución**: Migrar a `redeem_coupon_universal`.
+**Resolución**: Mismo fix que E3. PayPal capture ahora usa `redeem_coupon_universal`.
 
 ---
 
-### E5: Funciones SQL referencian tablas con schema `public.*` en vez de `billing.*` o `academy.*`
-
-**Impacto**: ⚠️ **Deuda técnica post-migración**. Las funciones funcionan porque el `search_path` incluye `public`, `billing` y `academy`. Pero es confuso e inconsistente. Si se cambiara el search_path o se reorganizara, se romperían.
-
-**Funciones afectadas**:
-| Función | Referencia incorrecta | Debería ser |
-|---------|----------------------|-------------|
-| `validate_coupon_universal` | `public.coupons` | `billing.coupons` |
-| `validate_coupon_universal` | `public.coupon_courses` | `billing.coupon_courses` |
-| `validate_coupon_universal` | `public.coupon_plans` | `billing.coupon_plans` |
-| `validate_coupon_universal` | `public.coupon_redemptions` | `billing.coupon_redemptions` |
-| `redeem_coupon_universal` | `public.coupon_redemptions` | `billing.coupon_redemptions` |
-| `step_payment_insert_idempotent` | `public.payments` | `billing.payments` |
-| `step_subscription_create_active` | `public.organization_subscriptions` | `billing.organization_subscriptions` |
-| `step_subscription_expire_previous` | `public.organization_subscriptions` | `billing.organization_subscriptions` |
-| `step_course_enrollment_annual` | `public.course_enrollments` | `academy.course_enrollments` |
-| `step_send_purchase_email` | `public.users` | `iam.users` |
-| `step_send_purchase_email` | `public.email_queue` | ¿schema? |
-| `step_apply_founders_program` | `public.organizations` | `iam.organizations` |
-| `step_organization_set_plan` | `public.organizations` | `iam.organizations` |
-| `handle_payment_subscription_success` | `public.plans` | `billing.plans` |
-| `handle_upgrade_subscription_success` | `public.organizations` | `iam.organizations` |
-| `handle_upgrade_subscription_success` | `public.plans` | `billing.plans` |
-| `fill_progress_user_id_from_auth` | `public.users` | `iam.users` |
-
-**Solución**: Crear script SQL que actualice todas las funciones para usar schemas calificados.
-
----
-
-### E6: `activateFreeSubscription` no soporta cursos
+### E5: `activateFreeSubscription` no soporta cursos
 
 **Impacto**: Si un cupón del 100% se aplica a un curso, el flujo de "activación gratuita" no funciona porque solo llama a `handle_payment_subscription_success` (suscripciones).
 
@@ -149,4 +161,4 @@
 |------|----------|
 | `billing/plan-subscription` | Comparte el checkout, payment_events, y coupon system. Diferente handler SQL (`handle_payment_subscription_success` vs `handle_payment_course_success`) |
 | `iam/user-registration` | El usuario debe estar registrado para comprar. `users.id` es FK en todo |
-| `notifications` | Los triggers en `billing.payments` disparan notificaciones push |
+| `notifications` | Triggers en `billing.payments` disparan notificaciones push y emails automáticamente |

@@ -1,6 +1,6 @@
-# Technical Map: Suscripción a Cursos
+# Technical Map: Billing (Courses + Subscriptions + Seats + Upgrades)
 
-> Referencia técnica exhaustiva. No tutorial.
+> Referencia técnica exhaustiva. Actualizada 2026-02-21.
 
 ---
 
@@ -33,11 +33,19 @@
 | provider_payment_id | text | UNIQUE(combo) | ID del pago en la pasarela |
 | user_id | uuid | — | Quién pagó |
 | course_id | uuid | — | Curso comprado |
-| product_type | text | — | 'course' |
+| product_type | text | — | 'course' / 'subscription' / 'upgrade' / 'seat_purchase' |
 | amount | numeric | — | Monto cobrado |
 | currency | text | — | 'USD' / 'ARS' |
 | status | text | — | 'completed' |
-| gateway | text | — | Provider (duplicado) |
+| metadata | jsonb | — | Metadata enriquecida (product_name, etc.) |
+
+**Triggers en `billing.payments`** (disparan automáticamente al INSERT con status='completed'):
+| Trigger | Función | Qué hace |
+|---------|---------|----------|
+| `trg_queue_purchase_email` | `notifications.queue_purchase_email()` | Encola emails al comprador + admin |
+| `trg_log_payment_activity` | `audit.log_payment_activity()` | Registra en `organization_activity_logs` |
+| `trg_notify_admin_payment` | `notifications.notify_admin_on_payment()` | Campanita admin |
+| `trg_notify_user_payment` | `notifications.notify_user_payment_completed()` | Campanita usuario |
 
 ### `billing.mp_preferences`
 | Columna | Tipo | FK | Uso |
@@ -45,11 +53,12 @@
 | id | varchar(64) | PK | ID de preferencia de MP |
 | user_id | uuid | — | Usuario que inicia pago |
 | course_id | uuid | — | Curso a comprar |
-| product_type | text | — | 'course' |
+| product_type | text | — | 'course' / 'subscription' / 'upgrade' / 'seats' |
 | amount | numeric | — | Monto |
 | status | text | — | 'pending' → 'completed' |
 | init_point | text | — | URL de redirección a MP |
 | coupon_id | uuid | FK → coupons | Cupón aplicado |
+| coupon_code | text | — | Código del cupón (para redemption post-pago) |
 
 ### `billing.paypal_preferences`
 | Columna | Tipo | FK | Uso |
@@ -58,7 +67,7 @@
 | order_id | varchar(100) | — | PayPal Order ID |
 | user_id | uuid | — | Usuario que inicia pago |
 | course_id | uuid | — | Curso a comprar |
-| product_type | text | — | 'course' |
+| product_type | text | — | 'course' / 'subscription' / 'upgrade' / 'seats' |
 | amount | numeric | — | Monto |
 | status | text | — | 'pending' → 'completed' |
 
@@ -94,49 +103,99 @@
 | coupon_id | uuid | FK → coupons |
 | user_id | uuid | Quién usó el cupón |
 | course_id | uuid | Curso donde se usó |
+| plan_id | uuid | Plan donde se usó |
 | amount_saved | numeric | Descuento efectivo |
 
 ---
 
-## 2. Funciones SQL
+## 2. Funciones SQL (billing: 11 funciones)
 
-### `billing.handle_payment_course_success`
+### Handlers (4 funciones — patrón `handle_payment_{product}_success`)
+
+#### `billing.handle_payment_course_success`
 - **Tipo**: SECURITY DEFINER
-- **search_path**: billing, academy, public
 - **Parámetros**: p_provider, p_provider_payment_id, p_user_id, p_course_id, p_amount, p_currency, p_metadata
 - **Lógica**:
   1. `pg_advisory_xact_lock` → idempotency
-  2. `step_payment_insert_idempotent` → INSERT o SKIP si duplicado
-  3. `step_course_enrollment_annual` → INSERT/UPSERT enrollment
-  4. `step_send_purchase_email` → encola emails
+  2. Pre-fetch nombre del curso → enriquece metadata
+  3. `step_payment_insert_idempotent` → INSERT o SKIP si duplicado
+  4. `step_course_enrollment_annual` → INSERT/UPSERT enrollment
+  5. ~~`step_send_purchase_email`~~ → **ELIMINADO** (ahora es trigger automático)
 - **Error handling**: EXCEPTION → `ops.log_system_error` + retorna `ok_with_warning`
 
-### `billing.step_payment_insert_idempotent`
+#### `billing.handle_payment_subscription_success`
+- **Tipo**: SECURITY DEFINER
+- **Parámetros**: p_provider, p_provider_payment_id, p_user_id, p_organization_id, p_plan_id, p_billing_period, p_amount, p_currency, p_metadata, **p_is_upgrade** (bool, default false)
+- **Lógica**:
+  1. Idempotency lock
+  2. Pre-fetch plan name + previous plan (si upgrade)
+  3. Enriquece metadata con product_name
+  4. `step_payment_insert_idempotent`
+  5. `step_subscription_expire_previous`
+  6. `step_subscription_create_active`
+  7. `step_organization_set_plan`
+  8. `step_apply_founders_program` (si annual)
+- **Nota**: Función unificada para suscripciones nuevas Y upgrades via flag `p_is_upgrade`
+
+#### `billing.handle_payment_upgrade_success`
+- **Tipo**: SECURITY DEFINER (wrapper)
+- **Lógica**: Llama a `handle_payment_subscription_success` con `p_is_upgrade = true`
+
+#### `billing.handle_payment_seat_success`
+- **Tipo**: SECURITY DEFINER
+- **Parámetros**: p_provider, p_provider_payment_id, p_user_id, p_organization_id, p_plan_id, p_seats_purchased, p_amount, p_currency, p_metadata
+- **Lógica**:
+  1. Idempotency lock
+  2. Enriquece metadata
+  3. `step_payment_insert_idempotent`
+  4. `iam.step_organization_increment_seats`
+
+### Steps (5 funciones auxiliares)
+
+#### `billing.step_payment_insert_idempotent`
 - **Tipo**: SECURITY INVOKER
 - **Lógica**: INSERT INTO payments ON CONFLICT (provider, provider_payment_id) DO NOTHING
 - **Retorna**: uuid (payment_id) o NULL si ya existía
+- **Usado por**: Los 4 handlers
 
-### `academy.step_course_enrollment_annual`
+#### `billing.step_subscription_create_active`
 - **Tipo**: SECURITY INVOKER
-- **search_path**: academy, billing, public
-- **Lógica**: INSERT INTO course_enrollments ON CONFLICT (user_id, course_id) DO UPDATE SET expires_at = now() + 1 year
-- **⚠️ Referencia**: Todavía usa `public.course_enrollments` en vez de `academy.course_enrollments`
+- **Lógica**: INSERT suscripción activa con expires_at calculado
+- **Usado por**: `handle_payment_subscription_success` + `bank-transfer-actions.ts` (directo)
 
-### `billing.step_send_purchase_email`
-- **Tipo**: SECURITY DEFINER
-- **Lógica**: Inserta 2 emails en `email_queue`:
-  1. Para el comprador (`purchase_confirmation`)
-  2. Para admin (`admin_sale_notification` → contacto@seencel.com)
+#### `billing.step_subscription_expire_previous`
+- **Tipo**: SECURITY INVOKER
+- **Lógica**: UPDATE suscripciones → expired
+- **Usado por**: `handle_payment_subscription_success` + `bank-transfer-actions.ts` (directo)
 
-### `billing.validate_coupon_universal`
+#### `billing.step_organization_set_plan`
+- **Tipo**: SECURITY INVOKER
+- **Lógica**: UPDATE iam.organizations SET plan_id
+- **Usado por**: `handle_payment_subscription_success` + `bank-transfer-actions.ts` (directo)
+
+#### `billing.step_apply_founders_program`
+- **Tipo**: SECURITY INVOKER
+- **Lógica**: Aplica programa founders
+- **Usado por**: `handle_payment_subscription_success` + `bank-transfer-actions.ts` (directo)
+
+### Cupones (2 funciones)
+
+#### `billing.validate_coupon_universal`
 - **Tipo**: SECURITY DEFINER
 - **Lógica**: Valida un cupón contra un producto (curso o plan)
-- **⚠️ Referencia**: Usa `public.coupons`, `public.coupon_courses`, `public.coupon_redemptions` (deberían ser `billing.*`)
 
-### `billing.redeem_coupon_universal`
+#### `billing.redeem_coupon_universal`
 - **Tipo**: SECURITY DEFINER
 - **Lógica**: Valida + registra la redención del cupón
-- **⚠️ Referencia**: Usa `public.coupon_redemptions` (debería ser `billing.*`)
+- **Nota**: El webhook de MP y PayPal capture lo llaman UNIVERSALMENTE para cursos, suscripciones y upgrades
+
+### Funciones eliminadas (ya no existen)
+| Función eliminada | Reemplazada por |
+|-------------------|-----------------|
+| `step_send_purchase_email` | Trigger `notifications.queue_purchase_email()` |
+| `step_log_seat_purchase_event` | Trigger `audit.log_payment_activity()` |
+| `handle_member_seat_purchase` | Renombrada → `handle_payment_seat_success` |
+| `handle_upgrade_subscription_success` | Renombrada → `handle_payment_upgrade_success` |
 
 ---
 
@@ -193,30 +252,30 @@
 | `src/app/[locale]/(dashboard)/checkout/failure/page.tsx` | Datos de error |
 | `src/app/[locale]/(dashboard)/checkout/pending/page.tsx` | Datos de pendiente |
 
-### API Routes
+### API Routes (Webhooks & Payment)
 | Archivo | Qué hace |
 |---------|----------|
 | `src/app/api/mercadopago/create-preference/route.ts` | Crea preferencia de pago en MP |
 | `src/app/api/mercadopago/webhook/route.ts` | Recibe webhooks de MP |
-| `src/lib/mercadopago/webhook-handler.ts` | Procesa pagos aprobados de MP |
+| `src/lib/mercadopago/webhook-handler.ts` | Procesa pagos aprobados de MP → RPC al handler correcto |
 | `src/app/api/paypal/create-order/route.ts` | Crea orden de PayPal |
-| `src/app/api/paypal/capture-order/route.ts` | Captura pago de PayPal |
+| `src/app/api/paypal/capture-order/route.ts` | Captura pago de PayPal → RPC al handler correcto |
+
+### Bank Transfers
+| Archivo | Qué hace |
+|---------|----------|
+| `src/features/billing/payments/actions/bank-transfer-actions.ts` | Crea pago bancario con activación optimista |
+
+### Team (Seats)
+| Archivo | Qué hace |
+|---------|----------|
+| `src/features/team/actions.ts` → `purchaseMemberSeats()` | RPC `handle_payment_seat_success` |
 
 ---
 
-## 4. SQL Scripts
+## 4. Cadena de datos completa
 
-> Nota: Los scripts de migración al schema `billing` ya fueron ejecutados.
-
-| Archivo | Qué hace | Estado |
-|---------|----------|--------|
-| Scripts de migración `billing` | Migración de tablas de `public` a `billing` | ✅ Ejecutado |
-| Scripts de migración `academy` | Migración de tablas de `public` a `academy` | ✅ Ejecutado |
-
----
-
-## 5. Cadena de datos completa
-
+### Curso (MercadoPago)
 ```
 auth.uid()
     ↓
@@ -224,9 +283,9 @@ iam.users (auth_id → id)
     ↓ users.id
 checkout page.tsx (server fetch)
     ↓
-[usuario elige "Comprar"]
+[usuario elige "Comprar" → MP]
     ↓
-billing.mp_preferences (INSERT con user_id, course_id)
+billing.mp_preferences (INSERT con user_id, course_id, coupon_code)
     ↓
 MercadoPago API (externo)
     ↓
@@ -237,8 +296,38 @@ handlePaymentEvent() → parsea external_reference
 RPC: billing.handle_payment_course_success()
     ├── billing.step_payment_insert_idempotent()
     │   └── INSERT billing.payments
-    ├── academy.step_course_enrollment_annual()
-    │   └── UPSERT academy.course_enrollments
-    └── billing.step_send_purchase_email()
-        └── INSERT email_queue (x2)
+    │       └── TRIGGERS AUTOMÁTICOS:
+    │           ├── notifications.queue_purchase_email() → email_queue (x2)
+    │           ├── audit.log_payment_activity() → activity_logs
+    │           ├── notifications.notify_admin_on_payment() → campanita admin
+    │           └── notifications.notify_user_payment_completed() → campanita user
+    └── academy.step_course_enrollment_annual()
+        └── UPSERT academy.course_enrollments
+    ↓
+[Si hay cupón] → redeem_coupon_universal (universal: cursos + subs + upgrades)
+```
+
+### Suscripción / Upgrade (MercadoPago)
+```
+handlePaymentEvent() → parsea external_reference
+    ↓
+RPC: billing.handle_payment_subscription_success(p_is_upgrade=false|true)
+    ├── billing.step_payment_insert_idempotent() → triggers automáticos
+    ├── billing.step_subscription_expire_previous()
+    ├── billing.step_subscription_create_active()
+    ├── billing.step_organization_set_plan()
+    └── billing.step_apply_founders_program() (si annual)
+    ↓
+[Si hay cupón] → redeem_coupon_universal
+```
+
+### Seats (MercadoPago)
+```
+handlePaymentEvent() → parsea external_reference
+    ↓
+RPC: billing.handle_payment_seat_success()
+    ├── billing.step_payment_insert_idempotent() → triggers automáticos
+    └── iam.step_organization_increment_seats()
+    ↓
+[Si hay cupón] → redeem_coupon_universal
 ```

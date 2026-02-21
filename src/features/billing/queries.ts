@@ -87,7 +87,7 @@ export async function getExchangeRate(from = "USD", to = "ARS"): Promise<number>
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("exchange_rates")
+        .schema('finance').from("exchange_rates")
         .select("rate")
         .eq("from_currency", from)
         .eq("to_currency", to)
