@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -33,7 +33,7 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger',
       'step_create_organization',
       'signup',
@@ -67,25 +67,15 @@ CREATE OR REPLACE FUNCTION iam.step_create_organization_currencies(p_org_id uuid
 AS $function$
 BEGIN
   INSERT INTO public.organization_currencies (
-    id,
-    organization_id,
-    currency_id,
-    is_active,
-    is_default,
-    created_at
+    id, organization_id, currency_id, is_active, is_default, created_at
   )
   VALUES (
-    gen_random_uuid(),
-    p_org_id,
-    p_currency_id,
-    true,
-    true,
-    now()
+    gen_random_uuid(), p_org_id, p_currency_id, true, true, now()
   );
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger',
       'step_create_organization_currencies',
       'signup',
@@ -122,7 +112,7 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger',
       'step_create_organization_data',
       'signup',
@@ -162,7 +152,7 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger',
       'step_create_organization_preferences',
       'signup',
@@ -236,7 +226,7 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger', 'step_create_organization_roles', 'signup',
       SQLERRM, jsonb_build_object('org_id', p_org_id), 'critical'
     );
@@ -261,25 +251,15 @@ CREATE OR REPLACE FUNCTION iam.step_create_organization_wallets(p_org_id uuid, p
 AS $function$
 BEGIN
   INSERT INTO public.organization_wallets (
-    id,
-    organization_id,
-    wallet_id,
-    is_active,
-    is_default,
-    created_at
+    id, organization_id, wallet_id, is_active, is_default, created_at
   )
   VALUES (
-    gen_random_uuid(),
-    p_org_id,
-    p_wallet_id,
-    true,
-    true,
-    now()
+    gen_random_uuid(), p_org_id, p_wallet_id, true, true, now()
   );
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger',
       'step_create_organization_wallets',
       'signup',
@@ -288,154 +268,6 @@ EXCEPTION
         'organization_id', p_org_id,
         'wallet_id', p_wallet_id
       ),
-      'critical'
-    );
-    RAISE;
-END;
-$function$
-```
-</details>
-
-### `iam.step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.step_create_user(p_auth_user_id uuid, p_email text, p_full_name text, p_avatar_url text, p_avatar_source avatar_source_t, p_role_id uuid)
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'iam'
-AS $function$
-DECLARE
-  v_user_id uuid := gen_random_uuid();
-BEGIN
-  INSERT INTO iam.users (
-    id, auth_id, email, full_name, avatar_url, avatar_source, role_id
-  )
-  VALUES (
-    v_user_id, p_auth_user_id, p_email, p_full_name, p_avatar_url, p_avatar_source, p_role_id
-  );
-
-  RETURN v_user_id;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-      'trigger',
-      'step_create_user',
-      'signup',
-      SQLERRM,
-      jsonb_build_object(
-        'auth_user_id', p_auth_user_id,
-        'email', p_email,
-        'role_id', p_role_id
-      ),
-      'critical'
-    );
-    RAISE;
-END;
-$function$
-```
-</details>
-
-### `iam.step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.step_create_user_acquisition(p_user_id uuid, p_raw_meta jsonb)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'iam'
-AS $function$declare
-  v_source text;
-begin
-  ----------------------------------------------------------------
-  -- Fuente (fallback a direct)
-  ----------------------------------------------------------------
-  v_source := coalesce(
-    p_raw_meta->>'utm_source',
-    'direct'
-  );
-
-  INSERT INTO iam.user_acquisition (
-    user_id,
-    source,
-    medium,
-    campaign,
-    content,
-    landing_page,
-    referrer
-  )
-  VALUES (
-    p_user_id,
-    v_source,
-    p_raw_meta->>'utm_medium',
-    p_raw_meta->>'utm_campaign',
-    p_raw_meta->>'utm_content',
-    p_raw_meta->>'landing_page',
-    p_raw_meta->>'referrer'
-  )
-  ON CONFLICT (user_id) DO UPDATE SET
-    source = EXCLUDED.source,
-    medium = EXCLUDED.medium,
-    campaign = EXCLUDED.campaign,
-    content = EXCLUDED.content,
-    landing_page = EXCLUDED.landing_page,
-    referrer = EXCLUDED.referrer;
-
-EXCEPTION
-  WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-      'trigger',
-      'step_create_user_acquisition',
-      'signup',
-      SQLERRM,
-      jsonb_build_object(
-        'user_id', p_user_id,
-        'raw_meta', p_raw_meta
-      ),
-      'critical'
-    );
-    RAISE;
-end;$function$
-```
-</details>
-
-### `iam.step_create_user_data(p_user_id uuid)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.step_create_user_data(p_user_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'iam'
-AS $function$
-BEGIN
-  INSERT INTO iam.user_data (id, user_id, created_at)
-  VALUES (gen_random_uuid(), p_user_id, now());
-
-EXCEPTION
-  WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-      'trigger',
-      'step_create_user_data',
-      'signup',
-      SQLERRM,
-      jsonb_build_object('user_id', p_user_id),
       'critical'
     );
     RAISE;
@@ -463,39 +295,13 @@ BEGIN
   VALUES (gen_random_uuid(), p_user_id, p_org_id, now(), now());
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger', 'step_create_user_organization_preferences', 'signup',
       SQLERRM, jsonb_build_object('user_id', p_user_id, 'org_id', p_org_id), 'critical'
     );
     RAISE;
 END;
 $function$
-```
-</details>
-
-### `iam.step_create_user_preferences(p_user_id uuid)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.step_create_user_preferences(p_user_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$BEGIN
-  INSERT INTO iam.user_preferences (user_id) VALUES (p_user_id);
-EXCEPTION
-  WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-      'trigger', 'step_create_user_preferences', 'signup',
-      SQLERRM, jsonb_build_object('user_id', p_user_id), 'critical'
-    );
-    RAISE;
-END;$function$
 ```
 </details>
 

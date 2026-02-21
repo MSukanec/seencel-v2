@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [OPS] Tables (chunk 1: ops.ops_alerts — ops.ops_repair_logs)
+## [OPS] Tables (chunk 1: ops.ops_alerts — ops.system_error_logs)
 
 ### `ops.ops_alerts`
 
@@ -67,3 +67,16 @@
 | result | text | ✓ |  |  |
 | details | jsonb | ✓ | '{}'::jsonb |  |
 | created_at | timestamptz | ✓ | now() |  |
+
+### `ops.system_error_logs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| domain | text | ✗ |  |  |
+| entity | text | ✗ |  |  |
+| function_name | text | ✗ |  |  |
+| error_message | text | ✗ |  |  |
+| context | jsonb | ✓ |  |  |
+| severity | text | ✗ | 'error'::text |  |
+| created_at | timestamptz | ✗ | now() |  |

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] Tables (chunk 1: audit.changelog_entries — audit.system_error_logs)
+## [AUDIT] Tables (chunk 1: audit.changelog_entries — audit.organization_activity_logs)
 
 ### `audit.changelog_entries`
 
@@ -31,16 +31,3 @@
 | metadata | jsonb | ✓ | '{}'::jsonb |  |
 | created_at | timestamptz | ✗ | now() |  |
 | member_id | uuid | ✓ |  |  |
-
-### `audit.system_error_logs`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| domain | text | ✗ |  |  |
-| entity | text | ✗ |  |  |
-| function_name | text | ✗ |  |  |
-| error_message | text | ✗ |  |  |
-| context | jsonb | ✓ |  |  |
-| severity | text | ✗ | 'error'::text |  |
-| created_at | timestamptz | ✗ | now() |  |

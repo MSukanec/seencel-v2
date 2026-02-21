@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -347,46 +347,6 @@ BEGIN
     END;
 
     RETURN NULL;
-END;
-$function$
-```
-</details>
-
-### `audit.log_system_error(p_domain text, p_entity text, p_function_name text, p_error_message text, p_context jsonb DEFAULT NULL::jsonb, p_severity text DEFAULT 'error'::text)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_system_error(p_domain text, p_entity text, p_function_name text, p_error_message text, p_context jsonb DEFAULT NULL::jsonb, p_severity text DEFAULT 'error'::text)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public'
-AS $function$
-BEGIN
-  INSERT INTO public.system_error_logs (
-    domain,
-    entity,
-    function_name,
-    error_message,
-    context,
-    severity
-  )
-  VALUES (
-    p_domain,
-    p_entity,
-    p_function_name,
-    p_error_message,
-    p_context,
-    p_severity
-  );
-
-EXCEPTION
-  WHEN OTHERS THEN
-    RAISE NOTICE 'log_system_error failed: %', SQLERRM;
 END;
 $function$
 ```

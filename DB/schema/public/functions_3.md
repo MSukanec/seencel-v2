@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -199,22 +199,6 @@ $function$
 ```
 </details>
 
-### `unaccent(regdictionary, text)`
-
-- **Returns**: text
-- **Kind**: function | STABLE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent(regdictionary, text)
- RETURNS text
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/unaccent', $function$unaccent_dict$function$
-```
-</details>
-
 ### `unaccent(text)`
 
 - **Returns**: text
@@ -224,6 +208,22 @@ AS '$libdir/unaccent', $function$unaccent_dict$function$
 
 ```sql
 CREATE OR REPLACE FUNCTION public.unaccent(text)
+ RETURNS text
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/unaccent', $function$unaccent_dict$function$
+```
+</details>
+
+### `unaccent(regdictionary, text)`
+
+- **Returns**: text
+- **Kind**: function | STABLE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.unaccent(regdictionary, text)
  RETURNS text
  LANGUAGE c
  STABLE PARALLEL SAFE STRICT

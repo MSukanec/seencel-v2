@@ -74,15 +74,16 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
         return { error: "update_failed", message: `Users update failed: ${userError.message}` };
     }
 
-    // 3. Upsert User Data (first_name, last_name)
+    // 3. Update User Data (first_name, last_name)
+    // El row ya existe (creado por handle_new_user), solo UPDATE
     const { error: userDataError } = await supabase
         .schema('iam').from("user_data")
-        .upsert({
-            user_id: internalUser.id,
+        .update({
             first_name: firstName,
             last_name: lastName,
             ...(countryId ? { country: countryId } : {}),
-        }, { onConflict: "user_id" });
+        })
+        .eq("user_id", internalUser.id);
 
     if (userDataError) {
         console.error("Error updating user_data:", userDataError);

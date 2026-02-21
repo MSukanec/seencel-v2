@@ -83,10 +83,20 @@
 - **Security**: SECURITY DEFINER
 - **search_path**: `iam`
 - **Lógica**: Guard email → Guard anti-dupl → detect provider → extract avatar → extract name → 4 INSERTs inline
-- **Error handling**: Un solo `EXCEPTION` handler con `v_current_step` para tracking granular del paso que falló
+- **Error handling**: `EXCEPTION` handler con `v_current_step` + `ops.log_system_error()` para tracking granular
+- **Error logging**: Usa `ops.log_system_error()` (migrado desde `public.log_system_error` en 071)
 - **Schema**: `DB/schema/iam/functions_2.md`
 
 > ⚠️ Esta función NO usa step functions separadas. Todo está inlineado tras la consolidación (070/070b/070d).
+
+### Funciones auxiliares disparadas durante signup (triggers en `iam.users`)
+
+| Trigger | Función | Qué hace |
+|---------|---------|----------|
+| `notify_new_user` | `notifications.notify_admin_on_new_user()` | Notifica a admins que hay un nuevo usuario |
+| `on_user_created_queue_email_welcome` | `notifications.queue_email_welcome()` | Encola email de bienvenida |
+
+Ambas funciones fueron corregidas en la migración 072 para usar `notifications.notifications` y `notifications.email_queue` (antes referenciaban `public.*` que ya no existe).
 
 ---
 
@@ -137,12 +147,17 @@ Email confirmation click → /auth/callback?code=xxx
   └─ exchangeCodeForSession(code) → redirect /hub
        └─ auth.users INSERT → TRIGGER on_auth_user_created
             └─ iam.handle_new_user()  [UNA sola función, todo inline]
-                 ├─ Guard: email NOT NULL
+                 ├─ Guard: email NOT NULL (logs via ops.log_system_error)
                  ├─ Guard: auth_id no duplicado
                  ├─ INSERT iam.users         (signup_completed=false)
+                 │    ├─ TRIGGER notify_new_user → notifications.notify_admin_on_new_user()
+                 │    │    └─ notifications.send_notification() → INSERT notifications.notifications
+                 │    └─ TRIGGER queue_email_welcome → notifications.queue_email_welcome()
+                 │         └─ INSERT notifications.email_queue (email de bienvenida)
                  ├─ INSERT iam.user_acquisition (UTM tracking)
                  ├─ INSERT iam.user_data     (vacío)
                  └─ INSERT iam.user_preferences (defaults tabla)
+                 (EXCEPTION → ops.log_system_error + RAISE)
 
 Dashboard Layout → getUserProfile() → signup_completed=false → redirect /onboarding
 
@@ -164,13 +179,35 @@ Hub → Usuario listo (sin org)
 | Tabla | Trigger | Evento | Función |
 |-------|---------|--------|---------|
 | `auth.users` | `on_auth_user_created` | AFTER INSERT | `iam.handle_new_user()` |
+| `iam.users` | `notify_new_user` | AFTER INSERT | `notifications.notify_admin_on_new_user()` |
+| `iam.users` | `on_user_created_queue_email_welcome` | AFTER INSERT | `notifications.queue_email_welcome()` |
 
-> ⚠️ Este trigger está en el schema `auth` de Supabase y no aparece en el introspector automático.
+> ⚠️ El trigger de `auth.users` está en el schema `auth` de Supabase y no aparece en el introspector automático.
 
 ---
 
-## 6. RLS
+## 6. Error Handling
+
+| Función | Logging | Severidad |
+|---------|---------|----------|
+| `iam.handle_new_user()` | `ops.log_system_error()` (inline guard + exception) | critical |
+| `notifications.queue_email_welcome()` | `RAISE NOTICE` (no bloquea signup) | notice |
+| `notifications.notify_admin_on_new_user()` | ninguno (trigger wrapper) | — |
+
+---
+
+## 7. RLS
 
 `iam.handle_new_user()` usa `SECURITY DEFINER`, por lo que bypasea RLS durante el signup (no hay sesión de usuario en un trigger).
 
 El onboarding usa el cliente Supabase normal (anon key + RLS), ya que el usuario ya está autenticado en ese punto. Las RLS de `iam.users` permiten UPDATE donde `iam.is_self(id)` sea true.
+
+---
+
+## 8. Migraciones aplicadas
+
+| Script | Qué hizo |
+|--------|----------|
+| `070/070b/070d` | Consolidó `handle_new_user` (eliminó step functions, todo inline) |
+| `071` | Migró `log_system_error` → `ops.log_system_error`. Actualizó 16 funciones en IAM y billing |
+| `072` | Corrigió 17 funciones en schema `notifications` que referenciaban `public.*` (tablas ya estaban en `notifications.*`) |

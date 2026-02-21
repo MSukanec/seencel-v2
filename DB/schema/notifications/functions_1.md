@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_admin_on_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'public'
+ SET search_path TO 'notifications'
 AS $function$
 BEGIN
     PERFORM notifications.send_notification(
@@ -46,30 +46,27 @@ CREATE OR REPLACE FUNCTION notifications.notify_admin_on_payment()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'public'
+ SET search_path TO 'billing', 'notifications', 'iam'
 AS $function$
 DECLARE
     v_amount_formatted text;
     v_user_email text;
 BEGIN
-    -- 1. Verificar si el pago está completado
-    -- (Funciona para INSERT directo como 'completed' O para UPDATE de 'pending' -> 'completed')
     IF NEW.status = 'completed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'completed') THEN
         
-        -- Opcional: Obtener info extra del usuario para el mensaje (si quieres el email en el cuerpo)
-        SELECT email INTO v_user_email FROM public.users WHERE id = NEW.user_id;
-        -- 2. Enviar Notificación
-        PERFORM public.send_notification(
-            NULL, -- Se ignora porque audiencia es 'admins'
-            'success', -- Tipo de info
-            '💰 Nuevo Pago Recibido', -- Título con emoji para diferenciar
+        SELECT email INTO v_user_email FROM iam.users WHERE id = NEW.user_id;
+
+        PERFORM notifications.send_notification(
+            NULL,
+            'success',
+            '💰 Nuevo Pago Recibido',
             COALESCE(v_user_email, 'Un usuario') || ' ha pagado ' || NEW.amount || ' ' || COALESCE(NEW.currency, 'USD'),
             jsonb_build_object(
                 'payment_id', NEW.id,
                 'amount', NEW.amount,
                 'user_id', NEW.user_id
             ),
-            'admins' -- Broadcast a todos los admins
+            'admins'
         );
     END IF;
     RETURN NEW;
@@ -90,12 +87,12 @@ CREATE OR REPLACE FUNCTION notifications.notify_broadcast_all(p_type text, p_tit
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'public'
+ SET search_path TO 'notifications', 'iam'
 AS $function$
 DECLARE
   v_notif_id uuid;
 BEGIN
-  INSERT INTO public.notifications (
+  INSERT INTO notifications.notifications (
     type, title, body, data, audience, created_by
   )
   VALUES (
@@ -105,9 +102,9 @@ BEGIN
   )
   RETURNING id INTO v_notif_id;
 
-  INSERT INTO public.user_notifications (user_id, notification_id)
+  INSERT INTO notifications.user_notifications (user_id, notification_id)
   SELECT u.id, v_notif_id
-  FROM public.users u
+  FROM iam.users u
   WHERE u.is_active = true
   ON CONFLICT (user_id, notification_id) DO NOTHING;
 
@@ -129,32 +126,29 @@ CREATE OR REPLACE FUNCTION notifications.notify_course_enrollment()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'academy', 'public'
+ SET search_path TO 'academy', 'notifications'
 AS $function$
 DECLARE
     v_course_name TEXT;
     v_course_slug TEXT;
 BEGIN
-    -- Only notify on INSERT when status is 'active'
     IF TG_OP = 'INSERT' AND NEW.status = 'active' THEN
         
-        -- Get course info
         SELECT title, slug INTO v_course_name, v_course_slug
         FROM courses
         WHERE id = NEW.course_id;
         
-        -- Call the master notification function
-        PERFORM public.send_notification(
-            NEW.user_id,                    -- 1. Recipient (the enrolled user)
-            'success',                      -- 2. Type: success (positive event)
-            '¡Inscripción Exitosa!',        -- 3. Title
-            'Ya tienes acceso al curso "' || COALESCE(v_course_name, 'tu curso') || '". ¡Comienza a aprender!', -- 4. Body
-            jsonb_build_object(             -- 5. Data (for navigation)
+        PERFORM notifications.send_notification(
+            NEW.user_id,
+            'success',
+            '¡Inscripción Exitosa!',
+            'Ya tienes acceso al curso "' || COALESCE(v_course_name, 'tu curso') || '". ¡Comienza a aprender!',
+            jsonb_build_object(
                 'course_id', NEW.course_id,
                 'enrollment_id', NEW.id,
                 'url', '/academia/mis-cursos/' || COALESCE(v_course_slug, NEW.course_id::text)
             ), 
-            'direct'                        -- 6. Audience: direct to user
+            'direct'
         );
     END IF;
     
@@ -176,7 +170,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_kanban_card_assigned()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'public', 'iam'
+ SET search_path TO 'notifications', 'iam'
 AS $function$
 DECLARE
     v_assignee_user_id uuid;
@@ -201,7 +195,7 @@ BEGIN
     END IF;
 
     SELECT u.id, u.full_name INTO v_actor_user_id, v_actor_name
-    FROM public.users u
+    FROM iam.users u
     WHERE u.auth_id = auth.uid();
 
     IF v_actor_user_id IS NOT NULL AND v_actor_user_id = v_assignee_user_id THEN
@@ -242,14 +236,14 @@ CREATE OR REPLACE FUNCTION notifications.notify_new_feedback()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'public'
+ SET search_path TO 'notifications', 'iam'
 AS $function$
 DECLARE
     user_identity text;
 BEGIN
     BEGIN
         SELECT COALESCE(full_name, email, 'Un usuario') INTO user_identity
-        FROM public.users
+        FROM iam.users
         WHERE id = NEW.user_id;
     EXCEPTION WHEN OTHERS THEN
         user_identity := 'Un usuario';
@@ -291,25 +285,23 @@ CREATE OR REPLACE FUNCTION notifications.notify_new_transfer()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'public'
+ SET search_path TO 'billing', 'notifications'
 AS $function$
 DECLARE
     payer_name text;
 BEGIN
-    -- Obtener nombre del pagador (si es nulo usar 'Un usuario')
     payer_name := COALESCE(NEW.payer_name, 'Un usuario');
 
-    -- Llamar a la función MAESTRA para notificar a TODOS los admins
-    PERFORM public.send_notification(
-        NULL,                    -- NULL porque es para audiencia 'admins'
-        'info',                  -- Tipo: info, success, warning, error
-        'Nueva Transferencia',   -- Título
-        payer_name || ' ha reportado un pago de ' || NEW.currency || ' ' || NEW.amount, -- Cuerpo
-        jsonb_build_object(      -- DATA para redirección
+    PERFORM notifications.send_notification(
+        NULL,
+        'info',
+        'Nueva Transferencia',
+        payer_name || ' ha reportado un pago de ' || NEW.currency || ' ' || NEW.amount,
+        jsonb_build_object(
             'payment_id', NEW.id,
-            'url', '/admin/finance?id=' || NEW.id -- Ajusta esta URL a donde quieras que vayan al hacer clic
+            'url', '/admin/finance?id=' || NEW.id
         ), 
-        'admins'                 -- Audiencia: 'admins' (Broadcast)
+        'admins'
     );
 
     RETURN NEW;
@@ -330,7 +322,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'public'
+ SET search_path TO 'notifications'
 AS $function$
 BEGIN
     PERFORM notifications.send_notification(
@@ -362,7 +354,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_push_on_notification()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'public'
+ SET search_path TO 'notifications'
 AS $function$
 DECLARE
     v_title TEXT;
@@ -373,7 +365,7 @@ DECLARE
 BEGIN
     SELECT title, body, data
     INTO v_title, v_body, v_data
-    FROM public.notifications
+    FROM notifications.notifications
     WHERE id = NEW.notification_id;
 
     IF v_title IS NULL THEN
@@ -419,7 +411,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_quote_status_change()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'construction', 'public'
+ SET search_path TO 'notifications', 'construction'
 AS $function$
 DECLARE
     v_project_name TEXT;
@@ -491,7 +483,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_subscription_activated()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'public'
+ SET search_path TO 'billing', 'notifications', 'iam'
 AS $function$
 DECLARE
     v_plan_name text;
@@ -504,29 +496,24 @@ DECLARE
     v_body_admin text;
     v_billing_label text;
 BEGIN
-    -- Solo notificar cuando la suscripción se crea activa
     IF NEW.status = 'active' THEN
         
-        -- Obtener nombre del plan
         SELECT name INTO v_plan_name
-        FROM public.plans
+        FROM billing.plans
         WHERE id = NEW.plan_id;
         
-        -- Obtener el owner de la organización
         SELECT owner_id INTO v_owner_id
         FROM public.organizations
         WHERE id = NEW.organization_id;
 
-        -- Etiqueta del período
         v_billing_label := CASE 
             WHEN NEW.billing_period = 'annual' THEN 'anual'
             ELSE 'mensual'
         END;
         
-        -- Detectar si es upgrade: ¿hay una suscripción anterior para esta org?
         SELECT p.name INTO v_previous_plan
-        FROM public.organization_subscriptions s
-        JOIN public.plans p ON p.id = s.plan_id
+        FROM billing.organization_subscriptions s
+        JOIN billing.plans p ON p.id = s.plan_id
         WHERE s.organization_id = NEW.organization_id
           AND s.id != NEW.id
           AND s.status IN ('expired', 'cancelled')
@@ -535,7 +522,6 @@ BEGIN
         
         v_is_upgrade := (v_previous_plan IS NOT NULL);
         
-        -- Construir mensajes según sea upgrade o nueva suscripción
         IF v_is_upgrade THEN
             v_title_owner := '⬆️ ¡Plan Mejorado!';
             v_body_owner := 'Tu plan fue mejorado a ' || COALESCE(v_plan_name, '') || '. ¡A disfrutarlo! 🚀';
@@ -548,9 +534,8 @@ BEGIN
             v_body_admin := 'Organización activó plan ' || COALESCE(v_plan_name, '') || ' (' || v_billing_label || ') por ' || NEW.amount || ' ' || NEW.currency;
         END IF;
         
-        -- Notificación al dueño de la organización
         IF v_owner_id IS NOT NULL THEN
-            PERFORM public.send_notification(
+            PERFORM notifications.send_notification(
                 v_owner_id,
                 'success',
                 v_title_owner,
@@ -567,8 +552,7 @@ BEGIN
             );
         END IF;
         
-        -- Notificar a admins de la plataforma
-        PERFORM public.send_notification(
+        PERFORM notifications.send_notification(
             NULL,
             'info',
             v_title_admin,
@@ -605,7 +589,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_system_error()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'billing', 'academy'
+ SET search_path TO 'notifications', 'iam', 'billing'
 AS $function$
 DECLARE
     v_user_name text := NULL;
@@ -614,20 +598,17 @@ DECLARE
     v_body text;
     v_context_parts text[] := ARRAY[]::text[];
 BEGIN
-    -- Solo notificar errores de severidad 'error' o 'critical'
     IF NEW.severity NOT IN ('error', 'critical') THEN
         RETURN NEW;
     END IF;
 
-    -- Resolver usuario si existe en context
     IF NEW.context ? 'user_id' AND (NEW.context->>'user_id') IS NOT NULL THEN
         SELECT u.full_name, u.email
         INTO v_user_name, v_user_email
-        FROM public.users u
+        FROM iam.users u
         WHERE u.id = (NEW.context->>'user_id')::uuid;
     END IF;
 
-    -- Resolver organización si existe en context
     IF NEW.context ? 'organization_id' AND (NEW.context->>'organization_id') IS NOT NULL THEN
         SELECT o.name
         INTO v_org_name
@@ -635,10 +616,8 @@ BEGIN
         WHERE o.id = (NEW.context->>'organization_id')::uuid;
     END IF;
 
-    -- Construir cuerpo legible
     v_body := NEW.function_name || ': ' || LEFT(NEW.error_message, 100);
 
-    -- Agregar contexto humano si existe
     IF v_org_name IS NOT NULL THEN
         v_context_parts := array_append(v_context_parts, 'Org: ' || v_org_name);
     END IF;
@@ -653,8 +632,7 @@ BEGIN
         v_body := v_body || ' (' || array_to_string(v_context_parts, ' | ') || ')';
     END IF;
 
-    -- Enviar notificación a admins
-    PERFORM public.send_notification(
+    PERFORM notifications.send_notification(
         NULL,
         CASE 
             WHEN NEW.severity = 'critical' THEN 'error'
@@ -694,13 +672,13 @@ CREATE OR REPLACE FUNCTION notifications.notify_user_direct(p_user_id uuid, p_ty
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'billing', 'academy'
+ SET search_path TO 'notifications'
 AS $function$
 declare
   v_notif_id uuid;
 begin
   -- Crear notificación directa
-  insert into public.notifications (
+  insert into notifications.notifications (
     type,
     title,
     body,
@@ -719,7 +697,7 @@ begin
   returning id into v_notif_id;
 
   -- Asociar al usuario destino
-  insert into public.user_notifications (
+  insert into notifications.user_notifications (
     user_id,
     notification_id
   )
@@ -747,12 +725,12 @@ CREATE OR REPLACE FUNCTION notifications.notify_user_payment_completed()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'public'
+ SET search_path TO 'billing', 'notifications'
 AS $function$
 BEGIN
     IF NEW.status = 'completed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'completed') THEN
         
-        PERFORM public.send_notification(
+        PERFORM notifications.send_notification(
             NEW.user_id,
             'success',
             '¡Pago Confirmado!',
@@ -784,7 +762,7 @@ CREATE OR REPLACE FUNCTION notifications.queue_email_bank_transfer(p_user_id uui
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam', 'notifications'
+ SET search_path TO 'notifications', 'iam'
 AS $function$DECLARE
     v_user_email TEXT;
     v_user_name TEXT;
@@ -812,7 +790,7 @@ BEGIN
     v_amount_formatted := p_amount::TEXT;
 
     -- 2. Insertar email para el USUARIO (BankTransferPending)
-    INSERT INTO public.email_queue (
+    INSERT INTO notifications.email_queue (
         recipient_email,
         recipient_name,
         template_type,
@@ -830,14 +808,14 @@ BEGIN
             'productName', p_product_name,
             'amount', v_amount_formatted,
             'currency', p_currency,
-            'reference', p_transfer_id -- Usamos el ID de transferencia como referencia
+            'reference', p_transfer_id
         ),
         'pending',
         NOW()
     );
 
     -- 3. Insertar email para el ADMIN (AdminNewTransfer)
-    INSERT INTO public.email_queue (
+    INSERT INTO notifications.email_queue (
         recipient_email,
         recipient_name,
         template_type,
@@ -846,7 +824,7 @@ BEGIN
         status,
         created_at
     ) VALUES (
-        'contacto@seencel.com', -- Admin email hardcodeado por ahora
+        'contacto@seencel.com',
         'Admin Seencel',
         'admin_new_transfer',
         '💸 Nueva transferencia: ' || p_product_name || ' - ' || p_payer_name,
@@ -869,7 +847,6 @@ BEGIN
     );
 
 EXCEPTION WHEN OTHERS THEN
-    -- Loguear error pero no fallar la transacción principal
     RAISE NOTICE 'Error en queue_email_bank_transfer: %', SQLERRM;
     RETURN jsonb_build_object(
         'success', false,
@@ -891,13 +868,13 @@ CREATE OR REPLACE FUNCTION notifications.queue_email_welcome()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam', 'notifications'
+ SET search_path TO 'notifications', 'iam'
 AS $function$
 BEGIN
     -- Solo procesar si es un INSERT (nuevo usuario)
     IF TG_OP = 'INSERT' THEN
         -- Insertar en cola de emails
-        INSERT INTO public.email_queue (
+        INSERT INTO notifications.email_queue (
             recipient_email,
             recipient_name,
             template_type,
@@ -941,26 +918,25 @@ CREATE OR REPLACE FUNCTION notifications.send_notification(p_user_id uuid, p_typ
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'billing', 'academy'
+ SET search_path TO 'notifications', 'iam'
 AS $function$
 DECLARE
     v_notification_id uuid;
 BEGIN
     -- 1. Insertar la notificación
-    INSERT INTO public.notifications (type, title, body, data, audience)
+    INSERT INTO notifications.notifications (type, title, body, data, audience)
     VALUES (p_type, p_title, p_body, p_data, p_audience)
     RETURNING id INTO v_notification_id;
 
     -- 2. Distribuir según audiencia
     IF p_audience = 'direct' AND p_user_id IS NOT NULL THEN
-        INSERT INTO public.user_notifications (user_id, notification_id)
+        INSERT INTO notifications.user_notifications (user_id, notification_id)
         VALUES (p_user_id, v_notification_id);
     
     ELSIF p_audience = 'admins' THEN
-        -- CORREGIDO: Usar el role_id de admin directamente
-        INSERT INTO public.user_notifications (user_id, notification_id)
+        INSERT INTO notifications.user_notifications (user_id, notification_id)
         SELECT id, v_notification_id
-        FROM public.users
+        FROM iam.users
         WHERE role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid;
         
     END IF;

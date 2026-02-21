@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -12,5 +12,5 @@
 | billing_profiles | trg_billing_profiles_user_id_immutable | BEFORE | UPDATE | EXECUTE FUNCTION iam.forbid_user_id_change() |
 | coupons | trg_coupons_set_updated | BEFORE | UPDATE | EXECUTE FUNCTION set_updated_at() |
 | organization_subscriptions | trg_notify_subscription_activated | AFTER | INSERT | EXECUTE FUNCTION notifications.notify_subscription_activa... |
-| payments | notify_payment | AFTER | INSERT, UPDATE | EXECUTE FUNCTION notifications.notify_admin_on_payment() |
+| payments | notify_payment | AFTER | UPDATE, INSERT | EXECUTE FUNCTION notifications.notify_admin_on_payment() |
 | payments | notify_user_payment_completed | AFTER | UPDATE, INSERT | EXECUTE FUNCTION notifications.notify_user_payment_comple... |

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -235,7 +235,7 @@ SELECT sel.id,
     (sel.context ->> 'provider'::text) AS payment_provider,
     (sel.context ->> 'course_id'::text) AS context_course_id,
     (sel.context ->> 'step'::text) AS error_step
-   FROM (((audit.system_error_logs sel
+   FROM (((ops.system_error_logs sel
      LEFT JOIN iam.users u ON ((u.id = ((sel.context ->> 'user_id'::text))::uuid)))
      LEFT JOIN iam.organizations o ON ((o.id = ((sel.context ->> 'organization_id'::text))::uuid)))
      LEFT JOIN billing.plans pl ON ((pl.id = o.plan_id)));

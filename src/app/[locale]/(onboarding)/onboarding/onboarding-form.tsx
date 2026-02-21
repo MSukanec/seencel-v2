@@ -74,17 +74,23 @@ function detectCountryFromTimezone(): string | null {
 
 interface OnboardingFormProps {
     countries: Country[];
+    defaultValues?: {
+        firstName?: string;
+        lastName?: string;
+        countryId?: string;
+    };
 }
 
-export default function OnboardingForm({ countries }: OnboardingFormProps) {
+export default function OnboardingForm({ countries, defaultValues }: OnboardingFormProps) {
     const t = useTranslations("Onboarding");
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
-    const [countryId, setCountryId] = useState("");
+    const [countryId, setCountryId] = useState(defaultValues?.countryId || "");
 
-    // Auto-detect country from browser timezone
+    // Auto-detect country from browser timezone (solo si no hay valor pre-llenado)
     useEffect(() => {
+        if (defaultValues?.countryId) return; // Ya tiene país del provider
         const detectedAlpha2 = detectCountryFromTimezone();
         if (detectedAlpha2 && countries.length > 0) {
             const match = countries.find(c => c.alpha_2 === detectedAlpha2);
@@ -92,7 +98,7 @@ export default function OnboardingForm({ countries }: OnboardingFormProps) {
                 setCountryId(match.id);
             }
         }
-    }, [countries]);
+    }, [countries, defaultValues?.countryId]);
 
     const handleSubmit = (formData: FormData) => {
         setError(null);
@@ -111,7 +117,7 @@ export default function OnboardingForm({ countries }: OnboardingFormProps) {
 
             if (result?.error) {
                 console.error("Onboarding error:", result.message);
-                setError("Ocurrió un error inesperado. Por favor intentá nuevamente. Si el problema persiste, contactanos en contacto@seencel.com");
+                setError(t("form.error"));
             } else if (result?.success) {
                 router.push("/hub");
                 router.refresh();
@@ -137,6 +143,7 @@ export default function OnboardingForm({ countries }: OnboardingFormProps) {
                                 required
                                 className="h-10"
                                 placeholder={t("form.firstName")}
+                                defaultValue={defaultValues?.firstName}
                             />
                         </FormGroup>
 
@@ -147,19 +154,20 @@ export default function OnboardingForm({ countries }: OnboardingFormProps) {
                                 required
                                 className="h-10"
                                 placeholder={t("form.lastName")}
+                                defaultValue={defaultValues?.lastName}
                             />
                         </FormGroup>
                     </div>
                 </Section>
 
                 {/* Country Section */}
-                <Section title="Ubicación" icon={<Globe className="w-5 h-5 text-primary" />}>
-                    <FormGroup label="País" htmlFor="country">
+                <Section title={t("form.country")} icon={<Globe className="w-5 h-5 text-primary" />}>
+                    <FormGroup label={t("form.country")} htmlFor="country">
                         <CountrySelector
                             value={countryId}
                             onChange={setCountryId}
                             countries={countries}
-                            placeholder="Seleccioná tu país..."
+                            placeholder={t("form.countryPlaceholder")}
                         />
                     </FormGroup>
                 </Section>

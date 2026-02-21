@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [OPS] RLS Policies (17)
+## [OPS] RLS Policies (18)
 
 ### `ops_alerts` (6 policies)
 
@@ -178,6 +178,17 @@ is_admin()
 ```
 
 #### ADMIN VE LOGS OPS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+
+### `system_error_logs` (1 policies)
+
+#### ADMINS VEN SYSTEM_ERROR_LOGS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}

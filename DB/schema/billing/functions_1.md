@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T12:04:42.647Z
+> Generated: 2026-02-21T13:42:37.043Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -22,73 +22,35 @@ AS $function$DECLARE
     v_payment_id uuid;
     v_step text := 'start';
 BEGIN
-    -- ============================================================
-    -- 1) Idempotencia fuerte
-    -- ============================================================
     v_step := 'idempotency_lock';
     PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
     v_step := 'insert_payment';
     v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        p_organization_id,
-        'seat_purchase',  -- product_type
-        p_plan_id,
-        NULL,             -- course_id
-        p_amount,
-        p_currency,
-        p_metadata
+        p_provider, p_provider_payment_id, p_user_id, p_organization_id,
+        'seat_purchase', p_plan_id, NULL, p_amount, p_currency, p_metadata
     );
 
     IF v_payment_id IS NULL THEN
         RETURN jsonb_build_object('status', 'already_processed');
     END IF;
 
-    -- ============================================================
-    -- 3) Incrementar seats disponibles
-    -- ============================================================
     v_step := 'increment_seats';
-    PERFORM public.step_organization_increment_seats(
-        p_organization_id,
-        p_seats_purchased
-    );
+    PERFORM public.step_organization_increment_seats(p_organization_id, p_seats_purchased);
 
-    -- ============================================================
-    -- 4) Registrar evento de compra
-    -- ============================================================
     v_step := 'log_event';
     PERFORM public.step_log_seat_purchase_event(
-        p_organization_id,
-        p_user_id,
-        p_seats_purchased,
-        p_amount,
-        p_currency,
-        v_payment_id,
-        true  -- prorated
+        p_organization_id, p_user_id, p_seats_purchased,
+        p_amount, p_currency, v_payment_id, true
     );
 
-    -- ============================================================
-    -- 5) Email de confirmación
-    -- ============================================================
     v_step := 'send_email';
     PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'seat_purchase',
+        p_user_id, 'seat_purchase',
         p_seats_purchased || ' asiento(s) adicional(es)',
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
+        p_amount, p_currency, v_payment_id, p_provider
     );
 
-    -- ============================================================
-    -- OK
-    -- ============================================================
     v_step := 'done';
     RETURN jsonb_build_object(
         'status', 'ok',
@@ -97,10 +59,8 @@ BEGIN
     );
 
 EXCEPTION WHEN OTHERS THEN
-    PERFORM public.log_system_error(
-        'payment',
-        'seat_purchase',
-        'handle_member_seat_purchase',
+    PERFORM ops.log_system_error(
+        'payment', 'seat_purchase', 'handle_member_seat_purchase',
         SQLERRM,
         jsonb_build_object(
             'step', v_step,
@@ -140,81 +100,37 @@ AS $function$DECLARE
     v_course_name text;
     v_step text := 'start';
 BEGIN
-    -- ============================================================
-    -- 1) Idempotencia
-    -- ============================================================
     v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
+    PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
     v_step := 'insert_payment';
     v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        NULL,
-        'course',
-        NULL,
-        p_course_id,
-        p_amount,
-        p_currency,
-        p_metadata
+        p_provider, p_provider_payment_id, p_user_id, NULL,
+        'course', NULL, p_course_id, p_amount, p_currency, p_metadata
     );
 
     IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
+        RETURN jsonb_build_object('status', 'already_processed');
     END IF;
 
-    -- ============================================================
-    -- 3) Enroll anual al curso
-    -- ============================================================
     v_step := 'course_enrollment_annual';
-    PERFORM public.step_course_enrollment_annual(
-        p_user_id,
-        p_course_id
-    );
+    PERFORM public.step_course_enrollment_annual(p_user_id, p_course_id);
 
-    -- ============================================================
-    -- 4) NUEVO: Enviar emails de confirmación
-    -- ============================================================
     v_step := 'send_purchase_email';
-    
-    -- Obtener nombre del curso
-    SELECT title INTO v_course_name
-    FROM public.courses
-    WHERE id = p_course_id;
-    
+    SELECT title INTO v_course_name FROM public.courses WHERE id = p_course_id;
+
     PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'course',
-        COALESCE(v_course_name, 'Curso'),
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
+        p_user_id, 'course', COALESCE(v_course_name, 'Curso'),
+        p_amount, p_currency, v_payment_id, p_provider
     );
 
-    -- ============================================================
-    -- DONE
-    -- ============================================================
     v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id
-    );
+    RETURN jsonb_build_object('status', 'ok', 'payment_id', v_payment_id);
 
 EXCEPTION
     WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'course',
-            'handle_payment_course_success',
+        PERFORM ops.log_system_error(
+            'payment', 'course', 'handle_payment_course_success',
             SQLERRM,
             jsonb_build_object(
                 'step', v_step,
@@ -256,101 +172,45 @@ AS $function$DECLARE
     v_plan_name text;
     v_step text := 'start';
 BEGIN
-    -- ============================================================
-    -- 1) Idempotencia fuerte
-    -- ============================================================
     v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
+    PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
-    -- ============================================================
-    -- 2) Registrar pago
-    -- ============================================================
     v_step := 'insert_payment';
     v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        p_organization_id,
-        'subscription',
-        p_plan_id,
-        NULL,
-        p_amount,
-        p_currency,
-        p_metadata
+        p_provider, p_provider_payment_id, p_user_id, p_organization_id,
+        'subscription', p_plan_id, NULL, p_amount, p_currency, p_metadata
     );
 
     IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
+        RETURN jsonb_build_object('status', 'already_processed');
     END IF;
 
-    -- ============================================================
-    -- 3) Expirar suscripción anterior
-    -- ============================================================
     v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(
-        p_organization_id
-    );
+    PERFORM public.step_subscription_expire_previous(p_organization_id);
 
-    -- ============================================================
-    -- 4) Crear nueva suscripción activa
-    -- ============================================================
     v_step := 'create_active_subscription';
     v_subscription_id := public.step_subscription_create_active(
-        p_organization_id,
-        p_plan_id,
-        p_billing_period,
-        v_payment_id,
-        p_amount,
-        p_currency
+        p_organization_id, p_plan_id, p_billing_period,
+        v_payment_id, p_amount, p_currency
     );
 
-    -- ============================================================
-    -- 5) Actualizar plan activo
-    -- ============================================================
     v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(
-        p_organization_id,
-        p_plan_id
-    );
+    PERFORM public.step_organization_set_plan(p_organization_id, p_plan_id);
 
-    -- ============================================================
-    -- 6) Fundadores (solo anual)
-    -- ============================================================
     IF p_billing_period = 'annual' THEN
         v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(
-            p_user_id,
-            p_organization_id
-        );
+        PERFORM public.step_apply_founders_program(p_user_id, p_organization_id);
     END IF;
 
-    -- ============================================================
-    -- 7) NUEVO: Enviar emails de confirmación
-    -- ============================================================
     v_step := 'send_purchase_email';
-    
-    -- Obtener nombre del plan
-    SELECT name INTO v_plan_name
-    FROM public.plans
-    WHERE id = p_plan_id;
-    
+    SELECT name INTO v_plan_name FROM public.plans WHERE id = p_plan_id;
+
     PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'subscription',
+        p_user_id, 'subscription',
         COALESCE(v_plan_name, 'Plan') || ' (' || p_billing_period || ')',
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
+        p_amount, p_currency, v_payment_id, p_provider
     );
 
-    -- ============================================================
-    -- OK
-    -- ============================================================
     v_step := 'done';
     RETURN jsonb_build_object(
         'status', 'ok',
@@ -360,10 +220,8 @@ BEGIN
 
 EXCEPTION
     WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'subscription',
-            'handle_payment_subscription_success',
+        PERFORM ops.log_system_error(
+            'payment', 'subscription', 'handle_payment_subscription_success',
             SQLERRM,
             jsonb_build_object(
                 'step', v_step,
@@ -408,17 +266,9 @@ AS $function$DECLARE
     v_previous_plan_id uuid;
     v_step text := 'start';
 BEGIN
-    -- ============================================================
-    -- 1) Idempotencia fuerte
-    -- ============================================================
     v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
+    PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
-    -- ============================================================
-    -- 2) Guardar datos del plan anterior (para metadata y email)
-    -- ============================================================
     v_step := 'get_previous_plan';
     SELECT o.plan_id, p.name
     INTO v_previous_plan_id, v_previous_plan_name
@@ -426,20 +276,10 @@ BEGIN
     LEFT JOIN public.plans p ON p.id = o.plan_id
     WHERE o.id = p_organization_id;
 
-    -- ============================================================
-    -- 3) Registrar pago
-    -- ============================================================
     v_step := 'insert_payment';
     v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        p_organization_id,
-        'upgrade',
-        p_plan_id,
-        NULL,
-        p_amount,
-        p_currency,
+        p_provider, p_provider_payment_id, p_user_id, p_organization_id,
+        'upgrade', p_plan_id, NULL, p_amount, p_currency,
         p_metadata || jsonb_build_object(
             'upgrade', true,
             'previous_plan_id', v_previous_plan_id,
@@ -448,74 +288,35 @@ BEGIN
     );
 
     IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
+        RETURN jsonb_build_object('status', 'already_processed');
     END IF;
 
-    -- ============================================================
-    -- 4) Expirar suscripción anterior (PRO)
-    -- ============================================================
     v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(
-        p_organization_id
-    );
+    PERFORM public.step_subscription_expire_previous(p_organization_id);
 
-    -- ============================================================
-    -- 5) Crear nueva suscripción activa (TEAMS)
-    -- ============================================================
     v_step := 'create_active_subscription';
     v_subscription_id := public.step_subscription_create_active(
-        p_organization_id,
-        p_plan_id,
-        p_billing_period,
-        v_payment_id,
-        p_amount,
-        p_currency
+        p_organization_id, p_plan_id, p_billing_period,
+        v_payment_id, p_amount, p_currency
     );
 
-    -- ============================================================
-    -- 6) Actualizar plan activo
-    -- ============================================================
     v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(
-        p_organization_id,
-        p_plan_id
-    );
+    PERFORM public.step_organization_set_plan(p_organization_id, p_plan_id);
 
-    -- ============================================================
-    -- 7) Fundadores (solo anual)
-    -- ============================================================
     IF p_billing_period = 'annual' THEN
         v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(
-            p_user_id,
-            p_organization_id
-        );
+        PERFORM public.step_apply_founders_program(p_user_id, p_organization_id);
     END IF;
 
-    -- ============================================================
-    -- 8) Email de confirmación de upgrade
-    -- ============================================================
     v_step := 'send_purchase_email';
-    
-    SELECT name INTO v_plan_name
-    FROM public.plans
-    WHERE id = p_plan_id;
-    
+    SELECT name INTO v_plan_name FROM public.plans WHERE id = p_plan_id;
+
     PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'upgrade',
+        p_user_id, 'upgrade',
         'Upgrade a ' || COALESCE(v_plan_name, 'Plan') || ' (' || CASE WHEN p_billing_period = 'annual' THEN 'anual' ELSE 'mensual' END || ')',
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
+        p_amount, p_currency, v_payment_id, p_provider
     );
 
-    -- ============================================================
-    -- OK
-    -- ============================================================
     v_step := 'done';
     RETURN jsonb_build_object(
         'status', 'ok',
@@ -527,10 +328,8 @@ BEGIN
 
 EXCEPTION
     WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'upgrade',
-            'handle_upgrade_subscription_success',
+        PERFORM ops.log_system_error(
+            'payment', 'upgrade', 'handle_upgrade_subscription_success',
             SQLERRM,
             jsonb_build_object(
                 'step', v_step,
@@ -818,11 +617,6 @@ declare
   v_payment_id uuid;
   v_product_id uuid;
 begin
-  -- ------------------------------------------------------------
-  -- product_id unificado:
-  -- - subscription: guardamos plan_id en product_id
-  -- - course: guardamos course_id en product_id
-  -- ------------------------------------------------------------
   if p_product_type = 'subscription' then
     v_product_id := p_plan_id;
   elsif p_product_type = 'course' then
@@ -832,34 +626,15 @@ begin
   end if;
 
   insert into public.payments (
-    provider,
-    provider_payment_id,
-    user_id,
-    organization_id,
-    product_type,
-    product_id,
-    course_id,
-    amount,
-    currency,
-    status,
-    metadata,
-    gateway,
-    approved_at
+    provider, provider_payment_id, user_id, organization_id,
+    product_type, product_id, course_id, amount, currency,
+    status, metadata, gateway, approved_at
   )
   values (
-    p_provider,
-    p_provider_payment_id,
-    p_user_id,
-    p_organization_id,
-    p_product_type,
-    v_product_id,
-    p_course_id,
-    p_amount,
-    coalesce(p_currency, 'USD'),
-    'completed',
-    coalesce(p_metadata, '{}'::jsonb),
-    p_provider,
-    now()
+    p_provider, p_provider_payment_id, p_user_id, p_organization_id,
+    p_product_type, v_product_id, p_course_id, p_amount,
+    coalesce(p_currency, 'USD'), 'completed',
+    coalesce(p_metadata, '{}'::jsonb), p_provider, now()
   )
   on conflict (provider, provider_payment_id)
   do nothing
@@ -869,10 +644,8 @@ begin
 
 exception
   when others then
-    perform public.log_system_error(
-      'payment',
-      'payments',
-      'step_payment_insert_idempotent',
+    perform ops.log_system_error(
+      'payment', 'payments', 'step_payment_insert_idempotent',
       sqlerrm,
       jsonb_build_object(
         'provider', p_provider,
