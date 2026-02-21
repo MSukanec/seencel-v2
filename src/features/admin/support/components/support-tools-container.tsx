@@ -4,11 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, User, Building, CreditCard, GraduationCap, Receipt, Ticket, Crown, XCircle, CheckCircle2 } from "lucide-react";
-import { getTestUserStatus, TestUserStatus, getAllUsers, getUserOrganizations, getCurrentUserAndOrg, UserBasic, OrganizationBasic } from "../actions";
+import { Loader2, RefreshCw, User, Building, CreditCard, GraduationCap, Receipt, Ticket, Crown, XCircle, CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
+import { getTestUserStatus, TestUserStatus, getAllUsers, getUserOrganizations, getCurrentUserAndOrg, cleanupTestPurchase, UserBasic, OrganizationBasic } from "../actions";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
-import { PurchaseCleanupTool } from "./purchase-cleanup-tool";
-import { SystemErrorsViewer } from "./system-errors-viewer";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 function StatusBadge({ value, trueLabel = "Sí", falseLabel = "No" }: { value: boolean; trueLabel?: string; falseLabel?: string }) {
     return value ? (
@@ -50,6 +59,10 @@ export function SupportToolsContainer() {
     const [status, setStatus] = useState<TestUserStatus | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Cleanup state
+    const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
+    const [cleaningUp, setCleaningUp] = useState(false);
 
     // Load all users and current user/org on mount
     useEffect(() => {
@@ -158,14 +171,29 @@ export function SupportToolsContainer() {
                             {selectedUser ? selectedUser.email : "Selecciona un usuario"}
                         </CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={fetchStatus} disabled={loading || !selectedUserId || !selectedOrgId}>
-                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                        Refrescar
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setShowCleanupConfirm(true)}
+                            disabled={cleaningUp || !selectedUserId || !selectedOrgId}
+                        >
+                            {cleaningUp ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                            )}
+                            Resetear
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={fetchStatus} disabled={loading || !selectedUserId || !selectedOrgId}>
+                            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                            Refrescar
+                        </Button>
+                    </div>
                 </CardHeader>
 
                 {/* User/Org Selectors using Combobox */}
-                <CardContent className="pb-4 space-y-3 border-b border-border/50">
+                <CardContent className="pb-4 border-b border-border/50">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* User Selector */}
                         <div className="space-y-1.5">
@@ -235,187 +263,224 @@ export function SupportToolsContainer() {
                 )}
 
                 {status && (
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
-                        {/* Usuario */}
+                    <CardContent className="space-y-4 pt-4">
+                        {/* Usuario + Organización — 2 columnas */}
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    Usuario
+                                <CardTitle className="text-sm flex items-center gap-4">
+                                    <span className="flex items-center gap-1.5">
+                                        <User className="h-4 w-4" />
+                                        Usuario
+                                    </span>
+                                    <span className="text-muted-foreground">|</span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Building className="h-4 w-4" />
+                                        Organización
+                                    </span>
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-0">
-                                <DataRow label="ID" value={<code className="text-xs">{status.user?.id?.slice(0, 8)}...</code>} />
-                                <DataRow label="Nombre" value={status.user?.fullName || "Sin nombre"} />
-                                <DataRow label="Email" value={status.user?.email} />
-                            </CardContent>
-                        </Card>
-
-                        {/* Organización */}
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <Building className="h-4 w-4" />
-                                    Organización
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-0">
-                                <DataRow label="Nombre" value={status.organization?.name || "Sin org"} />
-                                <DataRow
-                                    label="Plan"
-                                    value={status.organization?.planName || "Sin plan"}
-                                    badge={status.organization?.planId ? (
-                                        <Badge variant="default" className="bg-primary/10 text-primary">Activo</Badge>
-                                    ) : (
-                                        <Badge variant="secondary">Sin plan</Badge>
-                                    )}
-                                />
-                                <DataRow
-                                    label="Fundador"
-                                    value=""
-                                    badge={
-                                        status.organization?.isFounder ? (
-                                            <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
-                                                <Crown className="h-3 w-3 mr-1" />
-                                                Sí
-                                            </Badge>
-                                        ) : <StatusBadge value={false} />
-                                    }
-                                />
-                            </CardContent>
-                        </Card>
-
-                        {/* Suscripción */}
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <CreditCard className="h-4 w-4" />
-                                    Suscripción
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-0">
-                                {status.subscription ? (
-                                    <>
-                                        <DataRow
-                                            label="Estado"
-                                            value={status.subscription.status}
-                                            badge={
-                                                <Badge className={status.subscription.status === "active" ? "bg-green-500/10 text-green-600" : "bg-yellow-500/10 text-yellow-600"}>
-                                                    {status.subscription.status}
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-0">
+                                    <DataRow label="ID" value={<code className="text-xs break-all">{status.user?.id}</code>} />
+                                    <DataRow label="Auth ID" value={<code className="text-xs break-all">{status.user?.authId}</code>} />
+                                    <DataRow label="Nombre" value={status.user?.fullName || "Sin nombre"} />
+                                    <DataRow label="Email" value={status.user?.email} />
+                                </div>
+                                <div className="space-y-0">
+                                    <DataRow label="Nombre" value={status.organization?.name || "Sin org"} />
+                                    <DataRow
+                                        label="Plan"
+                                        value={status.organization?.planName || "Sin plan"}
+                                        badge={status.organization?.planId ? (
+                                            <Badge variant="default" className="bg-primary/10 text-primary">Activo</Badge>
+                                        ) : (
+                                            <Badge variant="secondary">Sin plan</Badge>
+                                        )}
+                                    />
+                                    <DataRow
+                                        label="Fundador"
+                                        value=""
+                                        badge={
+                                            status.organization?.isFounder ? (
+                                                <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                                                    <Crown className="h-3 w-3 mr-1" />
+                                                    Sí
                                                 </Badge>
-                                            }
-                                        />
-                                        <DataRow label="Plan" value={status.subscription.planName} />
-                                        <DataRow label="Período" value={status.subscription.billingPeriod} />
-                                    </>
-                                ) : (
-                                    <div className="py-4 text-center text-muted-foreground text-sm">
-                                        Sin suscripción activa
-                                    </div>
-                                )}
+                                            ) : <StatusBadge value={false} />
+                                        }
+                                    />
+                                </div>
                             </CardContent>
                         </Card>
 
-                        {/* Enrollments */}
+                        {/* Suscripción + Cursos — 2 columnas */}
                         <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <GraduationCap className="h-4 w-4" />
-                                    Cursos Inscriptos
-                                    <Badge variant="secondary">{status.enrollments.length}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-0">
-                                {status.enrollments.length > 0 ? (
-                                    status.enrollments.map(e => (
-                                        <DataRow
-                                            key={e.id}
-                                            label={e.courseName}
-                                            value=""
-                                            badge={<Badge variant="outline">{e.status}</Badge>}
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="py-4 text-center text-muted-foreground text-sm">
-                                        Sin inscripciones
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div>
+                                    <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                                        <CreditCard className="h-4 w-4" />
+                                        Suscripción
+                                    </h4>
+                                    <div className="space-y-0">
+                                        {status.subscription ? (
+                                            <>
+                                                <DataRow
+                                                    label="Estado"
+                                                    value={status.subscription.status}
+                                                    badge={
+                                                        <Badge className={status.subscription.status === "active" ? "bg-green-500/10 text-green-600" : "bg-yellow-500/10 text-yellow-600"}>
+                                                            {status.subscription.status}
+                                                        </Badge>
+                                                    }
+                                                />
+                                                <DataRow label="Plan" value={status.subscription.planName} />
+                                                <DataRow label="Período" value={status.subscription.billingPeriod} />
+                                            </>
+                                        ) : (
+                                            <div className="py-4 text-center text-muted-foreground text-sm">
+                                                Sin suscripción activa
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                                        <GraduationCap className="h-4 w-4" />
+                                        Cursos Inscriptos
+                                        <Badge variant="secondary">{status.enrollments.length}</Badge>
+                                    </h4>
+                                    <div className="space-y-0">
+                                        {status.enrollments.length > 0 ? (
+                                            status.enrollments.map(e => (
+                                                <DataRow
+                                                    key={e.id}
+                                                    label={e.courseName}
+                                                    value=""
+                                                    badge={<Badge variant="outline">{e.status}</Badge>}
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="py-4 text-center text-muted-foreground text-sm">
+                                                Sin inscripciones
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
 
-                        {/* Pagos */}
+                        {/* Pagos + Cupones — 2 columnas */}
                         <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <Receipt className="h-4 w-4" />
-                                    Pagos Recientes
-                                    <Badge variant="secondary">{status.payments.length}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-0">
-                                {status.payments.length > 0 ? (
-                                    status.payments.slice(0, 3).map(p => (
-                                        <DataRow
-                                            key={p.id}
-                                            label={`${p.currency} ${p.amount}`}
-                                            value={p.productType}
-                                            badge={
-                                                <Badge className={p.status === "approved" ? "bg-green-500/10 text-green-600" : "bg-yellow-500/10 text-yellow-600"}>
-                                                    {p.status}
-                                                </Badge>
-                                            }
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="py-4 text-center text-muted-foreground text-sm">
-                                        Sin pagos
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                                <div>
+                                    <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                                        <Receipt className="h-4 w-4" />
+                                        Pagos Recientes
+                                        <Badge variant="secondary">{status.payments.length}</Badge>
+                                    </h4>
+                                    <div className="space-y-0">
+                                        {status.payments.length > 0 ? (
+                                            status.payments.slice(0, 3).map(p => (
+                                                <DataRow
+                                                    key={p.id}
+                                                    label={`${p.currency} ${p.amount}`}
+                                                    value={p.productType}
+                                                    badge={
+                                                        <Badge className={p.status === "approved" ? "bg-green-500/10 text-green-600" : "bg-yellow-500/10 text-yellow-600"}>
+                                                            {p.status}
+                                                        </Badge>
+                                                    }
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="py-4 text-center text-muted-foreground text-sm">
+                                                Sin pagos
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Cupones */}
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <Ticket className="h-4 w-4" />
-                                    Cupones Usados
-                                    <Badge variant="secondary">{status.couponRedemptions.length}</Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-0">
-                                {status.couponRedemptions.length > 0 ? (
-                                    status.couponRedemptions.map(c => (
-                                        <DataRow
-                                            key={c.id}
-                                            label={c.couponCode}
-                                            value={new Date(c.redeemedAt).toLocaleDateString("es")}
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="py-4 text-center text-muted-foreground text-sm">
-                                        Sin cupones usados
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                                        <Ticket className="h-4 w-4" />
+                                        Cupones Usados
+                                        <Badge variant="secondary">{status.couponRedemptions.length}</Badge>
+                                    </h4>
+                                    <div className="space-y-0">
+                                        {status.couponRedemptions.length > 0 ? (
+                                            status.couponRedemptions.map(c => (
+                                                <DataRow
+                                                    key={c.id}
+                                                    label={c.couponCode}
+                                                    value={new Date(c.redeemedAt).toLocaleDateString("es")}
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="py-4 text-center text-muted-foreground text-sm">
+                                                Sin cupones usados
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </div>
                             </CardContent>
                         </Card>
                     </CardContent>
                 )}
             </Card>
 
-            {/* Bottom tools grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Cleanup Tool - Now uses selected user/org */}
-                <PurchaseCleanupTool
-                    userEmail={selectedUser?.email || null}
-                    userId={selectedUserId || null}
-                    orgId={selectedOrgId || null}
-                    orgName={selectedOrg?.name || null}
-                />
-
-                {/* System Errors Viewer */}
-                <SystemErrorsViewer />
-            </div>
+            {/* Cleanup Confirmation Dialog */}
+            <AlertDialog open={showCleanupConfirm} onOpenChange={setShowCleanupConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                            ¿Confirmar limpieza?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-3">
+                                <p>Esto borrará <strong>TODOS</strong> los datos de compra de:</p>
+                                <div className="bg-muted p-3 rounded-md text-sm space-y-1">
+                                    <p><strong>Email:</strong> {selectedUser?.email}</p>
+                                    <p><strong>Organización:</strong> {selectedOrg?.name || selectedOrgId}</p>
+                                </div>
+                                <p>Se eliminarán:</p>
+                                <ul className="list-disc list-inside text-sm space-y-1">
+                                    <li>Enrollments de cursos</li>
+                                    <li>Suscripciones de la organización</li>
+                                    <li>Pagos y transferencias</li>
+                                    <li>Preferencias de pago (MP, PayPal)</li>
+                                    <li>Cupones usados</li>
+                                </ul>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!selectedUser?.email || !selectedOrgId) return;
+                                setShowCleanupConfirm(false);
+                                setCleaningUp(true);
+                                try {
+                                    const result = await cleanupTestPurchase(selectedUser.email, selectedOrgId);
+                                    if (result.success) {
+                                        toast.success(result.message);
+                                        fetchStatus();
+                                    } else {
+                                        toast.error(result.message);
+                                    }
+                                } catch (err) {
+                                    toast.error("Error al resetear datos");
+                                } finally {
+                                    setCleaningUp(false);
+                                }
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Sí, eliminar todo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

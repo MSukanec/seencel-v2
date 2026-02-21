@@ -422,7 +422,7 @@ export async function checkActiveProjectLimit(
 ): Promise<{ allowed: boolean; current_active_count: number; max_allowed: number } | null> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.rpc('check_active_project_limit', {
+    const { data, error } = await supabase.schema('billing').rpc('check_active_project_limit', {
         p_organization_id: organizationId,
         p_excluded_project_id: excludedProjectId || null,
     });

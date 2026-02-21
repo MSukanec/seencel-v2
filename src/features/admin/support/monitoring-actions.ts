@@ -101,13 +101,13 @@ export async function getMonitoringDashboard(): Promise<{
         const [errorsResult, criticalErrorsResult, openAlertsResult, criticalAlertsResult, lastCheckResult] = await Promise.all([
             // Total errors last 24h
             supabase
-                .schema('audit').from('system_error_logs')
+                .schema('ops').from('system_error_logs')
                 .select('id', { count: 'exact', head: true })
                 .gte('created_at', since24h),
 
             // Critical errors last 24h
             supabase
-                .schema('audit').from('system_error_logs')
+                .schema('ops').from('system_error_logs')
                 .select('id', { count: 'exact', head: true })
                 .gte('created_at', since24h)
                 .eq('severity', 'critical'),

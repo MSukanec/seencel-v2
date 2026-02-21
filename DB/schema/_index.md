@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:47:02.827Z
+> Generated: 2026-02-21T19:23:32.061Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -46,7 +46,7 @@
 - **`system_job_logs`** (8 cols)
 - **`testimonials`** (16 cols)
 
-### Functions (56)
+### Functions (53)
 
 - `assert_project_is_active(p_project_id uuid)` → void 🔐 *(public/functions_1.md)*
 - `audit_subcontract_payments()` → trigger 🔐 *(public/functions_1.md)*
@@ -58,7 +58,6 @@
 - `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `check_active_project_limit(p_organization_id uuid, p_excluded_project_id uuid DEFAULT NULL::uuid)` → json 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `create_construction_task_material_snapshot()` → trigger *(public/functions_1.md)*
 - `current_user_id()` → uuid 🔐 *(public/functions_1.md)*
@@ -68,9 +67,7 @@
 - `fn_storage_overview(p_org_id uuid)` → TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb) 🔐 *(public/functions_1.md)*
 - `generate_next_document_group_name(p_folder_id uuid)` → text 🔐 *(public/functions_1.md)*
 - `generate_po_order_number()` → trigger *(public/functions_1.md)*
-- `get_organization_seat_status(p_organization_id uuid)` → jsonb 🔐 *(public/functions_2.md)*
-- `get_upgrade_proration(p_organization_id uuid, p_target_plan_id uuid)` → jsonb 🔐 *(public/functions_2.md)*
-- `get_user()` → json 🔐 *(public/functions_2.md)*
+- `get_user()` → json 🔐 *(public/functions_1.md)*
 - `handle_import_batch_member_id()` → trigger 🔐 *(public/functions_2.md)*
 - `handle_updated_by()` → trigger 🔐 *(public/functions_2.md)*
 - `has_permission(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_2.md)*
@@ -88,15 +85,15 @@
 - `refresh_labor_avg_prices()` → void 🔐 *(public/functions_2.md)*
 - `refresh_material_avg_prices()` → void 🔐 *(public/functions_2.md)*
 - `refresh_product_avg_prices()` → void 🔐 *(public/functions_2.md)*
-- `set_budget_task_organization()` → trigger 🔐 *(public/functions_3.md)*
-- `set_task_labor_organization()` → trigger *(public/functions_3.md)*
-- `set_task_material_organization()` → trigger 🔐 *(public/functions_3.md)*
+- `set_budget_task_organization()` → trigger 🔐 *(public/functions_2.md)*
+- `set_task_labor_organization()` → trigger *(public/functions_2.md)*
+- `set_task_material_organization()` → trigger 🔐 *(public/functions_2.md)*
 - `set_timestamp()` → trigger 🔐 *(public/functions_3.md)*
 - `set_updated_at()` → trigger 🔐 *(public/functions_3.md)*
 - `set_updated_at_ia_user_preferences()` → trigger 🔐 *(public/functions_3.md)*
 - `sync_task_status_progress()` → trigger *(public/functions_3.md)*
-- `unaccent(regdictionary, text)` → text *(public/functions_3.md)*
 - `unaccent(text)` → text *(public/functions_3.md)*
+- `unaccent(regdictionary, text)` → text *(public/functions_3.md)*
 - `unaccent_init(internal)` → internal *(public/functions_3.md)*
 - `unaccent_lexize(internal, internal, internal, internal)` → internal *(public/functions_3.md)*
 - `update_forum_thread_activity()` → trigger 🔐 *(public/functions_3.md)*
@@ -152,8 +149,8 @@
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
-- `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
+- `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_project(p_project_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.current_user_id()` → uuid 🔐 *(iam/functions_1.md)*
 - `iam.dismiss_home_banner()` → boolean 🔐 *(iam/functions_1.md)*
@@ -449,8 +446,11 @@
 - **`billing.plans`** (18 cols)
 - **`billing.subscription_notifications_log`** (4 cols | FK: subscription_id → organization_subscriptions)
 
-### Functions (11)
+### Functions (14)
 
+- `billing.check_active_project_limit(p_organization_id uuid, p_excluded_project_id uuid DEFAULT NULL::uuid)` → json 🔐 *(billing/functions_1.md)*
+- `billing.get_organization_seat_status(p_organization_id uuid)` → jsonb 🔐 *(billing/functions_1.md)*
+- `billing.get_upgrade_proration(p_organization_id uuid, p_target_plan_id uuid)` → jsonb 🔐 *(billing/functions_1.md)*
 - `billing.handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
 - `billing.handle_payment_seat_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
 - `billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb, p_is_upgrade boolean DEFAULT false)` → jsonb 🔐 *(billing/functions_1.md)*
@@ -475,10 +475,9 @@
 - **`ops.ops_repair_logs`** (7 cols | FK: alert_id → ops_alerts)
 - **`ops.system_error_logs`** (8 cols)
 
-### Functions (12)
+### Functions (10)
 
 - `ops.admin_cleanup_test_purchase(p_user_email text, p_org_id uuid)` → jsonb 🔐 *(ops/functions_1.md)*
-- `ops.admin_cleanup_test_user(target_email text)` → void 🔐 *(ops/functions_1.md)*
 - `ops.log_system_error(p_domain text, p_entity text, p_function_name text, p_error_message text, p_context jsonb DEFAULT NULL::jsonb, p_severity text DEFAULT 'error'::text)` → void 🔐 *(ops/functions_1.md)*
 - `ops.ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)` → void *(ops/functions_1.md)*
 - `ops.ops_detect_orgs_without_currency()` → void 🔐 *(ops/functions_1.md)*
@@ -488,7 +487,6 @@
 - `ops.ops_execute_repair_action(p_alert_id uuid, p_action_id text, p_executed_by uuid)` → void *(ops/functions_1.md)*
 - `ops.ops_retry_user_creation(p_alert_id uuid, p_executed_by uuid)` → void *(ops/functions_1.md)*
 - `ops.ops_run_all_checks()` → void 🔐 *(ops/functions_1.md)*
-- `ops.reset_test_payments_and_subscriptions(p_user_id uuid, p_organization_id uuid)` → void *(ops/functions_1.md)*
 
 ### Views (14)
 

@@ -58,7 +58,7 @@ export async function sendInvitationAction(
     }
 
     // 3. Check available seats
-    const { data: seatData, error: seatError } = await supabase.rpc('get_organization_seat_status', {
+    const { data: seatData, error: seatError } = await supabase.schema('billing').rpc('get_organization_seat_status', {
         p_organization_id: organizationId
     });
 
@@ -834,7 +834,7 @@ export async function getOrganizationSeatStatus(
 ): Promise<{ success: boolean; data?: SeatStatus; error?: string }> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.rpc('get_organization_seat_status', {
+    const { data, error } = await supabase.schema('billing').rpc('get_organization_seat_status', {
         p_organization_id: organizationId
     });
 

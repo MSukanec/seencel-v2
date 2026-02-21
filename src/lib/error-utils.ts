@@ -146,7 +146,7 @@ export async function logServerError(
         const rawMessage = extractMessage(error);
 
         // Use the SECURITY DEFINER RPC function to bypass RLS
-        await supabase.schema('audit').rpc("log_system_error", {
+        await supabase.schema('ops').rpc("log_system_error", {
             p_domain: domain,
             p_entity: entity,
             p_function_name: functionName,

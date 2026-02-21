@@ -1,103 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:47:02.827Z
+> Generated: 2026-02-21T19:23:32.061Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 3: set_budget_task_organization — update_updated_at_column)
-
-### `set_budget_task_organization()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.set_budget_task_organization()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  -- Resolver organización desde la tarea
-  select t.organization_id
-  into new.organization_id
-  from public.tasks t
-  where t.id = new.task_id;
-
-  -- Si no existe la tarea, es un error lógico
-  if new.organization_id is null then
-    raise exception
-      'No se pudo resolver organization_id para task_id %',
-      new.task_id;
-  end if;
-
-  return new;
-end;
-$function$
-```
-</details>
-
-### `set_task_labor_organization()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.set_task_labor_organization()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-    -- Si organization_id es null, heredarlo de la tarea padre
-    IF NEW.organization_id IS NULL THEN
-        SELECT organization_id INTO NEW.organization_id
-        FROM tasks
-        WHERE id = NEW.task_id;
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `set_task_material_organization()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.set_task_material_organization()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  -- Resolver organización desde la tarea
-  select t.organization_id
-  into new.organization_id
-  from public.tasks t
-  where t.id = new.task_id;
-
-  -- Si no existe la tarea, es un error lógico
-  if new.organization_id is null then
-    raise exception
-      'No se pudo resolver organization_id para task_id %',
-      new.task_id;
-  end if;
-
-  return new;
-end;
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 3: set_timestamp — update_updated_at_column)
 
 ### `set_timestamp()` 🔐
 
@@ -199,22 +105,6 @@ $function$
 ```
 </details>
 
-### `unaccent(regdictionary, text)`
-
-- **Returns**: text
-- **Kind**: function | STABLE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.unaccent(regdictionary, text)
- RETURNS text
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/unaccent', $function$unaccent_dict$function$
-```
-</details>
-
 ### `unaccent(text)`
 
 - **Returns**: text
@@ -224,6 +114,22 @@ AS '$libdir/unaccent', $function$unaccent_dict$function$
 
 ```sql
 CREATE OR REPLACE FUNCTION public.unaccent(text)
+ RETURNS text
+ LANGUAGE c
+ STABLE PARALLEL SAFE STRICT
+AS '$libdir/unaccent', $function$unaccent_dict$function$
+```
+</details>
+
+### `unaccent(regdictionary, text)`
+
+- **Returns**: text
+- **Kind**: function | STABLE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.unaccent(regdictionary, text)
  RETURNS text
  LANGUAGE c
  STABLE PARALLEL SAFE STRICT

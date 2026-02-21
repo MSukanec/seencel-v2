@@ -140,6 +140,38 @@ export async function getUserEnrollments(): Promise<Set<string>> {
 }
 
 /**
+ * Get course IDs where the user already has lesson progress (progress_pct > 0).
+ * Used to distinguish "Comenzar" vs "Continuar" in course cards.
+ */
+export async function getCoursesWithProgress(): Promise<Set<string>> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return new Set();
+
+    const { data: internalUser } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!internalUser) return new Set();
+
+    const { data, error } = await supabase
+        .schema('academy').from('course_progress_view')
+        .select('course_id')
+        .eq('user_id', internalUser.id)
+        .gt('progress_pct', 0);
+
+    if (error) {
+        console.error('Error fetching courses with progress:', error);
+        return new Set();
+    }
+
+    return new Set((data || []).map(d => d.course_id));
+}
+
+/**
  * Get the current user's markers for all lessons in a course
  * Returns markers ordered by time within each lesson
  */

@@ -168,7 +168,7 @@ export async function getUpgradeProration(
 ): Promise<UpgradeProrationData> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.rpc("get_upgrade_proration", {
+    const { data, error } = await supabase.schema('billing').rpc("get_upgrade_proration", {
         p_organization_id: organizationId,
         p_target_plan_id: targetPlanId,
     });

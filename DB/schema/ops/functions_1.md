@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:47:02.827Z
+> Generated: 2026-02-21T19:23:32.061Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [OPS] Functions (chunk 1: admin_cleanup_test_purchase — reset_test_payments_and_subscriptions)
+## [OPS] Functions (chunk 1: admin_cleanup_test_purchase — ops_run_all_checks)
 
 ### `ops.admin_cleanup_test_purchase(p_user_email text, p_org_id uuid)` 🔐
 
@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION ops.admin_cleanup_test_purchase(p_user_email text, p_
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'academy', 'iam'
 AS $function$
 DECLARE
     v_user_id UUID;
@@ -33,7 +33,7 @@ BEGIN
     -- VALIDACIÓN: Obtener y validar user_id
     -- ============================================
     SELECT COUNT(*) INTO v_affected_count
-    FROM public.users 
+    FROM iam.users 
     WHERE email = p_user_email;
     
     IF v_affected_count = 0 THEN
@@ -51,29 +51,29 @@ BEGIN
     END IF;
     
     SELECT id INTO v_user_id 
-    FROM public.users 
+    FROM iam.users 
     WHERE email = p_user_email;
     
     -- ============================================
     -- OPERACIONES DE LIMPIEZA (con conteo)
     -- ============================================
     
-    -- 1. Borrar course_enrollments
-    DELETE FROM course_enrollments WHERE user_id = v_user_id;
+    -- 1. Borrar course_enrollments (academy schema)
+    DELETE FROM academy.course_enrollments WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'course_enrollments (' || v_affected_count || ')'); 
     END IF;
     
-    -- 2. Borrar suscripciones de la organización
-    DELETE FROM organization_subscriptions WHERE organization_id = v_org_id;
+    -- 2. Borrar suscripciones de la organización (billing schema)
+    DELETE FROM billing.organization_subscriptions WHERE organization_id = v_org_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'organization_subscriptions (' || v_affected_count || ')'); 
     END IF;
     
-    -- 3. Resetear plan_id de la organización al plan FREE
-    UPDATE organizations 
+    -- 3. Resetear plan_id de la organización al plan FREE (iam schema)
+    UPDATE iam.organizations 
     SET plan_id = v_free_plan_id 
     WHERE id = v_org_id AND plan_id IS DISTINCT FROM v_free_plan_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
@@ -82,7 +82,7 @@ BEGIN
     END IF;
 
     -- 3b. Resetear is_founder flag
-    UPDATE organizations 
+    UPDATE iam.organizations 
     SET settings = COALESCE(settings, '{}'::jsonb) - 'is_founder'
     WHERE id = v_org_id AND (settings->>'is_founder')::boolean = true;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
@@ -91,7 +91,7 @@ BEGIN
     END IF;
 
     -- 3c. Resetear purchased_seats a 0
-    UPDATE organizations 
+    UPDATE iam.organizations 
     SET purchased_seats = 0 
     WHERE id = v_org_id AND COALESCE(purchased_seats, 0) > 0;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
@@ -99,38 +99,38 @@ BEGIN
         v_deleted_items := array_append(v_deleted_items, 'organizations.purchased_seats → 0'); 
     END IF;
     
-    -- 4. Borrar payments del usuario
-    DELETE FROM payments WHERE user_id = v_user_id;
+    -- 4. Borrar payments del usuario (billing schema)
+    DELETE FROM billing.payments WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'payments (' || v_affected_count || ')'); 
     END IF;
     
-    -- 5. Borrar bank_transfer_payments del usuario
-    DELETE FROM bank_transfer_payments WHERE user_id = v_user_id;
+    -- 5. Borrar bank_transfer_payments del usuario (billing schema)
+    DELETE FROM billing.bank_transfer_payments WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'bank_transfer_payments (' || v_affected_count || ')'); 
     END IF;
     
-    -- 6. Borrar mp_preferences del usuario
-    DELETE FROM mp_preferences WHERE user_id = v_user_id;
+    -- 6. Borrar mp_preferences del usuario (billing schema)
+    DELETE FROM billing.mp_preferences WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'mp_preferences (' || v_affected_count || ')'); 
     END IF;
     
-    -- 7. Borrar coupon_redemptions del usuario
-    DELETE FROM coupon_redemptions WHERE user_id = v_user_id;
+    -- 7. Borrar coupon_redemptions del usuario (billing schema)
+    DELETE FROM billing.coupon_redemptions WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'coupon_redemptions (' || v_affected_count || ')'); 
     END IF;
     
     -- 8. Borrar payment_events vinculados a paypal_preferences del usuario
-    DELETE FROM payment_events pe
+    DELETE FROM billing.payment_events pe
     WHERE EXISTS (
-        SELECT 1 FROM paypal_preferences pp 
+        SELECT 1 FROM billing.paypal_preferences pp 
         WHERE pp.id::text = pe.custom_id 
         AND pp.user_id = v_user_id
     );
@@ -139,15 +139,12 @@ BEGIN
         v_deleted_items := array_append(v_deleted_items, 'payment_events (' || v_affected_count || ')'); 
     END IF;
 
-    -- 9. Borrar paypal_preferences del usuario (tabla unificada)
-    DELETE FROM paypal_preferences WHERE user_id = v_user_id;
+    -- 9. Borrar paypal_preferences del usuario (billing schema)
+    DELETE FROM billing.paypal_preferences WHERE user_id = v_user_id;
     GET DIAGNOSTICS v_affected_count = ROW_COUNT;
     IF v_affected_count > 0 THEN 
         v_deleted_items := array_append(v_deleted_items, 'paypal_preferences (' || v_affected_count || ')'); 
     END IF;
-    
-    -- NOTA: paypal_seat_preferences y paypal_upgrade_preferences son legacy
-    -- y no existen en producción. Toda la data está en paypal_preferences.
     
     -- ============================================
     -- RESULTADO
@@ -167,67 +164,6 @@ BEGIN
         'user_id', v_user_id,
         'org_id', v_org_id
     );
-END;
-$function$
-```
-</details>
-
-### `ops.admin_cleanup_test_user(target_email text)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION ops.admin_cleanup_test_user(target_email text)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public', 'iam'
-AS $function$
-DECLARE
-    v_user_id uuid;
-    v_org_record record;
-BEGIN
-    -- 1. Find the user ID from auth.users (or public.users)
-    SELECT id INTO v_user_id
-    FROM auth.users
-    WHERE email = target_email;
-
-    IF v_user_id IS NULL THEN
-        RAISE NOTICE 'User % not found, nothing to clean.', target_email;
-        RETURN;
-    END IF;
-
-    RAISE NOTICE 'Cleaning up user: % (ID: %)', target_email, v_user_id;
-
-    -- 2. Find Organizations owned by this user
-    FOR v_org_record IN 
-        SELECT o.id, o.name 
-        FROM public.organizations o
-        JOIN iam.organization_members om ON o.id = om.organization_id
-        WHERE om.user_id = (SELECT id FROM public.users WHERE auth_id = v_user_id)
-    LOOP
-        -- Check if there are OTHER members in this org
-        IF (SELECT count(*) FROM iam.organization_members WHERE organization_id = v_org_record.id) = 1 THEN
-            RAISE NOTICE 'Deleting Organization: % (ID: %)', v_org_record.name, v_org_record.id;
-            
-            DELETE FROM public.organizations WHERE id = v_org_record.id;
-        ELSE
-            RAISE NOTICE 'Skipping Organization % because it has other members.', v_org_record.name;
-            
-            -- Just remove the member, don't kill the org
-            DELETE FROM iam.organization_members 
-            WHERE organization_id = v_org_record.id 
-            AND user_id = (SELECT id FROM public.users WHERE auth_id = v_user_id);
-        END IF;
-    END LOOP;
-
-    -- 3. Finally, delete the User from auth.users
-    DELETE FROM auth.users WHERE id = v_user_id;
-    
-    RAISE NOTICE 'Cleanup complete for %', target_email;
 END;
 $function$
 ```
@@ -747,57 +683,6 @@ BEGIN
 
   -- Detector de orgs sin moneda
   PERFORM ops.ops_detect_orgs_without_currency();
-END;
-$function$
-```
-</details>
-
-### `ops.reset_test_payments_and_subscriptions(p_user_id uuid, p_organization_id uuid)`
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION ops.reset_test_payments_and_subscriptions(p_user_id uuid, p_organization_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
-AS $function$
-BEGIN
-  -- 🔥 CLAVE ABSOLUTA
-  SET CONSTRAINTS ALL DEFERRED;
-
-  -- 1) BORRAR ENROLLMENTS
-  DELETE FROM public.course_enrollments
-  WHERE user_id = p_user_id;
-
-  -- 2) BORRAR PAGOS
-  DELETE FROM public.payments
-  WHERE user_id = p_user_id
-     OR organization_id = p_organization_id;
-
-  -- 3) BORRAR BILLING CYCLES
-  DELETE FROM public.organization_billing_cycles
-  WHERE organization_id = p_organization_id;
-
-  -- 4) BORRAR SUBSCRIPTIONS
-  DELETE FROM public.organization_subscriptions
-  WHERE organization_id = p_organization_id;
-
-  -- 5) RESET ORGANIZATION
-  UPDATE public.organizations
-  SET
-    plan_id = '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2',
-    settings = '{}'::jsonb,
-    updated_at = now()
-  WHERE id = p_organization_id;
-
-  -- 6) LIMPIAR ERRORES
-  DELETE FROM public.system_errors
-  WHERE context->>'user_id' = p_user_id::text
-     OR context->>'organization_id' = p_organization_id::text;
 END;
 $function$
 ```

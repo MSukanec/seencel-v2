@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCourses, getUserEnrollments } from "@/features/academy/student-actions";
+import { getCourses, getUserEnrollments, getCoursesWithProgress } from "@/features/academy/student-actions";
 import { CoursesContent } from "@/features/academy/components/courses-content";
 import { PageWrapper } from "@/components/layout";
 import { Video } from "lucide-react";
@@ -34,8 +34,11 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
         redirect('/auth/login');
     }
 
-    const courses = await getCourses();
-    const enrolledCourseIds = await getUserEnrollments();
+    const [courses, enrolledCourseIds, startedCourseIds] = await Promise.all([
+        getCourses(),
+        getUserEnrollments(),
+        getCoursesWithProgress(),
+    ]);
 
     return (
         <PageWrapper type="page" title={t('myCourses')} icon={<Video />}>
@@ -44,6 +47,7 @@ export default async function MyCoursesPage({ params }: { params: Promise<{ loca
                 detailRoute="/academy/courses"
                 isDashboard={true}
                 enrolledCourseIds={Array.from(enrolledCourseIds)}
+                startedCourseIds={Array.from(startedCourseIds)}
             />
         </PageWrapper>
     );

@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/users/queries";
-import { getCourses, getUserEnrollments } from "@/features/academy/student-actions";
+import { getCourses, getUserEnrollments, getCoursesWithProgress } from "@/features/academy/student-actions";
 import { CoursesContent } from "@/features/academy/components/courses-content";
 import { getFeatureFlag } from "@/actions/feature-flags";
 import type { Metadata } from 'next';
@@ -53,10 +53,11 @@ export async function generateMetadata({
 export default async function CoursesPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
     setRequestLocale(locale);
-    const [{ profile }, courses, enrolledCourseIds, isPurchaseEnabled] = await Promise.all([
+    const [{ profile }, courses, enrolledCourseIds, startedCourseIds, isPurchaseEnabled] = await Promise.all([
         getUserProfile(),
         getCourses(),
         getUserEnrollments(),
+        getCoursesWithProgress(),
         getFeatureFlag("course_purchases_enabled")
     ]);
 
@@ -70,6 +71,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                         courses={courses}
                         detailRoute="/academy/courses"
                         enrolledCourseIds={Array.from(enrolledCourseIds)}
+                        startedCourseIds={Array.from(startedCourseIds)}
                         isPurchaseEnabled={isPurchaseEnabled}
                     />
                 </div>

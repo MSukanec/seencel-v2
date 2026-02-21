@@ -92,7 +92,7 @@ export default async function AdminSystemPage() {
 
                 {/* Tab: Herramientas de Debug */}
                 <TabsContent value="debug" className="m-0 h-full focus-visible:outline-none">
-                    <ContentLayout variant="wide">
+                    <ContentLayout variant="settings">
                         <SupportToolsContainer />
                     </ContentLayout>
                 </TabsContent>

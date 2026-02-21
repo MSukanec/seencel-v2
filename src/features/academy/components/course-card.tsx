@@ -11,10 +11,11 @@ interface CourseCardProps {
     className?: string;
     basePath?: string;
     isEnrolled?: boolean;
+    hasProgress?: boolean;
     isPurchaseEnabled?: boolean;
 }
 
-export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false, isPurchaseEnabled = true }: CourseCardProps) {
+export function CourseCard({ course, className, basePath = '/academy/courses', isEnrolled = false, hasProgress = false, isPurchaseEnabled = true }: CourseCardProps) {
     const { details } = course;
 
     // Format price - show USD explicitly
@@ -85,7 +86,7 @@ export function CourseCard({ course, className, basePath = '/academy/courses', i
                         <Button size="sm" asChild>
                             <Link href={`/academy/my-courses/${course.slug}` as any}>
                                 <Play className="w-4 h-4 mr-1" />
-                                Continuar
+                                {hasProgress ? 'Continuar' : 'Comenzar'}
                             </Link>
                         </Button>
                     )}

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:47:02.827Z
+> Generated: 2026-02-21T19:23:32.061Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 1: assert_project_is_active — generate_po_order_number)
+## [PUBLIC] Functions (chunk 1: assert_project_is_active — get_user)
 
 ### `assert_project_is_active(p_project_id uuid)` 🔐
 
@@ -356,55 +356,6 @@ CREATE OR REPLACE FUNCTION public.can_view_project(p_project_id uuid)
  SET search_path TO 'public', 'iam'
 AS $function$
   SELECT iam.can_view_project(p_project_id);
-$function$
-```
-</details>
-
-### `check_active_project_limit(p_organization_id uuid, p_excluded_project_id uuid DEFAULT NULL::uuid)` 🔐
-
-- **Returns**: json
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.check_active_project_limit(p_organization_id uuid, p_excluded_project_id uuid DEFAULT NULL::uuid)
- RETURNS json
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'billing'
-AS $function$
-DECLARE
-    v_current_count INT;
-    v_max_allowed INT;
-    v_plan_features JSONB;
-BEGIN
-    SELECT COUNT(*)
-    INTO v_current_count
-    FROM public.projects
-    WHERE organization_id = p_organization_id
-      AND status = 'active'
-      AND is_deleted = false
-      AND (p_excluded_project_id IS NULL OR id != p_excluded_project_id);
-
-    SELECT p.features
-    INTO v_plan_features
-    FROM public.organizations o
-    JOIN billing.plans p ON p.id = o.plan_id
-    WHERE o.id = p_organization_id;
-
-    IF v_plan_features IS NULL THEN
-        v_max_allowed := -1;
-    ELSE
-        v_max_allowed := COALESCE((v_plan_features->>'max_active_projects')::INT, -1);
-    END IF;
-
-    RETURN json_build_object(
-        'allowed', (v_max_allowed = -1 OR v_current_count < v_max_allowed),
-        'current_active_count', v_current_count,
-        'max_allowed', v_max_allowed
-    );
-END;
 $function$
 ```
 </details>
@@ -767,6 +718,25 @@ BEGIN
     
     RETURN NEW;
 END;
+$function$
+```
+</details>
+
+### `get_user()` 🔐
+
+- **Returns**: json
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user()
+ RETURNS json
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.get_user();
 $function$
 ```
 </details>

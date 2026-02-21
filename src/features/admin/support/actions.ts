@@ -90,7 +90,7 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
     try {
         const supabase = await createClient();
 
-        // Get orgs where user is a member
+        // Get orgs where user is a member (without cross-schema join to billing.plans)
         const { data, error } = await supabase
             .schema('iam').from("organization_members")
             .select(`
@@ -98,7 +98,7 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
                 organizations:organization_id (
                     id,
                     name,
-                    plans:plan_id (name)
+                    plan_id
                 )
             `)
             .eq("user_id", userId);
@@ -107,12 +107,30 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
             return { success: false, error: sanitizeError(error) };
         }
 
+        // Collect unique plan IDs to fetch names from billing schema
+        const planIds = [...new Set(
+            (data || [])
+                .map((m: any) => m.organizations?.plan_id)
+                .filter(Boolean)
+        )];
+
+        let planMap: Record<string, string> = {};
+        if (planIds.length > 0) {
+            const { data: plans } = await supabase
+                .schema('billing').from("plans")
+                .select("id, name")
+                .in("id", planIds);
+            if (plans) {
+                planMap = Object.fromEntries(plans.map((p: any) => [p.id, p.name]));
+            }
+        }
+
         return {
             success: true,
             organizations: (data || []).map((m: any) => ({
                 id: m.organizations.id,
                 name: m.organizations.name,
-                planName: m.organizations.plans?.name || null
+                planName: m.organizations.plan_id ? (planMap[m.organizations.plan_id] || null) : null
             }))
         };
     } catch (error) {
@@ -218,6 +236,7 @@ export async function cleanupTestPurchase(email: string, orgId: string): Promise
 export interface TestUserStatus {
     user: {
         id: string;
+        authId: string;
         email: string;
         fullName: string | null;
         createdAt: string;
@@ -277,7 +296,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
         // 1. Obtener usuario por ID
         const { data: user } = await supabase
             .schema('iam').from("users")
-            .select("id, email, full_name, created_at")
+            .select("id, auth_id, email, full_name, created_at")
             .eq("id", userId)
             .single();
 
@@ -285,7 +304,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
             return { success: false, error: "Usuario no encontrado" };
         }
 
-        // 2. Obtener organización con plan
+        // 2. Obtener organización
         const { data: org } = await supabase
             .schema('iam').from("organizations")
             .select(`
@@ -293,11 +312,21 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
                 name, 
                 plan_id, 
                 created_at,
-                settings,
-                plans:plan_id (name)
+                settings
             `)
             .eq("id", orgId)
             .single();
+
+        // 2b. Fetch plan name from billing schema if org has plan_id
+        let orgPlanName: string | null = null;
+        if (org?.plan_id) {
+            const { data: planData } = await supabase
+                .schema('billing').from("plans")
+                .select("name")
+                .eq("id", org.plan_id)
+                .single();
+            orgPlanName = planData?.name || null;
+        }
 
         // 3. Obtener suscripción activa
         const { data: subscription } = await supabase
@@ -365,6 +394,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
             data: {
                 user: {
                     id: user.id,
+                    authId: user.auth_id,
                     email: user.email,
                     fullName: user.full_name,
                     createdAt: user.created_at
@@ -373,7 +403,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
                     id: org.id,
                     name: org.name,
                     planId: org.plan_id,
-                    planName: (org.plans as any)?.name || null,
+                    planName: orgPlanName,
                     isFounder,
                     createdAt: org.created_at
                 } : null,
@@ -453,7 +483,7 @@ export async function getSystemErrors(hours: number = 24): Promise<{ success: bo
         const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await supabase
-            .schema('audit').from('system_error_logs')
+            .schema('ops').from('system_error_logs')
             .select('*')
             .gte('created_at', since)
             .order('created_at', { ascending: false })

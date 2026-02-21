@@ -1,326 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:47:02.827Z
+> Generated: 2026-02-21T19:23:32.061Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 2: get_organization_seat_status — refresh_product_avg_prices)
-
-### `get_organization_seat_status(p_organization_id uuid)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_organization_seat_status(p_organization_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam', 'billing'
-AS $function$
-DECLARE
-    v_seats_included integer;
-    v_max_members integer;
-    v_purchased_seats integer;
-    v_current_members integer;
-    v_pending_invitations integer;
-    v_total_capacity integer;
-    v_available_seats integer;
-    v_plan_price_monthly numeric;
-    v_plan_price_annual numeric;
-    v_plan_slug text;
-    v_billing_period text;
-    v_expires_at timestamptz;
-    v_days_remaining integer;
-    v_prorated_price_monthly numeric;
-    v_prorated_price_annual numeric;
-    v_can_buy_more boolean;
-BEGIN
-    SELECT 
-        COALESCE((p.features->>'seats_included')::integer, 1),
-        COALESCE((p.features->>'max_members')::integer, 999),
-        COALESCE(p.monthly_amount, 0),
-        COALESCE(p.annual_amount, 0),
-        p.slug
-    INTO v_seats_included, v_max_members, v_plan_price_monthly, v_plan_price_annual, v_plan_slug
-    FROM public.organizations o
-    JOIN billing.plans p ON p.id = o.plan_id
-    WHERE o.id = p_organization_id;
-
-    SELECT COALESCE(purchased_seats, 0)
-    INTO v_purchased_seats
-    FROM public.organizations
-    WHERE id = p_organization_id;
-
-    SELECT COUNT(*)
-    INTO v_current_members
-    FROM iam.organization_members
-    WHERE organization_id = p_organization_id
-      AND is_active = true;
-
-    SELECT COUNT(*)
-    INTO v_pending_invitations
-    FROM iam.organization_invitations
-    WHERE organization_id = p_organization_id
-      AND status IN ('pending', 'registered');
-
-    v_total_capacity := v_seats_included + v_purchased_seats;
-    v_available_seats := v_total_capacity - (v_current_members + v_pending_invitations);
-    v_can_buy_more := (v_total_capacity < v_max_members);
-
-    SELECT 
-        s.billing_period,
-        s.expires_at
-    INTO v_billing_period, v_expires_at
-    FROM billing.organization_subscriptions s
-    WHERE s.organization_id = p_organization_id
-      AND s.status = 'active'
-    LIMIT 1;
-
-    IF v_expires_at IS NOT NULL THEN
-        v_days_remaining := GREATEST(0, (v_expires_at::date - CURRENT_DATE));
-        
-        IF v_billing_period = 'monthly' THEN
-            v_prorated_price_monthly := ROUND(v_plan_price_monthly * (v_days_remaining::numeric / 30.0), 2);
-            v_prorated_price_annual := NULL;
-        ELSE
-            v_prorated_price_annual := ROUND(v_plan_price_annual * (v_days_remaining::numeric / 365.0), 2);
-            v_prorated_price_monthly := NULL;
-        END IF;
-    ELSE
-        v_days_remaining := 0;
-        v_prorated_price_monthly := v_plan_price_monthly;
-        v_prorated_price_annual := v_plan_price_annual;
-    END IF;
-
-    RETURN jsonb_build_object(
-        'seats_included', v_seats_included,
-        'max_members', v_max_members,
-        'purchased', v_purchased_seats,
-        'total_capacity', v_total_capacity,
-        'used', v_current_members,
-        'pending_invitations', v_pending_invitations,
-        'available', GREATEST(v_available_seats, 0),
-        'can_invite', v_available_seats > 0,
-        'can_buy_more', v_can_buy_more,
-        'seat_price_monthly', v_plan_price_monthly,
-        'seat_price_annual', v_plan_price_annual,
-        'plan_slug', v_plan_slug,
-        'billing_period', v_billing_period,
-        'expires_at', v_expires_at,
-        'days_remaining', v_days_remaining,
-        'prorated_monthly', v_prorated_price_monthly,
-        'prorated_annual', v_prorated_price_annual
-    );
-END;
-$function$
-```
-</details>
-
-### `get_upgrade_proration(p_organization_id uuid, p_target_plan_id uuid)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_upgrade_proration(p_organization_id uuid, p_target_plan_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    -- Plan actual
-    v_current_plan_id uuid;
-    v_current_plan_slug text;
-    v_current_plan_name text;
-    v_current_monthly numeric;
-    v_current_annual numeric;
-    
-    -- Plan destino
-    v_target_plan_slug text;
-    v_target_plan_name text;
-    v_target_monthly numeric;
-    v_target_annual numeric;
-    
-    -- Suscripción activa
-    v_billing_period text;
-    v_started_at timestamptz;
-    v_expires_at timestamptz;
-    v_subscription_amount numeric;
-    v_subscription_id uuid;
-    
-    -- Cálculos
-    v_days_remaining integer;
-    v_period_total_days integer;
-    v_credit numeric;
-    v_target_price numeric;
-    v_upgrade_price numeric;
-BEGIN
-    -- ============================================================
-    -- 1) Obtener plan actual de la organización
-    -- ============================================================
-    SELECT 
-        o.plan_id,
-        p.slug,
-        p.name,
-        COALESCE(p.monthly_amount, 0),
-        COALESCE(p.annual_amount, 0)
-    INTO v_current_plan_id, v_current_plan_slug, v_current_plan_name,
-         v_current_monthly, v_current_annual
-    FROM public.organizations o
-    JOIN public.plans p ON p.id = o.plan_id
-    WHERE o.id = p_organization_id;
-    
-    IF v_current_plan_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'ok', false,
-            'error', 'ORGANIZATION_NOT_FOUND'
-        );
-    END IF;
-    
-    -- Validar que el plan actual sea PRO
-    IF v_current_plan_slug NOT ILIKE '%pro%' THEN
-        RETURN jsonb_build_object(
-            'ok', false,
-            'error', 'NOT_PRO_PLAN',
-            'current_plan', v_current_plan_slug
-        );
-    END IF;
-    
-    -- ============================================================
-    -- 2) Obtener plan destino
-    -- ============================================================
-    SELECT 
-        slug,
-        name,
-        COALESCE(monthly_amount, 0),
-        COALESCE(annual_amount, 0)
-    INTO v_target_plan_slug, v_target_plan_name,
-         v_target_monthly, v_target_annual
-    FROM public.plans
-    WHERE id = p_target_plan_id;
-    
-    IF v_target_plan_slug IS NULL THEN
-        RETURN jsonb_build_object(
-            'ok', false,
-            'error', 'TARGET_PLAN_NOT_FOUND'
-        );
-    END IF;
-    
-    -- Validar que el destino sea TEAMS
-    IF v_target_plan_slug NOT ILIKE '%team%' THEN
-        RETURN jsonb_build_object(
-            'ok', false,
-            'error', 'NOT_TEAMS_PLAN',
-            'target_plan', v_target_plan_slug
-        );
-    END IF;
-    
-    -- ============================================================
-    -- 3) Obtener suscripción activa
-    -- ============================================================
-    SELECT 
-        s.id,
-        s.billing_period,
-        s.started_at,
-        s.expires_at,
-        s.amount
-    INTO v_subscription_id, v_billing_period, v_started_at, v_expires_at, v_subscription_amount
-    FROM public.organization_subscriptions s
-    WHERE s.organization_id = p_organization_id
-      AND s.status = 'active'
-    LIMIT 1;
-    
-    IF v_subscription_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'ok', false,
-            'error', 'NO_ACTIVE_SUBSCRIPTION'
-        );
-    END IF;
-    
-    -- ============================================================
-    -- 4) Calcular prorrateo
-    -- ============================================================
-    -- Días restantes
-    v_days_remaining := GREATEST(0, (v_expires_at::date - CURRENT_DATE));
-    
-    -- Total de días del período (calculado con fechas reales)
-    v_period_total_days := GREATEST(1, (v_expires_at::date - v_started_at::date));
-    
-    -- Crédito: precio USD del plan actual × (días restantes / días totales)
-    -- IMPORTANTE: Usar precios de la tabla plans (USD), NO subscription.amount
-    -- (que puede estar en ARS u otra moneda de pago)
-    v_credit := ROUND(
-        (CASE WHEN v_billing_period = 'monthly' THEN v_current_monthly ELSE v_current_annual END)
-        * (v_days_remaining::numeric / v_period_total_days::numeric),
-        2
-    );
-    
-    -- Precio del plan destino (mismo ciclo)
-    IF v_billing_period = 'monthly' THEN
-        v_target_price := v_target_monthly;
-    ELSE
-        v_target_price := v_target_annual;
-    END IF;
-    
-    -- Precio neto del upgrade (mínimo $0.01)
-    v_upgrade_price := GREATEST(0.01, v_target_price - v_credit);
-    
-    -- ============================================================
-    -- 5) Retornar resultado
-    -- ============================================================
-    RETURN jsonb_build_object(
-        'ok', true,
-        
-        -- Plan actual
-        'current_plan_id', v_current_plan_id,
-        'current_plan_slug', v_current_plan_slug,
-        'current_plan_name', v_current_plan_name,
-        
-        -- Plan destino
-        'target_plan_id', p_target_plan_id,
-        'target_plan_slug', v_target_plan_slug,
-        'target_plan_name', v_target_plan_name,
-        'target_price', v_target_price,
-        
-        -- Suscripción actual
-        'subscription_id', v_subscription_id,
-        'billing_period', v_billing_period,
-        'expires_at', v_expires_at,
-        'subscription_amount', v_subscription_amount,
-        
-        -- Prorrateo
-        'days_remaining', v_days_remaining,
-        'period_total_days', v_period_total_days,
-        'credit', v_credit,
-        'upgrade_price', v_upgrade_price
-    );
-END;
-$function$
-```
-</details>
-
-### `get_user()` 🔐
-
-- **Returns**: json
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_user()
- RETURNS json
- LANGUAGE sql
- SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-  SELECT iam.get_user();
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 2: handle_import_batch_member_id — set_task_material_organization)
 
 ### `handle_import_batch_member_id()` 🔐
 
@@ -738,5 +421,99 @@ CREATE OR REPLACE FUNCTION public.refresh_product_avg_prices()
  LANGUAGE sql
  SECURITY DEFINER
 AS $function$refresh materialized view concurrently public.product_avg_prices;$function$
+```
+</details>
+
+### `set_budget_task_organization()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_budget_task_organization()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  -- Resolver organización desde la tarea
+  select t.organization_id
+  into new.organization_id
+  from public.tasks t
+  where t.id = new.task_id;
+
+  -- Si no existe la tarea, es un error lógico
+  if new.organization_id is null then
+    raise exception
+      'No se pudo resolver organization_id para task_id %',
+      new.task_id;
+  end if;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `set_task_labor_organization()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_task_labor_organization()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    -- Si organization_id es null, heredarlo de la tarea padre
+    IF NEW.organization_id IS NULL THEN
+        SELECT organization_id INTO NEW.organization_id
+        FROM tasks
+        WHERE id = NEW.task_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
+### `set_task_material_organization()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_task_material_organization()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  -- Resolver organización desde la tarea
+  select t.organization_id
+  into new.organization_id
+  from public.tasks t
+  where t.id = new.task_id;
+
+  -- Si no existe la tarea, es un error lógico
+  if new.organization_id is null then
+    raise exception
+      'No se pudo resolver organization_id para task_id %',
+      new.task_id;
+  end if;
+
+  return new;
+end;
+$function$
 ```
 </details>
