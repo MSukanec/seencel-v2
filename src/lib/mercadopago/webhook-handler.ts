@@ -105,11 +105,18 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
 
             // Handle Coupon Redemption if applicable
             if (couponCode && courseId) {
-                await supabase.rpc('redeem_coupon', {
+                const redeemResult = await supabase.rpc('redeem_coupon_universal', {
                     p_code: couponCode,
-                    p_course_id: courseId,
-                    p_user_id: userId
+                    p_product_type: 'course',
+                    p_product_id: courseId,
+                    p_price: transaction_amount,
+                    p_currency: currency_id || 'ARS',
                 });
+                if (redeemResult.error) {
+                    console.error('[MP Handler] Coupon redemption failed (non-blocking):', redeemResult.error);
+                } else {
+                    console.log('[MP Handler] Coupon redeemed:', redeemResult.data);
+                }
             }
 
         } else if (productType === 'subscription') {

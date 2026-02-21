@@ -222,18 +222,31 @@ export async function POST(request: NextRequest) {
             console.log('[PayPal Capture] Seat purchase result:', seatResult);
         }
 
-        // Redeem coupon if applicable
+        // Redeem coupon if applicable (universal: supports courses and subscriptions)
         if (preference.coupon_code) {
-            // redeem_coupon expects course-specific params, call only for courses
-            // For subscriptions/upgrades, coupon tracking is handled by the preference record
-            if (preference.product_type === 'course') {
-                await adminSupabase.rpc('redeem_coupon', {
+            const productTypeMap: Record<string, string> = {
+                course: 'course',
+                subscription: 'subscription',
+                upgrade: 'subscription',
+            };
+            const redeemProductType = productTypeMap[preference.product_type];
+            const redeemProductId = preference.product_type === 'course'
+                ? preference.course_id
+                : preference.plan_id;
+
+            if (redeemProductType && redeemProductId) {
+                const { error: redeemError } = await adminSupabase.rpc('redeem_coupon_universal', {
                     p_code: preference.coupon_code,
-                    p_course_id: preference.course_id,
-                    p_order_id: orderId,
+                    p_product_type: redeemProductType,
+                    p_product_id: redeemProductId,
                     p_price: captureAmount,
                     p_currency: captureCurrency,
                 });
+                if (redeemError) {
+                    console.error('[PayPal Capture] Coupon redemption failed (non-blocking):', redeemError);
+                } else {
+                    console.log(`[PayPal Capture] Coupon ${preference.coupon_code} redeemed for ${redeemProductType}`);
+                }
             }
         }
 

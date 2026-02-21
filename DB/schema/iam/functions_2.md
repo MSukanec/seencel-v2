@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T14:12:15.483Z
+> Generated: 2026-02-21T16:30:21.519Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -929,7 +929,7 @@ $function$
 ```
 </details>
 
-### `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` 🔐
+### `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` 🔐
 
 - **Returns**: uuid
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -937,7 +937,7 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)
+CREATE OR REPLACE FUNCTION iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -947,10 +947,10 @@ DECLARE
   v_org_id uuid := gen_random_uuid();
 BEGIN
   INSERT INTO public.organizations (
-    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
+    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id
   )
   VALUES (
-    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id, p_business_mode
+    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id
   );
 
   RETURN v_org_id;
@@ -965,8 +965,7 @@ EXCEPTION
       jsonb_build_object(
         'owner_id', p_owner_id,
         'org_name', p_org_name,
-        'plan_id', p_plan_id,
-        'business_mode', p_business_mode
+        'plan_id', p_plan_id
       ),
       'critical'
     );

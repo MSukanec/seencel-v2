@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T14:12:15.483Z
+> Generated: 2026-02-21T16:30:21.519Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -17,8 +17,9 @@ CREATE OR REPLACE FUNCTION billing.handle_member_seat_purchase(p_provider text, 
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
-AS $function$DECLARE
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
+AS $function$
+DECLARE
     v_payment_id uuid;
     v_step text := 'start';
 BEGIN
@@ -26,7 +27,7 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
     v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
+    v_payment_id := billing.step_payment_insert_idempotent(
         p_provider, p_provider_payment_id, p_user_id, p_organization_id,
         'seat_purchase', p_plan_id, NULL, p_amount, p_currency, p_metadata
     );
@@ -36,16 +37,16 @@ BEGIN
     END IF;
 
     v_step := 'increment_seats';
-    PERFORM public.step_organization_increment_seats(p_organization_id, p_seats_purchased);
+    PERFORM iam.step_organization_increment_seats(p_organization_id, p_seats_purchased);
 
     v_step := 'log_event';
-    PERFORM public.step_log_seat_purchase_event(
+    PERFORM billing.step_log_seat_purchase_event(
         p_organization_id, p_user_id, p_seats_purchased,
         p_amount, p_currency, v_payment_id, true
     );
 
     v_step := 'send_email';
-    PERFORM public.step_send_purchase_email(
+    PERFORM billing.step_send_purchase_email(
         p_user_id, 'seat_purchase',
         p_seats_purchased || ' asiento(s) adicional(es)',
         p_amount, p_currency, v_payment_id, p_provider
@@ -63,12 +64,10 @@ EXCEPTION WHEN OTHERS THEN
         'payment', 'seat_purchase', 'handle_member_seat_purchase',
         SQLERRM,
         jsonb_build_object(
-            'step', v_step,
-            'provider', p_provider,
+            'step', v_step, 'provider', p_provider,
             'provider_payment_id', p_provider_payment_id,
             'organization_id', p_organization_id,
-            'seats', p_seats_purchased,
-            'amount', p_amount
+            'seats', p_seats_purchased, 'amount', p_amount
         ),
         'critical'
     );
@@ -78,7 +77,8 @@ EXCEPTION WHEN OTHERS THEN
         'payment_id', v_payment_id,
         'warning_step', v_step
     );
-END;$function$
+END;
+$function$
 ```
 </details>
 
@@ -94,8 +94,9 @@ CREATE OR REPLACE FUNCTION billing.handle_payment_course_success(p_provider text
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
-AS $function$DECLARE
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
+AS $function$
+DECLARE
     v_payment_id uuid;
     v_course_name text;
     v_step text := 'start';
@@ -104,7 +105,7 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
     v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
+    v_payment_id := billing.step_payment_insert_idempotent(
         p_provider, p_provider_payment_id, p_user_id, NULL,
         'course', NULL, p_course_id, p_amount, p_currency, p_metadata
     );
@@ -114,12 +115,12 @@ BEGIN
     END IF;
 
     v_step := 'course_enrollment_annual';
-    PERFORM public.step_course_enrollment_annual(p_user_id, p_course_id);
+    PERFORM academy.step_course_enrollment_annual(p_user_id, p_course_id);
 
     v_step := 'send_purchase_email';
-    SELECT title INTO v_course_name FROM public.courses WHERE id = p_course_id;
+    SELECT title INTO v_course_name FROM academy.courses WHERE id = p_course_id;
 
-    PERFORM public.step_send_purchase_email(
+    PERFORM billing.step_send_purchase_email(
         p_user_id, 'course', COALESCE(v_course_name, 'Curso'),
         p_amount, p_currency, v_payment_id, p_provider
     );
@@ -133,13 +134,10 @@ EXCEPTION
             'payment', 'course', 'handle_payment_course_success',
             SQLERRM,
             jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
+                'step', v_step, 'provider', p_provider,
                 'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'course_id', p_course_id,
-                'amount', p_amount,
-                'currency', p_currency
+                'user_id', p_user_id, 'course_id', p_course_id,
+                'amount', p_amount, 'currency', p_currency
             ),
             'critical'
         );
@@ -149,7 +147,8 @@ EXCEPTION
             'payment_id', v_payment_id,
             'warning_step', v_step
         );
-END;$function$
+END;
+$function$
 ```
 </details>
 
@@ -165,8 +164,9 @@ CREATE OR REPLACE FUNCTION billing.handle_payment_subscription_success(p_provide
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
-AS $function$DECLARE
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
+AS $function$
+DECLARE
     v_payment_id uuid;
     v_subscription_id uuid;
     v_plan_name text;
@@ -176,7 +176,7 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
     v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
+    v_payment_id := billing.step_payment_insert_idempotent(
         p_provider, p_provider_payment_id, p_user_id, p_organization_id,
         'subscription', p_plan_id, NULL, p_amount, p_currency, p_metadata
     );
@@ -186,26 +186,26 @@ BEGIN
     END IF;
 
     v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(p_organization_id);
+    PERFORM billing.step_subscription_expire_previous(p_organization_id);
 
     v_step := 'create_active_subscription';
-    v_subscription_id := public.step_subscription_create_active(
+    v_subscription_id := billing.step_subscription_create_active(
         p_organization_id, p_plan_id, p_billing_period,
         v_payment_id, p_amount, p_currency
     );
 
     v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(p_organization_id, p_plan_id);
+    PERFORM billing.step_organization_set_plan(p_organization_id, p_plan_id);
 
     IF p_billing_period = 'annual' THEN
         v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(p_user_id, p_organization_id);
+        PERFORM billing.step_apply_founders_program(p_user_id, p_organization_id);
     END IF;
 
     v_step := 'send_purchase_email';
-    SELECT name INTO v_plan_name FROM public.plans WHERE id = p_plan_id;
+    SELECT name INTO v_plan_name FROM billing.plans WHERE id = p_plan_id;
 
-    PERFORM public.step_send_purchase_email(
+    PERFORM billing.step_send_purchase_email(
         p_user_id, 'subscription',
         COALESCE(v_plan_name, 'Plan') || ' (' || p_billing_period || ')',
         p_amount, p_currency, v_payment_id, p_provider
@@ -224,13 +224,10 @@ EXCEPTION
             'payment', 'subscription', 'handle_payment_subscription_success',
             SQLERRM,
             jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
+                'step', v_step, 'provider', p_provider,
                 'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'organization_id', p_organization_id,
-                'plan_id', p_plan_id,
-                'billing_period', p_billing_period
+                'user_id', p_user_id, 'organization_id', p_organization_id,
+                'plan_id', p_plan_id, 'billing_period', p_billing_period
             ),
             'critical'
         );
@@ -241,7 +238,8 @@ EXCEPTION
             'subscription_id', v_subscription_id,
             'warning_step', v_step
         );
-END;$function$
+END;
+$function$
 ```
 </details>
 
@@ -257,8 +255,9 @@ CREATE OR REPLACE FUNCTION billing.handle_upgrade_subscription_success(p_provide
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
-AS $function$DECLARE
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
+AS $function$
+DECLARE
     v_payment_id uuid;
     v_subscription_id uuid;
     v_plan_name text;
@@ -272,12 +271,12 @@ BEGIN
     v_step := 'get_previous_plan';
     SELECT o.plan_id, p.name
     INTO v_previous_plan_id, v_previous_plan_name
-    FROM public.organizations o
-    LEFT JOIN public.plans p ON p.id = o.plan_id
+    FROM iam.organizations o
+    LEFT JOIN billing.plans p ON p.id = o.plan_id
     WHERE o.id = p_organization_id;
 
     v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
+    v_payment_id := billing.step_payment_insert_idempotent(
         p_provider, p_provider_payment_id, p_user_id, p_organization_id,
         'upgrade', p_plan_id, NULL, p_amount, p_currency,
         p_metadata || jsonb_build_object(
@@ -292,26 +291,26 @@ BEGIN
     END IF;
 
     v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(p_organization_id);
+    PERFORM billing.step_subscription_expire_previous(p_organization_id);
 
     v_step := 'create_active_subscription';
-    v_subscription_id := public.step_subscription_create_active(
+    v_subscription_id := billing.step_subscription_create_active(
         p_organization_id, p_plan_id, p_billing_period,
         v_payment_id, p_amount, p_currency
     );
 
     v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(p_organization_id, p_plan_id);
+    PERFORM billing.step_organization_set_plan(p_organization_id, p_plan_id);
 
     IF p_billing_period = 'annual' THEN
         v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(p_user_id, p_organization_id);
+        PERFORM billing.step_apply_founders_program(p_user_id, p_organization_id);
     END IF;
 
     v_step := 'send_purchase_email';
-    SELECT name INTO v_plan_name FROM public.plans WHERE id = p_plan_id;
+    SELECT name INTO v_plan_name FROM billing.plans WHERE id = p_plan_id;
 
-    PERFORM public.step_send_purchase_email(
+    PERFORM billing.step_send_purchase_email(
         p_user_id, 'upgrade',
         'Upgrade a ' || COALESCE(v_plan_name, 'Plan') || ' (' || CASE WHEN p_billing_period = 'annual' THEN 'anual' ELSE 'mensual' END || ')',
         p_amount, p_currency, v_payment_id, p_provider
@@ -332,13 +331,10 @@ EXCEPTION
             'payment', 'upgrade', 'handle_upgrade_subscription_success',
             SQLERRM,
             jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
+                'step', v_step, 'provider', p_provider,
                 'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'organization_id', p_organization_id,
-                'plan_id', p_plan_id,
-                'billing_period', p_billing_period
+                'user_id', p_user_id, 'organization_id', p_organization_id,
+                'plan_id', p_plan_id, 'billing_period', p_billing_period
             ),
             'critical'
         );
@@ -349,7 +345,8 @@ EXCEPTION
             'subscription_id', v_subscription_id,
             'warning_step', v_step
         );
-END;$function$
+END;
+$function$
 ```
 </details>
 
@@ -365,7 +362,7 @@ CREATE OR REPLACE FUNCTION billing.redeem_coupon_universal(p_code text, p_produc
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 DECLARE
   v_user_id uuid;
@@ -374,43 +371,25 @@ DECLARE
   v_discount numeric;
   v_existing_id uuid;
 BEGIN
-  -- ============================================================
-  -- 1) Obtener usuario
-  -- ============================================================
   v_user_id := public.current_user_id();
   
   IF v_user_id IS NULL THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'UNAUTHENTICATED'
-    );
+    RETURN jsonb_build_object('ok', false, 'reason', 'UNAUTHENTICATED');
   END IF;
 
-  -- ============================================================
-  -- 2) Validar cupón usando la función universal
-  -- ============================================================
-  v_validation := public.validate_coupon_universal(
-    p_code,
-    p_product_type,
-    p_product_id,
-    p_price,
-    p_currency
+  v_validation := billing.validate_coupon_universal(
+    p_code, p_product_type, p_product_id, p_price, p_currency
   );
 
-  -- Si la validación falla, retornar el error
   IF (v_validation->>'ok')::boolean IS FALSE THEN
     RETURN v_validation;
   END IF;
 
-  -- Extraer datos del cupón validado
   v_coupon_id := (v_validation->>'coupon_id')::uuid;
   v_discount := (v_validation->>'discount')::numeric;
 
-  -- ============================================================
-  -- 3) Verificar idempotencia (evitar duplicados)
-  -- ============================================================
   SELECT id INTO v_existing_id
-  FROM public.coupon_redemptions
+  FROM billing.coupon_redemptions
   WHERE coupon_id = v_coupon_id
     AND user_id = v_user_id
     AND (
@@ -426,49 +405,28 @@ BEGIN
   LIMIT 1;
 
   IF v_existing_id IS NOT NULL THEN
-    -- Ya fue redimido para esta orden/suscripción
     RETURN jsonb_build_object(
-      'ok', true,
-      'already_redeemed', true,
-      'redemption_id', v_existing_id,
-      'discount', v_discount,
+      'ok', true, 'already_redeemed', true,
+      'redemption_id', v_existing_id, 'discount', v_discount,
       'final_price', (v_validation->>'final_price')::numeric
     );
   END IF;
 
-  -- ============================================================
-  -- 4) Registrar redención
-  -- ============================================================
-  INSERT INTO public.coupon_redemptions (
-    coupon_id,
-    user_id,
-    course_id,
-    plan_id,
-    order_id,
-    subscription_id,
-    amount_saved,
-    currency
+  INSERT INTO billing.coupon_redemptions (
+    coupon_id, user_id, course_id, plan_id,
+    order_id, subscription_id, amount_saved, currency
   )
   VALUES (
-    v_coupon_id,
-    v_user_id,
+    v_coupon_id, v_user_id,
     CASE WHEN p_product_type = 'course' THEN p_product_id ELSE NULL END,
     CASE WHEN p_product_type = 'subscription' THEN p_product_id ELSE NULL END,
-    p_order_id,
-    p_subscription_id,
-    v_discount,
-    p_currency
+    p_order_id, p_subscription_id, v_discount, p_currency
   )
   RETURNING id INTO v_existing_id;
 
-  -- ============================================================
-  -- 5) Retornar éxito
-  -- ============================================================
   RETURN jsonb_build_object(
-    'ok', true,
-    'redemption_id', v_existing_id,
-    'coupon_id', v_coupon_id,
-    'coupon_code', v_validation->>'coupon_code',
+    'ok', true, 'redemption_id', v_existing_id,
+    'coupon_id', v_coupon_id, 'coupon_code', v_validation->>'coupon_code',
     'discount', v_discount,
     'final_price', (v_validation->>'final_price')::numeric,
     'is_free', (v_validation->>'is_free')::boolean
@@ -489,20 +447,18 @@ $function$
 CREATE OR REPLACE FUNCTION billing.step_apply_founders_program(p_user_id uuid, p_organization_id uuid)
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 DECLARE
   v_bonus_course_id uuid;
 BEGIN
-  -- marcar organización como founder
-  UPDATE public.organizations
+  UPDATE iam.organizations
   SET
     settings = coalesce(settings, '{}'::jsonb)
       || jsonb_build_object('is_founder', true),
     updated_at = now()
   WHERE id = p_organization_id;
 
-  -- curso bonus desde app_settings
   SELECT value::uuid
   INTO v_bonus_course_id
   FROM public.app_settings
@@ -510,7 +466,7 @@ BEGIN
   LIMIT 1;
 
   IF v_bonus_course_id IS NOT NULL THEN
-    PERFORM public.step_course_enrollment_annual(
+    PERFORM academy.step_course_enrollment_annual(
       p_user_id,
       v_bonus_course_id
     );
@@ -532,40 +488,28 @@ CREATE OR REPLACE FUNCTION billing.step_log_seat_purchase_event(p_organization_i
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public', 'iam'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 DECLARE
     v_event_id UUID;
     v_member_id UUID;
 BEGIN
-    -- Intentar obtener el member_id del usuario en la organización
     SELECT id INTO v_member_id
     FROM iam.organization_members
     WHERE organization_id = p_organization_id 
       AND user_id = p_user_id
     LIMIT 1;
 
-    -- Log en organization_activity_logs (tabla real)
     INSERT INTO public.organization_activity_logs (
-        organization_id,
-        member_id,
-        action,
-        target_table,
-        target_id,
-        metadata
+        organization_id, member_id, action,
+        target_table, target_id, metadata
     ) VALUES (
-        p_organization_id,
-        v_member_id,
-        'seat_purchased',
-        'payments',
-        p_payment_id,
+        p_organization_id, v_member_id, 'seat_purchased',
+        'payments', p_payment_id,
         jsonb_build_object(
-            'seats', p_seats,
-            'amount', p_amount,
-            'currency', p_currency,
-            'payment_id', p_payment_id,
-            'prorated', p_prorated,
-            'user_id', p_user_id
+            'seats', p_seats, 'amount', p_amount,
+            'currency', p_currency, 'payment_id', p_payment_id,
+            'prorated', p_prorated, 'user_id', p_user_id
         )
     )
     RETURNING id INTO v_event_id;
@@ -587,10 +531,10 @@ $function$
 CREATE OR REPLACE FUNCTION billing.step_organization_set_plan(p_organization_id uuid, p_plan_id uuid)
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 BEGIN
-  UPDATE public.organizations
+  UPDATE iam.organizations
   SET
     plan_id = p_plan_id,
     updated_at = now()
@@ -611,7 +555,7 @@ $function$
 CREATE OR REPLACE FUNCTION billing.step_payment_insert_idempotent(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_product_type text, p_plan_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb)
  RETURNS uuid
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 declare
   v_payment_id uuid;
@@ -625,7 +569,7 @@ begin
     v_product_id := null;
   end if;
 
-  insert into public.payments (
+  insert into billing.payments (
     provider, provider_payment_id, user_id, organization_id,
     product_type, product_id, course_id, amount, currency,
     status, metadata, gateway, approved_at
@@ -678,15 +622,14 @@ CREATE OR REPLACE FUNCTION billing.step_send_purchase_email(p_user_id uuid, p_pr
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 DECLARE
     v_user_email text;
     v_user_name text;
 BEGIN
-    -- Obtener datos del usuario
     SELECT email, full_name INTO v_user_email, v_user_name
-    FROM public.users
+    FROM iam.users
     WHERE id = p_user_id;
 
     IF v_user_email IS NULL THEN
@@ -694,14 +637,8 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Email al comprador
     INSERT INTO public.email_queue (
-        recipient_email,
-        recipient_name,
-        template_type,
-        subject,
-        data,
-        created_at
+        recipient_email, recipient_name, template_type, subject, data, created_at
     ) VALUES (
         v_user_email,
         COALESCE(v_user_name, 'Usuario'),
@@ -712,41 +649,27 @@ BEGIN
             ELSE 'Confirmación de compra'
         END,
         jsonb_build_object(
-            'user_id', p_user_id,
-            'user_email', v_user_email,
-            'user_name', v_user_name,
-            'product_type', p_product_type,
-            'product_name', p_product_name,
-            'amount', p_amount,
-            'currency', p_currency,
-            'payment_id', p_payment_id,
-            'provider', p_provider  -- ← NUEVO: incluir provider
+            'user_id', p_user_id, 'user_email', v_user_email,
+            'user_name', v_user_name, 'product_type', p_product_type,
+            'product_name', p_product_name, 'amount', p_amount,
+            'currency', p_currency, 'payment_id', p_payment_id,
+            'provider', p_provider
         ),
         NOW()
     );
 
-    -- También notificar admins
     INSERT INTO public.email_queue (
-        recipient_email,
-        recipient_name,
-        template_type,
-        subject,
-        data,
-        created_at
+        recipient_email, recipient_name, template_type, subject, data, created_at
     ) VALUES (
         'contacto@seencel.com',
         'Admin SEENCEL',
         'admin_sale_notification',
         '💰 Nueva venta: ' || p_product_name,
         jsonb_build_object(
-            'buyer_email', v_user_email,
-            'buyer_name', v_user_name,
-            'product_type', p_product_type,
-            'product_name', p_product_name,
-            'amount', p_amount,
-            'currency', p_currency,
-            'payment_id', p_payment_id,
-            'provider', p_provider  -- ← NUEVO: incluir provider
+            'buyer_email', v_user_email, 'buyer_name', v_user_name,
+            'product_type', p_product_type, 'product_name', p_product_name,
+            'amount', p_amount, 'currency', p_currency,
+            'payment_id', p_payment_id, 'provider', p_provider
         ),
         NOW()
     );
@@ -769,7 +692,7 @@ $function$
 CREATE OR REPLACE FUNCTION billing.step_subscription_create_active(p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_payment_id uuid, p_amount numeric, p_currency text)
  RETURNS uuid
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 declare
   v_subscription_id uuid;
@@ -781,27 +704,13 @@ begin
     v_expires_at := now() + interval '1 month';
   end if;
 
-  insert into public.organization_subscriptions (
-    organization_id,
-    plan_id,
-    payment_id,
-    status,
-    billing_period,
-    started_at,
-    expires_at,
-    amount,
-    currency
+  insert into billing.organization_subscriptions (
+    organization_id, plan_id, payment_id, status,
+    billing_period, started_at, expires_at, amount, currency
   )
   values (
-    p_organization_id,
-    p_plan_id,
-    p_payment_id,
-    'active',
-    p_billing_period,
-    now(),
-    v_expires_at,
-    p_amount,
-    p_currency
+    p_organization_id, p_plan_id, p_payment_id, 'active',
+    p_billing_period, now(), v_expires_at, p_amount, p_currency
   )
   returning id into v_subscription_id;
 
@@ -822,10 +731,10 @@ $function$
 CREATE OR REPLACE FUNCTION billing.step_subscription_expire_previous(p_organization_id uuid)
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 BEGIN
-  UPDATE public.organization_subscriptions
+  UPDATE billing.organization_subscriptions
   SET
     status = 'expired',
     expires_at = now()
@@ -848,11 +757,11 @@ CREATE OR REPLACE FUNCTION billing.validate_coupon_universal(p_code text, p_prod
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
 DECLARE
   v_user_id uuid;
-  v_coupon public.coupons%rowtype;
+  v_coupon billing.coupons%rowtype;
   v_uses_user int;
   v_uses_total int;
   v_applicable boolean := false;
@@ -860,40 +769,23 @@ DECLARE
   v_final_price numeric;
   v_applies_to_check text;
 BEGIN
-  -- ============================================================
-  -- 1) Validar usuario autenticado
-  -- ============================================================
   v_user_id := public.current_user_id();
-  
+
   IF v_user_id IS NULL THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'UNAUTHENTICATED'
-    );
+    RETURN jsonb_build_object('ok', false, 'reason', 'UNAUTHENTICATED');
   END IF;
 
-  -- ============================================================
-  -- 2) Validar product_type
-  -- ============================================================
   IF p_product_type NOT IN ('course', 'subscription') THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'INVALID_PRODUCT_TYPE'
-    );
+    RETURN jsonb_build_object('ok', false, 'reason', 'INVALID_PRODUCT_TYPE');
   END IF;
 
-  -- Mapear product_type a applies_to values
   v_applies_to_check := CASE 
     WHEN p_product_type = 'course' THEN 'courses'
     WHEN p_product_type = 'subscription' THEN 'subscriptions'
   END;
 
-  -- ============================================================
-  -- 3) Buscar cupón (case-insensitive, siempre lower)
-  -- ============================================================
-  SELECT *
-  INTO v_coupon
-  FROM public.coupons
+  SELECT * INTO v_coupon
+  FROM billing.coupons
   WHERE lower(code) = lower(p_code)
     AND is_active = true
     AND (applies_to = v_applies_to_check OR applies_to = 'all')
@@ -902,127 +794,79 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'COUPON_NOT_FOUND'
-    );
+    RETURN jsonb_build_object('ok', false, 'reason', 'COUPON_NOT_FOUND');
   END IF;
 
-  -- ============================================================
-  -- 4) Verificar mínimo de compra
-  -- ============================================================
   IF v_coupon.min_order_total IS NOT NULL 
      AND p_price < v_coupon.min_order_total THEN
     RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'MINIMUM_NOT_MET',
+      'ok', false, 'reason', 'MINIMUM_NOT_MET',
       'minimum_required', v_coupon.min_order_total
     );
   END IF;
 
-  -- ============================================================
-  -- 5) Verificar alcance específico (curso o plan)
-  -- ============================================================
   IF v_coupon.applies_to_all THEN
     v_applicable := true;
   ELSE
-    -- Verificar tabla de relación según tipo
     IF p_product_type = 'course' THEN
       SELECT EXISTS (
-        SELECT 1 FROM public.coupon_courses
-        WHERE coupon_id = v_coupon.id
-          AND course_id = p_product_id
+        SELECT 1 FROM billing.coupon_courses
+        WHERE coupon_id = v_coupon.id AND course_id = p_product_id
       ) INTO v_applicable;
     ELSE
       SELECT EXISTS (
-        SELECT 1 FROM public.coupon_plans
-        WHERE coupon_id = v_coupon.id
-          AND plan_id = p_product_id
+        SELECT 1 FROM billing.coupon_plans
+        WHERE coupon_id = v_coupon.id AND plan_id = p_product_id
       ) INTO v_applicable;
     END IF;
   END IF;
 
   IF NOT v_applicable THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'PRODUCT_NOT_ELIGIBLE'
-    );
+    RETURN jsonb_build_object('ok', false, 'reason', 'PRODUCT_NOT_ELIGIBLE');
   END IF;
 
-  -- ============================================================
-  -- 6) Verificar límite por usuario
-  -- ============================================================
-  SELECT count(*)
-  INTO v_uses_user
-  FROM public.coupon_redemptions
-  WHERE coupon_id = v_coupon.id
-    AND user_id = v_user_id;
+  SELECT count(*) INTO v_uses_user
+  FROM billing.coupon_redemptions
+  WHERE coupon_id = v_coupon.id AND user_id = v_user_id;
 
   IF v_coupon.per_user_limit IS NOT NULL 
      AND v_uses_user >= v_coupon.per_user_limit THEN
     RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'USER_LIMIT_REACHED',
-      'limit', v_coupon.per_user_limit,
-      'used', v_uses_user
+      'ok', false, 'reason', 'USER_LIMIT_REACHED',
+      'limit', v_coupon.per_user_limit, 'used', v_uses_user
     );
   END IF;
 
-  -- ============================================================
-  -- 7) Verificar límite global
-  -- ============================================================
-  SELECT count(*)
-  INTO v_uses_total
-  FROM public.coupon_redemptions
+  SELECT count(*) INTO v_uses_total
+  FROM billing.coupon_redemptions
   WHERE coupon_id = v_coupon.id;
 
   IF v_coupon.max_redemptions IS NOT NULL 
      AND v_uses_total >= v_coupon.max_redemptions THEN
-    RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'GLOBAL_LIMIT_REACHED'
-    );
+    RETURN jsonb_build_object('ok', false, 'reason', 'GLOBAL_LIMIT_REACHED');
   END IF;
 
-  -- ============================================================
-  -- 8) Verificar moneda (solo para descuentos fijos)
-  -- ============================================================
   IF v_coupon.type = 'fixed' 
      AND v_coupon.currency IS NOT NULL 
      AND v_coupon.currency <> p_currency THEN
     RETURN jsonb_build_object(
-      'ok', false,
-      'reason', 'CURRENCY_MISMATCH',
-      'coupon_currency', v_coupon.currency,
-      'order_currency', p_currency
+      'ok', false, 'reason', 'CURRENCY_MISMATCH',
+      'coupon_currency', v_coupon.currency, 'order_currency', p_currency
     );
   END IF;
 
-  -- ============================================================
-  -- 9) Calcular descuento
-  -- ============================================================
   IF v_coupon.type = 'percent' THEN
-    v_discount := round(
-      p_price * (least(v_coupon.amount, 100)::numeric / 100.0),
-      2
-    );
+    v_discount := round(p_price * (least(v_coupon.amount, 100)::numeric / 100.0), 2);
   ELSE
     v_discount := least(v_coupon.amount, p_price);
   END IF;
 
   v_final_price := greatest(p_price - v_discount, 0);
 
-  -- ============================================================
-  -- 10) Retornar éxito
-  -- ============================================================
   RETURN jsonb_build_object(
-    'ok', true,
-    'coupon_id', v_coupon.id,
-    'coupon_code', v_coupon.code,
-    'type', v_coupon.type,
-    'amount', v_coupon.amount,
-    'discount', v_discount,
-    'final_price', v_final_price,
+    'ok', true, 'coupon_id', v_coupon.id, 'coupon_code', v_coupon.code,
+    'type', v_coupon.type, 'amount', v_coupon.amount,
+    'discount', v_discount, 'final_price', v_final_price,
     'currency', coalesce(v_coupon.currency, p_currency),
     'is_free', v_final_price = 0
   );

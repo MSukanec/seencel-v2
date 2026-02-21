@@ -29,7 +29,7 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
     'context_community_enabled': 'Acceso Comunidad',
     'context_community_map_enabled': 'Comunidad: Mapa Seencel',
     'context_community_founders_enabled': 'Comunidad: Directorio Fundadores',
-    'dashboard_maintenance_mode': 'Modo Mantenimiento',
+    'dashboard_maintenance_mode': 'Acceso a la plataforma',
     'pro_purchases_enabled': 'Habilitar Compra Plan Pro',
     'teams_purchases_enabled': 'Habilitar Compra Plan Teams',
     'course_purchases_enabled': 'Habilitar Compra Cursos',

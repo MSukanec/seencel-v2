@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T14:12:15.483Z
+> Generated: 2026-02-21T16:30:21.519Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -95,8 +95,8 @@
 - `set_updated_at()` → trigger 🔐 *(public/functions_3.md)*
 - `set_updated_at_ia_user_preferences()` → trigger 🔐 *(public/functions_3.md)*
 - `sync_task_status_progress()` → trigger *(public/functions_3.md)*
-- `unaccent(text)` → text *(public/functions_3.md)*
 - `unaccent(regdictionary, text)` → text *(public/functions_3.md)*
+- `unaccent(text)` → text *(public/functions_3.md)*
 - `unaccent_init(internal)` → internal *(public/functions_3.md)*
 - `unaccent_lexize(internal, internal, internal, internal)` → internal *(public/functions_3.md)*
 - `update_forum_thread_activity()` → trigger 🔐 *(public/functions_3.md)*
@@ -152,8 +152,8 @@
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
-- `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
+- `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_project(p_project_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.current_user_id()` → uuid 🔐 *(iam/functions_1.md)*
 - `iam.dismiss_home_banner()` → boolean 🔐 *(iam/functions_1.md)*
@@ -183,8 +183,8 @@
 - `iam.step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_create_default_kanban_board(p_org_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_data(p_org_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(iam/functions_3.md)*
