@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T13:42:37.043Z
+> Generated: 2026-02-21T14:12:15.483Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -788,7 +788,7 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    PERFORM public.log_system_error(
+    PERFORM ops.log_system_error(
       'trigger',
       'step_add_org_member',
       'signup',

@@ -29,7 +29,7 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
     'context_community_enabled': 'Acceso Comunidad',
     'context_community_map_enabled': 'Comunidad: Mapa Seencel',
     'context_community_founders_enabled': 'Comunidad: Directorio Fundadores',
-    'dashboard_maintenance_mode': 'Modo Mantenimiento Global',
+    'dashboard_maintenance_mode': 'Modo Mantenimiento',
     'pro_purchases_enabled': 'Habilitar Compra Plan Pro',
     'teams_purchases_enabled': 'Habilitar Compra Plan Teams',
     'course_purchases_enabled': 'Habilitar Compra Cursos',
@@ -40,7 +40,11 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
 type FlagStatus = 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon';
 
 // Flags that should use a simple Switch (on/off) instead of status dropdown
-const SIMPLE_TOGGLE_FLAGS = ['mp_enabled', 'paypal_enabled', 'dashboard_maintenance_mode', 'auth_registration_enabled'];
+const SIMPLE_TOGGLE_FLAGS = ['mp_enabled', 'paypal_enabled', 'auth_registration_enabled', 'org_creation_enabled', 'dashboard_maintenance_mode'];
+
+// Note: dashboard_maintenance_mode uses simple toggle logic.
+// In DB: status 'active' = platform is OK, status 'hidden' = maintenance ON.
+// Switch ON = 'active' (Habilitado), Switch OFF = 'hidden' (En mantenimiento).
 
 export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFlagsManagerProps) {
     const router = useRouter();
@@ -109,7 +113,7 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
                                 {item.originalKey}
                             </Badge>
 
-                            {/* Simple Switch for payment method flags */}
+                            {/* Simple Switch for toggle flags */}
                             {isSimpleToggle ? (
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-muted-foreground">
@@ -117,9 +121,9 @@ export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFl
                                     </span>
                                     <Switch
                                         checked={item.status === 'active'}
-                                        onCheckedChange={(checked) =>
-                                            handleStatusChange(item.originalKey, checked ? 'active' : 'hidden')
-                                        }
+                                        onCheckedChange={(checked) => {
+                                            handleStatusChange(item.originalKey, checked ? 'active' : 'hidden');
+                                        }}
                                         disabled={isPending}
                                     />
                                 </div>

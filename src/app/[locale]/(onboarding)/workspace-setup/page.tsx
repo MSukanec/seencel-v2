@@ -20,12 +20,15 @@ export default async function WorkspaceSetupPage({
         return redirect('/login');
     }
 
-    // Parallel: orgs + admin check + invitations
-    const [{ organizations, activeOrgId }, isAdmin, pendingInvitation] = await Promise.all([
+    // Parallel: orgs + admin check + invitations + feature flag
+    const [{ organizations, activeOrgId }, isAdmin, pendingInvitation, orgCreationFlag] = await Promise.all([
         getUserOrganizations(user.id),
         checkIsAdmin(),
         isNewOrg ? Promise.resolve(null) : checkPendingInvitation(user.email || ''),
+        supabase.from('feature_flags').select('status').eq('key', 'org_creation_enabled').single(),
     ]);
+
+    const orgCreationEnabled = orgCreationFlag?.data?.status === 'active';
 
     // If user already has an org and is NOT explicitly creating a new one, redirect
     if ((activeOrgId || organizations.length > 0) && !isNewOrg) {
@@ -37,6 +40,7 @@ export default async function WorkspaceSetupPage({
             pendingInvitation={pendingInvitation}
             isNewOrg={isNewOrg}
             isAdmin={isAdmin}
+            orgCreationEnabled={orgCreationEnabled}
         />
     );
 }

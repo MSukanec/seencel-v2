@@ -186,8 +186,8 @@ export function SidebarContent({
             );
         } else if (status === 'maintenance') {
             badge = (
-                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
-                    <Lock className="h-3 w-3 text-orange-500" />
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-semantic-warning/10 hover:bg-semantic-warning/20 shadow-none">
+                    <Lock className="h-3 w-3 text-semantic-warning" />
                 </Badge>
             );
         } else if (status === 'founders') {
@@ -290,8 +290,8 @@ export function SidebarContent({
                                     let badge = null;
                                     if (status === 'maintenance') {
                                         badge = (
-                                            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-orange-500/10 hover:bg-orange-500/20 shadow-none">
-                                                <Lock className="h-3 w-3 text-orange-500" />
+                                            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center bg-semantic-warning/10 hover:bg-semantic-warning/20 shadow-none">
+                                                <Lock className="h-3 w-3 text-semantic-warning" />
                                             </Badge>
                                         );
                                     } else if (status === 'founders') {

@@ -75,8 +75,7 @@ const ALL_CONTEXTS: ContextItem[] = [
     // Project removed from top-level sidebar as requested
     { id: 'learnings', label: 'Academia', icon: GraduationCap },
     { id: 'community', label: 'Comunidad', icon: Users },
-    // Admin visible only to admins (filtered in useMemo below)
-    { id: 'admin', label: 'Administración', icon: Hammer },
+    // Admin removed from home state — access via SidebarAdminButton at bottom
 ];
 
 export const contextRoutes: Record<NavigationContext, string> = {

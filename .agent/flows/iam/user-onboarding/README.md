@@ -1,6 +1,8 @@
 # Onboarding de Usuario
 
 > **Alcance**: Cubre el flujo desde que un usuario recién registrado es redirigido a `/onboarding` (porque `signup_completed=false`) hasta que completa sus datos personales, pasa por el Hub, y llega a crear/unirse a una organización.
+>
+> ⚠️ **Este flow NO cubre el onboarding de organización** (crear org, elegir tipo, configurar sidebar). Ese es un flow separado: `.agent/flows/iam/organization-onboarding/`.
 
 ## ¿Qué resuelve?
 

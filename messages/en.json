@@ -5,6 +5,16 @@
         "finance": "Finance",
         "settings": "Settings"
     },
+    "Sidebar": {
+        "tools": {
+            "kanban": "Kanban",
+            "files": "Documentation"
+        },
+        "construction": "CONSTRUCTION",
+        "items": {
+            "sitelog": "Site Log"
+        }
+    },
     "Learning": {
         "title": "Learning",
         "description": "Knowledge base and lessons learned",

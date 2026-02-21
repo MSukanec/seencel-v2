@@ -10,12 +10,13 @@
 //   3. Datos de Contacto (CUIT, email, teléfono, web)
 // ============================================================================
 
-import { useRef, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { TextField, NotesField, PhoneField } from "@/components/shared/forms/fields";
 import { updateOrganization } from "@/actions/update-organization";
 import { OrganizationLogoUpload } from "./organization-logo-upload";
 import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import {
     Building2,
     FileText,
@@ -25,6 +26,15 @@ import {
 // ── Props ──
 interface OrganizationDetailsFormProps {
     organization: any;
+}
+
+interface OrgFields {
+    name: string;
+    description: string;
+    tax_id: string;
+    email: string;
+    phone: string;
+    website: string;
 }
 
 export function OrganizationDetailsForm({ organization }: OrganizationDetailsFormProps) {
@@ -41,42 +51,24 @@ export function OrganizationDetailsForm({ organization }: OrganizationDetailsFor
     const [phone, setPhone] = useState(orgData.phone || "");
     const [website, setWebsite] = useState(orgData.website || "");
 
-    // ── Debounced auto-save (1000ms) for text fields ──
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // ── Auto-save (según autosave-pattern.md) ──
+    const { triggerAutoSave } = useAutoSave<OrgFields>({
+        saveFn: async (fields) => {
+            const formData = new FormData();
+            formData.set("name", fields.name);
+            formData.set("description", fields.description);
+            formData.set("tax_id", fields.tax_id);
+            formData.set("email", fields.email);
+            formData.set("phone", fields.phone);
+            formData.set("website", fields.website);
 
-    const triggerAutoSave = useCallback((fields: {
-        name: string;
-        description: string;
-        tax_id: string;
-        email: string;
-        phone: string;
-        website: string;
-    }) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-
-        debounceRef.current = setTimeout(async () => {
-            if (!fields.name.trim()) return; // name is required
-
-            try {
-                const formData = new FormData();
-                formData.set("name", fields.name);
-                formData.set("description", fields.description);
-                formData.set("tax_id", fields.tax_id);
-                formData.set("email", fields.email);
-                formData.set("phone", fields.phone);
-                formData.set("website", fields.website);
-
-                const result = await updateOrganization(organization.id, formData);
-                if (result?.error) {
-                    toast.error("Error al guardar", { description: result.error });
-                } else {
-                    toast.success("¡Cambios guardados!");
-                }
-            } catch {
-                toast.error("Error al guardar los cambios.");
+            const result = await updateOrganization(organization.id, formData);
+            if (result?.error) {
+                throw new Error(result.error);
             }
-        }, 1000);
-    }, [organization.id]);
+        },
+        validate: (fields) => !!fields.name.trim(),
+    });
 
     // ── Field change handlers ──
     const handleNameChange = (value: string) => {

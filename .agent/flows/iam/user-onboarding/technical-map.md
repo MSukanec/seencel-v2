@@ -1,6 +1,8 @@
 # Technical Map: Onboarding de Usuario
 
 > Referencia técnica exhaustiva. Consulta rápida, no tutorial.
+>
+> ⚠️ Este flow es exclusivamente de **usuario**. El onboarding de organización es un flow separado.
 
 ---
 
@@ -73,7 +75,10 @@ El onboarding usa el cliente Supabase normal (anon key + RLS), ya que el usuario
 
 | Archivo | Función | Qué hace |
 |---------|---------|----------|
-| `src/actions/onboarding.ts` | `submitOnboarding()` | Valida Zod, 3 updates DB, revalidate, return success |
+| `src/actions/onboarding.ts` | `submitOnboarding()` | Valida Zod, UPDATE iam.users, UPDATE iam.user_data, UPDATE iam.user_preferences, revalidate |
+
+> ℹ️ `user_data` usa `.update()` (no `.upsert()`). El row lo crea `handle_new_user` (SECURITY DEFINER).
+> La RLS de `user_data` solo tiene SELECT + UPDATE. No hay INSERT policy intencional.
 
 ### Queries
 
@@ -87,6 +92,7 @@ El onboarding usa el cliente Supabase normal (anon key + RLS), ya que el usuario
 | Archivo | Lógica |
 |---------|--------|
 | `src/app/[locale]/(dashboard)/layout.tsx` | L57: `!profile.signup_completed` → redirect `/onboarding` |
+| `src/app/[locale]/(onboarding)/onboarding/page.tsx` | Si `signup_completed=true` → redirect `/hub` (guard anti-repetición) |
 
 ### Onboarding Checklist (post-onboarding)
 
@@ -121,10 +127,14 @@ Dashboard Layout Guard
 
 Onboarding Page (Server)
   ├─ auth.getUser() → verificar autenticación
+  ├─ SELECT iam.users + user_data WHERE auth_id
+  ├─ Guard: si signup_completed=true → redirect /hub
+  ├─ Pre-fill: extraer first_name, last_name, country de user_data
   └─ getCountries() → SELECT public.countries
 
 Onboarding Form (Client)
-  ├─ useEffect → detectCountryFromTimezone()
+  ├─ Recibe defaultValues (firstName, lastName, countryId) del server
+  ├─ useEffect → detectCountryFromTimezone() (solo si no hay defaultValues.countryId)
   │    └─ Intl.DateTimeFormat().resolvedOptions().timeZone
   │         └─ TIMEZONE_TO_ALPHA2[tz] → alpha_2
   │              └─ countries.find(c => c.alpha_2 === alpha2) → setCountryId
@@ -138,7 +148,7 @@ submitOnboarding() (Server Action)
   ├─ auth.getUser() → auth_id
   ├─ SELECT iam.users WHERE auth_id → internalUser.id
   ├─ UPDATE iam.users SET full_name, signup_completed=true, updated_at
-  ├─ UPSERT iam.user_data ON CONFLICT (user_id) → first_name, last_name, country
+  ├─ UPDATE iam.user_data SET first_name, last_name, country (WHERE user_id)
   ├─ UPDATE iam.user_preferences SET timezone (non-critical)
   └─ revalidatePath("/", "layout")
 

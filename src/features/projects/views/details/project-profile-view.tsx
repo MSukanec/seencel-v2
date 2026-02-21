@@ -21,6 +21,7 @@ import { SingleImageDropzone } from "@/components/ui/single-image-dropzone";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/client-image-compression";
 import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import {
     Select,
     SelectContent,
@@ -82,6 +83,11 @@ interface ProjectProfileViewProps {
     projectModalities: { id: string; name: string }[];
 }
 
+interface ProjectTextFields {
+    name: string;
+    description: string;
+}
+
 export function ProjectProfileView({ project, projectTypes, projectModalities }: ProjectProfileViewProps) {
     const data = project.project_data || {};
     const { updateProjectInList } = useLayoutData();
@@ -94,32 +100,21 @@ export function ProjectProfileView({ project, projectTypes, projectModalities }:
     const [modalityId, setModalityId] = useState<string>(project.project_modality_id || "");
     const [color, setColor] = useState(project.color || "#007AFF");
 
-    // ── Debounced auto-save (1000ms) for text fields ──
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const triggerAutoSave = useCallback((fields: {
-        name: string;
-        description: string;
-    }) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-
-        debounceRef.current = setTimeout(async () => {
-            if (!fields.name.trim()) return; // name is required
-
-            try {
-                const formData = new FormData();
-                formData.set("id", project.id);
-                formData.set("name", fields.name);
-                formData.set("description", fields.description);
-                await updateProject(formData);
-                // Optimistic update — refresh name in header selector immediately
-                updateProjectInList(project.id, { name: fields.name });
-                toast.success("¡Cambios guardados!");
-            } catch {
-                toast.error("Error al guardar los cambios.");
-            }
-        }, 1000);
-    }, [project.id]);
+    // ── Auto-save para campos de texto (según autosave-pattern.md) ──
+    const { triggerAutoSave } = useAutoSave<ProjectTextFields>({
+        saveFn: async (fields) => {
+            const formData = new FormData();
+            formData.set("id", project.id);
+            formData.set("name", fields.name);
+            formData.set("description", fields.description);
+            await updateProject(formData);
+        },
+        validate: (fields) => !!fields.name.trim(),
+        onSuccess: (fields) => {
+            // Optimistic update — refresh name in header selector immediately
+            updateProjectInList(project.id, { name: fields.name });
+        },
+    });
 
     // ── Immediate save for selects (no debounce needed) ──
     const saveField = useCallback(async (fieldName: string, value: string) => {

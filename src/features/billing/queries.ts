@@ -36,17 +36,10 @@ export async function getBillingProfile(): Promise<{ profile: BillingProfile | n
 
     if (!userData) return { profile: null };
 
-    // Get billing profile with country relation
+    // Get billing profile (no join — country_id has no FK, and countries is in public schema)
     const { data: profile, error } = await supabase
         .schema('billing').from('billing_profiles')
-        .select(`
-            *,
-            country:country_id (
-                id,
-                name,
-                alpha_2
-            )
-        `)
+        .select('*')
         .eq('user_id', userData.id)
         .single();
 
@@ -54,7 +47,18 @@ export async function getBillingProfile(): Promise<{ profile: BillingProfile | n
         console.error("Error fetching billing profile:", error);
     }
 
-    return { profile: profile as BillingProfile | null };
+    // If profile has country_id, fetch country separately from public schema
+    let country = null;
+    if (profile?.country_id) {
+        const { data: countryData } = await supabase
+            .from('countries')
+            .select('id, name, alpha_2')
+            .eq('id', profile.country_id)
+            .single();
+        country = countryData;
+    }
+
+    return { profile: profile ? { ...profile, country } as BillingProfile : null };
 }
 
 export async function getCurrencies() {

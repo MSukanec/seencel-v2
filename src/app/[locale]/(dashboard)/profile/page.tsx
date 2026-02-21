@@ -15,7 +15,7 @@ import { PreferencesView } from "@/features/users/views/profile-preferences-view
 
 // Queries
 import { getUserOrganizations } from "@/features/organization/queries";
-import { getUserProfile } from "@/features/users/queries";
+import { getUserProfile, checkIsAdmin } from "@/features/users/queries";
 import { getUserTimezone } from "@/features/users/queries";
 import { getCountries } from "@/features/countries/queries";
 import { getBillingProfile } from "@/features/billing/queries";
@@ -57,12 +57,14 @@ export default async function ProfilePage({ searchParams }: PageProps) {
             countries,
             billingData,
             userTimezone,
+            isAdmin,
         ] = await Promise.all([
             getUserOrganizations(),
             getUserProfile(),
             getCountries(),
             getBillingProfile(),
             getUserTimezone(),
+            checkIsAdmin(),
         ]);
 
         const { organizations, activeOrgId, currentUserId } = orgData as any;
@@ -109,6 +111,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                             organizations={organizations}
                             activeOrgId={activeOrgId}
                             currentUserId={currentUserId}
+                            isAdmin={isAdmin}
                         />
                     </TabsContent>
 

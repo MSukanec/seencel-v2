@@ -21,15 +21,27 @@ export function SidebarPlanButton({ isExpanded = false }: SidebarPlanButtonProps
     const { planSlug, isFounder } = useOrganization();
     const isHydrated = useOrganizationStore(state => state.isHydrated);
 
-    // Before store is hydrated, render a static placeholder (same dimensions, no skeleton flash)
-    if (!isHydrated || !planSlug) {
+    // Before store is hydrated, render nothing (avoid skeleton flash)
+    if (!isHydrated) {
         return (
             <div
                 className={cn(
-                    "rounded-md bg-[#2b2b2b] opacity-40",
+                    "rounded-md bg-muted/30",
                     isExpanded ? "h-8 w-full" : "h-8 w-8"
                 )}
             />
+        );
+    }
+
+    // No org / no plan — show subtle fallback
+    if (!planSlug) {
+        if (!isExpanded) return null; // No mostrar nada colapsado
+        return (
+            <div className="w-full rounded-md border border-dashed border-border/50 px-3 py-1.5 text-center">
+                <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
+                    Sin Plan
+                </span>
+            </div>
         );
     }
 

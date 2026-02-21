@@ -36,9 +36,10 @@ interface ProfileOrganizationsViewProps {
     organizations: Organization[];
     activeOrgId: string | null;
     currentUserId: string;
+    isAdmin: boolean;
 }
 
-export function ProfileOrganizationsView({ organizations, activeOrgId, currentUserId }: ProfileOrganizationsViewProps) {
+export function ProfileOrganizationsView({ organizations, activeOrgId, currentUserId, isAdmin }: ProfileOrganizationsViewProps) {
     const t = useTranslations('Settings.Organization');
     const router = useRouter();
 

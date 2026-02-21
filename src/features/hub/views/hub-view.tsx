@@ -303,7 +303,7 @@ function DashboardCard({
     const renderBadge = () => {
         if (status === 'maintenance') {
             return (
-                <Badge variant="secondary" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+                <Badge variant="secondary" className="bg-semantic-warning/10 text-semantic-warning border-semantic-warning/20">
                     <Lock className="h-3 w-3 mr-1" />
                     Mantenimiento
                 </Badge>

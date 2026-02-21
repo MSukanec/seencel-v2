@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { CalendarDays, Check, Info } from "lucide-react";
+import { CalendarDays, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { upsertProjectSettings, fetchProjectSettingsAction } from "../actions";
@@ -9,6 +9,7 @@ import { upsertProjectSettings, fetchProjectSettingsAction } from "../actions";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { cn } from "@/lib/utils";
 import { useActiveProjectId } from "@/stores/layout-store";
+import { useAutoSave } from "@/hooks/use-auto-save";
 
 // ============================================================================
 // Types
@@ -33,7 +34,6 @@ const DAYS_OF_WEEK = [
 ];
 
 const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5];
-const AUTOSAVE_DELAY = 1000; // 1 second debounce
 
 // ============================================================================
 // Component
@@ -49,9 +49,7 @@ export function ConstructionTasksSettingsView({
     const activeProjectId = storeProjectId ?? propProjectId ?? null;
 
     const [workDays, setWorkDays] = useState<number[]>(initialWorkDays ?? DEFAULT_WORK_DAYS);
-    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
     const [isLoading, setIsLoading] = useState(false);
-    const saveTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
     const isFirstRender = useRef(true);
     const lastLoadedProjectId = useRef<string | null>(null);
 
@@ -72,41 +70,28 @@ export function ConstructionTasksSettingsView({
         });
     }, [activeProjectId, initialWorkDays, propProjectId]);
 
-    // Auto-save with debounce when workDays changes
+    // ── Auto-save con useAutoSave (según autosave-pattern.md) ──
+    const { triggerAutoSave } = useAutoSave<number[]>({
+        saveFn: async (days) => {
+            if (!activeProjectId) return;
+            const result = await upsertProjectSettings(activeProjectId, organizationId, days);
+            if (!result.success) {
+                throw new Error(result.error || "Error al guardar");
+            }
+        },
+        onSuccess: (days) => {
+            onWorkDaysChange?.(days);
+        },
+    });
+
+    // Trigger auto-save when workDays changes (skip first render)
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
             return;
         }
-
         if (!activeProjectId) return;
-
-        if (saveTimeout.current) {
-            clearTimeout(saveTimeout.current);
-        }
-
-        setSaveStatus("saving");
-
-        saveTimeout.current = setTimeout(async () => {
-            try {
-                const result = await upsertProjectSettings(activeProjectId, organizationId, workDays);
-                if (result.success) {
-                    setSaveStatus("saved");
-                    onWorkDaysChange?.(workDays);
-                    setTimeout(() => setSaveStatus("idle"), 2000);
-                } else {
-                    setSaveStatus("idle");
-                    toast.error(result.error || "Error al guardar");
-                }
-            } catch {
-                setSaveStatus("idle");
-                toast.error("Error inesperado al guardar");
-            }
-        }, AUTOSAVE_DELAY);
-
-        return () => {
-            if (saveTimeout.current) clearTimeout(saveTimeout.current);
-        };
+        triggerAutoSave(workDays);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [workDays]);
 
@@ -210,7 +195,7 @@ export function ConstructionTasksSettingsView({
                                 })}
                             </div>
 
-                            {/* Summary + auto-save status */}
+                            {/* Summary */}
                             <div className="flex items-center gap-2">
                                 <p className="text-sm text-muted-foreground">
                                     {workDays.length === 7
@@ -220,17 +205,6 @@ export function ConstructionTasksSettingsView({
                                             : `${workDays.length} días laborales por semana.`
                                     }
                                 </p>
-                                {saveStatus === "saving" && (
-                                    <span className="text-xs text-muted-foreground/60 animate-pulse">
-                                        Guardando...
-                                    </span>
-                                )}
-                                {saveStatus === "saved" && (
-                                    <span className="text-xs text-primary flex items-center gap-1">
-                                        <Check className="h-3 w-3" />
-                                        Guardado
-                                    </span>
-                                )}
                             </div>
                         </div>
                     </SettingsSection>

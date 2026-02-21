@@ -8,6 +8,7 @@ import { getActiveHeroSections } from "@/features/hero-sections/queries";
 import { getUserTimezone } from "@/features/users/queries";
 import { getRecentPublicCourses } from "@/features/academy/course-queries";
 import { HubView } from "@/features/hub";
+import { LayoutDashboard } from "lucide-react";
 
 export default async function HubPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -44,7 +45,7 @@ export default async function HubPage({ params }: { params: Promise<{ locale: st
     const activeOrgLogo = activeOrg?.logo_url || null;
 
     return (
-        <PageWrapper type="dashboard">
+        <PageWrapper type="page" title="Hub" icon={<LayoutDashboard />}>
             <HubView
                 user={profile}
                 activeOrgId={activeOrgId}

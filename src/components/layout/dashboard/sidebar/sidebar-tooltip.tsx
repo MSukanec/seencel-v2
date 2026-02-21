@@ -32,8 +32,8 @@ const restrictionConfig = {
     },
     maintenance: {
         icon: Lock,
-        iconClass: "text-orange-500",
-        bgClass: "bg-orange-500/10",
+        iconClass: "text-semantic-warning",
+        bgClass: "bg-semantic-warning/10",
         text: "En mantenimiento. Estará disponible pronto.",
         linkHref: null,
         linkText: null,

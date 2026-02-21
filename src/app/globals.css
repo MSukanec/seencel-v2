@@ -53,7 +53,7 @@
   --sidebar-ring: oklch(0.705 0.015 286.067);
 
   /* ── Semantic Colors ── */
-  --semantic-positive: #576642;
+  --semantic-positive: #69804a;
   --semantic-positive-fg: oklch(0.985 0 0);
   --semantic-negative: oklch(0.54 0.19 24);
   --semantic-negative-fg: oklch(0.985 0 0);
@@ -259,20 +259,26 @@
 [data-slot="button"][data-variant="default"] {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(175deg, #3a3a42 0%, #32323a 50%, #383840 100%);
+  background: linear-gradient(175deg,
+      color-mix(in srgb, var(--primary) 85%, white 15%) 0%,
+      var(--primary) 50%,
+      color-mix(in srgb, var(--primary) 90%, white 10%) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
     0 1px 3px rgba(0, 0, 0, 0.20),
     0 0 0 1px rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background-image:
     repeating-linear-gradient(90deg,
       transparent,
       transparent 2px,
-      rgba(255, 255, 255, 0.008) 2px,
-      rgba(255, 255, 255, 0.008) 3px),
-    linear-gradient(175deg, #3a3a42 0%, #32323a 50%, #383840 100%);
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 3px),
+    linear-gradient(175deg,
+      color-mix(in srgb, var(--primary) 85%, white 15%) 0%,
+      var(--primary) 50%,
+      color-mix(in srgb, var(--primary) 90%, white 10%) 100%);
 }
 
 [data-slot="button"][data-variant="default"]::after {
@@ -287,8 +293,8 @@
   background: linear-gradient(90deg,
       transparent 0%,
       transparent 10%,
-      rgba(200, 200, 230, 0.45) 46%,
-      rgba(200, 200, 230, 0.12) 54%,
+      rgba(255, 255, 255, 0.45) 46%,
+      rgba(255, 255, 255, 0.12) 54%,
       transparent 90%,
       transparent 100%);
   animation: plan-reflection 12s linear infinite;
@@ -299,29 +305,38 @@
     repeating-linear-gradient(90deg,
       transparent,
       transparent 2px,
-      rgba(255, 255, 255, 0.012) 2px,
-      rgba(255, 255, 255, 0.012) 3px),
-    linear-gradient(175deg, #42424a 0%, #3a3a42 50%, #404048 100%);
+      rgba(255, 255, 255, 0.04) 2px,
+      rgba(255, 255, 255, 0.04) 3px),
+    linear-gradient(175deg,
+      color-mix(in srgb, var(--primary) 80%, white 20%) 0%,
+      color-mix(in srgb, var(--primary) 95%, white 5%) 50%,
+      color-mix(in srgb, var(--primary) 85%, white 15%) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
     0 2px 6px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* Light mode: lighter steel */
+/* Light mode: slightly darker to ensure contrast */
 :root [data-slot="button"][data-variant="default"] {
-  background: linear-gradient(175deg, #505060 0%, #484856 50%, #52525e 100%);
+  background: linear-gradient(175deg,
+      color-mix(in srgb, var(--primary) 70%, black 30%) 0%,
+      color-mix(in srgb, var(--primary) 75%, black 25%) 50%,
+      color-mix(in srgb, var(--primary) 72%, black 28%) 100%);
   background-image:
     repeating-linear-gradient(90deg,
       transparent,
       transparent 2px,
-      rgba(255, 255, 255, 0.015) 2px,
-      rgba(255, 255, 255, 0.015) 3px),
-    linear-gradient(175deg, #505060 0%, #484856 50%, #52525e 100%);
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 3px),
+    linear-gradient(175deg,
+      color-mix(in srgb, var(--primary) 70%, black 30%) 0%,
+      color-mix(in srgb, var(--primary) 75%, black 25%) 50%,
+      color-mix(in srgb, var(--primary) 72%, black 28%) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
     0 1px 3px rgba(0, 0, 0, 0.12),
     0 0 0 1px rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -332,15 +347,19 @@
     repeating-linear-gradient(90deg,
       transparent,
       transparent 2px,
-      rgba(255, 255, 255, 0.02) 2px,
-      rgba(255, 255, 255, 0.02) 3px),
-    linear-gradient(175deg, #585868 0%, #50505e 50%, #5a5a66 100%);
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 3px),
+    linear-gradient(175deg,
+      color-mix(in srgb, var(--primary) 75%, black 25%) 0%,
+      color-mix(in srgb, var(--primary) 80%, black 20%) 50%,
+      color-mix(in srgb, var(--primary) 77%, black 23%) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
     0 2px 6px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(255, 255, 255, 0.08);
 }
+
 
 /* ============================================================================
    6. UTILITY CLASSES

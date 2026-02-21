@@ -2,77 +2,38 @@
 trigger: always_on
 ---
 
-📐 RULES — SEENCEL (VERSIÓN OPERATIVA Y DEFINITIVA)
+Estas reglas definen restricciones fundamentales del sistema Seencel.
+No son sugerencias. Son obligatorias.
 
-Estas reglas definen cómo debe trabajar el agente dentro del proyecto Seencel.
-No son sugerencias. Son restricciones de funcionamiento.
+1. Idioma y veracidad
 
-1. Idioma y comportamiento general
+El agente debe responder siempre en español.
 
-Responder siempre en español.
+El agente no debe afirmar que algo fue probado, ejecutado o verificado si el usuario no lo pidió explícitamente.
 
-No ejecutar builds, tests ni simulaciones de navegador/DOM salvo que el usuario lo pida explícitamente.
+El agente no debe simular ejecuciones de build, tests o navegador sin instrucción explícita del usuario.
 
-No afirmar que algo fue “probado” si no se pidió ni se ejecutó.
+2. Supabase como fuente de verdad
 
-2. Archivos protegidos (NO MODIFICAR)
-
-Los siguientes archivos son documentación de referencia y NUNCA deben ser modificados por el agente:
-
-**/TABLES.md
-
-**/features/*/TABLES.md
-
-DB/SCHEMA.md (auto-generado por `npm run db:schema`)
-
-Estos archivos solo los actualiza el usuario manualmente luego de ejecutar migraciones reales en Supabase.
-`DB/SCHEMA.md` se regenera con `npm run db:schema` — el agente puede pedirle al usuario que lo ejecute si necesita datos actualizados.
-
-3. Cambios de Base de Datos (DB)
-
-El agente NUNCA ejecuta SQL ni intenta modificar Supabase.
-
-El agente NUNCA pega SQL en el chat.
-
-Si se necesitan cambios de base de datos:
-
-Crear archivos .sql separados
-
-Guardarlos en una carpeta /DB en el root del proyecto (al mismo nivel que src/, scripts/, etc.)
-
-El usuario es el único responsable de:
-
-ejecutar esos scripts en Supabase
-
-luego actualizar los TABLES.md (y ejecutar `npm run db:schema` para regenerar el schema)
-
-📖 CONSULTAR SCHEMA: Para conocer la estructura actual de la base de datos (tablas, columnas, FKs, funciones, triggers, RLS, vistas, enums, índices), el agente DEBE leer `DB/SCHEMA.md`. Este archivo es la fuente de verdad del estado real de la base de datos.
-
-4. Supabase es la fuente de verdad
-
-Supabase define:
+Supabase es la única fuente de verdad para:
 
 permisos
 
 visibilidad
 
-reglas de negocio
+reglas de negocio críticas
 
 integridad de datos
 
-El frontend NO reemplaza reglas que existen en la base.
+El frontend y el backend no deben reemplazar reglas que pertenecen a la base de datos.
 
-Si algo depende de permisos o roles:
+Si algo depende de permisos o roles, debe estar garantizado mediante RLS o funciones SQL.
 
-debe existir RLS o una función SQL que lo garantice
+3. RLS obligatoria
 
-No se “compensa” una RLS débil con lógica en frontend.
+Toda tabla persistente del sistema debe tener políticas RLS explícitas.
 
-5. RLS no es opcional
-
-Ninguna tabla real existe sin RLS explícita.
-
-Las políticas se definen en conjunto:
+Las políticas deben contemplar, según corresponda:
 
 SELECT
 
@@ -80,145 +41,112 @@ INSERT
 
 UPDATE
 
-DELETE (si aplica)
+DELETE
 
-No se crean tablas “temporales” sin RLS.
+No se aceptan tablas reales sin RLS.
 
-Si una tabla no puede explicarse claramente con RLS, el diseño es incorrecto.
+Si una tabla no puede explicarse claramente mediante RLS, el diseño se considera incorrecto.
 
-6. Regla crítica de identidad de usuario
+4. Regla crítica de identidad
 
-NUNCA usar auth_id como clave foránea del sistema.
+auth_id se usa únicamente para vincular Supabase Auth con la tabla users.
 
-auth_id se usa únicamente en la tabla users para vincular:
+Reglas obligatorias:
 
-Supabase Auth → users.id
+auth_id NO debe usarse como clave foránea en otras tablas.
 
-TODAS las demás tablas y relaciones usan users.id como FK.
+Todas las relaciones del sistema deben usar users.id como FK real.
 
-No hay excepciones.
+No existen excepciones a esta regla.
 
-7. No duplicar lógica
+5. No duplicar lógica
 
-Una regla existe en un solo lugar.
+Cada regla de negocio debe existir en un solo lugar del sistema.
 
-Si algo ya existe:
+Si una lógica ya existe como:
 
-como función SQL
+función SQL
 
-como helper central
+política RLS
 
-como política RLS
-NO se reimplementa en otro lado.
+helper central
 
-No se crean atajos “más simples”.
+servicio backend
 
-Duplicar lógica = deuda técnica inmediata.
+no debe reimplementarse en otra capa.
 
-8. Separación estricta de responsabilidades
+No se crean atajos “simplificados” que dupliquen comportamiento existente.
 
-Cada capa hace solo lo que le corresponde:
+Duplicar lógica se considera deuda técnica crítica.
 
-Base de datos: reglas, permisos, integridad
+6. Separación estricta de responsabilidades
 
-Backend / API: orquestación, cálculos, integraciones
+Cada capa cumple un rol único:
+
+Base de datos: permisos, integridad y reglas de datos
+
+Backend / API: orquestación, integraciones y cálculos
 
 Frontend: UI, UX, estado y presentación
 
-Si una capa hace trabajo de otra, el diseño es inválido.
+Si una capa asume responsabilidades de otra, el diseño es inválido.
 
-9. El modelo de datos manda
+7. El modelo de datos manda
 
 El modelo de datos se diseña primero.
 
-La UI se adapta al modelo.
+Reglas obligatorias:
 
-El modelo NO se deforma para facilitar React, forms o queries.
+La UI se adapta al modelo de datos.
 
-Las vistas (*_view) sirven para lectura y simplificación, no para esconder malos modelos.
+El modelo no se deforma para facilitar React, formularios o queries.
 
-10. Naming y dominio
+Las vistas (*_view) se usan para lectura y simplificación, no para ocultar problemas de modelado.
 
-Los nombres reflejan conceptos reales del negocio.
+8. Naming orientado al dominio
 
-No usar nombres genéricos si el dominio es específico.
+Los nombres deben reflejar conceptos reales del negocio.
+
+Reglas:
+
+Evitar nombres genéricos cuando el dominio es específico.
 
 No reutilizar conceptos distintos “porque se parecen”.
 
-Si un nombre no se puede explicar a un humano, está mal.
+Si un nombre no puede explicarse claramente a un humano, se considera incorrecto.
 
-11. Proceso obligatorio al trabajar en un feature
+9. Prioridad de calidad del sistema
 
-Antes de modificar o crear algo en un feature:
-
-Leer `DB/SCHEMA.md` para consultar la estructura real de las tablas involucradas (columnas, FKs, RLS, triggers).
-
-Leer features/<feature>/TABLES.md para contexto adicional del esquema.
-
-Leer features/<feature>/README.md si existe, para contexto funcional.
-
-Al crear o modificar:
-
-páginas
-
-modales
-
-formularios
-
-flujos UX
-
-Se debe verificar que cumplan las reglas de diseño y funcionalidad definidas en .agent/rules.
-
-👉 Si durante el trabajo se detecta:
-
-código legacy
-
-lógica que rompe esas reglas
-
-Avisar inmediatamente al usuario para que decida si se corrige o no.
-
-12. Documentación viva
-
-Si se realiza un cambio importante en un feature:
-
-se debe actualizar su README.md
-
-No documentar cambios triviales.
-
-Documentar decisiones relevantes y comportamiento nuevo.
-
-13. Código y mantenibilidad
-
-Priorizar claridad por sobre cleverness.
-
-Evitar abstracciones prematuras.
-
-El código debe poder entenderse meses después.
-
-Refactorizar es válido, romper contratos no.
-
-14. Nada “rápido” que comprometa el sistema
-
-No agregar campos “provisorios”.
-
-No crear tablas sin pensar relaciones, RLS y naming.
-
-No aceptar hacks con “después lo arreglamos”.
-
-El sistema está pensado para largo plazo desde el primer commit.
-
-15. Regla final (la más importante)
-
-Ninguna decisión técnica puede ir en contra de:
+No se aceptan soluciones que comprometan:
 
 seguridad
 
 escalabilidad
 
-claridad
+claridad del sistema
 
-visión de Seencel a largo plazo
+visión de largo plazo de Seencel
 
-Si algo funciona pero rompe eso, se descarta.
+Si algo funciona pero viola estos principios, debe rechazarse.
 
-16. Cada vez que hagas algo PORUQE una regla lo dice, quiero que especifiques "Segun la regla XXX, voy a hacer al cosa". "Estoy lo hago por la regla XXX", "La reglla XXX dice XXX y esto no lo cumple", etc. Es decir, quiero saber CADA VEZ QUE HACES ALGO TENIENDO EN CUENTA UNA REGLA. La idea es que me lo digas VINULANDOLA, ej "Según layout-pattern.md" (y que yo al clickearla pueda ir).
+10. Prohibición de hacks estructurales
+
+No se permite:
+
+agregar campos “provisorios”
+
+crear tablas sin diseño relacional claro
+
+introducir soluciones rápidas que generen deuda estructural
+
+El sistema está diseñado para largo plazo desde el primer commit.
+
+11. Uso obligatorio de reglas del proyecto
+
+El agente debe respetar las reglas definidas en .agent/rules.
+
+Cuando una decisión esté guiada por una regla específica, el agente debe mencionarla explícitamente en su razonamiento visible usando el nombre del archivo de regla correspondiente.
+
+Ejemplo esperado:
+
+“Según avoid-layout-shift.md, …”

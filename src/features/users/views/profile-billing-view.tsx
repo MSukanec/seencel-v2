@@ -4,22 +4,24 @@
 // PROFILE BILLING VIEW
 // ============================================================================
 // Vista de facturación personal usando SettingsSection layout.
-// Secciones: Tipo de Facturación + Datos de Facturación.
+// Auto-save con debounce (mismo patrón que profile-info-view).
+// Usa Field Factories (Standard 19.10) para todos los campos.
 // ============================================================================
 
-import { useTransition, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Receipt, Loader2 } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { CountrySelector } from "@/components/ui/country-selector";
+import { Receipt } from "lucide-react";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { updateBillingProfile } from "@/features/billing/actions";
 import { BillingProfile } from "@/features/billing/queries";
-import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
+import { CountrySelector } from "@/components/ui/country-selector";
+import { FormGroup } from "@/components/ui/form-group";
+import { FactoryLabel } from "@/components/shared/forms/fields/field-wrapper";
+
+// Field Factories (Standard 19.10)
+import { TextField, SwitchField } from "@/components/shared/forms/fields";
 
 interface Country {
     id: string;
@@ -32,10 +34,21 @@ interface ProfileBillingViewProps {
     countries: Country[];
 }
 
+interface BillingFields {
+    is_company: boolean;
+    full_name: string;
+    company_name: string;
+    tax_id: string;
+    country_id: string;
+    address_line1: string;
+    city: string;
+    postcode: string;
+}
+
 export function ProfileBillingView({ billingProfile, countries }: ProfileBillingViewProps) {
     const t = useTranslations('Settings.Billing');
-    const [isPending, startTransition] = useTransition();
 
+    // ── Form state ──
     const [isCompany, setIsCompany] = useState(billingProfile?.is_company ?? false);
     const [fullName, setFullName] = useState(billingProfile?.full_name ?? "");
     const [companyName, setCompanyName] = useState(billingProfile?.company_name ?? "");
@@ -45,18 +58,78 @@ export function ProfileBillingView({ billingProfile, countries }: ProfileBilling
     const [city, setCity] = useState(billingProfile?.city ?? "");
     const [postcode, setPostcode] = useState(billingProfile?.postcode ?? "");
 
-    const onSubmit = (formData: FormData) => {
-        startTransition(async () => {
-            formData.set("is_company", isCompany.toString());
-            formData.set("country_id", countryId);
+    // ── Helper: build current fields snapshot ──
+    const buildFields = (overrides: Partial<BillingFields> = {}): BillingFields => ({
+        is_company: isCompany,
+        full_name: fullName,
+        company_name: companyName,
+        tax_id: taxId,
+        country_id: countryId,
+        address_line1: addressLine1,
+        city: city,
+        postcode: postcode,
+        ...overrides,
+    });
+
+    // ── Auto-save (según autosave-pattern.md) ──
+    const { triggerAutoSave } = useAutoSave<BillingFields>({
+        saveFn: async (fields) => {
+            const formData = new FormData();
+            formData.set("is_company", fields.is_company.toString());
+            formData.set("full_name", fields.full_name);
+            formData.set("company_name", fields.company_name);
+            formData.set("tax_id", fields.tax_id);
+            formData.set("country_id", fields.country_id);
+            formData.set("address_line1", fields.address_line1);
+            formData.set("city", fields.city);
+            formData.set("postcode", fields.postcode);
 
             const result = await updateBillingProfile(formData);
-            if (result.success) {
-                toast.success(t('success'));
-            } else {
-                toast.error(t('error'));
-            }
-        });
+            if (!result.success) throw new Error(t('error'));
+        },
+        successMessage: t('success'),
+        errorMessage: t('error'),
+    });
+
+    // ── Field change handlers ──
+    const handleIsCompanyChange = (value: boolean) => {
+        setIsCompany(value);
+        triggerAutoSave(buildFields({ is_company: value }));
+    };
+
+    const handleFullNameChange = (value: string) => {
+        setFullName(value);
+        triggerAutoSave(buildFields({ full_name: value }));
+    };
+
+    const handleCompanyNameChange = (value: string) => {
+        setCompanyName(value);
+        triggerAutoSave(buildFields({ company_name: value }));
+    };
+
+    const handleTaxIdChange = (value: string) => {
+        setTaxId(value);
+        triggerAutoSave(buildFields({ tax_id: value }));
+    };
+
+    const handleCountryChange = (value: string) => {
+        setCountryId(value);
+        triggerAutoSave(buildFields({ country_id: value }));
+    };
+
+    const handleAddressChange = (value: string) => {
+        setAddressLine1(value);
+        triggerAutoSave(buildFields({ address_line1: value }));
+    };
+
+    const handleCityChange = (value: string) => {
+        setCity(value);
+        triggerAutoSave(buildFields({ city: value }));
+    };
+
+    const handlePostcodeChange = (value: string) => {
+        setPostcode(value);
+        triggerAutoSave(buildFields({ postcode: value }));
     };
 
     return (
@@ -68,115 +141,86 @@ export function ProfileBillingView({ billingProfile, countries }: ProfileBilling
                     title={t('title')}
                     description={t('description')}
                 >
-                    <form action={onSubmit} className="space-y-5">
+                    <div className="space-y-4">
                         {/* Tipo: Empresa / Persona */}
-                        <div className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                                <Label className="text-base">{t('isCompany')}</Label>
-                                <p className="text-sm text-muted-foreground">{t('isCompanyDescription')}</p>
-                            </div>
-                            <Switch
-                                checked={isCompany}
-                                onCheckedChange={setIsCompany}
-                            />
-                        </div>
+                        <SwitchField
+                            label={t('isCompany')}
+                            description={t('isCompanyDescription')}
+                            value={isCompany}
+                            onChange={handleIsCompanyChange}
+                        />
 
                         {/* Nombre/Empresa + CUIT */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor={isCompany ? "company_name" : "full_name"}>
-                                    {isCompany ? t('companyName') : t('fullName')}
-                                </Label>
-                                {isCompany ? (
-                                    <Input
-                                        id="company_name"
-                                        name="company_name"
-                                        value={companyName}
-                                        onChange={(e) => setCompanyName(e.target.value)}
-                                        placeholder={t('companyNamePlaceholder')}
-                                    />
-                                ) : (
-                                    <Input
-                                        id="full_name"
-                                        name="full_name"
-                                        value={fullName}
-                                        onChange={(e) => setFullName(e.target.value)}
-                                        placeholder={t('fullNamePlaceholder')}
-                                    />
-                                )}
-                                <input type="hidden" name="full_name" value={fullName} />
-                                <input type="hidden" name="company_name" value={companyName} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="tax_id">{t('taxId')}</Label>
-                                <Input
-                                    id="tax_id"
-                                    name="tax_id"
-                                    value={taxId}
-                                    onChange={(e) => setTaxId(e.target.value)}
-                                    placeholder={t('taxIdPlaceholder')}
+                            {isCompany ? (
+                                <TextField
+                                    label={t('companyName')}
+                                    value={companyName}
+                                    onChange={handleCompanyNameChange}
+                                    placeholder={t('companyNamePlaceholder')}
+                                    required={false}
                                 />
-                            </div>
+                            ) : (
+                                <TextField
+                                    label={t('fullName')}
+                                    value={fullName}
+                                    onChange={handleFullNameChange}
+                                    placeholder={t('fullNamePlaceholder')}
+                                    required={false}
+                                />
+                            )}
+                            <TextField
+                                label={t('taxId')}
+                                value={taxId}
+                                onChange={handleTaxIdChange}
+                                placeholder={t('taxIdPlaceholder')}
+                                required={false}
+                            />
                         </div>
 
                         {/* Dirección + País */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="address_line1">{t('address')}</Label>
-                                <Input
-                                    id="address_line1"
-                                    name="address_line1"
-                                    value={addressLine1}
-                                    onChange={(e) => setAddressLine1(e.target.value)}
-                                    placeholder={t('addressPlaceholder')}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="country_id">{t('country')}</Label>
+                            <TextField
+                                label={t('address')}
+                                value={addressLine1}
+                                onChange={handleAddressChange}
+                                placeholder={t('addressPlaceholder')}
+                                required={false}
+                            />
+                            <FormGroup
+                                label={<FactoryLabel label={t('country')} />}
+                                required={false}
+                            >
                                 <CountrySelector
                                     value={countryId}
-                                    onChange={setCountryId}
+                                    onChange={handleCountryChange}
                                     countries={countries}
                                     placeholder={t('countryPlaceholder')}
                                 />
-                                <input type="hidden" name="country_id" value={countryId} />
-                            </div>
+                            </FormGroup>
                         </div>
 
                         {/* Ciudad + Código Postal */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="city">{t('city')}</Label>
-                                <Input
-                                    id="city"
-                                    name="city"
-                                    value={city}
-                                    onChange={(e) => setCity(e.target.value)}
-                                    placeholder={t('cityPlaceholder')}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="postcode">{t('postcode')}</Label>
-                                <Input
-                                    id="postcode"
-                                    name="postcode"
-                                    value={postcode}
-                                    onChange={(e) => setPostcode(e.target.value)}
-                                    placeholder={t('postcodePlaceholder')}
-                                />
-                            </div>
+                            <TextField
+                                label={t('city')}
+                                value={city}
+                                onChange={handleCityChange}
+                                placeholder={t('cityPlaceholder')}
+                                required={false}
+                            />
+                            <TextField
+                                label={t('postcode')}
+                                value={postcode}
+                                onChange={handlePostcodeChange}
+                                placeholder={t('postcodePlaceholder')}
+                                required={false}
+                            />
                         </div>
 
-                        {/* Guardar */}
-                        <div className="flex items-center justify-between pt-2">
-                            <p className="text-xs text-muted-foreground">{t('footer')}</p>
-                            <Button type="submit" disabled={isPending} size="sm">
-                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {t('save')}
-                            </Button>
-                        </div>
-                    </form>
+                        {/* Footer info */}
+                        <p className="text-xs text-muted-foreground pt-2">{t('footer')}</p>
+                    </div>
                 </SettingsSection>
             </SettingsSectionContainer>
         </ContentLayout>

@@ -22,12 +22,13 @@ interface WorkspaceSetupViewProps {
     pendingInvitation: PendingInvitationData | null;
     isNewOrg?: boolean;
     isAdmin?: boolean;
+    orgCreationEnabled?: boolean;
 }
 
 type BusinessMode = "professional" | "supplier";
 type Step = "choose" | "type" | "name" | "accepted";
 
-export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: WorkspaceSetupViewProps) {
+export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCreationEnabled = true }: WorkspaceSetupViewProps) {
     const router = useRouter();
     const [step, setStep] = useState<Step>(isNewOrg ? "type" : "choose");
     const [businessMode, setBusinessMode] = useState<BusinessMode>("professional");
@@ -36,6 +37,10 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: Wor
     const [isAccepting, setIsAccepting] = useState(false);
     const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
     const logoFileRef = useRef<File | null>(null);
+
+    // Visual block for EVERYONE when flag is off.
+    // Admin sees it blocked but can still click through.
+    const orgCreationDisabled = !orgCreationEnabled;
 
     // ── CREATE ORG ──
     const handleCreateOrg = () => {
@@ -210,14 +215,32 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: Wor
                 mode="onboarding"
             >
                 <div className="space-y-4 w-full">
-                    {/* Professional */}
+                    {/* Professional — blocked visually when flag is off, admin can bypass */}
                     <button
                         onClick={() => {
+                            if (orgCreationDisabled && !isAdmin) return;
                             setBusinessMode("professional");
                             setStep("name");
                         }}
-                        className="w-full rounded-xl border bg-card p-6 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
+                        className={cn(
+                            "w-full rounded-xl border bg-card p-6 text-left transition-all group relative",
+                            orgCreationDisabled
+                                ? isAdmin
+                                    ? "hover:border-primary/50 hover:bg-accent/30 cursor-pointer opacity-60 hover:opacity-80"
+                                    : "cursor-default opacity-50"
+                                : "hover:border-primary/50 hover:bg-accent/30"
+                        )}
                     >
+                        {/* Blocked Badge */}
+                        {orgCreationDisabled && (
+                            <Badge
+                                variant="secondary"
+                                className="absolute top-3 right-3 text-[10px] gap-1 px-2 py-0.5"
+                            >
+                                <Lock className="w-2.5 h-2.5" />
+                                No disponible
+                            </Badge>
+                        )}
                         <div className="flex items-start gap-4">
                             <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-colors"
                                 style={{ backgroundColor: "color-mix(in srgb, var(--chart-1) 15%, transparent)" }}
@@ -227,7 +250,9 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: Wor
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
                                     <h3 className="font-semibold text-base">Estudio Profesional / Constructora</h3>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                    {!orgCreationDisabled && (
+                                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                    )}
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     Organización que diseña, dirige o ejecuta proyectos de arquitectura, ingeniería o construcción.
@@ -327,9 +352,29 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: Wor
             <div className="space-y-4 w-full">
                 {/* Option 1: Create Organization */}
                 <button
-                    onClick={() => setStep("type")}
-                    className="w-full rounded-xl border bg-card p-6 text-left hover:border-primary/50 hover:bg-accent/30 transition-all group"
+                    onClick={() => {
+                        if (orgCreationDisabled && !isAdmin) return;
+                        setStep("type");
+                    }}
+                    className={cn(
+                        "w-full rounded-xl border bg-card p-6 text-left transition-all group relative",
+                        orgCreationDisabled
+                            ? isAdmin
+                                ? "hover:border-primary/50 hover:bg-accent/30 cursor-pointer opacity-60 hover:opacity-80"
+                                : "cursor-default opacity-50"
+                            : "hover:border-primary/50 hover:bg-accent/30"
+                    )}
                 >
+                    {/* Blocked Badge */}
+                    {orgCreationDisabled && (
+                        <Badge
+                            variant="secondary"
+                            className="absolute top-3 right-3 text-[10px] gap-1 px-2 py-0.5"
+                        >
+                            <Lock className="w-2.5 h-2.5" />
+                            No disponible
+                        </Badge>
+                    )}
                     <div className="flex items-start gap-4">
                         <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                             <Plus className="w-5 h-5 text-primary" />
@@ -337,10 +382,15 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin }: Wor
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                                 <h3 className="font-semibold text-base">Crear una organización</h3>
-                                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                {!orgCreationDisabled && (
+                                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                                Empezá desde cero con tu propia empresa o equipo de trabajo.
+                                {orgCreationDisabled
+                                    ? "La creación de organizaciones está temporalmente deshabilitada."
+                                    : "Empezá desde cero con tu propia empresa o equipo de trabajo."
+                                }
                             </p>
                         </div>
                     </div>

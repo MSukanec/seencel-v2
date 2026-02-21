@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T13:42:37.043Z
+> Generated: 2026-02-21T14:12:15.483Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -341,14 +341,14 @@ CREATE OR REPLACE FUNCTION iam.sync_contact_on_user_update()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'projects', 'iam'
 AS $function$
 begin
   -- Solo si cambian full_name o email
   if (old.full_name is distinct from new.full_name)
      or (old.email is distinct from new.email) then
 
-    update public.contacts c
+    update projects.contacts c
     set full_name  = coalesce(new.full_name, c.full_name),
         email      = coalesce(new.email, c.email),
         updated_at = now()

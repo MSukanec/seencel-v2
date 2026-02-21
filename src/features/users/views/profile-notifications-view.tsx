@@ -9,10 +9,9 @@
 // ============================================================================
 
 import { useState, useEffect } from "react";
-import { Bell, BellRing, Mail, Smartphone, AlertTriangle } from "lucide-react";
+import { BellRing, Mail, Smartphone, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { SettingsSection, SettingsSectionContainer } from "@/components/shared/settings-section";
 import { ContentLayout } from "@/components/layout/dashboard/shared/content-layout";
 import { toast } from "sonner";
@@ -44,26 +43,45 @@ export function ProfileNotificationsView() {
     }, []);
 
     const checkPushStatus = async () => {
-        // Check if push is supported
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        // 1. Check if browser APIs exist
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
             setPushStatus("unsupported");
             return;
         }
 
-        // Check permission
-        const permission = Notification.permission;
-        if (permission === "denied") {
+        // 2. Check if notification permission was explicitly denied
+        if (Notification.permission === "denied") {
             setPushStatus("denied");
             return;
         }
 
-        // Check if already subscribed
+        // 3. Check if there's a registered Service Worker.
+        //    navigator.serviceWorker.ready NEVER resolves if no SW is registered,
+        //    so we first check getRegistrations() which resolves immediately.
         try {
-            const registration = await navigator.serviceWorker.ready;
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            if (registrations.length === 0) {
+                // No SW registered — push not available on this device/env
+                setPushStatus("unsupported");
+                return;
+            }
+
+            // SW exists — race .ready against a timeout to avoid hanging
+            const registration = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+            ]);
+
+            if (!registration) {
+                // Timed out — SW not ready
+                setPushStatus("unsupported");
+                return;
+            }
+
             const subscription = await registration.pushManager.getSubscription();
             setPushStatus(subscription ? "subscribed" : "unsubscribed");
         } catch {
-            setPushStatus("unsubscribed");
+            setPushStatus("unsupported");
         }
     };
 

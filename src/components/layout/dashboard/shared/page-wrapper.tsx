@@ -6,13 +6,11 @@ import { PageHeader, BreadcrumbItem } from "./page-header"
 import { MobileHeader } from "../mobile/mobile-header"
 
 interface PageWrapperProps {
-    /** Type of page: dashboard (no header) or page (with header) */
-    type: 'dashboard' | 'page'
-    /** Page title - only used when type='page' */
+    /** Page title */
     title?: string | React.ReactNode
-    /** Tab navigation - only used when type='page' */
+    /** Tab navigation */
     tabs?: React.ReactNode
-    /** Action buttons - only used when type='page' */
+    /** Action buttons */
     actions?: React.ReactNode
     /** Page content */
     children: React.ReactNode
@@ -26,10 +24,12 @@ interface PageWrapperProps {
     backButton?: React.ReactNode
     /** Desktop toolbar - renders as second row in header */
     toolbar?: React.ReactNode
+    /** @deprecated Use without type — kept temporarily for compatibility */
+    type?: 'dashboard' | 'page'
 }
 
 export function PageWrapper({
-    type,
+    type: _type,
     title,
     tabs,
     actions,
@@ -42,7 +42,7 @@ export function PageWrapper({
 }: PageWrapperProps) {
     return (
         <div className={cn("flex flex-col h-full overflow-hidden", className)}>
-            {/* Mobile Header: ALWAYS visible regardless of type */}
+            {/* Mobile Header: ALWAYS visible */}
             <MobileHeader
                 title={title}
                 icon={icon}
@@ -51,8 +51,8 @@ export function PageWrapper({
                 user={user}
             />
 
-            {/* Desktop Header: Only for 'page' type */}
-            {type === 'page' && title && (
+            {/* Desktop Header */}
+            {title && (
                 <PageHeader
                     breadcrumbs={[{ label: title }]}
                     tabs={tabs}

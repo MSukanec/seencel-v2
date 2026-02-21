@@ -47,8 +47,9 @@ export default async function DashboardLayout({
     // Needed immediately so the sidebar renders with the correct nav from the start.
     const initialAccessContext = await checkUserAccessContext(authUser.id, activeOrgId || null);
 
-    // Maintenance mode check
-    const isMaintenanceMode = flags.find(f => f.key === "dashboard_maintenance_mode")?.value ?? false;
+    // Maintenance mode check — active = platform OK, any other status = maintenance ON
+    const maintenanceFlag = flags.find(f => f.key === "dashboard_maintenance_mode");
+    const isMaintenanceMode = maintenanceFlag ? maintenanceFlag.status !== 'active' : false;
     if (isMaintenanceMode && !isAdmin && !isBetaTester) {
         return <MaintenancePage />;
     }

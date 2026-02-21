@@ -24,6 +24,7 @@ import { TextField, NotesField, SelectField } from "@/components/shared/forms/fi
 import { Combobox } from "@/components/ui/combobox";
 import { Monitor, Building2, Settings, FileText, Ruler, Boxes, Zap, Layers, Tag } from "lucide-react";
 import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import { updateTask, updateTaskOrganization } from "@/features/tasks/actions";
 import type { TaskView, TaskDivision, Unit } from "@/features/tasks/types";
 
@@ -43,6 +44,14 @@ interface TasksDetailGeneralViewProps {
     organizationId: string;
     isAdminMode?: boolean;
     organizations?: Organization[];
+}
+
+interface TaskTextFields {
+    name: string;
+    code: string;
+    description: string;
+    unit_id: string;
+    task_division_id: string;
 }
 
 // ============================================================================
@@ -76,44 +85,27 @@ export function TasksDetailGeneralView({
     const [selectedOrgId, setSelectedOrgId] = useState(task.organization_id || "");
 
     // ========================================================================
-    // Debounced auto-save (1000ms) for text fields
+    // Auto-save para campos de texto (según autosave-pattern.md)
     // ========================================================================
 
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const triggerAutoSave = useCallback((fields: {
-        name: string;
-        code: string;
-        description: string;
-        unit_id: string;
-        task_division_id: string;
-    }) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-
-        debounceRef.current = setTimeout(async () => {
-            if (!fields.name.trim()) return; // name is required
-
-            try {
-                const formData = new FormData();
-                formData.set("id", task.id);
-                formData.set("name", fields.name);
-                formData.set("code", fields.code);
-                formData.set("description", fields.description);
-                formData.set("unit_id", fields.unit_id);
-                formData.set("task_division_id", fields.task_division_id);
-                formData.set("is_published", String(task.is_published ?? false));
-                if (isAdminMode) formData.set("is_admin_mode", "true");
-                const result = await updateTask(formData);
-                if (result.error) {
-                    toast.error(result.error);
-                } else {
-                    toast.success("¡Cambios guardados!");
-                }
-            } catch {
-                toast.error("Error al guardar los cambios.");
+    const { triggerAutoSave } = useAutoSave<TaskTextFields>({
+        saveFn: async (fields) => {
+            const formData = new FormData();
+            formData.set("id", task.id);
+            formData.set("name", fields.name);
+            formData.set("code", fields.code);
+            formData.set("description", fields.description);
+            formData.set("unit_id", fields.unit_id);
+            formData.set("task_division_id", fields.task_division_id);
+            formData.set("is_published", String(task.is_published ?? false));
+            if (isAdminMode) formData.set("is_admin_mode", "true");
+            const result = await updateTask(formData);
+            if (result.error) {
+                throw new Error(result.error);
             }
-        }, 1000);
-    }, [task.id, task.is_published, isAdminMode]);
+        },
+        validate: (fields) => !!fields.name.trim(),
+    });
 
     // ========================================================================
     // Immediate save for selects (no debounce needed)
