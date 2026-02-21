@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -51,7 +51,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -111,7 +111,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -171,7 +171,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -228,7 +228,7 @@ BEGIN
 
     -- SAFE INSERT CATCHING ERRORS
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -289,7 +289,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -344,7 +344,7 @@ BEGIN
     audit_metadata := jsonb_build_object('title', target_record.title);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -398,7 +398,7 @@ BEGIN
     audit_metadata := jsonb_build_object('amount', target_record.amount, 'currency', target_record.currency_id);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -458,7 +458,7 @@ BEGIN
 
     -- CRITICAL: Wrap in exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, 
@@ -521,7 +521,7 @@ BEGIN
     -- Solo loguear si hay organization_id (divisiones de sistema no tienen org)
     IF target_record.organization_id IS NOT NULL THEN
         BEGIN
-            INSERT INTO public.organization_activity_logs (
+            INSERT INTO audit.organization_activity_logs (
                 organization_id, member_id, action, target_id, target_table, metadata
             ) VALUES (
                 target_record.organization_id, resolved_member_id,
@@ -582,7 +582,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -655,7 +655,7 @@ BEGIN
 
     -- CRITICAL: Exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_org_id, resolved_member_id,

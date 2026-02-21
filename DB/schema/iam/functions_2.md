@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -38,7 +38,7 @@ CREATE OR REPLACE FUNCTION iam.handle_new_organization(p_user_id uuid, p_organiz
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'billing'
 AS $function$
 DECLARE
   v_org_id uuid;
@@ -50,7 +50,7 @@ DECLARE
   v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
 BEGIN
   SELECT count(*) INTO v_recent_count
-  FROM public.organizations
+  FROM iam.organizations
   WHERE created_by = p_user_id AND created_at > now() - interval '1 hour';
 
   IF v_recent_count >= 3 THEN
@@ -58,10 +58,10 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  v_org_id := public.step_create_organization(p_user_id, p_organization_name, v_plan_free_id, p_business_mode);
+  v_org_id := iam.step_create_organization(p_user_id, p_organization_name, v_plan_free_id, p_business_mode);
 
-  PERFORM public.step_create_organization_data(v_org_id);
-  PERFORM public.step_create_organization_roles(v_org_id);
+  PERFORM iam.step_create_organization_data(v_org_id);
+  PERFORM iam.step_create_organization_roles(v_org_id);
 
   SELECT id INTO v_admin_role_id
   FROM iam.roles
@@ -72,11 +72,11 @@ BEGIN
     RAISE EXCEPTION 'Admin role not found for organization %', v_org_id;
   END IF;
 
-  PERFORM public.step_add_org_member(p_user_id, v_org_id, v_admin_role_id);
-  PERFORM public.step_assign_org_role_permissions(v_org_id);
-  PERFORM public.step_create_organization_currencies(v_org_id, v_default_currency_id);
-  PERFORM public.step_create_organization_wallets(v_org_id, v_default_wallet_id);
-  PERFORM public.step_create_organization_preferences(
+  PERFORM iam.step_add_org_member(p_user_id, v_org_id, v_admin_role_id);
+  PERFORM iam.step_assign_org_role_permissions(v_org_id);
+  PERFORM iam.step_create_organization_currencies(v_org_id, v_default_currency_id);
+  PERFORM iam.step_create_organization_wallets(v_org_id, v_default_wallet_id);
+  PERFORM iam.step_create_organization_preferences(
     v_org_id, v_default_currency_id, v_default_wallet_id, v_default_pdf_template_id
   );
 
@@ -436,11 +436,11 @@ CREATE OR REPLACE FUNCTION iam.is_demo_org(p_organization_id uuid)
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam'
 AS $function$
   select exists (
     select 1
-    from public.organizations o
+    from iam.organizations o
     where o.id = p_organization_id
       and o.is_demo = true
   );
@@ -575,94 +575,60 @@ CREATE OR REPLACE FUNCTION iam.merge_contacts(p_source_contact_id uuid, p_target
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'projects', 'finance', 'catalog'
 AS $function$
 declare
-  v_source record;
-  v_target record;
-  v_updated_count integer := 0;
-  v_table_count integer;
+  v_source_exists boolean;
+  v_target_exists boolean;
+  v_merged_references int := 0;
 begin
-  if p_source_contact_id = p_target_contact_id then
-    return jsonb_build_object('success', false, 'error', 'SAME_CONTACT', 'message', 'No podés reemplazar un contacto por sí mismo');
+  select exists(
+    select 1 from projects.contacts where id = p_source_contact_id and organization_id = p_organization_id and is_deleted = false
+  ) into v_source_exists;
+
+  if not v_source_exists then
+    return jsonb_build_object('success', false, 'error', 'source_not_found');
   end if;
 
-  select id, organization_id, linked_user_id, full_name into v_source
-  from public.contacts where id = p_source_contact_id and organization_id = p_organization_id and is_deleted = false;
+  select exists(
+    select 1 from projects.contacts where id = p_target_contact_id and organization_id = p_organization_id and is_deleted = false
+  ) into v_target_exists;
 
-  if v_source.id is null then
-    return jsonb_build_object('success', false, 'error', 'SOURCE_NOT_FOUND', 'message', 'El contacto a reemplazar no existe');
+  if not v_target_exists then
+    return jsonb_build_object('success', false, 'error', 'target_not_found');
   end if;
 
-  select id, organization_id, linked_user_id, full_name into v_target
-  from public.contacts where id = p_target_contact_id and organization_id = p_organization_id and is_deleted = false;
+  -- Update all references from source to target
+  update projects.project_clients set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
-  if v_target.id is null then
-    return jsonb_build_object('success', false, 'error', 'TARGET_NOT_FOUND', 'message', 'El contacto de destino no existe');
-  end if;
+  update projects.project_labor set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
-  if v_source.linked_user_id is not null then
-    if exists (
-      select 1 from iam.organization_members
-      where organization_id = p_organization_id and user_id = v_source.linked_user_id and is_active = true
-    ) or exists (
-      select 1 from iam.organization_external_actors
-      where organization_id = p_organization_id and user_id = v_source.linked_user_id and is_active = true and is_deleted = false
-    ) then
-      return jsonb_build_object('success', false, 'error', 'SOURCE_IS_LINKED_ACTIVE', 'message', 'No se puede reemplazar un contacto vinculado a un usuario activo');
-    end if;
-  end if;
+  update finance.subcontracts set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
-  update public.project_clients set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+  update finance.subcontract_bids set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
-  update public.project_labor set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+  update finance.movements set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
-  update public.subcontracts set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+  update finance.material_invoices set provider_id = p_target_contact_id, updated_at = now() where provider_id = p_source_contact_id;
 
-  update public.subcontract_bids set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+  update finance.material_purchase_orders set provider_id = p_target_contact_id, updated_at = now() where provider_id = p_source_contact_id;
 
-  update public.movements set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+  update catalog.materials set default_provider_id = p_target_contact_id, updated_at = now() where default_provider_id = p_source_contact_id;
 
-  update public.material_invoices set provider_id = p_target_contact_id, updated_at = now() where provider_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+  update catalog.task_recipe_external_services set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
-  update public.material_purchase_orders set provider_id = p_target_contact_id, updated_at = now() where provider_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
-
-  update public.materials set default_provider_id = p_target_contact_id, updated_at = now() where default_provider_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
-
-  update public.task_recipe_external_services set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
-
-  update public.media_links set contact_id = p_target_contact_id where contact_id = p_source_contact_id;
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
-
-  update public.contact_category_links set contact_id = p_target_contact_id
+  -- Merge category links (avoid duplicates)
+  update projects.contact_category_links set contact_id = p_target_contact_id
   where contact_id = p_source_contact_id
-    and category_id not in (select category_id from public.contact_category_links where contact_id = p_target_contact_id);
-  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+    and category_id not in (select category_id from projects.contact_category_links where contact_id = p_target_contact_id);
 
-  delete from public.contact_category_links where contact_id = p_source_contact_id;
+  delete from projects.contact_category_links where contact_id = p_source_contact_id;
 
-  update public.contacts
-  set is_deleted = true, deleted_at = now(), updated_at = now(), linked_user_id = null
+  update projects.contacts
+  set is_deleted = true, deleted_at = now(), updated_at = now()
   where id = p_source_contact_id;
 
-  return jsonb_build_object(
-    'success', true, 'source_contact', v_source.full_name, 'target_contact', v_target.full_name,
-    'references_moved', v_updated_count,
-    'message', 'Contacto "' || v_source.full_name || '" reemplazado por "' || v_target.full_name || '". ' || v_updated_count || ' referencias actualizadas.'
-  );
-
-exception
-  when others then
-    return jsonb_build_object('success', false, 'error', 'UNEXPECTED_ERROR', 'message', SQLERRM);
+  return jsonb_build_object('success', true, 'source_id', p_source_contact_id, 'target_id', p_target_contact_id);
 end;
 $function$
 ```
@@ -680,71 +646,37 @@ CREATE OR REPLACE FUNCTION iam.protect_linked_contact_delete()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'projects', 'finance', 'catalog'
 AS $function$
-declare
-  v_is_active_member boolean;
-  v_is_active_actor boolean;
-  v_ref_count integer := 0;
-  v_ref_tables text[] := '{}';
 begin
-  if not (old.is_deleted = false and new.is_deleted = true) then
-    return new;
+  if exists (select 1 from projects.project_clients where contact_id = old.id and is_deleted = false) then
+    raise exception 'No se puede eliminar este contacto porque tiene proyectos asociados como cliente.';
   end if;
-
-  if new.linked_user_id is not null then
-    select exists (
-      select 1 from iam.organization_members om
-      where om.organization_id = new.organization_id and om.user_id = new.linked_user_id and om.is_active = true
-    ) into v_is_active_member;
-
-    select exists (
-      select 1 from iam.organization_external_actors oea
-      where oea.organization_id = new.organization_id and oea.user_id = new.linked_user_id
-        and oea.is_active = true and oea.is_deleted = false
-    ) into v_is_active_actor;
-
-    if v_is_active_member or v_is_active_actor then
-      raise exception 'No se puede eliminar un contacto vinculado a un usuario activo de la organización. Primero desvinculá al miembro o colaborador externo.'
-        using errcode = 'P0001';
-    end if;
+  if exists (select 1 from projects.project_labor where contact_id = old.id and is_deleted = false) then
+    raise exception 'No se puede eliminar este contacto porque tiene asignaciones de personal.';
   end if;
-
-  if exists (select 1 from public.project_clients where contact_id = old.id and is_deleted = false) then
-    v_ref_tables := array_append(v_ref_tables, 'clientes de proyecto');
+  if exists (select 1 from finance.subcontracts where contact_id = old.id and coalesce(is_deleted, false) = false) then
+    raise exception 'No se puede eliminar este contacto porque tiene subcontratos asociados.';
   end if;
-  if exists (select 1 from public.project_labor where contact_id = old.id and is_deleted = false) then
-    v_ref_tables := array_append(v_ref_tables, 'mano de obra');
+  if exists (select 1 from finance.subcontract_bids where contact_id = old.id) then
+    raise exception 'No se puede eliminar este contacto porque tiene ofertas de subcontratos.';
   end if;
-  if exists (select 1 from public.subcontracts where contact_id = old.id and coalesce(is_deleted, false) = false) then
-    v_ref_tables := array_append(v_ref_tables, 'subcontratos');
+  if exists (select 1 from finance.movements where contact_id = old.id) then
+    raise exception 'No se puede eliminar este contacto porque tiene movimientos financieros.';
   end if;
-  if exists (select 1 from public.subcontract_bids where contact_id = old.id) then
-    v_ref_tables := array_append(v_ref_tables, 'ofertas de subcontrato');
+  if exists (select 1 from finance.material_invoices where provider_id = old.id) then
+    raise exception 'No se puede eliminar este contacto porque tiene facturas de materiales.';
   end if;
-  if exists (select 1 from public.movements where contact_id = old.id) then
-    v_ref_tables := array_append(v_ref_tables, 'movimientos financieros');
+  if exists (select 1 from finance.material_purchase_orders where provider_id = old.id and is_deleted = false) then
+    raise exception 'No se puede eliminar este contacto porque tiene órdenes de compra.';
   end if;
-  if exists (select 1 from public.material_invoices where provider_id = old.id) then
-    v_ref_tables := array_append(v_ref_tables, 'facturas de materiales');
+  if exists (select 1 from catalog.materials where default_provider_id = old.id and is_deleted = false) then
+    raise exception 'No se puede eliminar este contacto porque es proveedor predeterminado de materiales.';
   end if;
-  if exists (select 1 from public.material_purchase_orders where provider_id = old.id and is_deleted = false) then
-    v_ref_tables := array_append(v_ref_tables, 'órdenes de compra');
+  if exists (select 1 from catalog.task_recipe_external_services where contact_id = old.id and is_deleted = false) then
+    raise exception 'No se puede eliminar este contacto porque tiene servicios externos asociados.';
   end if;
-  if exists (select 1 from public.materials where default_provider_id = old.id and is_deleted = false) then
-    v_ref_tables := array_append(v_ref_tables, 'proveedor default de materiales');
-  end if;
-  if exists (select 1 from public.task_recipe_external_services where contact_id = old.id and is_deleted = false) then
-    v_ref_tables := array_append(v_ref_tables, 'servicios externos de recetas');
-  end if;
-
-  if array_length(v_ref_tables, 1) > 0 then
-    raise exception 'No se puede eliminar este contacto porque está siendo usado en: %. Primero reemplazalo por otro contacto.',
-      array_to_string(v_ref_tables, ', ')
-      using errcode = 'P0001';
-  end if;
-
-  return new;
+  return old;
 end;
 $function$
 ```
@@ -929,7 +861,7 @@ $function$
 ```
 </details>
 
-### `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` 🔐
+### `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` 🔐
 
 - **Returns**: uuid
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -937,20 +869,20 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)
+CREATE OR REPLACE FUNCTION iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam', 'billing'
+ SET search_path TO 'iam', 'billing', 'public'
 AS $function$
 DECLARE
   v_org_id uuid := gen_random_uuid();
 BEGIN
-  INSERT INTO public.organizations (
-    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
+  INSERT INTO iam.organizations (
+    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id
   )
   VALUES (
-    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id, p_business_mode
+    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id
   );
 
   RETURN v_org_id;
@@ -965,8 +897,7 @@ EXCEPTION
       jsonb_build_object(
         'owner_id', p_owner_id,
         'org_name', p_org_name,
-        'plan_id', p_plan_id,
-        'business_mode', p_business_mode
+        'plan_id', p_plan_id
       ),
       'critical'
     );

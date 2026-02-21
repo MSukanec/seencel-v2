@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -180,8 +180,8 @@
 - `iam.step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_create_default_kanban_board(p_org_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_data(p_org_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(iam/functions_3.md)*

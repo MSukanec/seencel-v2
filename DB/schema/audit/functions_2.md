@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -51,7 +51,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             org_id,
@@ -111,7 +111,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -177,7 +177,7 @@ BEGIN
 
     -- CRITICAL: Exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -234,8 +234,8 @@ BEGIN
     -- Obtener nombre del trabajador para metadata
     SELECT COALESCE(c.full_name, c.first_name || ' ' || c.last_name, 'Sin nombre')
     INTO v_contact_name
-    FROM public.project_labor pl
-    JOIN public.contacts c ON c.id = pl.contact_id
+    FROM projects.project_labor pl
+    JOIN projects.contacts c ON c.id = pl.contact_id
     WHERE pl.id = target_record.labor_id;
 
     audit_metadata := jsonb_build_object(
@@ -245,7 +245,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, 
@@ -307,7 +307,7 @@ BEGIN
 
     -- Insert con exception handler para evitar errores en cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, 
@@ -380,7 +380,7 @@ BEGIN
 
     -- CRITICAL: Wrap in exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -448,7 +448,7 @@ BEGIN
 
     -- CRITICAL: Wrap in exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -510,7 +510,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', target_record.name);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -596,7 +596,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -661,7 +661,7 @@ BEGIN
 
     BEGIN
         IF resolved_member_id IS NOT NULL THEN
-            INSERT INTO public.organization_activity_logs (
+            INSERT INTO audit.organization_activity_logs (
                 organization_id, member_id, action, target_id, target_table, metadata
             ) VALUES (
                 target_record.id,
@@ -715,7 +715,7 @@ BEGIN
     v_action := NEW.product_type || '_purchased';
 
     -- Insertar en activity logs
-    INSERT INTO public.organization_activity_logs (
+    INSERT INTO audit.organization_activity_logs (
         organization_id, member_id, action,
         target_table, target_id, metadata
     ) VALUES (
@@ -818,7 +818,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, 
@@ -861,7 +861,7 @@ BEGIN
         resolved_member_id := NEW.updated_by;
     ELSIF (TG_OP = 'INSERT') THEN target_record := NEW; audit_action := 'create_client'; resolved_member_id := NEW.created_by; END IF;
     audit_metadata := jsonb_build_object('status', target_record.status, 'contact_id', target_record.contact_id);
-    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
+    BEGIN INSERT INTO audit.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
     VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'project_clients', audit_metadata);
     EXCEPTION WHEN OTHERS THEN NULL; END;
     RETURN NULL;
@@ -906,7 +906,7 @@ BEGIN
     audit_metadata := jsonb_build_object('project_id', target_record.project_id);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -962,7 +962,7 @@ BEGIN
 
     SELECT COALESCE(full_name, first_name || ' ' || last_name, 'Sin nombre')
     INTO v_contact_name
-    FROM public.contacts
+    FROM projects.contacts
     WHERE id = target_record.contact_id;
 
     audit_metadata := jsonb_build_object(
@@ -971,7 +971,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, 
@@ -1027,7 +1027,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', target_record.name);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -1079,7 +1079,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', target_record.name);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -1160,7 +1160,7 @@ BEGIN
 
     -- CRITICAL: Wrap in exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -1225,7 +1225,7 @@ BEGIN
 
     -- Exception handler for cascade deletes or missing logs table
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,

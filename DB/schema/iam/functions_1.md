@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -17,14 +17,13 @@ CREATE OR REPLACE FUNCTION iam.accept_client_invitation(p_token text, p_user_id 
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'iam', 'public'
+ SET search_path TO 'iam'
 AS $function$
 DECLARE
     v_invitation RECORD;
     v_existing_client RECORD;
     v_client_record_id uuid;
 BEGIN
-    -- 1. Buscar invitación de cliente por token
     SELECT
         i.id,
         i.organization_id,
@@ -38,7 +37,7 @@ BEGIN
         o.name AS org_name
     INTO v_invitation
     FROM iam.organization_invitations i
-    JOIN public.organizations o ON o.id = i.organization_id
+    JOIN iam.organizations o ON o.id = i.organization_id
     WHERE i.token = p_token
       AND i.invitation_type = 'client'
     LIMIT 1;
@@ -51,7 +50,6 @@ BEGIN
         );
     END IF;
 
-    -- 2. Verificar status
     IF v_invitation.status NOT IN ('pending', 'registered') THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -60,7 +58,6 @@ BEGIN
         );
     END IF;
 
-    -- 3. Verificar expiración
     IF v_invitation.expires_at IS NOT NULL AND v_invitation.expires_at < NOW() THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -69,7 +66,6 @@ BEGIN
         );
     END IF;
 
-    -- 4. Verificar si ya es cliente de esta org
     SELECT id, is_active
     INTO v_existing_client
     FROM iam.organization_clients
@@ -84,7 +80,6 @@ BEGIN
         WHERE id = v_invitation.id;
 
     ELSIF v_existing_client IS NOT NULL AND NOT v_existing_client.is_active THEN
-        -- 5a. Reactivar cliente soft-deleted
         UPDATE iam.organization_clients
         SET
             is_active = true,
@@ -104,7 +99,6 @@ BEGIN
         SET status = 'accepted', accepted_at = NOW(), user_id = p_user_id
         WHERE id = v_invitation.id;
     ELSE
-        -- 5b. Insertar nuevo cliente
         INSERT INTO iam.organization_clients (
             organization_id,
             user_id,
@@ -126,9 +120,8 @@ BEGIN
         WHERE id = v_invitation.id;
     END IF;
 
-    -- 6. AUTO-CREAR project_access
     IF v_invitation.project_id IS NOT NULL THEN
-        INSERT INTO public.project_access (
+        INSERT INTO iam.project_access (
             project_id,
             organization_id,
             user_id,
@@ -150,12 +143,11 @@ BEGIN
         DO NOTHING;
     END IF;
 
-    -- 7. Configurar preferencias del usuario
-    UPDATE public.user_preferences
+    UPDATE iam.user_preferences
     SET last_organization_id = v_invitation.organization_id
     WHERE user_id = p_user_id;
 
-    INSERT INTO public.user_organization_preferences (
+    INSERT INTO iam.user_organization_preferences (
         user_id, organization_id, updated_at
     ) VALUES (
         p_user_id, v_invitation.organization_id, NOW()
@@ -163,7 +155,6 @@ BEGIN
     ON CONFLICT (user_id, organization_id) DO UPDATE
     SET updated_at = NOW();
 
-    -- 8. Retornar éxito
     RETURN jsonb_build_object(
         'success', true,
         'already_client', (v_existing_client IS NOT NULL AND v_existing_client.is_active),
@@ -188,14 +179,13 @@ CREATE OR REPLACE FUNCTION iam.accept_external_invitation(p_token text, p_user_i
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'iam', 'public'
+ SET search_path TO 'iam'
 AS $function$
 DECLARE
     v_invitation RECORD;
     v_existing_actor RECORD;
     v_actor_id uuid;
 BEGIN
-    -- 1. Buscar invitación externa por token
     SELECT
         i.id,
         i.organization_id,
@@ -209,7 +199,7 @@ BEGIN
         o.name AS org_name
     INTO v_invitation
     FROM iam.organization_invitations i
-    JOIN public.organizations o ON o.id = i.organization_id
+    JOIN iam.organizations o ON o.id = i.organization_id
     WHERE i.token = p_token
       AND i.invitation_type = 'external'
     LIMIT 1;
@@ -222,7 +212,6 @@ BEGIN
         );
     END IF;
 
-    -- 2. Verificar status
     IF v_invitation.status NOT IN ('pending', 'registered') THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -231,7 +220,6 @@ BEGIN
         );
     END IF;
 
-    -- 3. Verificar expiración
     IF v_invitation.expires_at IS NOT NULL AND v_invitation.expires_at < NOW() THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -240,7 +228,6 @@ BEGIN
         );
     END IF;
 
-    -- 4. Verificar si ya es actor externo (activo o inactivo)
     SELECT id, is_active
     INTO v_existing_actor
     FROM iam.organization_external_actors
@@ -255,7 +242,6 @@ BEGIN
         WHERE id = v_invitation.id;
 
     ELSIF v_existing_actor IS NOT NULL AND NOT v_existing_actor.is_active THEN
-        -- 5a. Reactivar actor soft-deleted
         UPDATE iam.organization_external_actors
         SET
             is_active = true,
@@ -276,7 +262,6 @@ BEGIN
         SET status = 'accepted', accepted_at = NOW(), user_id = p_user_id
         WHERE id = v_invitation.id;
     ELSE
-        -- 5b. Insertar nuevo actor externo
         INSERT INTO iam.organization_external_actors (
             organization_id,
             user_id,
@@ -295,9 +280,8 @@ BEGIN
         WHERE id = v_invitation.id;
     END IF;
 
-    -- 6. AUTO-CREAR project_access si la invitación tiene project_id
     IF v_invitation.project_id IS NOT NULL THEN
-        INSERT INTO public.project_access (
+        INSERT INTO iam.project_access (
             project_id,
             organization_id,
             user_id,
@@ -319,12 +303,11 @@ BEGIN
         DO NOTHING;
     END IF;
 
-    -- 7. Configurar preferencias del usuario
-    UPDATE public.user_preferences
+    UPDATE iam.user_preferences
     SET last_organization_id = v_invitation.organization_id
     WHERE user_id = p_user_id;
 
-    INSERT INTO public.user_organization_preferences (
+    INSERT INTO iam.user_organization_preferences (
         user_id, organization_id, updated_at
     ) VALUES (
         p_user_id, v_invitation.organization_id, NOW()
@@ -332,7 +315,6 @@ BEGIN
     ON CONFLICT (user_id, organization_id) DO UPDATE
     SET updated_at = NOW();
 
-    -- 8. Retornar éxito
     RETURN jsonb_build_object(
         'success', true,
         'already_actor', (v_existing_actor IS NOT NULL AND v_existing_actor.is_active),
@@ -357,7 +339,7 @@ CREATE OR REPLACE FUNCTION iam.accept_organization_invitation(p_token text, p_us
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'billing'
 AS $function$
 DECLARE
     v_invitation RECORD;
@@ -369,7 +351,6 @@ DECLARE
     v_available INT;
     v_new_member_id UUID;
 BEGIN
-    -- 1. Buscar invitación por token
     SELECT 
         i.id,
         i.organization_id,
@@ -382,7 +363,7 @@ BEGIN
         o.name as org_name
     INTO v_invitation
     FROM iam.organization_invitations i
-    JOIN public.organizations o ON o.id = i.organization_id
+    JOIN iam.organizations o ON o.id = i.organization_id
     WHERE i.token = p_token
     LIMIT 1;
 
@@ -394,7 +375,6 @@ BEGIN
         );
     END IF;
 
-    -- 2. Verificar estado
     IF v_invitation.status != 'registered' AND v_invitation.status != 'pending' THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -403,7 +383,6 @@ BEGIN
         );
     END IF;
 
-    -- 3. Verificar expiración
     IF v_invitation.expires_at IS NOT NULL AND v_invitation.expires_at < NOW() THEN
         RETURN jsonb_build_object(
             'success', false,
@@ -412,7 +391,6 @@ BEGIN
         );
     END IF;
 
-    -- 4. Verificar que el usuario no es ya miembro activo
     SELECT EXISTS (
         SELECT 1 FROM iam.organization_members
         WHERE organization_id = v_invitation.organization_id
@@ -433,19 +411,17 @@ BEGIN
         );
     END IF;
 
-    -- 4b. Verificar si existe un miembro INACTIVO
     SELECT id INTO v_inactive_member_id
     FROM iam.organization_members
     WHERE organization_id = v_invitation.organization_id
       AND user_id = p_user_id
       AND is_active = false;
 
-    -- 5. Verificar asientos disponibles
     SELECT 
         COALESCE((p.features->>'seats_included')::integer, 1) + COALESCE(org.purchased_seats, 0)
     INTO v_seat_capacity
-    FROM public.organizations org
-    JOIN public.plans p ON p.id = org.plan_id
+    FROM iam.organizations org
+    JOIN billing.plans p ON p.id = org.plan_id
     WHERE org.id = v_invitation.organization_id;
 
     SELECT COUNT(*) INTO v_current_members
@@ -469,7 +445,6 @@ BEGIN
         );
     END IF;
 
-    -- 6. Crear o reactivar miembro
     IF v_inactive_member_id IS NOT NULL THEN
         UPDATE iam.organization_members
         SET 
@@ -504,7 +479,6 @@ BEGIN
         RETURNING id INTO v_new_member_id;
     END IF;
 
-    -- 7. Actualizar invitación
     UPDATE iam.organization_invitations
     SET 
         status = 'accepted',
@@ -512,8 +486,7 @@ BEGIN
         user_id = p_user_id
     WHERE id = v_invitation.id;
 
-    -- 8. Registrar evento
-    INSERT INTO public.organization_member_events (
+    INSERT INTO billing.organization_member_events (
         organization_id,
         member_id,
         user_id,
@@ -704,12 +677,12 @@ CREATE OR REPLACE FUNCTION iam.can_mutate_project(p_project_id uuid, p_permissio
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'projects'
 AS $function$
   SELECT
     iam.is_admin()
     OR EXISTS (
-      SELECT 1 FROM public.projects p
+      SELECT 1 FROM projects.projects p
       WHERE p.id = p_project_id
         AND iam.can_mutate_org(p.organization_id, p_permission_key)
     )
@@ -913,7 +886,7 @@ CREATE OR REPLACE FUNCTION iam.ensure_contact_for_user(p_organization_id uuid, p
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'projects'
 AS $function$
 declare
   v_user record;
@@ -952,14 +925,14 @@ begin
 
   select c.id
   into v_contact_id
-  from public.contacts c
+  from projects.contacts c
   where c.organization_id = p_organization_id
     and c.linked_user_id = v_user.id
     and c.is_deleted = false
   limit 1;
 
   if v_contact_id is not null then
-    update public.contacts c
+    update projects.contacts c
     set
       first_name = coalesce(c.first_name, v_first_name),
       last_name  = coalesce(c.last_name, v_last_name),
@@ -975,7 +948,7 @@ begin
 
   select c.id
   into v_contact_id
-  from public.contacts c
+  from projects.contacts c
   where c.organization_id = p_organization_id
     and c.email = v_user.email
     and c.linked_user_id is null
@@ -983,7 +956,7 @@ begin
   limit 1;
 
   if v_contact_id is not null then
-    update public.contacts c
+    update projects.contacts c
     set
       linked_user_id = v_user.id,
       first_name = coalesce(c.first_name, v_first_name),
@@ -996,7 +969,7 @@ begin
     return v_contact_id;
   end if;
 
-  insert into public.contacts (
+  insert into projects.contacts (
     organization_id, linked_user_id, first_name, last_name,
     full_name, email, image_url, created_at, updated_at
   )

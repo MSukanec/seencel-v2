@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -411,7 +411,7 @@ CREATE OR REPLACE FUNCTION notifications.notify_quote_status_change()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'construction'
+ SET search_path TO 'notifications', 'construction', 'projects'
 AS $function$
 DECLARE
     v_project_name TEXT;
@@ -426,8 +426,8 @@ BEGIN
 
         SELECT p.name, c.name, NEW.name, p.id
         INTO v_project_name, v_client_name, v_quote_name, v_project_id
-        FROM public.projects p
-        LEFT JOIN public.project_clients c ON NEW.client_id = c.id
+        FROM projects.projects p
+        LEFT JOIN projects.project_clients c ON NEW.client_id = c.id
         WHERE p.id = NEW.project_id;
 
         IF NEW.status = 'approved' THEN
@@ -503,7 +503,7 @@ BEGIN
         WHERE id = NEW.plan_id;
         
         SELECT owner_id INTO v_owner_id
-        FROM public.organizations
+        FROM iam.organizations
         WHERE id = NEW.organization_id;
 
         v_billing_label := CASE 
@@ -612,7 +612,7 @@ BEGIN
     IF NEW.context ? 'organization_id' AND (NEW.context->>'organization_id') IS NOT NULL THEN
         SELECT o.name
         INTO v_org_name
-        FROM public.organizations o
+        FROM iam.organizations o
         WHERE o.id = (NEW.context->>'organization_id')::uuid;
     END IF;
 
@@ -918,7 +918,7 @@ CREATE OR REPLACE FUNCTION notifications.queue_purchase_email()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'notifications', 'billing', 'academy', 'iam', 'public'
+ SET search_path TO 'notifications', 'billing', 'academy', 'iam'
 AS $function$
 DECLARE
     v_user_email text;
@@ -974,7 +974,7 @@ BEGIN
     v_subject_admin := '💰 Nueva venta: ' || v_product_name;
 
     -- Email al comprador
-    INSERT INTO public.email_queue (
+    INSERT INTO notifications.email_queue (
         recipient_email, recipient_name, template_type, subject, data, created_at
     ) VALUES (
         v_user_email,
@@ -992,7 +992,7 @@ BEGIN
     );
 
     -- Email al admin
-    INSERT INTO public.email_queue (
+    INSERT INTO notifications.email_queue (
         recipient_email, recipient_name, template_type, subject, data, created_at
     ) VALUES (
         'contacto@seencel.com',

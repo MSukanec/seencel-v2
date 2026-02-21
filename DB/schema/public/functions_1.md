@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -71,7 +71,7 @@ BEGIN
 
     -- NUEVO: Obtener nombre del subcontrato relacionado
     SELECT name INTO subcontract_name 
-    FROM public.subcontracts 
+    FROM finance.subcontracts 
     WHERE id = target_record.subcontract_id;
 
     -- Incluir name en metadata
@@ -82,7 +82,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,

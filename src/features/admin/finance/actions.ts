@@ -197,6 +197,16 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
             const isCourse = !!transferData.course_id;
             const isSubscription = !!transferData.plan_id && !!transferData.organization_id;
 
+            console.log("[AdminTransfer] Approval processing...", {
+                transferId: input.id,
+                isCourse,
+                isSubscription,
+                plan_id: transferData.plan_id,
+                organization_id: transferData.organization_id,
+                user_id: transferData.user_id,
+                billing_period: transferData.billing_period,
+            });
+
             if (isCourse) {
                 // Call the SQL function to handle course payment
                 const { data: handleResult, error: handleError } = await supabase.schema('billing').rpc(
@@ -255,16 +265,28 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
                 );
 
                 if (handleError) {
-                    console.error("Error calling handle_payment_subscription_success:", handleError);
+                    console.error("[AdminTransfer] RPC ERROR:", JSON.stringify(handleError, null, 2));
                 } else {
-                    const paymentId = (handleResult as { payment_id?: string })?.payment_id;
+                    console.log("[AdminTransfer] RPC SUCCESS result:", JSON.stringify(handleResult, null, 2));
+                    // Check for warning status
+                    const rpcResult = handleResult as { status?: string; warning_step?: string; payment_id?: string };
+                    if (rpcResult?.status === 'ok_with_warning') {
+                        console.error("[AdminTransfer] RPC returned ok_with_warning at step:", rpcResult.warning_step);
+                    }
+                    const paymentId = rpcResult?.payment_id;
                     if (paymentId) {
                         await supabase
-                            .from("bank_transfer_payments")
+                            .schema('billing').from("bank_transfer_payments")
                             .update({ payment_id: paymentId })
                             .eq("id", input.id);
                     }
                 }
+            } else {
+                console.warn("[AdminTransfer] Transfer is neither course nor subscription!", {
+                    course_id: transferData.course_id,
+                    plan_id: transferData.plan_id,
+                    organization_id: transferData.organization_id,
+                });
             }
         } catch (err) {
             console.error("Error processing approval:", err);

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -26,7 +26,7 @@ DECLARE
 BEGIN
     SELECT COUNT(*)
     INTO v_current_count
-    FROM public.projects
+    FROM projects.projects
     WHERE organization_id = p_organization_id
       AND status = 'active'
       AND is_deleted = false

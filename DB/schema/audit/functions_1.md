@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -20,7 +20,7 @@ CREATE OR REPLACE FUNCTION audit.log_activity(p_organization_id uuid, p_user_id 
  SET search_path TO 'audit', 'public'
 AS $function$
 begin
-  insert into public.organization_activity_logs (
+  insert into audit.organization_activity_logs (
     organization_id,
     user_id,
     action,
@@ -89,7 +89,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -132,7 +132,7 @@ BEGIN
         resolved_member_id := NEW.updated_by;
     ELSIF (TG_OP = 'INSERT') THEN target_record := NEW; audit_action := 'create_commitment'; resolved_member_id := NEW.created_by; END IF;
     audit_metadata := jsonb_build_object('amount', target_record.amount, 'currency_id', target_record.currency_id);
-    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
+    BEGIN INSERT INTO audit.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
     VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_commitments', audit_metadata);
     EXCEPTION WHEN OTHERS THEN NULL; END;
     RETURN NULL;
@@ -163,7 +163,7 @@ BEGIN
         resolved_member_id := NEW.updated_by;
     ELSIF (TG_OP = 'INSERT') THEN target_record := NEW; audit_action := 'create_payment'; resolved_member_id := NEW.created_by; END IF;
     audit_metadata := jsonb_build_object('amount', target_record.amount, 'date', target_record.payment_date, 'status', target_record.status);
-    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
+    BEGIN INSERT INTO audit.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
     VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_payments', audit_metadata);
     EXCEPTION WHEN OTHERS THEN NULL; END;
     RETURN NULL;
@@ -199,7 +199,7 @@ BEGIN
 
     audit_metadata := jsonb_build_object('name', target_record.name, 'is_system', target_record.is_system);
 
-    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
+    BEGIN INSERT INTO audit.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
     VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_roles', audit_metadata);
     EXCEPTION WHEN OTHERS THEN NULL; END;
     RETURN NULL;
@@ -265,7 +265,7 @@ BEGIN
 
     -- CRITICAL: Wrap in exception handler for cascade deletes
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -323,7 +323,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', COALESCE(target_record.full_name, target_record.first_name, 'Contact'));
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -375,7 +375,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', target_record.name);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -437,7 +437,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -496,7 +496,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -555,7 +555,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -611,7 +611,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', target_record.name);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -666,7 +666,7 @@ BEGIN
     audit_metadata := jsonb_build_object('name', target_record.name);
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -728,7 +728,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -791,7 +791,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -896,7 +896,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id, resolved_member_id,
@@ -959,7 +959,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             target_record.organization_id,
@@ -1035,7 +1035,7 @@ BEGIN
     );
 
     BEGIN
-        INSERT INTO public.organization_activity_logs (
+        INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
         ) VALUES (
             org_id,
@@ -1128,7 +1128,7 @@ BEGIN
       IF v_current_uid IS NOT NULL AND v_org_id IS NOT NULL THEN
           SELECT om.id INTO v_member_id
           FROM iam.organization_members om
-          JOIN public.users u ON u.id = om.user_id
+          JOIN iam.users u ON u.id = om.user_id
           WHERE u.auth_id = v_current_uid
           AND om.organization_id = v_org_id
           LIMIT 1;
@@ -1142,7 +1142,7 @@ BEGIN
   );
   -- 5. Insert (Safe)
   BEGIN
-      INSERT INTO public.organization_activity_logs (
+      INSERT INTO audit.organization_activity_logs (
         organization_id,
         member_id,
         action,

@@ -88,6 +88,13 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     try {
         const admin = createAdminClient();
+        console.log("[BankTransfer] Optimistic activation starting...", {
+            courseId: input.courseId,
+            planId: input.planId,
+            organizationId: input.organizationId,
+            billingPeriod: input.billingPeriod,
+            seatsQuantity: input.seatsQuantity,
+        });
 
         if (input.courseId) {
             // Course purchase → use the same handler as MP webhook
@@ -111,6 +118,15 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
             }
         } else if (input.planId && input.organizationId) {
             // Plan/subscription purchase → use the same handler as MP webhook
+            console.log("[BankTransfer] Calling handle_payment_subscription_success RPC...", {
+                provider: "bank_transfer",
+                orderId,
+                userId: userData.id,
+                organizationId: input.organizationId,
+                planId: input.planId,
+                billingPeriod: input.billingPeriod || "annual",
+            });
+
             const { data: result, error: subError } = await admin.schema('billing').rpc(
                 "handle_payment_subscription_success",
                 {
@@ -128,12 +144,18 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
             );
 
             if (subError) {
-                console.error("Error creating subscription:", subError);
+                console.error("[BankTransfer] RPC ERROR:", JSON.stringify(subError, null, 2));
             } else {
-                console.log("Subscription result:", result);
+                console.log("[BankTransfer] RPC SUCCESS result:", JSON.stringify(result, null, 2));
+                // Check if response indicates a warning
+                const rpcResult = result as { status?: string; warning_step?: string };
+                if (rpcResult?.status === 'ok_with_warning') {
+                    console.error("[BankTransfer] RPC returned ok_with_warning at step:", rpcResult.warning_step);
+                }
             }
         } else if (input.seatsQuantity && input.organizationId && !input.planId) {
             // Seat purchase → already uses handle_payment_seat_success (billing schema)
+            console.log("[BankTransfer] Seat purchase path...");
             const { data: orgData } = await admin
                 .schema('iam').from("organizations")
                 .select("plan_id")
@@ -158,11 +180,18 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
                 });
 
                 if (seatError) {
-                    console.error("Error purchasing seats:", seatError);
+                    console.error("[BankTransfer] Seat RPC ERROR:", seatError);
                 }
             } else {
-                console.error("No active plan found for seat purchase");
+                console.error("[BankTransfer] No active plan found for seat purchase");
             }
+        } else {
+            console.warn("[BankTransfer] No activation branch matched!", {
+                hasCourseId: !!input.courseId,
+                hasPlanId: !!input.planId,
+                hasOrgId: !!input.organizationId,
+                hasSeats: !!input.seatsQuantity,
+            });
         }
     } catch (activationError) {
         console.error("Error in optimistic activation:", activationError);

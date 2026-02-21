@@ -70,7 +70,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
 
         supabase
             .schema('billing').from('organization_subscriptions')
-            .select('*, plan:plans(*)')
+            .select('*, plan:plan_id(*)')
             .eq('organization_id', organizationId)
             .eq('status', 'active')
             .maybeSingle(),
@@ -86,7 +86,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .schema('iam').from('organization_preferences')
             .select('*')
             .eq('organization_id', organizationId)
-            .single(),
+            .maybeSingle(),
 
         supabase
             .schema('finance').from('organization_currencies_view')

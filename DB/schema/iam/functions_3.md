@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T19:23:32.061Z
+> Generated: 2026-02-21T21:03:12.424Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [IAM] Functions (chunk 3: step_create_organization — users_normalize_email)
 
-### `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` 🔐
+### `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` 🔐
 
 - **Returns**: uuid
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -13,20 +13,20 @@
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)
+CREATE OR REPLACE FUNCTION iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam', 'billing'
+ SET search_path TO 'iam', 'billing'
 AS $function$
 DECLARE
   v_org_id uuid := gen_random_uuid();
 BEGIN
-  INSERT INTO public.organizations (
-    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id
+  INSERT INTO iam.organizations (
+    id, name, created_by, owner_id, created_at, updated_at, is_active, plan_id, business_mode
   )
   VALUES (
-    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id
+    v_org_id, p_org_name, p_owner_id, p_owner_id, now(), now(), true, p_plan_id, p_business_mode
   );
 
   RETURN v_org_id;
@@ -41,7 +41,8 @@ EXCEPTION
       jsonb_build_object(
         'owner_id', p_owner_id,
         'org_name', p_org_name,
-        'plan_id', p_plan_id
+        'plan_id', p_plan_id,
+        'business_mode', p_business_mode
       ),
       'critical'
     );
@@ -63,10 +64,10 @@ CREATE OR REPLACE FUNCTION iam.step_create_organization_currencies(p_org_id uuid
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'finance', 'public'
 AS $function$
 BEGIN
-  INSERT INTO public.organization_currencies (
+  INSERT INTO finance.organization_currencies (
     id, organization_id, currency_id, is_active, is_default, created_at
   )
   VALUES (
@@ -104,10 +105,10 @@ CREATE OR REPLACE FUNCTION iam.step_create_organization_data(p_org_id uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'public'
 AS $function$
 BEGIN
-  INSERT INTO public.organization_data (organization_id)
+  INSERT INTO iam.organization_data (organization_id)
   VALUES (p_org_id);
 
 EXCEPTION
@@ -138,10 +139,10 @@ CREATE OR REPLACE FUNCTION iam.step_create_organization_preferences(p_org_id uui
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'public'
 AS $function$
 BEGIN
-  INSERT INTO public.organization_preferences (
+  INSERT INTO iam.organization_preferences (
     organization_id, default_currency_id, default_wallet_id, default_pdf_template_id,
     use_currency_exchange, created_at, updated_at
   )
@@ -247,10 +248,10 @@ CREATE OR REPLACE FUNCTION iam.step_create_organization_wallets(p_org_id uuid, p
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'iam', 'finance', 'public'
 AS $function$
 BEGIN
-  INSERT INTO public.organization_wallets (
+  INSERT INTO finance.organization_wallets (
     id, organization_id, wallet_id, is_active, is_default, created_at
   )
   VALUES (
@@ -317,9 +318,10 @@ CREATE OR REPLACE FUNCTION iam.step_organization_increment_seats(p_organization_
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'iam', 'public'
 AS $function$
 BEGIN
-    UPDATE public.organizations
+    UPDATE iam.organizations
     SET 
         purchased_seats = COALESCE(purchased_seats, 0) + p_seats_to_add,
         updated_at = now()
