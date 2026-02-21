@@ -138,7 +138,7 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
     let reviewerId: string | null = null;
     if (authUser) {
         const { data: userData } = await supabase
-            .from("users")
+            .schema('iam').from("users")
             .select("id")
             .eq("auth_id", authUser.id)
             .single();
@@ -309,7 +309,7 @@ export async function getAdminUsers(): Promise<{ id: string; email: string; full
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, email, full_name')
         .order('full_name', { ascending: true });
 
@@ -333,7 +333,7 @@ export async function getAdminCurrencies(): Promise<{ id: string; code: string; 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('currencies')
+        .schema('finance').from('currencies')
         .select('id, code, name, symbol')
         .order('code', { ascending: true });
 

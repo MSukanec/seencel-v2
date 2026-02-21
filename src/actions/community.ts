@@ -24,7 +24,7 @@ export async function getPublicProjects(): Promise<PublicProject[]> {
 
     // Query projects with their organization and plan info
     const { data, error } = await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .select(`
             id,
             name,

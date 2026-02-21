@@ -187,11 +187,18 @@ export async function suggestRecipe({
         let userCountry: string | null = null;
         try {
             const { data: userData } = await supabase
-                .from("user_data")
-                .select("countries(name)")
+                .schema('iam').from("user_data")
+                .select("country")
                 .eq("user_id", user.id)
                 .maybeSingle();
-            userCountry = (userData?.countries as any)?.name ?? null;
+            if (userData?.country) {
+                const { data: countryData } = await supabase
+                    .from("countries")
+                    .select("name")
+                    .eq("id", userData.country)
+                    .single();
+                userCountry = countryData?.name ?? null;
+            }
         } catch {
             // No bloqueante — el país es contexto adicional, no obligatorio
         }

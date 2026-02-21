@@ -12,7 +12,7 @@ export async function updateInsightConfig(organizationId: string, newConfig: any
 
     // Fetch current config to merge
     const { data: current, error: fetchError } = await supabase
-        .from('organization_preferences')
+        .schema('iam').from('organization_preferences')
         .select('insight_config')
         .eq('organization_id', organizationId)
         .single();
@@ -23,7 +23,7 @@ export async function updateInsightConfig(organizationId: string, newConfig: any
     const updatedSettings = { ...settings, ...newConfig };
 
     const { error } = await supabase
-        .from('organization_preferences')
+        .schema('iam').from('organization_preferences')
         .update({ insight_config: updatedSettings })
         .eq('organization_id', organizationId);
 
@@ -44,7 +44,7 @@ export async function switchOrganization(organizationId: string) {
 
     // 2. Get Public User ID
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -55,7 +55,7 @@ export async function switchOrganization(organizationId: string) {
 
     // 3. Update User Preferences (Global)
     const { error } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .update({ last_organization_id: organizationId })
         .eq('user_id', publicUser.id);
 
@@ -67,7 +67,7 @@ export async function switchOrganization(organizationId: string) {
     // 3b. Update Org-Specific Preferences (Last Access Timestamp)
     // We upsert to ensure we touch the updated_at.
     await supabase
-        .from('user_organization_preferences')
+        .schema('iam').from('user_organization_preferences')
         .upsert({
             user_id: publicUser.id,
             organization_id: organizationId,
@@ -102,7 +102,7 @@ export async function createOrganization(
 
     // 2. Get Public User ID
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -131,7 +131,7 @@ export async function createOrganization(
 
     // 4. Upsert Org-Specific Preferences (Last Access Timestamp)
     await supabase
-        .from('user_organization_preferences')
+        .schema('iam').from('user_organization_preferences')
         .upsert({
             user_id: publicUser.id,
             organization_id: newOrgId,

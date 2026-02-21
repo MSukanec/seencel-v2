@@ -72,7 +72,7 @@ async function fetchSubcontractPayments(
     const supabase = await createClient();
 
     let query = supabase
-        .from("subcontract_payments")
+        .schema("finance").from("subcontract_payments")
         .select(`
             id,
             payment_date,
@@ -133,7 +133,7 @@ export async function getSubcontractsForProject(projectId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("subcontracts")
+        .schema("finance").from("subcontracts")
         .select(`
             id,
             title,

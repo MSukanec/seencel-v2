@@ -28,7 +28,7 @@ export async function importAITasksBatch(
 
     // Get member ID for audit
     const { data: memberData } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('organization_id', organizationId)
         .eq('user_id', user.id)

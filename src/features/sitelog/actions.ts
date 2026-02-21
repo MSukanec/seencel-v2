@@ -11,7 +11,7 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('site_logs')
+        .schema('construction').from('site_logs')
         .select(`
             *,
             entry_type:site_log_types(*),
@@ -51,7 +51,7 @@ export async function getSiteLogsForOrganization(organizationId: string): Promis
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('site_logs')
+        .schema('construction').from('site_logs')
         .select(`
             *,
             entry_type:site_log_types(*),
@@ -143,7 +143,7 @@ export async function getSiteLogTypes(organizationId: string): Promise<SiteLogTy
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('site_log_types')
+        .schema('construction').from('site_log_types')
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
@@ -167,15 +167,15 @@ export async function createSiteLogType(organizationId: string, name: string, de
     }
 
     // 2. Get Public User/Member data
-    const { data: userData } = await supabase.from('users').select('id').eq('auth_id', user.id).single();
+    const { data: userData } = await supabase.schema('iam').from('users').select('id').eq('auth_id', user.id).single();
     if (!userData) throw new Error("User profile not found");
 
-    const { data: memberData } = await supabase.from('organization_members')
+    const { data: memberData } = await supabase.schema('iam').from('organization_members')
         .select('id').eq('user_id', userData.id).eq('organization_id', organizationId).single();
     if (!memberData) throw new Error("Not a member");
 
     const { data, error } = await supabase
-        .from('site_log_types')
+        .schema('construction').from('site_log_types')
         .insert({
             organization_id: organizationId,
             name,
@@ -200,7 +200,7 @@ export async function updateSiteLogType(id: string, name: string, description?: 
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('site_log_types')
+        .schema('construction').from('site_log_types')
         .update({
             name,
             description,
@@ -222,7 +222,7 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
     // 1. Reassign
     if (replacementId) {
         const { error: moveError } = await supabase
-            .from('site_logs')
+            .schema('construction').from('site_logs')
             .update({ entry_type_id: replacementId })
             .eq('entry_type_id', id);
 
@@ -233,7 +233,7 @@ export async function deleteSiteLogType(id: string, replacementId?: string) {
 
     // 2. Soft Delete
     const { error } = await supabase
-        .from('site_log_types')
+        .schema('construction').from('site_log_types')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -274,7 +274,7 @@ export async function createSiteLog(formData: FormData) {
     if (id) {
         // UPDATE Existing Log
         const { error } = await supabase
-            .from('site_logs')
+            .schema('construction').from('site_logs')
             .update({
                 comments: comments,
                 log_date: logDate,
@@ -293,7 +293,7 @@ export async function createSiteLog(formData: FormData) {
     } else {
         // CREATE New Log
         const { data: logData, error } = await supabase
-            .from('site_logs')
+            .schema('construction').from('site_logs')
             .insert({
                 project_id: projectId,
                 organization_id: organizationId,
@@ -414,7 +414,7 @@ export async function deleteSiteLog(logId: string, projectId: string) {
 
     // 2. Soft Delete
     const { error } = await supabase
-        .from('site_logs')
+        .schema('construction').from('site_logs')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),

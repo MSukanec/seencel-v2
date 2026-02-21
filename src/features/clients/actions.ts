@@ -40,7 +40,7 @@ export async function createClientAction(input: z.infer<typeof createClientSchem
     // Simply insert the project_clients record. No invitation is sent here.
     // Invitations are sent explicitly via sendClientInvitationAction.
     const { data: newClient, error } = await supabase
-        .from('project_clients')
+        .schema('projects').from('project_clients')
         .insert({
             project_id: input.project_id,
             contact_id: input.contact_id,
@@ -70,7 +70,7 @@ export async function updateClientAction(input: z.infer<typeof updateClientSchem
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_clients')
+        .schema('projects').from('project_clients')
         .update({
             project_id: input.project_id,
             contact_id: input.contact_id,
@@ -100,7 +100,7 @@ export async function deleteClientAction(clientId: string) {
 
     // Soft-delete project_client
     const { error } = await supabase
-        .from('project_clients')
+        .schema('projects').from('project_clients')
         .update({ is_deleted: true, deleted_at: now })
         .eq('id', clientId);
 
@@ -111,7 +111,7 @@ export async function deleteClientAction(clientId: string) {
 
     // Also soft-delete any project_access linked to this client_id
     await supabase
-        .from('project_access')
+        .schema('iam').from('project_access')
         .update({ is_deleted: true, deleted_at: now, is_active: false })
         .eq('client_id', clientId)
         .eq('is_deleted', false);
@@ -128,7 +128,7 @@ export async function deactivateClientAction(clientId: string) {
 
     // Set client as inactive (keeps the record visible)
     const { error } = await supabase
-        .from('project_clients')
+        .schema('projects').from('project_clients')
         .update({ status: 'inactive' })
         .eq('id', clientId);
 
@@ -139,7 +139,7 @@ export async function deactivateClientAction(clientId: string) {
 
     // Revoke project_access linked to this client_id
     await supabase
-        .from('project_access')
+        .schema('iam').from('project_access')
         .update({ is_active: false })
         .eq('client_id', clientId)
         .eq('is_deleted', false);
@@ -155,7 +155,7 @@ export async function reactivateClientAction(clientId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('project_clients')
+        .schema('projects').from('project_clients')
         .update({ status: 'active' })
         .eq('id', clientId);
 
@@ -166,7 +166,7 @@ export async function reactivateClientAction(clientId: string) {
 
     // Reactivate project_access linked to this client_id
     await supabase
-        .from('project_access')
+        .schema('iam').from('project_access')
         .update({ is_active: true })
         .eq('client_id', clientId)
         .eq('is_deleted', false);
@@ -188,7 +188,7 @@ export async function createClientRoleAction(input: z.infer<typeof createRoleSch
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('client_roles')
+        .schema('projects').from('client_roles')
         .insert({
             organization_id: input.organization_id,
             name: input.name,
@@ -215,7 +215,7 @@ export async function updateClientRoleAction(input: z.infer<typeof updateRoleSch
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('client_roles')
+        .schema('projects').from('client_roles')
         .update({
             name: input.name,
             description: input.description,
@@ -239,7 +239,7 @@ export async function deleteClientRoleAction(roleId: string, replacementId?: str
     // 1. If replacementId is provided, migrate clients
     if (replacementId) {
         const { error: migrationError } = await supabase
-            .from('project_clients')
+            .schema('projects').from('project_clients')
             .update({ client_role_id: replacementId })
             .eq('client_role_id', roleId);
 
@@ -251,7 +251,7 @@ export async function deleteClientRoleAction(roleId: string, replacementId?: str
 
     // 2. Perform Soft Delete
     const { error } = await supabase
-        .from('client_roles')
+        .schema('projects').from('client_roles')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', roleId);
 
@@ -326,7 +326,7 @@ export async function createCommitmentAction(input: z.infer<typeof createCommitm
     // Try Public Table first
     if (!currencyCode) {
         const { data: pubCurrency } = await supabase
-            .from('currencies')
+            .schema('finance').from('currencies')
             .select('code')
             .eq('id', currencyIdToCheck)
             .single();
@@ -336,7 +336,7 @@ export async function createCommitmentAction(input: z.infer<typeof createCommitm
         } else {
             // Fallback to View
             const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
+                .schema('finance').from('organization_currencies_view')
                 .select('currency_code')
                 .eq('organization_id', payload.organization_id)
                 .eq('currency_id', currencyIdToCheck)
@@ -349,7 +349,7 @@ export async function createCommitmentAction(input: z.infer<typeof createCommitm
 
     // Insert commitment - functional_amount is calculated dynamically in views/frontend
     const { data, error } = await supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .insert({
             project_id: payload.project_id,
             client_id: payload.client_id,
@@ -411,7 +411,7 @@ export async function updateCommitmentAction(input: z.infer<typeof updateCommitm
 
     // 1. Fetch current commitment to get org_id if needed
     const { data: currentCommitment, error: fetchError } = await supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .select('organization_id, currency_id, amount, exchange_rate')
         .eq('id', commitmentId)
         .single();
@@ -424,7 +424,7 @@ export async function updateCommitmentAction(input: z.infer<typeof updateCommitm
 
     if (!currencyCode) {
         const { data: pubCurrency } = await supabase
-            .from('currencies')
+            .schema('finance').from('currencies')
             .select('code')
             .eq('id', currencyIdToCheck)
             .single();
@@ -433,7 +433,7 @@ export async function updateCommitmentAction(input: z.infer<typeof updateCommitm
             currencyCode = pubCurrency.code;
         } else {
             const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
+                .schema('finance').from('organization_currencies_view')
                 .select('currency_code')
                 .eq('organization_id', currentCommitment.organization_id)
                 .eq('currency_id', currencyIdToCheck)
@@ -450,7 +450,7 @@ export async function updateCommitmentAction(input: z.infer<typeof updateCommitm
 
     // Update commitment - functional amount calculated dynamically
     const { data, error } = await supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .update({
             amount: newAmount,
             currency_id: currencyIdToCheck,
@@ -479,7 +479,7 @@ export async function deleteCommitmentAction(commitmentId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', commitmentId);
 
@@ -547,7 +547,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
     // Fallback: If no code provided, fetch from DB (Public table -> View)
     if (!currencyCode) {
         const { data: publicCurrency, error: currencyError } = await supabase
-            .from('currencies')
+            .schema('finance').from('currencies')
             .select('code')
             .eq('id', input.currency_id)
             .single();
@@ -556,7 +556,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
             currencyCode = publicCurrency.code;
         } else {
             const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
+                .schema('finance').from('organization_currencies_view')
                 .select('currency_code')
                 .eq('organization_id', payload.organization_id)
                 .eq('currency_id', payload.currency_id)
@@ -574,7 +574,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
 
     // Insert payment - functional amount calculated dynamically in views/frontend
     const { data, error } = await supabase
-        .from('client_payments')
+        .schema('finance').from('client_payments')
         .insert({
             project_id: payload.project_id,
             organization_id: payload.organization_id,
@@ -679,7 +679,7 @@ export async function createPaymentAction(input: z.infer<typeof createPaymentSch
     if (rollbackNeeded && data?.id) {
         console.error(`Rolling back payment ${data.id} due to: ${rollbackReason}`);
         await supabase
-            .from('client_payments')
+            .schema('finance').from('client_payments')
             .update({ is_deleted: true, deleted_at: new Date().toISOString() })
             .eq('id', data.id);
 
@@ -732,7 +732,7 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
 
     // 1. Fetch current payment to get amount/rate for calculation AND organization_id
     const { data: currentPayment, error: fetchError } = await supabase
-        .from('client_payments')
+        .schema('finance').from('client_payments')
         .select('amount, exchange_rate, currency_id, organization_id')
         .eq('id', paymentId)
         .single();
@@ -751,7 +751,7 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
         const currencyIdToCheck = payload.currency_id ?? currentPayment.currency_id;
 
         const { data: pubCurrency } = await supabase
-            .from('currencies')
+            .schema('finance').from('currencies')
             .select('code')
             .eq('id', currencyIdToCheck)
             .single();
@@ -760,7 +760,7 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
             currencyCode = pubCurrency.code;
         } else {
             const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
+                .schema('finance').from('organization_currencies_view')
                 .select('currency_code')
                 .eq('organization_id', currentPayment.organization_id)
                 .eq('currency_id', currencyIdToCheck)
@@ -773,7 +773,7 @@ export async function updatePaymentAction(input: z.infer<typeof updatePaymentSch
 
     // Update payment - functional amount calculated dynamically
     const { data, error } = await supabase
-        .from('client_payments')
+        .schema('finance').from('client_payments')
         .update({
             project_id: payload.project_id,
             organization_id: payload.organization_id,
@@ -856,7 +856,7 @@ export async function deletePaymentAction(paymentId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('client_payments')
+        .schema('finance').from('client_payments')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -906,7 +906,7 @@ export async function inviteClientToProjectAction(
     }
 
     const { data: currentUser } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", authUser.id)
         .single();
@@ -1063,7 +1063,7 @@ export async function sendClientInvitationAction(
     // 4. If already has project_access, no need to invite
     if (contact.linked_user_id) {
         const { data: existingAccess } = await supabase
-            .from("project_access")
+            .schema('iam').from("project_access")
             .select("id")
             .eq("project_id", projectClient.project_id)
             .eq("user_id", contact.linked_user_id)
@@ -1132,7 +1132,7 @@ export async function getCommitmentsByClientAction(clientId: string) {
 
     // Fetch commitments with currency details for display
     const { data, error } = await supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .select(`
             *,
             currency:currencies(id, code, symbol, name)

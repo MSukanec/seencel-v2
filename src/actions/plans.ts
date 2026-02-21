@@ -40,7 +40,7 @@ export async function getPlans(): Promise<Plan[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("plans")
+        .schema('billing').from("plans")
         .select("id, name, slug, monthly_amount, annual_amount, billing_type, features, status")
         .eq("status", "available")
         .order("monthly_amount", { ascending: true });
@@ -66,28 +66,26 @@ export async function getCurrentOrganizationInfo(): Promise<{ organizationId: st
 
     // 2. Get User's active organization ID from preferences
     const { data: userData } = await supabase
-        .from('users')
-        .select(`
-            id,
-            user_preferences!inner (
-                last_organization_id
-            )
-        `)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
-    if (!userData || !userData.user_preferences) return { organizationId: null, planId: null };
+    if (!userData) return { organizationId: null, planId: null };
 
-    const pref = Array.isArray(userData.user_preferences)
-        ? (userData.user_preferences as any)[0]
-        : (userData.user_preferences as any);
+    // Cross-schema: user_preferences esta en iam
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
 
-    const orgId = pref?.last_organization_id;
+    const orgId = prefData?.last_organization_id;
     if (!orgId) return { organizationId: null, planId: null };
 
     // 3. Get the organization's plan_id
     const { data: orgData } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('plan_id')
         .eq('id', orgId)
         .single();
@@ -115,7 +113,7 @@ export async function getPlanBySlug(slug: string): Promise<Plan | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("plans")
+        .schema('billing').from("plans")
         .select("id, name, slug, monthly_amount, annual_amount, billing_type, features, status")
         .eq("slug", slug)
         .eq("status", "available")
@@ -163,14 +161,23 @@ const UNLIMITED_FEATURES: PlanFeatures = {
 export async function getOrganizationPlanFeatures(organizationId: string): Promise<PlanFeatures | null> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-        .from("organizations")
-        .select(`
-            plan:plans!plan_id (
-                features
-            )
-        `)
+    // First get the plan_id from the organization
+    const { data: orgData, error: orgError } = await supabase
+        .schema('iam').from("organizations")
+        .select("plan_id")
         .eq("id", organizationId)
+        .single();
+
+    if (orgError || !orgData?.plan_id) {
+        console.error("Error fetching organization plan_id:", orgError);
+        return null;
+    }
+
+    // Cross-schema: plans está en billing
+    const { data, error } = await supabase
+        .schema('billing').from("plans")
+        .select("features")
+        .eq("id", orgData.plan_id)
         .single();
 
     if (error || !data) {
@@ -178,9 +185,8 @@ export async function getOrganizationPlanFeatures(organizationId: string): Promi
         return null;
     }
 
-    // Extract features from the nested plan object
-    const planData = data.plan as any;
-    const rawFeatures = planData?.features;
+    // Extract features directly (no longer nested under plan)
+    const rawFeatures = (data as any)?.features;
 
     // If features is null, undefined, or empty object → plan has no limits (Enterprise)
     if (!rawFeatures || (typeof rawFeatures === 'object' && Object.keys(rawFeatures).length === 0)) {
@@ -218,28 +224,26 @@ export async function isOrganizationFounder(): Promise<boolean> {
 
     // 2. Get User's active organization ID from preferences
     const { data: userData } = await supabase
-        .from('users')
-        .select(`
-            id,
-            user_preferences!inner (
-                last_organization_id
-            )
-        `)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
-    if (!userData || !userData.user_preferences) return false;
+    if (!userData) return false;
 
-    const pref = Array.isArray(userData.user_preferences)
-        ? (userData.user_preferences as any)[0]
-        : (userData.user_preferences as any);
+    // Cross-schema: user_preferences esta en iam
+    const { data: prefData2 } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
 
-    const orgId = pref?.last_organization_id;
+    const orgId = prefData2?.last_organization_id;
     if (!orgId) return false;
 
     // 3. Get the organization's settings.is_founder
     const { data: orgData } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('settings')
         .eq('id', orgId)
         .single();

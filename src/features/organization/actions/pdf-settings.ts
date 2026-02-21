@@ -58,18 +58,21 @@ async function getActiveOrganizationId() {
     if (!user) return null;
 
     const { data: userData } = await supabase
-        .from('users')
-        .select(`id, user_preferences!inner(last_organization_id)`)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
     if (!userData) return null;
 
-    const pref = Array.isArray((userData as any).user_preferences)
-        ? (userData as any).user_preferences[0]
-        : (userData as any).user_preferences;
+    // Cross-schema: user_preferences está en iam
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
 
-    return pref?.last_organization_id || null;
+    return prefData?.last_organization_id || null;
 }
 
 export async function getOrganizationPdfTheme(specificTemplateId?: string): Promise<{
@@ -89,7 +92,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
     if (!orgId) return { error: "Organization not found" };
 
     const [orgRes, prefRes, templatesRes, orgDataRes] = await Promise.all([
-        supabase.from('organizations')
+        supabase.schema('iam').from('organizations')
             .select(`
                 name,
                 plan_id,
@@ -97,15 +100,15 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
             `)
             .eq('id', orgId)
             .single(),
-        supabase.from('organization_preferences')
+        supabase.schema('iam').from('organization_preferences')
             .select('default_pdf_template_id')
             .eq('organization_id', orgId)
             .single(),
-        supabase.from('pdf_templates')
+        supabase.schema('finance').from('pdf_templates')
             .select('id, name')
             .eq('organization_id', orgId)
             .order('created_at', { ascending: false }),
-        supabase.from('organization_data')
+        supabase.schema('iam').from('organization_data')
             .select('address, city, state, country, phone, email')
             .eq('organization_id', orgId)
             .single()
@@ -158,7 +161,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
 
     if (targetId) {
         // Try fetch specific ID
-        const { data } = await supabase.from('pdf_templates').select('*').eq('id', targetId).single();
+        const { data } = await supabase.schema('finance').from('pdf_templates').select('*').eq('id', targetId).single();
         if (data && (data.organization_id === orgId || data.organization_id === null)) {
             template = data;
         }
@@ -167,7 +170,7 @@ export async function getOrganizationPdfTheme(specificTemplateId?: string): Prom
     // Fallback if no targetId found OR if targetId didn't return a valid template
     if (!template) {
         const { data } = await supabase
-            .from('pdf_templates')
+            .schema('finance').from('pdf_templates')
             .select('*')
             .is('organization_id', null)
             .order('created_at', { ascending: true })
@@ -245,7 +248,7 @@ export async function createOrganizationPdfTemplate(name: string): Promise<{ suc
     };
 
     const { data, error } = await supabase
-        .from('pdf_templates')
+        .schema('finance').from('pdf_templates')
         .insert(payload)
         .select('id')
         .single();
@@ -255,7 +258,7 @@ export async function createOrganizationPdfTemplate(name: string): Promise<{ suc
         return { success: false, error: "Could not create template" };
     }
 
-    await supabase.from('organization_preferences').update({ default_pdf_template_id: data.id }).eq('organization_id', orgId);
+    await supabase.schema('iam').from('organization_preferences').update({ default_pdf_template_id: data.id }).eq('organization_id', orgId);
 
     revalidatePath('/organization/settings');
     return { success: true, newTemplateId: data.id };
@@ -268,7 +271,7 @@ export async function updateOrganizationPdfTheme(theme: PdfGlobalTheme): Promise
     if (!orgId) return { success: false, error: "Organization not found" };
     if (!theme.id) return { success: false, error: "No template ID provided." };
 
-    const { data: currentT } = await supabase.from('pdf_templates').select('organization_id').eq('id', theme.id).single();
+    const { data: currentT } = await supabase.schema('finance').from('pdf_templates').select('organization_id').eq('id', theme.id).single();
 
     if (!currentT) return { success: false, error: "Template not found" };
     if (currentT.organization_id !== orgId) {
@@ -304,7 +307,7 @@ export async function updateOrganizationPdfTheme(theme: PdfGlobalTheme): Promise
     };
 
     const { error: updateError } = await supabase
-        .from('pdf_templates')
+        .schema('finance').from('pdf_templates')
         .update(payload)
         .eq('id', theme.id);
 
@@ -322,19 +325,19 @@ export async function deleteOrganizationPdfTemplate(templateId: string): Promise
 
     if (!orgId) return { success: false, error: "Organization not found" };
 
-    const { data: currentT } = await supabase.from('pdf_templates').select('organization_id').eq('id', templateId).single();
+    const { data: currentT } = await supabase.schema('finance').from('pdf_templates').select('organization_id').eq('id', templateId).single();
 
     if (!currentT || currentT.organization_id !== orgId) {
         return { success: false, error: "Cannot delete this template." };
     }
 
-    const { data: pref } = await supabase.from('organization_preferences').select('default_pdf_template_id').eq('organization_id', orgId).single();
+    const { data: pref } = await supabase.schema('iam').from('organization_preferences').select('default_pdf_template_id').eq('organization_id', orgId).single();
 
     if (pref?.default_pdf_template_id === templateId) {
-        await supabase.from('organization_preferences').update({ default_pdf_template_id: null }).eq('organization_id', orgId);
+        await supabase.schema('iam').from('organization_preferences').update({ default_pdf_template_id: null }).eq('organization_id', orgId);
     }
 
-    const { error } = await supabase.from('pdf_templates').delete().eq('id', templateId);
+    const { error } = await supabase.schema('finance').from('pdf_templates').delete().eq('id', templateId);
 
     if (error) {
         return { success: false, error: "Failed to delete template." };
@@ -367,7 +370,7 @@ export async function uploadPdfLogo(formData: FormData): Promise<{
 
     // Verify template ownership
     const { data: template } = await supabase
-        .from('pdf_templates')
+        .schema('finance').from('pdf_templates')
         .select('organization_id')
         .eq('id', templateId)
         .single();
@@ -402,7 +405,7 @@ export async function uploadPdfLogo(formData: FormData): Promise<{
 
         // Update template record with pdf_logo_path
         const { error: updateError } = await supabase
-            .from('pdf_templates')
+            .schema('finance').from('pdf_templates')
             .update({ pdf_logo_path: filePath })
             .eq('id', templateId);
 

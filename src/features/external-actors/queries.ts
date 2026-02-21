@@ -42,7 +42,7 @@ export async function getMyExternalActorAccess() {
 
     // Resolver users.id desde auth_id
     const { data: userData } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", user.id)
         .single();

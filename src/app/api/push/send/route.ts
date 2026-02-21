@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
         // Get all push subscriptions for this user
         const { data: subscriptions, error } = await supabase
-            .from("push_subscriptions")
+            .schema('notifications').from("push_subscriptions")
             .select("id, endpoint, p256dh, auth")
             .eq("user_id", user_id);
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
                     // If subscription is expired/invalid (410 Gone or 404), remove it
                     if (err.statusCode === 410 || err.statusCode === 404) {
                         await supabase
-                            .from("push_subscriptions")
+                            .schema('notifications').from("push_subscriptions")
                             .delete()
                             .eq("id", sub.id);
                         console.log(`[Push] Removed expired subscription ${sub.id}`);

@@ -31,7 +31,7 @@ export async function createIndexTypeAction(input: CreateIndexTypeInput) {
 
     // 1. Create the index type
     const { data: indexType, error: typeError } = await supabase
-        .from('economic_index_types')
+        .schema('finance').from('economic_index_types')
         .insert({
             organization_id: input.organization_id,
             name: input.name,
@@ -52,7 +52,7 @@ export async function createIndexTypeAction(input: CreateIndexTypeInput) {
     // 2. Create the components
     if (input.components.length > 0) {
         const { error: compError } = await supabase
-            .from('economic_index_components')
+            .schema('finance').from('economic_index_components')
             .insert(
                 input.components.map(comp => ({
                     index_type_id: indexType.id,
@@ -67,7 +67,7 @@ export async function createIndexTypeAction(input: CreateIndexTypeInput) {
         if (compError) {
             console.error('Error creating components:', compError);
             // Rollback: delete the index type
-            await supabase.from('economic_index_types').delete().eq('id', indexType.id);
+            await supabase.schema('finance').from('economic_index_types').delete().eq('id', indexType.id);
             throw new Error(compError.message || 'Failed to create components');
         }
     }
@@ -83,7 +83,7 @@ export async function updateIndexTypeAction(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_types')
+        .schema('finance').from('economic_index_types')
         .update({
             name: input.name,
             description: input.description,
@@ -109,7 +109,7 @@ export async function deleteIndexTypeAction(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('economic_index_types')
+        .schema('finance').from('economic_index_types')
         .delete()
         .eq('id', id);
 
@@ -139,7 +139,7 @@ export async function createIndexValueAction(input: CreateIndexValueInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .insert({
             index_type_id: input.index_type_id,
             period_year: input.period_year,
@@ -168,7 +168,7 @@ export async function updateIndexValueAction(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .update({
             period_year: input.period_year,
             period_month: input.period_month,
@@ -195,7 +195,7 @@ export async function deleteIndexValueAction(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .delete()
         .eq('id', id);
 
@@ -224,7 +224,7 @@ export async function createComponentAction(input: CreateComponentInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_components')
+        .schema('finance').from('economic_index_components')
         .insert({
             index_type_id: input.index_type_id,
             key: input.key,
@@ -249,7 +249,7 @@ export async function deleteComponentAction(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('economic_index_components')
+        .schema('finance').from('economic_index_components')
         .delete()
         .eq('id', id);
 

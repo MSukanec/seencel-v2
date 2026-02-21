@@ -24,7 +24,7 @@ export default async function SupportPage({ params }: PageProps) {
     if (!user) redirect('/auth/login');
     // Fetch feedback data
     const { data: feedback } = await supabase
-        .from('feedback')
+        .schema('iam').from('feedback')
         .select(`
             id,
             message,

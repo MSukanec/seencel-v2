@@ -18,7 +18,7 @@ async function getAdminUserId() {
     if (!user) throw new Error("Not authenticated");
 
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -35,7 +35,7 @@ export async function adminImpersonateOrg(targetOrgId: string) {
 
     // Get current org ID (to restore later)
     const { data: prefs } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .select('last_organization_id')
         .eq('user_id', userId)
         .single();
@@ -44,7 +44,7 @@ export async function adminImpersonateOrg(targetOrgId: string) {
 
     // Switch to target org
     const { error } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .update({ last_organization_id: targetOrgId })
         .eq('user_id', userId);
 
@@ -67,7 +67,7 @@ export async function adminExitImpersonation(originalOrgId: string) {
     const { supabase, userId } = await getAdminUserId();
 
     const { error } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .update({ last_organization_id: originalOrgId })
         .eq('user_id', userId);
 
@@ -92,7 +92,7 @@ export async function getAdminOrgList() {
 
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('id, name')
         .order('name');
 

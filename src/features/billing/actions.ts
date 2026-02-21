@@ -16,7 +16,7 @@ export async function updateBillingProfile(formData: FormData) {
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -187,7 +187,7 @@ export async function activateFreeSubscription(input: FreeSubscriptionInput): Pr
 
     // Get internal user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();

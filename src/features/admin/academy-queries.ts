@@ -101,7 +101,7 @@ export async function getAdminCourseEnrollments(): Promise<AdminCourseEnrollment
     // Get user data from public schema separately (cross-schema FK expansion no soportado por PostgREST)
     const userIds = [...new Set(enrollments?.map(e => e.user_id) ?? [])];
     const { data: usersData } = userIds.length
-        ? await supabase.from('users').select('id, full_name, email, avatar_url').in('id', userIds)
+        ? await supabase.schema('iam').from('users').select('id, full_name, email, avatar_url').in('id', userIds)
         : { data: [] };
     const userMap = new Map<string, { id: string; full_name: string | null; email: string; avatar_url: string | null }>();
     usersData?.forEach(u => userMap.set(u.id, u));

@@ -47,16 +47,16 @@ export async function checkPendingInvitation(email: string): Promise<PendingInvi
     // 2. Fetch org name, role name and inviter in parallel
     const [orgDataResult, roleDataResult, inviterResult] = await Promise.all([
         inv.organization_id
-            ? supabase.from('organizations').select('name, logo_url').eq('id', inv.organization_id).single()
+            ? supabase.schema('iam').from('organizations').select('name, logo_url').eq('id', inv.organization_id).single()
             : Promise.resolve({ data: null }),
         inv.role_id
-            ? supabase.from('roles').select('name').eq('id', inv.role_id).single()
+            ? supabase.schema('iam').from('roles').select('name').eq('id', inv.role_id).single()
             : Promise.resolve({ data: null }),
         inv.invited_by
-            ? supabase.from('organization_members').select('user_id').eq('id', inv.invited_by).single()
+            ? supabase.schema('iam').from('organization_members').select('user_id').eq('id', inv.invited_by).single()
                 .then(async ({ data: memberData }) => {
                     if (memberData?.user_id) {
-                        const { data: inviterUser } = await supabase.from('users').select('full_name').eq('id', memberData.user_id).single();
+                        const { data: inviterUser } = await supabase.schema('iam').from('users').select('full_name').eq('id', memberData.user_id).single();
                         return inviterUser?.full_name || null;
                     }
                     return null;

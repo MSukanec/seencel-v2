@@ -21,7 +21,7 @@ export async function markNotificationAsRead(notificationId: string) {
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -31,7 +31,7 @@ export async function markNotificationAsRead(notificationId: string) {
     }
 
     const { error } = await supabase
-        .from('user_notifications')
+        .schema('notifications').from('user_notifications')
         .update({ read_at: new Date().toISOString() })
         .eq('id', notificationId)
         .eq('user_id', userData.id);
@@ -56,7 +56,7 @@ export async function markAllNotificationsAsRead() {
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -66,7 +66,7 @@ export async function markAllNotificationsAsRead() {
     }
 
     const { error } = await supabase
-        .from('user_notifications')
+        .schema('notifications').from('user_notifications')
         .update({ read_at: new Date().toISOString() })
         .eq('user_id', userData.id)
         .is('read_at', null);

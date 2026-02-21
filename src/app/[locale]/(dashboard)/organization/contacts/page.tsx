@@ -51,7 +51,7 @@ export default async function ContactsPage() {
         const [contacts, categories, orgResult] = await Promise.all([
             getOrganizationContacts(organizationId),
             getContactCategories(organizationId),
-            supabase.from('organizations').select('name, logo_url').eq('id', organizationId).single(),
+            supabase.schema('iam').from('organizations').select('name, logo_url').eq('id', organizationId).single(),
         ]);
 
         const organizationName = orgResult.data?.name || '';

@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     try {
         // Fetch pending emails
         const { data: pendingEmails, error: fetchError } = await supabase
-            .from("email_queue")
+            .schema('notifications').from("email_queue")
             .select("*")
             .eq("status", "pending")
             .lt("attempts", MAX_ATTEMPTS)
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
                 if (result.success) {
                     // Mark as sent
                     await supabase
-                        .from("email_queue")
+                        .schema('notifications').from("email_queue")
                         .update({
                             status: "sent",
                             sent_at: new Date().toISOString(),
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
                 // Update attempts and last_error
                 const newAttempts = email.attempts + 1;
                 await supabase
-                    .from("email_queue")
+                    .schema('notifications').from("email_queue")
                     .update({
                         attempts: newAttempts,
                         last_error: errorMessage,

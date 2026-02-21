@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -38,7 +38,7 @@ SELECT lt.id AS labor_id,
            FROM catalog.labor_prices lp
           WHERE ((lp.valid_to IS NULL) OR (lp.valid_to >= CURRENT_DATE))
           ORDER BY lp.labor_type_id, lp.organization_id, lp.valid_from DESC) lpc ON ((lpc.labor_id = lt.id)))
-     LEFT JOIN currencies c ON ((c.id = lpc.currency_id)))
+     LEFT JOIN finance.currencies c ON ((c.id = lpc.currency_id)))
      LEFT JOIN labor_avg_prices lap ON ((lap.labor_id = lt.id)));
 ```
 
@@ -188,7 +188,7 @@ SELECT tr.id,
      LEFT JOIN catalog.tasks t ON ((t.id = tr.task_id)))
      LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)))
-     LEFT JOIN organizations o ON ((o.id = tr.organization_id)))
+     LEFT JOIN iam.organizations o ON ((o.id = tr.organization_id)))
   WHERE (tr.is_deleted = false);
 ```
 

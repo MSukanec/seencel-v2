@@ -46,7 +46,7 @@ export async function uploadOrganizationLogo(formData: FormData) {
         const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public-assets/${filePath}`;
 
         const { error: updateError } = await supabase
-            .from('organizations')
+            .schema('iam').from('organizations')
             .update({ logo_url: publicUrl })
             .eq('id', organizationId);
 

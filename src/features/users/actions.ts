@@ -25,7 +25,7 @@ type ActionResponse = { success: boolean; error?: string; avatar_url?: string };
 
 async function getPublicUserId(supabase: any, authId: string) {
     const { data: publicUser, error } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authId)
         .single();
@@ -54,7 +54,7 @@ export async function updateUserProfile(formData: FormData) {
     const country = formData.get('country') as string || null;
 
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -66,7 +66,7 @@ export async function updateUserProfile(formData: FormData) {
 
     // 1. Update public.users
     const { error: userError } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .update({ full_name: fullName })
         .eq('id', userId);
 
@@ -74,7 +74,7 @@ export async function updateUserProfile(formData: FormData) {
 
     // 2. Update public.user_data
     const { error: userDataError } = await supabase
-        .from('user_data')
+        .schema('iam').from('user_data')
         .update({
             first_name: firstName,
             last_name: lastName,
@@ -104,7 +104,7 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
     if (!user) throw new Error("Not authenticated");
 
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -124,7 +124,7 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdate) 
     }
 
     const { data, error } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .update(updateData)
         .eq('user_id', userId)
         .select()
@@ -198,7 +198,7 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResponse> 
 
         // 3. Update User Profile
         const { error: updateError } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .update({
                 avatar_url: publicUrl,
                 avatar_source: 'upload'
@@ -226,7 +226,7 @@ export async function removeAvatar() {
     const userId = await getPublicUserId(supabase, user.id);
 
     const { error } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .update({
             avatar_url: null,
             avatar_source: 'email'
@@ -250,7 +250,7 @@ export async function restoreProviderAvatar() {
     if (!providerAvatar) throw new Error("No provider avatar found");
 
     const { error } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .update({
             avatar_url: providerAvatar,
             avatar_source: 'google'

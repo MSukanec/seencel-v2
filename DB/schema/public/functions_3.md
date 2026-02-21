@@ -1,494 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 3: handle_registered_invitation — log_client_commitment_activity)
-
-### `handle_registered_invitation()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_registered_invitation()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-begin
-  -- Solo actuar si la invitación tiene un user_id asignado
-  if new.user_id is not null then
-    perform public.ensure_contact_for_user(new.organization_id, new.user_id);
-  end if;
-  return new;
-end;
-$function$
-```
-</details>
-
-### `handle_updated_by()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_updated_by()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    current_uid uuid;
-    resolved_member_id uuid;
-BEGIN
-    current_uid := auth.uid();
-    
-    -- Si no hay usuario logueado (ej. seeders o sistema), no hacemos nada
-    IF current_uid IS NULL THEN
-        RETURN NEW;
-    END IF;
-    -- Buscamos el ID del miembro dentro de la organización
-    SELECT om.id INTO resolved_member_id
-    FROM public.organization_members om
-    JOIN public.users u ON u.id = om.user_id
-    WHERE u.auth_id = current_uid
-      AND om.organization_id = NEW.organization_id -- Funciona perfecto ahora
-    LIMIT 1;
-    -- Si encontramos al miembro, sellamos el registro
-    IF resolved_member_id IS NOT NULL THEN
-        -- Si es INSERT, llenamos el creador
-        IF (TG_OP = 'INSERT') THEN
-            NEW.created_by := resolved_member_id;
-        END IF;
-        -- SIEMPRE actualizamos el editor
-        NEW.updated_by := resolved_member_id;
-    END IF;
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `handle_updated_by_organizations()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_updated_by_organizations()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    current_uid uuid;
-    resolved_member_id uuid;
-BEGIN
-    current_uid := auth.uid();
-    
-    IF current_uid IS NULL THEN
-        RETURN NEW;
-    END IF;
-
-    -- Resolve Member ID
-    -- User must be a member of THIS organization (NEW.id)
-    SELECT om.id INTO resolved_member_id
-    FROM public.organization_members om
-    JOIN public.users u ON u.id = om.user_id
-    WHERE u.auth_id = current_uid
-      AND om.organization_id = NEW.id -- Key difference: generic uses NEW.organization_id
-    LIMIT 1;
-
-    IF resolved_member_id IS NOT NULL THEN
-        NEW.updated_by := resolved_member_id;
-    END IF;
-
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `handle_upgrade_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_upgrade_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$DECLARE
-    v_payment_id uuid;
-    v_subscription_id uuid;
-    v_plan_name text;
-    v_previous_plan_name text;
-    v_previous_plan_id uuid;
-    v_step text := 'start';
-BEGIN
-    -- ============================================================
-    -- 1) Idempotencia fuerte
-    -- ============================================================
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(
-        hashtext(p_provider || p_provider_payment_id)
-    );
-
-    -- ============================================================
-    -- 2) Guardar datos del plan anterior (para metadata y email)
-    -- ============================================================
-    v_step := 'get_previous_plan';
-    SELECT o.plan_id, p.name
-    INTO v_previous_plan_id, v_previous_plan_name
-    FROM public.organizations o
-    LEFT JOIN public.plans p ON p.id = o.plan_id
-    WHERE o.id = p_organization_id;
-
-    -- ============================================================
-    -- 3) Registrar pago
-    -- ============================================================
-    v_step := 'insert_payment';
-    v_payment_id := public.step_payment_insert_idempotent(
-        p_provider,
-        p_provider_payment_id,
-        p_user_id,
-        p_organization_id,
-        'upgrade',
-        p_plan_id,
-        NULL,
-        p_amount,
-        p_currency,
-        p_metadata || jsonb_build_object(
-            'upgrade', true,
-            'previous_plan_id', v_previous_plan_id,
-            'previous_plan_name', v_previous_plan_name
-        )
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object(
-            'status', 'already_processed'
-        );
-    END IF;
-
-    -- ============================================================
-    -- 4) Expirar suscripción anterior (PRO)
-    -- ============================================================
-    v_step := 'expire_previous_subscription';
-    PERFORM public.step_subscription_expire_previous(
-        p_organization_id
-    );
-
-    -- ============================================================
-    -- 5) Crear nueva suscripción activa (TEAMS)
-    -- ============================================================
-    v_step := 'create_active_subscription';
-    v_subscription_id := public.step_subscription_create_active(
-        p_organization_id,
-        p_plan_id,
-        p_billing_period,
-        v_payment_id,
-        p_amount,
-        p_currency
-    );
-
-    -- ============================================================
-    -- 6) Actualizar plan activo
-    -- ============================================================
-    v_step := 'set_organization_plan';
-    PERFORM public.step_organization_set_plan(
-        p_organization_id,
-        p_plan_id
-    );
-
-    -- ============================================================
-    -- 7) Fundadores (solo anual)
-    -- ============================================================
-    IF p_billing_period = 'annual' THEN
-        v_step := 'apply_founders_program';
-        PERFORM public.step_apply_founders_program(
-            p_user_id,
-            p_organization_id
-        );
-    END IF;
-
-    -- ============================================================
-    -- 8) Email de confirmación de upgrade
-    -- ============================================================
-    v_step := 'send_purchase_email';
-    
-    SELECT name INTO v_plan_name
-    FROM public.plans
-    WHERE id = p_plan_id;
-    
-    PERFORM public.step_send_purchase_email(
-        p_user_id,
-        'upgrade',
-        'Upgrade a ' || COALESCE(v_plan_name, 'Plan') || ' (' || CASE WHEN p_billing_period = 'annual' THEN 'anual' ELSE 'mensual' END || ')',
-        p_amount,
-        p_currency,
-        v_payment_id,
-        p_provider
-    );
-
-    -- ============================================================
-    -- OK
-    -- ============================================================
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id,
-        'subscription_id', v_subscription_id,
-        'previous_plan_id', v_previous_plan_id,
-        'previous_plan_name', v_previous_plan_name
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM public.log_system_error(
-            'payment',
-            'upgrade',
-            'handle_upgrade_subscription_success',
-            SQLERRM,
-            jsonb_build_object(
-                'step', v_step,
-                'provider', p_provider,
-                'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id,
-                'organization_id', p_organization_id,
-                'plan_id', p_plan_id,
-                'billing_period', p_billing_period
-            ),
-            'critical'
-        );
-
-        RETURN jsonb_build_object(
-            'status', 'ok_with_warning',
-            'payment_id', v_payment_id,
-            'subscription_id', v_subscription_id,
-            'warning_step', v_step
-        );
-END;$function$
-```
-</details>
-
-### `has_permission(p_organization_id uuid, p_permission_key text)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.has_permission(p_organization_id uuid, p_permission_key text)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  select exists (
-    select 1
-    from public.organization_members om
-    join public.roles r
-      on r.id = om.role_id
-    join public.role_permissions rp
-      on rp.role_id = r.id
-    join public.permissions p
-      on p.id = rp.permission_id
-    where om.organization_id = p_organization_id
-      and om.user_id = public.current_user_id()
-      and om.is_active = true
-      and p.key = p_permission_key
-  );
-$function$
-```
-</details>
-
-### `heartbeat(p_org_id uuid DEFAULT NULL::uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.heartbeat(p_org_id uuid DEFAULT NULL::uuid, p_status text DEFAULT 'online'::text, p_session_id uuid DEFAULT NULL::uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_auth_id uuid;
-    v_user_id uuid;
-BEGIN
-    -- Auth check
-    v_auth_id := auth.uid();
-    IF v_auth_id IS NULL THEN RAISE EXCEPTION 'Unauthenticated'; END IF;
-
-    SELECT u.id INTO v_user_id FROM public.users u WHERE u.auth_id = v_auth_id LIMIT 1;
-    IF v_user_id IS NULL THEN RAISE EXCEPTION 'User not provisioned'; END IF;
-
-    -- Upsert presencia
-    INSERT INTO public.user_presence (
-        user_id, organization_id, session_id, last_seen_at, status, updated_from, updated_at
-    ) VALUES (
-        v_user_id, p_org_id, p_session_id, now(), COALESCE(p_status, 'online'), 'heartbeat', now()
-    )
-    ON CONFLICT (user_id) DO UPDATE SET
-        organization_id = COALESCE(EXCLUDED.organization_id, user_presence.organization_id),
-        session_id = EXCLUDED.session_id,
-        last_seen_at = EXCLUDED.last_seen_at,
-        status = EXCLUDED.status,
-        updated_at = now();
-
-    -- Actualizar duración de la sesión actual (si existe)
-    IF p_session_id IS NOT NULL THEN
-        UPDATE public.user_view_history
-        SET
-            exited_at = now(),
-            duration_seconds = EXTRACT(EPOCH FROM (now() - entered_at))::integer
-        WHERE user_id = v_user_id
-          AND session_id = p_session_id
-          AND exited_at IS NULL;
-    END IF;
-END;
-$function$
-```
-</details>
-
-### `increment_recipe_usage()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.increment_recipe_usage()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-begin
-    update task_recipes
-    set 
-        usage_count = usage_count + 1,
-        updated_at = now()
-    where id = new.recipe_id;
-    
-    return new;
-end;
-$function$
-```
-</details>
-
-### `is_admin()` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.is_admin()
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  select exists (
-    select 1
-    from public.admin_users au
-    where au.auth_id = auth.uid()
-  );
-$function$
-```
-</details>
-
-### `is_demo_org(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.is_demo_org(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  select exists (
-    select 1
-    from public.organizations o
-    where o.id = p_organization_id
-      and o.is_demo = true
-  );
-$function$
-```
-</details>
-
-### `is_external_actor(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.is_external_actor(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT EXISTS (
-    SELECT 1
-    FROM organization_external_actors ea
-    WHERE ea.organization_id = p_organization_id
-      AND ea.user_id = current_user_id()
-      AND ea.is_active = true
-      AND ea.is_deleted = false
-  );
-$function$
-```
-</details>
-
-### `is_org_member(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.is_org_member(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  select exists (
-    select 1
-    from public.organization_members m
-    where m.organization_id = p_organization_id
-      and m.user_id = public.current_user_id()
-      and m.is_active = true
-  );
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 3: is_self — step_create_organization_roles)
 
 ### `is_self(p_user_id uuid)` 🔐
 
@@ -502,9 +17,9 @@ CREATE OR REPLACE FUNCTION public.is_self(p_user_id uuid)
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-  select p_user_id = public.current_user_id();
+  SELECT iam.is_self(p_user_id);
 $function$
 ```
 </details>
@@ -521,83 +36,9 @@ CREATE OR REPLACE FUNCTION public.is_system_row(p_is_system boolean)
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-  select coalesce(p_is_system, false);
-$function$
-```
-</details>
-
-### `kanban_auto_complete_card()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.kanban_auto_complete_card()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-DECLARE
-  list_auto_complete boolean;
-BEGIN
-  SELECT auto_complete INTO list_auto_complete
-  FROM kanban_lists
-  WHERE id = NEW.list_id;
-  
-  IF list_auto_complete = true AND NEW.is_completed = false THEN
-    NEW.is_completed := true;
-    NEW.completed_at := now();
-  END IF;
-  
-  RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `kanban_set_card_board_id()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.kanban_set_card_board_id()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  IF NEW.board_id IS NULL AND NEW.list_id IS NOT NULL THEN
-    SELECT board_id INTO NEW.board_id
-    FROM kanban_lists
-    WHERE id = NEW.list_id;
-  END IF;
-  RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `kanban_set_updated_at()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.kanban_set_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
+  SELECT iam.is_system_row(p_is_system);
 $function$
 ```
 </details>
@@ -633,7 +74,281 @@ $function$
 ```
 </details>
 
-### `log_activity(p_organization_id uuid, p_user_id uuid, p_action text, p_target_table text, p_target_id uuid, p_metadata jsonb)` 🔐
+### `merge_contacts(p_source_contact_id uuid, p_target_contact_id uuid, p_organization_id uuid)` 🔐
+
+- **Returns**: jsonb
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.merge_contacts(p_source_contact_id uuid, p_target_contact_id uuid, p_organization_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  v_source record;
+  v_target record;
+  v_updated_count integer := 0;
+  v_table_count integer;
+begin
+  if p_source_contact_id = p_target_contact_id then
+    return jsonb_build_object('success', false, 'error', 'SAME_CONTACT', 'message', 'No podés reemplazar un contacto por sí mismo');
+  end if;
+
+  select id, organization_id, linked_user_id, full_name into v_source
+  from public.contacts where id = p_source_contact_id and organization_id = p_organization_id and is_deleted = false;
+
+  if v_source.id is null then
+    return jsonb_build_object('success', false, 'error', 'SOURCE_NOT_FOUND', 'message', 'El contacto a reemplazar no existe');
+  end if;
+
+  select id, organization_id, linked_user_id, full_name into v_target
+  from public.contacts where id = p_target_contact_id and organization_id = p_organization_id and is_deleted = false;
+
+  if v_target.id is null then
+    return jsonb_build_object('success', false, 'error', 'TARGET_NOT_FOUND', 'message', 'El contacto de destino no existe');
+  end if;
+
+  if v_source.linked_user_id is not null then
+    if exists (
+      select 1 from iam.organization_members
+      where organization_id = p_organization_id and user_id = v_source.linked_user_id and is_active = true
+    ) or exists (
+      select 1 from iam.organization_external_actors
+      where organization_id = p_organization_id and user_id = v_source.linked_user_id and is_active = true and is_deleted = false
+    ) then
+      return jsonb_build_object('success', false, 'error', 'SOURCE_IS_LINKED_ACTIVE', 'message', 'No se puede reemplazar un contacto vinculado a un usuario activo');
+    end if;
+  end if;
+
+  update public.project_clients set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.project_labor set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.subcontracts set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.subcontract_bids set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.movements set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.material_invoices set provider_id = p_target_contact_id, updated_at = now() where provider_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.material_purchase_orders set provider_id = p_target_contact_id, updated_at = now() where provider_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.materials set default_provider_id = p_target_contact_id, updated_at = now() where default_provider_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.task_recipe_external_services set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.media_links set contact_id = p_target_contact_id where contact_id = p_source_contact_id;
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  update public.contact_category_links set contact_id = p_target_contact_id
+  where contact_id = p_source_contact_id
+    and category_id not in (select category_id from public.contact_category_links where contact_id = p_target_contact_id);
+  get diagnostics v_table_count = row_count; v_updated_count := v_updated_count + v_table_count;
+
+  delete from public.contact_category_links where contact_id = p_source_contact_id;
+
+  update public.contacts
+  set is_deleted = true, deleted_at = now(), updated_at = now(), linked_user_id = null
+  where id = p_source_contact_id;
+
+  return jsonb_build_object(
+    'success', true, 'source_contact', v_source.full_name, 'target_contact', v_target.full_name,
+    'references_moved', v_updated_count,
+    'message', 'Contacto "' || v_source.full_name || '" reemplazado por "' || v_target.full_name || '". ' || v_updated_count || ' referencias actualizadas.'
+  );
+
+exception
+  when others then
+    return jsonb_build_object('success', false, 'error', 'UNEXPECTED_ERROR', 'message', SQLERRM);
+end;
+$function$
+```
+</details>
+
+### `protect_linked_contact_delete()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.protect_linked_contact_delete()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  v_is_active_member boolean;
+  v_is_active_actor boolean;
+  v_ref_count integer := 0;
+  v_ref_tables text[] := '{}';
+begin
+  if not (old.is_deleted = false and new.is_deleted = true) then
+    return new;
+  end if;
+
+  if new.linked_user_id is not null then
+    select exists (
+      select 1 from iam.organization_members om
+      where om.organization_id = new.organization_id and om.user_id = new.linked_user_id and om.is_active = true
+    ) into v_is_active_member;
+
+    select exists (
+      select 1 from iam.organization_external_actors oea
+      where oea.organization_id = new.organization_id and oea.user_id = new.linked_user_id
+        and oea.is_active = true and oea.is_deleted = false
+    ) into v_is_active_actor;
+
+    if v_is_active_member or v_is_active_actor then
+      raise exception 'No se puede eliminar un contacto vinculado a un usuario activo de la organización. Primero desvinculá al miembro o colaborador externo.'
+        using errcode = 'P0001';
+    end if;
+  end if;
+
+  if exists (select 1 from public.project_clients where contact_id = old.id and is_deleted = false) then
+    v_ref_tables := array_append(v_ref_tables, 'clientes de proyecto');
+  end if;
+  if exists (select 1 from public.project_labor where contact_id = old.id and is_deleted = false) then
+    v_ref_tables := array_append(v_ref_tables, 'mano de obra');
+  end if;
+  if exists (select 1 from public.subcontracts where contact_id = old.id and coalesce(is_deleted, false) = false) then
+    v_ref_tables := array_append(v_ref_tables, 'subcontratos');
+  end if;
+  if exists (select 1 from public.subcontract_bids where contact_id = old.id) then
+    v_ref_tables := array_append(v_ref_tables, 'ofertas de subcontrato');
+  end if;
+  if exists (select 1 from public.movements where contact_id = old.id) then
+    v_ref_tables := array_append(v_ref_tables, 'movimientos financieros');
+  end if;
+  if exists (select 1 from public.material_invoices where provider_id = old.id) then
+    v_ref_tables := array_append(v_ref_tables, 'facturas de materiales');
+  end if;
+  if exists (select 1 from public.material_purchase_orders where provider_id = old.id and is_deleted = false) then
+    v_ref_tables := array_append(v_ref_tables, 'órdenes de compra');
+  end if;
+  if exists (select 1 from public.materials where default_provider_id = old.id and is_deleted = false) then
+    v_ref_tables := array_append(v_ref_tables, 'proveedor default de materiales');
+  end if;
+  if exists (select 1 from public.task_recipe_external_services where contact_id = old.id and is_deleted = false) then
+    v_ref_tables := array_append(v_ref_tables, 'servicios externos de recetas');
+  end if;
+
+  if array_length(v_ref_tables, 1) > 0 then
+    raise exception 'No se puede eliminar este contacto porque está siendo usado en: %. Primero reemplazalo por otro contacto.',
+      array_to_string(v_ref_tables, ', ')
+      using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `quote_item_set_default_sort_key()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.quote_item_set_default_sort_key()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    IF NEW.sort_key IS NULL OR NEW.sort_key = 0 THEN
+        SELECT COALESCE(MAX(sort_key), 0) + 1 INTO NEW.sort_key
+        FROM public.quote_items
+        WHERE quote_id = NEW.quote_id;
+    END IF;
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
+### `recalculate_po_totals()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.recalculate_po_totals()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    UPDATE material_purchase_orders
+    SET subtotal = COALESCE((
+        SELECT SUM(quantity * COALESCE(unit_price, 0))
+        FROM material_purchase_order_items
+        WHERE purchase_order_id = COALESCE(NEW.purchase_order_id, OLD.purchase_order_id)
+    ), 0),
+    updated_at = NOW()
+    WHERE id = COALESCE(NEW.purchase_order_id, OLD.purchase_order_id);
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$
+```
+</details>
+
+### `recalculate_recipe_rating()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.recalculate_recipe_rating()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+    update task_recipes
+    set 
+        rating_avg = (
+            select round(avg(rating)::numeric, 2)
+            from task_recipe_ratings
+            where recipe_id = coalesce(new.recipe_id, old.recipe_id)
+        ),
+        rating_count = (
+            select count(*)
+            from task_recipe_ratings
+            where recipe_id = coalesce(new.recipe_id, old.recipe_id)
+        ),
+        updated_at = now()
+    where id = coalesce(new.recipe_id, old.recipe_id);
+    
+    return coalesce(new, old);
+end;
+$function$
+```
+</details>
+
+### `refresh_labor_avg_prices()` 🔐
 
 - **Returns**: void
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -641,37 +356,57 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.log_activity(p_organization_id uuid, p_user_id uuid, p_action text, p_target_table text, p_target_id uuid, p_metadata jsonb)
+CREATE OR REPLACE FUNCTION public.refresh_labor_avg_prices()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
 begin
-  insert into public.organization_activity_logs (
-    organization_id,
-    user_id,
-    action,
-    target_table,
-    target_id,
-    metadata,
-    created_at
-  )
-  values (
-    p_organization_id,
-    p_user_id,
-    p_action,
-    p_target_table,
-    p_target_id,
-    coalesce(p_metadata, '{}'::jsonb),
-    now()
-  );
+  refresh materialized view public.labor_avg_prices;
 end;
 $function$
 ```
 </details>
 
-### `log_calendar_event_activity()` 🔐
+### `refresh_material_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_material_avg_prices()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  refresh materialized view public.material_avg_prices;
+end;
+$function$
+```
+</details>
+
+### `refresh_product_avg_prices()` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_product_avg_prices()
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+AS $function$refresh materialized view concurrently public.product_avg_prices;$function$
+```
+</details>
+
+### `set_budget_task_organization()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -679,64 +414,59 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.log_calendar_event_activity()
+CREATE OR REPLACE FUNCTION public.set_budget_task_organization()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
+begin
+  -- Resolver organización desde la tarea
+  select t.organization_id
+  into new.organization_id
+  from public.tasks t
+  where t.id = new.task_id;
+
+  -- Si no existe la tarea, es un error lógico
+  if new.organization_id is null then
+    raise exception
+      'No se pudo resolver organization_id para task_id %',
+      new.task_id;
+  end if;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `set_task_labor_organization()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_task_labor_organization()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
 BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD;
-        audit_action := 'delete_calendar_event';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        -- AQUI ESTA EL CAMBIO: Chequeamos deleted_at en vez de is_deleted
-        IF (OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL) THEN
-            audit_action := 'delete_calendar_event';
-        ELSE
-            audit_action := 'update_calendar_event';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW;
-        audit_action := 'create_calendar_event';
-        resolved_member_id := NEW.created_by;
+    -- Si organization_id es null, heredarlo de la tarea padre
+    IF NEW.organization_id IS NULL THEN
+        SELECT organization_id INTO NEW.organization_id
+        FROM tasks
+        WHERE id = NEW.task_id;
     END IF;
-
-    audit_metadata := jsonb_build_object(
-        'title', target_record.title,
-        'start_at', target_record.start_at,
-        'source_type', target_record.source_type
-    );
-
-    BEGIN
-        INSERT INTO public.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            target_record.organization_id,
-            resolved_member_id,
-            audit_action,
-            target_record.id,
-            'calendar_events',
-            audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-
-    RETURN NULL;
+    
+    RETURN NEW;
 END;
 $function$
 ```
 </details>
 
-### `log_client_commitment_activity()` 🔐
+### `set_task_material_organization()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -744,24 +474,151 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION public.log_client_commitment_activity()
+CREATE OR REPLACE FUNCTION public.set_task_material_organization()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public'
 AS $function$
-DECLARE
-    resolved_member_id uuid; audit_action text; audit_metadata jsonb; target_record RECORD;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN target_record := OLD; audit_action := 'delete_commitment'; resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN target_record := NEW; 
-        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN audit_action := 'delete_commitment'; ELSE audit_action := 'update_commitment'; END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN target_record := NEW; audit_action := 'create_commitment'; resolved_member_id := NEW.created_by; END IF;
-    audit_metadata := jsonb_build_object('amount', target_record.amount, 'currency_id', target_record.currency_id);
-    BEGIN INSERT INTO public.organization_activity_logs (organization_id, member_id, action, target_id, target_table, metadata)
-    VALUES (target_record.organization_id, resolved_member_id, audit_action, target_record.id, 'client_commitments', audit_metadata);
-    EXCEPTION WHEN OTHERS THEN NULL; END;
-    RETURN NULL;
-END; $function$
+begin
+  -- Resolver organización desde la tarea
+  select t.organization_id
+  into new.organization_id
+  from public.tasks t
+  where t.id = new.task_id;
+
+  -- Si no existe la tarea, es un error lógico
+  if new.organization_id is null then
+    raise exception
+      'No se pudo resolver organization_id para task_id %',
+      new.task_id;
+  end if;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `set_timestamp()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_timestamp()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$
+```
+</details>
+
+### `set_updated_at()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$
+```
+</details>
+
+### `set_updated_at_ia_user_preferences()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_updated_at_ia_user_preferences()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$
+```
+</details>
+
+### `step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.step_add_org_member(p_user_id, p_org_id, p_role_id);
+$function$
+```
+</details>
+
+### `step_assign_org_role_permissions(p_org_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_assign_org_role_permissions(p_org_id uuid)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.step_assign_org_role_permissions(p_org_id);
+$function$
+```
+</details>
+
+### `step_create_organization_roles(p_org_id uuid)` 🔐
+
+- **Returns**: jsonb
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.step_create_organization_roles(p_org_id uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.step_create_organization_roles(p_org_id);
+$function$
 ```
 </details>

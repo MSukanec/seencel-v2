@@ -620,7 +620,7 @@ export async function deleteSystemLaborType(id: string): Promise<{ success: bool
 export async function getProjectLabor(projectId: string): Promise<ProjectLabor[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('project_labor')
+        .schema('projects').from('project_labor')
         .select('*')
         .eq('project_id', projectId)
         .eq('is_deleted', false)
@@ -640,7 +640,7 @@ export async function getProjectLabor(projectId: string): Promise<ProjectLabor[]
 export async function getProjectLaborView(projectId: string): Promise<ProjectLaborView[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('project_labor_view')
+        .schema('projects').from('project_labor_view')
         .select('*')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
@@ -659,7 +659,7 @@ export async function getProjectLaborView(projectId: string): Promise<ProjectLab
 export async function getOrgLaborView(organizationId: string): Promise<ProjectLaborView[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('project_labor_view')
+        .schema('projects').from('project_labor_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
@@ -687,7 +687,7 @@ export async function createProjectLabor(input: CreateProjectLaborInput): Promis
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_labor')
+        .schema('projects').from('project_labor')
         .insert({
             project_id: input.project_id,
             organization_id: input.organization_id,
@@ -726,7 +726,7 @@ export async function updateProjectLabor(input: UpdateProjectLaborInput): Promis
     if (input.notes !== undefined) updateData.notes = input.notes;
 
     const { data, error } = await supabase
-        .from('project_labor')
+        .schema('projects').from('project_labor')
         .update(updateData)
         .eq('id', input.id)
         .select()
@@ -745,7 +745,7 @@ export async function deleteProjectLabor(id: string, projectId: string): Promise
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('project_labor')
+        .schema('projects').from('project_labor')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id);
 
@@ -765,7 +765,7 @@ export async function deleteProjectLabor(id: string, projectId: string): Promise
 export async function getLaborPayments(projectId: string): Promise<LaborPaymentView[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('labor_payments_view')
+        .schema('finance').from('labor_payments_view')
         .select('*')
         .eq('project_id', projectId)
         .order('payment_date', { ascending: false });
@@ -781,7 +781,7 @@ export async function getLaborPayments(projectId: string): Promise<LaborPaymentV
 export async function getLaborPaymentsByOrg(organizationId: string): Promise<LaborPaymentView[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('labor_payments_view')
+        .schema('finance').from('labor_payments_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('payment_date', { ascending: false });
@@ -813,7 +813,7 @@ export async function createLaborPayment(data: {
 }) {
     const supabase = await createClient();
     const { data: newPayment, error } = await supabase
-        .from('labor_payments')
+        .schema('finance').from('labor_payments')
         .insert({
             project_id: data.project_id,
             organization_id: data.organization_id,
@@ -848,7 +848,7 @@ export async function updateLaborPayment(id: string, data: {
 }, projectId: string) {
     const supabase = await createClient();
     const { data: updatedPayment, error } = await supabase
-        .from('labor_payments')
+        .schema('finance').from('labor_payments')
         .update({
             labor_id: data.labor_id,
             amount: data.amount,
@@ -872,7 +872,7 @@ export async function updateLaborPayment(id: string, data: {
 export async function deleteLaborPayment(id: string, projectId: string) {
     const supabase = await createClient();
     const { error } = await supabase
-        .from('labor_payments')
+        .schema('finance').from('labor_payments')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()

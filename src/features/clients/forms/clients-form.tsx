@@ -61,7 +61,7 @@ export function ClientForm({
             const supabase = createSupabaseClient();
 
             const { data: contactsData } = await supabase
-                .from("contacts_view")
+                .schema('projects').from("contacts_view")
                 .select("id, full_name, company_name, email, resolved_avatar_url")
                 .eq("organization_id", orgId)
                 .eq("is_deleted", false)

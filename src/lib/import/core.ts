@@ -19,7 +19,7 @@ export async function createImportBatch(
 
     // Get member_id for this user in this organization
     const { data: member } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('organization_id', organizationId)
         .eq('user_id', user.id)

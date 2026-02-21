@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] RLS Policies (19)
+## [CONSTRUCTION] RLS Policies (18)
 
 ### `construction_dependencies` (4 policies)
 
@@ -110,9 +110,38 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 can_view_org(organization_id, 'projects.view'::text)
 ```
 
-### `quote_items` (4 policies)
+### `site_log_types` (3 policies)
 
-#### ACTORES VEN ITEMS PRESUPUESTO DEL PROYECTO
+#### MIEMBROS CREAN SITE_LOG_TYPES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+(((organization_id IS NULL) AND is_admin()) OR ((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'sitelog.manage'::text)))
+```
+
+#### MIEMBROS EDITAN SITE_LOG_TYPES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(((organization_id IS NULL) AND is_admin()) OR ((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'sitelog.manage'::text)))
+```
+
+#### MIEMBROS VEN SITE_LOG_TYPES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+((organization_id IS NULL) OR can_view_org(organization_id, 'sitelog.view'::text))
+```
+
+### `site_logs` (4 policies)
+
+#### ACTORES VEN BITACORAS DEL PROYECTO
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
@@ -121,71 +150,29 @@ can_view_org(organization_id, 'projects.view'::text)
 can_view_project(project_id)
 ```
 
-#### MIEMBROS CREAN QUOTE_ITEMS
+#### MIEMBROS CREAN SITE_LOGS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
+can_mutate_org(organization_id, 'sitelog.manage'::text)
 ```
 
-#### MIEMBROS EDITAN QUOTE_ITEMS
+#### MIEMBROS EDITAN SITE_LOGS
 
 - **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
-```
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
+can_mutate_org(organization_id, 'sitelog.manage'::text)
 ```
 
-#### MIEMBROS VEN QUOTE_ITEMS
+#### MIEMBROS VEN SITE_LOGS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'commercial.view'::text)
-```
-
-### `quotes` (4 policies)
-
-#### EXTERNOS VEN QUOTES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_project(project_id)
-```
-
-#### MIEMBROS ACTUALIZAN QUOTES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
-```
-
-#### MIEMBROS CREAN QUOTES
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
-```
-
-#### MIEMBROS VEN QUOTES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_view_org(organization_id, 'commercial.view'::text)
+can_view_org(organization_id, 'sitelog.view'::text)
 ```

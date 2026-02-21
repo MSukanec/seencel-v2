@@ -4,7 +4,7 @@ description: Crear un nuevo schema PostgreSQL en Supabase y migrar objetos desde
 
 # Workflow: Crear Nuevo Schema PostgreSQL
 
-Basado en los casos reales del schema `iam` (invitaciones) y `construction` (quotes + tareas de obra).
+Basado en los casos reales de los schemas `iam`, `construction`, `projects`, `finance`, `billing`, `academy`, `catalog`, `ai`, `ops` y `notifications`.
 
 ---
 
@@ -16,10 +16,11 @@ Antes de escribir una sola línea de SQL, responder:
 
 1. **¿Cuál es el dominio?** El schema debe tener un nombre que refleje un dominio de negocio real (ej: `iam`, `construction`, `billing`).
 2. **¿Qué tablas pertenecen al dominio?** Revisar `DB/schema/public/tables_*.md` para identificar candidatos.
-3. **¿Qué funciones son pura lógica de negocio de este dominio?** Leer `DB/schema/public/functions_*.md`. **NUNCA** mover funciones genéricas como:
-   - Funciones `log_*` (activity logging)
-   - Funciones `notify_*` (notifications)
-   - Funciones de auditoría cross-domain
+3. **¿Qué funciones son pura lógica de negocio de este dominio?** Leer `DB/schema/public/functions_*.md`. **NUNCA** mover al schema de negocio funciones cross-domain como:
+   - Funciones `log_*` (activity logging) → van al schema `audit` (si se crea)
+   - Funciones utilitarias (`handle_updated_by`, `set_timestamp`, `set_updated_at`, etc.) → se quedan en `public`
+   - ✅ Funciones `notify_*` → ya migradas al schema `notifications`
+   - ✅ Funciones `ops_*` → ya migradas al schema `ops`
 4. **¿Qué vistas son de solo lectura de este dominio?** Leer `DB/schema/public/views.md`.
 5. **¿Hay tablas legacy a descartar?** Identificarlas antes de decidir.
 
@@ -192,14 +193,14 @@ Cada vez que se crea un nuevo schema, hay que registrarlo en el introspector par
 
 ### 4.1 — Modificar `scripts/introspect-db.mjs`
 
-Buscar la línea:
+Buscar la línea (estado actual feb 2026):
 ```javascript
-const SCHEMAS = ['public', 'iam', 'construction'];
+const SCHEMAS = ['public', 'iam', 'construction', 'projects', 'finance', 'ai', 'catalog', 'academy', 'billing', 'ops', 'notifications', 'audit'];
 ```
 
 Agregar el nuevo schema al array:
 ```javascript
-const SCHEMAS = ['public', 'iam', 'construction', 'nuevo_schema'];
+const SCHEMAS = ['public', 'iam', 'construction', 'projects', 'finance', 'ai', 'catalog', 'academy', 'billing', 'ops', 'notifications', 'audit', 'nuevo_schema'];
 ```
 
 **Eso es todo.** El script tiene arquitectura genérica — genera automáticamente los archivos para cualquier schema en el array.
@@ -264,7 +265,7 @@ El frontend usa `.schema('construction').from(...)` para acceder a ellas.
 ```
 ANÁLISIS
 [ ] Identificar tablas del dominio
-[ ] Identificar funciones de negocio pura (excluir log_*, notify_*)
+[ ] Identificar funciones de negocio pura (excluir log_*, utilitarias cross-domain)
 [ ] Identificar vistas de solo lectura del dominio
 [ ] Decidir estrategia de compatibilidad (Opción B en Seencel)
 
@@ -298,7 +299,15 @@ POST-MIGRACIÓN (usuario)
 
 ## Casos de Referencia
 
-| Schema | Archivo SQL | Frontend afectado |
-|--------|-------------|-------------------|
-| `iam` | `DB/move_invitations_to_iam.sql` | `src/features/organization/` |
-| `construction` | `DB/025_create_construction_schema.sql` | `src/features/quotes/`, `src/features/tasks/`, `src/features/project-health/` |
+| Schema | Archivos SQL | Dominio |
+|--------|-------------|--------|
+| `iam` | `DB/move_invitations_to_iam.sql` | Invitaciones, permisos |
+| `construction` | `DB/025_create_construction_schema.sql` | Tareas de obra, dependencias, site logs |
+| `projects` | `DB/064c_create_projects_schema.sql` | Proyectos, contacts, signatures |
+| `finance` | `DB/064d_create_finance_schema.sql` | Currencies, payments, quotes, subcontracts, capital, PDFs |
+| `catalog` | `DB/03X_create_catalog_schema.sql` | Catálogo técnico |
+| `ai` | `DB/03X_create_ai_schema.sql` | IA, embeddings |
+| `billing` | `DB/04X_create_billing_schema.sql` | Pagos, suscripciones, transferencias |
+| `academy` | `DB/04X_create_academy_schema.sql` | Cursos, enrollments |
+| `ops` | `DB/047_migrate_ops_tables.sql`, `DB/048_migrate_ops_functions.sql` | Alertas operativas, checks, reparaciones |
+| `notifications` | `DB/046_migrate_notifications_tables.sql`, `DB/049_migrate_notifications_functions.sql` | Notificaciones, push, broadcast |

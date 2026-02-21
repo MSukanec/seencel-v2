@@ -25,7 +25,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
     let internalUserId: string | null = null;
     if (currentUserId) {
         const { data: userData } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id')
             .eq('auth_id', currentUserId)
             .single();
@@ -36,21 +36,21 @@ export async function fetchOrganizationStoreData(orgId: string) {
     const [prefsResult, orgResult, currenciesResult, walletsResult, projectsResult, clientsResult, memberResult, externalActorResult] = await Promise.all([
         // 1. Organization preferences
         supabase
-            .from('organization_preferences')
+            .schema('iam').from('organization_preferences')
             .select('default_currency_id, functional_currency_id, default_wallet_id, currency_decimal_places, use_currency_exchange, insight_config, default_tax_label_id, kpi_compact_format')
             .eq('organization_id', orgId)
             .maybeSingle(),
 
         // 2. Organization settings (isFounder) + plan slug
         supabase
-            .from('organizations')
-            .select('settings, plan:plans!plan_id(slug, name)')
+            .schema('iam').from('organizations')
+            .select('settings, plan_id')
             .eq('id', orgId)
             .single(),
 
         // 3. Enabled currencies
         supabase
-            .from('organization_currencies_view')
+            .schema('finance').from('organization_currencies_view')
             .select('*')
             .eq('organization_id', orgId)
             .eq('is_active', true)
@@ -58,14 +58,14 @@ export async function fetchOrganizationStoreData(orgId: string) {
 
         // 4. Enabled wallets
         supabase
-            .from('organization_wallets_view')
+            .schema('finance').from('organization_wallets_view')
             .select('*')
             .eq('organization_id', orgId)
             .eq('is_active', true),
 
         // 5. Projects (only id + name for dropdowns)
         supabase
-            .from('projects')
+            .schema('projects').from('projects')
             .select('id, name')
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
@@ -73,7 +73,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
 
         // 6. Clients (only id + name for dropdowns)
         supabase
-            .from('project_clients_view')
+            .schema('projects').from('project_clients_view')
             .select('id, contact_full_name, contact_company_name, project_id')
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
@@ -82,7 +82,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         // 7. Check if user is a member of this organization
         internalUserId
             ? supabase
-                .from('organization_members')
+                .schema('iam').from('organization_members')
                 .select('id')
                 .eq('organization_id', orgId)
                 .eq('user_id', internalUserId)
@@ -93,7 +93,7 @@ export async function fetchOrganizationStoreData(orgId: string) {
         // 8. Check if user is an external actor of this organization
         internalUserId
             ? supabase
-                .from('organization_external_actors')
+                .schema('iam').from('organization_external_actors')
                 .select('id, actor_type')
                 .eq('organization_id', orgId)
                 .eq('user_id', internalUserId)
@@ -105,8 +105,18 @@ export async function fetchOrganizationStoreData(orgId: string) {
 
     const preferences = prefsResult.data;
     const isFounder = (orgResult.data?.settings as any)?.is_founder === true;
-    const planData = orgResult.data?.plan as any;
-    const planSlug: string | null = planData?.slug || planData?.name || null;
+
+    // Cross-schema: plans está en billing — fetch separado
+    let planSlug: string | null = null;
+    const orgPlanId = (orgResult.data as any)?.plan_id;
+    if (orgPlanId) {
+        const { data: planData } = await supabase
+            .schema('billing').from('plans')
+            .select('slug, name')
+            .eq('id', orgPlanId)
+            .single();
+        planSlug = planData?.slug || planData?.name || null;
+    }
 
     // Access context detection
     // Defensive: if we couldn't resolve the user, default to member=true

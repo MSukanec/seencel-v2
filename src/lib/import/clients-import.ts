@@ -33,7 +33,7 @@ export async function importPaymentsBatch(
 
     // 1. Get project clients for name lookup
     const { data: projectClients } = await supabase
-        .from('project_clients_view')
+        .schema('projects').from('project_clients_view')
         .select('id, contact_full_name, contact_company_name')
         .eq('project_id', projectId);
 
@@ -53,7 +53,7 @@ export async function importPaymentsBatch(
 
     // 2. Get currencies for code lookup
     const { data: currencies } = await supabase
-        .from('currencies')
+        .schema('finance').from('currencies')
         .select('id, code');
 
     const currencyMap = new Map<string, string>();
@@ -63,7 +63,7 @@ export async function importPaymentsBatch(
 
     // 3. Get wallets for name lookup
     const { data: wallets } = await supabase
-        .from('organization_wallets_view')
+        .schema('finance').from('organization_wallets_view')
         .select('id, wallet_name')
         .eq('organization_id', organizationId);
 
@@ -160,7 +160,7 @@ export async function importPaymentsBatch(
     // 5. Insert valid records
     if (records.length > 0) {
         const { error } = await supabase
-            .from('client_payments')
+            .schema('finance').from('client_payments')
             .insert(records);
 
         if (error) {

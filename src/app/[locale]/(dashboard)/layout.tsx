@@ -70,7 +70,7 @@ export default async function DashboardLayout({
     if (isImpersonating && activeOrgId) {
         const supabaseForOrgName = await createClient();
         const { data: orgData } = await supabaseForOrgName
-            .from('organizations')
+            .schema('iam').from('organizations')
             .select('name')
             .eq('id', activeOrgId)
             .single();

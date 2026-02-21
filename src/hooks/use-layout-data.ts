@@ -75,7 +75,7 @@ export function useLayoutData(): LayoutData {
         async function fetchOrg() {
             try {
                 const { data } = await supabase
-                    .from('organizations')
+                    .schema('iam').from('organizations')
                     .select('id, name, logo_url, settings')
                     .eq('id', orgId)
                     .eq('is_deleted', false)

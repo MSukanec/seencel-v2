@@ -78,7 +78,7 @@ export async function createCoupon(input: CreateCouponInput): Promise<{ success:
     let createdBy: string | null = null;
     if (authUser) {
         const { data: userData } = await supabase
-            .from("users")
+            .schema('iam').from("users")
             .select("id")
             .eq("auth_id", authUser.id)
             .single();

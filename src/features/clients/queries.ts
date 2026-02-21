@@ -31,25 +31,28 @@ async function getActiveOrganizationId() {
     if (!user) return null;
 
     const { data: userData } = await supabase
-        .from('users')
-        .select(`id, user_preferences(last_organization_id)`)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
     if (!userData) return null;
 
-    const pref = Array.isArray((userData as any).user_preferences)
-        ? (userData as any).user_preferences[0]
-        : (userData as any).user_preferences;
+    // Cross-schema: user_preferences está en iam
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
 
-    return pref?.last_organization_id || null;
+    return prefData?.last_organization_id || null;
 }
 
 export async function getClients(projectId: string | null) {
     const supabase = await createClient();
 
     let query = supabase
-        .from('project_clients_view')
+        .schema('projects').from('project_clients_view')
         .select('*')
         .eq('is_deleted', false)
         .order('contact_full_name', { ascending: true });
@@ -75,7 +78,7 @@ export async function getClientsByOrganization(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_clients_view')
+        .schema('projects').from('project_clients_view')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -96,7 +99,7 @@ export async function getOrganizationContacts(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .select('id, full_name, email, phone, linked_user_id, image_url')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -118,7 +121,7 @@ export async function getFinancialSummaryByOrganization(organizationId: string) 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('client_financial_summary_view')
+        .schema('finance').from('client_financial_summary_view')
         .select('*')
         .eq('organization_id', organizationId);
 
@@ -137,7 +140,7 @@ export async function getCommitmentsByOrganization(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .select(`
             *,
             project:projects(name),
@@ -270,7 +273,7 @@ export async function getPaymentsByOrganization(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('client_payments_view')
+        .schema('finance').from('client_payments_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('payment_date', { ascending: false });
@@ -320,7 +323,7 @@ export async function getClientFinancialSummary(projectId: string | null) {
     const supabase = await createClient();
 
     let query = supabase
-        .from('client_financial_summary_view')
+        .schema('finance').from('client_financial_summary_view')
         .select('*');
 
     if (projectId) {
@@ -341,7 +344,7 @@ export async function getClientCommitments(projectId: string | null) {
     const supabase = await createClient();
 
     let query = supabase
-        .from('client_commitments')
+        .schema('finance').from('client_commitments')
         .select(`
             *,
             project:projects(name),
@@ -372,7 +375,7 @@ export async function getClientPayments(projectId: string | null) {
     const supabase = await createClient();
 
     let query = supabase
-        .from('client_payments_view')
+        .schema('finance').from('client_payments_view')
         .select('*')
         .order('payment_date', { ascending: false });
 
@@ -451,7 +454,7 @@ export async function getClientRoles(orgId?: string) {
     if (!organizationId) return { error: "No authorized organization found" };
 
     const { data, error } = await supabase
-        .from('client_roles')
+        .schema('projects').from('client_roles')
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)

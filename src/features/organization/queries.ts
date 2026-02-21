@@ -10,13 +10,8 @@ export async function getDashboardData() {
 
     // 1b. Get Public User ID from 'users' table
     const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select(`
-            id,
-            user_preferences!inner (
-                last_organization_id
-            )
-        `)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
@@ -27,12 +22,14 @@ export async function getDashboardData() {
 
     const publicUserId = userData.id;
 
-    // We already have 'userData.user_preferences'. cast to any to avoid TS strictness if types aren't perfect
-    const pref = Array.isArray((userData as any).user_preferences)
-        ? (userData as any).user_preferences[0]
-        : (userData as any).user_preferences;
+    // Cross-schema: user_preferences está en iam, no se puede hacer join implícito desde public.users
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', publicUserId)
+        .single();
 
-    const activeOrgId = pref?.last_organization_id;
+    const activeOrgId = prefData?.last_organization_id;
 
     let orgId = activeOrgId;
 
@@ -42,28 +39,14 @@ export async function getDashboardData() {
 
     if (orgId) {
         const { data: directMember } = await supabase
-            .from('organization_members')
+            .schema('iam').from('organization_members')
             .select(`
                 role_id,
                 organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
                     logo_url,
-                    settings,
-                    organization_data (
-                        description,
-                        phone,
-                        email,
-                        website,
-                        tax_id,
-                        address,
-                        city,
-                        state,
-                        country,
-                        postal_code,
-                        lat,
-                        lng
-                    )
+                    settings
                 )
             `)
             .eq('user_id', publicUserId)
@@ -77,26 +60,12 @@ export async function getDashboardData() {
         } else {
             // FALLBACK: Check if user is the Creator (Legacy Support)
             const { data: ownedOrg } = await supabase
-                .from('organizations')
+                .schema('iam').from('organizations')
                 .select(`
                     id, 
                     name, 
                     logo_url,
-                    settings,
-                    organization_data (
-                        description,
-                        phone,
-                        email,
-                        website,
-                        tax_id,
-                        address,
-                        city,
-                        state,
-                        country,
-                        postal_code,
-                        lat,
-                        lng
-                    )
+                    settings
                 `)
                 .eq('id', orgId)
                 .eq('created_by', publicUserId) // Legacy check
@@ -114,28 +83,14 @@ export async function getDashboardData() {
     if (!organization) {
         // 1. Try generic membership
         const { data: fallbackMember } = await supabase
-            .from('organization_members')
+            .schema('iam').from('organization_members')
             .select(`
                 role_id,
                 organizations:organizations!organization_members_organization_id_fkey(
                     id, 
                     name, 
                     logo_url,
-                    settings,
-                    organization_data (
-                        description,
-                        phone,
-                        email,
-                        website,
-                        tax_id,
-                        address,
-                        city,
-                        state,
-                        country,
-                        postal_code,
-                        lat,
-                        lng
-                    )
+                    settings
                 )
             `)
             .eq('user_id', publicUserId)
@@ -153,26 +108,12 @@ export async function getDashboardData() {
         } else {
             // 2. Try generic ownership (Legacy Support)
             const { data: firstOwned } = await supabase
-                .from('organizations')
+                .schema('iam').from('organizations')
                 .select(`
                     id, 
                     name, 
                     logo_url,
-                    settings,
-                    organization_data (
-                        description,
-                        phone,
-                        email,
-                        website,
-                        tax_id,
-                        address,
-                        city,
-                        state,
-                        country,
-                        postal_code,
-                        lat,
-                        lng
-                    )
+                    settings
                 `)
                 .eq('created_by', publicUserId)
                 .eq('is_deleted', false)
@@ -191,6 +132,17 @@ export async function getDashboardData() {
         return { error: `Setup Required: The user ${publicUserId} is not linked to any organization.` };
     }
 
+    // Fetch organization_data separately (cross-schema: organization_data is in public)
+    const { data: orgDataResult } = await supabase
+        .schema('iam').from('organization_data')
+        .select('description, phone, email, website, tax_id, address, city, state, country, postal_code, lat, lng')
+        .eq('organization_id', orgId)
+        .maybeSingle();
+
+    if (orgDataResult) {
+        (organization as any).organization_data = orgDataResult;
+    }
+
     // 3. Parallel Fetching for Dashboard Widgets
     const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
 
@@ -201,7 +153,7 @@ export async function getDashboardData() {
         activityRes
     ] = await Promise.all([
         // Projects (using view for image_url and metadata)
-        supabase.from('projects_view')
+        supabase.schema('projects').from('projects_view')
             .select('*')
             .eq('organization_id', orgId)
             .eq('is_active', true)
@@ -212,13 +164,13 @@ export async function getDashboardData() {
         supabase.rpc('get_org_dashboard_stats', { org_id: orgId }),
 
         // Financial Movements (Unified View)
-        supabase.from('unified_financial_movements_view')
+        supabase.schema('finance').from('unified_financial_movements_view')
             .select('*')
             .eq('organization_id', orgId)
             .limit(500),
 
         // Activity Feed
-        supabase.from('organization_activity_logs_view')
+        supabase.schema('audit').from('organization_activity_logs_view')
             .select('*')
             .eq('organization_id', orgId)
             .order('created_at', { ascending: false })
@@ -229,7 +181,7 @@ export async function getDashboardData() {
     const [docsCount, tasksCount, teamCount] = await Promise.all([
         supabase.from('design_documents').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).gte('created_at', thirtyDaysAgo),
         supabase.schema('catalog').from('tasks').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
-        supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('organization_id', orgId)
+        supabase.schema('projects').from('contacts').select('*', { count: 'exact', head: true }).eq('organization_id', orgId)
     ]);
 
     return {
@@ -264,13 +216,8 @@ export async function getUserOrganizations(authId?: string) {
 
     // 2. Get Public User ID & Preferences (required for all subsequent queries)
     const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select(`
-            id,
-            user_preferences (
-                last_organization_id
-            )
-        `)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', resolvedAuthId)
         .single();
 
@@ -280,18 +227,22 @@ export async function getUserOrganizations(authId?: string) {
     }
 
     const publicUserId = userData.id;
-    const pref = Array.isArray((userData as any).user_preferences)
-        ? (userData as any).user_preferences[0]
-        : (userData as any).user_preferences;
 
-    const activeOrgId = pref?.last_organization_id || null;
+    // Cross-schema: user_preferences está en iam
+    const { data: prefData2 } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', publicUserId)
+        .single();
+
+    const activeOrgId = prefData2?.last_organization_id || null;
 
     // 3. Fetch organizations, usage stats and members ALL IN PARALLEL
     // (was sequential waterfall: orgs → usage → members)
     const [membershipsResult, usageResult] = await Promise.all([
         // 3a. Organizations
         supabase
-            .from('organization_members')
+            .schema('iam').from('organization_members')
             .select(`
                 organizations:organizations!organization_members_organization_id_fkey (
                     id,
@@ -307,7 +258,7 @@ export async function getUserOrganizations(authId?: string) {
 
         // 3b. Usage Stats (Last Access) — parallel, not waiting for orgs
         supabase
-            .from('user_organization_preferences')
+            .schema('iam').from('user_organization_preferences')
             .select('organization_id, updated_at')
             .eq('user_id', publicUserId),
     ]);
@@ -346,7 +297,7 @@ export async function getUserOrganizations(authId?: string) {
     let orgMembers: any[] = [];
     if (orgIds.length > 0) {
         const { data: membersData, error: membersError } = await supabase
-            .from('organization_members')
+            .schema('iam').from('organization_members')
             .select(`
                 organization_id,
                 user: users (
@@ -416,23 +367,26 @@ export async function getFinancialMovements() {
 
     // 2. Fetcy Org ID (Simplified for now, assuming robust context later)
     const { data: userData } = await supabase
-        .from('users')
-        .select(`id, user_preferences!inner(last_organization_id)`)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
     if (!userData) return { error: "User profile not found." };
 
-    const pref = Array.isArray((userData as any).user_preferences)
-        ? (userData as any).user_preferences[0]
-        : (userData as any).user_preferences;
+    // Cross-schema: user_preferences está en iam
+    const { data: prefData3 } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
 
-    const orgId = pref?.last_organization_id;
+    const orgId = prefData3?.last_organization_id;
 
     if (!orgId) return { error: "No active organization found." };
 
     const { data, error } = await supabase
-        .from('unified_financial_movements_view')
+        .schema('finance').from('unified_financial_movements_view')
         .select('*')
         .eq('organization_id', orgId)
         .order('payment_date', { ascending: false });
@@ -446,14 +400,14 @@ export async function getFinancialMovements() {
     // Fetch Wallets for mapping - organization_wallets.id is what payments reference
     // Filter by is_active to only show enabled wallets (Standard 10.3)
     const { data: wallets } = await supabase
-        .from('organization_wallets_view')
+        .schema('finance').from('organization_wallets_view')
         .select('id, wallet_name')
         .eq('organization_id', orgId)
         .eq('is_active', true);
 
     // Fetch Projects for mapping (exclude deleted projects)
     const { data: projects } = await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .select('id, name')
         .eq('organization_id', orgId)
         .eq('is_deleted', false);
@@ -476,7 +430,7 @@ export async function getOrganizationFinancialData(orgId: string) {
 
     // 1. Fetch Preferences (Defaults)
     const { data: preferences } = await supabase
-        .from('organization_preferences')
+        .schema('iam').from('organization_preferences')
         // Using 'maybeSingle' to avoid error if no preferences found (just returns null)
         .select('default_currency_id, functional_currency_id, default_wallet_id, currency_decimal_places, use_currency_exchange, insight_config, default_tax_label_id, kpi_compact_format')
         .eq('organization_id', orgId)
@@ -484,7 +438,7 @@ export async function getOrganizationFinancialData(orgId: string) {
 
     // 1b. Fetch Organization Settings (is_founder)
     const { data: orgData } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('settings')
         .eq('id', orgId)
         .single();
@@ -493,7 +447,7 @@ export async function getOrganizationFinancialData(orgId: string) {
 
     // 2. Fetch Enabled Currencies (Use View)
     const { data: orgCurrencies } = await supabase
-        .from('organization_currencies_view')
+        .schema('finance').from('organization_currencies_view')
         .select('*')
         .eq('organization_id', orgId)
         .eq('is_active', true)
@@ -503,7 +457,7 @@ export async function getOrganizationFinancialData(orgId: string) {
     // Using the view ensures we bypass RLS issues on the raw 'organization_wallets' table if any.
     // The view already contains wallet_name, currency_id, currency_symbol etc.
     const { data: orgWalletsView } = await supabase
-        .from('organization_wallets_view')
+        .schema('finance').from('organization_wallets_view')
         .select('*')
         .eq('organization_id', orgId)
         .eq('is_active', true);
@@ -579,7 +533,7 @@ export async function getRecentOrganizationsCount(days: number = 30): Promise<nu
     const sinceDate = subDays(new Date(), days).toISOString();
 
     const { count, error } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('*', { count: 'exact', head: true })
         .eq('is_deleted', false)
         .gte('created_at', sinceDate);

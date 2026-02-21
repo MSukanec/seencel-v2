@@ -20,7 +20,7 @@ export async function getEnrollableUsers() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id, full_name, email, avatar_url")
         .eq("is_active", true)
         .order("full_name");
@@ -144,7 +144,7 @@ export async function isUserEnrolledInCourse(courseId: string): Promise<boolean>
 
     // Get internal user ID
     const { data: userData } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", user.id)
         .single();

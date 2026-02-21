@@ -48,7 +48,7 @@ export async function getProjectCollaborators(projectId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("project_access_view")
+        .schema('projects').from("project_access_view")
         .select("*")
         .eq("project_id", projectId)
         .eq("is_deleted", false)
@@ -90,7 +90,7 @@ export async function getAvailableCollaborators(organizationId: string, projectI
 
     // 2. Get user_ids already linked to this project
     const { data: existingAccess } = await supabase
-        .from("project_access")
+        .schema('iam').from("project_access")
         .select("user_id")
         .eq("project_id", projectId)
         .eq("is_deleted", false);

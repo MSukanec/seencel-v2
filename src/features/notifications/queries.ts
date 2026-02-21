@@ -26,7 +26,7 @@ export async function getUserNotifications(): Promise<{ notifications: UserNotif
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -35,7 +35,7 @@ export async function getUserNotifications(): Promise<{ notifications: UserNotif
 
     // Get user notifications with notification details
     const { data: userNotifications, error } = await supabase
-        .from('user_notifications')
+        .schema('notifications').from('user_notifications')
         .select(`
             id,
             user_id,
@@ -78,7 +78,7 @@ export async function getUnreadNotificationsCount(): Promise<number> {
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -86,7 +86,7 @@ export async function getUnreadNotificationsCount(): Promise<number> {
     if (!userData) return 0;
 
     const { count, error } = await supabase
-        .from('user_notifications')
+        .schema('notifications').from('user_notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userData.id)
         .is('read_at', null);

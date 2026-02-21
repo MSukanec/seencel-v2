@@ -24,7 +24,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
     try {
         // 1. Obtener datos del proyecto
         const { data: projectData, error: projectError } = await supabase
-            .from('project_data')
+            .schema('projects').from('project_data')
             .select('start_date, estimated_end')
             .eq('project_id', projectId)
             .single();
@@ -67,7 +67,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
         // 4. Obtener pagos de clientes (costo ejecutado)
         // Nota: Usamos 'amount' ya que functional_amount ya no existe en la tabla
         const { data: payments, error: paymentsError } = await supabase
-            .from('client_payments')
+            .schema('finance').from('client_payments')
             .select('amount')
             .eq('project_id', projectId)
             .eq('status', 'confirmed')

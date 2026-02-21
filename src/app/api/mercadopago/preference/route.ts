@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         // Get internal user (users.id) — NEVER use auth_id as FK (Rule 6)
         const { data: internalUser } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id, email, full_name')
             .eq('auth_id', user.id)
             .single();

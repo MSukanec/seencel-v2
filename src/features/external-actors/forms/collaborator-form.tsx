@@ -76,7 +76,7 @@ export function CollaboratorForm({
 
             // 2. Get user_ids already linked to this project
             const { data: existingAccess } = await supabase
-                .from("project_access")
+                .schema('iam').from("project_access")
                 .select("user_id")
                 .eq("project_id", projectId)
                 .eq("is_deleted", false);

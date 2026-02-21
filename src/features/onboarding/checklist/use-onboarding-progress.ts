@@ -40,14 +40,8 @@ export function useOnboardingProgress(): OnboardingProgressData {
             // NOT the auth.uid() from Supabase Auth
             // =========================================================================
             const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select(`
-                    id,
-                    user_preferences (
-                        last_organization_id,
-                        home_checklist
-                    )
-                `)
+                .schema('iam').from('users')
+                .select('id')
                 .eq('auth_id', authUser.id)
                 .maybeSingle();
 
@@ -64,14 +58,18 @@ export function useOnboardingProgress(): OnboardingProgressData {
             }
 
             const publicUserId = userData.id;
-            const pref = Array.isArray((userData as any).user_preferences)
-                ? (userData as any).user_preferences[0]
-                : (userData as any).user_preferences;
 
-            let organizationId = pref?.last_organization_id || null;
+            // Cross-schema: user_preferences está en iam
+            const { data: prefData } = await supabase
+                .schema('iam').from('user_preferences')
+                .select('last_organization_id, home_checklist')
+                .eq('user_id', publicUserId)
+                .maybeSingle();
+
+            let organizationId = prefData?.last_organization_id || null;
 
             // Check if dismissed from the JSON (backwards compatible)
-            const storedChecklist = pref?.home_checklist as OnboardingChecklist | null;
+            const storedChecklist = prefData?.home_checklist as OnboardingChecklist | null;
             const allStoredTrue = storedChecklist &&
                 storedChecklist.create_project === true &&
                 storedChecklist.create_contact === true &&
@@ -89,7 +87,7 @@ export function useOnboardingProgress(): OnboardingProgressData {
             // =========================================================================
             if (!organizationId) {
                 const { data: membership } = await supabase
-                    .from('organization_members')
+                    .schema('iam').from('organization_members')
                     .select('organization_id')
                     .eq('user_id', publicUserId) // Use PUBLIC user ID here
                     .limit(1)
@@ -110,17 +108,17 @@ export function useOnboardingProgress(): OnboardingProgressData {
             // =========================================================================
             const [projectsResult, contactsResult, movementsResult] = await Promise.all([
                 supabase
-                    .from('projects')
+                    .schema('projects').from('projects')
                     .select('id', { count: 'exact', head: true })
                     .eq('organization_id', organizationId),
 
                 supabase
-                    .from('contacts')
+                    .schema('projects').from('contacts')
                     .select('id', { count: 'exact', head: true })
                     .eq('organization_id', organizationId),
 
                 supabase
-                    .from('movements')
+                    .schema('finance').from('movements')
                     .select('id', { count: 'exact', head: true })
                     .eq('organization_id', organizationId),
             ]);

@@ -39,7 +39,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
 
     // Resolve public user ID from auth_id (organizations & members use users.id, not auth_id)
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -63,7 +63,7 @@ export default async function OrganizationSettingsPage({ searchParams }: PagePro
 
     // Fetch owner_id for the organization
     const { data: orgData } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('owner_id')
         .eq('id', orgId)
         .single();

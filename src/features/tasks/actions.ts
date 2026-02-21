@@ -1616,7 +1616,7 @@ export async function getRecipeExternalServices(
             .select("recipe_external_service_id, valid_from")
             .in("recipe_external_service_id", serviceIds),
         currencyIds.length > 0
-            ? supabase.from("currencies").select("id, symbol").in("id", currencyIds)
+            ? supabase.schema("finance").from("currencies").select("id, symbol").in("id", currencyIds)
             : Promise.resolve({ data: [] }),
         contactIds.length > 0
             ? supabase.from("contacts").select("id, full_name").in("id", contactIds)
@@ -1887,7 +1887,7 @@ export async function rateRecipe(data: TaskRecipeRatingFormData) {
 
     // Get user's internal ID
     const { data: userData } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", user.id)
         .single();
@@ -1934,7 +1934,7 @@ export async function adoptRecipe(taskId: string, recipeId: string) {
 
     // Upsert preference (one per org per task)
     const { error } = await supabase
-        .schema('catalog').from("organization_recipe_preferences")
+        .schema('iam').from("organization_recipe_preferences")
         .upsert(
             {
                 organization_id: activeOrgId,
@@ -1964,7 +1964,7 @@ export async function getAdoptedRecipe(taskId: string): Promise<string | null> {
     const { activeOrgId } = await getUserOrganizations();
 
     const { data, error } = await supabase
-        .schema('catalog').from("organization_recipe_preferences")
+        .schema('iam').from("organization_recipe_preferences")
         .select("recipe_id")
         .eq("organization_id", activeOrgId)
         .eq("task_id", taskId)

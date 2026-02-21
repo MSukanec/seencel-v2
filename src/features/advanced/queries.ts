@@ -10,7 +10,7 @@ export async function getIndexTypes(organizationId: string): Promise<EconomicInd
     const supabase = await createClient();
 
     const { data: indexTypes, error } = await supabase
-        .from('economic_index_types')
+        .schema('finance').from('economic_index_types')
         .select(`
             *,
             components:economic_index_components(*)
@@ -27,7 +27,7 @@ export async function getIndexTypes(organizationId: string): Promise<EconomicInd
     const enrichedTypes = await Promise.all(
         (indexTypes || []).map(async (indexType) => {
             const { data: values, count } = await supabase
-                .from('economic_index_values')
+                .schema('finance').from('economic_index_values')
                 .select('*', { count: 'exact' })
                 .eq('index_type_id', indexType.id)
                 .order('period_year', { ascending: false })
@@ -53,7 +53,7 @@ export async function getIndexType(indexTypeId: string): Promise<EconomicIndexTy
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_types')
+        .schema('finance').from('economic_index_types')
         .select(`
             *,
             components:economic_index_components(*)
@@ -79,7 +79,7 @@ export async function getIndexValues(indexTypeId: string): Promise<EconomicIndex
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .select('*')
         .eq('index_type_id', indexTypeId)
         .order('period_year', { ascending: false })
@@ -101,7 +101,7 @@ export async function getIndexComponents(indexTypeId: string): Promise<EconomicI
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_components')
+        .schema('finance').from('economic_index_components')
         .select('*')
         .eq('index_type_id', indexTypeId)
         .order('sort_order', { ascending: true });
@@ -125,7 +125,7 @@ export async function getIndexValueByPeriod(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .select('*')
         .eq('index_type_id', indexTypeId)
         .eq('period_year', year)
@@ -147,7 +147,7 @@ export async function getLatestIndexValue(indexTypeId: string): Promise<Economic
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .select('*')
         .eq('index_type_id', indexTypeId)
         .order('period_year', { ascending: false })
@@ -177,7 +177,7 @@ export async function getIndexHistory(
     const basePeriod = baseYear * 100 + baseMonth;
 
     const { data, error } = await supabase
-        .from('economic_index_values')
+        .schema('finance').from('economic_index_values')
         .select('*')
         .eq('index_type_id', indexTypeId)
         .or(`period_year.gt.${baseYear},and(period_year.eq.${baseYear},period_month.gte.${baseMonth})`)

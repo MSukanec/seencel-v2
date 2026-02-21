@@ -116,7 +116,7 @@ export async function getUserEnrollments(): Promise<Set<string>> {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -153,7 +153,7 @@ export async function getUserLessonMarkers(courseId: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -205,7 +205,7 @@ export async function getUserLessonProgress(courseId: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -254,7 +254,7 @@ export async function getLastViewedLesson(courseId: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -302,7 +302,7 @@ export async function markLessonCompleted(lessonId: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -345,7 +345,7 @@ export async function toggleLessonCompleted(lessonId: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -398,7 +398,7 @@ export async function updateLessonPosition(lessonId: string, positionSec: number
 
     // Get internal user ID 
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -439,7 +439,7 @@ export async function getUserLessonSummaries(courseId: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -508,7 +508,7 @@ export async function getUserLessonSummariesWithDetails(courseId: string): Promi
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -565,7 +565,7 @@ export async function saveLessonSummary(lessonId: string, body: string) {
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -628,7 +628,7 @@ export async function createLessonMarker(lessonId: string, body: string, timeSec
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -726,7 +726,7 @@ export async function getCourseOverviewData(courseId: string): Promise<CourseOve
 
     // Get internal user ID
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -782,7 +782,7 @@ export async function getLatestUserMarkersWithDetails(courseId: string, limit: n
     }
 
     const { data: internalUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();

@@ -11,7 +11,7 @@ export async function getOrganizationContacts(organizationId: string): Promise<C
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contacts_view')
+        .schema('projects').from('contacts_view')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false) // Filter out deleted contacts
@@ -29,7 +29,7 @@ export async function getContactsSummary(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contacts_summary_view')
+        .schema('projects').from('contacts_summary_view')
         .select('*')
         .eq('organization_id', organizationId)
         .single();
@@ -72,7 +72,7 @@ export async function createContact(organizationId: string, contact: Partial<Con
             // but UNIQUE constraint sees ALL rows including soft-deleted)
             const adminSupabase = createServiceClient();
             const { data: existingLinked } = await adminSupabase
-                .from('contacts')
+                .schema('projects').from('contacts')
                 .select('id')
                 .eq('organization_id', organizationId)
                 .eq('linked_user_id', seencelUser.userId)
@@ -97,7 +97,7 @@ export async function createContact(organizationId: string, contact: Partial<Con
 
     // 1. Create Contact
     const { data: newContact, error } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .insert(payload)
         .select()
         .single();
@@ -116,7 +116,7 @@ export async function createContact(organizationId: string, contact: Partial<Con
         }));
 
         const { error: linkError } = await supabase
-            .from('contact_category_links')
+            .schema('projects').from('contact_category_links')
             .insert(links);
 
         if (linkError) {
@@ -148,7 +148,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
     if (payload.email && !payload.linked_user_id) {
         // Fetch current contact to check if already linked
         const { data: currentContact } = await supabase
-            .from('contacts')
+            .schema('projects').from('contacts')
             .select('linked_user_id, organization_id')
             .eq('id', contactId)
             .single();
@@ -159,7 +159,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
                 // Use service client to bypass RLS (sees soft-deleted contacts too)
                 const adminSupabase = createServiceClient();
                 const { data: existingLinked } = await adminSupabase
-                    .from('contacts')
+                    .schema('projects').from('contacts')
                     .select('id')
                     .eq('organization_id', currentContact.organization_id)
                     .eq('linked_user_id', seencelUser.userId)
@@ -185,7 +185,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
 
     // 1. Update Details
     const { error } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .update(payload)
         .eq('id', contactId);
 
@@ -198,7 +198,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
     if (categoryIds) {
         // Remove existing links
         await supabase
-            .from('contact_category_links')
+            .schema('projects').from('contact_category_links')
             .delete()
             .eq('contact_id', contactId);
 
@@ -208,7 +208,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
             // Schema says organization_id is foreign key on links. 
             // We need to fetch the contact's org_id to be safe, or pass it. 
             // Let's fetch it quickly to ensure integrity.
-            const { data: contact } = await supabase.from('contacts').select('organization_id').eq('id', contactId).single();
+            const { data: contact } = await supabase.schema('projects').from('contacts').select('organization_id').eq('id', contactId).single();
 
             if (contact) {
                 // Deduplicate categoryIds to prevent unique constraint violations in the same batch
@@ -219,7 +219,7 @@ export async function updateContact(contactId: string, updates: Partial<Contact>
                     organization_id: contact.organization_id
                 }));
                 console.log("Inserting links:", links);
-                const { error: insertError } = await supabase.from('contact_category_links').insert(links);
+                const { error: insertError } = await supabase.schema('projects').from('contact_category_links').insert(links);
                 if (insertError) {
                     console.error("Error inserting links:", insertError);
                     throw new Error("Failed to link contact categories: " + insertError.message);
@@ -237,7 +237,7 @@ export async function deleteContact(contactId: string, replacementId?: string) {
 
     // Get organization_id for the contact (needed for merge RPC)
     const { data: contact } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .select('organization_id')
         .eq('id', contactId)
         .single();
@@ -271,7 +271,7 @@ export async function deleteContact(contactId: string, replacementId?: string) {
 
     // 2. Simple soft delete (trigger validates no active references)
     const { error } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -292,7 +292,7 @@ export async function getContactCategories(organizationId: string): Promise<Cont
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contact_categories')
+        .schema('projects').from('contact_categories')
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
@@ -319,7 +319,7 @@ export async function createContactCategory(organizationId: string, name: string
 
     // 2. Get Public User ID
     const { data: userData, error: userError } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -331,7 +331,7 @@ export async function createContactCategory(organizationId: string, name: string
 
     // 3. Get Organization Member ID
     const { data: memberData, error: memberError } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
@@ -343,7 +343,7 @@ export async function createContactCategory(organizationId: string, name: string
     }
 
     const { data, error } = await supabase
-        .from('contact_categories')
+        .schema('projects').from('contact_categories')
         .insert({
             organization_id: organizationId,
             name,
@@ -366,7 +366,7 @@ export async function updateContactCategory(id: string, name: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('contact_categories')
+        .schema('projects').from('contact_categories')
         .update({ name })
         .eq('id', id);
 
@@ -385,7 +385,7 @@ export async function deleteContactCategory(id: string, replacementId?: string) 
     if (replacementId) {
         // Find links with the old category
         const { data: linksToMigrate } = await supabase
-            .from('contact_category_links')
+            .schema('projects').from('contact_category_links')
             .select('*')
             .eq('contact_category_id', id);
 
@@ -401,7 +401,7 @@ export async function deleteContactCategory(id: string, replacementId?: string) 
             }));
 
             const { error: moveError } = await supabase
-                .from('contact_category_links')
+                .schema('projects').from('contact_category_links')
                 .upsert(newLinks, { onConflict: 'contact_id, contact_category_id', ignoreDuplicates: true });
 
             if (moveError) {
@@ -414,7 +414,7 @@ export async function deleteContactCategory(id: string, replacementId?: string) 
 
     // 2. Soft Delete
     const { error } = await supabase
-        .from('contact_categories')
+        .schema('projects').from('contact_categories')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -464,7 +464,7 @@ export async function getContactsByCategories(organizationId: string, categories
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .select(`
             *,
             contact_category_links!inner (
@@ -514,7 +514,7 @@ export async function checkSeencelUser(email: string): Promise<{
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select(`
             id,
             full_name,

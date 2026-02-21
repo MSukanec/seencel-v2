@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] Tables (chunk 1: construction.construction_dependencies — construction.quotes)
+## [CONSTRUCTION] Tables (chunk 1: construction.construction_dependencies — construction.site_logs)
 
 ### `construction.construction_dependencies`
 
@@ -92,7 +92,7 @@
 | description | text | ✓ |  |  |
 | cost_scope | cost_scope_enum | ✗ | 'materials_and_labor'::cost_scope_enum |  |
 | updated_by | uuid | ✓ |  |  |
-| quote_item_id | uuid | ✓ |  | FK → quote_items.id |
+| quote_item_id | uuid | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
 | status | text | ✗ | 'pending'::text |  |
@@ -104,58 +104,43 @@
 | actual_end_date | date | ✓ |  |  |
 | recipe_id | uuid | ✓ |  |  |
 
-### `construction.quote_items`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| quote_id | uuid | ✗ |  | FK → quotes.id |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| task_id | uuid | ✓ |  |  |
-| organization_id | uuid | ✗ |  |  |
-| project_id | uuid | ✓ |  |  |
-| description | text | ✓ |  |  |
-| quantity | numeric | ✗ | 1 |  |
-| unit_price | numeric | ✗ | 0 |  |
-| currency_id | uuid | ✗ |  |  |
-| markup_pct | numeric | ✗ | 0 |  |
-| tax_pct | numeric | ✗ | 0 |  |
-| created_by | uuid | ✓ |  |  |
-| cost_scope | cost_scope_enum | ✗ | 'materials_and_labor'::cost_scope_enum |  |
-| sort_key | numeric | ✗ | 0 |  |
-| updated_by | uuid | ✓ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `construction.quotes`
+### `construction.site_log_types`
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  | UNIQUE |
+| name | text | ✗ |  |  |
 | description | text | ✓ |  |  |
-| project_id | uuid | ✓ |  | UNIQUE |
-| organization_id | uuid | ✗ |  |  |
-| status | text | ✗ | 'draft'::text |  |
+| is_system | bool | ✗ | false |  |
 | created_at | timestamptz | ✓ | now() |  |
+| organization_id | uuid | ✓ |  |  |
 | updated_at | timestamptz | ✓ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 | created_by | uuid | ✓ |  |  |
-| version | int4 | ✗ | 1 | UNIQUE |
-| currency_id | uuid | ✗ |  |  |
-| exchange_rate | numeric | ✓ |  |  |
-| tax_pct | numeric | ✗ | 0 |  |
-| tax_label | text | ✓ | '''IVA''::text'::text |  |
-| discount_pct | numeric | ✗ | 0 |  |
-| client_id | uuid | ✓ |  |  |
-| quote_type | text | ✗ | 'quote'::text |  |
-| valid_until | date | ✓ |  |  |
-| approved_at | timestamptz | ✓ |  |  |
-| approved_by | uuid | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+
+### `construction.site_logs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✗ |  |  |
+| created_by | uuid | ✓ |  |  |
+| log_date | date | ✗ |  |  |
+| comments | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| is_public | bool | ✓ | false |  |
+| status | site_log_status | ✓ | 'approved'::site_log_status |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_favorite | bool | ✓ | false |  |
+| weather | weather_enum | ✓ | 'none'::weather_enum |  |
+| organization_id | uuid | ✗ |  |  |
+| entry_type_id | uuid | ✓ |  | FK → site_log_types.id |
+| severity | site_log_severity | ✓ | 'low'::site_log_severity |  |
+| ai_summary | text | ✓ |  |  |
+| ai_tags | _text | ✓ |  |  |
+| ai_analyzed | bool | ✗ | false |  |
 | updated_by | uuid | ✓ |  |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
-| quote_date | date | ✓ |  |  |
-| parent_quote_id | uuid | ✓ |  | FK → quotes.id |
-| original_contract_value | numeric | ✓ |  |  |
-| change_order_number | int4 | ✓ |  |  |

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] Indexes (32, excluding PKs)
+## [CONSTRUCTION] Indexes (35, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -24,18 +24,21 @@
 | construction_tasks | idx_construction_tasks_quote_item_id | `CREATE INDEX idx_construction_tasks_quote_item_id ON construction.constructio...` |
 | construction_tasks | idx_construction_tasks_recipe_id | `CREATE INDEX idx_construction_tasks_recipe_id ON construction.construction_ta...` |
 | construction_tasks | idx_construction_tasks_status | `CREATE INDEX idx_construction_tasks_status ON construction.construction_tasks...` |
-| quote_items | idx_quote_items_not_deleted | `CREATE INDEX idx_quote_items_not_deleted ON construction.quote_items USING bt...` |
-| quote_items | idx_quote_items_sort | `CREATE INDEX idx_quote_items_sort ON construction.quote_items USING btree (qu...` |
-| quote_items | idx_quote_items_updated_by | `CREATE INDEX idx_quote_items_updated_by ON construction.quote_items USING btr...` |
-| quote_items | quote_items_id_key | `CREATE UNIQUE INDEX quote_items_id_key ON construction.quote_items USING btre...` |
-| quotes | idx_quotes_client | `CREATE INDEX idx_quotes_client ON construction.quotes USING btree (client_id)` |
-| quotes | idx_quotes_created | `CREATE INDEX idx_quotes_created ON construction.quotes USING btree (created_by)` |
-| quotes | idx_quotes_not_deleted | `CREATE INDEX idx_quotes_not_deleted ON construction.quotes USING btree (is_de...` |
-| quotes | idx_quotes_org | `CREATE INDEX idx_quotes_org ON construction.quotes USING btree (organization_id)` |
-| quotes | idx_quotes_org_active | `CREATE INDEX idx_quotes_org_active ON construction.quotes USING btree (organi...` |
-| quotes | idx_quotes_parent_quote | `CREATE INDEX idx_quotes_parent_quote ON construction.quotes USING btree (pare...` |
-| quotes | idx_quotes_project | `CREATE INDEX idx_quotes_project ON construction.quotes USING btree (project_id)` |
-| quotes | idx_quotes_status | `CREATE INDEX idx_quotes_status ON construction.quotes USING btree (status)` |
-| quotes | idx_quotes_type | `CREATE INDEX idx_quotes_type ON construction.quotes USING btree (quote_type)` |
-| quotes | idx_quotes_updated_by | `CREATE INDEX idx_quotes_updated_by ON construction.quotes USING btree (update...` |
-| quotes | ux_quotes_project_name_version | `CREATE UNIQUE INDEX ux_quotes_project_name_version ON construction.quotes USI...` |
+| site_log_types | site_log_types_not_deleted_idx | `CREATE INDEX site_log_types_not_deleted_idx ON construction.site_log_types US...` |
+| site_log_types | site_log_types_org_idx | `CREATE INDEX site_log_types_org_idx ON construction.site_log_types USING btre...` |
+| site_log_types | site_log_types_org_name_uniq | `CREATE UNIQUE INDEX site_log_types_org_name_uniq ON construction.site_log_typ...` |
+| site_log_types | site_log_types_org_not_deleted_idx | `CREATE INDEX site_log_types_org_not_deleted_idx ON construction.site_log_type...` |
+| site_log_types | site_log_types_system_idx | `CREATE INDEX site_log_types_system_idx ON construction.site_log_types USING b...` |
+| site_log_types | site_log_types_system_name_uniq | `CREATE UNIQUE INDEX site_log_types_system_name_uniq ON construction.site_log_...` |
+| site_logs | site_logs_ai_analyzed_idx | `CREATE INDEX site_logs_ai_analyzed_idx ON construction.site_logs USING btree ...` |
+| site_logs | site_logs_ai_full_idx | `CREATE INDEX site_logs_ai_full_idx ON construction.site_logs USING btree (org...` |
+| site_logs | site_logs_created_by_idx | `CREATE INDEX site_logs_created_by_idx ON construction.site_logs USING btree (...` |
+| site_logs | site_logs_date_idx | `CREATE INDEX site_logs_date_idx ON construction.site_logs USING btree (log_da...` |
+| site_logs | site_logs_favorite_idx | `CREATE INDEX site_logs_favorite_idx ON construction.site_logs USING btree (is...` |
+| site_logs | site_logs_not_deleted_date_idx | `CREATE INDEX site_logs_not_deleted_date_idx ON construction.site_logs USING b...` |
+| site_logs | site_logs_not_deleted_pub_idx | `CREATE INDEX site_logs_not_deleted_pub_idx ON construction.site_logs USING bt...` |
+| site_logs | site_logs_org_idx | `CREATE INDEX site_logs_org_idx ON construction.site_logs USING btree (organiz...` |
+| site_logs | site_logs_org_project_date_idx | `CREATE INDEX site_logs_org_project_date_idx ON construction.site_logs USING b...` |
+| site_logs | site_logs_project_idx | `CREATE INDEX site_logs_project_idx ON construction.site_logs USING btree (pro...` |
+| site_logs | site_logs_public_idx | `CREATE INDEX site_logs_public_idx ON construction.site_logs USING btree (is_p...` |
+| site_logs | site_logs_status_idx | `CREATE INDEX site_logs_status_idx ON construction.site_logs USING btree (status)` |

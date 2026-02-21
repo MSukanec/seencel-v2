@@ -54,7 +54,7 @@ export async function createSubcontractPaymentAction(input: z.infer<typeof creat
 
     if (!currencyCode) {
         const { data: pubCurrency } = await supabase
-            .from('currencies')
+            .schema('finance').from('currencies')
             .select('code')
             .eq('id', payload.currency_id)
             .single();
@@ -63,7 +63,7 @@ export async function createSubcontractPaymentAction(input: z.infer<typeof creat
             currencyCode = pubCurrency.code;
         } else {
             const { data: viewCurrency } = await supabase
-                .from('organization_currencies_view')
+                .schema('finance').from('organization_currencies_view')
                 .select('currency_code')
                 .eq('organization_id', payload.organization_id)
                 .eq('currency_id', payload.currency_id)
@@ -84,7 +84,7 @@ export async function createSubcontractPaymentAction(input: z.infer<typeof creat
         : payload.amount;
 
     const { data, error } = await supabase
-        .from('subcontract_payments')
+        .schema('finance').from('subcontract_payments')
         .insert({
             project_id: payload.project_id,
             organization_id: payload.organization_id,
@@ -191,7 +191,7 @@ export async function updateSubcontractPaymentAction(input: z.infer<typeof updat
 
     // 1. Fetch current
     const { data: currentPayment, error: fetchError } = await supabase
-        .from('subcontract_payments')
+        .schema('finance').from('subcontract_payments')
         .select('organization_id, currency_id, amount, exchange_rate')
         .eq('id', paymentId)
         .single();
@@ -202,10 +202,10 @@ export async function updateSubcontractPaymentAction(input: z.infer<typeof updat
     let currencyCode = currencyCodeToCheck;
     if (!currencyCode) {
         const currencyId = payload.currency_id ?? currentPayment.currency_id;
-        const { data: pub } = await supabase.from('currencies').select('code').eq('id', currencyId).single();
+        const { data: pub } = await supabase.schema('finance').from('currencies').select('code').eq('id', currencyId).single();
         if (pub) currencyCode = pub.code;
         else {
-            const { data: view } = await supabase.from('organization_currencies_view')
+            const { data: view } = await supabase.schema('finance').from('organization_currencies_view')
                 .select('currency_code')
                 .eq('organization_id', currentPayment.organization_id)
                 .eq('currency_id', currencyId).single();
@@ -222,7 +222,7 @@ export async function updateSubcontractPaymentAction(input: z.infer<typeof updat
     const functional_amount = isUSD ? newAmount * newRate : newAmount;
 
     const { data, error } = await supabase
-        .from('subcontract_payments')
+        .schema('finance').from('subcontract_payments')
         .update({
             amount: payload.amount,
             currency_id: payload.currency_id,
@@ -253,7 +253,7 @@ export async function deleteSubcontractPaymentAction(paymentId: string) {
 
     // Soft Delete Implementation
     const { error } = await supabase
-        .from('subcontract_payments')
+        .schema('finance').from('subcontract_payments')
         .update({ is_deleted: true })
         .eq('id', paymentId);
 
@@ -272,7 +272,7 @@ export async function bulkDeleteSubcontractPaymentsAction(paymentIds: string[], 
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('subcontract_payments')
+        .schema('finance').from('subcontract_payments')
         .update({ is_deleted: true })
         .in('id', paymentIds);
 
@@ -311,7 +311,7 @@ export async function createQuickSubcontractAction(organizationId: string, proje
     const { data: { user } } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
-        .from('subcontracts')
+        .schema('finance').from('subcontracts')
         .insert({
             organization_id: organizationId,
             project_id: projectId,
@@ -347,7 +347,7 @@ export async function createSubcontractAction(input: z.infer<typeof createSubcon
     const { data: { user } } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
-        .from('subcontracts')
+        .schema('finance').from('subcontracts')
         .insert({
             ...input,
             created_by: user?.id,
@@ -373,7 +373,7 @@ export async function updateSubcontractAction(input: z.infer<typeof updateSubcon
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('subcontracts')
+        .schema('finance').from('subcontracts')
         .update({
             title: input.title,
             contact_id: input.contact_id,
@@ -407,7 +407,7 @@ export async function deleteSubcontractAction(subcontractId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('subcontracts')
+        .schema('finance').from('subcontracts')
         .update({ is_deleted: true })
         .eq('id', subcontractId);
 

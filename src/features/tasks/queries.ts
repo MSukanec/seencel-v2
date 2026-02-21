@@ -585,7 +585,7 @@ export async function getTaskUsageCounts(organizationId: string): Promise<Map<st
     // Count quote_items per task_id (scoped by organization via quotes)
     const [quoteResult, constructionResult] = await Promise.all([
         supabase
-            .schema('construction').from('quote_items')
+            .schema('finance').from('quote_items')
             .select('task_id, quotes!inner(organization_id)', { count: 'exact' })
             .eq('quotes.organization_id', organizationId)
             .eq('is_deleted', false)

@@ -40,7 +40,7 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     // Get internal user ID
     const { data: userData, error: userError } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", user.id)
         .single();
@@ -140,7 +140,7 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
             // Seat purchase → register additional seats
             // Get the current plan_id of the org
             const { data: orgData } = await supabase
-                .from("organizations")
+                .schema('iam').from("organizations")
                 .select("plan_id")
                 .eq("id", input.organizationId)
                 .single();

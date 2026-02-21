@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Indexes (78, excluding PKs)
+## [CATALOG] Indexes (79, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -69,6 +69,7 @@
 | tasks | idx_tasks_construction_system_id | `CREATE INDEX idx_tasks_construction_system_id ON catalog.tasks USING btree (t...` |
 | tasks | idx_tasks_import_batch_id | `CREATE INDEX idx_tasks_import_batch_id ON catalog.tasks USING btree (import_b...` |
 | tasks | idx_tasks_template_id | `CREATE INDEX idx_tasks_template_id ON catalog.tasks USING btree (template_id)...` |
+| tasks | idx_tasks_unique_system_code | `CREATE UNIQUE INDEX idx_tasks_unique_system_code ON catalog.tasks USING btree...` |
 | tasks | tasks_active_idx | `CREATE INDEX tasks_active_idx ON catalog.tasks USING btree (organization_id, ...` |
 | tasks | tasks_code_lower_uniq | `CREATE UNIQUE INDEX tasks_code_lower_uniq ON catalog.tasks USING btree (organ...` |
 | tasks | tasks_custom_name_org_uniq | `CREATE UNIQUE INDEX tasks_custom_name_org_uniq ON catalog.tasks USING btree (...` |

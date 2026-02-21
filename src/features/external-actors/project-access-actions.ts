@@ -102,7 +102,7 @@ export async function linkCollaboratorToProjectAction(input: {
 
     // Create project access
     const { data, error } = await supabase
-        .from("project_access")
+        .schema('iam').from("project_access")
         .insert({
             project_id: input.project_id,
             organization_id: input.organization_id,
@@ -161,7 +161,7 @@ export async function unlinkCollaboratorFromProjectAction(accessId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("project_access")
+        .schema('iam').from("project_access")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -185,7 +185,7 @@ export async function deactivateCollaboratorAccessAction(accessId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("project_access")
+        .schema('iam').from("project_access")
         .update({ is_active: false })
         .eq("id", accessId);
 
@@ -205,7 +205,7 @@ export async function reactivateCollaboratorAccessAction(accessId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("project_access")
+        .schema('iam').from("project_access")
         .update({ is_active: true })
         .eq("id", accessId);
 

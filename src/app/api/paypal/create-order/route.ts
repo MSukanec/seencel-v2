@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
         // Get internal user_id (users.id) from auth_id (same pattern as MercadoPago)
         const { data: internalUser } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id')
             .eq('auth_id', user.id)
             .single();

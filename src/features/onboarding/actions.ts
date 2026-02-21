@@ -22,7 +22,7 @@ export async function getOnboardingProgress() {
 
     // Get user preferences
     const { data: prefs } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .select('last_organization_id, checklist_dismissed')
         .eq('user_id', user.id)
         .single();
@@ -50,19 +50,19 @@ export async function getOnboardingProgress() {
     // =========================================================================
     const [projectsResult, contactsResult, movementsResult] = await Promise.all([
         supabase
-            .from('projects')
+            .schema('projects').from('projects')
             .select('id', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
             .limit(1),
 
         supabase
-            .from('contacts')
+            .schema('projects').from('contacts')
             .select('id', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
             .limit(1),
 
         supabase
-            .from('movements')
+            .schema('finance').from('movements')
             .select('id', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
             .limit(1),
@@ -95,7 +95,7 @@ export async function dismissOnboardingChecklist() {
     if (!user) return { success: false };
 
     const { error } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .update({ checklist_dismissed: true })
         .eq('user_id', user.id);
 

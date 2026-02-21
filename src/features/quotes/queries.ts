@@ -78,7 +78,7 @@ export async function getQuoteItems(quoteId: string) {
 
     // Query 1: quote_items desde construction schema (sin joins cross-schema)
     const { data: items, error } = await supabase
-        .schema("construction").from("quote_items")
+        .schema("finance").from("quote_items")
         .select("*")
         .eq("quote_id", quoteId)
         .eq("is_deleted", false)
@@ -201,7 +201,7 @@ export async function getNextChangeOrderNumber(contractId: string): Promise<numb
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema("construction").from("quotes")
+        .schema("finance").from("quotes")
         .select("change_order_number")
         .eq("parent_quote_id", contractId)
         .eq("quote_type", "change_order")

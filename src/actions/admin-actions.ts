@@ -18,7 +18,7 @@ export async function getAllActivityLogs(limit: number = 200): Promise<AdminActi
 
     // First, get all logs from the view
     const { data: logs, error: logsError } = await supabase
-        .from('organization_activity_logs_view')
+        .schema('audit').from('organization_activity_logs_view')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -33,7 +33,7 @@ export async function getAllActivityLogs(limit: number = 200): Promise<AdminActi
     // Get unique org IDs and fetch org info
     const orgIds = [...new Set(logs.map(l => l.organization_id))];
     const { data: orgs } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('id, name, logo_url')
         .in('id', orgIds);
 

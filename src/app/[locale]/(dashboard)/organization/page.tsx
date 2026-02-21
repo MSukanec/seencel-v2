@@ -66,7 +66,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
         // Phase 2: Widget data prefetch (parallel, fault-tolerant)
         const [orgResult, planFeatures, savedLayout, ...widgetResults] = await Promise.all([
             // Phase 1
-            orgId ? supabase.from("organizations").select("name").eq("id", orgId).single() : null,
+            orgId ? supabase.schema('iam').from("organizations").select("name").eq("id", orgId).single() : null,
             orgId ? getOrganizationPlanFeatures(orgId) : null,
             getDashboardLayout('org_dashboard'),
             // Phase 2 — Widget prefetch (allSettled semantics via .catch)

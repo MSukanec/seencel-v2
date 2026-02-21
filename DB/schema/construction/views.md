@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] Views (3)
+## [CONSTRUCTION] Views (4)
 
 ### `construction.construction_tasks_view`
 
@@ -59,8 +59,8 @@ SELECT ct.id,
      LEFT JOIN catalog.tasks t ON ((t.id = ct.task_id)))
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)))
      LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
-     LEFT JOIN construction.quote_items qi ON ((qi.id = ct.quote_item_id)))
-     LEFT JOIN construction.quotes q ON ((q.id = qi.quote_id)))
+     LEFT JOIN finance.quote_items qi ON ((qi.id = ct.quote_item_id)))
+     LEFT JOIN finance.quotes q ON ((q.id = qi.quote_id)))
      LEFT JOIN catalog.task_recipes tr ON ((tr.id = ct.recipe_id)))
      LEFT JOIN LATERAL ( SELECT cp.name AS phase_name
            FROM (construction.construction_phase_tasks cpt
@@ -91,18 +91,40 @@ SELECT c.id,
     COALESCE(co_stats.pending_changes_value, (0)::numeric) AS pending_changes_value,
     (COALESCE(c.original_contract_value, (0)::numeric) + COALESCE(co_stats.approved_changes_value, (0)::numeric)) AS revised_contract_value,
     ((COALESCE(c.original_contract_value, (0)::numeric) + COALESCE(co_stats.approved_changes_value, (0)::numeric)) + COALESCE(co_stats.pending_changes_value, (0)::numeric)) AS potential_contract_value
-   FROM (construction.quotes c
+   FROM (finance.quotes c
      LEFT JOIN ( SELECT co.parent_quote_id,
             count(*) AS total_cos,
             count(*) FILTER (WHERE (co.status = 'approved'::text)) AS approved_cos,
             count(*) FILTER (WHERE (co.status = ANY (ARRAY['draft'::text, 'sent'::text]))) AS pending_cos,
             COALESCE(sum(qv.total_with_tax) FILTER (WHERE (co.status = 'approved'::text)), (0)::numeric) AS approved_changes_value,
             COALESCE(sum(qv.total_with_tax) FILTER (WHERE (co.status = ANY (ARRAY['draft'::text, 'sent'::text]))), (0)::numeric) AS pending_changes_value
-           FROM (construction.quotes co
+           FROM (finance.quotes co
              JOIN construction.quotes_view qv ON ((qv.id = co.id)))
           WHERE ((co.quote_type = 'change_order'::text) AND (co.is_deleted = false))
           GROUP BY co.parent_quote_id) co_stats ON ((co_stats.parent_quote_id = c.id)))
   WHERE ((c.quote_type = 'contract'::text) AND (c.is_deleted = false));
+```
+
+### `construction.project_material_requirements_view`
+
+```sql
+SELECT ctms.project_id,
+    ctms.organization_id,
+    ctms.material_id,
+    m.name AS material_name,
+    u.name AS unit_name,
+    m.category_id,
+    mc.name AS category_name,
+    (sum(ctms.quantity_planned))::numeric(20,4) AS total_required,
+    count(DISTINCT ctms.construction_task_id) AS task_count,
+    array_agg(DISTINCT ctms.construction_task_id) AS construction_task_ids
+   FROM ((((construction.construction_task_material_snapshots ctms
+     JOIN construction.construction_tasks ct ON ((ct.id = ctms.construction_task_id)))
+     JOIN catalog.materials m ON ((m.id = ctms.material_id)))
+     LEFT JOIN catalog.units u ON ((u.id = m.unit_id)))
+     LEFT JOIN catalog.material_categories mc ON ((mc.id = m.category_id)))
+  WHERE ((ct.is_deleted = false) AND (ct.status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'paused'::text])))
+  GROUP BY ctms.project_id, ctms.organization_id, ctms.material_id, m.name, u.name, m.category_id, mc.name;
 ```
 
 ### `construction.quotes_view`
@@ -145,16 +167,16 @@ SELECT q.id,
     COALESCE(stats.subtotal_with_markup, (0)::numeric) AS subtotal_with_markup,
     round((COALESCE(stats.subtotal_with_markup, (0)::numeric) * ((1)::numeric - (COALESCE(q.discount_pct, (0)::numeric) / 100.0))), 2) AS total_after_discount,
     round(((COALESCE(stats.subtotal_with_markup, (0)::numeric) * ((1)::numeric - (COALESCE(q.discount_pct, (0)::numeric) / 100.0))) * ((1)::numeric + (COALESCE(q.tax_pct, (0)::numeric) / 100.0))), 2) AS total_with_tax
-   FROM (((((construction.quotes q
-     LEFT JOIN currencies c ON ((q.currency_id = c.id)))
-     LEFT JOIN projects p ON ((q.project_id = p.id)))
-     LEFT JOIN contacts cl ON ((q.client_id = cl.id)))
-     LEFT JOIN construction.quotes parent ON ((q.parent_quote_id = parent.id)))
+   FROM (((((finance.quotes q
+     LEFT JOIN finance.currencies c ON ((q.currency_id = c.id)))
+     LEFT JOIN projects.projects p ON ((q.project_id = p.id)))
+     LEFT JOIN projects.contacts cl ON ((q.client_id = cl.id)))
+     LEFT JOIN finance.quotes parent ON ((q.parent_quote_id = parent.id)))
      LEFT JOIN ( SELECT qi.quote_id,
             count(*) AS item_count,
             sum((qi.quantity * qi.unit_price)) AS subtotal,
             sum(((qi.quantity * qi.unit_price) * ((1)::numeric + (COALESCE(qi.markup_pct, (0)::numeric) / 100.0)))) AS subtotal_with_markup
-           FROM construction.quote_items qi
+           FROM finance.quote_items qi
           WHERE (qi.is_deleted = false)
           GROUP BY qi.quote_id) stats ON ((q.id = stats.quote_id)))
   WHERE (q.is_deleted = false);

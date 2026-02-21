@@ -29,7 +29,7 @@ export async function getBillingProfile(): Promise<{ profile: BillingProfile | n
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -61,7 +61,7 @@ export async function getCurrencies() {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('currencies')
+        .schema('finance').from('currencies')
         .select('*')
         .order('code', { ascending: true });
 
@@ -110,7 +110,7 @@ export async function getUserCountryCode(): Promise<string | null> {
 
     // Get user's country from user_data -> countries
     const { data } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select(`
             user_data!inner (
                 countries:country (

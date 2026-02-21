@@ -34,7 +34,7 @@ export async function sendInvitationAction(
     }
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, full_name, email')
         .eq('auth_id', authUser.id)
         .single();
@@ -45,7 +45,7 @@ export async function sendInvitationAction(
 
     // 2. Verify caller is admin member (using full view like updateMemberRoleAction)
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
@@ -75,7 +75,7 @@ export async function sendInvitationAction(
     const normalizedEmail = email.toLowerCase().trim();
 
     const { data: existingMember } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id, users!inner(email)')
         .eq('organization_id', organizationId)
         .eq('is_active', true)
@@ -101,14 +101,14 @@ export async function sendInvitationAction(
 
     // 6. Get organization name for the email
     const { data: org } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('name')
         .eq('id', organizationId)
         .single();
 
     // 7. Get role and validate it's not a system role
     const { data: role } = await supabase
-        .from('roles')
+        .schema('iam').from('roles')
         .select('name, is_system, type')
         .eq('id', roleId)
         .single();
@@ -248,7 +248,7 @@ export async function revokeInvitationAction(
     if (!authUser) return { success: false, error: "No autenticado" };
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -256,7 +256,7 @@ export async function revokeInvitationAction(
 
     // Verify caller is admin
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
@@ -297,7 +297,7 @@ export async function resendInvitationAction(
     if (!authUser) return { success: false, error: "No autenticado" };
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, full_name, email')
         .eq('auth_id', authUser.id)
         .single();
@@ -305,7 +305,7 @@ export async function resendInvitationAction(
 
     // Verify caller is admin
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
@@ -332,7 +332,7 @@ export async function resendInvitationAction(
 
     // Get org name for email
     const { data: org } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('name')
         .eq('id', organizationId)
         .single();
@@ -403,7 +403,7 @@ export async function acceptInvitationAction(
 
     // 2. Get public user_id
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -528,12 +528,12 @@ export async function acceptInvitationAction(
     // 5. Switch active org to the invited one BEFORE revalidating
     if (res.organization_id) {
         await supabase
-            .from('user_preferences')
+            .schema('iam').from('user_preferences')
             .update({ last_organization_id: res.organization_id })
             .eq('user_id', publicUser.id);
 
         await supabase
-            .from('user_organization_preferences')
+            .schema('iam').from('user_organization_preferences')
             .upsert({
                 user_id: publicUser.id,
                 organization_id: res.organization_id,
@@ -572,7 +572,7 @@ export async function seedPermissions(organizationId: string) {
         { key: 'org.manage', description: 'Gestionar Organización', category: 'Organización' },
     ];
 
-    const { error } = await supabase.from('permissions').upsert(defaultPermissions, { onConflict: 'key' });
+    const { error } = await supabase.schema('iam').from('permissions').upsert(defaultPermissions, { onConflict: 'key' });
 
     if (error) {
         console.error('Error seeding permissions:', error);
@@ -594,7 +594,7 @@ export async function toggleRolePermission(
 
     // Verify role belongs to org and is not Administrador
     const { data: role } = await supabase
-        .from('roles')
+        .schema('iam').from('roles')
         .select('id, name, organization_id')
         .eq('id', roleId)
         .eq('organization_id', organizationId)
@@ -610,7 +610,7 @@ export async function toggleRolePermission(
 
     if (enabled) {
         const { error } = await supabase
-            .from('role_permissions')
+            .schema('iam').from('role_permissions')
             .insert({
                 role_id: roleId,
                 permission_id: permissionId,
@@ -623,7 +623,7 @@ export async function toggleRolePermission(
         }
     } else {
         const { error } = await supabase
-            .from('role_permissions')
+            .schema('iam').from('role_permissions')
             .delete()
             .eq('role_id', roleId)
             .eq('permission_id', permissionId);
@@ -657,7 +657,7 @@ export async function updateMemberRoleAction(
 
     // Resolve public user ID from auth ID
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -666,7 +666,7 @@ export async function updateMemberRoleAction(
 
     // Check current user is admin
     const { data: currentMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id')
         .eq('organization_id', organizationId)
         .eq('user_id', publicUser.id)
@@ -680,7 +680,7 @@ export async function updateMemberRoleAction(
 
     // Get target member
     const { data: targetMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id, user_full_name')
         .eq('id', memberId)
         .eq('organization_id', organizationId)
@@ -693,7 +693,7 @@ export async function updateMemberRoleAction(
 
     // Check if current user is the org owner
     const { data: orgData } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('owner_id')
         .eq('id', organizationId)
         .single();
@@ -718,7 +718,7 @@ export async function updateMemberRoleAction(
 
     // Update the role
     const { error } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .update({ role_id: newRoleId })
         .eq('id', memberId)
         .eq('organization_id', organizationId);
@@ -748,7 +748,7 @@ export async function removeMemberAction(
 
     // Resolve public user ID from auth ID
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -756,7 +756,7 @@ export async function removeMemberAction(
     if (!publicUser) throw new Error("Usuario no encontrado");
 
     const { data: currentMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id')
         .eq('organization_id', organizationId)
         .eq('user_id', publicUser.id)
@@ -770,7 +770,7 @@ export async function removeMemberAction(
     }
 
     const { data: targetMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id, user_full_name')
         .eq('id', memberId)
         .eq('organization_id', organizationId)
@@ -787,7 +787,7 @@ export async function removeMemberAction(
 
     // Check if current user is the org owner
     const { data: orgData } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('owner_id')
         .eq('id', organizationId)
         .single();
@@ -806,7 +806,7 @@ export async function removeMemberAction(
     }
 
     const { error } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .update({ is_active: false })
         .eq('id', memberId)
         .eq('organization_id', organizationId);
@@ -867,7 +867,7 @@ export async function purchaseMemberSeats(
     }
 
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -932,7 +932,7 @@ export async function addExternalCollaboratorAction(
     }
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, full_name, email')
         .eq('auth_id', authUser.id)
         .single();
@@ -943,7 +943,7 @@ export async function addExternalCollaboratorAction(
 
     // 2. Verify caller is admin
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
@@ -964,7 +964,7 @@ export async function addExternalCollaboratorAction(
 
     // 4. Check if already an active member  
     const { data: existingMember } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id, users!inner(email)')
         .eq('organization_id', organizationId)
         .eq('is_active', true)
@@ -990,7 +990,7 @@ export async function addExternalCollaboratorAction(
 
     // 6. Check if user exists in Seencel (for notification purposes)
     const { data: existingUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, full_name, email')
         .eq('email', normalizedEmail)
         .maybeSingle();
@@ -998,7 +998,7 @@ export async function addExternalCollaboratorAction(
     // 6b. If user exists, check if already an active external actor
     if (existingUser) {
         const { data: existingActor } = await supabase
-            .from('organization_external_actors')
+            .schema('iam').from('organization_external_actors')
             .select('id, is_active')
             .eq('organization_id', organizationId)
             .eq('user_id', existingUser.id)
@@ -1011,7 +1011,7 @@ export async function addExternalCollaboratorAction(
 
     // Get org name for emails/toasts
     const { data: org } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('name')
         .eq('id', organizationId)
         .single();
@@ -1072,7 +1072,7 @@ export async function addExternalCollaboratorAction(
     if (existingUser) {
         try {
             const { data: notif } = await supabase
-                .from('notifications')
+                .schema('notifications').from('notifications')
                 .insert({
                     type: 'invitation',
                     title: `Te invitaron a ${orgName}`,
@@ -1088,7 +1088,7 @@ export async function addExternalCollaboratorAction(
 
             if (notif) {
                 await supabase
-                    .from('user_notifications')
+                    .schema('notifications').from('user_notifications')
                     .insert({
                         user_id: existingUser.id,
                         notification_id: notif.id,
@@ -1129,7 +1129,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
     }
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, full_name, email')
         .eq('auth_id', authUser.id)
         .single();
@@ -1140,7 +1140,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
 
     // 2. Verify caller is admin
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name, user_id')
         .eq('organization_id', input.organizationId)
         .eq('user_id', currentUser.id)
@@ -1156,7 +1156,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
 
     // 3. Check if already a member
     const { data: existingMember } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id, users!inner(email)')
         .eq('organization_id', input.organizationId)
         .eq('is_active', true)
@@ -1182,7 +1182,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
 
     // 5. Check if user exists in Seencel
     const { data: existingUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id, full_name, email')
         .eq('email', normalizedEmail)
         .maybeSingle();
@@ -1190,7 +1190,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
     // If user exists and already has project_access, skip
     if (existingUser) {
         const { data: existingAccess } = await supabase
-            .from('project_access')
+            .schema('iam').from('project_access')
             .select('id')
             .eq('project_id', input.projectId)
             .eq('user_id', existingUser.id)
@@ -1204,7 +1204,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
 
     // Get org name
     const { data: org } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('name')
         .eq('id', input.organizationId)
         .single();
@@ -1267,7 +1267,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
     if (existingUser) {
         try {
             const { data: notif } = await supabase
-                .from('notifications')
+                .schema('notifications').from('notifications')
                 .insert({
                     type: 'invitation',
                     title: `Te invitaron a ${orgName}`,
@@ -1284,7 +1284,7 @@ export async function addExternalCollaboratorWithProjectAction(input: {
 
             if (notif) {
                 await supabase
-                    .from('user_notifications')
+                    .schema('notifications').from('user_notifications')
                     .insert({
                         user_id: existingUser.id,
                         notification_id: notif.id,
@@ -1309,19 +1309,14 @@ export async function getExternalActorsForOrg(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('organization_external_actors')
+        .schema('iam').from('organization_external_actors')
         .select(`
             id,
             organization_id,
             user_id,
             actor_type,
             is_active,
-            created_at,
-            users!oea_user_fk (
-                full_name,
-                email,
-                avatar_url
-            )
+            created_at
         `)
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -1333,7 +1328,20 @@ export async function getExternalActorsForOrg(
         return { success: false, error: sanitizeError(error) };
     }
 
-    // Map the nested user data to flat structure
+    // Cross-schema: enriquecer con datos de users (public schema)
+    const userIds = [...new Set((data || []).map((a: any) => a.user_id).filter(Boolean))];
+    let usersMap: Record<string, { full_name: string | null; email: string | null; avatar_url: string | null }> = {};
+    if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+            .schema('iam').from('users')
+            .select('id, full_name, email, avatar_url')
+            .in('id', userIds);
+        for (const u of (usersData || [])) {
+            usersMap[u.id] = { full_name: u.full_name, email: u.email, avatar_url: u.avatar_url };
+        }
+    }
+
+    // Map the data to flat structure
     const actors: ExternalActorDetail[] = (data || []).map((actor: any) => ({
         id: actor.id,
         organization_id: actor.organization_id,
@@ -1341,9 +1349,9 @@ export async function getExternalActorsForOrg(
         actor_type: actor.actor_type,
         is_active: actor.is_active,
         created_at: actor.created_at,
-        user_full_name: actor.users?.full_name || null,
-        user_email: actor.users?.email || null,
-        user_avatar_url: actor.users?.avatar_url || null,
+        user_full_name: usersMap[actor.user_id]?.full_name || null,
+        user_email: usersMap[actor.user_id]?.email || null,
+        user_avatar_url: usersMap[actor.user_id]?.avatar_url || null,
     }));
 
     return { success: true, data: actors };
@@ -1363,7 +1371,7 @@ export async function removeExternalActorAction(
     if (!authUser) return { success: false, error: 'No autenticado' };
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -1371,7 +1379,7 @@ export async function removeExternalActorAction(
 
     // Verify caller is admin
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
@@ -1384,7 +1392,7 @@ export async function removeExternalActorAction(
     }
 
     const { error } = await supabase
-        .from('organization_external_actors')
+        .schema('iam').from('organization_external_actors')
         .update({ is_active: false })
         .eq('id', actorId)
         .eq('organization_id', organizationId);
@@ -1412,7 +1420,7 @@ export async function reactivateExternalActorAction(
     if (!authUser) return { success: false, error: 'No autenticado' };
 
     const { data: currentUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -1420,7 +1428,7 @@ export async function reactivateExternalActorAction(
 
     // Verify caller is admin
     const { data: callerMember } = await supabase
-        .from('organization_members_full_view')
+        .schema('iam').from('organization_members_full_view')
         .select('id, role_type, role_name')
         .eq('organization_id', organizationId)
         .eq('user_id', currentUser.id)
@@ -1434,7 +1442,7 @@ export async function reactivateExternalActorAction(
 
     // Check the actor exists and is currently inactive
     const { data: actor } = await supabase
-        .from('organization_external_actors')
+        .schema('iam').from('organization_external_actors')
         .select('id, is_active, actor_type')
         .eq('id', actorId)
         .eq('organization_id', organizationId)
@@ -1453,7 +1461,7 @@ export async function reactivateExternalActorAction(
         if (!isUnlimited) {
             // Count current active advisors
             const { count: activeAdvisorCount } = await supabase
-                .from('organization_external_actors')
+                .schema('iam').from('organization_external_actors')
                 .select('id', { count: 'exact', head: true })
                 .eq('organization_id', organizationId)
                 .eq('is_active', true)
@@ -1471,7 +1479,7 @@ export async function reactivateExternalActorAction(
 
     // Reactivate
     const { error } = await supabase
-        .from('organization_external_actors')
+        .schema('iam').from('organization_external_actors')
         .update({ is_active: true })
         .eq('id', actorId)
         .eq('organization_id', organizationId);

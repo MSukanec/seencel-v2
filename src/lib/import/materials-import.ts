@@ -47,7 +47,7 @@ export async function importMaterialPaymentsBatch(
 
     // 2. Get currencies for code lookup
     const { data: currencies } = await supabase
-        .from('currencies')
+        .schema('finance').from('currencies')
         .select('id, code');
 
     const currencyMap = new Map<string, any>();
@@ -57,7 +57,7 @@ export async function importMaterialPaymentsBatch(
 
     // 3. Get wallets for name lookup
     const { data: wallets } = await supabase
-        .from('organization_wallets_view')
+        .schema('finance').from('organization_wallets_view')
         .select('id, wallet_name')
         .eq('organization_id', organizationId);
 
@@ -158,7 +158,7 @@ export async function importMaterialPaymentsBatch(
     // 5. Insert valid records
     if (records.length > 0) {
         const { error } = await supabase
-            .from('material_payments')
+            .schema('finance').from('material_payments')
             .insert(records);
 
         if (error) {
@@ -193,7 +193,7 @@ export async function importMaterialsCatalogBatch(
 
     // Get organization member ID for audit
     const { data: memberData } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('organization_id', organizationId)
         .eq('user_id', user.id)
@@ -231,7 +231,7 @@ export async function importMaterialsCatalogBatch(
 
     // 3. Get existing providers (contacts) for lookup
     const { data: contacts } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .select('id, full_name, company_name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false);
@@ -244,7 +244,7 @@ export async function importMaterialsCatalogBatch(
 
     // 4. Get currencies for code lookup
     const { data: currencies } = await supabase
-        .from('currencies')
+        .schema('finance').from('currencies')
         .select('id, code');
 
     const currencyMap = new Map<string, string>();
@@ -517,7 +517,7 @@ export async function importMaterialsCatalogBatch(
         console.log(`[Import] Creating ${providerInserts.length} new providers:`, providerInserts.map(p => p.full_name));
 
         const { data: newProviders, error: providerError } = await supabase
-            .from('contacts')
+            .schema('projects').from('contacts')
             .insert(providerInserts)
             .select('id, full_name');
 

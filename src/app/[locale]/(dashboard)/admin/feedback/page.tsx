@@ -16,7 +16,7 @@ export default async function AdminFeedbackPage() {
     const supabase = await createClient();
 
     const { data: feedback, error } = await supabase
-        .from('feedback')
+        .schema('iam').from('feedback')
         .select(`
             id,
             message,

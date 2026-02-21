@@ -101,33 +101,33 @@ export async function getMonitoringDashboard(): Promise<{
         const [errorsResult, criticalErrorsResult, openAlertsResult, criticalAlertsResult, lastCheckResult] = await Promise.all([
             // Total errors last 24h
             supabase
-                .from('system_error_logs')
+                .schema('audit').from('system_error_logs')
                 .select('id', { count: 'exact', head: true })
                 .gte('created_at', since24h),
 
             // Critical errors last 24h
             supabase
-                .from('system_error_logs')
+                .schema('audit').from('system_error_logs')
                 .select('id', { count: 'exact', head: true })
                 .gte('created_at', since24h)
                 .eq('severity', 'critical'),
 
             // Open alerts
             supabase
-                .from('ops_alerts')
+                .schema('ops').from('ops_alerts')
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'open'),
 
             // Critical open alerts
             supabase
-                .from('ops_alerts')
+                .schema('ops').from('ops_alerts')
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'open')
                 .eq('severity', 'critical'),
 
             // Last check run
             supabase
-                .from('ops_check_runs')
+                .schema('ops').from('ops_check_runs')
                 .select('created_at, status, duration_ms')
                 .order('created_at', { ascending: false })
                 .limit(1)
@@ -184,7 +184,7 @@ export async function getEnrichedSystemErrors(hours: number = 48): Promise<{
         const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await supabase
-            .from('system_errors_enriched_view')
+            .schema('ops').from('system_errors_enriched_view')
             .select('*')
             .gte('created_at', since)
             .order('created_at', { ascending: false })
@@ -236,7 +236,7 @@ export async function getOpsAlerts(statusFilter?: string): Promise<{
         if (!user) return { success: false, error: "No autenticado" };
 
         let query = supabase
-            .from('ops_alerts_enriched_view')
+            .schema('ops').from('ops_alerts_enriched_view')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(100);
@@ -303,7 +303,7 @@ export async function getOpsRepairActions(): Promise<{
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data, error } = await supabase
-            .from('ops_repair_actions')
+            .schema('ops').from('ops_repair_actions')
             .select('*')
             .eq('is_active', true);
 
@@ -342,7 +342,7 @@ export async function executeOpsRepair(alertId: string, actionId: string): Promi
 
         // Obtener el users.id (no auth_id)
         const { data: userData } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id')
             .eq('auth_id', user.id)
             .single();
@@ -380,7 +380,7 @@ export async function resolveOpsAlert(alertId: string): Promise<{
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data: userData } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id')
             .eq('auth_id', user.id)
             .single();
@@ -388,7 +388,7 @@ export async function resolveOpsAlert(alertId: string): Promise<{
         if (!userData) return { success: false, error: "No se encontró el usuario" };
 
         const { error } = await supabase
-            .from('ops_alerts')
+            .schema('ops').from('ops_alerts')
             .update({
                 status: 'resolved',
                 resolved_at: new Date().toISOString(),
@@ -420,7 +420,7 @@ export async function ackOpsAlert(alertId: string): Promise<{
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data: userData } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id')
             .eq('auth_id', user.id)
             .single();
@@ -428,7 +428,7 @@ export async function ackOpsAlert(alertId: string): Promise<{
         if (!userData) return { success: false, error: "No se encontró el usuario" };
 
         const { error } = await supabase
-            .from('ops_alerts')
+            .schema('ops').from('ops_alerts')
             .update({
                 status: 'ack',
                 ack_at: new Date().toISOString(),

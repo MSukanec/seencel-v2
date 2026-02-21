@@ -11,7 +11,7 @@ export async function getBoards(organizationId: string, projectId?: string | nul
     const supabase = await createClient();
 
     let query = supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -40,7 +40,7 @@ export async function getBoard(boardId: string): Promise<KanbanBoard | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .select('*')
         .eq('id', boardId)
         .single();
@@ -67,7 +67,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
 
     // Get board
     const { data: board, error: boardError } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .select(`
             *,
             projects (name)
@@ -82,7 +82,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
 
     // Get lists with cards
     const { data: lists, error: listsError } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .select(`
             *,
             kanban_cards (*)
@@ -98,7 +98,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
 
     // Get labels for this organization
     const { data: labels, error: labelsError } = await supabase
-        .from('kanban_labels')
+        .schema('planner').from('kanban_labels')
         .select('*')
         .eq('organization_id', board.organization_id)
         .order('position', { ascending: true });
@@ -109,7 +109,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
 
     // Get organization members
     const { data: membersData, error: membersError } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select(`
             id,
             user_id,
@@ -163,7 +163,7 @@ export async function getCardDetails(cardId: string): Promise<KanbanCard | null>
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_cards')
+        .schema('planner').from('kanban_cards')
         .select('*')
         .eq('id', cardId)
         .single();
@@ -184,7 +184,7 @@ export async function getLabels(organizationId: string): Promise<KanbanLabel[]> 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_labels')
+        .schema('planner').from('kanban_labels')
         .select('*')
         .eq('organization_id', organizationId)
         .order('position', { ascending: true });
@@ -214,7 +214,7 @@ export async function getCalendarEvents(
     const supabase = await createClient();
 
     let query = supabase
-        .from('calendar_events')
+        .schema('planner').from('calendar_events')
         .select(`
             *,
             projects (name)
@@ -255,7 +255,7 @@ export async function getCalendarEvent(eventId: string): Promise<CalendarEvent |
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('calendar_events')
+        .schema('planner').from('calendar_events')
         .select(`
             *,
             projects (name),

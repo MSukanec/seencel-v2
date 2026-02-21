@@ -89,7 +89,7 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
     let emailAlreadyRegistered = false;
     if (!authUser && inv.email) {
         const { data: existingUser } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('id')
             .eq('email', inv.email.toLowerCase())
             .maybeSingle();
@@ -106,7 +106,7 @@ export default async function AcceptInvitationPage({ searchParams }: Props) {
 
     if (invitationData?.organization_id) {
         const { data: orgData } = await supabase
-            .from('organizations')
+            .schema('iam').from('organizations')
             .select('logo_url')
             .eq('id', invitationData.organization_id)
             .single();

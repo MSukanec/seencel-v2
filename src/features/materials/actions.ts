@@ -47,7 +47,7 @@ export async function createMaterialPaymentAction(input: z.infer<typeof createMa
     }
 
     const { data, error } = await supabase
-        .from('material_payments')
+        .schema('finance').from('material_payments')
         .insert({
             project_id: payload.project_id,
             organization_id: payload.organization_id,
@@ -152,7 +152,7 @@ export async function updateMaterialPaymentAction(input: z.infer<typeof updateMa
 
     // Fetch current payment to get organization_id if needed
     const { data: currentPayment, error: fetchError } = await supabase
-        .from('material_payments')
+        .schema('finance').from('material_payments')
         .select('organization_id')
         .eq('id', paymentId)
         .single();
@@ -162,7 +162,7 @@ export async function updateMaterialPaymentAction(input: z.infer<typeof updateMa
     }
 
     const { data, error } = await supabase
-        .from('material_payments')
+        .schema('finance').from('material_payments')
         .update({
             project_id: payload.project_id,
             organization_id: payload.organization_id,
@@ -239,7 +239,7 @@ export async function deleteMaterialPaymentAction(paymentId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('material_payments')
+        .schema('finance').from('material_payments')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -264,7 +264,7 @@ export async function getMaterialPurchasesAction(projectId: string) {
     // material_purchases was renamed to material_invoices
     // This query returns purchases/invoices for the dropdown
     const { data, error } = await supabase
-        .from('material_invoices')
+        .schema('finance').from('material_invoices')
         .select('id, invoice_number, notes, provider_id')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
@@ -296,7 +296,7 @@ export async function getOrgMaterialPurchasesAction(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_invoices')
+        .schema('finance').from('material_invoices')
         .select('id, invoice_number, notes, provider_id, project_id')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
@@ -575,7 +575,7 @@ export async function createPurchaseOrder(input: {
 
     // 1. Create the PO
     const { data: order, error: orderError } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .insert({
             project_id: input.project_id,
             organization_id: input.organization_id,
@@ -609,7 +609,7 @@ export async function createPurchaseOrder(input: {
         }));
 
         const { error: itemsError } = await supabase
-            .from('material_purchase_order_items')
+            .schema('finance').from('material_purchase_order_items')
             .insert(itemsToInsert);
 
         if (itemsError) {
@@ -638,7 +638,7 @@ export async function updatePurchaseOrder(input: {
 
     // 1. Get current order for context
     const { data: currentOrder, error: fetchError } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .select('id, organization_id, project_id, status')
         .eq('id', input.id)
         .single();
@@ -654,7 +654,7 @@ export async function updatePurchaseOrder(input: {
 
     // 2. Update the order
     const { error: updateError } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .update({
             provider_id: input.provider_id,
             order_date: input.order_date,
@@ -674,7 +674,7 @@ export async function updatePurchaseOrder(input: {
     if (input.items !== undefined) {
         // Delete existing items
         await supabase
-            .from('material_purchase_order_items')
+            .schema('finance').from('material_purchase_order_items')
             .delete()
             .eq('purchase_order_id', input.id);
 
@@ -693,7 +693,7 @@ export async function updatePurchaseOrder(input: {
             }));
 
             await supabase
-                .from('material_purchase_order_items')
+                .schema('finance').from('material_purchase_order_items')
                 .insert(itemsToInsert);
         }
     }
@@ -713,7 +713,7 @@ export async function updatePurchaseOrderStatus(
 
     // Get current status
     const { data: currentOrder, error: fetchError } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .select('status')
         .eq('id', orderId)
         .single();
@@ -740,7 +740,7 @@ export async function updatePurchaseOrderStatus(
     }
 
     const { error: updateError } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .update({
             status: newStatus,
             updated_at: new Date().toISOString(),
@@ -764,7 +764,7 @@ export async function deletePurchaseOrder(orderId: string) {
 
     // Check if order is in draft status
     const { data: order, error: fetchError } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .select('status')
         .eq('id', orderId)
         .single();
@@ -778,7 +778,7 @@ export async function deletePurchaseOrder(orderId: string) {
     }
 
     const { error } = await supabase
-        .from('material_purchase_orders')
+        .schema('finance').from('material_purchase_orders')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),

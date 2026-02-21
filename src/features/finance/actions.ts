@@ -218,7 +218,7 @@ export async function createCurrencyExchange(
 
     // Get user ID from users table
     const { data: userData, error: userError } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -324,7 +324,7 @@ export async function createWalletTransfer(
 
     // Get user ID from users table
     const { data: userData, error: userError } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();

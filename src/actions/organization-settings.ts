@@ -11,7 +11,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
 
     // 1. Fetch roles first to know which IDs to filter permissions for (avoiding 1000 row limit)
     const { data: rolesData } = await supabase
-        .from('roles')
+        .schema('iam').from('roles')
         .select('*')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .order('name');
@@ -37,7 +37,7 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
         seatPaymentsRes // Seat purchase payments
     ] = await Promise.all([
         supabase
-            .from('organization_members_full_view')
+            .schema('iam').from('organization_members_full_view')
             .select('*')
             .eq('organization_id', organizationId)
             .eq('is_active', true)
@@ -51,18 +51,18 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .order('created_at', { ascending: false }),
 
         supabase
-            .from('permissions')
+            .schema('iam').from('permissions')
             .select('*')
             .order('category', { ascending: true })
             .order('description', { ascending: true }),
 
         // Fix: Filter role_permissions by the relevant role IDs to avoid global limit
         roleIds.length > 0
-            ? supabase.from('role_permissions').select('*').in('role_id', roleIds)
+            ? supabase.schema('iam').from('role_permissions').select('*').in('role_id', roleIds)
             : Promise.resolve({ data: [] }),
 
         supabase
-            .from('organization_activity_logs_view')
+            .schema('audit').from('organization_activity_logs_view')
             .select('*')
             .eq('organization_id', organizationId)
             .order('created_at', { ascending: false })
@@ -83,31 +83,31 @@ export async function getOrganizationSettingsData(organizationId: string): Promi
             .limit(12),
 
         supabase
-            .from('organization_preferences')
+            .schema('iam').from('organization_preferences')
             .select('*')
             .eq('organization_id', organizationId)
             .single(),
 
         supabase
-            .from('organization_currencies_view')
+            .schema('finance').from('organization_currencies_view')
             .select('*')
             .eq('organization_id', organizationId)
             .eq('is_active', true)
             .order('currency_code', { ascending: true }),
 
         supabase
-            .from('organization_wallets_view')
+            .schema('finance').from('organization_wallets_view')
             .select('*')
             .eq('organization_id', organizationId)
             .eq('is_active', true)
             .order('wallet_name', { ascending: true }),
 
-        supabase.from('currencies').select('*').order('name'),
-        supabase.from('wallets').select('*').eq('is_active', true).order('name'),
+        supabase.schema('finance').from('currencies').select('*').order('name'),
+        supabase.schema('finance').from('wallets').select('*').eq('is_active', true).order('name'),
 
         // Fallback: Get organization with its plan directly
         supabase
-            .from('organizations')
+            .schema('iam').from('organizations')
             .select('*')
             .eq('id', organizationId)
             .single(),
@@ -224,7 +224,7 @@ export async function updateOrganizationPreferences(
 
     // Check if preferences exist first
     const { data: existing } = await supabase
-        .from('organization_preferences')
+        .schema('iam').from('organization_preferences')
         .select('id')
         .eq('organization_id', organizationId)
         .single();
@@ -233,7 +233,7 @@ export async function updateOrganizationPreferences(
 
     if (!existing) {
         const { error: insertError } = await supabase
-            .from('organization_preferences')
+            .schema('iam').from('organization_preferences')
             .insert({
                 organization_id: organizationId,
                 ...updates
@@ -241,7 +241,7 @@ export async function updateOrganizationPreferences(
         error = insertError;
     } else {
         const { error: updateError } = await supabase
-            .from('organization_preferences')
+            .schema('iam').from('organization_preferences')
             .update(updates)
             .eq('organization_id', organizationId);
         error = updateError;
@@ -271,7 +271,7 @@ export async function addOrganizationCurrency(
     if (!isDefault) {
         // Count existing non-default currencies
         const { count, error: countError } = await supabase
-            .from('organization_currencies')
+            .schema('finance').from('organization_currencies')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
             .eq('is_default', false)
@@ -289,7 +289,7 @@ export async function addOrganizationCurrency(
     */
 
     const { error } = await supabase
-        .from('organization_currencies')
+        .schema('finance').from('organization_currencies')
         .insert({
             organization_id: organizationId,
             currency_id: currencyId,
@@ -307,7 +307,7 @@ export async function removeOrganizationCurrency(organizationId: string, currenc
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('organization_currencies')
+        .schema('finance').from('organization_currencies')
         .delete()
         .eq('organization_id', organizationId)
         .eq('currency_id', currencyId);
@@ -326,7 +326,7 @@ export async function addOrganizationWallet(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('organization_wallets')
+        .schema('finance').from('organization_wallets')
         .insert({
             organization_id: organizationId,
             wallet_id: walletId,
@@ -344,7 +344,7 @@ export async function removeOrganizationWallet(organizationId: string, walletId:
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('organization_wallets')
+        .schema('finance').from('organization_wallets')
         .delete()
         .eq('organization_id', organizationId)
         .eq('wallet_id', walletId);

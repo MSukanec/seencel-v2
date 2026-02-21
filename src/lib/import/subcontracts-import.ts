@@ -33,7 +33,7 @@ export async function importSubcontractPaymentsBatch(
 
     // 1. Get subcontracts for lookup (Title or Provider)
     const { data: subcontracts } = await supabase
-        .from('subcontracts_view')
+        .schema('finance').from('subcontracts_view')
         .select('id, title, provider_name')
         .eq('project_id', projectId);
 
@@ -52,7 +52,7 @@ export async function importSubcontractPaymentsBatch(
 
     // 2. Get currencies for code lookup
     const { data: currencies } = await supabase
-        .from('currencies')
+        .schema('finance').from('currencies')
         .select('id, code');
 
     const currencyMap = new Map<string, any>(); // Store whole object (id, code)
@@ -62,7 +62,7 @@ export async function importSubcontractPaymentsBatch(
 
     // 3. Get wallets for name lookup
     const { data: wallets } = await supabase
-        .from('organization_wallets_view')
+        .schema('finance').from('organization_wallets_view')
         .select('id, wallet_name')
         .eq('organization_id', organizationId);
 
@@ -184,7 +184,7 @@ export async function importSubcontractPaymentsBatch(
     // 5. Insert valid records
     if (records.length > 0) {
         const { error } = await supabase
-            .from('subcontract_payments')
+            .schema('finance').from('subcontract_payments')
             .insert(records);
 
         if (error) {

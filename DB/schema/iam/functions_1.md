@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [IAM] Functions (chunk 1: accept_client_invitation — is_organization_client)
+## [IAM] Functions (chunk 1: accept_client_invitation — handle_new_organization)
 
 ### `iam.accept_client_invitation(p_token text, p_user_id uuid)` 🔐
 
@@ -378,23 +378,24 @@ BEGIN
         i.status,
         i.expires_at,
         i.invited_by,
-        o.name AS org_name
+        i.invitation_type,
+        o.name as org_name
     INTO v_invitation
     FROM iam.organization_invitations i
     JOIN public.organizations o ON o.id = i.organization_id
     WHERE i.token = p_token
     LIMIT 1;
 
-    IF v_invitation IS NULL THEN
+    IF v_invitation.id IS NULL THEN
         RETURN jsonb_build_object(
             'success', false,
             'error', 'invitation_not_found',
-            'message', 'Invitación no encontrada o token inválido'
+            'message', 'Invitación no encontrada'
         );
     END IF;
 
-    -- 2. Verificar status
-    IF v_invitation.status NOT IN ('pending', 'registered') THEN
+    -- 2. Verificar estado
+    IF v_invitation.status != 'registered' AND v_invitation.status != 'pending' THEN
         RETURN jsonb_build_object(
             'success', false,
             'error', 'invitation_already_used',
@@ -413,7 +414,7 @@ BEGIN
 
     -- 4. Verificar que el usuario no es ya miembro activo
     SELECT EXISTS (
-        SELECT 1 FROM public.organization_members
+        SELECT 1 FROM iam.organization_members
         WHERE organization_id = v_invitation.organization_id
           AND user_id = p_user_id
           AND is_active = true
@@ -434,7 +435,7 @@ BEGIN
 
     -- 4b. Verificar si existe un miembro INACTIVO
     SELECT id INTO v_inactive_member_id
-    FROM public.organization_members
+    FROM iam.organization_members
     WHERE organization_id = v_invitation.organization_id
       AND user_id = p_user_id
       AND is_active = false;
@@ -448,7 +449,7 @@ BEGIN
     WHERE org.id = v_invitation.organization_id;
 
     SELECT COUNT(*) INTO v_current_members
-    FROM public.organization_members
+    FROM iam.organization_members
     WHERE organization_id = v_invitation.organization_id
       AND is_active = true;
 
@@ -470,7 +471,7 @@ BEGIN
 
     -- 6. Crear o reactivar miembro
     IF v_inactive_member_id IS NOT NULL THEN
-        UPDATE public.organization_members
+        UPDATE iam.organization_members
         SET 
             is_active = true,
             is_billable = true,
@@ -483,7 +484,7 @@ BEGIN
 
         v_new_member_id := v_inactive_member_id;
     ELSE
-        INSERT INTO public.organization_members (
+        INSERT INTO iam.organization_members (
             organization_id,
             user_id,
             role_id,
@@ -542,6 +543,134 @@ $function$
 ```
 </details>
 
+### `iam.assign_default_permissions_to_org_roles(p_organization_id uuid)` 🔐
+
+- **Returns**: void
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.assign_default_permissions_to_org_roles(p_organization_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  admin_role_id uuid;
+  editor_role_id uuid;
+  viewer_role_id uuid;
+begin
+  select id into admin_role_id
+  from iam.roles
+  where organization_id = p_organization_id
+    and is_system = false
+    and lower(name) = 'administrador';
+
+  select id into editor_role_id
+  from iam.roles
+  where organization_id = p_organization_id
+    and is_system = false
+    and lower(name) = 'editor';
+
+  select id into viewer_role_id
+  from iam.roles
+  where organization_id = p_organization_id
+    and is_system = false
+    and lower(name) = 'visualizador';
+
+  -- Admin: todos los permisos no-admin
+  delete from iam.role_permissions where role_id = admin_role_id;
+  insert into iam.role_permissions (role_id, permission_id, organization_id)
+  select admin_role_id, p.id, p_organization_id
+  from iam.permissions p
+  where p.category <> 'admin'
+  on conflict do nothing;
+
+  -- Editor: permisos view + edit (sin admin, billing, roles)
+  delete from iam.role_permissions where role_id = editor_role_id;
+  insert into iam.role_permissions (role_id, permission_id, organization_id)
+  select editor_role_id, p.id, p_organization_id
+  from iam.permissions p
+  where p.category <> 'admin'
+    and p.key not like '%delete%'
+    and p.key not in ('billing.manage', 'roles.manage', 'members.manage')
+  on conflict do nothing;
+
+  -- Viewer: solo permisos view
+  delete from iam.role_permissions where role_id = viewer_role_id;
+  insert into iam.role_permissions (role_id, permission_id, organization_id)
+  select viewer_role_id, p.id, p_organization_id
+  from iam.permissions p
+  where p.key IN (
+    'projects.view', 'general_costs.view', 'members.view', 'roles.view',
+    'contacts.view', 'planner.view', 'commercial.view', 'sitelog.view',
+    'media.view', 'tasks.view', 'materials.view', 'subcontracts.view', 'labor.view'
+  );
+end;
+$function$
+```
+</details>
+
+### `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.can_mutate_org(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  select
+    iam.is_admin()
+    or (
+      not iam.is_demo_org(p_organization_id)
+      and iam.is_org_member(p_organization_id)
+      and iam.has_permission(p_organization_id, p_permission_key)
+    );
+$function$
+```
+</details>
+
+### `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.can_mutate_project(p_project_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT
+    iam.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM public.projects p
+      WHERE p.id = p_project_id
+        AND iam.can_mutate_org(p.organization_id, p_permission_key)
+    )
+    OR EXISTS (
+      SELECT 1 FROM iam.project_access pa
+      WHERE pa.project_id = p_project_id
+        AND pa.user_id = iam.current_user_id()
+        AND pa.is_active = true
+        AND pa.is_deleted = false
+        AND pa.access_level IN ('editor', 'admin')
+    );
+$function$
+```
+</details>
+
 ### `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` 🔐
 
 - **Returns**: boolean
@@ -554,15 +683,15 @@ CREATE OR REPLACE FUNCTION iam.can_view_client_data(p_project_id uuid, p_client_
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
+ SET search_path TO 'public', 'iam', 'projects'
 AS $function$
     SELECT
         -- Admins ven todo
         is_admin()
         -- Miembros de la org ven todo
         OR EXISTS (
-            SELECT 1 FROM public.projects p
-            JOIN public.organization_members om ON om.organization_id = p.organization_id
+            SELECT 1 FROM projects.projects p
+            JOIN iam.organization_members om ON om.organization_id = p.organization_id
             WHERE p.id = p_project_id
                 AND om.user_id = current_user_id()
                 AND om.is_active = true
@@ -571,13 +700,358 @@ AS $function$
         -- Si client_id IS NULL → ve todo (director de obra, etc.)
         -- Si client_id = p_client_id → ve los datos de ese cliente
         OR EXISTS (
-            SELECT 1 FROM public.project_access pa
+            SELECT 1 FROM iam.project_access pa
             WHERE pa.project_id = p_project_id
-                AND pa.user_id = current_user_id()
-                AND pa.is_active = true
-                AND pa.is_deleted = false
-                AND (pa.client_id IS NULL OR pa.client_id = p_client_id)
+              AND pa.user_id = current_user_id()
+              AND pa.is_active = true
+              AND pa.is_deleted = false
+              AND (pa.client_id IS NULL OR pa.client_id = p_client_id)
         );
+$function$
+```
+</details>
+
+### `iam.can_view_org(p_organization_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.can_view_org(p_organization_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+    SELECT
+        iam.is_admin()
+        OR iam.is_demo_org(p_organization_id)
+        OR iam.is_org_member(p_organization_id)
+        OR iam.is_external_actor(p_organization_id)
+        OR iam.is_organization_client(p_organization_id);
+$function$
+```
+</details>
+
+### `iam.can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.can_view_org(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT
+    iam.is_admin()
+    OR iam.is_demo_org(p_organization_id)
+    OR (
+      iam.is_org_member(p_organization_id)
+      AND iam.has_permission(p_organization_id, p_permission_key)
+    )
+    OR iam.external_has_scope(p_organization_id, p_permission_key);
+$function$
+```
+</details>
+
+### `iam.can_view_project(p_project_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.can_view_project(p_project_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam', 'projects'
+AS $function$
+  SELECT
+    iam.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM projects.projects p
+      JOIN iam.organization_members om ON om.organization_id = p.organization_id
+      WHERE p.id = p_project_id
+        AND om.user_id = iam.current_user_id()
+        AND om.is_active = true
+    )
+    OR EXISTS (
+      SELECT 1 FROM iam.project_access pa
+      WHERE pa.project_id = p_project_id
+        AND pa.user_id = iam.current_user_id()
+        AND pa.is_active = true
+        AND pa.is_deleted = false
+    );
+$function$
+```
+</details>
+
+### `iam.current_user_id()` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.current_user_id()
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  select u.id
+  from public.users u
+  where u.auth_id = auth.uid()
+  limit 1;
+$function$
+```
+</details>
+
+### `iam.dismiss_home_banner()` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.dismiss_home_banner()
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  v_user_id uuid;
+begin
+  v_user_id := iam.current_user_id();
+  if v_user_id is null then return false; end if;
+
+  update iam.user_preferences
+  set home_banner_dismissed = true, updated_at = now()
+  where user_id = v_user_id;
+
+  return true;
+end;
+$function$
+```
+</details>
+
+### `iam.ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  v_user record;
+  v_user_data record;
+  v_contact_id uuid;
+  v_first_name text;
+  v_last_name text;
+begin
+  select u.id, u.full_name, u.email, u.avatar_url
+  into v_user
+  from public.users u
+  where u.id = p_user_id
+  limit 1;
+
+  if v_user.id is null then
+    return null;
+  end if;
+
+  if v_user.email is null then
+    return null;
+  end if;
+
+  select ud.first_name, ud.last_name
+  into v_user_data
+  from public.user_data ud
+  where ud.user_id = p_user_id
+  limit 1;
+
+  if v_user_data.first_name is not null then
+    v_first_name := v_user_data.first_name;
+    v_last_name := coalesce(v_user_data.last_name, '');
+  elsif v_user.full_name is not null then
+    v_first_name := split_part(v_user.full_name, ' ', 1);
+    v_last_name := nullif(trim(substring(v_user.full_name from position(' ' in v_user.full_name) + 1)), '');
+  end if;
+
+  select c.id
+  into v_contact_id
+  from public.contacts c
+  where c.organization_id = p_organization_id
+    and c.linked_user_id = v_user.id
+    and c.is_deleted = false
+  limit 1;
+
+  if v_contact_id is not null then
+    update public.contacts c
+    set
+      first_name = coalesce(c.first_name, v_first_name),
+      last_name  = coalesce(c.last_name, v_last_name),
+      image_url  = coalesce(c.image_url, v_user.avatar_url),
+      full_name  = coalesce(v_user.full_name, c.full_name),
+      email      = coalesce(v_user.email, c.email),
+      updated_at = now()
+    where c.id = v_contact_id
+      and (c.first_name is null or c.image_url is null);
+
+    return v_contact_id;
+  end if;
+
+  select c.id
+  into v_contact_id
+  from public.contacts c
+  where c.organization_id = p_organization_id
+    and c.email = v_user.email
+    and c.linked_user_id is null
+    and c.is_deleted = false
+  limit 1;
+
+  if v_contact_id is not null then
+    update public.contacts c
+    set
+      linked_user_id = v_user.id,
+      first_name = coalesce(c.first_name, v_first_name),
+      last_name  = coalesce(c.last_name, v_last_name),
+      image_url  = coalesce(c.image_url, v_user.avatar_url),
+      full_name  = coalesce(v_user.full_name, c.full_name),
+      updated_at = now()
+    where c.id = v_contact_id;
+
+    return v_contact_id;
+  end if;
+
+  insert into public.contacts (
+    organization_id, linked_user_id, first_name, last_name,
+    full_name, email, image_url, created_at, updated_at
+  )
+  values (
+    p_organization_id, v_user.id, v_first_name, v_last_name,
+    v_user.full_name, v_user.email, v_user.avatar_url, now(), now()
+  )
+  returning id into v_contact_id;
+
+  return v_contact_id;
+end;
+$function$
+```
+</details>
+
+### `iam.external_has_scope(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.external_has_scope(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1
+    FROM iam.organization_external_actors ea
+    JOIN public.external_actor_scopes eas ON eas.external_actor_id = ea.id
+    WHERE ea.organization_id = p_organization_id
+      AND ea.user_id = iam.current_user_id()
+      AND ea.is_active = true
+      AND ea.is_deleted = false
+      AND eas.permission_key = p_permission_key
+  );
+$function$
+```
+</details>
+
+### `iam.fill_user_data_user_id_from_auth()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.fill_user_data_user_id_from_auth()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  v_user_id uuid;
+begin
+  -- Si ya viene user_id, no tocar
+  if new.user_id is not null then
+    return new;
+  end if;
+
+  -- Resolver user_id desde auth.uid()
+  select u.id
+  into v_user_id
+  from public.users u
+  where u.auth_id = auth.uid()
+  limit 1;
+
+  -- Si no existe usuario asociado al auth.uid(), error
+  if v_user_id is null then
+    raise exception 'No existe users.id para el auth.uid() actual';
+  end if;
+
+  -- Completar user_id automáticamente
+  new.user_id := v_user_id;
+
+  return new;
+end;
+$function$
+```
+</details>
+
+### `iam.forbid_user_id_change()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.forbid_user_id_change()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+begin
+  -- Impedir cambios de user_id luego de creado
+  if tg_op = 'UPDATE'
+     and new.user_id is distinct from old.user_id then
+    raise exception 'user_id no puede modificarse una vez creado';
+  end if;
+
+  return new;
+end;
 $function$
 ```
 </details>
@@ -613,7 +1087,7 @@ BEGIN
     FROM iam.organization_invitations i
     JOIN public.organizations o ON o.id = i.organization_id
     LEFT JOIN public.roles r ON r.id = i.role_id
-    LEFT JOIN public.organization_members m ON m.id = i.invited_by
+    LEFT JOIN iam.organization_members m ON m.id = i.invited_by
     LEFT JOIN public.users u ON u.id = m.user_id
     WHERE i.token = p_token
     LIMIT 1;
@@ -625,45 +1099,277 @@ BEGIN
         );
     END IF;
 
+    IF v_invitation.status NOT IN ('pending', 'registered') THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'invalid_status',
+            'status', v_invitation.status
+        );
+    END IF;
+
+    IF v_invitation.expires_at IS NOT NULL AND v_invitation.expires_at < NOW() THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'expired'
+        );
+    END IF;
+
     RETURN jsonb_build_object(
         'success', true,
-        'id', v_invitation.id,
+        'invitation_id', v_invitation.id,
         'email', v_invitation.email,
-        'status', v_invitation.status,
-        'expires_at', v_invitation.expires_at,
-        'invitation_type', COALESCE(v_invitation.invitation_type, 'member'),
-        'actor_type', v_invitation.actor_type,
         'organization_name', v_invitation.organization_name,
-        'role_name', COALESCE(v_invitation.role_name, 'Miembro'),
-        'inviter_name', v_invitation.inviter_name
+        'role_name', v_invitation.role_name,
+        'inviter_name', v_invitation.inviter_name,
+        'invitation_type', v_invitation.invitation_type,
+        'actor_type', v_invitation.actor_type
     );
 END;
 $function$
 ```
 </details>
 
-### `iam.is_organization_client(p_organization_id uuid)` 🔐
+### `iam.get_user()` 🔐
 
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
+- **Returns**: json
+- **Kind**: function | VOLATILE | SECURITY DEFINER
 
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION iam.is_organization_client(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
+CREATE OR REPLACE FUNCTION iam.get_user()
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam', 'billing'
+AS $function$
+declare
+  current_user_auth_id uuid;
+  current_user_internal_id uuid;
+  result json;
+begin
+  current_user_auth_id := auth.uid();
+  if current_user_auth_id is null then return null; end if;
+
+  select u.id into current_user_internal_id
+  from public.users u where u.auth_id = current_user_auth_id limit 1;
+
+  if current_user_internal_id is null then return null; end if;
+
+  with
+  active_org as (
+    select
+      o.id, o.name, o.is_active, o.is_system, o.created_by, o.created_at, o.updated_at,
+      o.owner_id,
+      p.id as plan_id, p.name as plan_name, p.slug as plan_slug, p.features as plan_features,
+      p.monthly_amount as plan_monthly_amount,
+      p.annual_amount as plan_annual_amount,
+      p.billing_type as plan_billing_type,
+      op.default_currency_id,
+      op.default_wallet_id,
+      op.default_pdf_template_id,
+      op.use_currency_exchange,
+      op.created_at as op_created_at,
+      op.updated_at as op_updated_at,
+      uop.last_project_id,
+      om.role_id
+    from iam.user_preferences up
+    join public.organizations o on o.id = up.last_organization_id
+    left join billing.plans p on p.id = o.plan_id
+    left join public.organization_preferences op on op.organization_id = o.id
+    left join iam.user_organization_preferences uop
+      on uop.user_id = up.user_id and uop.organization_id = o.id
+    join iam.organization_members om
+      on om.organization_id = o.id and om.user_id = up.user_id and om.is_active = true
+    where up.user_id = current_user_internal_id
+  ),
+
+  active_role_permissions as (
+    select
+      r.id as role_id, r.name as role_name,
+      json_agg(
+        json_build_object('id', perm.id, 'key', perm.key, 'description', perm.description, 'category', perm.category)
+      ) filter (where perm.id is not null) as permissions
+    from active_org ao
+    join iam.roles r on r.id = ao.role_id
+    left join iam.role_permissions rp on rp.role_id = r.id
+    left join iam.permissions perm on perm.id = rp.permission_id
+    group by r.id, r.name
+  ),
+
+  user_memberships as (
+    select json_agg(
+      json_build_object(
+        'organization_id', om.organization_id,
+        'organization_name', org.name,
+        'is_active', om.is_active,
+        'joined_at', om.joined_at,
+        'last_active_at', om.last_active_at,
+        'role', json_build_object('id', r.id, 'name', r.name)
+      )
+    ) as memberships
+    from iam.organization_members om
+    join public.organizations org on org.id = om.organization_id
+    join iam.roles r on r.id = om.role_id
+    where om.user_id = current_user_internal_id and om.is_active = true
+  ),
+
+  user_pref as (
+    select up.theme, up.home_checklist, up.home_banner_dismissed,
+           up.layout, up.language, up.sidebar_mode, up.timezone
+    from iam.user_preferences up where up.user_id = current_user_internal_id
+  )
+
+  select json_build_object(
+    'id', u.id,
+    'full_name', u.full_name,
+    'email', u.email,
+    'avatar_url', u.avatar_url,
+    'avatar_source', u.avatar_source,
+    'role_id', u.role_id,
+    'created_at', u.created_at,
+    'updated_at', u.updated_at,
+    'organization', (
+      select json_build_object(
+        'id', ao.id, 'name', ao.name, 'is_active', ao.is_active,
+        'is_system', ao.is_system, 'created_by', ao.created_by,
+        'created_at', ao.created_at, 'updated_at', ao.updated_at,
+        'owner_id', ao.owner_id,
+        'plan_id', ao.plan_id, 'plan_name', ao.plan_name,
+        'plan_slug', ao.plan_slug, 'plan_features', ao.plan_features,
+        'plan_monthly_amount', ao.plan_monthly_amount,
+        'plan_annual_amount', ao.plan_annual_amount,
+        'plan_billing_type', ao.plan_billing_type,
+        'default_currency_id', ao.default_currency_id,
+        'default_wallet_id', ao.default_wallet_id,
+        'default_pdf_template_id', ao.default_pdf_template_id,
+        'use_currency_exchange', ao.use_currency_exchange,
+        'preferences_created_at', ao.op_created_at,
+        'preferences_updated_at', ao.op_updated_at,
+        'last_project_id', ao.last_project_id,
+        'role', (
+          select json_build_object('id', arp.role_id, 'name', arp.role_name, 'permissions', coalesce(arp.permissions, '[]'::json))
+          from active_role_permissions arp limit 1
+        )
+      ) from active_org ao limit 1
+    ),
+    'memberships', (select memberships from user_memberships),
+    'preferences', (
+      select json_build_object(
+        'theme', up.theme,
+        'home_checklist', up.home_checklist,
+        'home_banner_dismissed', up.home_banner_dismissed,
+        'layout', up.layout,
+        'language', up.language,
+        'sidebar_mode', up.sidebar_mode,
+        'timezone', up.timezone
+      ) from user_pref up limit 1
+    )
+  ) into result
+  from public.users u
+  where u.id = current_user_internal_id;
+
+  return result;
+end;
+$function$
+```
+</details>
+
+### `iam.handle_new_org_member_contact()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.handle_new_org_member_contact()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
  SET search_path TO 'public', 'iam'
 AS $function$
-    SELECT EXISTS (
-        SELECT 1
-        FROM iam.organization_clients oc
-        WHERE oc.organization_id = p_organization_id
-          AND oc.user_id = current_user_id()
-          AND oc.is_active = true
-          AND oc.is_deleted = false
+begin
+  perform public.ensure_contact_for_user(new.organization_id, new.user_id);
+  return new;
+end;
+$function$
+```
+</details>
+
+### `iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.handle_new_organization(p_user_id uuid, p_organization_name text, p_business_mode text DEFAULT 'professional'::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+DECLARE
+  v_org_id uuid;
+  v_admin_role_id uuid;
+  v_recent_count integer;
+  v_plan_free_id uuid := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
+  v_default_currency_id uuid := '58c50aa7-b8b1-4035-b509-58028dd0e33f';
+  v_default_wallet_id uuid := '2658c575-0fa8-4cf6-85d7-6430ded7e188';
+  v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
+BEGIN
+  SELECT count(*) INTO v_recent_count
+  FROM public.organizations
+  WHERE created_by = p_user_id AND created_at > now() - interval '1 hour';
+
+  IF v_recent_count >= 3 THEN
+    RAISE EXCEPTION 'Has alcanzado el límite de creación de organizaciones. Intentá de nuevo más tarde.'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  v_org_id := public.step_create_organization(p_user_id, p_organization_name, v_plan_free_id, p_business_mode);
+
+  PERFORM public.step_create_organization_data(v_org_id);
+  PERFORM public.step_create_organization_roles(v_org_id);
+
+  SELECT id INTO v_admin_role_id
+  FROM iam.roles
+  WHERE organization_id = v_org_id AND name = 'Administrador' AND is_system = false
+  LIMIT 1;
+
+  IF v_admin_role_id IS NULL THEN
+    RAISE EXCEPTION 'Admin role not found for organization %', v_org_id;
+  END IF;
+
+  PERFORM public.step_add_org_member(p_user_id, v_org_id, v_admin_role_id);
+  PERFORM public.step_assign_org_role_permissions(v_org_id);
+  PERFORM public.step_create_organization_currencies(v_org_id, v_default_currency_id);
+  PERFORM public.step_create_organization_wallets(v_org_id, v_default_wallet_id);
+  PERFORM public.step_create_organization_preferences(
+    v_org_id, v_default_currency_id, v_default_wallet_id, v_default_pdf_template_id
+  );
+
+  UPDATE iam.user_preferences
+  SET last_organization_id = v_org_id, updated_at = now()
+  WHERE user_id = p_user_id;
+
+  RETURN v_org_id;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM public.log_system_error(
+      'function', 'handle_new_organization', 'organization',
+      SQLERRM, jsonb_build_object(
+        'user_id', p_user_id,
+        'organization_name', p_organization_name,
+        'business_mode', p_business_mode
+      ),
+      'critical'
     );
+    RAISE;
+END;
 $function$
 ```
 </details>

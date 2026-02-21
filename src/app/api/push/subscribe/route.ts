@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
         // Get public user ID (users.id, not auth_id — Rule 6)
         const { data: userData } = await supabase
-            .from("users")
+            .schema('iam').from("users")
             .select("id")
             .eq("auth_id", user.id)
             .single();
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
         // Upsert subscription (unique on user_id + endpoint)
         const { error } = await supabase
-            .from("push_subscriptions")
+            .schema('notifications').from("push_subscriptions")
             .upsert(
                 {
                     user_id: userData.id,
@@ -77,7 +77,7 @@ export async function DELETE(request: NextRequest) {
 
         // Get public user ID
         const { data: userData } = await supabase
-            .from("users")
+            .schema('iam').from("users")
             .select("id")
             .eq("auth_id", user.id)
             .single();
@@ -94,7 +94,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         const { error } = await supabase
-            .from("push_subscriptions")
+            .schema('notifications').from("push_subscriptions")
             .delete()
             .eq("user_id", userData.id)
             .eq("endpoint", endpoint);

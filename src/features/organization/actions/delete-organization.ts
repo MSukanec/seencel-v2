@@ -25,7 +25,7 @@ export async function deleteOrganization(
 
     // 2. Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -36,7 +36,7 @@ export async function deleteOrganization(
 
     // 3. Verify ownership
     const { data: org } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('id, owner_id, name')
         .eq('id', organizationId)
         .single();
@@ -51,7 +51,7 @@ export async function deleteOrganization(
 
     // 4. Verify it's not the active organization
     const { data: prefs } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .select('last_organization_id')
         .eq('user_id', userData.id)
         .single();
@@ -62,7 +62,7 @@ export async function deleteOrganization(
 
     // 5. Soft delete
     const { error } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),

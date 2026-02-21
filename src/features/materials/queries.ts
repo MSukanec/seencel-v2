@@ -12,7 +12,7 @@ export async function getMaterialPayments(projectId: string): Promise<MaterialPa
 
     // Use the VIEW which includes joined fields (wallet, currency, creator info)
     const { data, error } = await supabase
-        .from('material_payments_view')
+        .schema('finance').from('material_payments_view')
         .select('*')
         .eq('project_id', projectId)
         .order('payment_date', { ascending: false });
@@ -43,7 +43,7 @@ export async function getOrgMaterialPayments(organizationId: string): Promise<Ma
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_payments_view')
+        .schema('finance').from('material_payments_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('payment_date', { ascending: false });
@@ -72,14 +72,14 @@ export async function getOrganizationFinancialData(organizationId: string): Prom
 
     // 1. Get Organization Preferences
     const { data: org } = await supabase
-        .from('organizations')
+        .schema('iam').from('organizations')
         .select('default_currency_id')
         .eq('id', organizationId)
         .single();
 
     // 2. Get Currencies via view
     const { data: currenciesData } = await supabase
-        .from('organization_currencies_view')
+        .schema('finance').from('organization_currencies_view')
         .select('currency_id, currency_name, currency_code, currency_symbol, is_default, exchange_rate')
         .eq('organization_id', organizationId);
 
@@ -94,7 +94,7 @@ export async function getOrganizationFinancialData(organizationId: string): Prom
 
     // 3. Get Wallets via view
     const { data: walletsData } = await supabase
-        .from('organization_wallets_view')
+        .schema('finance').from('organization_wallets_view')
         .select('wallet_id, wallet_name, balance, currency_symbol, currency_code, is_default')
         .eq('organization_id', organizationId);
 
@@ -299,7 +299,7 @@ export async function getProjectMaterialRequirements(projectId: string): Promise
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_material_requirements_view')
+        .schema('construction').from('project_material_requirements_view')
         .select('*')
         .eq('project_id', projectId)
         .order('material_name', { ascending: true });
@@ -336,7 +336,7 @@ export async function getOrgMaterialRequirements(organizationId: string): Promis
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_material_requirements_view')
+        .schema('construction').from('project_material_requirements_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('material_name', { ascending: true });
@@ -377,7 +377,7 @@ export async function getPurchaseOrders(projectId: string): Promise<PurchaseOrde
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_purchase_orders_view')
+        .schema('finance').from('material_purchase_orders_view')
         .select('*')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
@@ -426,7 +426,7 @@ export async function getOrgPurchaseOrders(organizationId: string): Promise<Purc
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('material_purchase_orders_view')
+        .schema('finance').from('material_purchase_orders_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
@@ -478,7 +478,7 @@ export async function getPurchaseOrderById(orderId: string): Promise<{
 
     // Get the order
     const { data: orderData, error: orderError } = await supabase
-        .from('material_purchase_orders_view')
+        .schema('finance').from('material_purchase_orders_view')
         .select('*')
         .eq('id', orderId)
         .single();
@@ -490,7 +490,7 @@ export async function getPurchaseOrderById(orderId: string): Promise<{
 
     // Get the items
     const { data: itemsData, error: itemsError } = await supabase
-        .from('material_purchase_order_items')
+        .schema('finance').from('material_purchase_order_items')
         .select(`
             *,
             materials (name),
@@ -561,7 +561,7 @@ export async function getProvidersForProject(organizationId: string): Promise<{
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('contacts')
+        .schema('projects').from('contacts')
         .select('id, first_name, last_name, company_name, image_url, full_name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)

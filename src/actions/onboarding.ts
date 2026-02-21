@@ -49,7 +49,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
 
     // 1. Get internal user id
     const { data: internalUser } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", user.id)
         .single();
@@ -61,7 +61,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
 
     // 2. Update User Profile (full_name + signup_completed)
     const { error: userError } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .update({
             full_name: `${firstName} ${lastName}`,
             signup_completed: true,
@@ -76,7 +76,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
 
     // 3. Upsert User Data (first_name, last_name)
     const { error: userDataError } = await supabase
-        .from("user_data")
+        .schema('iam').from("user_data")
         .upsert({
             user_id: internalUser.id,
             first_name: firstName,
@@ -92,7 +92,7 @@ export async function submitOnboarding(prevState: any, formData: FormData) {
     // 4. Save timezone in user preferences (if detected)
     if (timezone) {
         const { error: prefError } = await supabase
-            .from("user_preferences")
+            .schema('iam').from("user_preferences")
             .update({ timezone })
             .eq("user_id", internalUser.id);
 

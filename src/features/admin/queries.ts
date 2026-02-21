@@ -20,7 +20,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select(`
             id,
             email,
@@ -76,7 +76,7 @@ export async function getAdminOrganizations(): Promise<AdminOrganization[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('admin_organizations_view')
+        .schema('iam').from('admin_organizations_view')
         .select('*')
         .order('last_activity_at', { ascending: false, nullsFirst: false });
 
@@ -134,25 +134,25 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
         atRiskRes,
         countriesRes
     ] = await Promise.all([
-        supabase.from('analytics_general_kpis_view').select('*').single(),
-        supabase.from('analytics_realtime_overview_view').select('*').single(),
-        supabase.from('analytics_user_growth_view').select('*'), // All historical months
-        supabase.from('analytics_page_engagement_view').select('*').order('visits', { ascending: false }).limit(5),
-        supabase.from('analytics_hourly_activity_view').select('*').order('hour_of_day', { ascending: true }),
-        supabase.from('analytics_top_users_view').select('*').limit(5),
+        supabase.schema('ops').from('analytics_general_kpis_view').select('*').single(),
+        supabase.schema('ops').from('analytics_realtime_overview_view').select('*').single(),
+        supabase.schema('ops').from('analytics_user_growth_view').select('*'), // All historical months
+        supabase.schema('ops').from('analytics_page_engagement_view').select('*').order('visits', { ascending: false }).limit(5),
+        supabase.schema('ops').from('analytics_hourly_activity_view').select('*').order('hour_of_day', { ascending: true }),
+        supabase.schema('ops').from('analytics_top_users_view').select('*').limit(5),
         // Helper queries for lists (Standard tables)
-        supabase.from('user_presence').select(`
+        supabase.schema('iam').from('user_presence').select(`
             last_seen_at, current_view, status,
             users (id, full_name, avatar_url, email, created_at, is_active)
         `).order('last_seen_at', { ascending: false }).limit(5),
-        supabase.from('users').select('id, full_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(5),
+        supabase.schema('iam').from('users').select('id, full_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(5),
         // Enterprise Analytics
-        supabase.from('analytics_bounce_rate_view').select('*').single(),
-        supabase.from('analytics_session_duration_view').select('*').single(),
-        supabase.from('analytics_user_journeys_view').select('*').limit(50), // Last 50 steps
-        supabase.from('analytics_at_risk_users_view').select('*').limit(5),
+        supabase.schema('ops').from('analytics_bounce_rate_view').select('*').single(),
+        supabase.schema('ops').from('analytics_session_duration_view').select('*').single(),
+        supabase.schema('ops').from('analytics_user_journeys_view').select('*').limit(50), // Last 50 steps
+        supabase.schema('ops').from('analytics_at_risk_users_view').select('*').limit(5),
         // Country distribution from user_data
-        supabase.from('analytics_users_by_country_view').select('*').limit(10)
+        supabase.schema('ops').from('analytics_users_by_country_view').select('*').limit(10)
     ]);
 
     // 2. Parse Data
@@ -802,7 +802,7 @@ export async function getUserJourneys(limit: number = 50): Promise<UserJourney[]
     const supabase = await createClient();
 
     const { data: journeysRaw, error } = await supabase
-        .from('analytics_user_journeys_view')
+        .schema('ops').from('analytics_user_journeys_view')
         .select('*')
         .order('entered_at', { ascending: false })
         .limit(limit * 10); // Get more steps to group into sessions
@@ -936,15 +936,15 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
         historyRes,
     ] = await Promise.all([
         // Core user
-        supabase.from('users').select('*').eq('id', userId).single(),
+        supabase.schema('iam').from('users').select('*').eq('id', userId).single(),
         // Extended data
-        supabase.from('user_data').select('first_name, last_name, phone_e164, birthdate, country:countries(name)').eq('user_id', userId).maybeSingle(),
+        supabase.schema('iam').from('user_data').select('first_name, last_name, phone_e164, birthdate, country').eq('user_id', userId).maybeSingle(),
         // Preferences
-        supabase.from('user_preferences').select('theme, language, layout, sidebar_mode, timezone').eq('user_id', userId).maybeSingle(),
+        supabase.schema('iam').from('user_preferences').select('theme, language, layout, sidebar_mode, timezone').eq('user_id', userId).maybeSingle(),
         // Presence
-        supabase.from('user_presence').select('last_seen_at, current_view, status, user_agent').eq('user_id', userId).maybeSingle(),
+        supabase.schema('iam').from('user_presence').select('last_seen_at, current_view, status, user_agent').eq('user_id', userId).maybeSingle(),
         // Organizations with plan
-        supabase.from('organization_members')
+        supabase.schema('iam').from('organization_members')
             .select(`
                 organization_id,
                 joined_at,
@@ -953,17 +953,14 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
                 organizations (
                     id,
                     name,
-                    logo_url,
-                    organization_subscriptions (
-                        plans (name)
-                    )
+                    logo_url
                 )
             `)
             .eq('user_id', userId),
         // Session stats from analytics view
-        supabase.from('analytics_top_users_view').select('total_sessions, total_pageviews, total_time_seconds').eq('id', userId).maybeSingle(),
+        supabase.schema('ops').from('analytics_top_users_view').select('total_sessions, total_pageviews, total_time_seconds').eq('id', userId).maybeSingle(),
         // Recent view history (last 200 entries)
-        supabase.from('user_view_history').select('id, view_name, entered_at, exited_at, duration_seconds, session_id').eq('user_id', userId).order('entered_at', { ascending: false }).limit(200),
+        supabase.schema('iam').from('user_view_history').select('id, view_name, entered_at, exited_at, duration_seconds, session_id').eq('user_id', userId).order('entered_at', { ascending: false }).limit(200),
     ]);
 
     if (userRes.error || !userRes.data) {
@@ -977,13 +974,24 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     const presence = presenceRes.data;
     const stats = statsRes.data;
 
-    // Parse organizations
+    // Parse organizations — plan_name requires cross-schema query (billing)
+    const orgIds = (membersRes.data || []).map((m: any) => m.organization_id).filter(Boolean);
+    let subsMap: Record<string, string> = {};
+    if (orgIds.length > 0) {
+        const { data: subs } = await supabase.schema('billing').from('organization_subscriptions')
+            .select('organization_id, plans (name)')
+            .in('organization_id', orgIds)
+            .eq('status', 'active');
+        for (const s of (subs || []) as any[]) {
+            subsMap[s.organization_id] = s.plans?.name || null;
+        }
+    }
     const organizations = (membersRes.data || []).map((m: any) => ({
         id: m.organizations?.id || m.organization_id,
         name: m.organizations?.name || 'Desconocida',
         logo_url: m.organizations?.logo_url || null,
         role_name: m.roles?.name || null,
-        plan_name: m.organizations?.organization_subscriptions?.[0]?.plans?.name || null,
+        plan_name: subsMap[m.organization_id] || null,
         joined_at: m.joined_at,
         is_active: m.is_active,
     }));
@@ -1084,13 +1092,13 @@ export async function getAdminOrganizationDetail(orgId: string): Promise<AdminOr
     const [orgRes, membersRes, projectsRes] = await Promise.all([
         // Get org from the admin view (includes owner, plan, counts)
         supabase
-            .from('admin_organizations_view')
+            .schema('iam').from('admin_organizations_view')
             .select('*')
             .eq('id', orgId)
             .single(),
         // Get members with user info
         supabase
-            .from('organization_members')
+            .schema('iam').from('organization_members')
             .select(`
                 id,
                 user_id,
@@ -1108,7 +1116,7 @@ export async function getAdminOrganizationDetail(orgId: string): Promise<AdminOr
             .order('joined_at', { ascending: true }),
         // Get projects
         supabase
-            .from('projects')
+            .schema('projects').from('projects')
             .select('id, name, status, code, color, created_at')
             .eq('organization_id', orgId)
             .eq('is_deleted', false)
@@ -1127,7 +1135,7 @@ export async function getAdminOrganizationDetail(orgId: string): Promise<AdminOr
     let ownerAvatarUrl: string | null = null;
     if (org.owner_name || org.owner_email) {
         const { data: ownerData } = await supabase
-            .from('users')
+            .schema('iam').from('users')
             .select('avatar_url')
             .eq('email', org.owner_email)
             .maybeSingle();

@@ -60,7 +60,7 @@ export async function getAllUsers(): Promise<{ success: boolean; users?: UserBas
         const ADMIN_ROLE_ID = 'd5606324-af8d-487e-8c8e-552511fce2a2';
 
         const { data, error } = await supabase
-            .from("users")
+            .schema('iam').from("users")
             .select("id, email, full_name")
             .eq("role_id", ADMIN_ROLE_ID)
             .order("email");
@@ -92,7 +92,7 @@ export async function getUserOrganizations(userId: string): Promise<{ success: b
 
         // Get orgs where user is a member
         const { data, error } = await supabase
-            .from("organization_members")
+            .schema('iam').from("organization_members")
             .select(`
                 organization_id,
                 organizations:organization_id (
@@ -134,25 +134,23 @@ export async function getCurrentUserAndOrg(): Promise<{ userId: string | null; o
 
         // Get internal user and their active org
         const { data: userData } = await supabase
-            .from("users")
-            .select(`
-                id,
-                user_preferences!inner (
-                    last_organization_id
-                )
-            `)
+            .schema('iam').from("users")
+            .select("id")
             .eq("auth_id", user.id)
             .single();
 
         if (!userData) return { userId: null, orgId: null };
 
-        const pref = Array.isArray(userData.user_preferences)
-            ? (userData.user_preferences as any)[0]
-            : (userData.user_preferences as any);
+        // Cross-schema: user_preferences está en iam
+        const { data: prefData } = await supabase
+            .schema('iam').from('user_preferences')
+            .select('last_organization_id')
+            .eq('user_id', userData.id)
+            .single();
 
         return {
             userId: userData.id,
-            orgId: pref?.last_organization_id || null
+            orgId: prefData?.last_organization_id || null
         };
     } catch (error) {
         console.error("Error en getCurrentUserAndOrg:", error);
@@ -278,7 +276,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
 
         // 1. Obtener usuario por ID
         const { data: user } = await supabase
-            .from("users")
+            .schema('iam').from("users")
             .select("id, email, full_name, created_at")
             .eq("id", userId)
             .single();
@@ -289,7 +287,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
 
         // 2. Obtener organización con plan
         const { data: org } = await supabase
-            .from("organizations")
+            .schema('iam').from("organizations")
             .select(`
                 id, 
                 name, 
@@ -455,7 +453,7 @@ export async function getSystemErrors(hours: number = 24): Promise<{ success: bo
         const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await supabase
-            .from('system_error_logs')
+            .schema('audit').from('system_error_logs')
             .select('*')
             .gte('created_at', since)
             .order('created_at', { ascending: false })
@@ -501,7 +499,7 @@ export async function getSupportChats(): Promise<{ success: boolean; chats?: Sup
 
         // Obtener todos los mensajes con info del usuario
         const { data: messages, error } = await supabase
-            .from("support_messages")
+            .schema('iam').from("support_messages")
             .select(`
                 id,
                 user_id,
@@ -585,7 +583,7 @@ export async function getChatMessages(userId: string): Promise<{ success: boolea
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from("support_messages")
+            .schema('iam').from("support_messages")
             .select("id, user_id, message, sender, created_at, read_by_admin, read_by_user")
             .eq("user_id", userId)
             .order("created_at", { ascending: true });
@@ -626,7 +624,7 @@ export async function sendAdminMessage(userId: string, message: string): Promise
         }
 
         const { error } = await supabase
-            .from("support_messages")
+            .schema('iam').from("support_messages")
             .insert({
                 user_id: userId,
                 message: message.trim(),
@@ -656,7 +654,7 @@ export async function markChatAsRead(userId: string): Promise<{ success: boolean
         const supabase = await createClient();
 
         const { error } = await supabase
-            .from("support_messages")
+            .schema('iam').from("support_messages")
             .update({ read_by_admin: true })
             .eq("user_id", userId)
             .eq("sender", "user")
@@ -684,7 +682,7 @@ export async function getUnreadChatsCount(): Promise<{ success: boolean; count?:
 
         // Obtener mensajes no leídos del usuario
         const { data, error } = await supabase
-            .from("support_messages")
+            .schema('iam').from("support_messages")
             .select("user_id")
             .eq("sender", "user")
             .eq("read_by_admin", false);

@@ -15,7 +15,7 @@ export async function saveLastActiveProject(projectId: string) {
 
     // Get PUBLIC user ID from users table
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -25,7 +25,7 @@ export async function saveLastActiveProject(projectId: string) {
 
     // Get project's organization
     const { data: project } = await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .select('organization_id')
         .eq('id', projectId)
         .single();
@@ -34,13 +34,13 @@ export async function saveLastActiveProject(projectId: string) {
 
     // Update project's last_active_at timestamp
     await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .update({ last_active_at: new Date().toISOString() })
         .eq('id', projectId);
 
     // Check if preference exists
     const { data: existingPref } = await supabase
-        .from('user_organization_preferences')
+        .schema('iam').from('user_organization_preferences')
         .select('id, user_id, organization_id')
         .eq('user_id', publicUserId)
         .eq('organization_id', project.organization_id)
@@ -49,7 +49,7 @@ export async function saveLastActiveProject(projectId: string) {
     if (existingPref) {
         // Update only last_project_id
         const { error } = await supabase
-            .from('user_organization_preferences')
+            .schema('iam').from('user_organization_preferences')
             .update({
                 last_project_id: projectId,
                 updated_at: new Date().toISOString()
@@ -60,7 +60,7 @@ export async function saveLastActiveProject(projectId: string) {
     } else {
         // Insert new preference
         const { error } = await supabase
-            .from('user_organization_preferences')
+            .schema('iam').from('user_organization_preferences')
             .insert({
                 user_id: publicUserId,
                 organization_id: project.organization_id,
@@ -80,7 +80,7 @@ export async function fetchLastActiveProject(organizationId: string) {
 
     // Get PUBLIC user ID from users table
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -88,7 +88,7 @@ export async function fetchLastActiveProject(organizationId: string) {
     if (!userData) return null;
 
     const { data } = await supabase
-        .from('user_organization_preferences')
+        .schema('iam').from('user_organization_preferences')
         .select('last_project_id')
         .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
@@ -109,7 +109,7 @@ export async function createProject(formData: FormData) {
 
     // Get public user ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -118,7 +118,7 @@ export async function createProject(formData: FormData) {
 
     // Get Organization Member ID (Required for created_by FK)
     const { data: memberData } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
@@ -165,7 +165,7 @@ export async function createProject(formData: FormData) {
     };
 
     const { data: newProject, error: insertError } = await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .insert(projectData)
         .select()
         .single();
@@ -177,7 +177,7 @@ export async function createProject(formData: FormData) {
 
     // Insert project_data
     const { error: dataError } = await supabase
-        .from('project_data')
+        .schema('projects').from('project_data')
         .insert({
             project_id: newProject.id,
             organization_id: organizationId,
@@ -191,7 +191,7 @@ export async function createProject(formData: FormData) {
 
     // Insert project_settings (color customization lives here)
     const { error: settingsError } = await supabase
-        .from('project_settings')
+        .schema('projects').from('project_settings')
         .insert({
             project_id: newProject.id,
             organization_id: organizationId,
@@ -356,7 +356,7 @@ export async function updateProject(formData: FormData) {
         // 1. Update basic project info if changed
         if (Object.keys(projectFields).length > 0) {
             const { error: projectError } = await supabase
-                .from("projects")
+                .schema('projects').from("projects")
                 .update(projectFields)
                 .eq("id", projectId);
 
@@ -365,7 +365,7 @@ export async function updateProject(formData: FormData) {
 
         // 2. Upsert project_data
         if (Object.keys(dataFields).length > 0) {
-            const { data: currentProject } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
+            const { data: currentProject } = await supabase.schema('projects').from('projects').select('organization_id').eq('id', projectId).single();
             if (!currentProject) throw new Error("Project not found");
 
             const { error: dataError } = await supabase
@@ -382,7 +382,7 @@ export async function updateProject(formData: FormData) {
 
         // 3. Upsert project_settings (color customization)
         if (Object.keys(settingsFields).length > 0) {
-            const { data: currentProject } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
+            const { data: currentProject } = await supabase.schema('projects').from('projects').select('organization_id').eq('id', projectId).single();
             if (!currentProject) throw new Error("Project not found");
 
             const { error: settingsError } = await supabase
@@ -454,7 +454,7 @@ export async function swapProjectStatus(
     try {
         // 1. Deactivate the chosen project
         const { error: deactivateError } = await supabase
-            .from('projects')
+            .schema('projects').from('projects')
             .update({ status: deactivateToStatus })
             .eq('id', projectToDeactivateId);
 
@@ -462,7 +462,7 @@ export async function swapProjectStatus(
 
         // 2. Activate the desired project
         const { error: activateError } = await supabase
-            .from('projects')
+            .schema('projects').from('projects')
             .update({ status: 'active' })
             .eq('id', projectToActivateId);
 
@@ -481,7 +481,7 @@ export async function deleteProject(projectId: string) {
 
     try {
         const { error } = await supabase
-            .from("projects")
+            .schema('projects').from("projects")
             .update({
                 is_deleted: true,
                 deleted_at: new Date().toISOString()
@@ -523,7 +523,7 @@ export async function getProjectTypes(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_types')
+        .schema('projects').from('project_types')
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
@@ -553,7 +553,7 @@ export async function createProjectType(
 
     // Get public user -> organization member ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -561,7 +561,7 @@ export async function createProjectType(
     if (!userData) return { error: "User not found" };
 
     const { data: memberData } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
@@ -571,7 +571,7 @@ export async function createProjectType(
     if (!organizationId) return { error: "Organization ID is required" };
 
     const { data, error } = await supabase
-        .from('project_types')
+        .schema('projects').from('project_types')
         .insert({
             name,
             organization_id: organizationId,
@@ -598,7 +598,7 @@ export async function updateProjectType(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_types')
+        .schema('projects').from('project_types')
         .update({ name })
         .eq('id', id)
         .select()
@@ -620,7 +620,7 @@ export async function deleteProjectType(id: string, replacementId?: string) {
         // 1. If replacement selected, migrate projects first
         if (replacementId) {
             const { error: updateError } = await supabase
-                .from('projects')
+                .schema('projects').from('projects')
                 .update({ project_type_id: replacementId })
                 .eq('project_type_id', id);
 
@@ -629,7 +629,7 @@ export async function deleteProjectType(id: string, replacementId?: string) {
 
         // 2. Soft delete the type
         const { error } = await supabase
-            .from('project_types')
+            .schema('projects').from('project_types')
             .update({ is_deleted: true, deleted_at: new Date().toISOString() })
             .eq('id', id);
 
@@ -651,7 +651,7 @@ export async function getProjectModalities(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_modalities')
+        .schema('projects').from('project_modalities')
         .select('*')
         .or(`organization_id.eq.${organizationId},organization_id.is.null`)
         .eq('is_deleted', false)
@@ -681,7 +681,7 @@ export async function createProjectModality(
 
     // Get public user -> organization member ID
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -689,7 +689,7 @@ export async function createProjectModality(
     if (!userData) return { error: "User not found" };
 
     const { data: memberData } = await supabase
-        .from('organization_members')
+        .schema('iam').from('organization_members')
         .select('id')
         .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
@@ -699,7 +699,7 @@ export async function createProjectModality(
     if (!organizationId) return { error: "Organization ID is required" };
 
     const { data, error } = await supabase
-        .from('project_modalities')
+        .schema('projects').from('project_modalities')
         .insert({
             name,
             organization_id: organizationId,
@@ -726,7 +726,7 @@ export async function updateProjectModality(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('project_modalities')
+        .schema('projects').from('project_modalities')
         .update({ name })
         .eq('id', id)
         .select()
@@ -748,7 +748,7 @@ export async function deleteProjectModality(id: string, replacementId?: string) 
         // 1. If replacement selected, migrate projects first
         if (replacementId) {
             const { error: updateError } = await supabase
-                .from('projects')
+                .schema('projects').from('projects')
                 .update({ project_modality_id: replacementId })
                 .eq('project_modality_id', id);
 
@@ -757,7 +757,7 @@ export async function deleteProjectModality(id: string, replacementId?: string) 
 
         // 2. Soft delete the modality
         const { error } = await supabase
-            .from('project_modalities')
+            .schema('projects').from('project_modalities')
             .update({ is_deleted: true, deleted_at: new Date().toISOString() })
             .eq('id', id);
 

@@ -9,7 +9,7 @@ export async function getLastActiveProject(organizationId: string) {
 
     // Get PUBLIC user ID from users table
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authUser.id)
         .single();
@@ -17,7 +17,7 @@ export async function getLastActiveProject(organizationId: string) {
     if (!userData) return null;
 
     const { data } = await supabase
-        .from('user_organization_preferences')
+        .schema('iam').from('user_organization_preferences')
         .select('last_project_id')
         .eq('user_id', userData.id)
         .eq('organization_id', organizationId)
@@ -31,7 +31,7 @@ export async function getOrganizationProjects(organizationId: string) {
 
     // Select from the view provided by user
     const { data, error } = await supabase
-        .from('projects_view')
+        .schema('projects').from('projects_view')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -53,7 +53,7 @@ export async function getActiveOrganizationProjects(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('projects_view')
+        .schema('projects').from('projects_view')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -73,7 +73,7 @@ export async function getSidebarProjects(organizationId: string) {
 
     // Use projects_view which joins project_settings for color fields
     const { data, error } = await supabase
-        .from('projects_view')
+        .schema('projects').from('projects_view')
         .select('id, name, status, organization_id, color, custom_color_hex, use_custom_color, image_url, image_palette, use_palette_theme')
         .eq('organization_id', organizationId)
         .neq('status', 'completed')
@@ -91,7 +91,7 @@ export async function getProjectById(projectId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .select(`
             *,
             project_data (*),
@@ -115,13 +115,13 @@ export async function getProjectFinancialMovements(projectId: string) {
 
     // First get the project to know its organization
     const { data: project } = await supabase
-        .from('projects')
+        .schema('projects').from('projects')
         .select('organization_id')
         .eq('id', projectId)
         .single();
 
     const { data, error } = await supabase
-        .from('unified_financial_movements_view')
+        .schema('finance').from('unified_financial_movements_view')
         .select('*')
         .eq('project_id', projectId)
         .order('payment_date', { ascending: false });

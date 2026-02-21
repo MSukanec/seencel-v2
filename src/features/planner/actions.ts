@@ -22,7 +22,7 @@ export async function createBoard(input: CreateBoardInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .insert({
             name: input.name,
             description: input.description || null,
@@ -47,7 +47,7 @@ export async function updateBoard(boardId: string, input: UpdateBoardInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .update({
             ...input,
             updated_at: new Date().toISOString(),
@@ -70,7 +70,7 @@ export async function deleteBoard(boardId: string) {
 
     // Soft delete
     const { error } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -94,7 +94,7 @@ export async function createList(input: CreateListInput) {
 
     // Get organization_id from board
     const { data: boardData } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .select('organization_id')
         .eq('id', input.board_id)
         .single();
@@ -103,7 +103,7 @@ export async function createList(input: CreateListInput) {
 
     // Get max position
     const { data: existingLists } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .select('position')
         .eq('board_id', input.board_id)
         .order('position', { ascending: false })
@@ -112,7 +112,7 @@ export async function createList(input: CreateListInput) {
     const maxPosition = existingLists?.[0]?.position ?? -1;
 
     const { data, error } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .insert({
             board_id: input.board_id,
             organization_id: boardData.organization_id,
@@ -136,7 +136,7 @@ export async function updateList(listId: string, input: Partial<CreateListInput>
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .update({
             ...input,
             updated_at: new Date().toISOString(),
@@ -158,7 +158,7 @@ export async function deleteList(listId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -178,7 +178,7 @@ export async function moveList(listId: string, targetBoardId: string) {
 
     // Get target board to check existence and max position
     const { data: targetBoard } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .select('id, organization_id')
         .eq('id', targetBoardId)
         .single();
@@ -187,7 +187,7 @@ export async function moveList(listId: string, targetBoardId: string) {
 
     // Get max position in target board
     const { data: existingLists } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .select('position')
         .eq('board_id', targetBoardId)
         .order('position', { ascending: false })
@@ -197,7 +197,7 @@ export async function moveList(listId: string, targetBoardId: string) {
 
     // Update list
     const { error } = await supabase
-        .from('kanban_lists')
+        .schema('planner').from('kanban_lists')
         .update({
             board_id: targetBoardId,
             position: maxPosition + 1,
@@ -220,7 +220,7 @@ export async function reorderLists(boardId: string, listIds: string[]) {
     // Update positions using separate update queries to avoid upsert/insert issues
     const updates = listIds.map((id, index) =>
         supabase
-            .from('kanban_lists')
+            .schema('planner').from('kanban_lists')
             .update({ position: index, updated_at: new Date().toISOString() })
             .eq('id', id)
             .eq('board_id', boardId) // Security check
@@ -248,7 +248,7 @@ export async function createCard(input: CreateCardInput) {
 
     // Get organization_id for the card
     const { data: boardData } = await supabase
-        .from('kanban_boards')
+        .schema('planner').from('kanban_boards')
         .select('organization_id')
         .eq('id', input.board_id)
         .single();
@@ -257,7 +257,7 @@ export async function createCard(input: CreateCardInput) {
 
     // Get max position in the target list
     const { data: existingCards } = await supabase
-        .from('kanban_cards')
+        .schema('planner').from('kanban_cards')
         .select('position')
         .eq('list_id', input.list_id)
         .order('position', { ascending: false })
@@ -266,7 +266,7 @@ export async function createCard(input: CreateCardInput) {
     const maxPosition = existingCards?.[0]?.position ?? -1;
 
     const { data, error } = await supabase
-        .from('kanban_cards')
+        .schema('planner').from('kanban_cards')
         .insert({
             list_id: input.list_id,
             board_id: input.board_id,
@@ -298,7 +298,7 @@ export async function updateCard(cardId: string, input: UpdateCardInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_cards')
+        .schema('planner').from('kanban_cards')
         .update({
             ...input,
             updated_at: new Date().toISOString(),
@@ -320,7 +320,7 @@ export async function deleteCard(cardId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('kanban_cards')
+        .schema('planner').from('kanban_cards')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -339,7 +339,7 @@ export async function moveCard(cardId: string, targetListId: string, targetPosit
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('kanban_cards')
+        .schema('planner').from('kanban_cards')
         .update({
             list_id: targetListId,
             position: targetPosition,
@@ -362,7 +362,7 @@ export async function reorderCards(listId: string, cardIds: string[]) {
     // This is safer than upsert for partial updates due to NOT NULL constraints
     const updates = cardIds.map((id, index) =>
         supabase
-            .from('kanban_cards')
+            .schema('planner').from('kanban_cards')
             .update({
                 position: index,
                 list_id: listId, // Ensure list_id is consistent
@@ -392,7 +392,7 @@ export async function createLabel(organizationId: string, name: string, color: s
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('kanban_labels')
+        .schema('planner').from('kanban_labels')
         .insert({
             organization_id: organizationId,
             name,
@@ -414,7 +414,7 @@ export async function addLabelToCard(cardId: string, labelId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('kanban_card_labels')
+        .schema('planner').from('kanban_card_labels')
         .insert({
             card_id: cardId,
             label_id: labelId,
@@ -432,7 +432,7 @@ export async function removeLabelFromCard(cardId: string, labelId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from('kanban_card_labels')
+        .schema('planner').from('kanban_card_labels')
         .delete()
         .eq('card_id', cardId)
         .eq('label_id', labelId);
@@ -453,7 +453,7 @@ export async function createCalendarEvent(input: CreateCalendarEventInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('calendar_events')
+        .schema('planner').from('calendar_events')
         .insert({
             organization_id: input.organization_id,
             project_id: input.project_id || null,
@@ -484,7 +484,7 @@ export async function updateCalendarEvent(eventId: string, input: UpdateCalendar
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('calendar_events')
+        .schema('planner').from('calendar_events')
         .update({
             ...input,
             updated_at: new Date().toISOString(),
@@ -507,7 +507,7 @@ export async function deleteCalendarEvent(eventId: string) {
 
     // Soft delete
     const { error } = await supabase
-        .from('calendar_events')
+        .schema('planner').from('calendar_events')
         .update({
             // is_deleted: true, // Removed in favor of deleted_at
             deleted_at: new Date().toISOString(),

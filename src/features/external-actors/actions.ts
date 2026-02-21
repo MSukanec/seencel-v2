@@ -111,7 +111,7 @@ export async function checkExternalActorAccess(orgId: string): Promise<{ isActiv
 
     // Resolve internal user id
     const { data: userData } = await supabase
-        .from("users")
+        .schema('iam').from("users")
         .select("id")
         .eq("auth_id", user.id)
         .single();

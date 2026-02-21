@@ -65,7 +65,7 @@ export default async function QuoteDetailAppPage({
             getOrganizationTasks(activeOrgId),
             getUnits(),
             getTaskDivisions(),
-            supabase.from("currencies").select("id, name, symbol").order("name"),
+            supabase.schema("finance").from("currencies").select("id, name, symbol").order("name"),
         ];
 
         if (isContract) {

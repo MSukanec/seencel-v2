@@ -39,14 +39,14 @@ export default async function QuotesPage({
             getOrganizationFinancialData(activeOrgId),
             // contacts_view tiene resolved_avatar_url (Google OAuth + uploads propios)
             supabase
-                .from("contacts_view")
+                .schema('projects').from("contacts_view")
                 .select("id, full_name, resolved_avatar_url")
                 .eq("organization_id", activeOrgId)
                 .eq("is_deleted", false)
                 .order("full_name"),
             // projects_view: solo activos, con image_url y color para avatares en ProjectField
             supabase
-                .from("projects_view")
+                .schema('projects').from("projects_view")
                 .select("id, name, image_url, color")
                 .eq("organization_id", activeOrgId)
                 .eq("is_deleted", false)

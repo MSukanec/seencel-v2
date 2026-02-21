@@ -1,244 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-20T14:40:38.399Z
+> Generated: 2026-02-21T03:04:42.923Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PUBLIC] Functions (chunk 1: admin_cleanup_test_purchase — documents_validate_project_org)
-
-### `admin_cleanup_test_purchase(p_user_email text, p_org_id uuid)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.admin_cleanup_test_purchase(p_user_email text, p_org_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_user_id UUID;
-    v_deleted_items TEXT[] := '{}';
-    v_org_id UUID;
-    v_affected_count INT;
-    v_free_plan_id UUID := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
-    
-BEGIN
-    v_org_id := p_org_id;
-    
-    -- ============================================
-    -- VALIDACIÓN: Obtener y validar user_id
-    -- ============================================
-    SELECT COUNT(*) INTO v_affected_count
-    FROM public.users 
-    WHERE email = p_user_email;
-    
-    IF v_affected_count = 0 THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'message', 'Usuario no encontrado: ' || p_user_email
-        );
-    END IF;
-    
-    IF v_affected_count > 1 THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'message', '⛔ SEGURIDAD: Más de un usuario con ese email (esto no debería pasar)'
-        );
-    END IF;
-    
-    SELECT id INTO v_user_id 
-    FROM public.users 
-    WHERE email = p_user_email;
-    
-    -- ============================================
-    -- OPERACIONES DE LIMPIEZA (con conteo)
-    -- ============================================
-    
-    -- 1. Borrar course_enrollments
-    DELETE FROM course_enrollments WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'course_enrollments (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 2. Borrar suscripciones de la organización
-    DELETE FROM organization_subscriptions WHERE organization_id = v_org_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'organization_subscriptions (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 3. Resetear plan_id de la organización al plan FREE
-    UPDATE organizations 
-    SET plan_id = v_free_plan_id 
-    WHERE id = v_org_id AND plan_id IS DISTINCT FROM v_free_plan_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'organizations.plan_id → FREE'); 
-    END IF;
-
-    -- 3b. Resetear is_founder flag
-    UPDATE organizations 
-    SET settings = COALESCE(settings, '{}'::jsonb) - 'is_founder'
-    WHERE id = v_org_id AND (settings->>'is_founder')::boolean = true;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'organizations.settings.is_founder → removed'); 
-    END IF;
-
-    -- 3c. Resetear purchased_seats a 0
-    UPDATE organizations 
-    SET purchased_seats = 0 
-    WHERE id = v_org_id AND COALESCE(purchased_seats, 0) > 0;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'organizations.purchased_seats → 0'); 
-    END IF;
-    
-    -- 4. Borrar payments del usuario
-    DELETE FROM payments WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'payments (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 5. Borrar bank_transfer_payments del usuario
-    DELETE FROM bank_transfer_payments WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'bank_transfer_payments (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 6. Borrar mp_preferences del usuario
-    DELETE FROM mp_preferences WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'mp_preferences (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 7. Borrar coupon_redemptions del usuario
-    DELETE FROM coupon_redemptions WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'coupon_redemptions (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- 8. Borrar payment_events vinculados a paypal_preferences del usuario
-    DELETE FROM payment_events pe
-    WHERE EXISTS (
-        SELECT 1 FROM paypal_preferences pp 
-        WHERE pp.id::text = pe.custom_id 
-        AND pp.user_id = v_user_id
-    );
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'payment_events (' || v_affected_count || ')'); 
-    END IF;
-
-    -- 9. Borrar paypal_preferences del usuario (tabla unificada)
-    DELETE FROM paypal_preferences WHERE user_id = v_user_id;
-    GET DIAGNOSTICS v_affected_count = ROW_COUNT;
-    IF v_affected_count > 0 THEN 
-        v_deleted_items := array_append(v_deleted_items, 'paypal_preferences (' || v_affected_count || ')'); 
-    END IF;
-    
-    -- NOTA: paypal_seat_preferences y paypal_upgrade_preferences son legacy
-    -- y no existen en producción. Toda la data está en paypal_preferences.
-    
-    -- ============================================
-    -- RESULTADO
-    -- ============================================
-    IF array_length(v_deleted_items, 1) IS NULL OR array_length(v_deleted_items, 1) = 0 THEN
-        RETURN jsonb_build_object(
-            'success', true,
-            'message', '✅ Usuario ' || p_user_email || ' encontrado pero no tenía datos de compra.',
-            'deleted_items', '[]'::jsonb
-        );
-    END IF;
-    
-    RETURN jsonb_build_object(
-        'success', true,
-        'message', '✅ Limpieza completa para ' || p_user_email,
-        'deleted_items', to_jsonb(v_deleted_items),
-        'user_id', v_user_id,
-        'org_id', v_org_id
-    );
-END;
-$function$
-```
-</details>
-
-### `admin_cleanup_test_user(target_email text)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.admin_cleanup_test_user(target_email text)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-DECLARE
-    v_user_id uuid;
-    v_org_record record;
-BEGIN
-    -- 1. Find the user ID from auth.users (or public.users)
-    SELECT id INTO v_user_id
-    FROM auth.users
-    WHERE email = target_email;
-
-    IF v_user_id IS NULL THEN
-        RAISE NOTICE 'User % not found, nothing to clean.', target_email;
-        RETURN;
-    END IF;
-
-    RAISE NOTICE 'Cleaning up user: % (ID: %)', target_email, v_user_id;
-
-    -- 2. Find Organizations owned by this user
-    -- We assume an org is "owned" if this user is a member with 'Administrador' role
-    -- OR we can look at the simplified logic: "Orgs where this user is the CREATOR"
-    -- If your logic relies on `organization_members`, we should find orgs where 
-    -- this user is a member and check if we want to delete it.
-    -- SAFE APPROACH: Delete Organization only if this user is the ONLY member.
-    
-    FOR v_org_record IN 
-        SELECT o.id, o.name 
-        FROM public.organizations o
-        JOIN public.organization_members om ON o.id = om.organization_id
-        WHERE om.user_id = (SELECT id FROM public.users WHERE auth_id = v_user_id)
-    LOOP
-        -- Check if there are OTHER members in this org
-        IF (SELECT count(*) FROM public.organization_members WHERE organization_id = v_org_record.id) = 1 THEN
-            RAISE NOTICE 'Deleting Organization: % (ID: %)', v_org_record.name, v_org_record.id;
-            
-            -- Delete the Organization (Cascade should handle the rest usually, but let's be safe)
-            -- Note: If you have FKs set to CASCADE, just deleting the org is enough.
-            DELETE FROM public.organizations WHERE id = v_org_record.id;
-        ELSE
-            RAISE NOTICE 'Skipping Organization % because it has other members.', v_org_record.name;
-            
-            -- Just remove the member, don't kill the org
-            DELETE FROM public.organization_members 
-            WHERE organization_id = v_org_record.id 
-            AND user_id = (SELECT id FROM public.users WHERE auth_id = v_user_id);
-        END IF;
-    END LOOP;
-
-    -- 3. Finally, delete the User from auth.users
-    -- This will cascade to public.users and any remaining direct links
-    DELETE FROM auth.users WHERE id = v_user_id;
-    
-    RAISE NOTICE 'Cleanup complete for %', target_email;
-END;
-$function$
-```
-</details>
+## [PUBLIC] Functions (chunk 1: analytics_track_navigation — external_has_scope)
 
 ### `analytics_track_navigation(p_org_id uuid, p_view_name text, p_session_id uuid)` 🔐
 
@@ -331,86 +96,11 @@ $function$
 ```sql
 CREATE OR REPLACE FUNCTION public.assign_default_permissions_to_org_roles(p_organization_id uuid)
  RETURNS void
- LANGUAGE plpgsql
+ LANGUAGE sql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-declare
-  admin_role_id uuid;
-  editor_role_id uuid;
-  viewer_role_id uuid;
-begin
-  -- ============================================================
-  -- 1. Obtener roles de la organización
-  -- ============================================================
-  select id into admin_role_id
-  from public.roles
-  where organization_id = p_organization_id
-    and is_system = false
-    and lower(name) = 'administrador';
-
-  select id into editor_role_id
-  from public.roles
-  where organization_id = p_organization_id
-    and is_system = false
-    and lower(name) = 'editor';
-
-  select id into viewer_role_id
-  from public.roles
-  where organization_id = p_organization_id
-    and is_system = false
-    and lower(name) in ('viewer', 'lector');
-
-  -- ============================================================
-  -- 2. ADMIN → todos los permisos organizacionales
-  -- (excluye sistema/admin global)
-  -- ============================================================
-  insert into public.role_permissions (role_id, permission_id)
-  select
-    admin_role_id,
-    p.id
-  from public.permissions p
-  where p.category <> 'admin'
-  on conflict do nothing;
-
-  -- ============================================================
-  -- 3. EDITOR → view + manage
-  -- + billing.view
-  -- + general_costs.manage
-  -- - sin organization / admin
-  -- ============================================================
-  insert into public.role_permissions (role_id, permission_id)
-  select
-    editor_role_id,
-    p.id
-  from public.permissions p
-  where
-    (
-      p.key like '%.view'
-      or p.key like '%.manage'
-      or p.key = 'billing.view'
-      or p.key = 'general_costs.manage'
-    )
-    and p.category not in (
-      'admin',
-      'organization'
-    )
-  on conflict do nothing;
-
-  -- ============================================================
-  -- 4. VIEWER → solo view
-  -- ============================================================
-  insert into public.role_permissions (role_id, permission_id)
-  select
-    viewer_role_id,
-    p.id
-  from public.permissions p
-  where
-    p.key like '%.view'
-    and p.category <> 'admin'
-  on conflict do nothing;
-
-end;
+  SELECT iam.assign_default_permissions_to_org_roles(p_organization_id);
 $function$
 ```
 </details>
@@ -640,15 +330,9 @@ CREATE OR REPLACE FUNCTION public.can_mutate_org(p_organization_id uuid, p_permi
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-  select
-    public.is_admin()
-    or (
-      not public.is_demo_org(p_organization_id)
-      and public.is_org_member(p_organization_id)
-      and public.has_permission(p_organization_id, p_permission_key)
-    );
+  SELECT iam.can_mutate_org(p_organization_id, p_permission_key);
 $function$
 ```
 </details>
@@ -665,25 +349,9 @@ CREATE OR REPLACE FUNCTION public.can_mutate_project(p_project_id uuid, p_permis
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-  SELECT
-    is_admin()
-    -- Miembros con permiso mutan via can_mutate_org
-    OR EXISTS (
-      SELECT 1 FROM projects p
-      WHERE p.id = p_project_id
-        AND can_mutate_org(p.organization_id, p_permission_key)
-    )
-    -- Actores con access_level editor o admin
-    OR EXISTS (
-      SELECT 1 FROM project_access pa
-      WHERE pa.project_id = p_project_id
-        AND pa.user_id = current_user_id()
-        AND pa.is_active = true
-        AND pa.is_deleted = false
-        AND pa.access_level IN ('editor', 'admin')
-    );
+  SELECT iam.can_mutate_project(p_project_id, p_permission_key);
 $function$
 ```
 </details>
@@ -707,32 +375,6 @@ $function$
 ```
 </details>
 
-### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid, p_permission_key text)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT
-    is_admin()
-    OR is_demo_org(p_organization_id)
-    OR (
-      is_org_member(p_organization_id)
-      AND has_permission(p_organization_id, p_permission_key)
-    )
-    OR external_has_scope(p_organization_id, p_permission_key);
-$function$
-```
-</details>
-
 ### `can_view_org(p_organization_id uuid)` 🔐
 
 - **Returns**: boolean
@@ -745,14 +387,28 @@ CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid)
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-    SELECT
-        is_admin()
-        OR is_demo_org(p_organization_id)
-        OR is_org_member(p_organization_id)
-        OR is_external_actor(p_organization_id)
-        OR iam.is_organization_client(p_organization_id);
+  SELECT iam.can_view_org(p_organization_id);
+$function$
+```
+</details>
+
+### `can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_view_org(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.can_view_org(p_organization_id, p_permission_key);
 $function$
 ```
 </details>
@@ -769,26 +425,9 @@ CREATE OR REPLACE FUNCTION public.can_view_project(p_project_id uuid)
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-  SELECT
-    is_admin()
-    -- Miembros de la org ven todos los proyectos de su org
-    OR EXISTS (
-      SELECT 1 FROM projects p
-      JOIN organization_members om ON om.organization_id = p.organization_id
-      WHERE p.id = p_project_id
-        AND om.user_id = current_user_id()
-        AND om.is_active = true
-    )
-    -- Actores con acceso explícito al proyecto (externos, clientes, empleados)
-    OR EXISTS (
-      SELECT 1 FROM project_access pa
-      WHERE pa.project_id = p_project_id
-        AND pa.user_id = current_user_id()
-        AND pa.is_active = true
-        AND pa.is_deleted = false
-    );
+  SELECT iam.can_view_project(p_project_id);
 $function$
 ```
 </details>
@@ -805,36 +444,33 @@ CREATE OR REPLACE FUNCTION public.check_active_project_limit(p_organization_id u
  RETURNS json
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'billing'
 AS $function$
 DECLARE
     v_current_count INT;
     v_max_allowed INT;
     v_plan_features JSONB;
 BEGIN
-    -- 1. Contar proyectos activos de la organización (excluyendo el proyecto actual si se proporciona)
     SELECT COUNT(*)
     INTO v_current_count
-    FROM projects
+    FROM public.projects
     WHERE organization_id = p_organization_id
       AND status = 'active'
       AND is_deleted = false
       AND (p_excluded_project_id IS NULL OR id != p_excluded_project_id);
 
-    -- 2. Obtener el límite del plan
     SELECT p.features
     INTO v_plan_features
-    FROM organizations o
-    JOIN plans p ON p.id = o.plan_id
+    FROM public.organizations o
+    JOIN billing.plans p ON p.id = o.plan_id
     WHERE o.id = p_organization_id;
 
-    -- Si no hay plan o features, asumir ilimitado
     IF v_plan_features IS NULL THEN
         v_max_allowed := -1;
     ELSE
         v_max_allowed := COALESCE((v_plan_features->>'max_active_projects')::INT, -1);
     END IF;
 
-    -- 3. Retornar resultado
     RETURN json_build_object(
         'allowed', (v_max_allowed = -1 OR v_current_count < v_max_allowed),
         'current_active_count', v_current_count,
@@ -929,12 +565,9 @@ CREATE OR REPLACE FUNCTION public.current_user_id()
  RETURNS uuid
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-  select u.id
-  from public.users u
-  where u.auth_id = auth.uid()
-  limit 1;
+  SELECT iam.current_user_id();
 $function$
 ```
 </details>
@@ -949,34 +582,11 @@ $function$
 ```sql
 CREATE OR REPLACE FUNCTION public.dismiss_home_banner()
  RETURNS boolean
- LANGUAGE plpgsql
+ LANGUAGE sql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'iam'
 AS $function$
-declare
-  v_user_id uuid;
-begin
-  -- Resolver user_id desde auth.uid()
-  select u.id
-  into v_user_id
-  from public.users u
-  where u.auth_id = auth.uid()
-  limit 1;
-
-  -- Si no hay usuario autenticado, no hacer nada
-  if v_user_id is null then
-    return false;
-  end if;
-
-  -- Actualizar preferencia
-  update public.user_preferences up
-  set
-    home_banner_dismissed = true,
-    updated_at = now()
-  where up.user_id = v_user_id;
-
-  return true;
-end;
+  SELECT iam.dismiss_home_banner();
 $function$
 ```
 </details>
@@ -1012,6 +622,44 @@ begin
 
   return new;
 end;
+$function$
+```
+</details>
+
+### `ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)` 🔐
+
+- **Returns**: uuid
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.ensure_contact_for_user(p_organization_id uuid, p_user_id uuid)
+ RETURNS uuid
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.ensure_contact_for_user(p_organization_id, p_user_id);
+$function$
+```
+</details>
+
+### `external_has_scope(p_organization_id uuid, p_permission_key text)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION public.external_has_scope(p_organization_id uuid, p_permission_key text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+  SELECT iam.external_has_scope(p_organization_id, p_permission_key);
 $function$
 ```
 </details>

@@ -44,7 +44,7 @@ export async function importContactsBatch(organizationId: string, contacts: any[
     if (emails.length > 0) {
         // Chunk query if too many emails
         const { data: existing } = await supabase
-            .from('contacts')
+            .schema('projects').from('contacts')
             .select('email')
             .eq('organization_id', organizationId)
             .in('email', emails);
@@ -60,7 +60,7 @@ export async function importContactsBatch(organizationId: string, contacts: any[
     // 4. Insert only new records
     if (newRecords.length > 0) {
         const { error } = await supabase
-            .from('contacts')
+            .schema('projects').from('contacts')
             .insert(newRecords);
 
         if (error) {

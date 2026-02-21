@@ -21,7 +21,7 @@ export async function submitFeedback(formData: FormData) {
 
     try {
         const { error } = await supabase
-            .from("feedback")
+            .schema('iam').from("feedback")
             .insert({
                 user_id: profile.id, // Explicitly set user_id from the users table
                 message: message,

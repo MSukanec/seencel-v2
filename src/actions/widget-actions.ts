@@ -15,16 +15,21 @@ async function getActiveOrganizationId(): Promise<string | null> {
     if (!user) return null;
 
     const { data: userData } = await supabase
-        .from('users')
-        .select(`id, user_preferences!inner(last_organization_id)`)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
-    if (!userData?.user_preferences) return null;
-    const pref = Array.isArray(userData.user_preferences)
-        ? (userData.user_preferences as any)[0]
-        : (userData.user_preferences as any);
-    return pref?.last_organization_id || null;
+    if (!userData) return null;
+
+    // Cross-schema: user_preferences está en iam
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
+
+    return prefData?.last_organization_id || null;
 }
 
 // ============================================================================
@@ -58,7 +63,7 @@ export async function getActivityFeedItems(
         // All scopes query organization_activity_logs_view,
         // but filter by target_table for domain-specific scopes.
         let query = supabase
-            .from("organization_activity_logs_view")
+            .schema('audit').from("organization_activity_logs_view")
             .select("id, action, target_table, full_name, avatar_url, metadata, created_at")
             .eq("organization_id", orgId)
             .order("created_at", { ascending: false })
@@ -143,7 +148,7 @@ export async function getRecentProjects(
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from("projects_view")
+            .schema('projects').from("projects_view")
             .select("*")
             .eq("organization_id", orgId)
             .eq("is_deleted", false)
@@ -201,7 +206,7 @@ export async function getUpcomingEvents(
         // Calendar events
         if (scope === 'all' || scope === 'calendar') {
             let calQuery = supabase
-                .from('calendar_events')
+                .schema('planner').from('calendar_events')
                 .select('id, title, start_at, color, is_all_day, status, projects(name)')
                 .eq('organization_id', orgId)
                 .eq('status', 'scheduled')
@@ -235,7 +240,7 @@ export async function getUpcomingEvents(
         // Kanban cards with due_date
         if (scope === 'all' || scope === 'kanban') {
             let kanbanQuery = supabase
-                .from('kanban_cards')
+                .schema('planner').from('kanban_cards')
                 .select('id, title, due_date, priority, is_completed, kanban_boards!inner(organization_id, name, project_id)')
                 .eq('kanban_boards.organization_id', orgId)
                 .eq('is_completed', false)
@@ -566,7 +571,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
     const [activityResult, projectsResult, orgResult, membersResult, projectCountResult, projectLocationsResult, membersAvatarResult, calendarResult, kanbanResult, financialResult, prefsResult, teamMembersResult, storageFilesResult, storageFoldersResult] = await Promise.all([
         // Activity feed (scope: organization, no filter)
         supabase
-            .from("organization_activity_logs_view")
+            .schema('audit').from("organization_activity_logs_view")
             .select("id, action, target_table, full_name, avatar_url, metadata, created_at")
             .eq("organization_id", orgId)
             .order("created_at", { ascending: false })
@@ -574,7 +579,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Recent projects
         supabase
-            .from("projects_view")
+            .schema('projects').from("projects_view")
             .select("*")
             .eq("organization_id", orgId)
             .eq("is_deleted", false)
@@ -584,14 +589,14 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Org info (name, logo, plan, settings) for pulse widget
         supabase
-            .from("organizations")
+            .schema('iam').from("organizations")
             .select("name, logo_url, settings, plan_id")
             .eq("id", orgId)
             .single(),
 
         // Member count
         supabase
-            .from("organization_members")
+            .schema('iam').from("organization_members")
             .select("id", { count: "exact", head: true })
             .eq("organization_id", orgId)
             .eq("is_active", true),
@@ -613,7 +618,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Member avatars for pulse widget
         supabase
-            .from("organization_members")
+            .schema('iam').from("organization_members")
             .select("users(full_name, avatar_url, email)")
             .eq("organization_id", orgId)
             .eq("is_active", true)
@@ -621,7 +626,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Upcoming calendar events (next 14 days)
         supabase
-            .from('calendar_events')
+            .schema('planner').from('calendar_events')
             .select('id, title, start_at, color, is_all_day, status, projects(name)')
             .eq('organization_id', orgId)
             .eq('status', 'scheduled')
@@ -632,7 +637,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Upcoming kanban cards with due_date
         supabase
-            .from('kanban_cards')
+            .schema('planner').from('kanban_cards')
             .select('id, title, due_date, priority, is_completed, kanban_boards!inner(organization_id, name)')
             .eq('kanban_boards.organization_id', orgId)
             .eq('is_completed', false)
@@ -645,22 +650,22 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Financial movements (raw fields for client-side calculation via useMoney)
         supabase
-            .from('unified_financial_movements_view')
+            .schema('finance').from('unified_financial_movements_view')
             .select('amount, currency_code, exchange_rate, amount_sign, payment_date')
             .eq('organization_id', orgId)
             .neq('amount_sign', 0),
 
         // Org preferences for currency
         supabase
-            .from('organization_preferences')
+            .schema('iam').from('organization_preferences')
             .select('functional_currency_id')
             .eq('organization_id', orgId)
             .single(),
 
         // Team members with real presence via user_presence
         supabase
-            .from('organization_members')
-            .select('id, users(full_name, avatar_url, email, user_presence(last_seen_at)), roles(name)')
+            .schema('iam').from('organization_members')
+            .select('id, role_id, users(full_name, avatar_url, email, user_presence(last_seen_at))')
             .eq('organization_id', orgId)
             .eq('is_active', true)
             .limit(10),
@@ -847,23 +852,26 @@ export async function getDashboardLayout(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    // Get public user ID + active org in one query
+    // Get public user ID + active org in two queries (cross-schema)
     const { data: userData } = await supabase
-        .from('users')
-        .select(`id, user_preferences!inner(last_organization_id)`)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
     if (!userData) return null;
 
-    const pref = Array.isArray(userData.user_preferences)
-        ? (userData.user_preferences as any)[0]
-        : (userData.user_preferences as any);
-    const orgId = pref?.last_organization_id;
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
+
+    const orgId = prefData?.last_organization_id;
     if (!orgId) return null;
 
     const { data } = await supabase
-        .from('dashboard_layouts')
+        .schema('iam').from('dashboard_layouts')
         .select('layout_data')
         .eq('user_id', userData.id)
         .eq('organization_id', orgId)
@@ -885,23 +893,26 @@ export async function saveDashboardLayout(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Not authenticated' };
 
-    // Get public user ID + active org
+    // Get public user ID + active org (cross-schema)
     const { data: userData } = await supabase
-        .from('users')
-        .select(`id, user_preferences!inner(last_organization_id)`)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
     if (!userData) return { success: false, error: 'User not found' };
 
-    const pref = Array.isArray(userData.user_preferences)
-        ? (userData.user_preferences as any)[0]
-        : (userData.user_preferences as any);
-    const orgId = pref?.last_organization_id;
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
+
+    const orgId = prefData?.last_organization_id;
     if (!orgId) return { success: false, error: 'No active organization' };
 
     const { error } = await supabase
-        .from('dashboard_layouts')
+        .schema('iam').from('dashboard_layouts')
         .upsert({
             user_id: userData.id,
             organization_id: orgId,
@@ -977,7 +988,7 @@ export async function getOverviewHeroData(
                     .select("lat, lng, city, country, address")
                     .eq("project_id", projectId)
                     .single(),
-                supabase.from("organization_members")
+                supabase.schema('iam').from("organization_members")
                     .select("users(full_name, avatar_url, email)")
                     .eq("organization_id", orgId)
                     .eq("is_active", true)
@@ -1022,11 +1033,11 @@ export async function getOverviewHeroData(
 
         // ── ORGANIZATION MODE ──
         const [orgResult, membersResult, projectCountResult, locationsResult, membersAvatarResult] = await Promise.all([
-            supabase.from("organizations")
+            supabase.schema('iam').from("organizations")
                 .select("name, logo_url, settings, plan_id")
                 .eq("id", orgId)
                 .single(),
-            supabase.from("organization_members")
+            supabase.schema('iam').from("organization_members")
                 .select("id", { count: "exact", head: true })
                 .eq("organization_id", orgId)
                 .eq("is_active", true),
@@ -1039,7 +1050,7 @@ export async function getOverviewHeroData(
                 .eq("organization_id", orgId)
                 .not("lat", "is", null)
                 .not("lng", "is", null),
-            supabase.from("organization_members")
+            supabase.schema('iam').from("organization_members")
                 .select("users(full_name, avatar_url, email)")
                 .eq("organization_id", orgId)
                 .eq("is_active", true)

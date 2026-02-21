@@ -25,24 +25,21 @@ export async function getActiveOrganizationId(): Promise<string | null> {
 
     // 2. Get User Preferences
     const { data: userData } = await supabase
-        .from('users')
-        .select(`
-            id,
-            user_preferences!inner (
-                last_organization_id
-            )
-        `)
+        .schema('iam').from('users')
+        .select('id')
         .eq('auth_id', user.id)
         .single();
 
-    if (!userData || !userData.user_preferences) return null;
+    if (!userData) return null;
 
-    // Handle array or single object response for user_preferences
-    const pref = Array.isArray((userData.user_preferences as any))
-        ? (userData.user_preferences as any)[0]
-        : (userData.user_preferences as any);
+    // Cross-schema: user_preferences esta en iam
+    const { data: prefData } = await supabase
+        .schema('iam').from('user_preferences')
+        .select('last_organization_id')
+        .eq('user_id', userData.id)
+        .single();
 
-    return pref?.last_organization_id || null;
+    return prefData?.last_organization_id || null;
 }
 
 // --- Categories ---
@@ -50,7 +47,7 @@ export async function getActiveOrganizationId(): Promise<string | null> {
 export async function getGeneralCostCategories(organizationId: string): Promise<GeneralCostCategory[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('general_cost_categories')
+        .schema('finance').from('general_cost_categories')
         .select('*')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false)
@@ -69,7 +66,7 @@ export async function getGeneralCostCategories(organizationId: string): Promise<
 export async function getGeneralCosts(organizationId: string): Promise<GeneralCost[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('general_costs')
+        .schema('finance').from('general_costs')
         .select(`
             *,
             category:general_cost_categories(*)
@@ -91,7 +88,7 @@ export async function getGeneralCosts(organizationId: string): Promise<GeneralCo
 export async function getGeneralCostPayments(organizationId: string): Promise<GeneralCostPaymentView[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('general_costs_payments_view')
+        .schema('finance').from('general_costs_payments_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('payment_date', { ascending: false });
@@ -111,17 +108,17 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
 
     const [monthlySummaryRes, byCategoryRes, recentPaymentsRes] = await Promise.all([
         supabase
-            .from('general_costs_monthly_summary_view')
+            .schema('finance').from('general_costs_monthly_summary_view')
             .select('*')
             .eq('organization_id', organizationId)
             .order('payment_month', { ascending: true }) // Ascending for charts
             .limit(12),
         supabase
-            .from('general_costs_by_category_view')
+            .schema('finance').from('general_costs_by_category_view')
             .select('*')
             .eq('organization_id', organizationId),
         supabase
-            .from('general_costs_payments_view')
+            .schema('finance').from('general_costs_payments_view')
             .select('*')
             .eq('organization_id', organizationId)
             .order('payment_date', { ascending: false })
@@ -234,7 +231,7 @@ export async function getGeneralCostsDashboard(organizationId: string): Promise<
 export async function createGeneralCostCategory(data: Partial<GeneralCostCategory>) {
     const supabase = await createClient();
     const { data: newCategory, error } = await supabase
-        .from('general_cost_categories')
+        .schema('finance').from('general_cost_categories')
         .insert({
             organization_id: data.organization_id,
             name: data.name,
@@ -252,7 +249,7 @@ export async function createGeneralCostCategory(data: Partial<GeneralCostCategor
 export async function updateGeneralCostCategory(id: string, data: Partial<GeneralCostCategory>) {
     const supabase = await createClient();
     const { data: updatedCategory, error } = await supabase
-        .from('general_cost_categories')
+        .schema('finance').from('general_cost_categories')
         .update({
             name: data.name,
             description: data.description,
@@ -271,7 +268,7 @@ export async function deleteGeneralCostCategory(id: string) {
     const supabase = await createClient();
     // Soft delete
     const { error } = await supabase
-        .from('general_cost_categories')
+        .schema('finance').from('general_cost_categories')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -288,7 +285,7 @@ export async function deleteGeneralCostCategory(id: string) {
 export async function createGeneralCost(data: Partial<GeneralCost>) {
     const supabase = await createClient();
     const { data: newCost, error } = await supabase
-        .from('general_costs')
+        .schema('finance').from('general_costs')
         .insert({
             organization_id: data.organization_id,
             name: data.name,
@@ -309,7 +306,7 @@ export async function createGeneralCost(data: Partial<GeneralCost>) {
 export async function updateGeneralCost(id: string, data: Partial<GeneralCost>) {
     const supabase = await createClient();
     const { data: updatedCost, error } = await supabase
-        .from('general_costs')
+        .schema('finance').from('general_costs')
         .update({
             name: data.name,
             description: data.description,
@@ -347,7 +344,7 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
     // We must map from the View type (potentially) to the Table schema
     // data.general_cost_id, data.amount, etc.
     const { data: newPayment, error } = await supabase
-        .from('general_costs_payments')
+        .schema('finance').from('general_costs_payments')
         .insert({
             organization_id: data.organization_id,
             general_cost_id: data.general_cost_id,
@@ -425,7 +422,7 @@ export async function createGeneralCostPayment(data: Partial<GeneralCostPaymentV
 export async function updateGeneralCostPayment(id: string, data: Partial<GeneralCostPaymentView> & { media_files?: any[] }) {
     const supabase = await createClient();
     const { data: updatedPayment, error } = await supabase
-        .from('general_costs_payments')
+        .schema('finance').from('general_costs_payments')
         .update({
             general_cost_id: data.general_cost_id,
             amount: data.amount,
@@ -505,7 +502,7 @@ export async function deleteGeneralCostPayment(id: string) {
     // TODO: Investigate RLS issue with soft delete UPDATE
     // Using hard DELETE temporarily until resolved
     const { error } = await supabase
-        .from('general_costs_payments')
+        .schema('finance').from('general_costs_payments')
         .delete()
         .eq('id', id);
 

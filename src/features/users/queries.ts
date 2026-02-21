@@ -18,7 +18,7 @@ export async function getUserProfile(authId?: string): Promise<{ profile: UserPr
 
     // 2. Fetch User + User Data
     const { data: userRecord, error: dbError } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select(`
             *,
             user_data (
@@ -27,12 +27,7 @@ export async function getUserProfile(authId?: string): Promise<{ profile: UserPr
                 last_name,
                 birthdate,
                 country,
-                phone_e164,
-                countries:country (
-                    id,
-                    name,
-                    alpha_2
-                )
+                phone_e164
             )
         `)
         .eq('auth_id', resolvedAuthId)
@@ -87,20 +82,22 @@ export async function checkIsAdmin(): Promise<boolean> {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     if (authError || !authUser) return false;
 
-    const { data: userWithRole, error } = await supabase
-        .from('users')
-        .select(`
-            role_id,
-            roles:role_id (
-                name
-            )
-        `)
+    const { data: userData, error } = await supabase
+        .schema('iam').from('users')
+        .select('role_id')
         .eq('auth_id', authUser.id)
         .single();
 
-    if (error || !userWithRole) return false;
+    if (error || !userData?.role_id) return false;
 
-    const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
+    // Cross-schema: roles está en iam
+    const { data: roleData } = await supabase
+        .schema('iam').from('roles')
+        .select('name')
+        .eq('id', userData.role_id)
+        .single();
+
+    const roleName = roleData?.name?.toLowerCase();
     return roleName === 'admin';
 }
 
@@ -114,20 +111,22 @@ export async function checkIsBetaTester(): Promise<boolean> {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     if (authError || !authUser) return false;
 
-    const { data: userWithRole, error } = await supabase
-        .from('users')
-        .select(`
-            role_id,
-            roles:role_id (
-                name
-            )
-        `)
+    const { data: userData, error } = await supabase
+        .schema('iam').from('users')
+        .select('role_id')
         .eq('auth_id', authUser.id)
         .single();
 
-    if (error || !userWithRole) return false;
+    if (error || !userData?.role_id) return false;
 
-    const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
+    // Cross-schema: roles está en iam
+    const { data: roleData } = await supabase
+        .schema('iam').from('roles')
+        .select('name')
+        .eq('id', userData.role_id)
+        .single();
+
+    const roleName = roleData?.name?.toLowerCase();
     // Check for "beta tester", "beta_tester", or "betatester" variations
     return roleName === 'beta tester' || roleName === 'beta_tester' || roleName === 'betatester';
 }
@@ -147,20 +146,22 @@ export async function checkUserRoles(authId?: string): Promise<{ isAdmin: boolea
         resolvedAuthId = authUser.id;
     }
 
-    const { data: userWithRole, error } = await supabase
-        .from('users')
-        .select(`
-            role_id,
-            roles:role_id (
-                name
-            )
-        `)
+    const { data: userData, error } = await supabase
+        .schema('iam').from('users')
+        .select('role_id')
         .eq('auth_id', resolvedAuthId)
         .single();
 
-    if (error || !userWithRole) return { isAdmin: false, isBetaTester: false };
+    if (error || !userData?.role_id) return { isAdmin: false, isBetaTester: false };
 
-    const roleName = (userWithRole.roles as any)?.name?.toLowerCase();
+    // Cross-schema: roles está en iam
+    const { data: roleData } = await supabase
+        .schema('iam').from('roles')
+        .select('name')
+        .eq('id', userData.role_id)
+        .single();
+
+    const roleName = roleData?.name?.toLowerCase();
 
     return {
         isAdmin: roleName === 'admin',
@@ -179,7 +180,7 @@ export async function getUserTimezone(): Promise<string | null> {
     if (!user) return null;
 
     const { data: publicUser } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', user.id)
         .single();
@@ -187,7 +188,7 @@ export async function getUserTimezone(): Promise<string | null> {
     if (!publicUser) return null;
 
     const { data: prefs } = await supabase
-        .from('user_preferences')
+        .schema('iam').from('user_preferences')
         .select('timezone')
         .eq('user_id', publicUser.id)
         .single();
@@ -222,7 +223,7 @@ export async function checkUserAccessContext(
 
     // Resolve internal user id
     const { data: userData } = await supabase
-        .from('users')
+        .schema('iam').from('users')
         .select('id')
         .eq('auth_id', authId)
         .single();
@@ -234,14 +235,14 @@ export async function checkUserAccessContext(
 
     const [memberResult, actorResult] = await Promise.all([
         supabase
-            .from('organization_members')
+            .schema('iam').from('organization_members')
             .select('id')
             .eq('organization_id', orgId)
             .eq('user_id', internalUserId)
             .eq('is_active', true)
             .maybeSingle(),
         supabase
-            .from('organization_external_actors')
+            .schema('iam').from('organization_external_actors')
             .select('id, actor_type, is_active')
             .eq('organization_id', orgId)
             .eq('user_id', internalUserId)

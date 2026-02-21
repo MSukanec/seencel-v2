@@ -149,7 +149,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
             let planId = productId; // might be in external_reference
             if (!planId && orgId) {
                 const { data: orgData } = await supabase
-                    .from('organizations')
+                    .schema('iam').from('organizations')
                     .select('plan_id')
                     .eq('id', orgId)
                     .single();

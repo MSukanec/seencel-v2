@@ -5,7 +5,7 @@ export async function getSubcontractsByProject(projectId: string) {
 
     // We fetch subcontracts from the view which already includes provider details and calculated financials
     const { data, error } = await supabase
-        .from('subcontracts_view')
+        .schema('finance').from('subcontracts_view')
         .select('*')
         .eq('project_id', projectId)
         .order('title', { ascending: true });
@@ -22,7 +22,7 @@ export async function getSubcontractById(subcontractId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('subcontracts')
+        .schema('finance').from('subcontracts')
         .select(`
             *,
             title,
@@ -59,7 +59,7 @@ export async function getSubcontractPayments(projectId: string) {
 
     // Use the view which already includes all denormalized data
     const { data, error } = await supabase
-        .from('subcontract_payments_view')
+        .schema('finance').from('subcontract_payments_view')
         .select('*')
         .eq('project_id', projectId)
         .order('payment_date', { ascending: false });
@@ -80,7 +80,7 @@ export async function getSubcontractsByOrganization(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('subcontracts_view')
+        .schema('finance').from('subcontracts_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('title', { ascending: true });
@@ -97,7 +97,7 @@ export async function getSubcontractPaymentsByOrganization(organizationId: strin
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('subcontract_payments_view')
+        .schema('finance').from('subcontract_payments_view')
         .select('*')
         .eq('organization_id', organizationId)
         .order('payment_date', { ascending: false });

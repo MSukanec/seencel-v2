@@ -31,7 +31,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
         // 1. Update Core Organization Table (only if name provided)
         if (name) {
             const { error: orgError } = await supabase
-                .from('organizations')
+                .schema('iam').from('organizations')
                 .update({ name: name })
                 .eq('id', orgId);
 
@@ -62,7 +62,7 @@ export async function updateOrganization(orgId: string, formData: FormData) {
         // If dataUpdate only has organization_id, skip upsert
         if (Object.keys(dataUpdate).length > 1) {
             const { error: dataError } = await supabase
-                .from('organization_data')
+                .schema('iam').from('organization_data')
                 .upsert(dataUpdate, {
                     onConflict: 'organization_id'
                 });
