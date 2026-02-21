@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getPlans } from "@/actions/plans";
 import { getFeatureFlag, getPlanPurchaseFlags, getPaymentMethodFlags } from "@/actions/feature-flags";
 import { getCountries } from "@/features/countries/queries";
-import { getCourseBySlug } from "@/features/academy/course-queries";
+import { getCourseBySlug } from "@/features/academy/queries";
 import { getUserOrganizations } from "@/features/organization/queries";
 import { getExchangeRate, getUserCountryCode, getUpgradeProration } from "@/features/billing/queries";
 import { checkIsAdmin } from "@/features/users/queries";

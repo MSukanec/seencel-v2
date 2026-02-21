@@ -1,4 +1,4 @@
-import { getCourseBySlug, getUserLessonSummariesWithDetails } from "@/actions/courses";
+import { getCourseBySlug, getUserLessonSummariesWithDetails } from "@/features/academy/student-actions";
 import { CourseNotesView } from "@/features/academy/views";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";

@@ -117,7 +117,7 @@ export type CouponValidationResult = CouponValidationSuccess | CouponValidationE
 export async function validateCoupon(input: CouponValidationInput): Promise<CouponValidationResult> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.rpc("validate_coupon_universal", {
+    const { data, error } = await supabase.schema('billing').rpc("validate_coupon_universal", {
         p_code: input.code,
         p_product_type: input.productType,
         p_product_id: input.productId,
@@ -197,7 +197,7 @@ export async function activateFreeSubscription(input: FreeSubscriptionInput): Pr
     }
 
     // First, redeem the coupon to mark it as used
-    const { error: redeemError } = await supabase.rpc("redeem_coupon_universal", {
+    const { error: redeemError } = await supabase.schema('billing').rpc("redeem_coupon_universal", {
         p_code: input.couponCode,
         p_product_type: "subscription",
         p_product_id: input.planId,
@@ -213,7 +213,7 @@ export async function activateFreeSubscription(input: FreeSubscriptionInput): Pr
     }
 
     // Activate subscription via handle_payment_subscription_success
-    const { data: handleResult, error: handleError } = await supabase.rpc(
+    const { data: handleResult, error: handleError } = await supabase.schema('billing').rpc(
         "handle_payment_subscription_success",
         {
             p_provider: "coupon",

@@ -1,4 +1,4 @@
-import { getCourseBySlug } from "@/actions/courses";
+import { getCourseBySlug } from "@/features/academy/student-actions";
 import { getForumCategories, getForumThreads } from "@/actions/forum";
 import { CourseForumView } from "@/features/academy/views";
 import { createClient } from "@/lib/supabase/server";

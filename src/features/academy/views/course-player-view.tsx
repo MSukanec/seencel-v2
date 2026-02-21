@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { CourseWithDetails, CourseModule, CourseLesson, LessonMarker, LessonProgress, LessonNote } from "@/types/courses";
+import { CourseWithDetails, CourseModule, CourseLesson, LessonMarker, LessonProgress, LessonNote } from "@/features/academy/types";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { CourseContentList } from "@/features/academy/components/course-content-list";
 import { LessonMarkersList } from "@/features/academy/components/lesson-markers-list";
-import { MarkerForm } from "@/features/academy/components/forms/marker-form";
-import { toggleLessonCompleted, saveLessonSummary } from "@/actions/courses";
+import { MarkerForm } from "@/features/academy/forms/marker-form";
+import { toggleLessonCompleted, saveLessonSummary } from "@/features/academy/student-actions";
 import { useModal } from "@/stores/modal-store";
 import { ContextSidebar } from "@/stores/sidebar-store";
 import { List, Bookmark, CheckCircle2, Circle, Loader2, Save, FileText, Plus } from "lucide-react";
@@ -281,8 +281,9 @@ export function CoursePlayerView({
                                         onClick={handleToggleComplete}
                                         disabled={isPending}
                                         className={cn(
-                                            isCurrentLessonCompleted && "text-green-600 border-green-600 hover:bg-green-50"
+                                            isCurrentLessonCompleted && "border-[color:var(--semantic-positive)] hover:bg-[color:color-mix(in_srgb,var(--semantic-positive)_10%,transparent)]"
                                         )}
+                                        style={isCurrentLessonCompleted ? { color: 'var(--semantic-positive)' } : undefined}
                                     >
                                         {isPending ? (
                                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -334,8 +335,9 @@ export function CoursePlayerView({
                                 onClick={handleSaveNote}
                                 disabled={!activeLesson || isSavingNote || (!hasNoteChanges && !noteSaved)}
                                 className={cn(
-                                    noteSaved && "bg-green-600 hover:bg-green-600"
+                                    noteSaved && "hover:opacity-90"
                                 )}
+                                style={noteSaved ? { backgroundColor: 'var(--semantic-positive)' } : undefined}
                             >
                                 {isSavingNote ? (
                                     <Loader2 className="h-4 w-4 animate-spin mr-2" />

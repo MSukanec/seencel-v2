@@ -10,7 +10,7 @@ import { Plus, CreditCard, Trash2 } from "lucide-react";
 import { useModal } from "@/stores/modal-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { EnrollmentForm } from "./enrollment-form";
+import { EnrollmentForm } from "@/features/academy/forms/enrollment-form";
 import { deleteEnrollment } from "@/actions/enrollment-actions";
 import type { AdminCourseEnrollment, AdminCourse } from "@/features/admin/academy-queries";
 import { format } from "date-fns";

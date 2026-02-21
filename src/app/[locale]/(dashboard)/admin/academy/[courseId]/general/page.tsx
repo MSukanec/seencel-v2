@@ -1,6 +1,6 @@
-import { getCourseById, getAllInstructors } from "@/features/academy/course-queries";
+import { getCourseById, getAllInstructors } from "@/features/academy/queries";
 import { notFound } from "next/navigation";
-import { GeneralForm } from "@/features/academy/components/admin/course-details/general-form";
+import { GeneralForm } from "@/features/academy/forms/course-general-form";
 
 interface GeneralPageProps {
     params: Promise<{ courseId: string }>;

@@ -17,10 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { updateCourseMarketing } from "@/features/academy/course-actions";
+import { updateCourseMarketing } from "@/features/academy/actions";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Course } from "@/features/academy/types/course-marketing";
+import type { Course } from "@/features/academy/course-marketing-data";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 
 const formSchema = z.object({

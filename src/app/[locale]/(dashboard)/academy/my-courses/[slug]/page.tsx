@@ -4,7 +4,7 @@ import {
     getCourseOverviewData,
     getUserLessonSummariesWithDetails,
     getLatestUserMarkersWithDetails
-} from "@/actions/courses";
+} from "@/features/academy/student-actions";
 import { getForumThreads } from "@/actions/forum";
 import { CourseOverviewView } from "@/features/academy/views";
 import { setRequestLocale } from 'next-intl/server';

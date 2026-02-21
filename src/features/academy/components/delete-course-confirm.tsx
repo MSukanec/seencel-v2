@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { deleteCourse } from "@/features/academy/course-actions";
+import { deleteCourse } from "@/features/academy/actions";
 import { useModal } from "@/stores/modal-store";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 

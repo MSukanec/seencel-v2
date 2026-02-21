@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from "@/lib/supabase/server";
-import { CourseWithDetails } from "@/types/courses";
+import { CourseWithDetails } from "@/features/academy/types";
 
 export async function getCourses(): Promise<CourseWithDetails[]> {
     const supabase = await createClient();

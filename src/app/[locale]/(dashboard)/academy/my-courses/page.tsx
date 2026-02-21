@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCourses, getUserEnrollments } from "@/actions/courses";
+import { getCourses, getUserEnrollments } from "@/features/academy/student-actions";
 import { CoursesContent } from "@/features/academy/components/courses-content";
 import { PageWrapper } from "@/components/layout";
 import { Video } from "lucide-react";

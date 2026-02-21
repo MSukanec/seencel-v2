@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";
 import { getUserProfile } from "@/features/users/queries";
-import { getCourses, getUserEnrollments } from "@/actions/courses";
+import { getCourses, getUserEnrollments } from "@/features/academy/student-actions";
 import { CoursesContent } from "@/features/academy/components/courses-content";
 import { getFeatureFlag } from "@/actions/feature-flags";
 import type { Metadata } from 'next';

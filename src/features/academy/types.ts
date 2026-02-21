@@ -1,3 +1,9 @@
+// ============================================
+// Academy Feature Types (DB types)
+// Consolidated from src/types/courses.ts
+// Marketing/Landing types → see course-marketing-data.ts
+// ============================================
+
 export type CourseStatus = 'available' | 'coming_soon' | 'maintenance';
 export type CourseVisibility = 'public' | 'private';
 
@@ -55,7 +61,7 @@ export interface CourseDetail {
     highlights: string[] | null;
     preview_video_id: string | null;
     seo_keywords: string[] | null;
-    landing_sections: any | null; // Using any for jsonb for now, can be typed strictly later
+    landing_sections: any | null;
     created_at: string;
     updated_at: string;
     image_bucket: string | null;
@@ -105,6 +111,3 @@ export interface LessonSummary extends Omit<LessonNote, 'time_sec' | 'note_type'
     time_sec: null;
     note_type: 'summary';
 }
-
-
-

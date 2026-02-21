@@ -7,7 +7,7 @@ import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { CoursesTable } from "@/features/academy/components/admin/courses-table";
+import { CoursesTable } from "@/features/academy/components/courses-table";
 import type { AdminCourse } from "@/features/admin/academy-queries";
 
 interface Instructor {

@@ -1,9 +1,9 @@
-import { getCourseById } from "@/features/academy/course-queries";
+import { getCourseById } from "@/features/academy/queries";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CourseTabs } from "@/features/academy/components/admin/course-details/course-tabs";
+import { CourseTabs } from "@/features/academy/components/course-tabs";
 
 interface CourseLayoutProps {
     children: React.ReactNode;

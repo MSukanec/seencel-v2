@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { LessonMarker, CourseLesson } from "@/types/courses";
-import { deleteLessonMarker } from "@/actions/courses";
-import { MarkerForm } from "@/features/academy/components/forms/marker-form";
+import { LessonMarker, CourseLesson } from "@/features/academy/types";
+import { deleteLessonMarker } from "@/features/academy/student-actions";
+import { MarkerForm } from "@/features/academy/forms/marker-form";
 import { useModal } from "@/stores/modal-store";
 import { Bookmark, Clock, Play, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";

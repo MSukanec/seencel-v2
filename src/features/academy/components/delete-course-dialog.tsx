@@ -10,7 +10,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteCourse } from "@/features/academy/course-actions";
+import { deleteCourse } from "@/features/academy/actions";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";

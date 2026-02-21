@@ -1,6 +1,6 @@
-import { getCourseBySlug, getCourseContent, getUserLessonMarkers, getUserLessonProgress, getLastViewedLesson, getUserLessonSummaries } from "@/actions/courses";
+import { getCourseBySlug, getCourseContent, getUserLessonMarkers, getUserLessonProgress, getLastViewedLesson, getUserLessonSummaries } from "@/features/academy/student-actions";
 import { CoursePlayerView } from "@/features/academy/views";
-import { LessonMarker, LessonProgress, LessonNote } from "@/types/courses";
+import { LessonMarker, LessonProgress, LessonNote } from "@/features/academy/types";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
 

@@ -1,4 +1,4 @@
-import { getCourseById } from "@/features/academy/course-queries";
+import { getCourseById } from "@/features/academy/queries";
 import { notFound } from "next/navigation";
 
 export default async function ForumPage({ params }: { params: Promise<{ courseId: string }> }) {

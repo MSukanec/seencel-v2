@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
         // Call appropriate handler based on product type
         if (preference.product_type === 'course') {
-            const { error } = await adminSupabase.rpc('handle_payment_course_success', {
+            const { error } = await adminSupabase.schema('billing').rpc('handle_payment_course_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
             }
 
         } else if (preference.product_type === 'subscription') {
-            const { error } = await adminSupabase.rpc('handle_payment_subscription_success', {
+            const { error } = await adminSupabase.schema('billing').rpc('handle_payment_subscription_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
             }
         } else if (preference.product_type === 'upgrade') {
             // Handle plan upgrade (Pro → Teams)
-            const { error } = await adminSupabase.rpc('handle_payment_upgrade_success', {
+            const { error } = await adminSupabase.schema('billing').rpc('handle_payment_upgrade_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
         } else if (preference.product_type === 'seats') {
             const seatsQuantity = preference.seats_quantity || 1;
 
-            const { data: seatResult, error } = await adminSupabase.rpc('handle_payment_seat_success', {
+            const { data: seatResult, error } = await adminSupabase.schema('billing').rpc('handle_payment_seat_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
                 : preference.plan_id;
 
             if (redeemProductType && redeemProductId) {
-                const { error: redeemError } = await adminSupabase.rpc('redeem_coupon_universal', {
+                const { error: redeemError } = await adminSupabase.schema('billing').rpc('redeem_coupon_universal', {
                     p_code: preference.coupon_code,
                     p_product_type: redeemProductType,
                     p_product_id: redeemProductId,

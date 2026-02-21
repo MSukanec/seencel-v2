@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CourseWithDetails } from "@/types/courses";
+import { CourseWithDetails } from "@/features/academy/types";
 import { CourseCard } from "./course-card";
 import { useTranslations } from "next-intl";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";

@@ -27,13 +27,13 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AdminCourse } from "@/features/admin/academy-queries";
 import { toast } from "sonner";
-import { deleteCourse } from "@/features/academy/course-actions";
+import { deleteCourse } from "@/features/academy/actions";
 import { useRouter } from "next/navigation";
 
 // Modals
 import { useModal } from "@/stores/modal-store";
-import { CreateCourseForm } from "./create-course-form";
-import { GeneralForm, type EditableCourseData } from "@/features/academy/components/admin/course-details/general-form";
+import { CreateCourseForm } from "@/features/academy/forms/course-form";
+import { GeneralForm, type EditableCourseData } from "@/features/academy/forms/course-general-form";
 
 function getStatusBadge(status: string) {
     switch (status) {

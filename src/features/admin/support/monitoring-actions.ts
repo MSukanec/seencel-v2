@@ -349,7 +349,7 @@ export async function executeOpsRepair(alertId: string, actionId: string): Promi
 
         if (!userData) return { success: false, error: "No se encontró el usuario" };
 
-        const { error } = await supabase.rpc('ops_execute_repair_action', {
+        const { error } = await supabase.schema('ops').rpc('ops_execute_repair_action', {
             p_alert_id: alertId,
             p_action_id: actionId,
             p_executed_by: userData.id,
@@ -459,7 +459,7 @@ export async function runOpsChecks(): Promise<{
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "No autenticado" };
 
-        const { error } = await supabase.rpc('ops_run_all_checks');
+        const { error } = await supabase.schema('ops').rpc('ops_run_all_checks');
 
         if (error) {
             console.error("Error running ops checks:", error);

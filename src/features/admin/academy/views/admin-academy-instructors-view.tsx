@@ -5,8 +5,8 @@ import { Plus, Users } from "lucide-react";
 import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 import { useRouter } from "next/navigation";
 import { ViewEmptyState } from "@/components/shared/empty-state";
-import { InstructorsTable } from "@/features/academy/components/admin/instructors-table";
-import { InstructorForm } from "@/features/academy/components/admin/instructor-form";
+import { InstructorsTable } from "@/features/academy/components/instructors-table";
+import { InstructorForm } from "@/features/academy/forms/instructor-form";
 
 interface Instructor {
     id: string;

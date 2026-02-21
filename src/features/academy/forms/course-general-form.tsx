@@ -24,13 +24,13 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { updateCourseGeneral } from "@/features/academy/course-actions";
+import { updateCourseGeneral } from "@/features/academy/actions";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Course } from "@/features/academy/types/course-marketing";
+import type { Course } from "@/features/academy/course-marketing-data";
 import { useModal } from "@/stores/modal-store";
 import { FormFooter } from "@/components/shared/forms/form-footer";
 

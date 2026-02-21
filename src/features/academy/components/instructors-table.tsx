@@ -27,8 +27,8 @@ import {
     Instagram,
 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteInstructor } from "@/features/academy/instructor-actions";
-import { InstructorForm } from "./instructor-form";
+import { deleteInstructor } from "@/features/academy/actions";
+import { InstructorForm } from "@/features/academy/forms/instructor-form";
 import { useRouter } from "next/navigation";
 
 // Define locally since it's just DB structure

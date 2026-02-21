@@ -1,4 +1,4 @@
-import { getCourseBySlug, getUserEnrollments } from "@/actions/courses";
+import { getCourseBySlug, getUserEnrollments } from "@/features/academy/student-actions";
 import { notFound, redirect } from "next/navigation";
 import { StudentCourseTabs } from "@/features/academy/components/student-course-tabs";
 import { createClient } from "@/lib/supabase/server";

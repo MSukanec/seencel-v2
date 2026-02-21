@@ -173,7 +173,7 @@ export async function cleanupTestPurchase(email: string, orgId: string): Promise
         }
 
         // Llamar RPC que bypassa RLS
-        const { data, error } = await supabase.rpc('admin_cleanup_test_purchase', {
+        const { data, error } = await supabase.schema('ops').rpc('admin_cleanup_test_purchase', {
             p_user_email: email,
             p_org_id: orgId
         });
@@ -301,7 +301,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
 
         // 3. Obtener suscripción activa
         const { data: subscription } = await supabase
-            .from("organization_subscriptions")
+            .schema('billing').from("organization_subscriptions")
             .select(`
                 id,
                 status,
@@ -334,7 +334,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
 
         // 5. Obtener payments
         const { data: payments } = await supabase
-            .from("payments")
+            .schema('billing').from("payments")
             .select("id, amount, currency, status, product_type, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
@@ -342,7 +342,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
 
         // 6. Obtener transferencias bancarias
         const { data: bankTransfers } = await supabase
-            .from("bank_transfer_payments")
+            .schema('billing').from("bank_transfer_payments")
             .select("id, amount, currency, status, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
@@ -350,7 +350,7 @@ export async function getTestUserStatus(userId: string, orgId: string): Promise<
 
         // 7. Obtener cupones usados
         const { data: couponRedemptions } = await supabase
-            .from("coupon_redemptions")
+            .schema('billing').from("coupon_redemptions")
             .select(`
                 id,
                 redeemed_at,

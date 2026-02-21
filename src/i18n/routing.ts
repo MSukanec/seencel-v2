@@ -72,6 +72,10 @@ export const routing = defineRouting({
             es: "/academia/mis-cursos/[slug]/reproductor",
             en: "/academy/my-courses/[slug]/player"
         },
+        "/academy/my-courses/[slug]/content": {
+            es: "/academia/mis-cursos/[slug]/contenido",
+            en: "/academy/my-courses/[slug]/content"
+        },
         "/academy/my-courses/[slug]/notes": {
             es: "/academia/mis-cursos/[slug]/notas",
             en: "/academy/my-courses/[slug]/notes"

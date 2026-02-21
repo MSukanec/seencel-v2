@@ -1,4 +1,4 @@
-import { getCourseBySlug } from "@/features/academy/course-queries";
+import { getCourseBySlug } from "@/features/academy/queries";
 import { CourseLanding } from "@/features/academy/views/course-landing-view";
 import { Header } from "@/components/layout";
 import { Footer } from "@/components/layout";

@@ -35,7 +35,7 @@ export async function createPayment(input: CreatePaymentInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("payments")
+        .schema('billing').from("payments")
         .insert({
             provider: input.provider,
             provider_payment_id: input.provider_payment_id || null,
@@ -75,7 +75,7 @@ export async function updatePayment(input: UpdatePaymentInput) {
     if (input.gateway !== undefined) updateData.gateway = input.gateway;
 
     const { data, error } = await supabase
-        .from("payments")
+        .schema('billing').from("payments")
         .update(updateData)
         .eq("id", input.id)
         .select()
@@ -97,7 +97,7 @@ export async function deletePayment(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("payments")
+        .schema('billing').from("payments")
         .delete()
         .eq("id", id);
 
@@ -163,7 +163,7 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
 
     // First, get the current bank transfer data (we need it for creating payment)
     const { data: transferData, error: fetchError } = await supabase
-        .from("bank_transfer_payments")
+        .schema('billing').from("bank_transfer_payments")
         .select("*")
         .eq("id", input.id)
         .single();
@@ -180,7 +180,7 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
 
     // Update the bank transfer status
     const { data, error } = await supabase
-        .from("bank_transfer_payments")
+        .schema('billing').from("bank_transfer_payments")
         .update(updateData)
         .eq("id", input.id)
         .select()
@@ -199,7 +199,7 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
 
             if (isCourse) {
                 // Call the SQL function to handle course payment
-                const { data: handleResult, error: handleError } = await supabase.rpc(
+                const { data: handleResult, error: handleError } = await supabase.schema('billing').rpc(
                     "handle_payment_course_success",
                     {
                         p_provider: "bank_transfer",
@@ -226,14 +226,14 @@ export async function updateBankTransfer(input: UpdateBankTransferInput) {
                     const paymentId = (handleResult as { payment_id?: string })?.payment_id;
                     if (paymentId) {
                         await supabase
-                            .from("bank_transfer_payments")
+                            .schema('billing').from("bank_transfer_payments")
                             .update({ payment_id: paymentId })
                             .eq("id", input.id);
                     }
                 }
             } else if (isSubscription) {
                 // Call the SQL function to handle subscription payment
-                const { data: handleResult, error: handleError } = await supabase.rpc(
+                const { data: handleResult, error: handleError } = await supabase.schema('billing').rpc(
                     "handle_payment_subscription_success",
                     {
                         p_provider: "bank_transfer",
@@ -283,7 +283,7 @@ export async function deleteBankTransfer(id: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("bank_transfer_payments")
+        .schema('billing').from("bank_transfer_payments")
         .delete()
         .eq("id", id);
 

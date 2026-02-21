@@ -168,7 +168,7 @@ export async function getForumThreads(courseId: string): Promise<ForumThread[]> 
     // Get ALL categories for this course
     const { data: categories } = await supabase
         .from('forum_categories')
-        .select('id')
+        .select('id, name, slug')
         .eq('course_id', courseId)
         .eq('is_active', true);
 
@@ -176,10 +176,11 @@ export async function getForumThreads(courseId: string): Promise<ForumThread[]> 
         return [];
     }
 
-    // Get category IDs
     const categoryIds = categories.map(c => c.id);
+    const categoryMap = new Map(categories.map(c => [c.id, { id: c.id, name: c.name, slug: c.slug }]));
 
-    const { data, error } = await supabase
+    // Fetch threads WITHOUT cross-schema join to users
+    const { data: threads, error } = await supabase
         .from('forum_threads')
         .select(`
             id,
@@ -193,16 +194,7 @@ export async function getForumThreads(courseId: string): Promise<ForumThread[]> 
             created_at,
             last_activity_at,
             category_id,
-            author:users!forum_threads_author_id_fkey (
-                id,
-                full_name,
-                avatar_url
-            ),
-            category:forum_categories!forum_threads_category_id_fkey (
-                id,
-                name,
-                slug
-            )
+            author_id
         `)
         .in('category_id', categoryIds)
         .eq('is_deleted', false)
@@ -214,10 +206,21 @@ export async function getForumThreads(courseId: string): Promise<ForumThread[]> 
         return [];
     }
 
-    return (data || []).map(thread => ({
+    if (!threads || threads.length === 0) return [];
+
+    // Fetch authors from iam.users separately
+    const authorIds = [...new Set(threads.map(t => t.author_id).filter(Boolean))];
+    const { data: authors } = await supabase
+        .schema('iam').from('users')
+        .select('id, full_name, avatar_url')
+        .in('id', authorIds);
+
+    const authorMap = new Map((authors || []).map(a => [a.id, a]));
+
+    return threads.map(thread => ({
         ...thread,
-        author: Array.isArray(thread.author) ? thread.author[0] : thread.author,
-        category: Array.isArray(thread.category) ? thread.category[0] : thread.category,
+        author: authorMap.get(thread.author_id) || { id: thread.author_id, full_name: null, avatar_url: null },
+        category: categoryMap.get(thread.category_id) || { id: thread.category_id, name: '', slug: '' },
     })) as ForumThread[];
 }
 
@@ -228,7 +231,7 @@ export async function getThreadById(threadId: string): Promise<{
 }> {
     const supabase = await createClient();
 
-    // Get thread
+    // Get thread WITHOUT cross-schema join to users
     const { data: thread, error: threadError } = await supabase
         .from('forum_threads')
         .select(`
@@ -242,11 +245,7 @@ export async function getThreadById(threadId: string): Promise<{
             is_locked,
             created_at,
             last_activity_at,
-            author:users!forum_threads_author_id_fkey (
-                id,
-                full_name,
-                avatar_url
-            ),
+            author_id,
             category:forum_categories!forum_threads_category_id_fkey (
                 id,
                 name,
@@ -267,7 +266,7 @@ export async function getThreadById(threadId: string): Promise<{
         .update({ view_count: (thread.view_count || 0) + 1 })
         .eq('id', threadId);
 
-    // Get posts
+    // Get posts WITHOUT cross-schema join
     const { data: posts } = await supabase
         .from('forum_posts')
         .select(`
@@ -277,25 +276,34 @@ export async function getThreadById(threadId: string): Promise<{
             created_at,
             updated_at,
             parent_id,
-            author:users!forum_posts_author_id_fkey (
-                id,
-                full_name,
-                avatar_url
-            )
+            author_id
         `)
         .eq('thread_id', threadId)
         .eq('is_deleted', false)
         .order('created_at', { ascending: true });
 
+    // Collect all author IDs and fetch from iam.users
+    const allAuthorIds = new Set<string>();
+    if (thread.author_id) allAuthorIds.add(thread.author_id);
+    (posts || []).forEach(p => { if (p.author_id) allAuthorIds.add(p.author_id); });
+
+    const { data: authors } = await supabase
+        .schema('iam').from('users')
+        .select('id, full_name, avatar_url')
+        .in('id', [...allAuthorIds]);
+
+    const authorMap = new Map((authors || []).map(a => [a.id, a]));
+    const unknownAuthor = { id: '', full_name: null, avatar_url: null };
+
     const formattedThread = {
         ...thread,
-        author: Array.isArray(thread.author) ? thread.author[0] : thread.author,
+        author: authorMap.get(thread.author_id) || unknownAuthor,
         category: Array.isArray(thread.category) ? thread.category[0] : thread.category,
     } as ForumThread;
 
     const formattedPosts = (posts || []).map(post => ({
         ...post,
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
+        author: authorMap.get(post.author_id) || unknownAuthor,
     })) as ForumPost[];
 
     return { thread: formattedThread, posts: formattedPosts };

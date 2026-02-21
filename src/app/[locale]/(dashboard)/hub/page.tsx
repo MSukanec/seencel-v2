@@ -6,7 +6,7 @@ import { getUserProfile } from "@/features/users/queries";
 import { getUserOrganizations, getRecentOrganizationsCount } from "@/features/organization/queries";
 import { getActiveHeroSections } from "@/features/hero-sections/queries";
 import { getUserTimezone } from "@/features/users/queries";
-import { getRecentPublicCourses } from "@/features/academy/course-queries";
+import { getRecentPublicCourses } from "@/features/academy/queries";
 import { HubView } from "@/features/hub";
 import { LayoutDashboard } from "lucide-react";
 

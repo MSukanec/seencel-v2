@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, ImageIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { createInstructor, updateInstructor } from "@/features/academy/instructor-actions";
+import { createInstructor, updateInstructor } from "@/features/academy/actions";
 
 const formSchema = z.object({
     name: z.string().min(1, "El nombre es obligatorio"),

@@ -1,5 +1,5 @@
 import { Link } from "@/i18n/routing";
-import { CourseWithDetails } from "@/types/courses";
+import { CourseWithDetails } from "@/features/academy/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

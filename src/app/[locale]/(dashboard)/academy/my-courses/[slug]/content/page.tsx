@@ -1,4 +1,4 @@
-import { getCourseBySlug, getCourseContent } from "@/actions/courses";
+import { getCourseBySlug, getCourseContent } from "@/features/academy/student-actions";
 import { CourseContentView } from "@/features/academy/views";
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";

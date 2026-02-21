@@ -1,6 +1,6 @@
 "use client";
 
-import { CourseLesson, CourseModule, LessonProgress } from "@/types/courses";
+import { CourseLesson, CourseModule, LessonProgress } from "@/features/academy/types";
 import {
     Accordion,
     AccordionContent,
@@ -56,7 +56,7 @@ export function CourseContentList({
                                         <span className={cn(
                                             "text-xs px-2 py-0.5 rounded-full",
                                             completedInModule === totalInModule
-                                                ? "bg-green-500/10 text-green-600"
+                                                ? "bg-[color:color-mix(in_srgb,var(--semantic-positive)_10%,transparent)] text-[color:var(--semantic-positive)]"
                                                 : "bg-muted text-muted-foreground"
                                         )}>
                                             {completedInModule}/{totalInModule}
@@ -87,7 +87,7 @@ export function CourseContentList({
                                         >
                                             <div className="flex-shrink-0">
                                                 {isCompleted ? (
-                                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                                    <CheckCircle2 className="h-5 w-5" style={{ color: 'var(--semantic-positive)' }} />
                                                 ) : isActive ? (
                                                     <PlayCircle className="h-5 w-5" />
                                                 ) : (

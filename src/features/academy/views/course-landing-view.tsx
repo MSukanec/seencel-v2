@@ -51,8 +51,8 @@ import {
 } from "lucide-react";
 import { FoundersBanner } from "@/features/academy/components/founders-banner";
 import { VideoPlaylistPlayer } from "@/components/shared/video-playlist-player";
-import type { Course, Module, EnabledSections } from "../types/course-marketing";
-import { DEFAULT_ENABLED_SECTIONS } from "../types/course-marketing";
+import type { Course, Module, EnabledSections } from "../course-marketing-data";
+import { DEFAULT_ENABLED_SECTIONS } from "../course-marketing-data";
 
 interface CourseLandingProps {
     course: Course;

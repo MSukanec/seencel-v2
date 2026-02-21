@@ -1,6 +1,6 @@
 "use client";
 
-import { CourseModule, CourseLesson } from "@/types/courses";
+import { CourseModule, CourseLesson } from "@/features/academy/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Play, Clock, CheckCircle2 } from "lucide-react";

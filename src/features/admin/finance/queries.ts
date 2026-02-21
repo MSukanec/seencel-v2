@@ -41,38 +41,13 @@ export type AdminPayment = {
 export async function getAdminPayments(): Promise<AdminPayment[]> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // Cross-schema joins not supported by PostgREST — fetch separately
+    const { data: payments, error } = await supabase
         .schema('billing').from("payments")
         .select(`
-            id,
-            provider,
-            provider_payment_id,
-            user_id,
-            course_id,
-            amount,
-            currency,
-            status,
-            created_at,
-            product_type,
-            product_id,
-            organization_id,
-            approved_at,
-            gateway,
-            metadata,
-            user:users!payments_user_id_fkey (
-                id,
-                email,
-                full_name,
-                avatar_url
-            ),
-            course:courses!payments_course_id_fkey (
-                id,
-                title
-            ),
-            organization:organizations!payments_organization_id_fkey (
-                id,
-                name
-            )
+            id, provider, provider_payment_id, user_id, course_id,
+            amount, currency, status, created_at, product_type,
+            product_id, organization_id, approved_at, gateway, metadata
         `)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -82,12 +57,34 @@ export async function getAdminPayments(): Promise<AdminPayment[]> {
         throw new Error("Error al obtener pagos");
     }
 
-    // Map array relations to single objects
-    return (data || []).map((row) => ({
+    if (!payments?.length) return [];
+
+    // Fetch related users from iam schema
+    const userIds = [...new Set(payments.map(p => p.user_id).filter(Boolean))];
+    const { data: usersData } = userIds.length
+        ? await supabase.schema('iam').from('users').select('id, email, full_name, avatar_url').in('id', userIds)
+        : { data: [] };
+    const userMap = new Map(usersData?.map(u => [u.id, u]) ?? []);
+
+    // Fetch related courses from academy schema
+    const courseIds = [...new Set(payments.map(p => p.course_id).filter(Boolean))] as string[];
+    const { data: coursesData } = courseIds.length
+        ? await supabase.schema('academy').from('courses').select('id, title').in('id', courseIds)
+        : { data: [] };
+    const courseMap = new Map(coursesData?.map(c => [c.id, c]) ?? []);
+
+    // Fetch related organizations from iam schema
+    const orgIds = [...new Set(payments.map(p => p.organization_id).filter(Boolean))] as string[];
+    const { data: orgsData } = orgIds.length
+        ? await supabase.schema('iam').from('organizations').select('id, name').in('id', orgIds)
+        : { data: [] };
+    const orgMap = new Map(orgsData?.map(o => [o.id, o]) ?? []);
+
+    return payments.map((row) => ({
         ...row,
-        user: Array.isArray(row.user) ? row.user[0] || null : row.user,
-        course: Array.isArray(row.course) ? row.course[0] || null : row.course,
-        organization: Array.isArray(row.organization) ? row.organization[0] || null : row.organization,
+        user: userMap.get(row.user_id) ?? null,
+        course: row.course_id ? courseMap.get(row.course_id) ?? null : null,
+        organization: row.organization_id ? orgMap.get(row.organization_id) ?? null : null,
     })) as AdminPayment[];
 }
 
@@ -137,41 +134,13 @@ export type AdminBankTransfer = {
 export async function getAdminBankTransfers(): Promise<AdminBankTransfer[]> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // Cross-schema joins not supported — fetch separately
+    const { data: transfers, error } = await supabase
         .schema('billing').from("bank_transfer_payments")
         .select(`
-            id,
-            order_id,
-            user_id,
-            amount,
-            currency,
-            payer_name,
-            payer_note,
-            status,
-            reviewed_by,
-            reviewed_at,
-            review_reason,
-            created_at,
-            updated_at,
-            payment_id,
-            course_id,
-            discount_percent,
-            discount_amount,
-            receipt_url,
-            user:users!bank_transfer_payments_user_id_fkey (
-                id,
-                email,
-                full_name,
-                avatar_url
-            ),
-            course:courses!bank_transfer_payments_course_id_fkey (
-                id,
-                title
-            ),
-            reviewer:users!bank_transfer_payments_reviewed_by_fkey (
-                id,
-                full_name
-            )
+            id, order_id, user_id, amount, currency, payer_name, payer_note,
+            status, reviewed_by, reviewed_at, review_reason, created_at,
+            updated_at, payment_id, course_id, discount_percent, discount_amount, receipt_url
         `)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -181,11 +150,33 @@ export async function getAdminBankTransfers(): Promise<AdminBankTransfer[]> {
         throw new Error("Error al obtener transferencias");
     }
 
-    // Map array relations to single objects
-    return (data || []).map((row) => ({
-        ...row,
-        user: Array.isArray(row.user) ? row.user[0] || null : row.user,
-        course: Array.isArray(row.course) ? row.course[0] || null : row.course,
-        reviewer: Array.isArray(row.reviewer) ? row.reviewer[0] || null : row.reviewer,
-    })) as AdminBankTransfer[];
+    if (!transfers?.length) return [];
+
+    // Fetch related users (includes both user_id and reviewed_by)
+    const allUserIds = [...new Set([
+        ...transfers.map(t => t.user_id),
+        ...transfers.map(t => t.reviewed_by).filter(Boolean)
+    ])] as string[];
+    const { data: usersData } = allUserIds.length
+        ? await supabase.schema('iam').from('users').select('id, email, full_name, avatar_url').in('id', allUserIds)
+        : { data: [] };
+    const userMap = new Map(usersData?.map(u => [u.id, u]) ?? []);
+
+    // Fetch related courses from academy schema
+    const courseIds = [...new Set(transfers.map(t => t.course_id).filter(Boolean))] as string[];
+    const { data: coursesData } = courseIds.length
+        ? await supabase.schema('academy').from('courses').select('id, title').in('id', courseIds)
+        : { data: [] };
+    const courseMap = new Map(coursesData?.map(c => [c.id, c]) ?? []);
+
+    return transfers.map((row) => {
+        const userData = userMap.get(row.user_id);
+        const reviewerData = row.reviewed_by ? userMap.get(row.reviewed_by) : null;
+        return {
+            ...row,
+            user: userData ? { id: userData.id, email: userData.email, full_name: userData.full_name, avatar_url: userData.avatar_url } : null,
+            course: row.course_id ? courseMap.get(row.course_id) ?? null : null,
+            reviewer: reviewerData ? { id: reviewerData.id, full_name: reviewerData.full_name } : null,
+        };
+    }) as AdminBankTransfer[];
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Course, Instructor, Module, Lesson, Testimonial, FAQ, Company, StudentWork, Masterclass, CourseDetails, EnabledSections, DEFAULT_ENABLED_SECTIONS } from "@/features/academy/types/course-marketing";
+import { Course, Instructor, Module, Lesson, Testimonial, FAQ, Company, StudentWork, Masterclass, CourseDetails, EnabledSections, DEFAULT_ENABLED_SECTIONS } from "@/features/academy/course-marketing-data";
 
 export async function getCourseBySlug(slug: string): Promise<Course | null> {
     const supabase = await createClient();

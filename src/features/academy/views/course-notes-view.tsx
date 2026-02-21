@@ -15,7 +15,7 @@ import {
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { LessonSummaryWithDetails } from "@/actions/courses";
+import { LessonSummaryWithDetails } from "@/features/academy/student-actions";
 import { ContentLayout } from "@/components/layout";
 
 interface CourseNotesViewProps {

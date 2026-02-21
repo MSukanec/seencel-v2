@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Course, Module, Lesson } from "@/features/academy/types/course-marketing";
+import { Course, Module, Lesson } from "@/features/academy/course-marketing-data";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, GripVertical, Video, Lock, Unlock } from "lucide-react";
@@ -22,7 +22,7 @@ import { useRouter } from "next/navigation";
 import {
     createModule, updateModule, deleteModule,
     createLesson, updateLesson, deleteLesson
-} from "@/features/academy/course-actions";
+} from "@/features/academy/actions";
 import { cn } from "@/lib/utils";
 
 interface ContentEditorProps {

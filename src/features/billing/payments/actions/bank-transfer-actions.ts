@@ -3,6 +3,7 @@
 
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 interface CreateBankTransferPaymentInput {
@@ -54,7 +55,7 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     // Insert bank transfer payment record
     const { data, error } = await supabase
-        .from("bank_transfer_payments")
+        .schema('billing').from("bank_transfer_payments")
         .insert({
             order_id: orderId,
             user_id: userData.id,
@@ -80,73 +81,67 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
     // ============================================================
     // OPTIMISTIC ACTIVATION: Grant access immediately
-    // NOTE: Payment record in `payments` table is NOT created here.
-    //       It will be created when admin approves the transfer.
+    // Uses the same handle_payment_* handlers as MP/PayPal webhooks.
+    // These are SECURITY DEFINER functions in 'billing' schema with
+    // their own search_path, so they can reach academy/iam internally.
     // ============================================================
 
     try {
+        const admin = createAdminClient();
+
         if (input.courseId) {
-            // Course purchase → only create enrollment (no payment record)
-            const { error: enrollError } = await supabase.rpc(
-                "step_course_enrollment_annual",
+            // Course purchase → use the same handler as MP webhook
+            const { data: result, error: courseError } = await admin.schema('billing').rpc(
+                "handle_payment_course_success",
                 {
+                    p_provider: "bank_transfer",
+                    p_provider_payment_id: orderId,
                     p_user_id: userData.id,
-                    p_course_id: input.courseId
+                    p_course_id: input.courseId,
+                    p_amount: input.amount,
+                    p_currency: input.currency,
+                    p_metadata: { payment_method: "bank_transfer" }
                 }
             );
 
-            if (enrollError) {
-                console.error("Error activating course enrollment:", enrollError);
-                // Don't fail - payment is recorded, admin can fix enrollment
+            if (courseError) {
+                console.error("Error activating course enrollment:", courseError);
+            } else {
+                console.log("Course enrollment result:", result);
             }
         } else if (input.planId && input.organizationId) {
-            // Plan/subscription purchase → create subscription without payment record
-            // Step 1: Expire previous subscription
-            await supabase.rpc("step_subscription_expire_previous", {
-                p_organization_id: input.organizationId
-            });
-
-            // Step 2: Create active subscription (without linking to a payment yet)
-            const { error: subError } = await supabase.rpc(
-                "step_subscription_create_active",
+            // Plan/subscription purchase → use the same handler as MP webhook
+            const { data: result, error: subError } = await admin.schema('billing').rpc(
+                "handle_payment_subscription_success",
                 {
+                    p_provider: "bank_transfer",
+                    p_provider_payment_id: orderId,
+                    p_user_id: userData.id,
                     p_organization_id: input.organizationId,
                     p_plan_id: input.planId,
                     p_billing_period: input.billingPeriod || "annual",
-                    p_payment_id: null, // No payment record yet
                     p_amount: input.amount,
-                    p_currency: input.currency
+                    p_currency: input.currency,
+                    p_metadata: { payment_method: "bank_transfer" },
+                    p_is_upgrade: false
                 }
             );
 
             if (subError) {
                 console.error("Error creating subscription:", subError);
-            }
-
-            // Step 3: Update organization's active plan
-            await supabase.rpc("step_organization_set_plan", {
-                p_organization_id: input.organizationId,
-                p_plan_id: input.planId
-            });
-
-            // Step 4: Apply founders program if annual
-            if (input.billingPeriod === "annual") {
-                await supabase.rpc("step_apply_founders_program", {
-                    p_user_id: userData.id,
-                    p_organization_id: input.organizationId
-                });
+            } else {
+                console.log("Subscription result:", result);
             }
         } else if (input.seatsQuantity && input.organizationId && !input.planId) {
-            // Seat purchase → register additional seats
-            // Get the current plan_id of the org
-            const { data: orgData } = await supabase
+            // Seat purchase → already uses handle_payment_seat_success (billing schema)
+            const { data: orgData } = await admin
                 .schema('iam').from("organizations")
                 .select("plan_id")
                 .eq("id", input.organizationId)
                 .single();
 
             if (orgData?.plan_id) {
-                const { error: seatError } = await supabase.rpc('handle_payment_seat_success', {
+                const { error: seatError } = await admin.schema('billing').rpc('handle_payment_seat_success', {
                     p_provider: 'bank_transfer',
                     p_provider_payment_id: orderId,
                     p_user_id: userData.id,
@@ -189,7 +184,7 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
 
         console.log("Queueing bank transfer email for:", userEmail);
 
-        const { data: rpcData, error: rpcError } = await supabase.rpc('queue_email_bank_transfer', {
+        const { data: rpcData, error: rpcError } = await supabase.schema('notifications').rpc('queue_email_bank_transfer', {
             p_user_id: userData.id, // Se mantiene por si acaso, pero ya no es crítico para el email d usuario
             p_transfer_id: orderId,
             p_product_name: productName,

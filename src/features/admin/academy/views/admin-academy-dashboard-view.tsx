@@ -1,7 +1,7 @@
 "use client";
 
 import type { CoursesDashboardData } from "@/features/admin/academy-queries";
-import { CoursesDashboard } from "@/features/academy/components/admin/courses-dashboard";
+import { CoursesDashboard } from "@/features/academy/views/courses-dashboard-view";
 
 interface AdminAcademyDashboardViewProps {
     data: CoursesDashboardData;

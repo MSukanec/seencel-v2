@@ -1,6 +1,6 @@
-import { getCourseById } from "@/features/academy/course-queries";
+import { getCourseById } from "@/features/academy/queries";
 import { notFound } from "next/navigation";
-import { ContentEditor } from "@/features/academy/components/admin/course-details/content-editor";
+import { ContentEditor } from "@/features/academy/components/content-editor";
 
 interface ContentPageProps {
     params: Promise<{ courseId: string }>;

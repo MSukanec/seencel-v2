@@ -8,7 +8,7 @@ import { useModal } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { deleteEnrollment } from "@/actions/enrollment-actions";
 import { useOptimisticList } from "@/hooks/use-optimistic-action";
-import { EnrollmentForm } from "@/features/academy/components/admin/enrollment-form";
+import { EnrollmentForm } from "@/features/academy/forms/enrollment-form";
 import { StudentsTable } from "./students-table";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 import type { AdminCourseEnrollment, AdminCourse } from "@/features/admin/academy-queries";

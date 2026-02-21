@@ -1,6 +1,6 @@
-import { getCourseById } from "@/features/academy/course-queries";
+import { getCourseById } from "@/features/academy/queries";
 import { notFound } from "next/navigation";
-import { MarketingForm } from "@/features/academy/components/admin/course-details/marketing-form";
+import { MarketingForm } from "@/features/academy/forms/course-marketing-form";
 
 interface MarketingPageProps {
     params: Promise<{ courseId: string }>;

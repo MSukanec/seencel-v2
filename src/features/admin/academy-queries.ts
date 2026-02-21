@@ -135,7 +135,7 @@ export async function getAdminCourseEnrollments(): Promise<AdminCourseEnrollment
 
     // Get payments for enrollments
     const { data: payments } = await supabase
-        .from("payments")
+        .schema('billing').from("payments")
         .select("id, user_id, course_id, amount, currency, provider, gateway, status, created_at")
         .not("course_id", "is", null)
         .eq("status", "completed");
@@ -284,7 +284,7 @@ export async function getCoursesDashboardData(): Promise<CoursesDashboardData> {
 
     // Get payments for courses
     const { data: payments } = await supabase
-        .from("payments")
+        .schema('billing').from("payments")
         .select("amount, currency, created_at, course_id")
         .not("course_id", "is", null)
         .eq("status", "completed");

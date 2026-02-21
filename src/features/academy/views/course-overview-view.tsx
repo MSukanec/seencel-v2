@@ -1,6 +1,6 @@
 "use client";
 
-import { CourseWithDetails, CourseModule, CourseLesson } from "@/types/courses";
+import { CourseWithDetails, CourseModule, CourseLesson } from "@/features/academy/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,7 @@ import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import { ContentLayout } from "@/components/layout";
 import { cn } from "@/lib/utils";
-import { CourseOverviewData, LessonSummaryWithDetails, MarkerWithDetails } from "@/actions/courses";
+import { CourseOverviewData, LessonSummaryWithDetails, MarkerWithDetails } from "@/features/academy/student-actions";
 import { ForumThread } from "@/actions/forum";
 
 interface CourseOverviewViewProps {

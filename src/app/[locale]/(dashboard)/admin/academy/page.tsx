@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Users, Video, GraduationCap } from "lucide-react";
 import { getCoursesDashboardData, getAdminCourseEnrollments, getAdminCourses } from "@/features/admin/academy-queries";
-import { getInstructors } from "@/features/academy/instructor-actions";
+import { getInstructors } from "@/features/academy/actions";
 import { PageWrapper } from "@/components/layout";
 import { ContentLayout } from "@/components/layout";
 import { ErrorDisplay } from "@/components/ui/error-display";
