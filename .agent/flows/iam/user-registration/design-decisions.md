@@ -12,27 +12,27 @@
 
 ### D2: Trigger SECURITY DEFINER para el signup
 
-- **Elegimos**: `iam.handle_new_user()` y todas las step functions son SECURITY DEFINER
+- **Elegimos**: `iam.handle_new_user()` es SECURITY DEFINER
 - **Alternativa descartada**: Usar service_role key o RLS permisiva para el insert
 - **Razón**: Durante el trigger, no hay sesión de usuario autenticada (el INSERT en auth.users lo hace Supabase internamente). SECURITY DEFINER permite ejecutar como el owner de la función, bypaseando RLS.
 
-### D3: Step functions separadas (no una sola función monolítica)
+### D3: Función consolidada (sin step functions)
 
-- **Elegimos**: 4 step functions individuales (`step_create_user`, `step_create_user_acquisition`, etc.)
-- **Alternativa descartada**: Un solo INSERT grande dentro de `handle_new_user`
-- **Razón**: Cada step tiene su propio error handling con `log_system_error()`. Si falla el paso 3, sabemos exactamente qué falló y en qué datos. Las step functions son reutilizables (por ej. `step_create_user_organization_preferences` se usa también al crear organización).
+- **Elegimos**: Una sola función `iam.handle_new_user()` con 4 INSERTs inline y tracking de `v_current_step`
+- **Alternativa descartada**: 4 step functions separadas (era la implementación anterior)
+- **Razón**: Las step functions eran de 1 línea cada una (un INSERT), no se reutilizaban en ningún otro lugar, tenían double error logging (step + parent), y agregaban 4 funciones SECURITY DEFINER innecesarias. La consolidación reduce surface de ataque, elimina overhead de context-switch, y simplifica debugging con un solo error handler + `v_current_step`.
 
 ### D4: UTM tracking en raw_user_meta_data
 
 - **Elegimos**: Pasar UTM params como `data` en `supabase.auth.signUp(options.data)`, que se almacena en `auth.users.raw_user_meta_data`
 - **Alternativa descartada**: Guardar UTMs en una tabla propia antes del signup
-- **Razón**: Supabase Auth ya proporciona el mecanismo de metadata. El trigger lee esos datos y los persiste en `iam.user_acquisition`. No se necesita lógica adicional ni tablas intermedias.
+- **Razón**: Supabase Auth ya proporciona el mecanismo de metadata. La función inline lee esos datos y los persiste en `iam.user_acquisition`. No se necesita lógica adicional ni tablas intermedias.
 
-### D5: Feature flag para habilitar/deshabilitar registro
+### D5: Feature flag bloquea TODOS los métodos de registro
 
-- **Elegimos**: Consultar `public.feature_flags` con key `auth_registration_enabled` antes de crear el usuario
-- **Alternativa descartada**: Variable de entorno o hardcoded
-- **Razón**: Permite deshabilitar registro en caliente desde la DB sin re-deploy. Útil para emergencias (ej: spam masivo).
+- **Elegimos**: Consultar `public.feature_flags` con key `auth_registration_enabled` y bloquear email + Google cuando está desactivado
+- **Alternativa descartada**: Bloquear solo email (permitir Google como bypass)
+- **Razón**: Si se quiere bloquear el registro, se bloquea por completo. Dejar Google abierto como escape no tiene sentido — un spammer podría crear cuentas de Google y registrarse igual.
 
 ### D6: Honeypot en vez de CAPTCHA
 
@@ -46,6 +46,12 @@
 - **Alternativa descartada**: Pedir nombre/apellido en la misma página de registro
 - **Razón**: Reduce la barrera de entrada: menos campos = más conversiones. El nombre/apellido se piden después, cuando el usuario ya "compró" la decisión de registrarse. Además permite que social auth (Google/Discord) skipee el nombre automáticamente si viene en la metadata.
 
+### D8: role_id usa DEFAULT de la tabla (no hardcodeado)
+
+- **Elegimos**: `handle_new_user` no pasa `role_id` explícitamente — usa el DEFAULT de `iam.users`
+- **Alternativa descartada**: Pasar el UUID del rol como parámetro explícito (era la implementación anterior)
+- **Razón**: El UUID `e6cc68d2-...` estaba hardcodeado en dos lugares (la tabla Y la función). Si en el futuro cambia el rol default, solo se cambia en un lugar (la tabla).
+
 ---
 
 ## Edge Cases y Gotchas
@@ -54,31 +60,25 @@
 
 - **Escenario**: En edge cases, Supabase puede disparar el trigger dos veces (ej: retry después de timeout)
 - **Impacto**: El guard `IF EXISTS (SELECT 1 FROM iam.users WHERE auth_id = NEW.id)` previene insertar un usuario duplicado
-- **Solución**: ✅ Ya resuelto con guard
+- **Estado**: ✅ Resuelto
 
 ### E2: Social auth (Google/Discord) sin email
 
 - **Escenario**: Teóricamente un provider OAuth podría no enviar email
-- **Impacto**: `NEW.email` sería null, causando error en `step_create_user`
-- **Solución futura**: Validar `NEW.email IS NOT NULL` antes de proceder. En la práctica, Google y Discord siempre envían email.
+- **Impacto**: `handle_new_user` tiene guard explícito `IF NEW.email IS NULL OR trim(NEW.email) = ''` que logea y falla limpio
+- **Estado**: ✅ Resuelto (guard agregado en 070d)
 
 ### E3: Usuario confirma email en otro dispositivo/browser
 
 - **Escenario**: Laura se registra desde mobile pero confirma el email desde desktop
-- **Impacto**: El callback exchange funciona en el browser que hizo click al link. El mobile no sabe que se confirmó hasta que refresque.
-- **Solución futura**: No es un problema real — el trigger se ejecuta al confirmar independientemente del browser.
+- **Impacto**: El callback exchange funciona en el browser que hizo click al link. El mobile no sabe que se confirmó hasta que refresque
+- **Estado**: ℹ️ No es un problema — el trigger se ejecuta al confirmar independientemente del browser
 
 ### E4: Timezone del browser vs timezone del usuario
 
 - **Escenario**: Laura usa un VPN y su timezone detectado es incorrecto
-- **Impacto**: El timezone se guarda en onboarding como preferencia. Se usa para renderizar fechas.
-- **Solución futura**: El usuario puede cambiarlo manualmente en Configuración → Preferencias.
-
-### E5: `debug_signup_log` todavía activa
-
-- **Escenario**: Algunas step functions (ej. `step_add_org_member`) insertan en `iam.debug_signup_log` para debugging
-- **Impacto**: La tabla crece indefinidamente. No afecta performance pero es ruido.
-- **Solución futura**: Eliminar los INSERTs de debug una vez que el flujo esté estabilizado por 30+ días, o agregar un cleanup job.
+- **Impacto**: El timezone se guarda en onboarding como preferencia. Se usa para renderizar fechas
+- **Estado**: ℹ️ El usuario puede cambiarlo manualmente en Configuración → Preferencias
 
 ---
 

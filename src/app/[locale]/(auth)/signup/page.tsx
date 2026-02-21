@@ -23,7 +23,7 @@ export default function SignupPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [showEmailForm, setShowEmailForm] = useState(false);
-    const [emailRegistrationEnabled, setEmailRegistrationEnabled] = useState<boolean | null>(null);
+    const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null);
 
     // Acquisition params from sessionStorage
     const [acquisitionParams, setAcquisitionParams] = useState<AcquisitionParams>({
@@ -39,7 +39,7 @@ export default function SignupPage() {
     useEffect(() => {
         setAcquisitionParams(getAcquisitionParams());
 
-        // Check if email registration is enabled
+        // Check if registration is enabled (blocks ALL methods)
         const checkFeatureFlag = async () => {
             const supabase = createClient();
             const { data } = await supabase
@@ -48,7 +48,7 @@ export default function SignupPage() {
                 .eq('key', 'auth_registration_enabled')
                 .single();
 
-            setEmailRegistrationEnabled(data?.status === 'active');
+            setRegistrationEnabled(data?.status === 'active');
         };
         checkFeatureFlag();
     }, []);
@@ -76,7 +76,7 @@ export default function SignupPage() {
                 if (result.error === "weak_password") errorMessage = t("weakPassword");
                 if (result.error === "invalid_domain") errorMessage = t("invalidEmail");
                 if (result.error === "email_taken") errorMessage = t("emailTaken");
-                if (result.error === "registration_blocked") errorMessage = "El registro con email está temporalmente deshabilitado. Usá Google para registrarte.";
+                if (result.error === "registration_blocked") errorMessage = "El registro está temporalmente deshabilitado.";
 
                 setState({ error: errorMessage });
             } else if (result?.success) {
@@ -92,8 +92,18 @@ export default function SignupPage() {
             mode="register"
         >
             <div className="grid gap-4">
-                {/* Google - siempre habilitado */}
-                <GoogleAuthButton text={t("googleButton")} />
+                {/* Alerta cuando el registro está deshabilitado */}
+                {registrationEnabled === false && (
+                    <Alert className="bg-orange-500/10 border-orange-500/20 text-orange-600">
+                        <AlertCircle className="h-4 w-4 !text-orange-600" />
+                        <AlertDescription className="ml-2">
+                            El registro de nuevos usuarios está temporalmente deshabilitado.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {/* Google - bloqueado por feature flag */}
+                <GoogleAuthButton text={t("googleButton")} disabled={registrationEnabled === false} />
 
                 {!showEmailForm ? (
                     <>
@@ -113,13 +123,10 @@ export default function SignupPage() {
                             variant="outline"
                             className="w-full"
                             onClick={() => setShowEmailForm(true)}
-                            disabled={emailRegistrationEnabled === false}
+                            disabled={registrationEnabled === false}
                         >
                             <Mail className="mr-2 h-4 w-4" />
-                            {emailRegistrationEnabled === false
-                                ? "Registro con email deshabilitado"
-                                : "Continuar con Email"
-                            }
+                            Continuar con Email
                         </Button>
                     </>
                 ) : (

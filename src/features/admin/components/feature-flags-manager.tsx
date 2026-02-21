@@ -40,7 +40,7 @@ const FLAG_TRANSLATIONS: Record<string, string> = {
 type FlagStatus = 'active' | 'maintenance' | 'founders' | 'hidden' | 'coming_soon';
 
 // Flags that should use a simple Switch (on/off) instead of status dropdown
-const SIMPLE_TOGGLE_FLAGS = ['mp_enabled', 'paypal_enabled', 'dashboard_maintenance_mode'];
+const SIMPLE_TOGGLE_FLAGS = ['mp_enabled', 'paypal_enabled', 'dashboard_maintenance_mode', 'auth_registration_enabled'];
 
 export function FeatureFlagsManager({ initialFlags, categories = [] }: FeatureFlagsManagerProps) {
     const router = useRouter();

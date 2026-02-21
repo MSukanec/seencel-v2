@@ -25,7 +25,7 @@
 | full_name | text | Nombre completo (se actualiza en onboarding) |
 | avatar_url | text | URL de avatar (de Google/Discord o null) |
 | avatar_source | avatar_source_t | Enum: 'email', 'google', 'discord' |
-| role_id | uuid | FK → iam.roles. Default: `e6cc68d2-...` (rol "user") |
+| role_id | uuid | FK → iam.roles. Default de la tabla: `e6cc68d2-...` (rol "user") |
 | signup_completed | bool | `false` → en onboarding. `true` → puede usar dashboard |
 | is_active | bool | Soft delete flag |
 
@@ -71,43 +71,22 @@
 | Columna | Tipo | Para qué se usa |
 |---------|------|-----------------|
 | key | text | `auth_registration_enabled` |
-| status | text | `active` = registro habilitado |
+| status | text | `active` = registro habilitado (AMBOS métodos: email + Google) |
 
 ---
 
 ## 2. Funciones SQL
 
-### `iam.handle_new_user()` — Trigger function
+### `iam.handle_new_user()` — Trigger function (consolidada)
 
 - **Tipo**: TRIGGER (AFTER INSERT on auth.users)
 - **Security**: SECURITY DEFINER
-- **search_path**: `iam, public, billing`
-- **Lógica**: Guard anti-dupl → detect provider → extract avatar → extract name → 4 steps
+- **search_path**: `iam`
+- **Lógica**: Guard email → Guard anti-dupl → detect provider → extract avatar → extract name → 4 INSERTs inline
+- **Error handling**: Un solo `EXCEPTION` handler con `v_current_step` para tracking granular del paso que falló
 - **Schema**: `DB/schema/iam/functions_2.md`
 
-### `iam.step_create_user(auth_id, email, full_name, avatar_url, avatar_source, role_id)`
-
-- **Tipo**: FUNCTION → uuid
-- **Lógica**: INSERT en `iam.users`, retorna `v_user_id`
-- **Schema**: `DB/schema/iam/functions_3.md`
-
-### `iam.step_create_user_acquisition(user_id, raw_meta)`
-
-- **Tipo**: FUNCTION → void
-- **Lógica**: INSERT/UPSERT en `iam.user_acquisition` extrayendo UTMs de jsonb
-- **Schema**: `DB/schema/iam/functions_3.md`
-
-### `iam.step_create_user_data(user_id)`
-
-- **Tipo**: FUNCTION → void
-- **Lógica**: INSERT esqueleto vacío en `iam.user_data`
-- **Schema**: `DB/schema/iam/functions_3.md`
-
-### `iam.step_create_user_preferences(user_id)`
-
-- **Tipo**: FUNCTION → void
-- **Lógica**: INSERT con defaults en `iam.user_preferences`
-- **Schema**: `DB/schema/iam/functions_3.md`
+> ⚠️ Esta función NO usa step functions separadas. Todo está inlineado tras la consolidación (070/070b/070d).
 
 ---
 
@@ -130,7 +109,8 @@
 
 | Archivo | Tipo | Qué hace |
 |---------|------|----------|
-| `src/app/[locale]/(auth)/signup/page.tsx` | Page | Página de registro con form |
+| `src/app/[locale]/(auth)/signup/page.tsx` | Page | Página de registro (email + Google). Feature flag bloquea ambos |
+| `src/features/auth/components/google-auth-button.tsx` | Component | Botón de Google OAuth (acepta prop `disabled`) |
 | `src/app/auth/callback/route.ts` | Route Handler | Exchange code → redirect |
 | `src/app/[locale]/(onboarding)/onboarding/onboarding-form.tsx` | Form | Form de onboarding (nombre, apellido) |
 
@@ -148,7 +128,7 @@
 ```
 Browser → registerUser() (Server Action)
   ├─ Zod validation (email, password, UTMs)
-  ├─ Feature flag check (public.feature_flags)
+  ├─ Feature flag check (public.feature_flags) — bloquea email + Google
   ├─ Honeypot check
   └─ supabase.auth.signUp({ email, password, data: UTMs })
        └─ Supabase Auth → INSERT auth.users → envía email
@@ -156,11 +136,13 @@ Browser → registerUser() (Server Action)
 Email confirmation click → /auth/callback?code=xxx
   └─ exchangeCodeForSession(code) → redirect /hub
        └─ auth.users INSERT → TRIGGER on_auth_user_created
-            └─ iam.handle_new_user()
-                 ├─ iam.step_create_user()         → iam.users (signup_completed=false)
-                 ├─ iam.step_create_user_acquisition() → iam.user_acquisition
-                 ├─ iam.step_create_user_data()    → iam.user_data (vacío)
-                 └─ iam.step_create_user_preferences() → iam.user_preferences
+            └─ iam.handle_new_user()  [UNA sola función, todo inline]
+                 ├─ Guard: email NOT NULL
+                 ├─ Guard: auth_id no duplicado
+                 ├─ INSERT iam.users         (signup_completed=false)
+                 ├─ INSERT iam.user_acquisition (UTM tracking)
+                 ├─ INSERT iam.user_data     (vacío)
+                 └─ INSERT iam.user_preferences (defaults tabla)
 
 Dashboard Layout → getUserProfile() → signup_completed=false → redirect /onboarding
 
@@ -189,6 +171,6 @@ Hub → Usuario listo (sin org)
 
 ## 6. RLS
 
-Las step functions usan `SECURITY DEFINER`, por lo que bypassean RLS durante el signup. Las tablas `iam.users`, `iam.user_data`, `iam.user_preferences` y `iam.user_acquisition` tienen sus propias RLS para operaciones normales post-signup.
+`iam.handle_new_user()` usa `SECURITY DEFINER`, por lo que bypasea RLS durante el signup (no hay sesión de usuario en un trigger).
 
 El onboarding usa el cliente Supabase normal (anon key + RLS), ya que el usuario ya está autenticado en ese punto. Las RLS de `iam.users` permiten UPDATE donde `iam.is_self(id)` sea true.

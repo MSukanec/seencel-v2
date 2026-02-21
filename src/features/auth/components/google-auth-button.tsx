@@ -5,10 +5,11 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
-export function GoogleAuthButton({ text = "Continuar con Google" }: { text?: string }) {
+export function GoogleAuthButton({ text = "Continuar con Google", disabled = false }: { text?: string; disabled?: boolean }) {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = async () => {
+        if (disabled) return;
         setIsLoading(true);
         const supabase = createClient();
         try {
@@ -39,7 +40,7 @@ export function GoogleAuthButton({ text = "Continuar con Google" }: { text?: str
             variant="outline"
             type="button"
             onClick={handleGoogleLogin}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             className="w-full h-11 relative font-medium"
         >
             {isLoading ? (

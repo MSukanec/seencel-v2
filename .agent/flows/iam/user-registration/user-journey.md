@@ -14,16 +14,17 @@ Laura es una arquitecta que nunca usó Seencel. Llega al sitio desde una búsque
 
 **Frontend**:
 - Page: `src/app/[locale]/(auth)/signup/page.tsx`
-- La página renderiza un formulario con campos: email, password, y un honeypot invisible (`website_url`)
+- La página renderiza dos opciones: botón de Google y botón de Email con formulario
 - Los parámetros UTM se capturan automáticamente de la URL y se almacenan en hidden inputs
+- Si el feature flag `auth_registration_enabled` está desactivado, AMBOS métodos se deshabilitan y se muestra una alerta naranja
 
 **Estado**: ✅ Funciona
 
 ---
 
-## Paso 2: Completar formulario y submitear
+## Paso 2: Completar formulario y submitear (Email)
 
-**Qué hace**: Laura ingresa su email y una contraseña que cumpla los requisitos (8+ chars, mayúscula, minúscula, número).
+**Qué hace**: Laura elige email, ingresa su email y una contraseña que cumpla los requisitos (8+ chars, mayúscula, minúscula, número).
 
 **Frontend**:
 - Server Action: `src/actions/auth/register.ts` → `registerUser()`
@@ -41,9 +42,22 @@ Laura es una arquitecta que nunca usó Seencel. Llega al sitio desde una búsque
 
 ---
 
+## Paso 2B: Registro con Google (alternativa)
+
+**Qué hace**: Laura elige Google en vez de email. Se redirige a Google OAuth.
+
+**Frontend**:
+- Component: `src/features/auth/components/google-auth-button.tsx`
+- Llama: `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })`
+- Acepta prop `disabled` para cuando el feature flag está desactivado
+
+**Estado**: ✅ Funciona
+
+---
+
 ## Paso 3: Confirmación por email
 
-**Qué hace**: Supabase Auth envía automáticamente un email de confirmación. Laura lo recibe y hace click en el link.
+**Qué hace**: Supabase Auth envía automáticamente un email de confirmación (solo para email signup). Laura lo recibe y hace click en el link. Para Google, este paso se skipea.
 
 **Infraestructura**: Supabase Auth maneja esto — el link contiene un `code` que apunta a `/auth/callback?code=xxx`.
 
@@ -53,7 +67,7 @@ Laura es una arquitecta que nunca usó Seencel. Llega al sitio desde una búsque
 
 ## Paso 4: Auth Callback — Exchange y redirect
 
-**Qué hace**: El link de confirmación redirige a `/auth/callback?code=xxx`. La route handler intercambia el código por una sesión.
+**Qué hace**: El link de confirmación (o Google OAuth) redirige a `/auth/callback?code=xxx`. La route handler intercambia el código por una sesión.
 
 **Frontend**:
 - Route Handler: `src/app/auth/callback/route.ts`
@@ -62,7 +76,7 @@ Laura es una arquitecta que nunca usó Seencel. Llega al sitio desde una búsque
 - Cookie `NEXT_LOCALE` se usa para el locale (fallback a `es`)
 
 **Tabla(s)**:
-- `auth.users` (INSERT automático por Supabase Auth al confirmar email)
+- `auth.users` (INSERT automático por Supabase Auth al confirmar email / completar OAuth)
 
 **Estado**: ✅ Funciona
 
@@ -74,17 +88,18 @@ Laura es una arquitecta que nunca usó Seencel. Llega al sitio desde una búsque
 
 **Trigger**: `on_auth_user_created` ON `auth.users` AFTER INSERT → `iam.handle_new_user()`
 
-**Función SQL**: `iam.handle_new_user()` (SECURITY DEFINER)
+**Función SQL**: `iam.handle_new_user()` (SECURITY DEFINER, search_path = `iam`)
 
-Secuencia:
-1. **Guard**: Si ya existe un user con ese `auth_id`, retorna (previene doble ejecución)
-2. **Provider**: Extrae provider de `raw_app_meta_data` o `raw_user_meta_data` (google/discord/email)
-3. **Avatar**: Extrae avatar de `raw_user_meta_data` (avatar_url o picture)
-4. **Full name**: Extrae de metadata o usa parte del email antes del `@`
-5. **`iam.step_create_user()`** → INSERT en `iam.users` (auth_id, email, full_name, avatar_url, avatar_source, role_id=user)
-6. **`iam.step_create_user_acquisition()`** → INSERT en `iam.user_acquisition` (UTM params extraídos de raw_user_meta_data)
-7. **`iam.step_create_user_data()`** → INSERT en `iam.user_data` (solo user_id, created_at — sin nombre/apellido aún)
-8. **`iam.step_create_user_preferences()`** → INSERT en `iam.user_preferences` (defaults: theme=dark, language=es, sidebar_mode=docked)
+Secuencia (todo inline en UNA función):
+1. **Guard email**: Si `NEW.email` es NULL o vacío → logea error + falla
+2. **Guard anti-duplicado**: Si ya existe user con ese `auth_id` → retorna sin hacer nada
+3. **Extract provider**: De `raw_app_meta_data` o `raw_user_meta_data` (google/discord/email)
+4. **Extract avatar**: URL de `raw_user_meta_data` (avatar_url o picture)
+5. **Extract full_name**: De metadata o usa parte del email antes del `@`
+6. **INSERT `iam.users`**: auth_id, email (lower), full_name, avatar_url, avatar_source. `role_id` usa DEFAULT de la tabla
+7. **INSERT `iam.user_acquisition`**: UTM params extraídos de `raw_user_meta_data`, con ON CONFLICT
+8. **INSERT `iam.user_data`**: Solo `user_id` — nombre/apellido vacíos
+9. **INSERT `iam.user_preferences`**: Solo `user_id` — defaults de la tabla
 
 **Tabla(s)**:
 - `iam.users` (INSERT) — `signup_completed = false` (default)
@@ -92,7 +107,7 @@ Secuencia:
 - `iam.user_data` (INSERT) — esqueleto vacío
 - `iam.user_preferences` (INSERT) — preferencias por defecto
 
-**Error handling**: Todas las step functions tienen EXCEPTION → `log_system_error()` + RAISE. La función madre `handle_new_user` también tiene catch global con severity `critical`.
+**Error handling**: Un solo `EXCEPTION` handler con `v_current_step` que indica exactamente qué paso falló. Se logea en `log_system_error` con severity `critical`.
 
 **Estado**: ✅ Funciona
 
@@ -157,26 +172,27 @@ Secuencia:
 └────────┬────────┘
          │ Click "Registrarse"
          ▼
-┌─────────────────┐
-│  Signup Page    │  ← UTM params capturados de URL
-│  (auth)/signup  │  ← Honeypot anti-bot
-└────────┬────────┘
-         │ Submit form
+┌─────────────────────────────┐
+│  Signup Page                │  ← UTM params capturados de URL
+│  (auth)/signup              │  ← Feature flag bloquea AMBOS métodos
+│                             │
+│  ┌──────────────────────┐   │
+│  │ Google OAuth Button  │   │  ← disabled si flag apagado
+│  └──────────────────────┘   │
+│  ┌──────────────────────┐   │
+│  │ Email + Password     │   │  ← Honeypot, Zod, blacklist
+│  └──────────────────────┘   │
+└────────┬────────────────────┘
+         │ Submit (email) / OAuth redirect (Google)
          ▼
 ┌─────────────────────────┐
-│  registerUser()         │  ← Server Action
-│  1. Feature flag check  │  ← public.feature_flags
+│  registerUser()         │  ← Server Action (solo email)
+│  1. Feature flag check  │
 │  2. Zod validation      │
 │  3. Honeypot check      │
 │  4. supabase.auth.signUp│  ← Con UTM en metadata
 └────────┬────────────────┘
-         │ Email enviado
-         ▼
-┌─────────────────────────┐
-│  Email de confirmación  │  ← Supabase Auth automático
-│  (click link)           │
-└────────┬────────────────┘
-         │ Redirect a /auth/callback?code=xxx
+         │ Email enviado / Google redirect
          ▼
 ┌─────────────────────────┐
 │  Auth Callback          │  ← route.ts
@@ -185,15 +201,18 @@ Secuencia:
 └────────┬────────────────┘
          │
          ▼ (simultáneo con la confirmación)
-┌─────────────────────────────────────────┐
-│  DB TRIGGER: on_auth_user_created       │
-│  auth.users INSERT → iam.handle_new_user│
-│                                         │
-│  1. iam.step_create_user()              │  → iam.users
-│  2. iam.step_create_user_acquisition()  │  → iam.user_acquisition
-│  3. iam.step_create_user_data()         │  → iam.user_data
-│  4. iam.step_create_user_preferences()  │  → iam.user_preferences
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  DB TRIGGER: on_auth_user_created        │
+│  auth.users INSERT → iam.handle_new_user │
+│                                          │
+│  [Todo inline, v_current_step tracking]  │
+│  1. Guard email NOT NULL                 │
+│  2. Guard auth_id duplicado              │
+│  3. INSERT iam.users                     │
+│  4. INSERT iam.user_acquisition          │
+│  5. INSERT iam.user_data                 │
+│  6. INSERT iam.user_preferences          │
+└──────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────┐
