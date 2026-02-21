@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:30:21.519Z
+> Generated: 2026-02-21T16:47:02.827Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] Functions (chunk 2: log_kanban_comment_activity — log_recipe_external_service_activity)
+## [AUDIT] Functions (chunk 2: log_kanban_comment_activity — log_quote_item_activity)
 
 ### `audit.log_kanban_comment_activity()` 🔐
 
@@ -681,6 +681,76 @@ $function$
 ```
 </details>
 
+### `audit.log_payment_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_payment_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'billing', 'iam', 'public'
+AS $function$
+DECLARE
+    v_member_id uuid;
+    v_action text;
+BEGIN
+    -- Solo pagos completados con organización
+    IF NEW.status <> 'completed' OR NEW.organization_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Buscar member_id
+    SELECT id INTO v_member_id
+    FROM iam.organization_members
+    WHERE organization_id = NEW.organization_id
+      AND user_id = NEW.user_id
+    LIMIT 1;
+
+    -- Construir action name
+    v_action := NEW.product_type || '_purchased';
+
+    -- Insertar en activity logs
+    INSERT INTO public.organization_activity_logs (
+        organization_id, member_id, action,
+        target_table, target_id, metadata
+    ) VALUES (
+        NEW.organization_id,
+        v_member_id,
+        v_action,
+        'payments',
+        NEW.id,
+        jsonb_build_object(
+            'amount', NEW.amount,
+            'currency', NEW.currency,
+            'product_type', NEW.product_type,
+            'provider', COALESCE(NEW.provider, NEW.gateway),
+            'user_id', NEW.user_id
+        ) || COALESCE(
+            -- Incluir metadata extra relevante (seats, billing_period, etc.)
+            jsonb_strip_nulls(jsonb_build_object(
+                'seats_purchased', NEW.metadata->>'seats_purchased',
+                'billing_period', NEW.metadata->>'billing_period',
+                'is_upgrade', NEW.metadata->>'upgrade'
+            )),
+            '{}'::jsonb
+        )
+    );
+
+    RETURN NEW;
+
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'log_payment_activity error: %', SQLERRM;
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
 ### `audit.log_project_activity()` 🔐
 
 - **Returns**: trigger
@@ -1160,67 +1230,6 @@ BEGIN
         ) VALUES (
             target_record.organization_id, resolved_member_id,
             audit_action, target_record.id, 'quote_items', audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN NULL;
-    END;
-
-    RETURN NULL;
-END;
-$function$
-```
-</details>
-
-### `audit.log_recipe_external_service_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_recipe_external_service_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public'
-AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD;
-        audit_action := 'delete_recipe_external_service';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-            audit_action := 'delete_recipe_external_service';
-        ELSE
-            audit_action := 'update_recipe_external_service';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW;
-        audit_action := 'create_recipe_external_service';
-        resolved_member_id := NEW.created_by;
-    END IF;
-
-    audit_metadata := jsonb_build_object(
-        'recipe_id', target_record.recipe_id,
-        'name', target_record.name,
-        'unit_price', target_record.unit_price,
-        'includes_materials', target_record.includes_materials
-    );
-
-    BEGIN
-        INSERT INTO public.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            target_record.organization_id, resolved_member_id,
-            audit_action, target_record.id, 'task_recipe_external_services', audit_metadata
         );
     EXCEPTION WHEN OTHERS THEN NULL;
     END;

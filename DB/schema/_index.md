@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:30:21.519Z
+> Generated: 2026-02-21T16:47:02.827Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -183,8 +183,8 @@
 - `iam.step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(iam/functions_2.md)*
 - `iam.step_create_default_kanban_board(p_org_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_3.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_2.md)*
+- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_data(p_org_id uuid)` → void 🔐 *(iam/functions_3.md)*
 - `iam.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(iam/functions_3.md)*
@@ -449,18 +449,16 @@
 - **`billing.plans`** (18 cols)
 - **`billing.subscription_notifications_log`** (4 cols | FK: subscription_id → organization_subscriptions)
 
-### Functions (13)
+### Functions (11)
 
-- `billing.handle_member_seat_purchase(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
 - `billing.handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
-- `billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
-- `billing.handle_upgrade_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
+- `billing.handle_payment_seat_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
+- `billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb, p_is_upgrade boolean DEFAULT false)` → jsonb 🔐 *(billing/functions_1.md)*
+- `billing.handle_payment_upgrade_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` → jsonb 🔐 *(billing/functions_1.md)*
 - `billing.redeem_coupon_universal(p_code text, p_product_type text, p_product_id uuid, p_price numeric, p_currency text DEFAULT 'USD'::text, p_order_id uuid DEFAULT NULL::uuid, p_subscription_id uuid DEFAULT NULL::uuid)` → jsonb 🔐 *(billing/functions_1.md)*
 - `billing.step_apply_founders_program(p_user_id uuid, p_organization_id uuid)` → void *(billing/functions_1.md)*
-- `billing.step_log_seat_purchase_event(p_organization_id uuid, p_user_id uuid, p_seats integer, p_amount numeric, p_currency text, p_payment_id uuid, p_prorated boolean)` → uuid 🔐 *(billing/functions_1.md)*
 - `billing.step_organization_set_plan(p_organization_id uuid, p_plan_id uuid)` → void *(billing/functions_1.md)*
 - `billing.step_payment_insert_idempotent(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_product_type text, p_plan_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb)` → uuid *(billing/functions_1.md)*
-- `billing.step_send_purchase_email(p_user_id uuid, p_product_type text, p_product_name text, p_amount numeric, p_currency text, p_payment_id uuid, p_provider text DEFAULT 'mercadopago'::text)` → void 🔐 *(billing/functions_1.md)*
 - `billing.step_subscription_create_active(p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_payment_id uuid, p_amount numeric, p_currency text)` → uuid *(billing/functions_1.md)*
 - `billing.step_subscription_expire_previous(p_organization_id uuid)` → void *(billing/functions_1.md)*
 - `billing.validate_coupon_universal(p_code text, p_product_type text, p_product_id uuid, p_price numeric, p_currency text DEFAULT 'USD'::text)` → jsonb 🔐 *(billing/functions_1.md)*
@@ -521,7 +519,7 @@
 - **`notifications.push_subscriptions`** (7 cols)
 - **`notifications.user_notifications`** (6 cols | FK: notification_id → notifications)
 
-### Functions (17)
+### Functions (18)
 
 - `notifications.notify_admin_on_new_user()` → trigger 🔐 *(notifications/functions_1.md)*
 - `notifications.notify_admin_on_payment()` → trigger 🔐 *(notifications/functions_1.md)*
@@ -539,6 +537,7 @@
 - `notifications.notify_user_payment_completed()` → trigger 🔐 *(notifications/functions_1.md)*
 - `notifications.queue_email_bank_transfer(p_user_id uuid, p_transfer_id uuid, p_product_name text, p_amount numeric, p_currency text, p_payer_name text, p_receipt_url text, p_user_email text DEFAULT NULL::text, p_user_first_name text DEFAULT NULL::text)` → jsonb 🔐 *(notifications/functions_1.md)*
 - `notifications.queue_email_welcome()` → trigger 🔐 *(notifications/functions_1.md)*
+- `notifications.queue_purchase_email()` → trigger 🔐 *(notifications/functions_1.md)*
 - `notifications.send_notification(p_user_id uuid, p_type text, p_title text, p_body text, p_data jsonb DEFAULT '{}'::jsonb, p_audience text DEFAULT 'direct'::text)` → uuid 🔐 *(notifications/functions_1.md)*
 
 ---
@@ -550,7 +549,7 @@
 - **`audit.changelog_entries`** (9 cols)
 - **`audit.organization_activity_logs`** (8 cols)
 
-### Functions (50)
+### Functions (51)
 
 - `audit.log_activity(p_organization_id uuid, p_user_id uuid, p_action text, p_target_table text, p_target_id uuid, p_metadata jsonb)` → void 🔐 *(audit/functions_1.md)*
 - `audit.log_calendar_event_activity()` → trigger 🔐 *(audit/functions_1.md)*
@@ -583,6 +582,7 @@
 - `audit.log_member_billable_change()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_organization_data_activity()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_organizations_activity()` → trigger 🔐 *(audit/functions_2.md)*
+- `audit.log_payment_activity()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_project_activity()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_project_client_activity()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_project_data_activity()` → trigger 🔐 *(audit/functions_2.md)*
@@ -591,7 +591,7 @@
 - `audit.log_project_type_activity()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_quote_activity()` → trigger 🔐 *(audit/functions_2.md)*
 - `audit.log_quote_item_activity()` → trigger 🔐 *(audit/functions_2.md)*
-- `audit.log_recipe_external_service_activity()` → trigger 🔐 *(audit/functions_2.md)*
+- `audit.log_recipe_external_service_activity()` → trigger 🔐 *(audit/functions_3.md)*
 - `audit.log_recipe_labor_activity()` → trigger 🔐 *(audit/functions_3.md)*
 - `audit.log_recipe_material_activity()` → trigger 🔐 *(audit/functions_3.md)*
 - `audit.log_site_log_types_activity()` → trigger 🔐 *(audit/functions_3.md)*

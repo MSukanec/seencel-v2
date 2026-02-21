@@ -146,7 +146,7 @@ export async function createBankTransferPayment(input: CreateBankTransferPayment
                 .single();
 
             if (orgData?.plan_id) {
-                const { error: seatError } = await supabase.rpc('handle_member_seat_purchase', {
+                const { error: seatError } = await supabase.rpc('handle_payment_seat_success', {
                     p_provider: 'bank_transfer',
                     p_provider_payment_id: orderId,
                     p_user_id: userData.id,

@@ -1,86 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:30:21.519Z
+> Generated: 2026-02-21T16:47:02.827Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [BILLING] Functions (chunk 1: handle_member_seat_purchase — validate_coupon_universal)
-
-### `billing.handle_member_seat_purchase(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION billing.handle_member_seat_purchase(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'iam', 'public'
-AS $function$
-DECLARE
-    v_payment_id uuid;
-    v_step text := 'start';
-BEGIN
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
-
-    v_step := 'insert_payment';
-    v_payment_id := billing.step_payment_insert_idempotent(
-        p_provider, p_provider_payment_id, p_user_id, p_organization_id,
-        'seat_purchase', p_plan_id, NULL, p_amount, p_currency, p_metadata
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object('status', 'already_processed');
-    END IF;
-
-    v_step := 'increment_seats';
-    PERFORM iam.step_organization_increment_seats(p_organization_id, p_seats_purchased);
-
-    v_step := 'log_event';
-    PERFORM billing.step_log_seat_purchase_event(
-        p_organization_id, p_user_id, p_seats_purchased,
-        p_amount, p_currency, v_payment_id, true
-    );
-
-    v_step := 'send_email';
-    PERFORM billing.step_send_purchase_email(
-        p_user_id, 'seat_purchase',
-        p_seats_purchased || ' asiento(s) adicional(es)',
-        p_amount, p_currency, v_payment_id, p_provider
-    );
-
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id,
-        'seats_added', p_seats_purchased
-    );
-
-EXCEPTION WHEN OTHERS THEN
-    PERFORM ops.log_system_error(
-        'payment', 'seat_purchase', 'handle_member_seat_purchase',
-        SQLERRM,
-        jsonb_build_object(
-            'step', v_step, 'provider', p_provider,
-            'provider_payment_id', p_provider_payment_id,
-            'organization_id', p_organization_id,
-            'seats', p_seats_purchased, 'amount', p_amount
-        ),
-        'critical'
-    );
-
-    RETURN jsonb_build_object(
-        'status', 'ok_with_warning',
-        'payment_id', v_payment_id,
-        'warning_step', v_step
-    );
-END;
-$function$
-```
-</details>
+## [BILLING] Functions (chunk 1: handle_payment_course_success — validate_coupon_universal)
 
 ### `billing.handle_payment_course_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_course_id uuid, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
 
@@ -99,31 +22,37 @@ AS $function$
 DECLARE
     v_payment_id uuid;
     v_course_name text;
+    v_enriched_metadata jsonb;
     v_step text := 'start';
 BEGIN
     v_step := 'idempotency_lock';
     PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
+    -- Pre-fetch nombre del curso para metadata
+    v_step := 'fetch_course_name';
+    SELECT title INTO v_course_name FROM academy.courses WHERE id = p_course_id;
+
+    -- Enriquecer metadata con product_name (para trigger de email)
+    v_enriched_metadata := COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object(
+        'product_name', COALESCE(v_course_name, 'Curso')
+    );
+
+    -- Insertar pago (trigger dispara email automáticamente)
     v_step := 'insert_payment';
     v_payment_id := billing.step_payment_insert_idempotent(
         p_provider, p_provider_payment_id, p_user_id, NULL,
-        'course', NULL, p_course_id, p_amount, p_currency, p_metadata
+        'course', NULL, p_course_id, p_amount, p_currency, v_enriched_metadata
     );
 
     IF v_payment_id IS NULL THEN
         RETURN jsonb_build_object('status', 'already_processed');
     END IF;
 
+    -- Inscripción al curso
     v_step := 'course_enrollment_annual';
     PERFORM academy.step_course_enrollment_annual(p_user_id, p_course_id);
 
-    v_step := 'send_purchase_email';
-    SELECT title INTO v_course_name FROM academy.courses WHERE id = p_course_id;
-
-    PERFORM billing.step_send_purchase_email(
-        p_user_id, 'course', COALESCE(v_course_name, 'Curso'),
-        p_amount, p_currency, v_payment_id, p_provider
-    );
+    -- Email ahora es trigger automático ✅
 
     v_step := 'done';
     RETURN jsonb_build_object('status', 'ok', 'payment_id', v_payment_id);
@@ -152,7 +81,7 @@ $function$
 ```
 </details>
 
-### `billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
+### `billing.handle_payment_seat_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
 
 - **Returns**: jsonb
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -160,7 +89,77 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
+CREATE OR REPLACE FUNCTION billing.handle_payment_seat_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_seats_purchased integer, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'billing', 'academy', 'iam', 'public'
+AS $function$
+DECLARE
+    v_payment_id uuid;
+    v_enriched_metadata jsonb;
+    v_step text := 'start';
+BEGIN
+    v_step := 'idempotency_lock';
+    PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
+
+    v_enriched_metadata := COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object(
+        'product_name', p_seats_purchased || ' asiento(s) adicional(es)',
+        'seats_purchased', p_seats_purchased
+    );
+
+    v_step := 'insert_payment';
+    v_payment_id := billing.step_payment_insert_idempotent(
+        p_provider, p_provider_payment_id, p_user_id, p_organization_id,
+        'seat_purchase', p_plan_id, NULL, p_amount, p_currency, v_enriched_metadata
+    );
+
+    IF v_payment_id IS NULL THEN
+        RETURN jsonb_build_object('status', 'already_processed');
+    END IF;
+
+    v_step := 'increment_seats';
+    PERFORM iam.step_organization_increment_seats(p_organization_id, p_seats_purchased);
+
+    v_step := 'done';
+    RETURN jsonb_build_object(
+        'status', 'ok',
+        'payment_id', v_payment_id,
+        'seats_added', p_seats_purchased
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    PERFORM ops.log_system_error(
+        'payment', 'seat_purchase', 'handle_payment_seat_success',
+        SQLERRM,
+        jsonb_build_object(
+            'step', v_step, 'provider', p_provider,
+            'provider_payment_id', p_provider_payment_id,
+            'organization_id', p_organization_id,
+            'seats', p_seats_purchased, 'amount', p_amount
+        ),
+        'critical'
+    );
+
+    RETURN jsonb_build_object(
+        'status', 'ok_with_warning',
+        'payment_id', v_payment_id,
+        'warning_step', v_step
+    );
+END;
+$function$
+```
+</details>
+
+### `billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb, p_is_upgrade boolean DEFAULT false)` 🔐
+
+- **Returns**: jsonb
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION billing.handle_payment_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb, p_is_upgrade boolean DEFAULT false)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -170,21 +169,66 @@ DECLARE
     v_payment_id uuid;
     v_subscription_id uuid;
     v_plan_name text;
+    v_previous_plan_id uuid;
+    v_previous_plan_name text;
+    v_product_name text;
+    v_product_type text;
+    v_enriched_metadata jsonb;
     v_step text := 'start';
 BEGIN
     v_step := 'idempotency_lock';
     PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
 
+    -- Determinar tipo de producto
+    v_product_type := CASE WHEN p_is_upgrade THEN 'upgrade' ELSE 'subscription' END;
+
+    -- Pre-fetch nombre del plan para enriquecer metadata
+    v_step := 'fetch_plan_name';
+    SELECT name INTO v_plan_name FROM billing.plans WHERE id = p_plan_id;
+
+    v_product_name := COALESCE(v_plan_name, 'Plan') || ' (' ||
+        CASE WHEN p_billing_period = 'annual' THEN 'anual' ELSE 'mensual' END || ')';
+
+    -- Enriquecer metadata base
+    v_enriched_metadata := COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object(
+        'billing_period', p_billing_period
+    );
+
+    -- Para upgrades: obtener info del plan anterior
+    IF p_is_upgrade THEN
+        v_step := 'get_previous_plan';
+        SELECT o.plan_id, p.name
+        INTO v_previous_plan_id, v_previous_plan_name
+        FROM iam.organizations o
+        LEFT JOIN billing.plans p ON p.id = o.plan_id
+        WHERE o.id = p_organization_id;
+
+        v_product_name := 'Upgrade a ' || v_product_name;
+
+        v_enriched_metadata := v_enriched_metadata || jsonb_build_object(
+            'upgrade', true,
+            'previous_plan_id', v_previous_plan_id,
+            'previous_plan_name', v_previous_plan_name
+        );
+    END IF;
+
+    -- Agregar product_name a metadata (para el trigger de email)
+    v_enriched_metadata := v_enriched_metadata || jsonb_build_object(
+        'product_name', v_product_name
+    );
+
+    -- Insertar pago (trigger dispara email + activity log automáticamente)
     v_step := 'insert_payment';
     v_payment_id := billing.step_payment_insert_idempotent(
         p_provider, p_provider_payment_id, p_user_id, p_organization_id,
-        'subscription', p_plan_id, NULL, p_amount, p_currency, p_metadata
+        v_product_type, p_plan_id, NULL, p_amount, p_currency, v_enriched_metadata
     );
 
     IF v_payment_id IS NULL THEN
         RETURN jsonb_build_object('status', 'already_processed');
     END IF;
 
+    -- Gestión de suscripción
     v_step := 'expire_previous_subscription';
     PERFORM billing.step_subscription_expire_previous(p_organization_id);
 
@@ -197,37 +241,34 @@ BEGIN
     v_step := 'set_organization_plan';
     PERFORM billing.step_organization_set_plan(p_organization_id, p_plan_id);
 
+    -- Programa founders (solo anual)
     IF p_billing_period = 'annual' THEN
         v_step := 'apply_founders_program';
         PERFORM billing.step_apply_founders_program(p_user_id, p_organization_id);
     END IF;
 
-    v_step := 'send_purchase_email';
-    SELECT name INTO v_plan_name FROM billing.plans WHERE id = p_plan_id;
-
-    PERFORM billing.step_send_purchase_email(
-        p_user_id, 'subscription',
-        COALESCE(v_plan_name, 'Plan') || ' (' || p_billing_period || ')',
-        p_amount, p_currency, v_payment_id, p_provider
-    );
+    -- Email y activity log ahora son triggers automáticos ✅
 
     v_step := 'done';
     RETURN jsonb_build_object(
         'status', 'ok',
         'payment_id', v_payment_id,
-        'subscription_id', v_subscription_id
+        'subscription_id', v_subscription_id,
+        'previous_plan_id', v_previous_plan_id,
+        'previous_plan_name', v_previous_plan_name
     );
 
 EXCEPTION
     WHEN OTHERS THEN
         PERFORM ops.log_system_error(
-            'payment', 'subscription', 'handle_payment_subscription_success',
+            'payment', v_product_type, 'handle_payment_subscription_success',
             SQLERRM,
             jsonb_build_object(
                 'step', v_step, 'provider', p_provider,
                 'provider_payment_id', p_provider_payment_id,
                 'user_id', p_user_id, 'organization_id', p_organization_id,
-                'plan_id', p_plan_id, 'billing_period', p_billing_period
+                'plan_id', p_plan_id, 'billing_period', p_billing_period,
+                'is_upgrade', p_is_upgrade
             ),
             'critical'
         );
@@ -243,7 +284,7 @@ $function$
 ```
 </details>
 
-### `billing.handle_upgrade_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
+### `billing.handle_payment_upgrade_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)` 🔐
 
 - **Returns**: jsonb
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -251,100 +292,18 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION billing.handle_upgrade_subscription_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
+CREATE OR REPLACE FUNCTION billing.handle_payment_upgrade_success(p_provider text, p_provider_payment_id text, p_user_id uuid, p_organization_id uuid, p_plan_id uuid, p_billing_period text, p_amount numeric, p_currency text, p_metadata jsonb DEFAULT '{}'::jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'billing', 'academy', 'iam', 'public'
 AS $function$
-DECLARE
-    v_payment_id uuid;
-    v_subscription_id uuid;
-    v_plan_name text;
-    v_previous_plan_name text;
-    v_previous_plan_id uuid;
-    v_step text := 'start';
 BEGIN
-    v_step := 'idempotency_lock';
-    PERFORM pg_advisory_xact_lock(hashtext(p_provider || p_provider_payment_id));
-
-    v_step := 'get_previous_plan';
-    SELECT o.plan_id, p.name
-    INTO v_previous_plan_id, v_previous_plan_name
-    FROM iam.organizations o
-    LEFT JOIN billing.plans p ON p.id = o.plan_id
-    WHERE o.id = p_organization_id;
-
-    v_step := 'insert_payment';
-    v_payment_id := billing.step_payment_insert_idempotent(
-        p_provider, p_provider_payment_id, p_user_id, p_organization_id,
-        'upgrade', p_plan_id, NULL, p_amount, p_currency,
-        p_metadata || jsonb_build_object(
-            'upgrade', true,
-            'previous_plan_id', v_previous_plan_id,
-            'previous_plan_name', v_previous_plan_name
-        )
-    );
-
-    IF v_payment_id IS NULL THEN
-        RETURN jsonb_build_object('status', 'already_processed');
-    END IF;
-
-    v_step := 'expire_previous_subscription';
-    PERFORM billing.step_subscription_expire_previous(p_organization_id);
-
-    v_step := 'create_active_subscription';
-    v_subscription_id := billing.step_subscription_create_active(
+    RETURN billing.handle_payment_subscription_success(
+        p_provider, p_provider_payment_id, p_user_id,
         p_organization_id, p_plan_id, p_billing_period,
-        v_payment_id, p_amount, p_currency
+        p_amount, p_currency, p_metadata, true
     );
-
-    v_step := 'set_organization_plan';
-    PERFORM billing.step_organization_set_plan(p_organization_id, p_plan_id);
-
-    IF p_billing_period = 'annual' THEN
-        v_step := 'apply_founders_program';
-        PERFORM billing.step_apply_founders_program(p_user_id, p_organization_id);
-    END IF;
-
-    v_step := 'send_purchase_email';
-    SELECT name INTO v_plan_name FROM billing.plans WHERE id = p_plan_id;
-
-    PERFORM billing.step_send_purchase_email(
-        p_user_id, 'upgrade',
-        'Upgrade a ' || COALESCE(v_plan_name, 'Plan') || ' (' || CASE WHEN p_billing_period = 'annual' THEN 'anual' ELSE 'mensual' END || ')',
-        p_amount, p_currency, v_payment_id, p_provider
-    );
-
-    v_step := 'done';
-    RETURN jsonb_build_object(
-        'status', 'ok',
-        'payment_id', v_payment_id,
-        'subscription_id', v_subscription_id,
-        'previous_plan_id', v_previous_plan_id,
-        'previous_plan_name', v_previous_plan_name
-    );
-
-EXCEPTION
-    WHEN OTHERS THEN
-        PERFORM ops.log_system_error(
-            'payment', 'upgrade', 'handle_upgrade_subscription_success',
-            SQLERRM,
-            jsonb_build_object(
-                'step', v_step, 'provider', p_provider,
-                'provider_payment_id', p_provider_payment_id,
-                'user_id', p_user_id, 'organization_id', p_organization_id,
-                'plan_id', p_plan_id, 'billing_period', p_billing_period
-            ),
-            'critical'
-        );
-
-        RETURN jsonb_build_object(
-            'status', 'ok_with_warning',
-            'payment_id', v_payment_id,
-            'subscription_id', v_subscription_id,
-            'warning_step', v_step
-        );
 END;
 $function$
 ```
@@ -476,50 +435,6 @@ $function$
 ```
 </details>
 
-### `billing.step_log_seat_purchase_event(p_organization_id uuid, p_user_id uuid, p_seats integer, p_amount numeric, p_currency text, p_payment_id uuid, p_prorated boolean)` 🔐
-
-- **Returns**: uuid
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION billing.step_log_seat_purchase_event(p_organization_id uuid, p_user_id uuid, p_seats integer, p_amount numeric, p_currency text, p_payment_id uuid, p_prorated boolean)
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'iam', 'public'
-AS $function$
-DECLARE
-    v_event_id UUID;
-    v_member_id UUID;
-BEGIN
-    SELECT id INTO v_member_id
-    FROM iam.organization_members
-    WHERE organization_id = p_organization_id 
-      AND user_id = p_user_id
-    LIMIT 1;
-
-    INSERT INTO public.organization_activity_logs (
-        organization_id, member_id, action,
-        target_table, target_id, metadata
-    ) VALUES (
-        p_organization_id, v_member_id, 'seat_purchased',
-        'payments', p_payment_id,
-        jsonb_build_object(
-            'seats', p_seats, 'amount', p_amount,
-            'currency', p_currency, 'payment_id', p_payment_id,
-            'prorated', p_prorated, 'user_id', p_user_id
-        )
-    )
-    RETURNING id INTO v_event_id;
-    
-    RETURN v_event_id;
-END;
-$function$
-```
-</details>
-
 ### `billing.step_organization_set_plan(p_organization_id uuid, p_plan_id uuid)`
 
 - **Returns**: void
@@ -606,77 +521,6 @@ exception
     );
     raise;
 end;
-$function$
-```
-</details>
-
-### `billing.step_send_purchase_email(p_user_id uuid, p_product_type text, p_product_name text, p_amount numeric, p_currency text, p_payment_id uuid, p_provider text DEFAULT 'mercadopago'::text)` 🔐
-
-- **Returns**: void
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION billing.step_send_purchase_email(p_user_id uuid, p_product_type text, p_product_name text, p_amount numeric, p_currency text, p_payment_id uuid, p_provider text DEFAULT 'mercadopago'::text)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'iam', 'public'
-AS $function$
-DECLARE
-    v_user_email text;
-    v_user_name text;
-BEGIN
-    SELECT email, full_name INTO v_user_email, v_user_name
-    FROM iam.users
-    WHERE id = p_user_id;
-
-    IF v_user_email IS NULL THEN
-        RAISE NOTICE 'step_send_purchase_email: Usuario % no encontrado', p_user_id;
-        RETURN;
-    END IF;
-
-    INSERT INTO public.email_queue (
-        recipient_email, recipient_name, template_type, subject, data, created_at
-    ) VALUES (
-        v_user_email,
-        COALESCE(v_user_name, 'Usuario'),
-        'purchase_confirmation',
-        CASE p_product_type
-            WHEN 'course' THEN '¡Tu curso está listo!'
-            WHEN 'subscription' THEN '¡Bienvenido a SEENCEL ' || p_product_name || '!'
-            ELSE 'Confirmación de compra'
-        END,
-        jsonb_build_object(
-            'user_id', p_user_id, 'user_email', v_user_email,
-            'user_name', v_user_name, 'product_type', p_product_type,
-            'product_name', p_product_name, 'amount', p_amount,
-            'currency', p_currency, 'payment_id', p_payment_id,
-            'provider', p_provider
-        ),
-        NOW()
-    );
-
-    INSERT INTO public.email_queue (
-        recipient_email, recipient_name, template_type, subject, data, created_at
-    ) VALUES (
-        'contacto@seencel.com',
-        'Admin SEENCEL',
-        'admin_sale_notification',
-        '💰 Nueva venta: ' || p_product_name,
-        jsonb_build_object(
-            'buyer_email', v_user_email, 'buyer_name', v_user_name,
-            'product_type', p_product_type, 'product_name', p_product_name,
-            'amount', p_amount, 'currency', p_currency,
-            'payment_id', p_payment_id, 'provider', p_provider
-        ),
-        NOW()
-    );
-
-EXCEPTION WHEN OTHERS THEN
-    RAISE NOTICE 'step_send_purchase_email error: %', SQLERRM;
-END;
 $function$
 ```
 </details>

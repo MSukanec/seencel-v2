@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T16:30:21.519Z
+> Generated: 2026-02-21T16:47:02.827Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -900,6 +900,118 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
     -- Log error pero no romper el flujo de registro
     RAISE NOTICE 'trigger_send_welcome_email error: %', SQLERRM;
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
+### `notifications.queue_purchase_email()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION notifications.queue_purchase_email()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'notifications', 'billing', 'academy', 'iam', 'public'
+AS $function$
+DECLARE
+    v_user_email text;
+    v_user_name text;
+    v_product_name text;
+    v_subject_user text;
+    v_subject_admin text;
+BEGIN
+    -- Solo pagos completados
+    IF NEW.status <> 'completed' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Obtener datos del usuario
+    SELECT email, full_name INTO v_user_email, v_user_name
+    FROM iam.users
+    WHERE id = NEW.user_id;
+
+    IF v_user_email IS NULL THEN
+        RAISE NOTICE 'queue_purchase_email: Usuario % no encontrado', NEW.user_id;
+        RETURN NEW;
+    END IF;
+
+    -- Obtener nombre del producto desde metadata (enriquecida por los handlers)
+    v_product_name := NEW.metadata->>'product_name';
+
+    -- Fallback: construir nombre si no está en metadata
+    IF v_product_name IS NULL THEN
+        CASE NEW.product_type
+            WHEN 'course' THEN
+                SELECT title INTO v_product_name FROM academy.courses WHERE id = NEW.course_id;
+                v_product_name := COALESCE(v_product_name, 'Curso');
+            WHEN 'subscription' THEN
+                SELECT name INTO v_product_name FROM billing.plans WHERE id = NEW.product_id;
+                v_product_name := COALESCE(v_product_name, 'Plan');
+            WHEN 'upgrade' THEN
+                SELECT name INTO v_product_name FROM billing.plans WHERE id = NEW.product_id;
+                v_product_name := 'Upgrade a ' || COALESCE(v_product_name, 'Plan');
+            WHEN 'seat_purchase' THEN
+                v_product_name := COALESCE(NEW.metadata->>'seats_purchased', '?') || ' asiento(s) adicional(es)';
+            ELSE
+                v_product_name := 'Producto';
+        END CASE;
+    END IF;
+
+    -- Construir subjects
+    v_subject_user := CASE NEW.product_type
+        WHEN 'course' THEN '¡Tu curso está listo!'
+        WHEN 'subscription' THEN '¡Bienvenido a SEENCEL ' || v_product_name || '!'
+        WHEN 'upgrade' THEN '¡Plan mejorado!'
+        ELSE 'Confirmación de compra'
+    END;
+    v_subject_admin := '💰 Nueva venta: ' || v_product_name;
+
+    -- Email al comprador
+    INSERT INTO public.email_queue (
+        recipient_email, recipient_name, template_type, subject, data, created_at
+    ) VALUES (
+        v_user_email,
+        COALESCE(v_user_name, 'Usuario'),
+        'purchase_confirmation',
+        v_subject_user,
+        jsonb_build_object(
+            'user_id', NEW.user_id, 'user_email', v_user_email,
+            'user_name', v_user_name, 'product_type', NEW.product_type,
+            'product_name', v_product_name, 'amount', NEW.amount,
+            'currency', NEW.currency, 'payment_id', NEW.id,
+            'provider', COALESCE(NEW.provider, NEW.gateway)
+        ),
+        NOW()
+    );
+
+    -- Email al admin
+    INSERT INTO public.email_queue (
+        recipient_email, recipient_name, template_type, subject, data, created_at
+    ) VALUES (
+        'contacto@seencel.com',
+        'Admin SEENCEL',
+        'admin_sale_notification',
+        v_subject_admin,
+        jsonb_build_object(
+            'buyer_email', v_user_email, 'buyer_name', v_user_name,
+            'product_type', NEW.product_type, 'product_name', v_product_name,
+            'amount', NEW.amount, 'currency', NEW.currency,
+            'payment_id', NEW.id, 'provider', COALESCE(NEW.provider, NEW.gateway)
+        ),
+        NOW()
+    );
+
+    RETURN NEW;
+
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'queue_purchase_email error: %', SQLERRM;
     RETURN NEW;
 END;
 $function$

@@ -103,22 +103,6 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
                 p_metadata: rpcMetadata
             });
 
-            // Handle Coupon Redemption if applicable
-            if (couponCode && courseId) {
-                const redeemResult = await supabase.rpc('redeem_coupon_universal', {
-                    p_code: couponCode,
-                    p_product_type: 'course',
-                    p_product_id: courseId,
-                    p_price: transaction_amount,
-                    p_currency: currency_id || 'ARS',
-                });
-                if (redeemResult.error) {
-                    console.error('[MP Handler] Coupon redemption failed (non-blocking):', redeemResult.error);
-                } else {
-                    console.log('[MP Handler] Coupon redeemed:', redeemResult.data);
-                }
-            }
-
         } else if (productType === 'subscription') {
             const planId = productId;
 
@@ -137,7 +121,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
         } else if (productType === 'upgrade') {
             const planId = productId;
 
-            rpcResult = await supabase.rpc('handle_upgrade_subscription_success', {
+            rpcResult = await supabase.rpc('handle_payment_upgrade_success', {
                 p_provider: 'mercadopago',
                 p_provider_payment_id: paymentId.toString(),
                 p_user_id: userId,
@@ -163,7 +147,7 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
                 planId = orgData?.plan_id || null;
             }
 
-            rpcResult = await supabase.rpc('handle_member_seat_purchase', {
+            rpcResult = await supabase.rpc('handle_payment_seat_success', {
                 p_provider: 'mercadopago',
                 p_provider_payment_id: paymentId.toString(),
                 p_user_id: userId,
@@ -176,6 +160,27 @@ export async function handlePaymentEvent(paymentId: string, supabase: any, sandb
             });
         } else {
             console.warn(`[MP Handler] Unknown product type: ${productType}`);
+        }
+
+        // Handle Coupon Redemption universally (courses, subscriptions, upgrades)
+        if (couponCode && productId && rpcResult && !rpcResult.error) {
+            // upgrades use 'subscription' as coupon product type
+            const redeemProductType = (productType === 'upgrade') ? 'subscription' : productType;
+
+            if (redeemProductType === 'course' || redeemProductType === 'subscription') {
+                const redeemResult = await supabase.rpc('redeem_coupon_universal', {
+                    p_code: couponCode,
+                    p_product_type: redeemProductType,
+                    p_product_id: productId,
+                    p_price: transaction_amount,
+                    p_currency: currency_id || 'ARS',
+                });
+                if (redeemResult.error) {
+                    console.error('[MP Handler] Coupon redemption failed (non-blocking):', redeemResult.error);
+                } else {
+                    console.log('[MP Handler] Coupon redeemed:', redeemResult.data);
+                }
+            }
         }
 
         if (rpcResult && rpcResult.error) {

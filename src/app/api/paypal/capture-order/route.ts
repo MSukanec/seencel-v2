@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
             }
         } else if (preference.product_type === 'upgrade') {
             // Handle plan upgrade (Pro → Teams)
-            const { error } = await adminSupabase.rpc('handle_upgrade_subscription_success', {
+            const { error } = await adminSupabase.rpc('handle_payment_upgrade_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
@@ -190,14 +190,14 @@ export async function POST(request: NextRequest) {
             });
 
             if (error) {
-                console.error('handle_upgrade_subscription_success error:', error);
+                console.error('handle_payment_upgrade_success error:', error);
                 return NextResponse.json({ error: 'Failed to process upgrade payment' }, { status: 500 });
             }
 
         } else if (preference.product_type === 'seats') {
             const seatsQuantity = preference.seats_quantity || 1;
 
-            const { data: seatResult, error } = await adminSupabase.rpc('handle_member_seat_purchase', {
+            const { data: seatResult, error } = await adminSupabase.rpc('handle_payment_seat_success', {
                 p_provider: 'paypal',
                 p_provider_payment_id: captureId,
                 p_user_id: internalUserId,
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
             });
 
             if (error) {
-                console.error('handle_member_seat_purchase error:', error);
+                console.error('handle_payment_seat_success error:', error);
                 return NextResponse.json({ error: 'Failed to process seat purchase' }, { status: 500 });
             }
 

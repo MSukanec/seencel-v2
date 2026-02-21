@@ -876,7 +876,7 @@ export async function purchaseMemberSeats(
         return { success: false, error: "User not found" };
     }
 
-    const { data: result, error } = await supabase.rpc('handle_member_seat_purchase', {
+    const { data: result, error } = await supabase.rpc('handle_payment_seat_success', {
         p_provider: provider,
         p_provider_payment_id: providerPaymentId,
         p_user_id: userData.id,
