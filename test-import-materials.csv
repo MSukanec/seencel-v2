@@ -1,6 +1,0 @@
-payment_date,material_type_name,amount,currency_code,wallet_name,notes
-2024-01-15,Cemento,50000,ARS,Caja Principal,Pago material obra
-2024-01-20,Ladrillos,75000,ARS,Caja Principal,Compra ladrillos
-2024-02-01,Acero,120000,ARS,Banco Santander,Hierro para columnas
-2024-02-10,Pintura,25000,ARS,Caja Principal,Pintura exterior
-2024-02-15,Vidrios,80000,ARS,Caja Principal,Ventanas frente

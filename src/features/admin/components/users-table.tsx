@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { AdminUser } from "../queries";
 import { DataTable, DataTableColumnHeader } from "@/components/shared/data-table";
@@ -9,12 +10,33 @@ import { Clock, Monitor, Mail } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "@/i18n/routing";
+import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
 
 interface UsersTableProps {
     users: AdminUser[];
 }
 
 export function UsersTable({ users }: UsersTableProps) {
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Multi-field filtering: name, email, id, auth_id
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) return users;
+        const query = searchQuery.toLowerCase().trim();
+        return users.filter((user) => {
+            const fullName = (user.full_name || "").toLowerCase();
+            const email = user.email.toLowerCase();
+            const id = user.id.toLowerCase();
+            const authId = (user.auth_id || "").toLowerCase();
+            return (
+                fullName.includes(query) ||
+                email.includes(query) ||
+                id.includes(query) ||
+                authId.includes(query)
+            );
+        });
+    }, [users, searchQuery]);
+
     const columns: ColumnDef<AdminUser>[] = [
         {
             id: "presence",
@@ -99,24 +121,33 @@ export function UsersTable({ users }: UsersTableProps) {
     ];
 
     return (
-        <DataTable
-            columns={columns}
-            data={users}
-            searchPlaceholder="Buscar usuarios..."
-            pageSize={25}
-            enableRowActions={true}
-            customActions={[
-                {
-                    label: "Copiar ID",
-                    onClick: (user) => navigator.clipboard.writeText(user.id),
-                },
-                {
-                    label: "Copiar Email",
-                    onClick: (user) => navigator.clipboard.writeText(user.email),
-                },
-            ]}
-        />
+        <>
+            <Toolbar
+                portalToHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Buscar por nombre, email, ID o Auth ID..."
+            />
+            <DataTable
+                columns={columns}
+                data={filteredUsers}
+                pageSize={25}
+                enableRowActions={true}
+                customActions={[
+                    {
+                        label: "Copiar ID",
+                        onClick: (user) => navigator.clipboard.writeText(user.id),
+                    },
+                    {
+                        label: "Copiar Auth ID",
+                        onClick: (user) => navigator.clipboard.writeText(user.auth_id),
+                    },
+                    {
+                        label: "Copiar Email",
+                        onClick: (user) => navigator.clipboard.writeText(user.email),
+                    },
+                ]}
+            />
+        </>
     );
 }
-
-

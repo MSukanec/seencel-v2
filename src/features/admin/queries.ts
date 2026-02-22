@@ -3,6 +3,7 @@ import { getViewName } from "@/lib/view-name-map";
 
 export interface AdminUser {
     id: string;
+    auth_id: string;
     email: string;
     full_name: string | null;
     avatar_url: string | null;
@@ -23,6 +24,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
         .schema('iam').from('users')
         .select(`
             id,
+            auth_id,
             email,
             full_name,
             avatar_url,
@@ -224,6 +226,7 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
 
     const topUsers = (topUsersRes.data || []).map((u: any) => ({
         id: u.id,
+        auth_id: u.auth_id || '',
         full_name: u.full_name,
         avatar_url: u.avatar_url,
         email: '',
