@@ -1,23 +1,14 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PROJECTS] Indexes (52, excluding PKs)
+## [PROJECTS] Indexes (41, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
 | client_portal_branding | client_portal_branding_project_id_key | `CREATE UNIQUE INDEX client_portal_branding_project_id_key ON projects.client_...` |
 | client_portal_settings | idx_client_portal_settings_org | `CREATE INDEX idx_client_portal_settings_org ON projects.client_portal_setting...` |
-| contact_categories | idx_contact_categories_global_name_active | `CREATE UNIQUE INDEX idx_contact_categories_global_name_active ON projects.con...` |
-| contact_categories | idx_contact_categories_org_name_active | `CREATE UNIQUE INDEX idx_contact_categories_org_name_active ON projects.contac...` |
-| contact_category_links | contact_category_links_contact_id_contact_category_id_key | `CREATE UNIQUE INDEX contact_category_links_contact_id_contact_category_id_key...` |
-| contacts | contacts_national_id_org_key | `CREATE UNIQUE INDEX contacts_national_id_org_key ON projects.contacts USING b...` |
-| contacts | idx_contacts_company_id | `CREATE INDEX idx_contacts_company_id ON projects.contacts USING btree (compan...` |
-| contacts | idx_contacts_import_batch_id | `CREATE INDEX idx_contacts_import_batch_id ON projects.contacts USING btree (i...` |
-| contacts | idx_contacts_is_deleted_org | `CREATE INDEX idx_contacts_is_deleted_org ON projects.contacts USING btree (or...` |
-| contacts | idx_contacts_org_email | `CREATE UNIQUE INDEX idx_contacts_org_email ON projects.contacts USING btree (...` |
-| contacts | uniq_contacts_org_linked_user | `CREATE UNIQUE INDEX uniq_contacts_org_linked_user ON projects.contacts USING ...` |
 | project_clients | idx_project_clients_client | `CREATE INDEX idx_project_clients_client ON projects.project_clients USING btr...` |
 | project_clients | idx_project_clients_created_at | `CREATE INDEX idx_project_clients_created_at ON projects.project_clients USING...` |
 | project_clients | idx_project_clients_is_primary | `CREATE INDEX idx_project_clients_is_primary ON projects.project_clients USING...` |
@@ -57,5 +48,3 @@
 | projects | projects_org_name_lower_uniq | `CREATE UNIQUE INDEX projects_org_name_lower_uniq ON projects.projects USING b...` |
 | projects | projects_over_limit_idx | `CREATE INDEX projects_over_limit_idx ON projects.projects USING btree (organi...` |
 | projects | projects_type_idx | `CREATE INDEX projects_type_idx ON projects.projects USING btree (project_type...` |
-| signatures | idx_signatures_document | `CREATE INDEX idx_signatures_document ON projects.signatures USING btree (docu...` |
-| signatures | idx_signatures_org | `CREATE INDEX idx_signatures_org ON projects.signatures USING btree (organizat...` |

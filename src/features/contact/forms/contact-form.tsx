@@ -109,7 +109,7 @@ export function ContactForm({
                 if (!externalCompanyContacts) {
                     const supabase = createSupabaseClient();
                     const { data: companiesData } = await supabase
-                        .from("contacts")
+                        .schema("contacts").from("contacts")
                         .select("id, full_name, first_name")
                         .eq("organization_id", organizationId)
                         .eq("contact_type", "company")

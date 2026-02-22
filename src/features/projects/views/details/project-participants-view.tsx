@@ -135,7 +135,7 @@ export function ProjectParticipantsView({
 
         const supabase = createSupabaseClient();
         const { data: contact, error } = await supabase
-            .from("contacts")
+            .schema("contacts").from("contacts")
             .select("*, contact_categories(id, name)")
             .eq("id", participant.contact_id)
             .single();

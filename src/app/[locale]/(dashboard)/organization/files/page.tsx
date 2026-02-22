@@ -47,17 +47,12 @@ export default async function OrganizationFilesPage() {
         const maxFileSizeMb = planFeatures?.max_file_size_mb ?? 50;
         const maxStorageMb = planFeatures?.max_storage_mb ?? 500;
 
-        const pageTitle = (
-            <span className="flex items-center gap-2">
-                Documentación
-                <span className="text-muted-foreground font-normal text-sm">· {organization.name}</span>
-            </span>
-        );
+
 
         return (
             <PageWrapper
                 type="page"
-                title={pageTitle}
+                title="Documentación"
                 icon={<FolderOpen />}
             >
                 <ContentLayout variant="wide">

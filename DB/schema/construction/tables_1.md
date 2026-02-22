@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -103,6 +103,45 @@
 | actual_start_date | date | ✓ |  |  |
 | actual_end_date | date | ✓ |  |  |
 | recipe_id | uuid | ✓ |  |  |
+
+### `construction.labor_insurances`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  |  |
+| project_id | uuid | ✓ |  |  |
+| labor_id | uuid | ✗ |  |  |
+| insurance_type | text | ✗ |  |  |
+| policy_number | text | ✓ |  |  |
+| provider | text | ✓ |  |  |
+| coverage_start | date | ✗ |  |  |
+| coverage_end | date | ✗ |  |  |
+| reminder_days | _int2 | ✓ | ARRAY[30, 15, 7] |  |
+| certificate_attachment_id | uuid | ✓ |  |  |
+| notes | text | ✓ |  |  |
+| created_by | uuid | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| coverage_range | daterange | ✓ |  |  |
+
+### `construction.personnel_attendees`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| site_log_id | uuid | ✓ |  | FK → site_logs.id |
+| attendance_type | text | ✓ | 'full'::text |  |
+| hours_worked | numeric | ✓ |  |  |
+| description | text | ✓ |  |  |
+| created_by | uuid | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| project_id | uuid | ✓ |  |  |
+| personnel_id | uuid | ✓ |  |  |
+| organization_id | uuid | ✓ |  |  |
+| work_date | date | ✗ | CURRENT_DATE |  |
+| status | text | ✓ |  |  |
 
 ### `construction.site_log_types`
 

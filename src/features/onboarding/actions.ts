@@ -56,7 +56,7 @@ export async function getOnboardingProgress() {
             .limit(1),
 
         supabase
-            .schema('projects').from('contacts')
+            .schema('contacts').from('contacts')
             .select('id', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
             .limit(1),

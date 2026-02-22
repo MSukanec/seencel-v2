@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [FINANCE] Views (22)
 
-### `finance.capital_ledger_view`
+### `finance.capital_ledger_view` (🔐 DEFINER)
 
 ```sql
 SELECT pc.id,
@@ -69,7 +69,7 @@ UNION ALL
   WHERE ((ca.status = 'confirmed'::text) AND (ca.is_deleted = false));
 ```
 
-### `finance.capital_organization_totals_view`
+### `finance.capital_organization_totals_view` (🔐 DEFINER)
 
 ```sql
 SELECT org.id AS organization_id,
@@ -101,7 +101,7 @@ SELECT org.id AS organization_id,
           GROUP BY capital_adjustments.organization_id) adjustments ON ((adjustments.organization_id = org.id)));
 ```
 
-### `finance.capital_participants_summary_view`
+### `finance.capital_participants_summary_view` (🔐 DEFINER)
 
 ```sql
 SELECT cp.id AS partner_id,
@@ -123,7 +123,7 @@ SELECT cp.id AS partner_id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.capital_partner_balances_view`
+### `finance.capital_partner_balances_view` (🔐 DEFINER)
 
 ```sql
 SELECT cp.id AS partner_id,
@@ -163,7 +163,7 @@ SELECT cp.id AS partner_id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.capital_partner_kpi_view`
+### `finance.capital_partner_kpi_view` (🔐 DEFINER)
 
 ```sql
 SELECT pb.partner_id,
@@ -218,7 +218,7 @@ SELECT pb.partner_id,
      LEFT JOIN finance.capital_organization_totals_view ot ON ((ot.organization_id = pb.organization_id)));
 ```
 
-### `finance.client_financial_summary_view`
+### `finance.client_financial_summary_view` (🔐 DEFINER)
 
 ```sql
 WITH commitment_totals AS (
@@ -254,7 +254,7 @@ WITH commitment_totals AS (
   WHERE ((pc.is_deleted = false) AND ((ct.total_committed > (0)::numeric) OR (pt.total_paid > (0)::numeric)));
 ```
 
-### `finance.client_payments_view`
+### `finance.client_payments_view` (🔐 DEFINER)
 
 ```sql
 SELECT cp.id,
@@ -298,7 +298,7 @@ SELECT cp.id,
     p.color AS project_color
    FROM ((((((((((((finance.client_payments cp
      LEFT JOIN projects.project_clients pc ON ((pc.id = cp.client_id)))
-     LEFT JOIN projects.contacts c ON ((c.id = pc.contact_id)))
+     LEFT JOIN contacts.contacts c ON ((c.id = pc.contact_id)))
      LEFT JOIN iam.users u_client ON ((u_client.id = c.linked_user_id)))
      LEFT JOIN projects.client_roles cr ON ((cr.id = pc.client_role_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = cp.wallet_id)))
@@ -312,7 +312,7 @@ SELECT cp.id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.general_costs_by_category_view`
+### `finance.general_costs_by_category_view` (🔐 DEFINER)
 
 ```sql
 SELECT gcp.organization_id,
@@ -327,7 +327,7 @@ SELECT gcp.organization_id,
   GROUP BY gcp.organization_id, (date_trunc('month'::text, (gcp.payment_date)::timestamp with time zone)), gc.category_id, gcc.name;
 ```
 
-### `finance.general_costs_monthly_summary_view`
+### `finance.general_costs_monthly_summary_view` (🔐 DEFINER)
 
 ```sql
 SELECT gcp.organization_id,
@@ -339,7 +339,7 @@ SELECT gcp.organization_id,
   GROUP BY gcp.organization_id, (date_trunc('month'::text, (gcp.payment_date)::timestamp with time zone));
 ```
 
-### `finance.general_costs_payments_view`
+### `finance.general_costs_payments_view` (🔐 DEFINER)
 
 ```sql
 SELECT gcp.id,
@@ -378,7 +378,7 @@ SELECT gcp.id,
   WHERE (gcp.is_deleted = false);
 ```
 
-### `finance.labor_by_type_view`
+### `finance.labor_by_type_view` (🔐 DEFINER)
 
 ```sql
 SELECT lp.organization_id,
@@ -395,7 +395,7 @@ SELECT lp.organization_id,
   GROUP BY lp.organization_id, lp.project_id, (date_trunc('month'::text, (lp.payment_date)::timestamp with time zone)), pl.labor_type_id, lt.name;
 ```
 
-### `finance.labor_monthly_summary_view`
+### `finance.labor_monthly_summary_view` (🔐 DEFINER)
 
 ```sql
 SELECT lp.organization_id,
@@ -409,7 +409,7 @@ SELECT lp.organization_id,
   GROUP BY lp.organization_id, lp.project_id, (date_trunc('month'::text, (lp.payment_date)::timestamp with time zone));
 ```
 
-### `finance.labor_payments_view`
+### `finance.labor_payments_view` (🔐 DEFINER)
 
 ```sql
 SELECT lp.id,
@@ -461,7 +461,7 @@ SELECT lp.id,
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = lp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN projects.project_labor pl ON ((pl.id = lp.labor_id)))
-     LEFT JOIN projects.contacts ct ON ((ct.id = pl.contact_id)))
+     LEFT JOIN contacts.contacts ct ON ((ct.id = pl.contact_id)))
      LEFT JOIN catalog.labor_categories lc ON ((lc.id = pl.labor_type_id)))
      LEFT JOIN projects.projects proj ON ((proj.id = lp.project_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = lp.created_by)))
@@ -469,7 +469,7 @@ SELECT lp.id,
   WHERE ((lp.is_deleted = false) OR (lp.is_deleted IS NULL));
 ```
 
-### `finance.material_invoices_view`
+### `finance.material_invoices_view` (🔐 DEFINER)
 
 ```sql
 SELECT inv.id,
@@ -498,7 +498,7 @@ SELECT inv.id,
     COALESCE(items.item_count, (0)::bigint) AS item_count
    FROM (((((finance.material_invoices inv
      LEFT JOIN finance.currencies c ON ((c.id = inv.currency_id)))
-     LEFT JOIN projects.contacts prov ON ((prov.id = inv.provider_id)))
+     LEFT JOIN contacts.contacts prov ON ((prov.id = inv.provider_id)))
      LEFT JOIN projects.projects p ON ((p.id = inv.project_id)))
      LEFT JOIN finance.material_purchase_orders po ON ((po.id = inv.purchase_order_id)))
      LEFT JOIN LATERAL ( SELECT count(*) AS item_count
@@ -506,7 +506,7 @@ SELECT inv.id,
           WHERE (ii.invoice_id = inv.id)) items ON (true));
 ```
 
-### `finance.material_payments_view`
+### `finance.material_payments_view` (🔐 DEFINER)
 
 ```sql
 SELECT mp.id,
@@ -541,7 +541,7 @@ SELECT mp.id,
           WHERE (ml.material_payment_id = mp.id))) AS has_attachments
    FROM (((((((((finance.material_payments mp
      LEFT JOIN finance.material_invoices mi ON ((mi.id = mp.purchase_id)))
-     LEFT JOIN projects.contacts prov ON ((prov.id = mi.provider_id)))
+     LEFT JOIN contacts.contacts prov ON ((prov.id = mi.provider_id)))
      LEFT JOIN projects.projects p ON ((p.id = mp.project_id)))
      LEFT JOIN iam.organization_members om ON ((om.id = mp.created_by)))
      LEFT JOIN iam.users u ON ((u.id = om.user_id)))
@@ -552,7 +552,7 @@ SELECT mp.id,
   WHERE ((mp.is_deleted = false) OR (mp.is_deleted IS NULL));
 ```
 
-### `finance.material_purchase_orders_view`
+### `finance.material_purchase_orders_view` (🔐 DEFINER)
 
 ```sql
 SELECT po.id,
@@ -578,7 +578,7 @@ SELECT po.id,
     COALESCE(items.item_count, (0)::bigint) AS item_count
    FROM ((((finance.material_purchase_orders po
      LEFT JOIN finance.currencies c ON ((c.id = po.currency_id)))
-     LEFT JOIN projects.contacts prov ON ((prov.id = po.provider_id)))
+     LEFT JOIN contacts.contacts prov ON ((prov.id = po.provider_id)))
      LEFT JOIN projects.projects p ON ((p.id = po.project_id)))
      LEFT JOIN LATERAL ( SELECT count(*) AS item_count
            FROM finance.material_purchase_order_items poi
@@ -586,7 +586,7 @@ SELECT po.id,
   WHERE (po.is_deleted = false);
 ```
 
-### `finance.organization_currencies_view`
+### `finance.organization_currencies_view` (🔐 DEFINER)
 
 ```sql
 SELECT oc.id,
@@ -606,7 +606,7 @@ SELECT oc.id,
      LEFT JOIN finance.currencies c ON ((oc.currency_id = c.id)));
 ```
 
-### `finance.organization_wallets_view`
+### `finance.organization_wallets_view` (🔐 DEFINER)
 
 ```sql
 SELECT ow.id,
@@ -626,7 +626,7 @@ SELECT ow.id,
      LEFT JOIN finance.wallets w ON ((ow.wallet_id = w.id)));
 ```
 
-### `finance.quotes_items_view`
+### `finance.quotes_items_view` (🔐 DEFINER)
 
 ```sql
 SELECT bi.id,
@@ -661,7 +661,7 @@ SELECT bi.id,
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
-### `finance.subcontract_payments_view`
+### `finance.subcontract_payments_view` (🔐 DEFINER)
 
 ```sql
 SELECT sp.id,
@@ -700,7 +700,7 @@ SELECT sp.id,
     cur.name AS currency_name
    FROM ((((((finance.subcontract_payments sp
      LEFT JOIN finance.subcontracts s ON ((s.id = sp.subcontract_id)))
-     LEFT JOIN projects.contacts c ON ((c.id = s.contact_id)))
+     LEFT JOIN contacts.contacts c ON ((c.id = s.contact_id)))
      LEFT JOIN iam.users u ON ((u.id = c.linked_user_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = sp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
@@ -708,7 +708,7 @@ SELECT sp.id,
   WHERE (sp.is_deleted = false);
 ```
 
-### `finance.subcontracts_view`
+### `finance.subcontracts_view` (🔐 DEFINER)
 
 ```sql
 SELECT s.id,
@@ -734,12 +734,12 @@ SELECT s.id,
     s.base_period_month,
     s.base_index_value
    FROM ((finance.subcontracts s
-     LEFT JOIN projects.contacts ct ON ((s.contact_id = ct.id)))
+     LEFT JOIN contacts.contacts ct ON ((s.contact_id = ct.id)))
      LEFT JOIN finance.currencies c ON ((s.currency_id = c.id)))
   WHERE (s.is_deleted = false);
 ```
 
-### `finance.unified_financial_movements_view`
+### `finance.unified_financial_movements_view` (🔐 DEFINER)
 
 ```sql
 SELECT gcp.id,
@@ -822,7 +822,7 @@ UNION ALL
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN catalog.material_types mt ON ((mt.id = mp.material_type_id)))
      LEFT JOIN finance.material_invoices mi ON ((mi.id = mp.purchase_id)))
-     LEFT JOIN projects.contacts prov ON ((prov.id = mi.provider_id)))
+     LEFT JOIN contacts.contacts prov ON ((prov.id = mi.provider_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = mp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
   WHERE ((mp.is_deleted = false) OR (mp.is_deleted IS NULL))
@@ -864,7 +864,7 @@ UNION ALL
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = lp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN projects.project_labor pl ON ((pl.id = lp.labor_id)))
-     LEFT JOIN projects.contacts ct ON ((ct.id = pl.contact_id)))
+     LEFT JOIN contacts.contacts ct ON ((ct.id = pl.contact_id)))
      LEFT JOIN catalog.labor_categories lc ON ((lc.id = pl.labor_type_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = lp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
@@ -907,7 +907,7 @@ UNION ALL
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = sp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN finance.subcontracts s ON ((s.id = sp.subcontract_id)))
-     LEFT JOIN projects.contacts ct ON ((ct.id = s.contact_id)))
+     LEFT JOIN contacts.contacts ct ON ((ct.id = s.contact_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = sp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))
   WHERE ((sp.is_deleted = false) OR (sp.is_deleted IS NULL))
@@ -949,7 +949,7 @@ UNION ALL
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = cp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN projects.project_clients pc ON ((pc.id = cp.client_id)))
-     LEFT JOIN projects.contacts ct ON ((ct.id = pc.contact_id)))
+     LEFT JOIN contacts.contacts ct ON ((ct.id = pc.contact_id)))
      LEFT JOIN finance.client_commitments cc ON ((cc.id = cp.commitment_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = cp.created_by)))
      LEFT JOIN iam.users u_created ON ((u_created.id = om_created.user_id)))

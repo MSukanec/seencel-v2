@@ -701,7 +701,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
 
     // Create new project (only required fields)
     const { data: project, error: projectError } = await supabase
-        .from("projects")
+        .schema("projects").from("projects")
         .insert({
             name: projectName || quote.name,
             organization_id: activeOrgId,
@@ -718,7 +718,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
     // Create project_data with description if exists
     if (quote.description) {
         await supabase
-            .from("project_data")
+            .schema("projects").from("project_data")
             .insert({
                 project_id: project.id,
                 organization_id: activeOrgId,
@@ -751,7 +751,7 @@ export async function convertQuoteToProject(quoteId: string, projectName?: strin
     // If quote has a client (contact), create project_client entry
     if (quote.client_id) {
         await supabase
-            .from("project_clients")
+            .schema("projects").from("project_clients")
             .insert({
                 project_id: project.id,
                 contact_id: quote.client_id,
@@ -805,7 +805,7 @@ export async function generateCommitmentsFromQuote(
 
     // Get project_client (we need the project_client ID, not contact ID)
     const { data: projectClient, error: pcError } = await supabase
-        .from("project_clients")
+        .schema("projects").from("project_clients")
         .select("id")
         .eq("project_id", quote.project_id)
         .eq("contact_id", options.clientId)
@@ -814,7 +814,7 @@ export async function generateCommitmentsFromQuote(
     if (pcError || !projectClient) {
         // Try to create project_client if doesn't exist
         const { data: newPc, error: newPcError } = await supabase
-            .from("project_clients")
+            .schema("projects").from("project_clients")
             .insert({
                 project_id: quote.project_id,
                 contact_id: options.clientId,

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] RLS Policies (18)
+## [CONSTRUCTION] RLS Policies (24)
 
 ### `construction_dependencies` (4 policies)
 
@@ -108,6 +108,64 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 - **USING**:
 ```sql
 can_view_org(organization_id, 'projects.view'::text)
+```
+
+### `labor_insurances` (3 policies)
+
+#### MIEMBROS CREAN LABOR_INSURANCES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS EDITAN LABOR_INSURANCES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS VEN LABOR_INSURANCES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_org(organization_id, 'construction.view'::text)
+```
+
+### `personnel_attendees` (3 policies)
+
+#### MIEMBROS CREAN PERSONNEL_ATTENDEES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS EDITAN PERSONNEL_ATTENDEES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS VEN PERSONNEL_ATTENDEES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `site_log_types` (3 policies)

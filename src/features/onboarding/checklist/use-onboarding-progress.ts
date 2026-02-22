@@ -113,7 +113,7 @@ export function useOnboardingProgress(): OnboardingProgressData {
                     .eq('organization_id', organizationId),
 
                 supabase
-                    .schema('projects').from('contacts')
+                    .schema('contacts').from('contacts')
                     .select('id', { count: 'exact', head: true })
                     .eq('organization_id', organizationId),
 

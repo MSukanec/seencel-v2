@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [CATALOG] Views (6)
 
-### `catalog.labor_view`
+### `catalog.labor_view` (🔐 DEFINER)
 
 ```sql
 SELECT lt.id AS labor_id,
@@ -42,7 +42,7 @@ SELECT lt.id AS labor_id,
      LEFT JOIN catalog.labor_avg_prices lap ON ((lap.labor_id = lt.id)));
 ```
 
-### `catalog.materials_view`
+### `catalog.materials_view` (🔐 DEFINER)
 
 ```sql
 SELECT m.id,
@@ -82,7 +82,7 @@ SELECT m.id,
   WHERE (m.is_deleted = false);
 ```
 
-### `catalog.organization_task_prices_view`
+### `catalog.organization_task_prices_view` (🔐 DEFINER)
 
 ```sql
 SELECT p.id,
@@ -106,7 +106,7 @@ SELECT p.id,
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
-### `catalog.task_costs_view`
+### `catalog.task_costs_view` (🔐 DEFINER)
 
 ```sql
 WITH recipe_material_costs AS (
@@ -180,7 +180,7 @@ WITH recipe_material_costs AS (
   GROUP BY rt.task_id, rt.organization_id;
 ```
 
-### `catalog.task_recipes_view`
+### `catalog.task_recipes_view` (🔐 DEFINER)
 
 ```sql
 SELECT tr.id,
@@ -216,7 +216,7 @@ SELECT tr.id,
   WHERE (tr.is_deleted = false);
 ```
 
-### `catalog.tasks_view`
+### `catalog.tasks_view` (🔐 DEFINER)
 
 ```sql
 SELECT t.id,

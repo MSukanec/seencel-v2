@@ -38,7 +38,7 @@ async function main() {
     console.log('✅ Connected! Introspecting schema...\n');
 
     // Schemas to introspect
-    const SCHEMAS = ['public', 'iam', 'construction', 'projects', 'finance', 'ai', 'catalog', 'academy', 'billing', 'ops', 'notifications', 'audit', 'planner', 'community', 'design', 'providers'];
+    const SCHEMAS = ['public', 'iam', 'construction', 'projects', 'contacts', 'finance', 'ai', 'catalog', 'academy', 'billing', 'ops', 'notifications', 'audit', 'planner', 'community', 'design', 'providers'];
 
     const schemasSQL = SCHEMAS.map(s => `'${s}'`).join(', ');
 
@@ -199,17 +199,27 @@ async function main() {
     // ── 2. VIEWS ──
     console.log('👁️ Fetching views...');
     const viewsRes = await client.query(`
-        SELECT table_schema, table_name, view_definition
-        FROM information_schema.views
-        WHERE table_schema IN (${schemasSQL})
-        ORDER BY table_schema, table_name;
+        SELECT
+            v.table_schema,
+            v.table_name,
+            v.view_definition,
+            CASE
+                WHEN 'security_invoker=true' = ANY(c.reloptions) THEN true
+                ELSE false
+            END AS is_security_invoker
+        FROM information_schema.views v
+        JOIN pg_class c ON c.relname = v.table_name
+        JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = v.table_schema
+        WHERE v.table_schema IN (${schemasSQL})
+        ORDER BY v.table_schema, v.table_name;
     `);
 
     if (viewsRes.rows.length > 0) {
         sections.push(`---\n## Views (${viewsRes.rows.length})\n`);
         for (const view of viewsRes.rows) {
             const displayName = view.table_schema === 'public' ? view.table_name : `${view.table_schema}.${view.table_name}`;
-            sections.push(`### \`${displayName}\`\n`);
+            const secBadge = view.is_security_invoker ? '🔓 INVOKER' : '🔐 DEFINER';
+            sections.push(`### \`${displayName}\` (${secBadge})\n`);
             sections.push('```sql');
             sections.push(view.view_definition?.trim() || '-- (definition not available)');
             sections.push('```\n');
@@ -525,7 +535,8 @@ async function main() {
         if (schemaViews.length > 0) {
             const viewLines = [header, `## [${schemaLabel}] Views (${schemaViews.length})\n`];
             for (const view of schemaViews) {
-                viewLines.push(`### \`${displayName(schema, view.table_name)}\`\n`);
+                const secBadge = view.is_security_invoker ? '🔓 INVOKER' : '🔐 DEFINER';
+                viewLines.push(`### \`${displayName(schema, view.table_name)}\` (${secBadge})\n`);
                 viewLines.push('```sql');
                 viewLines.push(view.view_definition?.trim() || '-- (definition not available)');
                 viewLines.push('```\n');

@@ -99,7 +99,7 @@ export async function getOrganizationContacts(organizationId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('projects').from('contacts')
+        .schema('contacts').from('contacts')
         .select('id, full_name, email, phone, linked_user_id, image_url')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)

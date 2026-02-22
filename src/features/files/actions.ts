@@ -74,7 +74,8 @@ function mapMimeToFileType(mime: string): string {
 export async function uploadFiles(
     organizationId: string,
     files: UploadFileData[],
-    folderId?: string | null
+    folderId?: string | null,
+    projectId?: string | null
 ) {
     try {
         const supabase = await createClient();
@@ -109,6 +110,7 @@ export async function uploadFiles(
                 .insert({
                     media_file_id: mediaFile.id,
                     organization_id: organizationId,
+                    project_id: projectId || null,
                     category: "general",
                     visibility: "private",
                     folder_id: folderId || null,

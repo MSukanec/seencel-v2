@@ -20,6 +20,7 @@ import { FolderOpen, FolderPlus, Loader2 } from "lucide-react";
 import { type UploadedFile } from "@/hooks/use-file-upload";
 import { uploadFiles, createFolder } from "@/features/files/actions";
 import type { Folder } from "@/features/files/types";
+import { ProjectField } from "@/components/shared/forms/fields/project-field";
 
 // ============================================================================
 // FILES UPLOAD FORM
@@ -29,9 +30,13 @@ interface FilesUploadFormProps {
     organizationId: string;
     maxFileSizeMb: number;
     folders?: Folder[];
+    /** Projects available for selection (org-level context) */
+    projects?: { id: string; name: string }[];
+    /** Pre-selected project (project-level context) */
+    activeProjectId?: string | null;
 }
 
-export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [] }: FilesUploadFormProps) {
+export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [], projects = [], activeProjectId }: FilesUploadFormProps) {
     const router = useRouter();
     const { closeModal } = useModal();
     const uploadedFilesRef = useRef<UploadedFile[]>([]);
@@ -53,6 +58,8 @@ export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [] }:
     const [newFolderName, setNewFolderName] = useState("");
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [localFolders, setLocalFolders] = useState<Folder[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>(activeProjectId || "none");
+    const showProjectSelector = !activeProjectId && projects.length > 0;
 
     // Combine server folders + locally created folders
     const allRootFolders = useMemo(() => {
@@ -128,6 +135,7 @@ export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [] }:
         }));
         const count = files.length;
         const folderId = selectedFolderId === "__none__" ? undefined : selectedFolderId;
+        const projectId = selectedProjectId === "none" ? undefined : selectedProjectId;
 
         // Optimistic: close modal + toast immediately
         closeModal();
@@ -139,7 +147,7 @@ export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [] }:
 
         // Server action in background
         try {
-            const result = await uploadFiles(organizationId, filesToUpload, folderId);
+            const result = await uploadFiles(organizationId, filesToUpload, folderId, projectId);
             if (!result.success) {
                 toast.error(result.error || "Error al registrar documentos en el sistema");
             }
@@ -177,6 +185,18 @@ export function FilesUploadForm({ organizationId, maxFileSizeMb, folders = [] }:
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto space-y-4">
+                {/* Project selector — only in org-level context */}
+                {showProjectSelector && (
+                    <ProjectField
+                        value={selectedProjectId}
+                        onChange={setSelectedProjectId}
+                        projects={projects}
+                        allowNone
+                        noneLabel="Sin proyecto"
+                        tooltip="Seleccioná el proyecto al que pertenecen estos documentos. Si no seleccionás ninguno, se subirán a nivel de organización."
+                    />
+                )}
+
                 {/* Folder selector — always visible */}
                 <div className="space-y-2">
                     <Label htmlFor="folder-select" className="flex items-center gap-1.5">

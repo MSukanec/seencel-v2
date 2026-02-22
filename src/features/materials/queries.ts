@@ -561,7 +561,7 @@ export async function getProvidersForProject(organizationId: string): Promise<{
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('projects').from('contacts')
+        .schema('contacts').from('contacts')
         .select('id, first_name, last_name, company_name, image_url, full_name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)

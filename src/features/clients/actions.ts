@@ -922,7 +922,7 @@ export async function inviteClientToProjectAction(
 
     // 2a. Check if contact already exists with this email in the org
     const { data: existingContact } = await supabase
-        .from("contacts")
+        .schema("contacts").from("contacts")
         .select("id, linked_user_id")
         .eq("organization_id", input.organization_id)
         .eq("is_deleted", false)
@@ -939,7 +939,7 @@ export async function inviteClientToProjectAction(
         const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
 
         const { data: newContact, error: contactError } = await supabase
-            .from("contacts")
+            .schema("contacts").from("contacts")
             .insert({
                 organization_id: input.organization_id,
                 email: normalizedEmail,
@@ -960,7 +960,7 @@ export async function inviteClientToProjectAction(
 
     // 3. Check if already a project_client
     const { data: existingClient } = await supabase
-        .from("project_clients")
+        .schema("projects").from("project_clients")
         .select("id")
         .eq("project_id", input.project_id)
         .eq("contact_id", contactId)
@@ -973,7 +973,7 @@ export async function inviteClientToProjectAction(
 
     // 4. Create project_client
     const { data: projectClient, error: clientError } = await supabase
-        .from("project_clients")
+        .schema("projects").from("project_clients")
         .insert({
             project_id: input.project_id,
             organization_id: input.organization_id,
@@ -1022,7 +1022,7 @@ export async function sendClientInvitationAction(
 
     // 2. Load the project_client + contact email
     const { data: projectClient, error: pcError } = await supabase
-        .from("project_clients")
+        .schema("projects").from("project_clients")
         .select(`
             id,
             project_id,
@@ -1050,7 +1050,7 @@ export async function sendClientInvitationAction(
 
     // 3. Check if already has an active invitation
     const { data: existingInv } = await supabase
-        .from("iam.organization_invitations" as any)
+        .schema("iam").from("organization_invitations")
         .select("id, status")
         .eq("client_id", clientId)
         .in("status", ["pending", "accepted"])
@@ -1109,7 +1109,7 @@ export async function checkContactByEmailAction(
     const supabase = await createClient();
 
     const { data } = await supabase
-        .from("contacts")
+        .schema("contacts").from("contacts")
         .select("id, full_name, image_url")
         .eq("organization_id", organizationId)
         .eq("is_deleted", false)

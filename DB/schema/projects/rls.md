@@ -1,375 +1,346 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PROJECTS] RLS Policies (37)
+## [PROJECTS] RLS Policies (34)
 
-### `client_portal_settings` (3 policies)
+### `client_portal_branding` (4 policies)
 
-#### MIEMBROS CREAN CLIENT_PORTAL_SETTINGS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
-```
-
-#### MIEMBROS EDITAN CLIENT_PORTAL_SETTINGS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'commercial.manage'::text)
-```
-
-#### MIEMBROS VEN CLIENT_PORTAL_SETTINGS
+#### ACTORS SELECT CLIENT_PORTAL_BRANDING
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'commercial.view'::text)
+iam.can_view_project(project_id)
+```
+
+#### MEMBERS INSERT CLIENT_PORTAL_BRANDING
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'commercial.manage'::text)
+```
+
+#### MEMBERS SELECT CLIENT_PORTAL_BRANDING
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_view_org(organization_id, 'commercial.view'::text)
+```
+
+#### MEMBERS UPDATE CLIENT_PORTAL_BRANDING
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'commercial.manage'::text)
+```
+
+### `client_portal_settings` (3 policies)
+
+#### MEMBERS INSERT CLIENT_PORTAL_SETTINGS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'commercial.manage'::text)
+```
+
+#### MEMBERS SELECT CLIENT_PORTAL_SETTINGS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_view_org(organization_id, 'commercial.view'::text)
+```
+
+#### MEMBERS UPDATE CLIENT_PORTAL_SETTINGS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 ### `client_roles` (3 policies)
 
-#### MIEMBROS CREAN CLIENT_ROLES
+#### MEMBERS INSERT CLIENT_ROLES
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'commercial.manage'::text))
+((organization_id IS NOT NULL) AND iam.can_mutate_org(organization_id, 'commercial.manage'::text))
 ```
 
-#### MIEMBROS EDITAN CLIENT_ROLES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'commercial.manage'::text))
-```
-
-#### MIEMBROS VEN CLIENT_ROLES
+#### MEMBERS SELECT CLIENT_ROLES
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NULL) OR can_view_org(organization_id, 'commercial.view'::text))
+((organization_id IS NULL) OR iam.can_view_org(organization_id, 'commercial.view'::text))
 ```
 
-### `contact_categories` (3 policies)
-
-#### MIEMBROS CREAN CONTACT_TYPES
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-is_org_member(organization_id)
-```
-
-#### MIEMBROS EDITAN CONTACT_TYPES
+#### MEMBERS UPDATE CLIENT_ROLES
 
 - **Command**: UPDATE | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NOT NULL) AND is_org_member(organization_id))
-```
-
-#### MIEMBROS VEN CONTACT_TYPES
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((organization_id IS NULL) OR is_org_member(organization_id))
-```
-
-### `contact_category_links` (4 policies)
-
-#### MIEMBROS BORRAN CONTACT_TYPE_LINKS
-
-- **Command**: DELETE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-is_org_member(organization_id)
-```
-
-#### MIEMBROS CREAN CONTACT_TYPE_LINKS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-is_org_member(organization_id)
-```
-
-#### MIEMBROS EDITAN CONTACT_TYPE_LINKS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-is_org_member(organization_id)
-```
-
-#### MIEMBROS VEN CONTACT_TYPE_LINKS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-is_org_member(organization_id)
-```
-
-### `contacts` (3 policies)
-
-#### MIEMBROS CREAN CONTACTS
-
-- **Command**: INSERT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **WITH CHECK**:
-```sql
-is_org_member(organization_id)
-```
-
-#### MIEMBROS EDITAN CONTACTS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-is_org_member(organization_id)
-```
-
-#### MIEMBROS VEN CONTACTS
-
-- **Command**: SELECT | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-((is_deleted = false) AND is_org_member(organization_id))
+((organization_id IS NOT NULL) AND iam.can_mutate_org(organization_id, 'commercial.manage'::text))
 ```
 
 ### `project_clients` (4 policies)
 
-#### ACTORES VEN CLIENTES DEL PROYECTO
+#### ACTORS SELECT PROJECT_CLIENTS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_project(project_id)
+iam.can_view_project(project_id)
 ```
 
-#### MIEMBROS CREAN PROJECT_CLIENTS
+#### MEMBERS INSERT PROJECT_CLIENTS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
+iam.can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
-#### MIEMBROS EDITAN PROJECT_CLIENTS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'clients.manage'::text)
-```
-
-#### MIEMBROS VEN PROJECT_CLIENTS
+#### MEMBERS SELECT PROJECT_CLIENTS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'clients.view'::text)
+iam.can_view_org(organization_id, 'commercial.view'::text)
+```
+
+#### MEMBERS UPDATE PROJECT_CLIENTS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'commercial.manage'::text)
 ```
 
 ### `project_data` (4 policies)
 
-#### ACTORES VEN DATOS DEL PROYECTO
+#### ACTORS SELECT PROJECT_DATA
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_project(project_id)
+iam.can_view_project(project_id)
 ```
 
-#### MIEMBROS ACTUALIZAN PROJECT_DATA
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS CREAN PROJECT_DATA
+#### MEMBERS INSERT PROJECT_DATA
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
-#### MIEMBROS VEN PROJECT_DATA
+#### MEMBERS SELECT PROJECT_DATA
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-(can_view_org(organization_id, 'projects.view'::text) OR (is_public = true))
+(iam.can_view_org(organization_id, 'projects.view'::text) OR (is_public = true))
+```
+
+#### MEMBERS UPDATE PROJECT_DATA
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
+```
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
 ### `project_labor` (3 policies)
 
-#### MIEMBROS CREAN PROJECT_LABOR
+#### MEMBERS INSERT PROJECT_LABOR
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'construction.manage'::text)
+iam.can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
-#### MIEMBROS EDITAN PROJECT_LABOR
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'construction.manage'::text)
-```
-
-#### MIEMBROS VEN PROJECT_LABOR
+#### MEMBERS SELECT PROJECT_LABOR
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'construction.view'::text)
+iam.can_view_org(organization_id, 'construction.view'::text)
+```
+
+#### MEMBERS UPDATE PROJECT_LABOR
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 ### `project_modalities` (3 policies)
 
-#### MIEMBROS ACTUALIZAN PROJECT_MODALITIES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS CREAN PROJECT_MODALITIES
+#### MEMBERS INSERT PROJECT_MODALITIES
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
-#### MIEMBROS VEN PROJECT_MODALITIES
+#### MEMBERS SELECT PROJECT_MODALITIES
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-(is_admin() OR ((is_deleted = false) AND ((organization_id IS NULL) OR can_view_org(organization_id, 'projects.view'::text))))
+(iam.is_admin() OR ((is_deleted = false) AND ((organization_id IS NULL) OR iam.can_view_org(organization_id, 'projects.view'::text))))
+```
+
+#### MEMBERS UPDATE PROJECT_MODALITIES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
+```
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
+```
+
+### `project_settings` (3 policies)
+
+#### MEMBERS INSERT PROJECT_SETTINGS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
+```
+
+#### MEMBERS SELECT PROJECT_SETTINGS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_view_org(organization_id, 'projects.view'::text)
+```
+
+#### MEMBERS UPDATE PROJECT_SETTINGS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
 ### `project_types` (3 policies)
 
-#### MIEMBROS ACTUALIZAN PROJECT_TYPES
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS CREAN PROJECT_TYPES
+#### MEMBERS INSERT PROJECT_TYPES
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
-#### MIEMBROS VEN PROJECT_TYPES
+#### MEMBERS SELECT PROJECT_TYPES
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-(is_admin() OR ((is_deleted = false) AND ((organization_id IS NULL) OR can_view_org(organization_id, 'projects.view'::text))))
+(iam.is_admin() OR ((is_deleted = false) AND ((organization_id IS NULL) OR iam.can_view_org(organization_id, 'projects.view'::text))))
+```
+
+#### MEMBERS UPDATE PROJECT_TYPES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
+```
+- **WITH CHECK**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
 ### `projects` (4 policies)
 
-#### ACTORES VEN PROYECTOS CON ACCESO
+#### ACTORS SELECT PROJECTS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_project(id)
+iam.can_view_project(id)
 ```
 
-#### MIEMBROS CREAN PROJECTS
+#### MEMBERS INSERT PROJECTS
 
 - **Command**: INSERT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```
 
-#### MIEMBROS EDITAN PROJECTS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-can_mutate_org(organization_id, 'projects.manage'::text)
-```
-
-#### MIEMBROS VEN PROJECTS
+#### MEMBERS SELECT PROJECTS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
 - **USING**:
 ```sql
-(can_view_org(organization_id, 'projects.view'::text) OR (EXISTS ( SELECT 1
+(iam.can_view_org(organization_id, 'projects.view'::text) OR (EXISTS ( SELECT 1
    FROM projects.project_data pd
   WHERE ((pd.project_id = projects.id) AND (pd.is_public = true)))))
+```
+
+#### MEMBERS UPDATE PROJECTS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+iam.can_mutate_org(organization_id, 'projects.manage'::text)
 ```

@@ -78,7 +78,7 @@ export function PageHeader({
                         <HeaderOrgProjectSelector />
 
                         {/* Separator between breadcrumb and title */}
-                        <div className="h-5 w-px bg-border/60 mx-4" />
+                        <div className="h-5 w-px bg-border/60 mx-2" />
 
                         <div className="flex items-center gap-1.5">
                             {backButton}

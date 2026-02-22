@@ -67,7 +67,7 @@ export function CollaboratorForm({
 
             // 1. Get contacts of the org (personas with email)
             const { data: orgContacts } = await supabase
-                .from("contacts")
+                .schema("contacts").from("contacts")
                 .select("id, full_name, email, contact_type, linked_user_id")
                 .eq("organization_id", orgId)
                 .eq("is_deleted", false)
@@ -93,7 +93,7 @@ export function CollaboratorForm({
 
             // 4. Get project clients for scoping
             const { data: clients } = await supabase
-                .from("project_clients")
+                .schema("projects").from("project_clients")
                 .select("id, contact:contacts(full_name)")
                 .eq("project_id", projectId)
                 .eq("is_deleted", false);

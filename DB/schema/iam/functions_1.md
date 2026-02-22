@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -886,7 +886,7 @@ CREATE OR REPLACE FUNCTION iam.ensure_contact_for_user(p_organization_id uuid, p
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'iam', 'projects'
+ SET search_path TO 'iam', 'contacts'
 AS $function$
 declare
   v_user record;
@@ -925,14 +925,14 @@ begin
 
   select c.id
   into v_contact_id
-  from projects.contacts c
+  from contacts.contacts c
   where c.organization_id = p_organization_id
     and c.linked_user_id = v_user.id
     and c.is_deleted = false
   limit 1;
 
   if v_contact_id is not null then
-    update projects.contacts c
+    update contacts.contacts c
     set
       first_name = coalesce(c.first_name, v_first_name),
       last_name  = coalesce(c.last_name, v_last_name),
@@ -948,7 +948,7 @@ begin
 
   select c.id
   into v_contact_id
-  from projects.contacts c
+  from contacts.contacts c
   where c.organization_id = p_organization_id
     and c.email = v_user.email
     and c.linked_user_id is null
@@ -956,7 +956,7 @@ begin
   limit 1;
 
   if v_contact_id is not null then
-    update projects.contacts c
+    update contacts.contacts c
     set
       linked_user_id = v_user.id,
       first_name = coalesce(c.first_name, v_first_name),
@@ -969,7 +969,7 @@ begin
     return v_contact_id;
   end if;
 
-  insert into projects.contacts (
+  insert into contacts.contacts (
     organization_id, linked_user_id, first_name, last_name,
     full_name, email, image_url, created_at, updated_at
   )

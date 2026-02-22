@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] Views (4)
+## [CONSTRUCTION] Views (5)
 
-### `construction.construction_tasks_view`
+### `construction.construction_tasks_view` (🔐 DEFINER)
 
 ```sql
 SELECT ct.id,
@@ -71,7 +71,7 @@ SELECT ct.id,
   WHERE (ct.is_deleted = false);
 ```
 
-### `construction.contract_summary_view`
+### `construction.contract_summary_view` (🔐 DEFINER)
 
 ```sql
 SELECT c.id,
@@ -105,7 +105,44 @@ SELECT c.id,
   WHERE ((c.quote_type = 'contract'::text) AND (c.is_deleted = false));
 ```
 
-### `construction.project_material_requirements_view`
+### `construction.labor_insurance_view` (🔐 DEFINER)
+
+```sql
+SELECT li.id,
+    li.organization_id,
+    li.project_id,
+    li.labor_id,
+    pl.contact_id,
+    li.insurance_type,
+    li.policy_number,
+    li.provider,
+    li.coverage_start,
+    li.coverage_end,
+    li.reminder_days,
+    li.certificate_attachment_id,
+    li.notes,
+    li.created_by,
+    li.created_at,
+    li.updated_at,
+    (li.coverage_end - CURRENT_DATE) AS days_to_expiry,
+        CASE
+            WHEN (CURRENT_DATE > li.coverage_end) THEN 'vencido'::text
+            WHEN ((li.coverage_end - CURRENT_DATE) <= 30) THEN 'por_vencer'::text
+            ELSE 'vigente'::text
+        END AS status,
+    ct.first_name AS contact_first_name,
+    ct.last_name AS contact_last_name,
+    COALESCE(ct.display_name_override, ct.full_name, concat(ct.first_name, ' ', ct.last_name)) AS contact_display_name,
+    lt.name AS labor_type_name,
+    proj.name AS project_name
+   FROM ((((construction.labor_insurances li
+     LEFT JOIN projects.project_labor pl ON ((pl.id = li.labor_id)))
+     LEFT JOIN contacts.contacts ct ON ((ct.id = pl.contact_id)))
+     LEFT JOIN catalog.labor_categories lt ON ((lt.id = pl.labor_type_id)))
+     LEFT JOIN projects.projects proj ON ((proj.id = li.project_id)));
+```
+
+### `construction.project_material_requirements_view` (🔐 DEFINER)
 
 ```sql
 SELECT ctms.project_id,
@@ -127,7 +164,7 @@ SELECT ctms.project_id,
   GROUP BY ctms.project_id, ctms.organization_id, ctms.material_id, m.name, u.name, m.category_id, mc.name;
 ```
 
-### `construction.quotes_view`
+### `construction.quotes_view` (🔐 DEFINER)
 
 ```sql
 SELECT q.id,
@@ -170,7 +207,7 @@ SELECT q.id,
    FROM (((((finance.quotes q
      LEFT JOIN finance.currencies c ON ((q.currency_id = c.id)))
      LEFT JOIN projects.projects p ON ((q.project_id = p.id)))
-     LEFT JOIN projects.contacts cl ON ((q.client_id = cl.id)))
+     LEFT JOIN contacts.contacts cl ON ((q.client_id = cl.id)))
      LEFT JOIN finance.quotes parent ON ((q.parent_quote_id = parent.id)))
      LEFT JOIN ( SELECT qi.quote_id,
             count(*) AS item_count,

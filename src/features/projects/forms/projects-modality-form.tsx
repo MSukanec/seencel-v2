@@ -46,6 +46,7 @@ export function ProjectsModalityForm({ organizationId, initialData, onSubmit }: 
 
         // Delegate to view → close immediately (optimistic)
         onSubmit({ name: name.trim() });
+        setBeforeClose(undefined); // Clear guard so modal closes without "unsaved changes" prompt
         closeModal();
     };
 

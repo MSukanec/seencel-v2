@@ -1619,7 +1619,7 @@ export async function getRecipeExternalServices(
             ? supabase.schema("finance").from("currencies").select("id, symbol").in("id", currencyIds)
             : Promise.resolve({ data: [] }),
         contactIds.length > 0
-            ? supabase.from("contacts").select("id, full_name").in("id", contactIds)
+            ? supabase.schema("contacts").from("contacts").select("id, full_name").in("id", contactIds)
             : Promise.resolve({ data: [] }),
     ]);
 

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -612,7 +612,7 @@ CREATE OR REPLACE FUNCTION audit.log_project_labor_activity()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'audit', 'public'
+ SET search_path TO 'audit', 'contacts'
 AS $function$
 DECLARE
     resolved_member_id uuid;
@@ -641,7 +641,7 @@ BEGIN
 
     SELECT COALESCE(full_name, first_name || ' ' || last_name, 'Sin nombre')
     INTO v_contact_name
-    FROM projects.contacts
+    FROM contacts.contacts
     WHERE id = target_record.contact_id;
 
     audit_metadata := jsonb_build_object(

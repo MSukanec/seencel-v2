@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [IAM] Functions (chunk 2: handle_new_org_member_contact — sync_role_permission_org_id)
+## [IAM] Functions (chunk 2: handle_new_org_member_contact — tick_home_checklist)
 
 ### `iam.handle_new_org_member_contact()` 🔐
 
@@ -786,7 +786,7 @@ CREATE OR REPLACE FUNCTION iam.merge_contacts(p_source_contact_id uuid, p_target
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'iam', 'projects', 'finance', 'catalog'
+ SET search_path TO 'iam', 'contacts', 'projects', 'finance', 'catalog'
 AS $function$
 declare
   v_source_exists boolean;
@@ -794,7 +794,7 @@ declare
   v_merged_references int := 0;
 begin
   select exists(
-    select 1 from projects.contacts where id = p_source_contact_id and organization_id = p_organization_id and is_deleted = false
+    select 1 from contacts.contacts where id = p_source_contact_id and organization_id = p_organization_id and is_deleted = false
   ) into v_source_exists;
 
   if not v_source_exists then
@@ -802,7 +802,7 @@ begin
   end if;
 
   select exists(
-    select 1 from projects.contacts where id = p_target_contact_id and organization_id = p_organization_id and is_deleted = false
+    select 1 from contacts.contacts where id = p_target_contact_id and organization_id = p_organization_id and is_deleted = false
   ) into v_target_exists;
 
   if not v_target_exists then
@@ -829,65 +829,17 @@ begin
   update catalog.task_recipe_external_services set contact_id = p_target_contact_id, updated_at = now() where contact_id = p_source_contact_id;
 
   -- Merge category links (avoid duplicates)
-  update projects.contact_category_links set contact_id = p_target_contact_id
+  update contacts.contact_category_links set contact_id = p_target_contact_id
   where contact_id = p_source_contact_id
-    and category_id not in (select category_id from projects.contact_category_links where contact_id = p_target_contact_id);
+    and category_id not in (select category_id from contacts.contact_category_links where contact_id = p_target_contact_id);
 
-  delete from projects.contact_category_links where contact_id = p_source_contact_id;
+  delete from contacts.contact_category_links where contact_id = p_source_contact_id;
 
-  update projects.contacts
+  update contacts.contacts
   set is_deleted = true, deleted_at = now(), updated_at = now()
   where id = p_source_contact_id;
 
   return jsonb_build_object('success', true, 'source_id', p_source_contact_id, 'target_id', p_target_contact_id);
-end;
-$function$
-```
-</details>
-
-### `iam.protect_linked_contact_delete()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.protect_linked_contact_delete()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'iam', 'projects', 'finance', 'catalog'
-AS $function$
-begin
-  if exists (select 1 from projects.project_clients where contact_id = old.id and is_deleted = false) then
-    raise exception 'No se puede eliminar este contacto porque tiene proyectos asociados como cliente.';
-  end if;
-  if exists (select 1 from projects.project_labor where contact_id = old.id and is_deleted = false) then
-    raise exception 'No se puede eliminar este contacto porque tiene asignaciones de personal.';
-  end if;
-  if exists (select 1 from finance.subcontracts where contact_id = old.id and coalesce(is_deleted, false) = false) then
-    raise exception 'No se puede eliminar este contacto porque tiene subcontratos asociados.';
-  end if;
-  if exists (select 1 from finance.subcontract_bids where contact_id = old.id) then
-    raise exception 'No se puede eliminar este contacto porque tiene ofertas de subcontratos.';
-  end if;
-  if exists (select 1 from finance.movements where contact_id = old.id) then
-    raise exception 'No se puede eliminar este contacto porque tiene movimientos financieros.';
-  end if;
-  if exists (select 1 from finance.material_invoices where provider_id = old.id) then
-    raise exception 'No se puede eliminar este contacto porque tiene facturas de materiales.';
-  end if;
-  if exists (select 1 from finance.material_purchase_orders where provider_id = old.id and is_deleted = false) then
-    raise exception 'No se puede eliminar este contacto porque tiene órdenes de compra.';
-  end if;
-  if exists (select 1 from catalog.materials where default_provider_id = old.id and is_deleted = false) then
-    raise exception 'No se puede eliminar este contacto porque es proveedor predeterminado de materiales.';
-  end if;
-  if exists (select 1 from catalog.task_recipe_external_services where contact_id = old.id and is_deleted = false) then
-    raise exception 'No se puede eliminar este contacto porque tiene servicios externos asociados.';
-  end if;
-  return old;
 end;
 $function$
 ```
@@ -970,6 +922,40 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
+$function$
+```
+</details>
+
+### `iam.tick_home_checklist(p_key text, p_value boolean)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.tick_home_checklist(p_key text, p_value boolean)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+declare
+  v_user_id uuid;
+begin
+  v_user_id := iam.current_user_id();
+  if v_user_id is null then return false; end if;
+
+  update iam.user_preferences up
+  set
+    home_checklist = jsonb_set(
+      coalesce(up.home_checklist, '{}'::jsonb), array[p_key], to_jsonb(p_value), true
+    ),
+    updated_at = now()
+  where up.user_id = v_user_id;
+
+  return found;
+end;
 $function$
 ```
 </details>

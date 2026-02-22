@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [OPS] Views (14)
 
-### `ops.analytics_at_risk_users_view`
+### `ops.analytics_at_risk_users_view` (🔐 DEFINER)
 
 ```sql
 SELECT analytics_user_session_summary_view.id,
@@ -20,7 +20,7 @@ SELECT analytics_user_session_summary_view.id,
  LIMIT 10;
 ```
 
-### `ops.analytics_bounce_rate_view`
+### `ops.analytics_bounce_rate_view` (🔐 DEFINER)
 
 ```sql
 WITH session_pages AS (
@@ -37,7 +37,7 @@ WITH session_pages AS (
    FROM session_pages;
 ```
 
-### `ops.analytics_general_kpis_view`
+### `ops.analytics_general_kpis_view` (🔐 DEFINER)
 
 ```sql
 SELECT ( SELECT count(*) AS count
@@ -51,7 +51,7 @@ SELECT ( SELECT count(*) AS count
           WHERE ((users.is_active = true) AND (users.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid))) AS total_users;
 ```
 
-### `ops.analytics_hourly_activity_view`
+### `ops.analytics_hourly_activity_view` (🔐 DEFINER)
 
 ```sql
 SELECT (EXTRACT(hour FROM h.entered_at))::integer AS hour_of_day,
@@ -63,7 +63,7 @@ SELECT (EXTRACT(hour FROM h.entered_at))::integer AS hour_of_day,
   ORDER BY (EXTRACT(hour FROM h.entered_at));
 ```
 
-### `ops.analytics_page_engagement_view`
+### `ops.analytics_page_engagement_view` (🔐 DEFINER)
 
 ```sql
 SELECT h.view_name,
@@ -76,7 +76,7 @@ SELECT h.view_name,
   GROUP BY h.view_name;
 ```
 
-### `ops.analytics_realtime_overview_view`
+### `ops.analytics_realtime_overview_view` (🔐 DEFINER)
 
 ```sql
 SELECT count(*) AS active_users
@@ -85,7 +85,7 @@ SELECT count(*) AS active_users
   WHERE ((up.last_seen_at > (now() - '00:05:00'::interval)) AND (up.status = 'online'::text) AND (u.role_id <> 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid));
 ```
 
-### `ops.analytics_session_duration_view`
+### `ops.analytics_session_duration_view` (🔐 DEFINER)
 
 ```sql
 SELECT round(avg(sessions.total_duration), 0) AS avg_duration_seconds,
@@ -99,7 +99,7 @@ SELECT round(avg(sessions.total_duration), 0) AS avg_duration_seconds,
           GROUP BY h.session_id) sessions;
 ```
 
-### `ops.analytics_top_users_view`
+### `ops.analytics_top_users_view` (🔐 DEFINER)
 
 ```sql
 SELECT u.id,
@@ -115,7 +115,7 @@ SELECT u.id,
   ORDER BY (count(*)) DESC;
 ```
 
-### `ops.analytics_user_growth_view`
+### `ops.analytics_user_growth_view` (🔐 DEFINER)
 
 ```sql
 SELECT date_trunc('day'::text, users.created_at) AS date,
@@ -126,7 +126,7 @@ SELECT date_trunc('day'::text, users.created_at) AS date,
   ORDER BY (date_trunc('day'::text, users.created_at)) DESC;
 ```
 
-### `ops.analytics_user_journeys_view`
+### `ops.analytics_user_journeys_view` (🔐 DEFINER)
 
 ```sql
 SELECT h.session_id,
@@ -144,7 +144,7 @@ SELECT h.session_id,
   ORDER BY h.session_id, h.entered_at;
 ```
 
-### `ops.analytics_user_session_summary_view`
+### `ops.analytics_user_session_summary_view` (🔐 DEFINER)
 
 ```sql
 SELECT u.id,
@@ -160,7 +160,7 @@ SELECT u.id,
   GROUP BY u.id, u.full_name, u.avatar_url, u.created_at;
 ```
 
-### `ops.analytics_users_by_country_view`
+### `ops.analytics_users_by_country_view` (🔐 DEFINER)
 
 ```sql
 SELECT c.id AS country_id,
@@ -174,7 +174,7 @@ SELECT c.id AS country_id,
   ORDER BY (count(ud.user_id)) DESC;
 ```
 
-### `ops.ops_alerts_enriched_view`
+### `ops.ops_alerts_enriched_view` (🔐 DEFINER)
 
 ```sql
 SELECT oa.id,
@@ -213,7 +213,7 @@ SELECT oa.id,
      LEFT JOIN iam.users res_u ON ((res_u.id = oa.resolved_by)));
 ```
 
-### `ops.system_errors_enriched_view`
+### `ops.system_errors_enriched_view` (🔐 DEFINER)
 
 ```sql
 SELECT sel.id,

@@ -231,7 +231,7 @@ export async function importMaterialsCatalogBatch(
 
     // 3. Get existing providers (contacts) for lookup
     const { data: contacts } = await supabase
-        .schema('projects').from('contacts')
+        .schema('contacts').from('contacts')
         .select('id, full_name, company_name')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false);
@@ -517,7 +517,7 @@ export async function importMaterialsCatalogBatch(
         console.log(`[Import] Creating ${providerInserts.length} new providers:`, providerInserts.map(p => p.full_name));
 
         const { data: newProviders, error: providerError } = await supabase
-            .schema('projects').from('contacts')
+            .schema('contacts').from('contacts')
             .insert(providerInserts)
             .select('id, full_name');
 

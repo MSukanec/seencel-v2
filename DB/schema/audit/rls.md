@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] RLS Policies (4)
+## [AUDIT] RLS Policies (6)
 
 ### `changelog_entries` (3 policies)
 
@@ -47,4 +47,24 @@ is_admin()
 - **USING**:
 ```sql
 (is_admin() OR is_org_member(organization_id))
+```
+
+### `signatures` (2 policies)
+
+#### MIEMBROS CREAN SIGNATURES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MIEMBROS VEN SIGNATURES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_org_member(organization_id)
 ```

@@ -620,14 +620,20 @@ export function FileGallery({ files, folders = [], organizationId, maxFileSizeMb
     // Open upload modal
     const handleUpload = useCallback(() => {
         openModal(
-            <FilesUploadForm organizationId={organizationId!} maxFileSizeMb={maxFileSizeMb} folders={folders} />,
+            <FilesUploadForm
+                organizationId={organizationId!}
+                maxFileSizeMb={maxFileSizeMb}
+                folders={folders}
+                projects={projects}
+                activeProjectId={activeProjectId}
+            />,
             {
                 title: "Subir Documentos",
                 description: "Arrastrá o seleccioná los documentos que querés subir a tu organización.",
                 size: "md",
             }
         );
-    }, [openModal, organizationId, maxFileSizeMb]);
+    }, [openModal, organizationId, maxFileSizeMb, folders, projects, activeProjectId]);
 
     // Debounced search (300ms)
     const debouncedSearch = useCallback((value: string) => {

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T20:08:16.861Z
+> Generated: 2026-02-22T22:05:48.801Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PROJECTS] Tables (chunk 1: projects.client_portal_branding — projects.signatures)
+## [PROJECTS] Tables (chunk 1: projects.client_portal_branding — projects.projects)
 
 ### `projects.client_portal_branding`
 
@@ -59,109 +59,13 @@
 | created_by | uuid | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
 
-### `projects.contact_categories`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| organization_id | uuid | ✓ |  |  |
-| updated_by | uuid | ✓ |  |  |
-| created_by | uuid | ✓ |  |  |
-
-### `projects.contact_category_links`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| contact_id | uuid | ✗ |  | UNIQUE, FK → contacts.id |
-| contact_category_id | uuid | ✗ |  | UNIQUE, FK → contact_categories.id |
-| created_at | timestamptz | ✓ | now() |  |
-| organization_id | uuid | ✗ |  |  |
-| updated_at | timestamptz | ✓ | now() |  |
-
-### `projects.contacts`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  | UNIQUE |
-| first_name | text | ✓ |  |  |
-| email | text | ✓ |  |  |
-| phone | text | ✓ |  |  |
-| company_name | text | ✓ |  |  |
-| location | text | ✓ |  |  |
-| notes | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| last_name | text | ✓ |  |  |
-| linked_user_id | uuid | ✓ |  |  |
-| full_name | text | ✓ |  |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| national_id | text | ✓ |  | UNIQUE |
-| avatar_updated_at | timestamptz | ✓ |  |  |
-| is_local | bool | ✗ | true |  |
-| display_name_override | text | ✓ |  |  |
-| linked_at | timestamptz | ✓ |  |  |
-| sync_status | text | ✗ | 'local'::text |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| image_url | text | ✓ |  |  |
-| import_batch_id | uuid | ✓ |  |  |
-| updated_by | uuid | ✓ |  |  |
-| created_by | uuid | ✓ |  |  |
-| contact_type | text | ✗ | 'person'::text |  |
-| company_id | uuid | ✓ |  | FK → contacts.id |
-
-### `projects.labor_insurances`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  |  |
-| project_id | uuid | ✓ |  | FK → projects.id |
-| labor_id | uuid | ✗ |  | FK → project_labor.id |
-| insurance_type | text | ✗ |  |  |
-| policy_number | text | ✓ |  |  |
-| provider | text | ✓ |  |  |
-| coverage_start | date | ✗ |  |  |
-| coverage_end | date | ✗ |  |  |
-| reminder_days | _int2 | ✓ | ARRAY[30, 15, 7] |  |
-| certificate_attachment_id | uuid | ✓ |  |  |
-| notes | text | ✓ |  |  |
-| created_by | uuid | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| coverage_range | daterange | ✓ |  |  |
-
-### `projects.personnel_attendees`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| site_log_id | uuid | ✓ |  |  |
-| attendance_type | text | ✓ | 'full'::text |  |
-| hours_worked | numeric | ✓ |  |  |
-| description | text | ✓ |  |  |
-| created_by | uuid | ✓ |  |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| project_id | uuid | ✓ |  | FK → projects.id |
-| personnel_id | uuid | ✓ |  | FK → project_labor.id |
-| organization_id | uuid | ✓ |  |  |
-| work_date | date | ✗ | CURRENT_DATE |  |
-| status | text | ✓ |  |  |
-
 ### `projects.project_clients`
 
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
 | project_id | uuid | ✗ |  | FK → projects.id |
-| contact_id | uuid | ✓ |  | FK → contacts.id |
+| contact_id | uuid | ✓ |  |  |
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
 | organization_id | uuid | ✗ |  |  |
@@ -208,7 +112,7 @@
 |--------|------|----------|---------|-------------|
 | id | uuid | ✗ | gen_random_uuid() | PK |
 | project_id | uuid | ✗ |  | FK → projects.id |
-| contact_id | uuid | ✗ |  | FK → contacts.id |
+| contact_id | uuid | ✗ |  |  |
 | notes | text | ✓ |  |  |
 | created_by | uuid | ✓ |  |  |
 | created_at | timestamptz | ✓ | now() |  |
@@ -290,23 +194,3 @@
 | project_modality_id | uuid | ✓ |  | FK → project_modalities.id |
 | updated_by | uuid | ✓ |  |  |
 | image_palette | jsonb | ✓ |  |  |
-
-### `projects.signatures`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| organization_id | uuid | ✗ |  |  |
-| document_type | text | ✗ |  |  |
-| document_id | uuid | ✗ |  |  |
-| signer_name | text | ✗ |  |  |
-| signer_email | text | ✓ |  |  |
-| signer_user_id | uuid | ✓ |  |  |
-| signature_url | text | ✗ |  |  |
-| signature_method | text | ✗ |  |  |
-| ip_address | inet | ✓ |  |  |
-| user_agent | text | ✓ |  |  |
-| signed_at | timestamptz | ✗ | now() |  |
-| created_at | timestamptz | ✗ | now() |  |
-| is_deleted | bool | ✓ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
