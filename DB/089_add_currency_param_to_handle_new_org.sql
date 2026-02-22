@@ -1,21 +1,20 @@
 -- ============================================================
--- 088: Consolidar handle_new_organization
+-- 089: Agregar parámetro de moneda a handle_new_organization
 -- ============================================================
--- Reemplaza la función que llamaba a 8 step functions separadas
--- por una sola función con toda la lógica inline.
--- Luego elimina las step functions que ya no se usan.
+-- Permite que el frontend pase la moneda default elegida por el
+-- usuario durante el onboarding. Si no se pasa, usa ARS (fallback).
 -- ============================================================
 
--- 1. Reemplazar handle_new_organization con versión consolidada
 CREATE OR REPLACE FUNCTION iam.handle_new_organization(
     p_user_id uuid,
     p_organization_name text,
-    p_business_mode text DEFAULT 'professional'::text
+    p_business_mode text DEFAULT 'professional'::text,
+    p_default_currency_id uuid DEFAULT NULL
 )
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'iam', 'billing'
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'iam', 'billing'
 AS $function$
 DECLARE
     v_org_id uuid := gen_random_uuid();
@@ -27,7 +26,7 @@ DECLARE
     v_recent_count integer;
     -- Defaults hardcodeados (datos semilla de producción)
     v_plan_free_id uuid := '015d8a97-6b6e-4aec-87df-5d1e6b0e4ed2';
-    v_default_currency_id uuid := '58c50aa7-b8b1-4035-b509-58028dd0e33f';
+    v_default_currency_id uuid := COALESCE(p_default_currency_id, '58c50aa7-b8b1-4035-b509-58028dd0e33f');
     v_default_wallet_id uuid := '2658c575-0fa8-4cf6-85d7-6430ded7e188';
     v_default_pdf_template_id uuid := 'b6266a04-9b03-4f3a-af2d-f6ee6d0a948b';
 BEGIN
@@ -115,7 +114,7 @@ BEGIN
     );
 
     -- ══════════════════════════════════════════════════════════
-    -- 6. MONEDA DEFAULT (ARS)
+    -- 6. MONEDA DEFAULT
     -- ══════════════════════════════════════════════════════════
     INSERT INTO finance.organization_currencies (
         id, organization_id, currency_id, is_active, is_default, created_at
@@ -175,28 +174,11 @@ EXCEPTION
             SQLERRM, jsonb_build_object(
                 'user_id', p_user_id,
                 'organization_name', p_organization_name,
-                'business_mode', p_business_mode
+                'business_mode', p_business_mode,
+                'default_currency_id', p_default_currency_id
             ),
             'critical'
         );
         RAISE;
 END;
 $function$;
-
-
--- ============================================================
--- 2. DROP step functions que ya no se usan
--- ============================================================
--- Nota: step_create_organization(uuid, text, uuid) de 3 params
--- y step_create_default_kanban_board ya se dropearon en 087.
--- Aquí dropeamos el resto.
-
-DROP FUNCTION IF EXISTS iam.step_create_organization(uuid, text, uuid, text);
-DROP FUNCTION IF EXISTS iam.step_create_organization_data(uuid);
-DROP FUNCTION IF EXISTS iam.step_create_organization_roles(uuid);
-DROP FUNCTION IF EXISTS iam.step_add_org_member(uuid, uuid, uuid);
-DROP FUNCTION IF EXISTS iam.step_assign_org_role_permissions(uuid);
-DROP FUNCTION IF EXISTS iam.step_create_organization_currencies(uuid, uuid);
-DROP FUNCTION IF EXISTS iam.step_create_organization_wallets(uuid, uuid);
-DROP FUNCTION IF EXISTS iam.step_create_organization_preferences(uuid, uuid, uuid, uuid);
-DROP FUNCTION IF EXISTS iam.step_create_user_organization_preferences(uuid, uuid);

@@ -1,6 +1,7 @@
 {
     "order": [
         "getting-started",
+        "agenda",
         "materials",
         "finance",
         "projects"
@@ -9,6 +10,10 @@
         "getting-started": {
             "title": "Getting Started",
             "icon": "rocket"
+        },
+        "agenda": {
+            "title": "Planner",
+            "icon": "calendar"
         },
         "materials": {
             "title": "Materials",

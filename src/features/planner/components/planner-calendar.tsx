@@ -1,19 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, List } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useModal } from "@/stores/modal-store";
 import { useActiveProjectId } from "@/stores/layout-store";
 
-import { CalendarEvent } from "@/features/planner/types";
+import { PlannerItem } from "@/features/planner/types";
 import { CalendarEventForm } from "../forms/calendar-event-form";
-import { Toolbar } from "@/components/layout/dashboard/shared/toolbar";
-import { FacetedFilter } from "@/components/layout/dashboard/shared/toolbar/toolbar-faceted-filter";
-import { ToolbarTabs } from "@/components/layout/dashboard/shared/toolbar/toolbar-tabs";
-import { PlannerListView } from "./planner-list-view";
 import { Project } from "@/types/project";
 import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, addMonths, isSameMonth, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -40,24 +35,15 @@ function hexToRgba(hex: string, alpha: number) {
 
 interface PlannerCalendarProps {
     organizationId: string;
-    events: CalendarEvent[];
-    onRefresh?: () => void;
+    events: PlannerItem[];
     projects?: Project[];
 }
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-export function PlannerCalendar({ organizationId, events, onRefresh, projects }: PlannerCalendarProps) {
+export function PlannerCalendar({ organizationId, events, projects }: PlannerCalendarProps) {
     const activeProjectId = useActiveProjectId();
     const [currentDate, setCurrentDate] = React.useState(new Date());
-    const [searchQuery, setSearchQuery] = React.useState("");
-    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const debouncedSetSearch = useCallback((value: string) => {
-        clearTimeout(searchTimerRef.current);
-        searchTimerRef.current = setTimeout(() => setSearchQuery(value), 300);
-    }, []);
-    const [typeFilter, setTypeFilter] = React.useState<Set<string>>(new Set());
-    const [viewMode, setViewMode] = React.useState<'month' | 'list'>('month');
     const { openModal, closeModal } = useModal();
 
     // Optimistic state for events
@@ -69,11 +55,11 @@ export function PlannerCalendar({ organizationId, events, onRefresh, projects }:
     }, [events]);
 
     // Optimistic event management
-    const addOptimisticEvent = React.useCallback((tempEvent: CalendarEvent) => {
+    const addOptimisticEvent = React.useCallback((tempEvent: PlannerItem) => {
         setOptimisticEvents(prev => [...prev, tempEvent]);
     }, []);
 
-    const updateOptimisticEvent = React.useCallback((updatedEvent: CalendarEvent) => {
+    const updateOptimisticEvent = React.useCallback((updatedEvent: PlannerItem) => {
         setOptimisticEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } : e));
     }, []);
 
@@ -87,7 +73,7 @@ export function PlannerCalendar({ organizationId, events, onRefresh, projects }:
     const goToToday = () => setCurrentDate(new Date());
 
     // Open event form modal
-    const openEventForm = (defaultDate?: Date, event?: CalendarEvent) => {
+    const openEventForm = (defaultDate?: Date, event?: PlannerItem) => {
         openModal(
             <CalendarEventForm
                 organizationId={organizationId}
@@ -111,56 +97,24 @@ export function PlannerCalendar({ organizationId, events, onRefresh, projects }:
     };
 
     // Event handlers
-    const handleNewEvent = () => {
-        openEventForm(new Date());
-    };
-
     const handleDayClick = (date: Date) => {
         openEventForm(date);
     };
 
-    const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
+    const handleEventClick = (event: PlannerItem, e: React.MouseEvent) => {
         e.stopPropagation();
         openEventForm(undefined, event);
     };
 
-    const handleTypeSelect = (value: string) => {
-        const next = new Set(typeFilter);
-        if (next.has(value)) {
-            next.delete(value);
-        } else {
-            next.add(value);
-        }
-        setTypeFilter(next);
-    };
-
-    // Filter Events
-    const filteredEvents = React.useMemo(() => {
+    // Use already-filtered events from props, then apply project context
+    const displayEvents = React.useMemo(() => {
         return optimisticEvents.filter(event => {
-            // Project context filter
             if (activeProjectId && event.project_id && event.project_id !== activeProjectId) {
                 return false;
             }
-
-            // Text Search
-            const searchLower = searchQuery.toLowerCase();
-            const matchesSearch = !searchQuery ||
-                event.title.toLowerCase().includes(searchLower) ||
-                event.description?.toLowerCase().includes(searchLower) ||
-                event.project_name?.toLowerCase().includes(searchLower);
-
-            if (!matchesSearch) return false;
-
-            // Type Filter
-            if (typeFilter.size > 0 && event.source_type) {
-                if (!typeFilter.has(event.source_type)) return false;
-            } else if (typeFilter.size > 0 && !event.source_type) {
-                if (!typeFilter.has('manual')) return false;
-            }
-
             return true;
         });
-    }, [optimisticEvents, searchQuery, typeFilter, activeProjectId]);
+    }, [optimisticEvents, activeProjectId]);
 
     // Calendar Generation Logic - Dynamic rows based on month
     const monthStart = startOfMonth(currentDate);
@@ -177,98 +131,10 @@ export function PlannerCalendar({ organizationId, events, onRefresh, projects }:
         day = addDays(day, 1);
     }
 
-    const typeFilterOptions = [
-        { label: "Manual", value: "manual", icon: CalendarIcon },
-        { label: "Kanban", value: "kanban_card", icon: List },
-        { label: "Pagos", value: "payment", icon: CalendarIcon },
-        { label: "Hitos", value: "quote_milestone", icon: CalendarIcon },
-    ];
 
-    if (viewMode === 'list') {
-        return (
-            <div className="h-full flex flex-col overflow-hidden">
-                <Toolbar
-                    portalToHeader
-                    mobileShowViewToggler
-                    searchQuery={searchQuery}
-                    onSearchChange={debouncedSetSearch}
-                    searchPlaceholder="Buscar eventos..."
-                    filterContent={
-                        <FacetedFilter
-                            title="Tipo"
-                            options={typeFilterOptions}
-                            selectedValues={typeFilter}
-                            onSelect={handleTypeSelect}
-                        />
-                    }
-                    actions={[{
-                        label: "Nuevo Evento",
-                        icon: Plus,
-                        onClick: handleNewEvent
-                    }]}
-                    leftActions={
-                        <ToolbarTabs
-                            value={viewMode}
-                            onValueChange={(v) => setViewMode(v as 'month' | 'list')}
-                            options={[
-                                { label: "Mes", value: "month", icon: CalendarIcon },
-                                { label: "Planificador", value: "list", icon: List },
-                            ]}
-                        />
-                    }
-                />
-                <div className="flex-1 overflow-hidden p-0">
-                    <PlannerListView
-                        events={filteredEvents}
-                        totalEvents={optimisticEvents.length}
-                        onEventClick={(e) => openEventForm(undefined, e)}
-                        onCreateEvent={handleNewEvent}
-                        onResetFilters={() => {
-                            setSearchQuery("");
-                            setTypeFilter(new Set());
-                        }}
-                        onOptimisticDeleteEvent={(eventId) => {
-                            setOptimisticEvents(prev => prev.filter(e => e.id !== eventId));
-                        }}
-                    />
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="h-full flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
-            {/* Header / Toolbar */}
-            <Toolbar
-                portalToHeader
-                mobileShowViewToggler
-                searchQuery={searchQuery}
-                onSearchChange={debouncedSetSearch}
-                searchPlaceholder="Buscar eventos..."
-                filterContent={
-                    <FacetedFilter
-                        title="Tipo"
-                        options={typeFilterOptions}
-                        selectedValues={typeFilter}
-                        onSelect={handleTypeSelect}
-                    />
-                }
-                actions={[{
-                    label: "Nuevo Evento",
-                    icon: Plus,
-                    onClick: handleNewEvent
-                }]}
-                leftActions={
-                    <ToolbarTabs
-                        value={viewMode}
-                        onValueChange={(v) => setViewMode(v as 'month' | 'list')}
-                        options={[
-                            { label: "Mes", value: "month", icon: CalendarIcon },
-                            { label: "Planificador", value: "list", icon: List },
-                        ]}
-                    />
-                }
-            />
 
             {/* Calendar Navigation Row */}
             <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
@@ -307,7 +173,7 @@ export function PlannerCalendar({ organizationId, events, onRefresh, projects }:
                     const isToday = isSameDay(date, new Date());
 
                     // Filter events for this day
-                    const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.start_at), date));
+                    const dayEvents = displayEvents.filter(e => e.start_at && isSameDay(new Date(e.start_at), date));
                     const visibleEvents = dayEvents.slice(0, 3);
                     const hiddenCount = dayEvents.length - 3;
 
@@ -363,7 +229,7 @@ export function PlannerCalendar({ organizationId, events, onRefresh, projects }:
                                         >
                                             {!isAllDay && (
                                                 <span className="opacity-80 font-mono text-[9px] hidden md:inline shrink-0">
-                                                    {format(new Date(event.start_at), "HH:mm")}
+                                                    {event.start_at ? format(new Date(event.start_at), "HH:mm") : ""}
                                                 </span>
                                             )}
                                             <span className={cn("truncate", isAllDay && "font-semibold")}>

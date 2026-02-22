@@ -1688,9 +1688,18 @@
     },
     "Planner": {
         "title": "Planificador",
+        "subtitle": "Organizá eventos, reuniones y tareas de tu equipo.",
         "tabs": {
             "calendar": "Calendario",
             "kanban": "Panel de Tareas"
+        },
+        "modes": {
+            "list": "Lista",
+            "kanban": "Panel",
+            "calendar": "Calendario"
+        },
+        "actions": {
+            "new": "Nuevo Evento"
         }
     },
     "Files": {

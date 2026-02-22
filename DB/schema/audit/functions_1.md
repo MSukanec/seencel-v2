@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T15:06:00.294Z
+> Generated: 2026-02-22T17:21:28.968Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] Functions (chunk 1: log_activity — log_kanban_child_activity)
+## [AUDIT] Functions (chunk 1: log_activity — log_material_activity)
 
 ### `audit.log_activity(p_organization_id uuid, p_user_id uuid, p_action text, p_target_table text, p_target_id uuid, p_metadata jsonb)` 🔐
 
@@ -39,72 +39,6 @@ begin
     now()
   );
 end;
-$function$
-```
-</details>
-
-### `audit.log_calendar_event_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_calendar_event_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public'
-AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD;
-        audit_action := 'delete_calendar_event';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        -- AQUI ESTA EL CAMBIO: Chequeamos deleted_at en vez de is_deleted
-        IF (OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL) THEN
-            audit_action := 'delete_calendar_event';
-        ELSE
-            audit_action := 'update_calendar_event';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW;
-        audit_action := 'create_calendar_event';
-        resolved_member_id := NEW.created_by;
-    END IF;
-
-    audit_metadata := jsonb_build_object(
-        'title', target_record.title,
-        'start_at', target_record.start_at,
-        'source_type', target_record.source_type
-    );
-
-    BEGIN
-        INSERT INTO audit.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            target_record.organization_id,
-            resolved_member_id,
-            audit_action,
-            target_record.id,
-            'calendar_events',
-            audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-
-    RETURN NULL;
-END;
 $function$
 ```
 </details>
@@ -911,7 +845,7 @@ $function$
 ```
 </details>
 
-### `audit.log_kanban_board_activity()` 🔐
+### `audit.log_labor_category_activity()` 🔐
 
 - **Returns**: trigger
 - **Kind**: function | VOLATILE | SECURITY DEFINER
@@ -919,7 +853,140 @@ $function$
 <details><summary>Source</summary>
 
 ```sql
-CREATE OR REPLACE FUNCTION audit.log_kanban_board_activity()
+CREATE OR REPLACE FUNCTION audit.log_labor_category_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'public'
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    -- Solo auditar registros de organización, NO de sistema
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD;
+        IF target_record.is_system = true THEN RETURN NULL; END IF;
+        audit_action := 'delete_labor_category';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        IF target_record.is_system = true THEN RETURN NULL; END IF;
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
+            audit_action := 'delete_labor_category';
+        ELSE
+            audit_action := 'update_labor_category';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW;
+        IF target_record.is_system = true THEN RETURN NULL; END IF;
+        audit_action := 'create_labor_category';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    audit_metadata := jsonb_build_object('name', target_record.name);
+
+    -- CRITICAL: Exception handler for cascade deletes
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id, resolved_member_id,
+            audit_action, target_record.id, 'labor_categories', audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
+
+### `audit.log_labor_payment_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_labor_payment_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'public'
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+    v_contact_name text;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD;
+        audit_action := 'delete_labor_payment';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
+            audit_action := 'delete_labor_payment';
+        ELSE
+            audit_action := 'update_labor_payment';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW;
+        audit_action := 'create_labor_payment';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    -- Obtener nombre del trabajador para metadata
+    SELECT COALESCE(c.full_name, c.first_name || ' ' || c.last_name, 'Sin nombre')
+    INTO v_contact_name
+    FROM projects.project_labor pl
+    JOIN projects.contacts c ON c.id = pl.contact_id
+    WHERE pl.id = target_record.labor_id;
+
+    audit_metadata := jsonb_build_object(
+        'worker_name', v_contact_name,
+        'amount', target_record.amount,
+        'status', target_record.status
+    );
+
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id, 
+            resolved_member_id,
+            audit_action, 
+            target_record.id, 
+            'labor_payments', 
+            audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
+
+### `audit.log_labor_price_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_labor_price_activity()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -933,31 +1000,99 @@ DECLARE
 BEGIN
     IF (TG_OP = 'DELETE') THEN
         target_record := OLD;
-        audit_action := 'delete_kanban_board';
+        audit_action := 'delete_labor_price';
         resolved_member_id := OLD.updated_by;
     ELSIF (TG_OP = 'UPDATE') THEN
         target_record := NEW;
+        audit_action := 'update_labor_price';
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW;
+        audit_action := 'create_labor_price';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    -- Metadata con información del precio
+    audit_metadata := jsonb_build_object(
+        'labor_type_id', target_record.labor_type_id,
+        'unit_price', target_record.unit_price,
+        'currency_id', target_record.currency_id
+    );
+
+    -- Insert con exception handler para evitar errores en cascade deletes
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id, 
+            resolved_member_id,
+            audit_action, 
+            target_record.id, 
+            'labor_prices', 
+            audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
+
+### `audit.log_material_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_material_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'public'
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    -- Skip logging for system materials (no organization_id)
+    IF (TG_OP = 'DELETE' AND OLD.organization_id IS NULL) OR
+       (TG_OP IN ('INSERT', 'UPDATE') AND NEW.organization_id IS NULL) THEN
+        RETURN NULL;
+    END IF;
+
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD;
+        audit_action := 'delete_material';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        -- Detect soft delete
         IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-            audit_action := 'delete_kanban_board';
-        ELSIF (OLD.is_archived = false AND NEW.is_archived = true) THEN
-            audit_action := 'archive_kanban_board';
-        ELSIF (OLD.is_archived = true AND NEW.is_archived = false) THEN
-            audit_action := 'unarchive_kanban_board';
+            audit_action := 'delete_material';
         ELSE
-            audit_action := 'update_kanban_board';
+            audit_action := 'update_material';
         END IF;
         resolved_member_id := NEW.updated_by;
     ELSIF (TG_OP = 'INSERT') THEN
         target_record := NEW;
-        audit_action := 'create_kanban_board';
+        audit_action := 'create_material';
         resolved_member_id := NEW.created_by;
     END IF;
 
+    -- Build metadata with relevant info
     audit_metadata := jsonb_build_object(
         'name', target_record.name,
-        'project_id', target_record.project_id
+        'material_type', target_record.material_type,
+        'is_system', target_record.is_system
     );
 
+    -- CRITICAL: Wrap in exception handler for cascade deletes
     BEGIN
         INSERT INTO audit.organization_activity_logs (
             organization_id, member_id, action, target_id, target_table, metadata
@@ -966,203 +1101,15 @@ BEGIN
             resolved_member_id,
             audit_action,
             target_record.id,
-            'kanban_boards',
+            'materials',
             audit_metadata
         );
     EXCEPTION WHEN OTHERS THEN
+        -- Silently skip if org/member no longer exists (cascade delete in progress)
         NULL;
     END;
 
     RETURN NULL;
-END;
-$function$
-```
-</details>
-
-### `audit.log_kanban_card_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_kanban_card_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public'
-AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
-    org_id uuid;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD;
-        audit_action := 'delete_kanban_card';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        IF (OLD.is_archived = false AND NEW.is_archived = true) THEN
-            audit_action := 'archive_kanban_card';
-        ELSIF (OLD.is_archived = true AND NEW.is_archived = false) THEN
-            audit_action := 'unarchive_kanban_card';
-        ELSIF (OLD.is_completed = false AND NEW.is_completed = true) THEN
-            audit_action := 'complete_kanban_card';
-        ELSIF (OLD.list_id IS DISTINCT FROM NEW.list_id) THEN
-            audit_action := 'move_kanban_card';
-        ELSE
-            audit_action := 'update_kanban_card';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW;
-        audit_action := 'create_kanban_card';
-        resolved_member_id := NEW.created_by;
-    END IF;
-
-    -- Get organization_id from the board
-    SELECT organization_id INTO org_id
-    FROM kanban_boards
-    WHERE id = target_record.board_id;
-
-    audit_metadata := jsonb_build_object(
-        'title', target_record.title,
-        'board_id', target_record.board_id
-    );
-
-    BEGIN
-        INSERT INTO audit.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            org_id,
-            resolved_member_id,
-            audit_action,
-            target_record.id,
-            'kanban_cards',
-            audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
-
-    RETURN NULL;
-END;
-$function$
-```
-</details>
-
-### `audit.log_kanban_child_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_kanban_child_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public', 'iam'
-AS $function$
-DECLARE
-  v_org_id uuid;
-  v_member_id uuid;
-  v_action text;
-  v_entity_name text;
-  v_metadata jsonb;
-  v_target_record RECORD;
-  v_record_json jsonb;
-  v_current_uid uuid;
-  v_name_or_title text;
-BEGIN
-  -- 1. Determine Entity Name
-  IF TG_TABLE_NAME = 'kanban_lists' THEN
-    v_entity_name := 'kanban_list';
-  ELSIF TG_TABLE_NAME = 'kanban_cards' THEN
-    v_entity_name := 'kanban_card';
-  ELSE
-    v_entity_name := TG_TABLE_NAME;
-  END IF;
-  -- 2. Determine Action & Target Record
-  IF TG_OP = 'UPDATE' THEN
-    v_target_record := NEW;
-    v_org_id := NEW.organization_id;
-    
-    IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-        v_action := 'delete_' || v_entity_name;
-    ELSIF (OLD.is_deleted = true AND NEW.is_deleted = false) THEN
-        v_action := 'restore_' || v_entity_name;
-    ELSE
-        v_action := 'update_' || v_entity_name;
-    END IF;
-    
-  ELSIF TG_OP = 'INSERT' THEN
-    v_target_record := NEW;
-    v_org_id := NEW.organization_id;
-    v_action := 'create_' || v_entity_name;
-    
-  ELSIF TG_OP = 'DELETE' THEN
-    v_target_record := OLD;
-    v_org_id := OLD.organization_id;
-    v_action := 'delete_' || v_entity_name;
-  END IF;
-  -- 3. Resolve Member ID
-  v_record_json := to_jsonb(v_target_record);
-  IF TG_OP = 'INSERT' THEN
-     IF (v_record_json->>'created_by') IS NOT NULL THEN
-         v_member_id := (v_record_json->>'created_by')::uuid;
-     END IF;
-  ELSE
-     IF (v_record_json->>'updated_by') IS NOT NULL THEN
-         v_member_id := (v_record_json->>'updated_by')::uuid;
-     END IF;
-  END IF;
-  -- Fallback: Resolve from auth.uid()
-  IF v_member_id IS NULL THEN
-      v_current_uid := auth.uid();
-      IF v_current_uid IS NOT NULL AND v_org_id IS NOT NULL THEN
-          SELECT om.id INTO v_member_id
-          FROM iam.organization_members om
-          JOIN iam.users u ON u.id = om.user_id
-          WHERE u.auth_id = v_current_uid
-          AND om.organization_id = v_org_id
-          LIMIT 1;
-      END IF;
-  END IF;
-  -- 4. Prepare Metadata
-  v_name_or_title := COALESCE(v_record_json->>'name', v_record_json->>'title', 'Unknown');
-  
-  v_metadata := jsonb_build_object(
-    'name', v_name_or_title
-  );
-  -- 5. Insert (Safe)
-  BEGIN
-      INSERT INTO audit.organization_activity_logs (
-        organization_id,
-        member_id,
-        action,
-        target_table,
-        target_id,
-        metadata,
-        created_at
-      ) VALUES (
-        v_org_id,
-        v_member_id,
-        v_action,
-        TG_TABLE_NAME,
-        (v_record_json->>'id')::uuid,
-        v_metadata,
-        now()
-      );
-  EXCEPTION WHEN OTHERS THEN
-      RAISE WARNING 'Audit Log Failed: %', SQLERRM;
-  END;
-  RETURN COALESCE(NEW, OLD);
 END;
 $function$
 ```

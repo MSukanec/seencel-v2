@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T15:06:00.294Z
+> Generated: 2026-02-22T17:21:28.968Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -152,72 +152,6 @@ BEGIN
         );
     END IF;
     
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `notifications.notify_kanban_card_assigned()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION notifications.notify_kanban_card_assigned()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'notifications', 'iam'
-AS $function$
-DECLARE
-    v_assignee_user_id uuid;
-    v_actor_user_id uuid;
-    v_actor_name text;
-    v_board_id uuid;
-BEGIN
-    IF NEW.assigned_to IS NULL THEN
-        RETURN NEW;
-    END IF;
-
-    IF TG_OP = 'UPDATE' AND OLD.assigned_to IS NOT DISTINCT FROM NEW.assigned_to THEN
-        RETURN NEW;
-    END IF;
-
-    SELECT om.user_id INTO v_assignee_user_id
-    FROM iam.organization_members om
-    WHERE om.id = NEW.assigned_to;
-
-    IF v_assignee_user_id IS NULL THEN
-        RETURN NEW;
-    END IF;
-
-    SELECT u.id, u.full_name INTO v_actor_user_id, v_actor_name
-    FROM iam.users u
-    WHERE u.auth_id = auth.uid();
-
-    IF v_actor_user_id IS NOT NULL AND v_actor_user_id = v_assignee_user_id THEN
-        RETURN NEW;
-    END IF;
-
-    v_board_id := NEW.board_id;
-
-    PERFORM notifications.send_notification(
-        v_assignee_user_id,
-        'info',
-        'Nueva asignación',
-        COALESCE(v_actor_name, 'Alguien') ||
-            ' te asignó a la tarjeta "' || NEW.title || '"',
-        jsonb_build_object(
-            'card_id', NEW.id,
-            'board_id', v_board_id,
-            'url', '/organization/planner?view=kanban&boardId=' || v_board_id::text
-        ),
-        'direct'
-    );
-
     RETURN NEW;
 END;
 $function$

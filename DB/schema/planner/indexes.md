@@ -1,41 +1,25 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T15:06:00.294Z
+> Generated: 2026-02-22T17:21:28.968Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PLANNER] Indexes (32, excluding PKs)
+## [PLANNER] Indexes (16, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
-| calendar_event_attendees | calendar_event_attendees_event_id_member_id_key | `CREATE UNIQUE INDEX calendar_event_attendees_event_id_member_id_key ON planne...` |
-| calendar_event_attendees | idx_event_attendees_event_id | `CREATE INDEX idx_event_attendees_event_id ON planner.calendar_event_attendees...` |
-| calendar_event_attendees | idx_event_attendees_member_id | `CREATE INDEX idx_event_attendees_member_id ON planner.calendar_event_attendee...` |
-| calendar_event_reminders | idx_event_reminders_event_id | `CREATE INDEX idx_event_reminders_event_id ON planner.calendar_event_reminders...` |
-| calendar_event_reminders | idx_event_reminders_remind_at | `CREATE INDEX idx_event_reminders_remind_at ON planner.calendar_event_reminder...` |
-| calendar_events | idx_calendar_events_org_id | `CREATE INDEX idx_calendar_events_org_id ON planner.calendar_events USING btre...` |
-| calendar_events | idx_calendar_events_project_id | `CREATE INDEX idx_calendar_events_project_id ON planner.calendar_events USING ...` |
-| calendar_events | idx_calendar_events_source | `CREATE INDEX idx_calendar_events_source ON planner.calendar_events USING btre...` |
-| calendar_events | idx_calendar_events_start_at | `CREATE INDEX idx_calendar_events_start_at ON planner.calendar_events USING bt...` |
-| calendar_events | idx_calendar_events_status | `CREATE INDEX idx_calendar_events_status ON planner.calendar_events USING btre...` |
-| kanban_boards | idx_kanban_boards_active | `CREATE INDEX idx_kanban_boards_active ON planner.kanban_boards USING btree (o...` |
-| kanban_boards | idx_kanban_boards_org | `CREATE INDEX idx_kanban_boards_org ON planner.kanban_boards USING btree (orga...` |
-| kanban_boards | idx_kanban_boards_org_project | `CREATE INDEX idx_kanban_boards_org_project ON planner.kanban_boards USING btr...` |
-| kanban_boards | idx_kanban_boards_project | `CREATE INDEX idx_kanban_boards_project ON planner.kanban_boards USING btree (...` |
-| kanban_boards | idx_kanban_boards_template | `CREATE INDEX idx_kanban_boards_template ON planner.kanban_boards USING btree ...` |
-| kanban_card_labels | idx_kanban_card_labels_card | `CREATE INDEX idx_kanban_card_labels_card ON planner.kanban_card_labels USING ...` |
-| kanban_card_labels | idx_kanban_card_labels_label | `CREATE INDEX idx_kanban_card_labels_label ON planner.kanban_card_labels USING...` |
-| kanban_cards | idx_kanban_cards_assigned | `CREATE INDEX idx_kanban_cards_assigned ON planner.kanban_cards USING btree (a...` |
-| kanban_cards | idx_kanban_cards_board | `CREATE INDEX idx_kanban_cards_board ON planner.kanban_cards USING btree (boar...` |
-| kanban_cards | idx_kanban_cards_completed | `CREATE INDEX idx_kanban_cards_completed ON planner.kanban_cards USING btree (...` |
-| kanban_cards | idx_kanban_cards_due | `CREATE INDEX idx_kanban_cards_due ON planner.kanban_cards USING btree (due_da...` |
-| kanban_cards | idx_kanban_cards_list | `CREATE INDEX idx_kanban_cards_list ON planner.kanban_cards USING btree (list_id)` |
-| kanban_cards | idx_kanban_cards_org | `CREATE INDEX idx_kanban_cards_org ON planner.kanban_cards USING btree (organi...` |
-| kanban_cards | idx_kanban_cards_priority | `CREATE INDEX idx_kanban_cards_priority ON planner.kanban_cards USING btree (p...` |
-| kanban_cards | idx_kanban_cards_project | `CREATE INDEX idx_kanban_cards_project ON planner.kanban_cards USING btree (pr...` |
-| kanban_checklist_items | idx_kanban_checklist_items_checklist | `CREATE INDEX idx_kanban_checklist_items_checklist ON planner.kanban_checklist...` |
-| kanban_checklist_items | idx_kanban_checklist_items_incomplete | `CREATE INDEX idx_kanban_checklist_items_incomplete ON planner.kanban_checklis...` |
-| kanban_checklists | idx_kanban_checklists_card | `CREATE INDEX idx_kanban_checklists_card ON planner.kanban_checklists USING bt...` |
-| kanban_labels | idx_kanban_labels_org | `CREATE INDEX idx_kanban_labels_org ON planner.kanban_labels USING btree (orga...` |
-| kanban_labels | kanban_labels_name_org_unique | `CREATE UNIQUE INDEX kanban_labels_name_org_unique ON planner.kanban_labels US...` |
-| kanban_lists | idx_kanban_lists_active | `CREATE INDEX idx_kanban_lists_active ON planner.kanban_lists USING btree (boa...` |
-| kanban_lists | idx_kanban_lists_org | `CREATE INDEX idx_kanban_lists_org ON planner.kanban_lists USING btree (organi...` |
+| attachments | idx_attachments_item | `CREATE INDEX idx_attachments_item ON planner.attachments USING btree (item_id)` |
+| attendees | attendees_item_id_member_id_key | `CREATE UNIQUE INDEX attendees_item_id_member_id_key ON planner.attendees USIN...` |
+| boards | idx_boards_org | `CREATE INDEX idx_boards_org ON planner.boards USING btree (organization_id) W...` |
+| checklist_items | idx_checklist_items_checklist | `CREATE INDEX idx_checklist_items_checklist ON planner.checklist_items USING b...` |
+| checklists | idx_checklists_item | `CREATE INDEX idx_checklists_item ON planner.checklists USING btree (item_id)` |
+| comments | idx_comments_item | `CREATE INDEX idx_comments_item ON planner.comments USING btree (item_id, crea...` |
+| items | idx_items_assigned | `CREATE INDEX idx_items_assigned ON planner.items USING btree (assigned_to, du...` |
+| items | idx_items_board_list | `CREATE INDEX idx_items_board_list ON planner.items USING btree (board_id, lis...` |
+| items | idx_items_calendar | `CREATE INDEX idx_items_calendar ON planner.items USING btree (organization_id...` |
+| items | idx_items_org_type | `CREATE INDEX idx_items_org_type ON planner.items USING btree (organization_id...` |
+| items | idx_items_project | `CREATE INDEX idx_items_project ON planner.items USING btree (project_id, item...` |
+| items | idx_items_source | `CREATE INDEX idx_items_source ON planner.items USING btree (source_type, sour...` |
+| labels | idx_labels_org | `CREATE INDEX idx_labels_org ON planner.labels USING btree (organization_id)` |
+| labels | labels_organization_id_name_key | `CREATE UNIQUE INDEX labels_organization_id_name_key ON planner.labels USING b...` |
+| lists | idx_lists_board | `CREATE INDEX idx_lists_board ON planner.lists USING btree (board_id, "positio...` |
+| reminders | idx_reminders_pending | `CREATE INDEX idx_reminders_pending ON planner.reminders USING btree (remind_a...` |

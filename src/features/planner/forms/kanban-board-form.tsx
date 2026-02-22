@@ -83,11 +83,16 @@ export function KanbanBoardForm({ organizationId, projectId, initialData, onSucc
                     organization_id: organizationId,
                     project_id: projectId || null,
                     icon: null,
+                    default_list_id: null,
                     is_template: false,
+                    template_id: null,
+                    settings: {},
                     is_archived: false,
+                    is_deleted: false,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                     created_by: null,
+                    updated_by: null,
                 };
                 onOptimisticCreate(tempBoard);
             }

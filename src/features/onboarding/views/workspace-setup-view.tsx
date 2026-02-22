@@ -7,12 +7,14 @@ import {
     Building2, Truck, Plus, Users, Loader2, CheckCircle,
     ArrowRight, ArrowLeft, Lock
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormGroup } from "@/components/ui/form-group";
 import { ImageUploader } from "@/components/shared/image-uploader";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { createOrganization } from "@/features/organization/actions";
+import type { Currency } from "@/types/organization";
 import { acceptInvitationAction } from "@/features/team/actions";
 import type { PendingInvitationData } from "@/actions/invitation-actions";
 import { Badge } from "@/components/ui/badge";
@@ -23,16 +25,18 @@ interface WorkspaceSetupViewProps {
     isNewOrg?: boolean;
     isAdmin?: boolean;
     orgCreationEnabled?: boolean;
+    currencies?: Currency[];
 }
 
 type BusinessMode = "professional" | "supplier";
 type Step = "choose" | "type" | "name" | "accepted";
 
-export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCreationEnabled = true }: WorkspaceSetupViewProps) {
+export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCreationEnabled = true, currencies = [] }: WorkspaceSetupViewProps) {
     const router = useRouter();
     const [step, setStep] = useState<Step>(isNewOrg ? "type" : "choose");
     const [businessMode, setBusinessMode] = useState<BusinessMode>("professional");
     const [orgName, setOrgName] = useState("");
+    const [selectedCurrencyId, setSelectedCurrencyId] = useState<string | undefined>(undefined);
     const [isPending, startTransition] = useTransition();
     const [isAccepting, setIsAccepting] = useState(false);
     const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
@@ -55,7 +59,7 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
                     logoFormData.append("file", logoFileRef.current);
                 }
 
-                const result = await createOrganization(orgName.trim(), businessMode, logoFormData);
+                const result = await createOrganization(orgName.trim(), businessMode, logoFormData, selectedCurrencyId);
                 if (!result.success) {
                     toast.error(result.error || "Error al crear la organización");
                 }
@@ -168,20 +172,38 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
                         />
                     </FormGroup>
 
-                    {/* Summary */}
-                    <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
-                        <p className="text-xs text-muted-foreground font-medium">Resumen</p>
-                        <div className="flex items-center gap-2 text-sm">
-                            {businessMode === "professional" ? (
-                                <Building2 className="w-4 h-4" style={{ color: "var(--chart-1)" }} />
-                            ) : (
-                                <Truck className="w-4 h-4" style={{ color: "var(--chart-2)" }} />
-                            )}
-                            <span>
-                                {businessMode === "professional" ? "Estudio Profesional / Constructora" : "Proveedor"}
-                            </span>
-                        </div>
-                    </div>
+                    {/* Currency Selector */}
+                    <FormGroup
+                        label="Moneda Principal"
+                        htmlFor="defaultCurrency"
+                        tooltip={
+                            <div className="space-y-1.5">
+                                <p>La moneda principal define en qué divisa se registran por defecto tus movimientos, presupuestos y reportes.</p>
+                                <p className="font-medium">Una vez creada la organización, esta moneda no podrá ser modificada.</p>
+                                <p>Podrás agregar monedas secundarias desde la configuración financiera.</p>
+                            </div>
+                        }
+                    >
+                        <Select
+                            value={selectedCurrencyId}
+                            onValueChange={setSelectedCurrencyId}
+                        >
+                            <SelectTrigger id="defaultCurrency" className="h-10">
+                                <SelectValue placeholder="Seleccioná tu moneda" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {currencies.map((c) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                        <span className="flex items-center gap-2">
+                                            <span className="font-medium">{c.symbol}</span>
+                                            <span>{c.name}</span>
+                                            <span className="text-muted-foreground">({c.code})</span>
+                                        </span>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FormGroup>
 
                     <Button
                         onClick={handleCreateOrg}
@@ -211,7 +233,7 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
         return (
             <AuthLayout
                 title="¿Qué tipo de organización es?"
-                description="Esto nos permite personalizar tu experiencia desde el primer día."
+                description="Esto nos permite personalizar tu experiencia desde el primer día. Podrás cambiar esta configuración en cualquier momento."
                 mode="onboarding"
             >
                 <div className="space-y-4 w-full">
@@ -226,9 +248,9 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
                             "w-full rounded-xl border bg-card p-6 text-left transition-all group relative",
                             orgCreationDisabled
                                 ? isAdmin
-                                    ? "hover:border-primary/50 hover:bg-accent/30 cursor-pointer opacity-60 hover:opacity-80"
+                                    ? "hover:border-primary/50 hover:brightness-110 cursor-pointer opacity-60 hover:opacity-80"
                                     : "cursor-default opacity-50"
-                                : "hover:border-primary/50 hover:bg-accent/30"
+                                : "hover:border-primary/50 hover:brightness-110"
                         )}
                     >
                         {/* Blocked Badge */}
@@ -285,7 +307,7 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
                         className={cn(
                             "w-full rounded-xl border bg-card p-6 text-left transition-all group relative",
                             isAdmin
-                                ? "hover:border-primary/50 hover:bg-accent/30 cursor-pointer opacity-60 hover:opacity-80"
+                                ? "hover:border-primary/50 hover:brightness-110 cursor-pointer opacity-60 hover:opacity-80"
                                 : "cursor-default opacity-50"
                         )}
                     >
@@ -360,9 +382,9 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
                         "w-full rounded-xl border bg-card p-6 text-left transition-all group relative",
                         orgCreationDisabled
                             ? isAdmin
-                                ? "hover:border-primary/50 hover:bg-accent/30 cursor-pointer opacity-60 hover:opacity-80"
+                                ? "hover:border-primary/50 hover:brightness-110 cursor-pointer opacity-60 hover:opacity-80"
                                 : "cursor-default opacity-50"
-                            : "hover:border-primary/50 hover:bg-accent/30"
+                            : "hover:border-primary/50 hover:brightness-110"
                     )}
                 >
                     {/* Blocked Badge */}

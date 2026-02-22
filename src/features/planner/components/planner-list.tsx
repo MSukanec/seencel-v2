@@ -1,19 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { format, isToday, isTomorrow, isSameYear, compareAsc, compareDesc } from "date-fns";
+import { format, isToday, isTomorrow, compareDesc } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarEvent } from "@/features/planner/types";
+import { PlannerItem } from "@/features/planner/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Calendar as CalendarIcon } from "lucide-react";
+import { MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { PlannerEventActions } from "./planner-event-actions";
 import { ViewEmptyState } from "@/components/shared/empty-state";
 
-interface PlannerListViewProps {
-    events: CalendarEvent[];
-    onEventClick?: (event: CalendarEvent) => void;
+interface PlannerListProps {
+    events: PlannerItem[];
+    onEventClick?: (event: PlannerItem) => void;
     /** Total events before filtering — to distinguish empty vs no-results */
     totalEvents?: number;
     /** Callback to create a new event */
@@ -24,17 +23,18 @@ interface PlannerListViewProps {
     onOptimisticDeleteEvent?: (eventId: string) => void;
 }
 
-export function PlannerListView({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters, onOptimisticDeleteEvent }: PlannerListViewProps) {
+export function PlannerList({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters, onOptimisticDeleteEvent }: PlannerListProps) {
     // Group events by date category
     const groupedEvents = React.useMemo(() => {
         const sorted = [...events].sort((a, b) =>
             // Descending sort (Newest/Furthest first)
-            compareDesc(new Date(a.start_at), new Date(b.start_at))
+            compareDesc(new Date(a.start_at!), new Date(b.start_at!))
         );
 
-        const groups: Record<string, CalendarEvent[]> = {};
+        const groups: Record<string, PlannerItem[]> = {};
 
         sorted.forEach(event => {
+            if (!event.start_at) return;
             const date = new Date(event.start_at);
             let key = format(date, "yyyy-MM-dd");
 
@@ -78,7 +78,6 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                     featureDescription="El planificador te permite organizar eventos, reuniones, visitas a obra y fechas importantes. Creá eventos con horarios, colores y descripciones para tener una vista completa de tu calendario."
                     onAction={onCreateEvent}
                     actionLabel="Nuevo Evento"
-                    docsPath="/docs/planificador/kanban"
                 />
             );
         }
@@ -110,9 +109,7 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                     tmrw.setDate(tmrw.getDate() + 1);
                     subtitle = format(tmrw, "EEEE d 'de' MMMM", { locale: es });
                 } else {
-                    const date = new Date(key + "T00:00:00"); // Fix timezone parsing issues roughly
-                    // Actually getting date from first event is safer
-                    const realDate = new Date(groupEvents[0].start_at);
+                    const realDate = new Date(groupEvents[0].start_at!);
                     title = format(realDate, "EEEE d", { locale: es });
                     subtitle = format(realDate, "MMMM yyyy", { locale: es });
                 }
@@ -140,7 +137,7 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                                     {/* Time */}
                                     <div className="flex flex-col items-center min-w-[80px] px-2 pl-4">
                                         <span className="text-lg font-bold">
-                                            {format(new Date(event.start_at), "HH:mm")}
+                                            {event.start_at ? format(new Date(event.start_at), "HH:mm") : "--:--"}
                                         </span>
                                         {event.end_at && (
                                             <span className="text-xs text-muted-foreground">
@@ -163,10 +160,10 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                                         </div>
 
                                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                            {event.project_name && (
+                                            {(event as any).project_name && (
                                                 <span className="flex items-center gap-1">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
-                                                    {event.project_name}
+                                                    {(event as any).project_name}
                                                 </span>
                                             )}
                                             {event.location && (
@@ -181,7 +178,7 @@ export function PlannerListView({ events, onEventClick, totalEvents, onCreateEve
                                     {/* Action Arrow (Visible on Hover) */}
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-2">
                                         <PlannerEventActions
-                                            event={event}
+                                            event={event as any}
                                             onEdit={() => onEventClick?.(event)}
                                             onOptimisticDelete={onOptimisticDeleteEvent}
                                             className="h-8 w-8 rounded-full hover:bg-muted"

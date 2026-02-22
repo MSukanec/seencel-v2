@@ -190,6 +190,7 @@ export function KanbanBoard({
     const handleAddCard = useCallback((listId: string) => {
         openModal(
             <KanbanCardForm
+                organizationId={board.organization_id}
                 boardId={board.id}
                 listId={listId}
                 projectId={activeProjectId || board.project_id}
@@ -229,6 +230,7 @@ export function KanbanBoard({
         openModal(
             <KanbanListForm
                 boardId={board.id}
+                organizationId={board.organization_id}
                 onOptimisticCreate={addOptimisticList}
                 onSuccess={(realList) => {
                     // Replace temp list with real one
@@ -256,6 +258,7 @@ export function KanbanBoard({
         openModal(
             <KanbanListForm
                 boardId={board.id}
+                organizationId={board.organization_id}
                 initialData={list}
                 onOptimisticUpdate={updateOptimisticList}
                 onRollback={(listId) => {
@@ -343,8 +346,9 @@ export function KanbanBoard({
     const handleCardClick = useCallback((card: KanbanCard) => {
         openModal(
             <KanbanCardForm
+                organizationId={board.organization_id}
                 boardId={board.id}
-                listId={card.list_id}
+                listId={card.list_id || ''}
                 projectId={activeProjectId || board.project_id}
                 projects={projects}
                 initialData={card}

@@ -147,7 +147,7 @@ export function KanbanBoardSelector({ boards, onCreateBoard }: KanbanBoardSelect
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <FolderKanban className="h-3 w-3" />
-                                    {board.card_count || 0} tarjetas
+                                    {board.item_count || 0} tarjetas
                                 </div>
                             </div>
 

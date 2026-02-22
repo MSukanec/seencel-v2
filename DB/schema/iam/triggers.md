@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T15:06:00.294Z
+> Generated: 2026-02-22T17:21:28.968Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -8,21 +8,21 @@
 | Table | Trigger | Timing | Events | Action |
 |-------|---------|--------|--------|--------|
 | feedback | notify_new_feedback | AFTER | INSERT | EXECUTE FUNCTION notifications.notify_new_feedback() |
-| organization_data | on_organization_data_audit | AFTER | DELETE, INSERT, UPDATE | EXECUTE FUNCTION audit.log_organization_data_activity() |
+| organization_data | on_organization_data_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_organization_data_activity() |
 | organization_data | set_updated_by_organization_data | BEFORE | UPDATE | EXECUTE FUNCTION handle_updated_by() |
 | organization_external_actors | oea_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION set_timestamp() |
-| organization_external_actors | on_external_actor_audit | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_external_actor_activity() |
-| organization_external_actors | set_updated_by_oea | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
+| organization_external_actors | on_external_actor_audit | AFTER | DELETE, UPDATE, INSERT | EXECUTE FUNCTION audit.log_external_actor_activity() |
+| organization_external_actors | set_updated_by_oea | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
 | organization_external_actors | trigger_create_contact_on_new_external_actor | AFTER | INSERT | EXECUTE FUNCTION iam.handle_new_external_actor_contact() |
 | organization_invitations | trigger_create_contact_on_registered_invitation | AFTER | INSERT | EXECUTE FUNCTION iam.handle_registered_invitation() |
-| organization_members | log_member_billable_changes | AFTER | INSERT, UPDATE, DELETE | EXECUTE FUNCTION audit.log_member_billable_change() |
+| organization_members | log_member_billable_changes | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION audit.log_member_billable_change() |
 | organization_members | set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION update_updated_at_column() |
-| organization_members | set_updated_by_organization_members | BEFORE | UPDATE, INSERT | EXECUTE FUNCTION handle_updated_by() |
+| organization_members | set_updated_by_organization_members | BEFORE | INSERT, UPDATE | EXECUTE FUNCTION handle_updated_by() |
 | organization_members | trigger_create_contact_on_new_member | AFTER | INSERT | EXECUTE FUNCTION iam.handle_new_org_member_contact() |
 | organization_preferences | set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION update_updated_at_column() |
 | organization_preferences | update_organization_preferences_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION update_updated_at_column() |
 | organization_recipe_preferences | trg_increment_recipe_usage | AFTER | INSERT | EXECUTE FUNCTION increment_recipe_usage() |
-| organizations | on_organizations_audit | AFTER | DELETE, INSERT, UPDATE | EXECUTE FUNCTION audit.log_organizations_activity() |
+| organizations | on_organizations_audit | AFTER | UPDATE, DELETE, INSERT | EXECUTE FUNCTION audit.log_organizations_activity() |
 | organizations | organizations_set_updated_at | BEFORE | UPDATE | EXECUTE FUNCTION update_updated_at_column() |
 | organizations | set_updated_by_organizations | BEFORE | UPDATE | EXECUTE FUNCTION iam.handle_updated_by_organizations() |
 | role_permissions | trg_role_permissions_sync_org | BEFORE | INSERT | EXECUTE FUNCTION iam.sync_role_permission_org_id() |

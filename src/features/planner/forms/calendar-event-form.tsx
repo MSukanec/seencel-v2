@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { MapPin } from "lucide-react";
+import { parseDateFromDB, formatDateTimeForDB } from "@/lib/timezone-data";
 
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
@@ -79,8 +80,8 @@ export function CalendarEventForm({
     // Determine initial values
     const getInitialValues = (): EventFormValues => {
         if (initialData) {
-            const startDate = new Date(initialData.start_at);
-            const endDate = initialData.end_at ? new Date(initialData.end_at) : null;
+            const startDate = parseDateFromDB(initialData.start_at) ?? new Date();
+            const endDate = initialData.end_at ? parseDateFromDB(initialData.end_at) ?? null : null;
 
             return {
                 title: initialData.title,
@@ -124,12 +125,12 @@ export function CalendarEventForm({
             // Build start_at datetime
             let startAt: string;
             if (values.is_all_day) {
-                startAt = new Date(values.start_date.setHours(0, 0, 0, 0)).toISOString();
+                startAt = formatDateTimeForDB(new Date(values.start_date.setHours(0, 0, 0, 0))) ?? new Date().toISOString();
             } else {
                 const [hours, minutes] = (values.start_time || "00:00").split(":").map(Number);
                 const startDate = new Date(values.start_date);
                 startDate.setHours(hours, minutes, 0, 0);
-                startAt = startDate.toISOString();
+                startAt = formatDateTimeForDB(startDate) ?? new Date().toISOString();
             }
 
             // Build end_at datetime (optional)
@@ -138,12 +139,12 @@ export function CalendarEventForm({
                 if (values.is_all_day) {
                     const endDate = new Date(values.end_date);
                     endDate.setHours(23, 59, 59, 999);
-                    endAt = endDate.toISOString();
+                    endAt = formatDateTimeForDB(endDate);
                 } else {
                     const [hours, minutes] = (values.end_time || "23:59").split(":").map(Number);
                     const endDate = new Date(values.end_date);
                     endDate.setHours(hours, minutes, 0, 0);
-                    endAt = endDate.toISOString();
+                    endAt = formatDateTimeForDB(endDate);
                 }
             }
 
@@ -182,31 +183,48 @@ export function CalendarEventForm({
                     id: tempId,
                     organization_id: organizationId,
                     project_id: values.project_id || projectId || null,
+                    item_type: 'event',
                     title: values.title,
                     description: values.description || null,
                     location: values.location || null,
                     color: values.color,
                     start_at: startAt,
+                    due_at: null,
                     end_at: endAt,
                     is_all_day: values.is_all_day,
                     timezone: 'America/Argentina/Buenos_Aires',
+                    status: 'todo',
+                    priority: 'none',
+                    is_completed: false,
+                    completed_at: null,
+                    estimated_hours: null,
+                    actual_hours: null,
+                    assigned_to: null,
                     source_type: null,
                     source_id: null,
                     recurrence_rule: null,
                     recurrence_end_at: null,
-                    parent_event_id: null,
-                    status: 'scheduled',
+                    parent_item_id: null,
+                    cover_image_url: null,
+                    cover_color: null,
+                    board_id: null,
+                    list_id: null,
+                    position: 0,
+                    is_archived: false,
+                    archived_at: null,
+                    is_deleted: false,
+                    deleted_at: null,
                     created_by: null,
                     updated_by: null,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
-                    deleted_at: null,
                 };
                 onOptimisticCreate?.(tempEvent);
                 onCancel?.(); // Close modal
 
                 const result = await createCalendarEvent({
                     organization_id: organizationId,
+                    item_type: 'event',
                     project_id: values.project_id || projectId,
                     title: values.title,
                     description: values.description || null,

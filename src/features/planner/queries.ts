@@ -1,30 +1,33 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { KanbanBoard, KanbanCard, KanbanLabel, KanbanList, KanbanMember } from "./types";
+import {
+    PlannerBoard,
+    PlannerItem,
+    PlannerLabel,
+    PlannerList,
+    PlannerMember
+} from "./types";
 
 // ============================================
 // BOARDS
 // ============================================
 
-export async function getBoards(organizationId: string, projectId?: string | null): Promise<KanbanBoard[]> {
+export async function getBoards(organizationId: string, projectId?: string | null): Promise<PlannerBoard[]> {
     const supabase = await createClient();
 
     let query = supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
     if (projectId === null) {
-        // Only org-level boards
         query = query.is('project_id', null);
     } else if (projectId) {
-        // Only project-specific boards
         query = query.eq('project_id', projectId);
     }
-    // If projectId is undefined, get all boards
 
     const { data, error } = await query;
 
@@ -33,14 +36,14 @@ export async function getBoards(organizationId: string, projectId?: string | nul
         return [];
     }
 
-    return data as KanbanBoard[];
+    return data as PlannerBoard[];
 }
 
-export async function getBoard(boardId: string): Promise<KanbanBoard | null> {
+export async function getBoard(boardId: string): Promise<PlannerBoard | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .select('*')
         .eq('id', boardId)
         .single();
@@ -50,24 +53,24 @@ export async function getBoard(boardId: string): Promise<KanbanBoard | null> {
         return null;
     }
 
-    return data as KanbanBoard;
+    return data as PlannerBoard;
 }
 
 // ============================================
-// LISTS & CARDS (Full board data)
+// BOARD WITH FULL DATA (lists + items)
 // ============================================
 
 export async function getBoardWithData(boardId: string, filterByProjectId?: string | null): Promise<{
-    board: KanbanBoard;
-    lists: KanbanList[];
-    labels: KanbanLabel[];
-    members: KanbanMember[];
+    board: PlannerBoard;
+    lists: PlannerList[];
+    labels: PlannerLabel[];
+    members: PlannerMember[];
 } | null> {
     const supabase = await createClient();
 
     // Get board
     const { data: board, error: boardError } = await supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .select('*')
         .eq('id', boardId)
         .single();
@@ -77,7 +80,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
         return null;
     }
 
-    // Get project name separately (cross-schema)
+    // Get project name (cross-schema)
     let boardProjectName: string | null = null;
     if (board.project_id) {
         const { data: projectData } = await supabase
@@ -88,12 +91,12 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
         boardProjectName = projectData?.name || null;
     }
 
-    // Get lists with cards
+    // Get lists with items
     const { data: lists, error: listsError } = await supabase
-        .schema('planner').from('kanban_lists')
+        .schema('planner').from('lists')
         .select(`
             *,
-            kanban_cards (*)
+            items (*)
         `)
         .eq('board_id', boardId)
         .eq('is_deleted', false)
@@ -104,9 +107,9 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
         return null;
     }
 
-    // Get labels for this organization
+    // Get labels
     const { data: labels, error: labelsError } = await supabase
-        .schema('planner').from('kanban_labels')
+        .schema('planner').from('labels')
         .select('*')
         .eq('organization_id', board.organization_id)
         .order('position', { ascending: true });
@@ -115,7 +118,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
         console.error('Error fetching labels:', labelsError);
     }
 
-    // Get organization members
+    // Get organization members (cross-schema)
     const { data: membersData, error: membersError } = await supabase
         .schema('iam').from('organization_members')
         .select(`
@@ -132,67 +135,71 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
         console.error('Error fetching members:', membersError);
     }
 
-    const members: KanbanMember[] = (membersData || []).map((m: any) => ({
-        id: m.id, // organization_members.id — FK target for assigned_to
+    const members: PlannerMember[] = (membersData || []).map((m: any) => ({
+        id: m.id,
         full_name: m.user?.full_name || null,
         avatar_url: m.user?.avatar_url || null,
     }));
 
-    // Process lists - sort cards by position and optionally filter by project
-    const processedLists: KanbanList[] = (lists || []).map(list => ({
-        ...list,
-        cards: (list.kanban_cards || [])
-            .filter((c: any) => !c.is_deleted)
-            // Filter by project_id if specified (undefined = show all, null = only org-level, string = specific project)
-            .filter((c: any) => {
-                if (filterByProjectId === undefined) return true; // Show all cards
-                if (filterByProjectId === null) return c.project_id === null; // Only org-level
-                return c.project_id === filterByProjectId || c.project_id === null; // Project + org-level
+    // Process lists - sort items and optionally filter by project
+    const processedLists: PlannerList[] = (lists || []).map(list => {
+        const filteredItems = ((list as any).items || [])
+            .filter((i: any) => !i.is_deleted && !i.is_archived)
+            .filter((i: any) => {
+                if (filterByProjectId === undefined) return true;
+                if (filterByProjectId === null) return i.project_id === null;
+                return i.project_id === filterByProjectId || i.project_id === null;
             })
-            .sort((a: any, b: any) => a.position - b.position)
-    }));
+            .sort((a: any, b: any) => a.position - b.position);
+
+        return {
+            ...list,
+            items: filteredItems,
+            cards: filteredItems, // backward compat
+        };
+    });
 
     return {
         board: {
             ...board,
             project_name: boardProjectName
-        } as KanbanBoard,
+        } as PlannerBoard,
         lists: processedLists,
-        labels: (labels || []) as KanbanLabel[],
+        labels: (labels || []) as PlannerLabel[],
         members
     };
 }
 
 // ============================================
-// CARD DETAILS
+// ITEM DETAILS
 // ============================================
 
-export async function getCardDetails(cardId: string): Promise<KanbanCard | null> {
+export async function getItemDetails(itemId: string): Promise<PlannerItem | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_cards')
+        .schema('planner').from('items')
         .select('*')
-        .eq('id', cardId)
+        .eq('id', itemId)
         .single();
 
     if (error) {
-        console.error('Error fetching card:', error);
+        console.error('Error fetching item:', error);
         return null;
     }
 
-    return data as KanbanCard;
+    return data as PlannerItem;
 }
 
 // ============================================
 // LABELS
 // ============================================
 
-export async function getLabels(organizationId: string): Promise<KanbanLabel[]> {
+export async function getLabels(organizationId: string): Promise<PlannerLabel[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_labels')
+        .schema('planner').from('labels')
         .select('*')
         .eq('organization_id', organizationId)
         .order('position', { ascending: true });
@@ -202,56 +209,69 @@ export async function getLabels(organizationId: string): Promise<KanbanLabel[]> 
         return [];
     }
 
-    return data as KanbanLabel[];
+    return data as PlannerLabel[];
 }
 
 // ============================================
-// CALENDAR EVENTS
+// CALENDAR ITEMS (items with dates — tasks + events)
 // ============================================
 
-import { CalendarEvent } from "./types";
-
-export async function getCalendarEvents(
+/**
+ * Get all items that should appear in the calendar:
+ * - All events (item_type = 'event')
+ * - All tasks with start_at or due_at set
+ */
+export async function getCalendarItems(
     organizationId: string,
     options?: {
         projectId?: string | null;
         startDate?: Date;
         endDate?: Date;
     }
-): Promise<CalendarEvent[]> {
+): Promise<PlannerItem[]> {
     const supabase = await createClient();
 
     let query = supabase
-        .schema('planner').from('calendar_events')
+        .schema('planner').from('items')
         .select('*')
         .eq('organization_id', organizationId)
-        .is('deleted_at', null)
+        .eq('is_deleted', false)
         .order('start_at', { ascending: true });
 
-    // Filter by project if provided
+    // Filter by project
     if (options?.projectId === null) {
         query = query.is('project_id', null);
     } else if (options?.projectId) {
         query = query.eq('project_id', options.projectId);
     }
 
-    // Filter by date range if provided
+    // Filter by date range (events have start_at, tasks have start_at or due_at)
     if (options?.startDate) {
-        query = query.gte('start_at', options.startDate.toISOString());
+        // Items that end or are due after the range start
+        query = query.or(
+            `start_at.gte.${options.startDate.toISOString()},due_at.gte.${options.startDate.toISOString()}`
+        );
     }
     if (options?.endDate) {
-        query = query.lte('start_at', options.endDate.toISOString());
+        query = query.or(
+            `start_at.lte.${options.endDate.toISOString()},due_at.lte.${options.endDate.toISOString()}`
+        );
     }
 
     const { data, error } = await query;
 
     if (error) {
-        console.error('Error fetching calendar events:', error);
+        console.error('Error fetching calendar items:', error);
         return [];
     }
 
-    // Fetch project names separately (cross-schema)
-    const projectIds = [...new Set((data || []).map((e: any) => e.project_id).filter(Boolean))] as string[];
+    // Filter: only events and tasks with dates
+    const calendarItems = (data || []).filter((item: any) =>
+        item.item_type === 'event' || item.start_at || item.due_at
+    );
+
+    // Fetch project names (cross-schema)
+    const projectIds = [...new Set(calendarItems.map((e: any) => e.project_id).filter(Boolean))] as string[];
     let projectMap: Record<string, string> = {};
     if (projectIds.length > 0) {
         const { data: projects } = await supabase
@@ -261,50 +281,62 @@ export async function getCalendarEvents(
         projectMap = Object.fromEntries((projects || []).map((p: any) => [p.id, p.name]));
     }
 
-    return (data || []).map((event: any) => ({
-        ...event,
-        project_name: event.project_id ? projectMap[event.project_id] || null : null
-    })) as CalendarEvent[];
+    return calendarItems.map((item: any) => ({
+        ...item,
+        project_name: item.project_id ? projectMap[item.project_id] || null : null
+    })) as PlannerItem[];
 }
 
-export async function getCalendarEvent(eventId: string): Promise<CalendarEvent | null> {
+/**
+ * Get a single item with attendees (for event detail)
+ */
+export async function getItemWithAttendees(itemId: string): Promise<PlannerItem | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('calendar_events')
+        .schema('planner').from('items')
         .select(`
             *,
-            calendar_event_attendees (
+            attendees (
                 id,
                 member_id,
                 status,
                 created_at
             )
         `)
-        .eq('id', eventId)
+        .eq('id', itemId)
         .single();
 
     if (error) {
-        console.error('Error fetching calendar event:', error);
+        console.error('Error fetching item with attendees:', error);
         return null;
     }
 
-    // Fetch project name separately (cross-schema)
-    let eventProjectName: string | null = null;
+    // Fetch project name (cross-schema)
+    let itemProjectName: string | null = null;
     if (data.project_id) {
         const { data: projectData } = await supabase
             .schema('projects').from('projects')
             .select('name')
             .eq('id', data.project_id)
             .single();
-        eventProjectName = projectData?.name || null;
+        itemProjectName = projectData?.name || null;
     }
 
     return {
         ...data,
-        project_name: eventProjectName,
-        attendees: data.calendar_event_attendees || []
-    } as CalendarEvent;
+        project_name: itemProjectName,
+        attendees: data.attendees || []
+    } as PlannerItem;
 }
 
+// ============================================
+// BACKWARD COMPAT ALIASES (remove after migration)
+// ============================================
 
+/** @deprecated Use getItemDetails */
+export const getCardDetails = getItemDetails;
+/** @deprecated Use getCalendarItems */
+export const getCalendarEvents = getCalendarItems;
+/** @deprecated Use getItemWithAttendees */
+export const getCalendarEvent = getItemWithAttendees;

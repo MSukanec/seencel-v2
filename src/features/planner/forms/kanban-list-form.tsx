@@ -19,6 +19,7 @@ const formSchema = z.object({
 
 interface KanbanListFormProps {
     boardId: string;
+    organizationId: string;
     initialData?: KanbanList;
     onSuccess?: (list: KanbanList) => void;
     /** Called BEFORE server response for optimistic UI */
@@ -27,7 +28,7 @@ interface KanbanListFormProps {
     onRollback?: (listId: string) => void;
 }
 
-export function KanbanListForm({ boardId, initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanListFormProps) {
+export function KanbanListForm({ boardId, organizationId, initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback }: KanbanListFormProps) {
     const [isPending, startTransition] = useTransition();
     const { closeModal } = useModal();
 
@@ -71,6 +72,7 @@ export function KanbanListForm({ boardId, initialData, onSuccess, onOptimisticCr
             const tempList: KanbanList = {
                 id: tempId,
                 board_id: boardId,
+                organization_id: organizationId,
                 name: values.name,
                 color: values.color || null,
                 position: 9999,

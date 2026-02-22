@@ -49,8 +49,8 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
     );
 
     const priorityConfig = PRIORITY_CONFIG[optimisticCard.priority];
-    const hasDueDate = !!optimisticCard.due_date;
-    const parsedDueDate = hasDueDate ? parseDateFromDB(optimisticCard.due_date!) : null;
+    const hasDueDate = !!optimisticCard.due_at;
+    const parsedDueDate = hasDueDate ? parseDateFromDB(optimisticCard.due_at!) : null;
     const isOverdue = hasDueDate && parsedDueDate && isPast(parsedDueDate) && !optimisticCard.is_completed;
     const isDueToday = hasDueDate && parsedDueDate && isToday(parsedDueDate);
 
@@ -206,7 +206,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
                             ) : (
                                 <Calendar className="h-3 w-3" />
                             )}
-                            {format(parseDateFromDB(card.due_date!)!, "d MMM", { locale: es })}
+                            {format(parseDateFromDB(card.due_at!)!, "d MMM", { locale: es })}
                         </div>
                     )}
 
@@ -247,39 +247,21 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
                     )}
                 </div>
 
-                {/* Assignees */}
-                {(card.assigned_to || (card.assignees && card.assignees.length > 0)) && (
-                    <div className="flex items-center justify-end mt-2 -mr-1">
-                        <div className="flex -space-x-2">
-                            {card.assigned_to && (() => {
-                                const member = members?.find(m => m.id === card.assigned_to);
-                                if (!member) return null;
-                                return (
-                                    <Avatar
-                                        key={member.id}
-                                        className="h-6 w-6 border-2 border-card"
-                                    >
-                                        <AvatarImage src={member.avatar_url || ""} />
-                                        <AvatarFallback className="text-[10px]">
-                                            {member.full_name?.[0] || "?"}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                );
-                            })()}
-                            {card.assignees?.slice(0, 3).map((assignee) => (
-                                <Avatar
-                                    key={assignee.member_id}
-                                    className="h-6 w-6 border-2 border-card"
-                                >
-                                    <AvatarImage src={assignee.avatar_url || ""} />
-                                    <AvatarFallback className="text-[10px]">
-                                        {assignee.full_name?.[0] || "?"}
-                                    </AvatarFallback>
-                                </Avatar>
-                            ))}
+                {/* Assignee */}
+                {card.assigned_to && (() => {
+                    const member = members?.find(m => m.id === card.assigned_to);
+                    if (!member) return null;
+                    return (
+                        <div className="flex items-center justify-end mt-2 -mr-1">
+                            <Avatar className="h-6 w-6 border-2 border-card">
+                                <AvatarImage src={member.avatar_url || ""} />
+                                <AvatarFallback className="text-[10px]">
+                                    {member.full_name?.[0] || "?"}
+                                </AvatarFallback>
+                            </Avatar>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
             <DeleteConfirmationDialog

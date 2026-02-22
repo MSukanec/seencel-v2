@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T15:06:00.294Z
+> Generated: 2026-02-22T17:21:28.968Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -738,30 +738,6 @@ $function$
 ```
 </details>
 
-### `iam.can_view_org(p_organization_id uuid)` 🔐
-
-- **Returns**: boolean
-- **Kind**: function | STABLE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION iam.can_view_org(p_organization_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public', 'iam'
-AS $function$
-    SELECT
-        iam.is_admin()
-        OR iam.is_demo_org(p_organization_id)
-        OR iam.is_org_member(p_organization_id)
-        OR iam.is_external_actor(p_organization_id)
-        OR iam.is_organization_client(p_organization_id);
-$function$
-```
-</details>
-
 ### `iam.can_view_org(p_organization_id uuid, p_permission_key text)` 🔐
 
 - **Returns**: boolean
@@ -784,6 +760,30 @@ AS $function$
       AND iam.has_permission(p_organization_id, p_permission_key)
     )
     OR iam.external_has_scope(p_organization_id, p_permission_key);
+$function$
+```
+</details>
+
+### `iam.can_view_org(p_organization_id uuid)` 🔐
+
+- **Returns**: boolean
+- **Kind**: function | STABLE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION iam.can_view_org(p_organization_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'iam'
+AS $function$
+    SELECT
+        iam.is_admin()
+        OR iam.is_demo_org(p_organization_id)
+        OR iam.is_org_member(p_organization_id)
+        OR iam.is_external_actor(p_organization_id)
+        OR iam.is_organization_client(p_organization_id);
 $function$
 ```
 </details>

@@ -50,11 +50,11 @@ export function MoveListModal({ listId, currentBoardId, organizationId, onSucces
             // So simplistic fetch is fine.
 
             const { data, error } = await supabase
-                .schema('planner').from('kanban_boards')
+                .schema('planner').from('boards')
                 .select('*')
                 .eq('organization_id', organizationId)
                 .neq('id', currentBoardId)
-                .is('deleted_at', null)
+                .eq('is_deleted', false)
                 .order('name');
 
             if (data) {

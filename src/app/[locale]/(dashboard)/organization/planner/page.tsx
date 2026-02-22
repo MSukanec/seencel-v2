@@ -3,14 +3,10 @@ import { getDashboardData } from "@/features/organization/queries";
 import { getActiveOrganizationProjects } from "@/features/projects/queries";
 import { getOrganizationPlanFeatures } from "@/actions/plans";
 import { redirect } from "next/navigation";
-import { PlannerPageView } from "@/features/planner/views/planner-page";
+import { PlannerView } from "@/features/planner/views/planner-view";
 import { getTranslations } from "next-intl/server";
 import { Metadata } from "next";
 import { ErrorDisplay } from "@/components/ui/error-display";
-
-interface PlannerPageProps {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
 
 export async function generateMetadata({
     params
@@ -27,7 +23,7 @@ export async function generateMetadata({
     };
 }
 
-export default async function PlannerPage({ searchParams }: PlannerPageProps) {
+export default async function PlannerPage() {
     try {
         const dashboardData = await getDashboardData();
 
@@ -46,40 +42,20 @@ export default async function PlannerPage({ searchParams }: PlannerPageProps) {
             getOrganizationPlanFeatures(organizationId)
         ]);
 
-        // Get max boards from plan (-1 = unlimited)
-        const maxBoards = planFeatures?.max_org_boards ?? -1;
         const isTeamsEnabled = planFeatures?.can_invite_members ?? false;
 
-        // Determine active board ID from URL params
-        const resolvedParams = await searchParams;
-        const paramBoardId = typeof resolvedParams.boardId === 'string' ? resolvedParams.boardId : null;
-
-        let activeBoardId = paramBoardId;
-        if (!activeBoardId && boards.length > 0) {
-            activeBoardId = boards[0].id;
-        }
-
-        // Fetch Active Board Data
+        // Single-board architecture: auto-resolve the first (default) board
         let activeBoardData = null;
-        if (activeBoardId) {
-            activeBoardData = await getBoardWithData(activeBoardId);
-            if (!activeBoardData && boards.length > 0 && activeBoardId !== boards[0].id) {
-                activeBoardData = await getBoardWithData(boards[0].id);
-                activeBoardId = boards[0].id;
-            }
+        if (boards.length > 0) {
+            activeBoardData = await getBoardWithData(boards[0].id);
         }
 
         return (
-            <PlannerPageView
-                boards={boards}
-                activeBoardId={activeBoardId}
+            <PlannerView
                 activeBoardData={activeBoardData}
                 organizationId={organizationId}
-
-                baseUrl="/organization/planner"
                 calendarEvents={calendarEvents}
                 projects={projects}
-                maxBoards={maxBoards}
                 isTeamsEnabled={isTeamsEnabled}
             />
         );

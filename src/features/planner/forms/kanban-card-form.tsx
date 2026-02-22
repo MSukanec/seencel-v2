@@ -60,6 +60,7 @@ const formSchema = z.object({
 });
 
 interface KanbanCardFormProps {
+    organizationId: string;
     boardId: string;
     listId: string;
     projectId?: string | null;
@@ -75,7 +76,7 @@ interface KanbanCardFormProps {
     isTeamsEnabled?: boolean;
 }
 
-export function KanbanCardForm({ boardId, listId, projectId, projects = [], members = [], initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback, isTeamsEnabled = false }: KanbanCardFormProps) {
+export function KanbanCardForm({ organizationId, boardId, listId, projectId, projects = [], members = [], initialData, onSuccess, onOptimisticCreate, onOptimisticUpdate, onRollback, isTeamsEnabled = false }: KanbanCardFormProps) {
     const [isPending, startTransition] = useTransition();
     const { closeModal } = useModal();
 
@@ -85,8 +86,8 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
             title: initialData?.title || "",
             description: initialData?.description || "",
             priority: (initialData?.priority as any) || "none",
-            start_date: initialData?.start_date ? formatDateForDB(parseDateFromDB(initialData.start_date)!) : "",
-            due_date: initialData?.due_date ? formatDateForDB(parseDateFromDB(initialData.due_date)!) : "",
+            start_date: initialData?.start_at ? formatDateForDB(parseDateFromDB(initialData.start_at)!) : "",
+            due_date: initialData?.due_at ? formatDateForDB(parseDateFromDB(initialData.due_at)!) : "",
             estimated_hours: initialData?.estimated_hours ?? null,
             assigned_to: initialData?.assigned_to || "none",
             cover_image_url: initialData?.cover_image_url || null,
@@ -119,8 +120,8 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
             title: values.title,
             description: values.description || null,
             priority: values.priority as KanbanPriority,
-            due_date: values.due_date || null,
-            start_date: values.start_date || null,
+            due_at: values.due_date || null,
+            start_at: values.start_date || null,
             estimated_hours: null,
             assigned_to: (values.assigned_to === "none" ? null : values.assigned_to) || null,
             cover_image_url: values.cover_image_url || null,
@@ -151,25 +152,42 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
             const tempId = `temp-${Date.now()}`;
             const tempCard: KanbanCard = {
                 id: tempId,
+                organization_id: organizationId,
+                item_type: 'task',
                 list_id: listId,
                 board_id: boardId,
                 title: cardData.title,
                 description: cardData.description,
+                color: null,
                 position: 9999,
+                status: 'todo',
                 priority: cardData.priority,
-                due_date: cardData.due_date,
-                start_date: cardData.start_date,
+                start_at: cardData.start_at,
+                due_at: cardData.due_at,
+                end_at: null,
+                is_all_day: true,
+                timezone: 'America/Argentina/Buenos_Aires',
                 is_completed: false,
                 completed_at: null,
                 is_archived: false,
+                archived_at: null,
+                is_deleted: false,
+                deleted_at: null,
                 cover_color: null,
                 cover_image_url: cardData.cover_image_url || null,
                 estimated_hours: cardData.estimated_hours,
                 actual_hours: null,
                 assigned_to: cardData.assigned_to,
+                location: null,
+                recurrence_rule: null,
+                recurrence_end_at: null,
+                parent_item_id: null,
+                source_type: null,
+                source_id: null,
                 created_at: new Date().toISOString(),
-                updated_at: null,
+                updated_at: new Date().toISOString(),
                 created_by: null,
+                updated_by: null,
                 project_id: selectedProjectId,
             };
             onOptimisticCreate?.(tempCard);
@@ -178,6 +196,8 @@ export function KanbanCardForm({ boardId, listId, projectId, projects = [], memb
             startTransition(async () => {
                 try {
                     const result = await createCard({
+                        organization_id: organizationId,
+                        item_type: 'task',
                         board_id: boardId,
                         list_id: listId,
                         project_id: selectedProjectId,

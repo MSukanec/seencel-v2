@@ -2,10 +2,16 @@
 
 ## Propósito
 
-La Agenda es el centro de planificación de la organización. Tiene dos herramientas:
+La Agenda es el centro de planificación de la organización. Ofrece **3 modos de visualización**
+sobre el mismo dataset unificado (`planner.items`):
 
-- **Calendario**: Para eventos con fecha/hora (reuniones, hitos, plazos)
-- **Panel de Tareas**: Para organizar ideas, pendientes y cosas por hacer
+- **Lista**: Vista cronológica de eventos agrupados por fecha
+- **Panel de Tareas (Kanban)**: Tableros con listas y tarjetas para gestionar tareas
+- **Calendario**: Grilla mensual con navegación
+
+El selector de modo está integrado en el **Toolbar** (header) como un `ToolbarTabs` animado
+con íconos (`List`, `LayoutGrid`, `Calendar`). El modo seleccionado persiste en la URL
+como `?view=list|kanban|calendar`.
 
 ## ⚠️ Panel de Tareas ≠ Tareas de Obra
 
@@ -27,13 +33,29 @@ planner/
 ├── actions/          # Server actions
 ├── components/       # Componentes internos
 │   ├── kanban-*      # Todo lo de paneles (dashboard, board, card, column)
-│   ├── planner-calendar.tsx   # Calendario completo
-│   └── planner-list-view.tsx  # Vista lista del calendario
+│   ├── planner-calendar.tsx   # Calendario (sin Toolbar propio)
+│   └── planner-list.tsx       # Vista lista cronológica
 ├── forms/            # Formularios (card, event, board)
-├── types.ts          # Tipos TypeScript
+├── types.ts          # Tipos TypeScript (PlannerItem unificado)
 └── views/
-    └── planner-page.tsx  # Orchestrador client (tabs Calendario/Panel)
+    └── planner-view.tsx  # Orchestrador client (3 modos: Lista/Kanban/Calendario)
 ```
+
+## Arquitectura
+
+```
+page.tsx (Server)
+├── Fetch: boards, calendarEvents, projects, planFeatures
+└── Renderiza PlannerView (Client Orchestrator)
+    ├── Toolbar con ToolbarTabs (mode selector) + search/filtros
+    └── Renderizado condicional:
+        ├── viewMode === "list"     → PlannerList
+        ├── viewMode === "kanban"   → KanbanDashboard
+        └── viewMode === "calendar" → PlannerCalendar
+```
+
+**Justificación del Client Orchestrator**: Estado compartido significativo
+entre los 3 modos (viewMode, searchQuery, typeFilter, board selection).
 
 ## Documentación
 

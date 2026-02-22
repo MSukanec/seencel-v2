@@ -90,7 +90,8 @@ export async function switchOrganization(organizationId: string) {
 export async function createOrganization(
     organizationName: string,
     businessMode: 'professional' | 'supplier' = 'professional',
-    logoFormData?: FormData
+    logoFormData?: FormData,
+    defaultCurrencyId?: string
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
 
@@ -118,6 +119,7 @@ export async function createOrganization(
         p_user_id: publicUser.id,
         p_organization_name: organizationName.trim(),
         p_business_mode: businessMode,
+        p_default_currency_id: defaultCurrencyId || null,
     });
 
     if (rpcError) {

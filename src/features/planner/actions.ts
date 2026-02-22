@@ -1,6 +1,5 @@
 "use server";
 
-
 import { sanitizeError } from "@/lib/error-utils";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -8,11 +7,11 @@ import {
     CreateBoardInput,
     UpdateBoardInput,
     CreateListInput,
-    CreateCardInput,
-    UpdateCardInput,
-    CreateCalendarEventInput,
-    UpdateCalendarEventInput
+    CreateItemInput,
+    UpdateItemInput,
 } from "./types";
+
+const PLANNER_PATH = '/organization/planner';
 
 // ============================================
 // BOARDS
@@ -22,7 +21,7 @@ export async function createBoard(input: CreateBoardInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .insert({
             name: input.name,
             description: input.description || null,
@@ -39,7 +38,7 @@ export async function createBoard(input: CreateBoardInput) {
         throw new Error('Error al crear el tablero');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
@@ -47,11 +46,8 @@ export async function updateBoard(boardId: string, input: UpdateBoardInput) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_boards')
-        .update({
-            ...input,
-            updated_at: new Date().toISOString(),
-        })
+        .schema('planner').from('boards')
+        .update(input)
         .eq('id', boardId)
         .select()
         .single();
@@ -61,16 +57,15 @@ export async function updateBoard(boardId: string, input: UpdateBoardInput) {
         throw new Error('Error al actualizar el tablero');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
 export async function deleteBoard(boardId: string) {
     const supabase = await createClient();
 
-    // Soft delete
     const { error } = await supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -82,7 +77,7 @@ export async function deleteBoard(boardId: string) {
         throw new Error('Error al eliminar el tablero');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
 // ============================================
@@ -94,7 +89,7 @@ export async function createList(input: CreateListInput) {
 
     // Get organization_id from board
     const { data: boardData } = await supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .select('organization_id')
         .eq('id', input.board_id)
         .single();
@@ -103,7 +98,7 @@ export async function createList(input: CreateListInput) {
 
     // Get max position
     const { data: existingLists } = await supabase
-        .schema('planner').from('kanban_lists')
+        .schema('planner').from('lists')
         .select('position')
         .eq('board_id', input.board_id)
         .order('position', { ascending: false })
@@ -112,7 +107,7 @@ export async function createList(input: CreateListInput) {
     const maxPosition = existingLists?.[0]?.position ?? -1;
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_lists')
+        .schema('planner').from('lists')
         .insert({
             board_id: input.board_id,
             organization_id: boardData.organization_id,
@@ -128,7 +123,7 @@ export async function createList(input: CreateListInput) {
         throw new Error(`Error al crear la columna: ${sanitizeError(error)}`);
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
@@ -136,11 +131,8 @@ export async function updateList(listId: string, input: Partial<CreateListInput>
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_lists')
-        .update({
-            ...input,
-            updated_at: new Date().toISOString(),
-        })
+        .schema('planner').from('lists')
+        .update(input)
         .eq('id', listId)
         .select()
         .single();
@@ -150,7 +142,7 @@ export async function updateList(listId: string, input: Partial<CreateListInput>
         throw new Error('Error al actualizar la columna');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
@@ -158,7 +150,7 @@ export async function deleteList(listId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .schema('planner').from('kanban_lists')
+        .schema('planner').from('lists')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -170,24 +162,22 @@ export async function deleteList(listId: string) {
         throw new Error('Error al eliminar la columna');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
 export async function moveList(listId: string, targetBoardId: string) {
     const supabase = await createClient();
 
-    // Get target board to check existence and max position
     const { data: targetBoard } = await supabase
-        .schema('planner').from('kanban_boards')
+        .schema('planner').from('boards')
         .select('id, organization_id')
         .eq('id', targetBoardId)
         .single();
 
     if (!targetBoard) throw new Error('Tablero de destino no encontrado');
 
-    // Get max position in target board
     const { data: existingLists } = await supabase
-        .schema('planner').from('kanban_lists')
+        .schema('planner').from('lists')
         .select('position')
         .eq('board_id', targetBoardId)
         .order('position', { ascending: false })
@@ -195,13 +185,11 @@ export async function moveList(listId: string, targetBoardId: string) {
 
     const maxPosition = existingLists?.[0]?.position ?? -1;
 
-    // Update list
     const { error } = await supabase
-        .schema('planner').from('kanban_lists')
+        .schema('planner').from('lists')
         .update({
             board_id: targetBoardId,
             position: maxPosition + 1,
-            updated_at: new Date().toISOString()
         })
         .eq('id', listId);
 
@@ -210,178 +198,183 @@ export async function moveList(listId: string, targetBoardId: string) {
         throw new Error('Error al mover la columna');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
 export async function reorderLists(boardId: string, listIds: string[]) {
     const supabase = await createClient();
 
-    // Update positions in batch
-    // Update positions using separate update queries to avoid upsert/insert issues
     const updates = listIds.map((id, index) =>
         supabase
-            .schema('planner').from('kanban_lists')
-            .update({ position: index, updated_at: new Date().toISOString() })
+            .schema('planner').from('lists')
+            .update({ position: index })
             .eq('id', id)
-            .eq('board_id', boardId) // Security check
+            .eq('board_id', boardId)
     );
 
     const results = await Promise.all(updates);
-
-    // Check for any errors in the batch
     const error = results.find(r => r.error)?.error;
 
     if (error) {
         console.error('Error reordering lists:', error);
-        throw new Error(`Error al reordenar las columnas: ${sanitizeError(error)} (Code: ${error.code})`);
+        throw new Error(`Error al reordenar las columnas: ${sanitizeError(error)}`);
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
 // ============================================
-// CARDS
+// ITEMS (unified tasks + events)
 // ============================================
 
-export async function createCard(input: CreateCardInput) {
+export async function createItem(input: CreateItemInput) {
     const supabase = await createClient();
 
-    // Get organization_id for the card
-    const { data: boardData } = await supabase
-        .schema('planner').from('kanban_boards')
-        .select('organization_id')
-        .eq('id', input.board_id)
-        .single();
+    // If board_id provided, get max position in the list
+    let position = 0;
+    if (input.list_id) {
+        const { data: existingItems } = await supabase
+            .schema('planner').from('items')
+            .select('position')
+            .eq('list_id', input.list_id)
+            .order('position', { ascending: false })
+            .limit(1);
 
-    if (!boardData) throw new Error('Tablero no encontrado para la tarjeta');
-
-    // Get max position in the target list
-    const { data: existingCards } = await supabase
-        .schema('planner').from('kanban_cards')
-        .select('position')
-        .eq('list_id', input.list_id)
-        .order('position', { ascending: false })
-        .limit(1);
-
-    const maxPosition = existingCards?.[0]?.position ?? -1;
+        position = (existingItems?.[0]?.position ?? -1) + 1;
+    }
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_cards')
+        .schema('planner').from('items')
         .insert({
-            list_id: input.list_id,
-            board_id: input.board_id,
-            organization_id: boardData.organization_id,
+            organization_id: input.organization_id,
+            item_type: input.item_type || 'task',
             title: input.title,
             description: input.description || null,
+            color: input.color || null,
+            // Time
+            start_at: input.start_at || null,
+            due_at: input.due_at || null,
+            end_at: input.end_at || null,
+            is_all_day: input.is_all_day ?? true,
+            timezone: input.timezone || 'America/Argentina/Buenos_Aires',
+            // Task
             priority: input.priority || 'none',
-            due_date: input.due_date || null,
-            start_date: input.start_date || null,
             estimated_hours: input.estimated_hours || null,
             assigned_to: input.assigned_to || null,
-            cover_image_url: input.cover_image_url || null,
+            // Event
+            location: input.location || null,
+            // Kanban
+            board_id: input.board_id || null,
+            list_id: input.list_id || null,
+            position,
+            // Context
             project_id: input.project_id || null,
-            position: maxPosition + 1,
+            cover_image_url: input.cover_image_url || null,
+            // Source
+            source_type: input.source_type || null,
+            source_id: input.source_id || null,
         })
         .select()
         .single();
 
     if (error) {
-        console.error('Error creating card:', error);
-        throw new Error(`Error al crear la tarjeta: ${sanitizeError(error)} (Code: ${error.code})`);
+        console.error('Error creating item:', error);
+        throw new Error(`Error al crear el item: ${sanitizeError(error)}`);
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
-export async function updateCard(cardId: string, input: UpdateCardInput) {
+export async function updateItem(itemId: string, input: UpdateItemInput) {
     const supabase = await createClient();
 
+    // Handle completion
+    const updateData: any = { ...input };
+    if (input.is_completed === true && !input.status) {
+        updateData.status = 'done';
+        updateData.completed_at = new Date().toISOString();
+    } else if (input.is_completed === false) {
+        updateData.completed_at = null;
+        if (!input.status) updateData.status = 'todo';
+    }
+
     const { data, error } = await supabase
-        .schema('planner').from('kanban_cards')
-        .update({
-            ...input,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', cardId)
+        .schema('planner').from('items')
+        .update(updateData)
+        .eq('id', itemId)
         .select()
         .single();
 
     if (error) {
-        console.error('Error updating card:', error);
-        throw new Error(`Error al actualizar la tarjeta: ${sanitizeError(error)} (Code: ${error.code})`);
+        console.error('Error updating item:', error);
+        throw new Error(`Error al actualizar el item: ${sanitizeError(error)}`);
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
-export async function deleteCard(cardId: string) {
+export async function deleteItem(itemId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .schema('planner').from('kanban_cards')
+        .schema('planner').from('items')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
         })
-        .eq('id', cardId);
+        .eq('id', itemId);
 
     if (error) {
-        console.error('Error deleting card:', error);
-        throw new Error('Error al eliminar la tarjeta');
+        console.error('Error deleting item:', error);
+        throw new Error('Error al eliminar el item');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
-export async function moveCard(cardId: string, targetListId: string, targetPosition: number) {
+export async function moveItem(itemId: string, targetListId: string, targetPosition: number) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .schema('planner').from('kanban_cards')
+        .schema('planner').from('items')
         .update({
             list_id: targetListId,
             position: targetPosition,
-            updated_at: new Date().toISOString(),
         })
-        .eq('id', cardId);
+        .eq('id', itemId);
 
     if (error) {
-        console.error('Error moving card:', error);
-        throw new Error('Error al mover la tarjeta');
+        console.error('Error moving item:', error);
+        throw new Error('Error al mover el item');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
-export async function reorderCards(listId: string, cardIds: string[]) {
+export async function reorderItems(listId: string, itemIds: string[]) {
     const supabase = await createClient();
 
-    // Update positions in batch using individual updates
-    // This is safer than upsert for partial updates due to NOT NULL constraints
-    const updates = cardIds.map((id, index) =>
+    const updates = itemIds.map((id, index) =>
         supabase
-            .schema('planner').from('kanban_cards')
+            .schema('planner').from('items')
             .update({
                 position: index,
-                list_id: listId, // Ensure list_id is consistent
-                updated_at: new Date().toISOString()
+                list_id: listId,
             })
             .eq('id', id)
     );
 
     const results = await Promise.all(updates);
-
-    // Check for errors
     const error = results.find(r => r.error)?.error;
 
     if (error) {
-        console.error('Error reordering cards:', error);
-        throw new Error(`Error al reordenar las tarjetas: ${sanitizeError(error)} (Code: ${error.code})`);
+        console.error('Error reordering items:', error);
+        throw new Error(`Error al reordenar los items: ${sanitizeError(error)}`);
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
 // ============================================
@@ -392,7 +385,7 @@ export async function createLabel(organizationId: string, name: string, color: s
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema('planner').from('kanban_labels')
+        .schema('planner').from('labels')
         .insert({
             organization_id: organizationId,
             name,
@@ -406,35 +399,35 @@ export async function createLabel(organizationId: string, name: string, color: s
         throw new Error('Error al crear la etiqueta');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
     return data;
 }
 
-export async function addLabelToCard(cardId: string, labelId: string) {
+export async function addLabelToItem(itemId: string, labelId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .schema('planner').from('kanban_card_labels')
+        .schema('planner').from('item_labels')
         .insert({
-            card_id: cardId,
+            item_id: itemId,
             label_id: labelId,
         });
 
-    if (error && error.code !== '23505') { // Ignore duplicate key error
+    if (error && error.code !== '23505') {
         console.error('Error adding label:', error);
         throw new Error('Error al agregar la etiqueta');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
-export async function removeLabelFromCard(cardId: string, labelId: string) {
+export async function removeLabelFromItem(itemId: string, labelId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .schema('planner').from('kanban_card_labels')
+        .schema('planner').from('item_labels')
         .delete()
-        .eq('card_id', cardId)
+        .eq('item_id', itemId)
         .eq('label_id', labelId);
 
     if (error) {
@@ -442,85 +435,42 @@ export async function removeLabelFromCard(cardId: string, labelId: string) {
         throw new Error('Error al quitar la etiqueta');
     }
 
-    revalidatePath('/organization/kanban');
+    revalidatePath(PLANNER_PATH);
 }
 
 // ============================================
-// CALENDAR EVENTS
+// BACKWARD COMPAT ALIASES (remove after migration)
 // ============================================
 
-export async function createCalendarEvent(input: CreateCalendarEventInput) {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .schema('planner').from('calendar_events')
-        .insert({
-            organization_id: input.organization_id,
-            project_id: input.project_id || null,
-            title: input.title,
-            description: input.description || null,
-            location: input.location || null,
-            color: input.color || '#3b82f6',
-            start_at: input.start_at,
-            end_at: input.end_at || null,
-            is_all_day: input.is_all_day || false,
-            timezone: input.timezone || 'America/Argentina/Buenos_Aires',
-            source_type: input.source_type || null,
-            source_id: input.source_id || null,
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating calendar event:', error);
-        throw new Error(`Error al crear el evento: ${sanitizeError(error)}`);
-    }
-
-    revalidatePath('/organization/planner');
-    return data;
+/** @deprecated Use createItem with item_type: 'task' */
+export async function createCard(input: CreateItemInput) {
+    return createItem({ ...input, item_type: 'task' });
 }
 
-export async function updateCalendarEvent(eventId: string, input: UpdateCalendarEventInput) {
-    const supabase = await createClient();
+/** @deprecated Use updateItem */
+export const updateCard = updateItem;
+/** @deprecated Use deleteItem */
+export const deleteCard = deleteItem;
+/** @deprecated Use moveItem */
+export const moveCard = moveItem;
+/** @deprecated Use reorderItems */
+export const reorderCards = reorderItems;
+/** @deprecated Use addLabelToItem */
+export const addLabelToCard = addLabelToItem;
+/** @deprecated Use removeLabelFromItem */
+export const removeLabelFromCard = removeLabelFromItem;
 
-    const { data, error } = await supabase
-        .schema('planner').from('calendar_events')
-        .update({
-            ...input,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', eventId)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error updating calendar event:', error);
-        throw new Error(`Error al actualizar el evento: ${sanitizeError(error)}`);
-    }
-
-    revalidatePath('/organization/planner');
-    return data;
+/** @deprecated Use createItem with item_type: 'event' */
+export async function createCalendarEvent(input: CreateItemInput) {
+    return createItem({
+        ...input,
+        item_type: 'event',
+        color: input.color || '#3b82f6',
+        is_all_day: input.is_all_day ?? false,
+    });
 }
 
-export async function deleteCalendarEvent(eventId: string) {
-    const supabase = await createClient();
-
-    // Soft delete
-    const { error } = await supabase
-        .schema('planner').from('calendar_events')
-        .update({
-            // is_deleted: true, // Removed in favor of deleted_at
-            deleted_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', eventId);
-
-    if (error) {
-        console.error('Error deleting calendar event:', error);
-        throw new Error(`Error al eliminar el evento: ${sanitizeError(error)} (${error.code})`);
-    }
-
-    revalidatePath('/organization/planner');
-}
-
-
+/** @deprecated Use updateItem */
+export const updateCalendarEvent = updateItem;
+/** @deprecated Use deleteItem */
+export const deleteCalendarEvent = deleteItem;
