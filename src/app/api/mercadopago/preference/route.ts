@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
         const failureUrl = `${baseUrl}/checkout/failure?source=mercadopago&${productParams}`;
 
         // Create preference
+        // Note: MercadoPago rejects localhost URLs for back_urls/auto_return/notification_url
+        const isLocalhost = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
         const preference = await mpPreferenceApi.create({
             body: {
                 items: [
@@ -138,13 +140,16 @@ export async function POST(request: NextRequest) {
                     name: internalUser.full_name || '',
                 },
                 external_reference: externalReference,
-                back_urls: {
-                    success: successUrl,
-                    pending: pendingUrl,
-                    failure: failureUrl,
-                },
-                auto_return: 'approved',
-                notification_url: `${baseUrl}/api/mercadopago/webhook`,
+                // Only set back_urls and auto_return for non-localhost (MP rejects localhost)
+                ...(isLocalhost ? {} : {
+                    back_urls: {
+                        success: successUrl,
+                        pending: pendingUrl,
+                        failure: failureUrl,
+                    },
+                    auto_return: 'approved' as const,
+                    notification_url: `${baseUrl}/api/mercadopago/webhook`,
+                }),
                 statement_descriptor: 'SEENCEL',
                 expires: true,
                 expiration_date_from: new Date().toISOString(),
@@ -193,9 +198,16 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('MercadoPago preference error:', error);
+        console.error('MercadoPago preference error (full):', JSON.stringify(error, null, 2));
+        console.error('MercadoPago preference error (raw):', error);
+        let errorMessage = 'Failed to create preference';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null) {
+            errorMessage = (error as any).message || (error as any).cause || JSON.stringify(error);
+        }
         return NextResponse.json(
-            { error: 'Failed to create preference' },
+            { error: errorMessage },
             { status: 500 }
         );
     }

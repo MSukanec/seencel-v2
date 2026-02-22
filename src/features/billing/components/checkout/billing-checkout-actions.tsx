@@ -160,7 +160,9 @@ export function BillingCheckoutActions({
                 });
 
                 if (!response.ok) {
-                    throw new Error("Error al crear preferencia de pago");
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error("[MP Preference] Server error:", response.status, errorData);
+                    throw new Error(errorData.error || "Error al crear preferencia de pago");
                 }
 
                 const data = await response.json();
