@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] RLS Policies (56)
+## [CATALOG] RLS Policies (62)
 
 ### `labor_categories` (3 policies)
 
@@ -175,6 +175,35 @@ is_admin()
 - **USING**:
 ```sql
 true
+```
+
+### `material_prices` (3 policies)
+
+#### MEMBERS INSERT MATERIAL_PRICES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT MATERIAL_PRICES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS UPDATE MATERIAL_PRICES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
 ```
 
 ### `material_types` (3 policies)
@@ -362,6 +391,35 @@ is_admin()
 - **USING**:
 ```sql
 true
+```
+
+### `task_recipe_external_services` (3 policies)
+
+#### MEMBERS INSERT TASK_RECIPE_EXTERNAL_SERVICES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT TASK_RECIPE_EXTERNAL_SERVICES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((is_deleted = false) AND is_org_member(organization_id))
+```
+
+#### MEMBERS UPDATE TASK_RECIPE_EXTERNAL_SERVICES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
 ```
 
 ### `task_recipe_labor` (3 policies)

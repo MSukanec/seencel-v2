@@ -245,43 +245,17 @@ export async function getTaskParameters() {
 }
 
 /**
- * Get all element-parameter links for the sidebar filter
+ * @deprecated Table task_element_parameters was removed from the DB.
  */
 export async function getElementParameterLinks() {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .schema('catalog').from('task_element_parameters')
-        .select('element_id, parameter_id');
-
-    if (error) {
-        console.error("Error fetching element-parameter links:", error);
-        return { data: [], error };
-    }
-
-    return { data: data || [], error: null };
+    return { data: [], error: null };
 }
 
 /**
- * Get linked parameter IDs for a specific element
+ * @deprecated Table task_element_parameters was removed from the DB.
  */
 export async function getLinkedParametersForElement(elementId: string) {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .schema('catalog').from('task_element_parameters')
-        .select('parameter_id')
-        .eq('element_id', elementId);
-
-    if (error) {
-        console.error("Error fetching linked parameters for element:", error);
-        return { data: [], error };
-    }
-
-    return {
-        data: data?.map(d => d.parameter_id) || [],
-        error: null
-    };
+    return { data: [], error: null };
 }
 
 /**
@@ -465,47 +439,17 @@ export async function getElementById(elementId: string) {
 }
 
 /**
- * Get element IDs linked to a division
+ * @deprecated Table task_division_elements was removed from the DB.
  */
 export async function getDivisionElementIds(divisionId: string) {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .schema('catalog').from('task_division_elements')
-        .select('element_id')
-        .eq('division_id', divisionId);
-
-    if (error) {
-        console.error('Error fetching division elements:', error);
-        return { data: [], error };
-    }
-
-    return {
-        data: (data || []).map(d => d.element_id),
-        error: null
-    };
+    return { data: [], error: null };
 }
 
 /**
- * Get action IDs linked to a division
+ * @deprecated Table task_division_actions was removed from the DB.
  */
 export async function getDivisionActionIds(divisionId: string) {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .schema('catalog').from('task_division_actions')
-        .select('action_id')
-        .eq('division_id', divisionId);
-
-    if (error) {
-        console.error('Error fetching division actions:', error);
-        return { data: [], error };
-    }
-
-    return {
-        data: (data || []).map(d => d.action_id),
-        error: null
-    };
+    return { data: [], error: null };
 }
 
 /**

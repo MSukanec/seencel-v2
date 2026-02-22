@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [PROJECTS] Views (4)
 
-### `projects.project_access_view` (🔐 DEFINER)
+### `projects.project_access_view` (🔓 INVOKER)
 
 ```sql
 SELECT pa.id,
@@ -42,7 +42,7 @@ SELECT pa.id,
   WHERE (pa.is_deleted = false);
 ```
 
-### `projects.project_clients_view` (🔐 DEFINER)
+### `projects.project_clients_view` (🔓 INVOKER)
 
 ```sql
 SELECT pc.id,
@@ -89,7 +89,7 @@ SELECT pc.id,
   WHERE (pc.is_deleted = false);
 ```
 
-### `projects.project_labor_view` (🔐 DEFINER)
+### `projects.project_labor_view` (🔓 INVOKER)
 
 ```sql
 SELECT pl.id,

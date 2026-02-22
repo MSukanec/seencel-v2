@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [AUDIT] Views (1)
 
-### `audit.organization_activity_logs_view` (🔐 DEFINER)
+### `audit.organization_activity_logs_view` (🔓 INVOKER)
 
 ```sql
 SELECT l.id,

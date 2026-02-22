@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [CONSTRUCTION] Views (5)
 
-### `construction.construction_tasks_view` (🔐 DEFINER)
+### `construction.construction_tasks_view` (🔓 INVOKER)
 
 ```sql
 SELECT ct.id,
@@ -71,7 +71,7 @@ SELECT ct.id,
   WHERE (ct.is_deleted = false);
 ```
 
-### `construction.contract_summary_view` (🔐 DEFINER)
+### `construction.contract_summary_view` (🔓 INVOKER)
 
 ```sql
 SELECT c.id,
@@ -105,7 +105,7 @@ SELECT c.id,
   WHERE ((c.quote_type = 'contract'::text) AND (c.is_deleted = false));
 ```
 
-### `construction.labor_insurance_view` (🔐 DEFINER)
+### `construction.labor_insurance_view` (🔓 INVOKER)
 
 ```sql
 SELECT li.id,
@@ -142,7 +142,7 @@ SELECT li.id,
      LEFT JOIN projects.projects proj ON ((proj.id = li.project_id)));
 ```
 
-### `construction.project_material_requirements_view` (🔐 DEFINER)
+### `construction.project_material_requirements_view` (🔓 INVOKER)
 
 ```sql
 SELECT ctms.project_id,
@@ -164,7 +164,7 @@ SELECT ctms.project_id,
   GROUP BY ctms.project_id, ctms.organization_id, ctms.material_id, m.name, u.name, m.category_id, mc.name;
 ```
 
-### `construction.quotes_view` (🔐 DEFINER)
+### `construction.quotes_view` (🔓 INVOKER)
 
 ```sql
 SELECT q.id,

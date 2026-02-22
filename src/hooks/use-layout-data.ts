@@ -103,7 +103,7 @@ export function useLayoutData(): LayoutData {
                 'postgres_changes',
                 {
                     event: 'UPDATE',
-                    schema: 'public',
+                    schema: 'iam',
                     table: 'organizations',
                     filter: `id=eq.${orgId}`,
                 },
@@ -200,7 +200,7 @@ export function useLayoutData(): LayoutData {
                 'postgres_changes',
                 {
                     event: '*',
-                    schema: 'public',
+                    schema: 'projects',
                     table: 'projects',
                     filter: `organization_id=eq.${orgId}`,
                 },

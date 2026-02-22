@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [ACADEMY] Views (7)
 
-### `academy.course_lesson_completions_view` (🔐 DEFINER)
+### `academy.course_lesson_completions_view` (🔓 INVOKER)
 
 ```sql
 SELECT clp.id AS progress_id,
@@ -27,7 +27,7 @@ SELECT clp.id AS progress_id,
      JOIN academy.courses c ON ((c.id = cm.course_id)));
 ```
 
-### `academy.course_lessons_total_view` (🔐 DEFINER)
+### `academy.course_lessons_total_view` (🔓 INVOKER)
 
 ```sql
 SELECT c.id AS course_id,
@@ -38,7 +38,7 @@ SELECT c.id AS course_id,
   GROUP BY c.id;
 ```
 
-### `academy.course_progress_view` (🔐 DEFINER)
+### `academy.course_progress_view` (🔓 INVOKER)
 
 ```sql
 SELECT t.course_id,
@@ -50,7 +50,7 @@ SELECT t.course_id,
      JOIN academy.course_user_course_done_view d ON ((d.course_id = t.course_id)));
 ```
 
-### `academy.course_user_active_days_view` (🔐 DEFINER)
+### `academy.course_user_active_days_view` (🔓 INVOKER)
 
 ```sql
 SELECT DISTINCT p.user_id,
@@ -58,7 +58,7 @@ SELECT DISTINCT p.user_id,
    FROM academy.course_lesson_progress p;
 ```
 
-### `academy.course_user_course_done_view` (🔐 DEFINER)
+### `academy.course_user_course_done_view` (🔓 INVOKER)
 
 ```sql
 SELECT m.course_id,
@@ -70,7 +70,7 @@ SELECT m.course_id,
   GROUP BY m.course_id, p.user_id;
 ```
 
-### `academy.course_user_global_progress_view` (🔐 DEFINER)
+### `academy.course_user_global_progress_view` (🔓 INVOKER)
 
 ```sql
 SELECT cpv.user_id,
@@ -81,7 +81,7 @@ SELECT cpv.user_id,
   GROUP BY cpv.user_id;
 ```
 
-### `academy.course_user_study_time_view` (🔐 DEFINER)
+### `academy.course_user_study_time_view` (🔓 INVOKER)
 
 ```sql
 SELECT p.user_id,

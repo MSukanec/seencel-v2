@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] RLS Policies (24)
+## [CONSTRUCTION] RLS Policies (27)
 
 ### `construction_dependencies` (4 policies)
 
@@ -41,6 +41,35 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 - **USING**:
 ```sql
 can_view_org(organization_id, 'projects.view'::text)
+```
+
+### `construction_phases` (3 policies)
+
+#### MEMBERS INSERT CONSTRUCTION_PHASES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT CONSTRUCTION_PHASES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((organization_id IS NULL) OR is_org_member(organization_id))
+```
+
+#### MEMBERS UPDATE CONSTRUCTION_PHASES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((organization_id IS NOT NULL) AND is_org_member(organization_id))
 ```
 
 ### `construction_task_material_snapshots` (3 policies)

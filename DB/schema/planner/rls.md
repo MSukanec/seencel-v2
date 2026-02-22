@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PLANNER] RLS Policies (25)
+## [PLANNER] RLS Policies (38)
 
 ### `attachments` (3 policies)
 
@@ -81,6 +81,35 @@ is_org_member(organization_id)
 - **USING**:
 ```sql
 (is_org_member(organization_id) AND (is_deleted = false))
+```
+
+### `boards` (3 policies)
+
+#### MEMBERS INSERT BOARDS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT BOARDS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((is_deleted = false) AND is_org_member(organization_id))
+```
+
+#### MEMBERS UPDATE BOARDS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
 ```
 
 ### `checklist_items` (3 policies)
@@ -170,7 +199,16 @@ is_org_member(organization_id)
 (is_org_member(organization_id) AND (is_deleted = false))
 ```
 
-### `item_labels` (2 policies)
+### `item_labels` (3 policies)
+
+#### MIEMBROS BORRAN ITEM_LABELS
+
+- **Command**: DELETE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
 
 #### MIEMBROS CREAN ITEM_LABELS
 
@@ -208,6 +246,93 @@ is_org_member(organization_id)
 - **USING**:
 ```sql
 (is_org_member(organization_id) AND (is_deleted = false))
+```
+
+### `items` (3 policies)
+
+#### MEMBERS INSERT ITEMS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT ITEMS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((is_deleted = false) AND is_org_member(organization_id))
+```
+
+#### MEMBERS UPDATE ITEMS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+### `labels` (3 policies)
+
+#### MEMBERS INSERT LABELS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT LABELS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS UPDATE LABELS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+### `lists` (3 policies)
+
+#### MEMBERS INSERT LISTS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MEMBERS SELECT LISTS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((is_deleted = false) AND is_org_member(organization_id))
+```
+
+#### MEMBERS UPDATE LISTS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_org_member(organization_id)
 ```
 
 ### `mentions` (2 policies)

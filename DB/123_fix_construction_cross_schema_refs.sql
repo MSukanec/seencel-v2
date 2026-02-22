@@ -1,23 +1,21 @@
-# Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:41:22.161Z
-> Source: Supabase PostgreSQL (read-only introspection)
-> ⚠️ This file is auto-generated. Do NOT edit manually.
+-- =================================================================
+-- 123_fix_construction_cross_schema_refs.sql
+-- Fix: funciones en construction que referencian quotes/quote_items
+-- con schema incorrecto (construction.* → finance.*)
+-- Fecha: 2026-02-22
+-- =================================================================
 
-## [CONSTRUCTION] Functions (chunk 1: approve_quote_and_create_tasks — sync_task_status_progress)
+-- ─────────────────────────────────────────────────────────────────
+-- 1. Fix: approve_quote_and_create_tasks
+--    - construction.quotes → finance.quotes
+--    - construction.quote_items → finance.quote_items
+-- ─────────────────────────────────────────────────────────────────
 
-### `construction.approve_quote_and_create_tasks(p_quote_id uuid, p_member_id uuid DEFAULT NULL::uuid)` 🔐
-
-- **Returns**: jsonb
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
 CREATE OR REPLACE FUNCTION construction.approve_quote_and_create_tasks(p_quote_id uuid, p_member_id uuid DEFAULT NULL::uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'construction', 'public'
+ SET search_path TO 'construction', 'finance', 'public'
 AS $function$
 DECLARE
     v_quote RECORD;
@@ -34,7 +32,7 @@ BEGIN
         q.organization_id,
         q.approved_at
     INTO v_quote
-    FROM construction.quotes q
+    FROM finance.quotes q
     WHERE q.id = p_quote_id
       AND q.is_deleted = false;
 
@@ -69,7 +67,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM construction.construction_tasks ct
-        INNER JOIN construction.quote_items qi ON ct.quote_item_id = qi.id
+        INNER JOIN finance.quote_items qi ON ct.quote_item_id = qi.id
         WHERE qi.quote_id = p_quote_id
           AND ct.is_deleted = false
     ) THEN
@@ -110,7 +108,7 @@ BEGIN
         'pending'::text,
         0,
         p_member_id
-    FROM construction.quote_items qi
+    FROM finance.quote_items qi
     WHERE qi.quote_id = p_quote_id;
 
     GET DIAGNOSTICS v_tasks_created = ROW_COUNT;
@@ -118,7 +116,7 @@ BEGIN
     -- ========================================
     -- 4. UPDATE QUOTE STATUS to approved
     -- ========================================
-    UPDATE construction.quotes
+    UPDATE finance.quotes
     SET
         status      = 'approved',
         approved_at = NOW(),
@@ -148,66 +146,13 @@ EXCEPTION
             'detail', SQLSTATE
         );
 END;
-$function$
-```
-</details>
+$function$;
 
-### `construction.create_construction_task_material_snapshot()`
+-- ─────────────────────────────────────────────────────────────────
+-- 2. Fix: get_next_change_order_number
+--    - construction.quotes → finance.quotes
+-- ─────────────────────────────────────────────────────────────────
 
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION construction.create_construction_task_material_snapshot()
- RETURNS trigger
- LANGUAGE plpgsql
- SET search_path TO 'construction', 'catalog', 'public'
-AS $function$
-BEGIN
-    -- Only create snapshot if recipe_id is set
-    IF NEW.recipe_id IS NOT NULL THEN
-        INSERT INTO construction_task_material_snapshots (
-            construction_task_id,
-            material_id,
-            quantity_planned,
-            amount_per_unit,
-            unit_id,
-            source_task_id,
-            organization_id,
-            project_id,
-            snapshot_at
-        )
-        SELECT
-            NEW.id,
-            trm.material_id,
-            (COALESCE(NEW.quantity, 0) * COALESCE(trm.amount, 0))::NUMERIC(20, 4),
-            trm.amount,
-            m.unit_id,
-            NEW.task_id,
-            NEW.organization_id,
-            NEW.project_id,
-            NOW()
-        FROM task_recipe_materials trm
-        INNER JOIN materials m ON m.id = trm.material_id
-        WHERE trm.recipe_id = NEW.recipe_id;
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `construction.get_next_change_order_number(p_contract_id uuid)`
-
-- **Returns**: integer
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
 CREATE OR REPLACE FUNCTION construction.get_next_change_order_number(p_contract_id uuid)
  RETURNS integer
  LANGUAGE plpgsql
@@ -217,47 +162,11 @@ DECLARE
 BEGIN
     SELECT COALESCE(MAX(change_order_number), 0) + 1
     INTO next_number
-    FROM construction.quotes
+    FROM finance.quotes
     WHERE parent_quote_id = p_contract_id
       AND quote_type = 'change_order'
       AND is_deleted = FALSE;
 
     RETURN next_number;
 END;
-$function$
-```
-</details>
-
-### `construction.sync_task_status_progress()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION construction.sync_task_status_progress()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-    -- Caso 1: Progress llega a 100 → marcar como completed
-    IF NEW.progress_percent = 100 AND OLD.progress_percent < 100 THEN
-        NEW.status := 'completed';
-    END IF;
-
-    -- Caso 2: Status cambia a completed → forzar progress a 100
-    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-        NEW.progress_percent := 100;
-    END IF;
-
-    -- Caso 3: Progress baja de 100 y estaba completed → revertir a in_progress
-    IF NEW.progress_percent < 100 AND OLD.status = 'completed' AND NEW.status = 'completed' THEN
-        NEW.status := 'in_progress';
-    END IF;
-
-    RETURN NEW;
-END;
-$function$
-```
-</details>
+$function$;

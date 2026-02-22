@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [FINANCE] Views (22)
 
-### `finance.capital_ledger_view` (🔐 DEFINER)
+### `finance.capital_ledger_view` (🔓 INVOKER)
 
 ```sql
 SELECT pc.id,
@@ -69,7 +69,7 @@ UNION ALL
   WHERE ((ca.status = 'confirmed'::text) AND (ca.is_deleted = false));
 ```
 
-### `finance.capital_organization_totals_view` (🔐 DEFINER)
+### `finance.capital_organization_totals_view` (🔓 INVOKER)
 
 ```sql
 SELECT org.id AS organization_id,
@@ -101,7 +101,7 @@ SELECT org.id AS organization_id,
           GROUP BY capital_adjustments.organization_id) adjustments ON ((adjustments.organization_id = org.id)));
 ```
 
-### `finance.capital_participants_summary_view` (🔐 DEFINER)
+### `finance.capital_participants_summary_view` (🔓 INVOKER)
 
 ```sql
 SELECT cp.id AS partner_id,
@@ -123,7 +123,7 @@ SELECT cp.id AS partner_id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.capital_partner_balances_view` (🔐 DEFINER)
+### `finance.capital_partner_balances_view` (🔓 INVOKER)
 
 ```sql
 SELECT cp.id AS partner_id,
@@ -163,7 +163,7 @@ SELECT cp.id AS partner_id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.capital_partner_kpi_view` (🔐 DEFINER)
+### `finance.capital_partner_kpi_view` (🔓 INVOKER)
 
 ```sql
 SELECT pb.partner_id,
@@ -218,7 +218,7 @@ SELECT pb.partner_id,
      LEFT JOIN finance.capital_organization_totals_view ot ON ((ot.organization_id = pb.organization_id)));
 ```
 
-### `finance.client_financial_summary_view` (🔐 DEFINER)
+### `finance.client_financial_summary_view` (🔓 INVOKER)
 
 ```sql
 WITH commitment_totals AS (
@@ -254,7 +254,7 @@ WITH commitment_totals AS (
   WHERE ((pc.is_deleted = false) AND ((ct.total_committed > (0)::numeric) OR (pt.total_paid > (0)::numeric)));
 ```
 
-### `finance.client_payments_view` (🔐 DEFINER)
+### `finance.client_payments_view` (🔓 INVOKER)
 
 ```sql
 SELECT cp.id,
@@ -312,7 +312,7 @@ SELECT cp.id,
   WHERE (cp.is_deleted = false);
 ```
 
-### `finance.general_costs_by_category_view` (🔐 DEFINER)
+### `finance.general_costs_by_category_view` (🔓 INVOKER)
 
 ```sql
 SELECT gcp.organization_id,
@@ -327,7 +327,7 @@ SELECT gcp.organization_id,
   GROUP BY gcp.organization_id, (date_trunc('month'::text, (gcp.payment_date)::timestamp with time zone)), gc.category_id, gcc.name;
 ```
 
-### `finance.general_costs_monthly_summary_view` (🔐 DEFINER)
+### `finance.general_costs_monthly_summary_view` (🔓 INVOKER)
 
 ```sql
 SELECT gcp.organization_id,
@@ -339,7 +339,7 @@ SELECT gcp.organization_id,
   GROUP BY gcp.organization_id, (date_trunc('month'::text, (gcp.payment_date)::timestamp with time zone));
 ```
 
-### `finance.general_costs_payments_view` (🔐 DEFINER)
+### `finance.general_costs_payments_view` (🔓 INVOKER)
 
 ```sql
 SELECT gcp.id,
@@ -378,7 +378,7 @@ SELECT gcp.id,
   WHERE (gcp.is_deleted = false);
 ```
 
-### `finance.labor_by_type_view` (🔐 DEFINER)
+### `finance.labor_by_type_view` (🔓 INVOKER)
 
 ```sql
 SELECT lp.organization_id,
@@ -395,7 +395,7 @@ SELECT lp.organization_id,
   GROUP BY lp.organization_id, lp.project_id, (date_trunc('month'::text, (lp.payment_date)::timestamp with time zone)), pl.labor_type_id, lt.name;
 ```
 
-### `finance.labor_monthly_summary_view` (🔐 DEFINER)
+### `finance.labor_monthly_summary_view` (🔓 INVOKER)
 
 ```sql
 SELECT lp.organization_id,
@@ -409,7 +409,7 @@ SELECT lp.organization_id,
   GROUP BY lp.organization_id, lp.project_id, (date_trunc('month'::text, (lp.payment_date)::timestamp with time zone));
 ```
 
-### `finance.labor_payments_view` (🔐 DEFINER)
+### `finance.labor_payments_view` (🔓 INVOKER)
 
 ```sql
 SELECT lp.id,
@@ -469,7 +469,7 @@ SELECT lp.id,
   WHERE ((lp.is_deleted = false) OR (lp.is_deleted IS NULL));
 ```
 
-### `finance.material_invoices_view` (🔐 DEFINER)
+### `finance.material_invoices_view` (🔓 INVOKER)
 
 ```sql
 SELECT inv.id,
@@ -506,7 +506,7 @@ SELECT inv.id,
           WHERE (ii.invoice_id = inv.id)) items ON (true));
 ```
 
-### `finance.material_payments_view` (🔐 DEFINER)
+### `finance.material_payments_view` (🔓 INVOKER)
 
 ```sql
 SELECT mp.id,
@@ -552,7 +552,7 @@ SELECT mp.id,
   WHERE ((mp.is_deleted = false) OR (mp.is_deleted IS NULL));
 ```
 
-### `finance.material_purchase_orders_view` (🔐 DEFINER)
+### `finance.material_purchase_orders_view` (🔓 INVOKER)
 
 ```sql
 SELECT po.id,
@@ -586,7 +586,7 @@ SELECT po.id,
   WHERE (po.is_deleted = false);
 ```
 
-### `finance.organization_currencies_view` (🔐 DEFINER)
+### `finance.organization_currencies_view` (🔓 INVOKER)
 
 ```sql
 SELECT oc.id,
@@ -606,7 +606,7 @@ SELECT oc.id,
      LEFT JOIN finance.currencies c ON ((oc.currency_id = c.id)));
 ```
 
-### `finance.organization_wallets_view` (🔐 DEFINER)
+### `finance.organization_wallets_view` (🔓 INVOKER)
 
 ```sql
 SELECT ow.id,
@@ -626,7 +626,7 @@ SELECT ow.id,
      LEFT JOIN finance.wallets w ON ((ow.wallet_id = w.id)));
 ```
 
-### `finance.quotes_items_view` (🔐 DEFINER)
+### `finance.quotes_items_view` (🔓 INVOKER)
 
 ```sql
 SELECT bi.id,
@@ -661,7 +661,7 @@ SELECT bi.id,
      LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
-### `finance.subcontract_payments_view` (🔐 DEFINER)
+### `finance.subcontract_payments_view` (🔓 INVOKER)
 
 ```sql
 SELECT sp.id,
@@ -708,7 +708,7 @@ SELECT sp.id,
   WHERE (sp.is_deleted = false);
 ```
 
-### `finance.subcontracts_view` (🔐 DEFINER)
+### `finance.subcontracts_view` (🔓 INVOKER)
 
 ```sql
 SELECT s.id,
@@ -739,7 +739,7 @@ SELECT s.id,
   WHERE (s.is_deleted = false);
 ```
 
-### `finance.unified_financial_movements_view` (🔐 DEFINER)
+### `finance.unified_financial_movements_view` (🔓 INVOKER)
 
 ```sql
 SELECT gcp.id,

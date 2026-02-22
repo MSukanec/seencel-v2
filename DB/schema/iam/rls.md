@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [IAM] RLS Policies (49)
+## [IAM] RLS Policies (52)
 
 ### `debug_signup_log` (1 policies)
 
@@ -470,6 +470,39 @@ is_self(user_id)
 - **USING**:
 ```sql
 (is_self(user_id) OR is_admin())
+```
+
+### `user_presence` (3 policies)
+
+#### MEMBERS SELECT USER_PRESENCE
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+((organization_id IS NULL) OR is_org_member(organization_id))
+```
+
+#### USERS INSERT OWN_USER_PRESENCE
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+(user_id = ( SELECT users.id
+   FROM iam.users
+  WHERE (users.auth_id = auth.uid())))
+```
+
+#### USERS UPDATE OWN_USER_PRESENCE
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+(user_id = ( SELECT users.id
+   FROM iam.users
+  WHERE (users.auth_id = auth.uid())))
 ```
 
 ### `user_view_history` (3 policies)

@@ -89,7 +89,7 @@ export function SidebarNotificationsButton({
                 'postgres_changes',
                 {
                     event: 'INSERT',
-                    schema: 'public',
+                    schema: 'notifications',
                     table: 'user_notifications',
                     filter: `user_id=eq.${user.id}`
                 },

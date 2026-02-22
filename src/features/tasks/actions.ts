@@ -954,80 +954,29 @@ export async function deleteTaskElement(id: string) {
 // ============================================
 // DIVISION COMPATIBILITY - ELEMENTS
 // ============================================
+/**
+ * @deprecated Table task_division_elements was removed from the DB.
+ */
 export async function toggleDivisionElement(
     divisionId: string,
     elementId: string,
     shouldLink: boolean
 ) {
-    const supabase = await createClient();
-
-    if (shouldLink) {
-        // Add link
-        const { error } = await supabase
-            .schema('catalog').from("task_division_elements")
-            .insert({ division_id: divisionId, element_id: elementId });
-
-        if (error) {
-            // Ignore duplicate key errors
-            if (!sanitizeError(error).includes("duplicate")) {
-                console.error("Error linking element:", error);
-                return { error: sanitizeError(error) };
-            }
-        }
-    } else {
-        // Remove link
-        const { error } = await supabase
-            .schema('catalog').from("task_division_elements")
-            .delete()
-            .eq("division_id", divisionId)
-            .eq("element_id", elementId);
-
-        if (error) {
-            console.error("Error unlinking element:", error);
-            return { error: sanitizeError(error) };
-        }
-    }
-
-    revalidatePath("/admin/catalog");
-    return { success: true, error: null };
+    return { success: false, error: 'task_division_elements table no longer exists' };
 }
 
 // ============================================
 // DIVISION COMPATIBILITY - ACTIONS
 // ============================================
+/**
+ * @deprecated Table task_division_actions was removed from the DB.
+ */
 export async function toggleDivisionAction(
     divisionId: string,
     actionId: string,
     shouldLink: boolean
 ) {
-    const supabase = await createClient();
-
-    if (shouldLink) {
-        const { error } = await supabase
-            .schema('catalog').from("task_division_actions")
-            .insert({ division_id: divisionId, action_id: actionId });
-
-        if (error) {
-            if (!sanitizeError(error).includes("duplicate")) {
-                console.error("Error linking action:", error);
-                return { error: sanitizeError(error) };
-            }
-        }
-    } else {
-        const { error } = await supabase
-            .schema('catalog').from("task_division_actions")
-            .delete()
-            .eq("division_id", divisionId)
-            .eq("action_id", actionId);
-
-        if (error) {
-            console.error("Error unlinking action:", error);
-            return { error: sanitizeError(error) };
-        }
-    }
-
-    revalidatePath("/admin/catalog");
-    return { success: true, error: null };
+    return { success: false, error: 'task_division_actions table no longer exists' };
 }
 
 // ============================================
@@ -1071,44 +1020,16 @@ export async function toggleActionElement(
 // ============================================
 // ELEMENT COMPATIBILITY - PARAMETERS
 // ============================================
+/**
+ * @deprecated Table task_element_parameters was removed from the DB.
+ */
 export async function toggleElementParameter(
     elementId: string,
     parameterId: string,
     shouldLink: boolean,
     order?: number
 ) {
-    const supabase = await createClient();
-
-    if (shouldLink) {
-        const { error } = await supabase
-            .schema('catalog').from("task_element_parameters")
-            .insert({
-                element_id: elementId,
-                parameter_id: parameterId,
-                order: order ?? 0
-            });
-
-        if (error) {
-            if (!sanitizeError(error).includes("duplicate")) {
-                console.error("Error linking parameter to element:", error);
-                return { error: sanitizeError(error) };
-            }
-        }
-    } else {
-        const { error } = await supabase
-            .schema('catalog').from("task_element_parameters")
-            .delete()
-            .eq("element_id", elementId)
-            .eq("parameter_id", parameterId);
-
-        if (error) {
-            console.error("Error unlinking parameter from element:", error);
-            return { error: sanitizeError(error) };
-        }
-    }
-
-    revalidatePath("/admin/catalog");
-    return { success: true, error: null };
+    return { success: false, error: 'task_element_parameters table no longer exists' };
 }
 
 // ============================================
@@ -2020,56 +1941,11 @@ export async function getCompatibleActionsForElementAction(elementId: string) {
 }
 
 /**
- * Get parameters for a specific element with their options (server action)
- * Replaces client-side createClient() in the parametric form
+ * @deprecated Table task_element_parameters was removed from the DB.
+ * Parameters now belong to construction systems, not elements.
  */
 export async function getElementParametersAction(elementId: string) {
-    try {
-        const supabase = await createClient();
-
-        // Get parameter links for this element
-        const { data: links } = await supabase
-            .schema('catalog').from('task_element_parameters')
-            .select('parameter_id, order, is_required')
-            .eq('element_id', elementId)
-            .order('order', { ascending: true });
-
-        if (!links || links.length === 0) {
-            return { data: [], error: null };
-        }
-
-        // Get parameters
-        const paramIds = links.map(l => l.parameter_id);
-        const { data: params } = await supabase
-            .schema('catalog').from('task_parameters')
-            .select('*')
-            .in('id', paramIds)
-            .eq('is_deleted', false);
-
-        // Get options for all parameters
-        const { data: options } = await supabase
-            .schema('catalog').from('task_parameter_options')
-            .select('*')
-            .in('parameter_id', paramIds)
-            .eq('is_deleted', false)
-            .order('order', { ascending: true });
-
-        // Build result
-        const result = (params || []).map(param => {
-            const link = links.find(l => l.parameter_id === param.id);
-            const paramOptions = (options || []).filter(o => o.parameter_id === param.id);
-            return {
-                ...param,
-                order: link?.order ?? param.order,
-                is_required: link?.is_required ?? param.is_required,
-                options: paramOptions
-            };
-        }).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-
-        return { data: result, error: null };
-    } catch (error) {
-        return { data: [], error: sanitizeError(error) };
-    }
+    return { data: [], error: null };
 }
 
 /**

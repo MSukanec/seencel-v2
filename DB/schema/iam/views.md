@@ -1,11 +1,11 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:05:48.801Z
+> Generated: 2026-02-22T22:41:22.161Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
 ## [IAM] Views (6)
 
-### `iam.admin_organizations_view` (🔐 DEFINER)
+### `iam.admin_organizations_view` (🔓 INVOKER)
 
 ```sql
 SELECT o.id,
@@ -40,7 +40,7 @@ SELECT o.id,
   WHERE (o.is_deleted = false);
 ```
 
-### `iam.admin_users_view` (🔐 DEFINER)
+### `iam.admin_users_view` (🔓 INVOKER)
 
 ```sql
 SELECT users.auth_id
@@ -48,7 +48,7 @@ SELECT users.auth_id
   WHERE (users.role_id = 'd5606324-af8d-487e-8c8e-552511fce2a2'::uuid);
 ```
 
-### `iam.organization_member_details` (🔐 DEFINER)
+### `iam.organization_member_details` (🔓 INVOKER)
 
 ```sql
 SELECT om.id AS member_id,
@@ -65,7 +65,7 @@ SELECT om.id AS member_id,
      JOIN iam.users u ON ((om.user_id = u.id)));
 ```
 
-### `iam.organization_members_full_view` (🔐 DEFINER)
+### `iam.organization_members_full_view` (🔓 INVOKER)
 
 ```sql
 SELECT om.id,
@@ -91,7 +91,7 @@ SELECT om.id,
      LEFT JOIN iam.roles r ON ((om.role_id = r.id)));
 ```
 
-### `iam.organization_online_users` (🔐 DEFINER)
+### `iam.organization_online_users` (🔓 INVOKER)
 
 ```sql
 SELECT up.organization_id AS org_id,
@@ -101,7 +101,7 @@ SELECT up.organization_id AS org_id,
    FROM iam.user_presence up;
 ```
 
-### `iam.users_public_profile_view` (🔐 DEFINER)
+### `iam.users_public_profile_view` (🔓 INVOKER)
 
 ```sql
 SELECT users.id,
