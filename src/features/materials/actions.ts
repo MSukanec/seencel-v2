@@ -472,7 +472,7 @@ export async function deleteMaterial(id: string, replacementId: string | null, i
     if (replacementId) {
         // products table
         await supabase
-            .from("products")
+            .schema('providers').from("products")
             .update({ material_id: replacementId })
             .eq("material_id", id);
 
@@ -804,7 +804,7 @@ import { MaterialType } from "@/features/materials/types";
 export async function getMaterialTypes(organizationId: string): Promise<MaterialType[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
-        .from('material_types')
+        .schema('catalog').from('material_types')
         .select('*')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false)
@@ -821,7 +821,7 @@ export async function getMaterialTypes(organizationId: string): Promise<Material
 export async function createMaterialType(data: Partial<MaterialType>) {
     const supabase = await createClient();
     const { data: newType, error } = await supabase
-        .from('material_types')
+        .schema('catalog').from('material_types')
         .insert({
             organization_id: data.organization_id,
             name: data.name,
@@ -839,7 +839,7 @@ export async function createMaterialType(data: Partial<MaterialType>) {
 export async function updateMaterialType(id: string, data: Partial<MaterialType>) {
     const supabase = await createClient();
     const { data: updatedType, error } = await supabase
-        .from('material_types')
+        .schema('catalog').from('material_types')
         .update({
             name: data.name,
             description: data.description,
@@ -857,7 +857,7 @@ export async function deleteMaterialType(id: string) {
     const supabase = await createClient();
     // Soft delete
     const { error } = await supabase
-        .from('material_types')
+        .schema('catalog').from('material_types')
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()

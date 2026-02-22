@@ -1,9 +1,38 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PROJECTS] RLS Policies (34)
+## [PROJECTS] RLS Policies (37)
+
+### `client_portal_settings` (3 policies)
+
+#### MIEMBROS CREAN CLIENT_PORTAL_SETTINGS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'commercial.manage'::text)
+```
+
+#### MIEMBROS EDITAN CLIENT_PORTAL_SETTINGS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'commercial.manage'::text)
+```
+
+#### MIEMBROS VEN CLIENT_PORTAL_SETTINGS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_view_org(organization_id, 'commercial.view'::text)
+```
 
 ### `client_roles` (3 policies)
 
@@ -42,7 +71,7 @@
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
+is_org_member(organization_id)
 ```
 
 #### MIEMBROS EDITAN CONTACT_TYPES
@@ -51,7 +80,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'contacts.manage'::text))
+((organization_id IS NOT NULL) AND is_org_member(organization_id))
 ```
 
 #### MIEMBROS VEN CONTACT_TYPES
@@ -60,7 +89,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NULL) OR can_view_org(organization_id, 'contacts.view'::text))
+((organization_id IS NULL) OR is_org_member(organization_id))
 ```
 
 ### `contact_category_links` (4 policies)
@@ -71,7 +100,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
+is_org_member(organization_id)
 ```
 
 #### MIEMBROS CREAN CONTACT_TYPE_LINKS
@@ -80,7 +109,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
+is_org_member(organization_id)
 ```
 
 #### MIEMBROS EDITAN CONTACT_TYPE_LINKS
@@ -89,7 +118,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
+is_org_member(organization_id)
 ```
 
 #### MIEMBROS VEN CONTACT_TYPE_LINKS
@@ -98,7 +127,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'contacts.view'::text)
+is_org_member(organization_id)
 ```
 
 ### `contacts` (3 policies)
@@ -109,7 +138,7 @@ can_view_org(organization_id, 'contacts.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
+is_org_member(organization_id)
 ```
 
 #### MIEMBROS EDITAN CONTACTS
@@ -118,11 +147,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
-```
-- **WITH CHECK**:
-```sql
-can_mutate_org(organization_id, 'contacts.manage'::text)
+is_org_member(organization_id)
 ```
 
 #### MIEMBROS VEN CONTACTS
@@ -131,7 +156,7 @@ can_mutate_org(organization_id, 'contacts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-(can_view_org(organization_id, 'contacts.view'::text) AND (is_deleted = false))
+((is_deleted = false) AND is_org_member(organization_id))
 ```
 
 ### `project_clients` (4 policies)
@@ -222,7 +247,7 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'labor.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN PROJECT_LABOR
@@ -231,7 +256,7 @@ can_mutate_org(organization_id, 'labor.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'labor.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN PROJECT_LABOR
@@ -240,7 +265,7 @@ can_mutate_org(organization_id, 'labor.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'labor.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `project_modalities` (3 policies)

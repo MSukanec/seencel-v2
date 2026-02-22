@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -116,7 +116,7 @@ can_mutate_org(organization_id, 'team.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'members.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
 ```
 
 #### MIEMBROS EDITAN INVITATIONS
@@ -125,7 +125,7 @@ can_mutate_org(organization_id, 'members.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'members.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
 ```
 
 #### MIEMBROS VEN INVITATIONS
@@ -134,19 +134,10 @@ can_mutate_org(organization_id, 'members.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'members.view'::text)
+can_view_org(organization_id, 'organization.view'::text)
 ```
 
 ### `organization_members` (3 policies)
-
-#### MIEMBROS  EDITAN ORGANIZATION_MEMBERS
-
-- **Command**: UPDATE | **Permissive**: PERMISSIVE
-- **Roles**: {public}
-- **USING**:
-```sql
-(can_mutate_org(organization_id, 'members.manage'::text) OR is_self(user_id))
-```
 
 #### MIEMBROS CREAN ORGANIZATION_MEMBERS
 
@@ -154,7 +145,16 @@ can_view_org(organization_id, 'members.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'members.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
+```
+
+#### MIEMBROS EDITAN ORGANIZATION_MEMBERS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(can_mutate_org(organization_id, 'organization.manage'::text) OR is_self(user_id))
 ```
 
 #### MIEMBROS VEN ORGANIZATION_MEMBERS
@@ -239,7 +239,7 @@ can_mutate_org(organization_id, 'team.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'roles.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
 ```
 
 #### MIEMBROS CREAN ROLE_PERMISSIONS
@@ -248,7 +248,7 @@ can_mutate_org(organization_id, 'roles.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'roles.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
 ```
 
 #### MIEMBROS EDITAN ROLE_PERMISSIONS
@@ -257,7 +257,7 @@ can_mutate_org(organization_id, 'roles.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'roles.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
 ```
 
 #### MIEMBROS VEN ROLE_PERMISSIONS
@@ -266,7 +266,7 @@ can_mutate_org(organization_id, 'roles.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'roles.view'::text)
+can_view_org(organization_id, 'organization.view'::text)
 ```
 
 ### `roles` (4 policies)
@@ -289,7 +289,7 @@ can_view_org(organization_id, 'roles.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-((is_system = false) AND (organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'roles.manage'::text))
+((is_system = false) AND (organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'organization.manage'::text))
 ```
 
 #### MIEMBROS EDITAN ROLES
@@ -298,7 +298,7 @@ can_view_org(organization_id, 'roles.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_system = false) AND (organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'roles.manage'::text))
+((is_system = false) AND (organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'organization.manage'::text))
 ```
 
 #### MIEMBROS VEN ROLES
@@ -307,7 +307,7 @@ can_view_org(organization_id, 'roles.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_system = true) OR can_view_org(organization_id, 'roles.view'::text))
+((is_system = true) OR can_view_org(organization_id, 'organization.view'::text))
 ```
 
 ### `support_messages` (6 policies)

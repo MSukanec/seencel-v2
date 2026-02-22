@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] RLS Policies (53)
+## [CATALOG] RLS Policies (56)
 
 ### `labor_categories` (3 policies)
 
@@ -13,7 +13,7 @@
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-((is_system = false) AND can_mutate_org(organization_id, 'labor.manage'::text))
+((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text))
 ```
 
 #### MIEMBROS EDITAN LABOR_CATEGORIES
@@ -22,7 +22,7 @@
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_system = false) AND can_mutate_org(organization_id, 'labor.manage'::text))
+((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text))
 ```
 
 #### MIEMBROS VEN LABOR_CATEGORIES
@@ -31,7 +31,7 @@
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_system = true) OR can_view_org(organization_id, 'labor.view'::text))
+((is_system = true) OR can_view_org(organization_id, 'construction.view'::text))
 ```
 
 ### `labor_levels` (2 policies)
@@ -66,7 +66,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'tasks.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS CREAN LABOR_PRICES
@@ -75,7 +75,7 @@ can_mutate_org(organization_id, 'tasks.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'tasks.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN LABOR_PRICES
@@ -84,7 +84,7 @@ can_mutate_org(organization_id, 'tasks.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'tasks.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN LABOR_PRICES
@@ -93,7 +93,7 @@ can_mutate_org(organization_id, 'tasks.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'tasks.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `labor_roles` (2 policies)
@@ -177,6 +177,35 @@ is_admin()
 true
 ```
 
+### `material_types` (3 policies)
+
+#### MIEMBROS CREAN MATERIAL_TYPES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text))
+```
+
+#### MIEMBROS EDITAN MATERIAL_TYPES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text))
+```
+
+#### MIEMBROS VEN MATERIAL_TYPES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+((is_system = true) OR is_org_member(organization_id))
+```
+
 ### `materials` (3 policies)
 
 #### MIEMBROS CREAN MATERIALS
@@ -185,7 +214,7 @@ true
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-(((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'materials.manage'::text)) OR ((organization_id IS NULL) AND (is_system = true) AND is_admin()))
+(((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'construction.manage'::text)) OR ((organization_id IS NULL) AND (is_system = true) AND is_admin()))
 ```
 
 #### MIEMBROS EDITAN MATERIALS
@@ -194,7 +223,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'materials.manage'::text)) OR ((is_system = true) AND is_admin()))
+(((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'construction.manage'::text)) OR ((is_system = true) AND is_admin()))
 ```
 
 #### MIEMBROS VEN MATERIALS
@@ -203,7 +232,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((organization_id IS NULL) AND (is_system = true)) OR can_view_org(organization_id, 'materials.view'::text))
+(((organization_id IS NULL) AND (is_system = true)) OR can_view_org(organization_id, 'construction.view'::text))
 ```
 
 ### `task_actions` (2 policies)
@@ -478,7 +507,7 @@ is_admin()
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((is_system = false) AND can_mutate_org(organization_id, 'tasks.manage'::text)) OR ((is_system = true) AND is_admin()))
+(((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text)) OR ((is_system = true) AND is_admin()))
 ```
 
 #### MIEMBROS CREAN TASKS
@@ -487,7 +516,7 @@ is_admin()
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-(((is_system = false) AND can_mutate_org(organization_id, 'tasks.manage'::text)) OR ((is_system = true) AND is_admin()))
+(((is_system = false) AND can_mutate_org(organization_id, 'construction.manage'::text)) OR ((is_system = true) AND is_admin()))
 ```
 
 #### MIEMBROS VEN TASKS
@@ -496,7 +525,7 @@ is_admin()
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((is_system = true) AND (is_admin() OR ((status <> 'draft'::task_catalog_status) AND (is_deleted = false)))) OR ((is_system = false) AND can_view_org(organization_id, 'tasks.view'::text)))
+(((is_system = true) AND (is_admin() OR ((status <> 'draft'::task_catalog_status) AND (is_deleted = false)))) OR ((is_system = false) AND can_view_org(organization_id, 'construction.view'::text)))
 ```
 
 ### `unit_categories` (2 policies)

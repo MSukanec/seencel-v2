@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationDialog } from "@/components/shared/forms/general/delete-confirmation-dialog";
 import { format, isPast, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { parseDateFromDB } from "@/lib/timezone-data";
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -50,7 +50,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
 
     const priorityConfig = PRIORITY_CONFIG[optimisticCard.priority];
     const hasDueDate = !!optimisticCard.due_at;
-    const parsedDueDate = hasDueDate ? parseDateFromDB(optimisticCard.due_at!) : null;
+    const parsedDueDate = hasDueDate ? new Date(optimisticCard.due_at!) : null;
     const isOverdue = hasDueDate && parsedDueDate && isPast(parsedDueDate) && !optimisticCard.is_completed;
     const isDueToday = hasDueDate && parsedDueDate && isToday(parsedDueDate);
 
@@ -206,7 +206,7 @@ export function KanbanCardItem({ card, members = [], onClick, isDragging, onOpti
                             ) : (
                                 <Calendar className="h-3 w-3" />
                             )}
-                            {format(parseDateFromDB(card.due_at!)!, "d MMM", { locale: es })}
+                            {format(new Date(card.due_at!), "d MMM", { locale: es })}
                         </div>
                     )}
 

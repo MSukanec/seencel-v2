@@ -1,9 +1,31 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [FINANCE] Tables (chunk 1: finance.capital_participants — finance.pdf_templates)
+## [FINANCE] Tables (chunk 1: finance.capital_adjustments — finance.partner_capital_balance)
+
+### `finance.capital_adjustments`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  |  |
+| project_id | uuid | ✓ |  |  |
+| partner_id | uuid | ✓ |  | FK → capital_participants.id |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| exchange_rate | numeric | ✗ | 1 |  |
+| amount | numeric | ✗ |  |  |
+| adjustment_date | date | ✗ | now() |  |
+| reason | text | ✓ |  |  |
+| notes | text | ✓ |  |  |
+| reference | text | ✓ |  |  |
+| status | text | ✗ | 'confirmed'::text |  |
+| created_by | uuid | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 
 ### `finance.capital_participants`
 
@@ -160,6 +182,43 @@
 | updated_at | timestamptz | ✗ | now() |  |
 | created_at | timestamptz | ✗ | now() |  |
 
+### `finance.financial_operation_movements`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| financial_operation_id | uuid | ✗ |  | FK → financial_operations.id |
+| organization_id | uuid | ✗ |  |  |
+| project_id | uuid | ✓ |  |  |
+| wallet_id | uuid | ✗ |  | FK → organization_wallets.id |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| amount | numeric | ✗ |  |  |
+| direction | text | ✗ |  |  |
+| exchange_rate | numeric | ✓ |  |  |
+| created_by | uuid | ✗ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+
+### `finance.financial_operations`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  |  |
+| project_id | uuid | ✓ |  |  |
+| type | text | ✗ |  |  |
+| operation_date | date | ✗ | CURRENT_DATE |  |
+| description | text | ✓ |  |  |
+| created_by | uuid | ✗ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_by | uuid | ✓ |  |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
 ### `finance.general_cost_categories`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -175,6 +234,16 @@
 | updated_at | timestamptz | ✗ | now() |  |
 | created_by | uuid | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
+
+### `finance.general_cost_payment_allocations`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| payment_id | uuid | ✗ |  | FK → general_costs_payments.id |
+| project_id | uuid | ✗ |  |  |
+| percentage | numeric | ✗ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
 
 ### `finance.general_costs`
 
@@ -473,93 +542,3 @@
 | updated_at | timestamptz | ✓ | now() |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
-
-### `finance.partner_contributions`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✓ |  |  |
-| organization_id | uuid | ✗ |  |  |
-| amount | numeric | ✗ |  |  |
-| currency_id | uuid | ✗ |  | FK → currencies.id |
-| exchange_rate | numeric | ✗ |  |  |
-| contribution_date | date | ✗ | now() |  |
-| notes | text | ✓ |  |  |
-| reference | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
-| partner_id | uuid | ✓ |  | FK → capital_participants.id |
-| status | text | ✗ | 'confirmed'::text |  |
-| created_by | uuid | ✓ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `finance.partner_withdrawals`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| project_id | uuid | ✓ |  |  |
-| organization_id | uuid | ✗ |  |  |
-| amount | numeric | ✗ |  |  |
-| currency_id | uuid | ✗ |  | FK → currencies.id |
-| exchange_rate | numeric | ✗ |  |  |
-| withdrawal_date | date | ✗ | now() |  |
-| notes | text | ✓ |  |  |
-| reference | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
-| partner_id | uuid | ✓ |  | FK → capital_participants.id |
-| status | text | ✗ | 'confirmed'::text |  |
-| created_by | uuid | ✓ |  |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-
-### `finance.pdf`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✗ | now() |  |
-| organization_id | uuid | ✓ |  |  |
-| updated_at | timestamptz | ✓ |  |  |
-| name | text | ✓ |  |  |
-| blocks | jsonb | ✓ |  |  |
-| config | jsonb | ✓ |  |  |
-
-### `finance.pdf_templates`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ | 'Plantilla por defecto'::text |  |
-| logo_width | int4 | ✓ | 80 |  |
-| logo_height | int4 | ✓ | 80 |  |
-| company_name_size | int4 | ✓ | 24 |  |
-| company_name_color | text | ✓ | '''#000000''::text'::text |  |
-| primary_color | text | ✓ | '''#000000''::text'::text |  |
-| secondary_color | text | ✓ | '#e5e7eb'::text |  |
-| text_color | text | ✓ | '#1f2937'::text |  |
-| font_family | text | ✓ | 'Arial'::text |  |
-| title_size | int4 | ✓ | 18 |  |
-| subtitle_size | int4 | ✓ | 14 |  |
-| body_size | int4 | ✓ | 12 |  |
-| margin_top | int4 | ✓ | 10 |  |
-| margin_bottom | int4 | ✓ | 10 |  |
-| margin_left | int4 | ✓ | 10 |  |
-| margin_right | int4 | ✓ | 10 |  |
-| footer_text | text | ✓ | 'Documento generado por Seencel. SEEN... |  |
-| footer_show_page_numbers | bool | ✓ | true |  |
-| created_at | timestamptz | ✓ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| company_info_size | int4 | ✓ | 10 |  |
-| show_footer_info | bool | ✓ | true |  |
-| page_size | varchar(10) | ✓ | 'A4'::character varying |  |
-| page_orientation | text | ✓ | 'vertical'::text |  |
-| organization_id | uuid | ✓ |  |  |
-| pdf_logo_path | text | ✓ |  |  |
-| show_company_name | bool | ✓ | true |  |
-| show_company_address | bool | ✓ | true |  |

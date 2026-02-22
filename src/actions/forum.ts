@@ -68,7 +68,7 @@ export async function getForumCategories(courseId: string): Promise<ForumCategor
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from('forum_categories')
+        .schema('community').from('forum_categories')
         .select(`
             id,
             name,
@@ -114,7 +114,7 @@ async function getOrCreateCourseCategory(courseId: string): Promise<string> {
 
     // Check if category for this course exists
     const { data: existing } = await supabase
-        .from('forum_categories')
+        .schema('community').from('forum_categories')
         .select('id')
         .eq('course_id', courseId)
         .single();
@@ -146,7 +146,7 @@ async function getOrCreateCourseCategory(courseId: string): Promise<string> {
 
     // Create default category for course
     const { data: newCategory, error } = await supabase
-        .from('forum_categories')
+        .schema('community').from('forum_categories')
         .insert({
             name: `Foro: ${course.title}`,
             slug: `course-${course.slug}`,
@@ -167,7 +167,7 @@ export async function getForumThreads(courseId: string): Promise<ForumThread[]> 
 
     // Get ALL categories for this course
     const { data: categories } = await supabase
-        .from('forum_categories')
+        .schema('community').from('forum_categories')
         .select('id, name, slug')
         .eq('course_id', courseId)
         .eq('is_active', true);
@@ -181,7 +181,7 @@ export async function getForumThreads(courseId: string): Promise<ForumThread[]> 
 
     // Fetch threads WITHOUT cross-schema join to users
     const { data: threads, error } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .select(`
             id,
             title,
@@ -233,7 +233,7 @@ export async function getThreadById(threadId: string): Promise<{
 
     // Get thread WITHOUT cross-schema join to users
     const { data: thread, error: threadError } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .select(`
             id,
             title,
@@ -262,13 +262,13 @@ export async function getThreadById(threadId: string): Promise<{
 
     // Increment view count
     await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .update({ view_count: (thread.view_count || 0) + 1 })
         .eq('id', threadId);
 
     // Get posts WITHOUT cross-schema join
     const { data: posts } = await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .select(`
             id,
             content,
@@ -394,7 +394,7 @@ export async function createPost(
 
     // Check if thread is locked
     const { data: thread } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .select('is_locked')
         .eq('id', threadId)
         .single();
@@ -404,7 +404,7 @@ export async function createPost(
     }
 
     const { data, error } = await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .insert({
             thread_id: threadId,
             organization_id: profile.current_org_id,
@@ -437,7 +437,7 @@ export async function updatePost(
     }
 
     const { error } = await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .update({ content, updated_at: new Date().toISOString() })
         .eq('id', postId)
         .eq('author_id', user.id);
@@ -461,7 +461,7 @@ export async function deletePost(postId: string): Promise<{ success: boolean; er
     }
 
     const { error } = await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .update({ is_deleted: true })
         .eq('id', postId)
         .eq('author_id', user.id);
@@ -480,7 +480,7 @@ export async function toggleThreadPin(threadId: string): Promise<{ success: bool
     const supabase = await createClient();
 
     const { data: thread } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .select('is_pinned')
         .eq('id', threadId)
         .single();
@@ -490,7 +490,7 @@ export async function toggleThreadPin(threadId: string): Promise<{ success: bool
     }
 
     const { error } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .update({ is_pinned: !thread.is_pinned })
         .eq('id', threadId);
 
@@ -507,7 +507,7 @@ export async function toggleThreadLock(threadId: string): Promise<{ success: boo
     const supabase = await createClient();
 
     const { data: thread } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .select('is_locked')
         .eq('id', threadId)
         .single();
@@ -517,7 +517,7 @@ export async function toggleThreadLock(threadId: string): Promise<{ success: boo
     }
 
     const { error } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .update({ is_locked: !thread.is_locked })
         .eq('id', threadId);
 
@@ -540,7 +540,7 @@ export async function markAsAnswer(postId: string): Promise<{ success: boolean; 
 
     // Get post's thread
     const { data: post } = await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .select('thread_id')
         .eq('id', postId)
         .single();
@@ -551,7 +551,7 @@ export async function markAsAnswer(postId: string): Promise<{ success: boolean; 
 
     // Check if user is thread author
     const { data: thread } = await supabase
-        .from('forum_threads')
+        .schema('community').from('forum_threads')
         .select('author_id')
         .eq('id', post.thread_id)
         .single();
@@ -562,13 +562,13 @@ export async function markAsAnswer(postId: string): Promise<{ success: boolean; 
 
     // Unmark all other answers in thread first
     await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .update({ is_accepted_answer: false })
         .eq('thread_id', post.thread_id);
 
     // Mark this post as answer
     const { error } = await supabase
-        .from('forum_posts')
+        .schema('community').from('forum_posts')
         .update({ is_accepted_answer: true })
         .eq('id', postId);
 

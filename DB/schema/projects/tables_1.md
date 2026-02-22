@@ -1,9 +1,47 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PROJECTS] Tables (chunk 1: projects.client_roles — projects.signatures)
+## [PROJECTS] Tables (chunk 1: projects.client_portal_branding — projects.signatures)
+
+### `projects.client_portal_branding`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✗ |  | UNIQUE, FK → projects.id |
+| organization_id | uuid | ✗ |  |  |
+| portal_name | text | ✓ |  |  |
+| welcome_message | text | ✓ |  |  |
+| primary_color | text | ✓ | '#83cc16'::text |  |
+| background_color | text | ✓ | '#09090b'::text |  |
+| show_footer | bool | ✓ | true |  |
+| footer_text | text | ✓ |  |  |
+| show_powered_by | bool | ✓ | true |  |
+| hero_image_url | text | ✓ |  |  |
+| show_hero | bool | ✓ | true |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+
+### `projects.client_portal_settings`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| project_id | uuid | ✗ |  | PK, FK → projects.id |
+| organization_id | uuid | ✗ |  |  |
+| show_dashboard | bool | ✗ | true |  |
+| show_installments | bool | ✗ | false |  |
+| show_payments | bool | ✗ | false |  |
+| show_logs | bool | ✗ | false |  |
+| show_amounts | bool | ✗ | true |  |
+| show_progress | bool | ✗ | true |  |
+| allow_comments | bool | ✗ | false |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| updated_by | uuid | ✓ |  |  |
+| created_at | timestamptz | ✓ | now() |  |
+| created_by | uuid | ✓ |  |  |
+| show_quotes | bool | ✓ | false |  |
 
 ### `projects.client_roles`
 

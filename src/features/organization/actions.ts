@@ -161,3 +161,45 @@ export async function createOrganization(
     redirect('/organization');
 }
 
+/**
+ * Lightweight fetch of user's organizations for the header breadcrumb selector.
+ * Returns only id, name, logo_url — no members, plans, or usage data.
+ */
+export async function fetchUserOrganizationsLight(): Promise<{ id: string; name: string; logo_url: string | null }[]> {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data: userData } = await supabase
+        .schema('iam').from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (!userData) return [];
+
+    const { data: memberships } = await supabase
+        .schema('iam').from('organization_members')
+        .select(`
+            organizations:organizations!organization_members_organization_id_fkey (
+                id,
+                name,
+                logo_url,
+                is_deleted
+            )
+        `)
+        .eq('user_id', userData.id)
+        .eq('is_active', true);
+
+    if (!memberships) return [];
+
+    return memberships
+        .map((m: any) => m.organizations)
+        .filter((org: any) => !!org && org.is_deleted === false)
+        .map((org: any) => ({
+            id: org.id,
+            name: org.name,
+            logo_url: org.logo_url || null,
+        }));
+}

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [ACADEMY] RLS Policies (30)
+## [ACADEMY] RLS Policies (33)
 
 ### `course_details` (3 policies)
 
@@ -303,4 +303,37 @@ is_admin()
 - **USING**:
 ```sql
 ((is_deleted = false) AND (is_active = true) AND (visibility = 'public'::text))
+```
+
+### `testimonials` (3 policies)
+
+#### ADMIN ACTUALIZAN TESTIMONIALS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TESTIMONIALS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+(((is_active = true) AND (is_deleted = false)) OR is_admin())
+```
+
+#### USUARIOS CREAN TESTIMONIALS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+(is_self(user_id) OR is_admin())
 ```

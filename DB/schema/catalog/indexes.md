@@ -1,17 +1,21 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Indexes (79, excluding PKs)
+## [CATALOG] Indexes (86, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
+| external_service_prices | idx_ext_service_prices_service | `CREATE INDEX idx_ext_service_prices_service ON catalog.external_service_price...` |
 | labor_categories | labor_categories_id_key | `CREATE UNIQUE INDEX labor_categories_id_key ON catalog.labor_categories USING...` |
 | labor_categories | labor_categories_system_name_unique | `CREATE UNIQUE INDEX labor_categories_system_name_unique ON catalog.labor_cate...` |
 | labor_prices | labor_prices_type_org_idx | `CREATE INDEX labor_prices_type_org_idx ON catalog.labor_prices USING btree (l...` |
 | material_categories | material_categories_unique_name | `CREATE UNIQUE INDEX material_categories_unique_name ON catalog.material_categ...` |
 | material_prices | material_prices_material_org_idx | `CREATE INDEX material_prices_material_org_idx ON catalog.material_prices USIN...` |
+| material_types | idx_material_types_list | `CREATE INDEX idx_material_types_list ON catalog.material_types USING btree (i...` |
+| material_types | uq_material_types_org_name | `CREATE UNIQUE INDEX uq_material_types_org_name ON catalog.material_types USIN...` |
+| material_types | uq_material_types_system_name | `CREATE UNIQUE INDEX uq_material_types_system_name ON catalog.material_types U...` |
 | materials | idx_materials_code_org | `CREATE INDEX idx_materials_code_org ON catalog.materials USING btree (code, o...` |
 | materials | idx_materials_default_provider | `CREATE INDEX idx_materials_default_provider ON catalog.materials USING btree ...` |
 | materials | idx_materials_import_batch | `CREATE INDEX idx_materials_import_batch ON catalog.materials USING btree (imp...` |
@@ -21,6 +25,9 @@
 | materials | materials_name_org_unique | `CREATE UNIQUE INDEX materials_name_org_unique ON catalog.materials USING btre...` |
 | materials | materials_name_system_unique | `CREATE UNIQUE INDEX materials_name_system_unique ON catalog.materials USING b...` |
 | organization_material_prices | unique_org_material | `CREATE UNIQUE INDEX unique_org_material ON catalog.organization_material_pric...` |
+| organization_task_prices | org_task_price_unique | `CREATE UNIQUE INDEX org_task_price_unique ON catalog.organization_task_prices...` |
+| organization_task_prices | org_task_prices_org_idx | `CREATE INDEX org_task_prices_org_idx ON catalog.organization_task_prices USIN...` |
+| organization_task_prices | org_task_prices_task_idx | `CREATE INDEX org_task_prices_task_idx ON catalog.organization_task_prices USI...` |
 | task_action_categories | task_action_categories_code_key | `CREATE UNIQUE INDEX task_action_categories_code_key ON catalog.task_action_ca...` |
 | task_action_categories | task_action_categories_name_key | `CREATE UNIQUE INDEX task_action_categories_name_key ON catalog.task_action_ca...` |
 | task_actions | idx_task_actions_category_id | `CREATE INDEX idx_task_actions_category_id ON catalog.task_actions USING btree...` |

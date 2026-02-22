@@ -72,18 +72,24 @@ export function PageHeader({
             <div className="hidden md:block">
                 {/* Row 1: Title + Tabs + Actions */}
                 <div className="px-8 h-[50px] flex items-center justify-between gap-4">
-                    {/* Left: Page Title & Icon & Tabs */}
-                    <div className="flex items-center gap-6 h-full">
-                        <div className="flex items-center gap-3">
+                    {/* Left: Breadcrumb + Title + Tabs */}
+                    <div className="flex items-center gap-0 h-full">
+                        {/* Breadcrumb: Org / Project */}
+                        <HeaderOrgProjectSelector />
+
+                        {/* Separator between breadcrumb and title */}
+                        <div className="h-5 w-px bg-border/60 mx-4" />
+
+                        <div className="flex items-center gap-1.5">
                             {backButton}
                             {icon ? (
                                 React.cloneElement(icon as any, {
-                                    className: cn("h-5 w-5 text-primary", (icon as any).props?.className)
+                                    className: cn("h-4 w-4 text-muted-foreground", (icon as any).props?.className)
                                 })
                             ) : ActiveIcon ? (
-                                <ActiveIcon className="h-5 w-5 text-primary" />
+                                <ActiveIcon className="h-4 w-4 text-muted-foreground" />
                             ) : null}
-                            <h1 className="text-base font-semibold tracking-tight text-foreground">
+                            <h1 className="text-sm font-medium text-foreground">
                                 {activeItem?.title || titleItem?.label}
                             </h1>
                         </div>
@@ -120,8 +126,6 @@ export function PageHeader({
 
                     {/* Right: Actions */}
                     <div id="page-header-actions" className="flex items-center gap-2">
-                        {/* Org/Project selector (auto-hides on org-scoped pages) + Currency selector */}
-                        <HeaderOrgProjectSelector />
                         <CurrencyModeSelector />
                         {actions}
 

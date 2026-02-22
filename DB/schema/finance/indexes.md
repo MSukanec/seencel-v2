@@ -1,12 +1,15 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [FINANCE] Indexes (131, excluding PKs)
+## [FINANCE] Indexes (134, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
+| capital_adjustments | idx_capital_adjustments_not_deleted | `CREATE INDEX idx_capital_adjustments_not_deleted ON finance.capital_adjustmen...` |
+| capital_adjustments | idx_capital_adjustments_org_date | `CREATE INDEX idx_capital_adjustments_org_date ON finance.capital_adjustments ...` |
+| capital_adjustments | idx_capital_adjustments_partner_date | `CREATE INDEX idx_capital_adjustments_partner_date ON finance.capital_adjustme...` |
 | capital_participants | idx_capital_participants_ownership_percentage | `CREATE INDEX idx_capital_participants_ownership_percentage ON finance.capital...` |
 | capital_participants | idx_partners_contact | `CREATE INDEX idx_partners_contact ON finance.capital_participants USING btree...` |
 | capital_participants | idx_partners_created_at | `CREATE INDEX idx_partners_created_at ON finance.capital_participants USING bt...` |

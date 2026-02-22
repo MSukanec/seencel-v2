@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [OPS] Tables (chunk 1: ops.ops_alerts — ops.system_error_logs)
+## [OPS] Tables (chunk 1: ops.ops_alerts — ops.system_job_logs)
 
 ### `ops.ops_alerts`
 
@@ -80,3 +80,16 @@
 | context | jsonb | ✓ |  |  |
 | severity | text | ✗ | 'error'::text |  |
 | created_at | timestamptz | ✗ | now() |  |
+
+### `ops.system_job_logs`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  |  |
+| subscription_id | uuid | ✓ |  |  |
+| job_type | text | ✗ |  |  |
+| details | jsonb | ✓ |  |  |
+| status | text | ✗ |  |  |
+| error_message | text | ✓ |  |  |
+| processed_at | timestamptz | ✓ | now() |  |

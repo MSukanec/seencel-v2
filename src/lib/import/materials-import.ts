@@ -35,7 +35,7 @@ export async function importMaterialPaymentsBatch(
 
     // 1. Get material types for lookup
     const { data: materialTypes } = await supabase
-        .from('material_types')
+        .schema('catalog').from('material_types')
         .select('id, name')
         .or(`organization_id.eq.${organizationId},is_system.eq.true`)
         .eq('is_deleted', false);

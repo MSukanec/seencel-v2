@@ -1,9 +1,84 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] Functions (chunk 2: log_material_payment_activity — log_subcontract_activity)
+## [AUDIT] Functions (chunk 2: log_material_activity — log_site_logs_activity)
+
+### `audit.log_material_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_material_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'public'
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    -- Skip logging for system materials (no organization_id)
+    IF (TG_OP = 'DELETE' AND OLD.organization_id IS NULL) OR
+       (TG_OP IN ('INSERT', 'UPDATE') AND NEW.organization_id IS NULL) THEN
+        RETURN NULL;
+    END IF;
+
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD;
+        audit_action := 'delete_material';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        -- Detect soft delete
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
+            audit_action := 'delete_material';
+        ELSE
+            audit_action := 'update_material';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW;
+        audit_action := 'create_material';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    -- Build metadata with relevant info
+    audit_metadata := jsonb_build_object(
+        'name', target_record.name,
+        'material_type', target_record.material_type,
+        'is_system', target_record.is_system
+    );
+
+    -- CRITICAL: Wrap in exception handler for cascade deletes
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id,
+            resolved_member_id,
+            audit_action,
+            target_record.id,
+            'materials',
+            audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Silently skip if org/member no longer exists (cascade delete in progress)
+        NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
 
 ### `audit.log_material_payment_activity()` 🔐
 
@@ -1136,60 +1211,6 @@ BEGIN
         );
     EXCEPTION WHEN OTHERS THEN
         NULL;
-    END;
-
-    RETURN NULL;
-END;
-$function$
-```
-</details>
-
-### `audit.log_subcontract_activity()` 🔐
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY DEFINER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION audit.log_subcontract_activity()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'audit', 'public'
-AS $function$
-DECLARE
-    resolved_member_id uuid;
-    audit_action text;
-    audit_metadata jsonb;
-    target_record RECORD;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        target_record := OLD; audit_action := 'delete_subcontract';
-        resolved_member_id := OLD.updated_by;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        target_record := NEW;
-        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
-            audit_action := 'delete_subcontract';
-        ELSE
-            audit_action := 'update_subcontract';
-        END IF;
-        resolved_member_id := NEW.updated_by;
-    ELSIF (TG_OP = 'INSERT') THEN
-        target_record := NEW; audit_action := 'create_subcontract';
-        resolved_member_id := NEW.created_by;
-    END IF;
-
-    audit_metadata := jsonb_build_object('title', target_record.title);
-
-    BEGIN
-        INSERT INTO audit.organization_activity_logs (
-            organization_id, member_id, action, target_id, target_table, metadata
-        ) VALUES (
-            target_record.organization_id, resolved_member_id,
-            audit_action, target_record.id, 'subcontracts', audit_metadata
-        );
-    EXCEPTION WHEN OTHERS THEN NULL;
     END;
 
     RETURN NULL;

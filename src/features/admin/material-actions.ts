@@ -105,7 +105,7 @@ export async function deleteSystemMaterial(id: string, replacementId: string | n
 
         // products table
         await supabase
-            .from("products")
+            .schema('providers').from("products")
             .update({ material_id: replacementId })
             .eq("material_id", id);
 

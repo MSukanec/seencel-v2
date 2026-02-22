@@ -1,9 +1,63 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [AUDIT] Functions (chunk 3: log_subcontract_payment_activity — log_unit_activity)
+## [AUDIT] Functions (chunk 3: log_subcontract_activity — log_unit_activity)
+
+### `audit.log_subcontract_activity()` 🔐
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION audit.log_subcontract_activity()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'audit', 'public'
+AS $function$
+DECLARE
+    resolved_member_id uuid;
+    audit_action text;
+    audit_metadata jsonb;
+    target_record RECORD;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        target_record := OLD; audit_action := 'delete_subcontract';
+        resolved_member_id := OLD.updated_by;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        target_record := NEW;
+        IF (OLD.is_deleted = false AND NEW.is_deleted = true) THEN
+            audit_action := 'delete_subcontract';
+        ELSE
+            audit_action := 'update_subcontract';
+        END IF;
+        resolved_member_id := NEW.updated_by;
+    ELSIF (TG_OP = 'INSERT') THEN
+        target_record := NEW; audit_action := 'create_subcontract';
+        resolved_member_id := NEW.created_by;
+    END IF;
+
+    audit_metadata := jsonb_build_object('title', target_record.title);
+
+    BEGIN
+        INSERT INTO audit.organization_activity_logs (
+            organization_id, member_id, action, target_id, target_table, metadata
+        ) VALUES (
+            target_record.organization_id, resolved_member_id,
+            audit_action, target_record.id, 'subcontracts', audit_metadata
+        );
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+
+    RETURN NULL;
+END;
+$function$
+```
+</details>
 
 ### `audit.log_subcontract_payment_activity()` 🔐
 

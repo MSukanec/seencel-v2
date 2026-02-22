@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Views (5)
+## [CATALOG] Views (6)
 
 ### `catalog.labor_view`
 
@@ -39,7 +39,7 @@ SELECT lt.id AS labor_id,
           WHERE ((lp.valid_to IS NULL) OR (lp.valid_to >= CURRENT_DATE))
           ORDER BY lp.labor_type_id, lp.organization_id, lp.valid_from DESC) lpc ON ((lpc.labor_id = lt.id)))
      LEFT JOIN finance.currencies c ON ((c.id = lpc.currency_id)))
-     LEFT JOIN labor_avg_prices lap ON ((lap.labor_id = lt.id)));
+     LEFT JOIN catalog.labor_avg_prices lap ON ((lap.labor_id = lt.id)));
 ```
 
 ### `catalog.materials_view`
@@ -80,6 +80,30 @@ SELECT m.id,
           ORDER BY mp_inner.valid_from DESC
          LIMIT 1) mp ON (true))
   WHERE (m.is_deleted = false);
+```
+
+### `catalog.organization_task_prices_view`
+
+```sql
+SELECT p.id,
+    p.organization_id,
+    p.task_id,
+    t.custom_name AS task_name,
+    td.name AS division_name,
+    td."order" AS division_order,
+    u.name AS unit,
+    p.labor_unit_cost,
+    p.material_unit_cost,
+    p.supply_unit_cost,
+    COALESCE(p.total_unit_cost, ((COALESCE(p.labor_unit_cost, (0)::numeric) + COALESCE(p.material_unit_cost, (0)::numeric)) + COALESCE(p.supply_unit_cost, (0)::numeric))) AS total_unit_cost,
+    p.currency_code,
+    p.note,
+    p.created_at,
+    p.updated_at
+   FROM (((catalog.organization_task_prices p
+     LEFT JOIN catalog.tasks t ON ((t.id = p.task_id)))
+     LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
 ### `catalog.task_costs_view`

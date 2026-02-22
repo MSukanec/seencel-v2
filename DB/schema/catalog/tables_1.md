@@ -1,9 +1,37 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Tables (chunk 1: catalog.labor_categories — catalog.units)
+## [CATALOG] Tables (chunk 1: catalog.external_service_prices — catalog.task_templates)
+
+### `catalog.external_service_prices`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| recipe_external_service_id | uuid | ✗ |  | FK → task_recipe_external_services.id |
+| organization_id | uuid | ✗ |  |  |
+| currency_id | uuid | ✗ |  |  |
+| unit_price | numeric | ✗ |  |  |
+| valid_from | date | ✗ | CURRENT_DATE |  |
+| valid_to | date | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| created_by | uuid | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+
+### `catalog.indirect_cost_values`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| indirect_cost_id | uuid | ✗ |  |  |
+| amount | numeric | ✗ |  |  |
+| currency_id | uuid | ✗ |  |  |
+| valid_from | date | ✗ | CURRENT_DATE |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
 
 ### `catalog.labor_categories`
 
@@ -104,6 +132,22 @@
 | created_by | uuid | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
 
+### `catalog.material_types`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✓ |  |  |
+| name | text | ✗ |  |  |
+| description | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| is_system | bool | ✗ | false |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_by | uuid | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+
 ### `catalog.materials`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -142,6 +186,22 @@
 | source | text | ✓ |  |  |
 | created_at | timestamptz | ✓ | now() |  |
 | updated_at | timestamptz | ✓ | now() |  |
+
+### `catalog.organization_task_prices`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| organization_id | uuid | ✗ |  | UNIQUE |
+| task_id | uuid | ✗ |  | UNIQUE, FK → tasks.id |
+| labor_unit_cost | numeric | ✓ |  |  |
+| material_unit_cost | numeric | ✓ |  |  |
+| total_unit_cost | numeric | ✓ |  |  |
+| currency_code | text | ✓ |  |  |
+| note | text | ✓ |  |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| created_at | timestamptz | ✗ | now() |  |
+| supply_unit_cost | numeric | ✓ |  |  |
 
 ### `catalog.task_action_categories`
 
@@ -418,61 +478,3 @@
 | created_by | uuid | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
 | code | varchar(20) | ✓ |  |  |
-
-### `catalog.tasks`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✓ | now() |  |
-| code | text | ✓ |  |  |
-| unit_id | uuid | ✗ |  | FK → units.id |
-| organization_id | uuid | ✓ |  |  |
-| is_system | bool | ✓ | true |  |
-| custom_name | text | ✓ |  |  |
-| task_division_id | uuid | ✓ |  | FK → task_divisions.id |
-| description | text | ✓ |  |  |
-| name | text | ✓ |  |  |
-| is_published | bool | ✓ | false |  |
-| is_deleted | bool | ✓ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| created_by | uuid | ✓ |  |  |
-| updated_by | uuid | ✓ |  |  |
-| task_action_id | uuid | ✓ |  | FK → task_actions.id |
-| task_element_id | uuid | ✓ |  | FK → task_elements.id |
-| is_parametric | bool | ✗ | false |  |
-| parameter_values | jsonb | ✓ | '{}'::jsonb |  |
-| import_batch_id | uuid | ✓ |  |  |
-| status | task_catalog_status | ✗ | 'draft'::task_catalog_status |  |
-| task_construction_system_id | uuid | ✓ |  | FK → task_construction_systems.id |
-| template_id | uuid | ✓ |  | FK → task_templates.id |
-
-### `catalog.unit_categories`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| code | text | ✗ |  | UNIQUE |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-
-### `catalog.units`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| name | text | ✗ |  |  |
-| id | uuid | ✗ | gen_random_uuid() | PK, UNIQUE |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| symbol | text | ✓ |  |  |
-| applicable_to | _text | ✗ | ARRAY['task'::text, 'material'::text,... |  |
-| organization_id | uuid | ✓ |  |  |
-| unit_category_id | uuid | ✓ |  | FK → unit_categories.id |
-| is_system | bool | ✗ | false |  |
-| is_deleted | bool | ✗ | false |  |
-| deleted_at | timestamptz | ✓ |  |  |
-| created_by | uuid | ✓ |  |  |
-| updated_by | uuid | ✓ |  |  |

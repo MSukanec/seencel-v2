@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -233,7 +233,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'billing.manage'::text)
+(is_admin() OR (is_org_member(organization_id) AND can_mutate_org(organization_id, 'admin.access'::text)))
 ```
 
 #### MIEMBROS VEN BILLING_CYCLES
@@ -242,7 +242,7 @@ can_mutate_org(organization_id, 'billing.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'billing.view'::text)
+is_org_member(organization_id)
 ```
 
 ### `organization_member_events` (2 policies)
@@ -253,7 +253,7 @@ can_view_org(organization_id, 'billing.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'billing.view'::text)
+is_org_member(organization_id)
 ```
 
 #### SISTEMA CREA MEMBER_EVENTS
@@ -262,7 +262,7 @@ can_view_org(organization_id, 'billing.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'members.manage'::text)
+can_mutate_org(organization_id, 'organization.manage'::text)
 ```
 
 ### `organization_subscriptions` (2 policies)
@@ -273,11 +273,11 @@ can_mutate_org(organization_id, 'members.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'billing.manage'::text)
+(is_admin() OR (is_org_member(organization_id) AND can_mutate_org(organization_id, 'admin.access'::text)))
 ```
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'billing.manage'::text)
+(is_admin() OR (is_org_member(organization_id) AND can_mutate_org(organization_id, 'admin.access'::text)))
 ```
 
 #### MIEMBROS VEN SUBSCRIPTIONS
@@ -286,7 +286,7 @@ can_mutate_org(organization_id, 'billing.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'billing.view'::text)
+is_org_member(organization_id)
 ```
 
 ### `payment_events` (2 policies)
@@ -344,7 +344,7 @@ is_admin()
 - **Roles**: {public}
 - **USING**:
 ```sql
-(is_self(user_id) OR ((organization_id IS NOT NULL) AND can_view_org(organization_id, 'billing.view'::text)) OR is_admin())
+(is_self(user_id) OR ((organization_id IS NOT NULL) AND is_org_member(organization_id)) OR is_admin())
 ```
 
 ### `paypal_preferences` (3 policies)

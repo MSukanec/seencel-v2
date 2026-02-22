@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -118,7 +118,7 @@ can_view_org(organization_id, 'projects.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-(((organization_id IS NULL) AND is_admin()) OR ((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'sitelog.manage'::text)))
+(((organization_id IS NULL) AND is_admin()) OR ((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'construction.manage'::text)))
 ```
 
 #### MIEMBROS EDITAN SITE_LOG_TYPES
@@ -127,7 +127,7 @@ can_view_org(organization_id, 'projects.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((organization_id IS NULL) AND is_admin()) OR ((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'sitelog.manage'::text)))
+(((organization_id IS NULL) AND is_admin()) OR ((organization_id IS NOT NULL) AND can_mutate_org(organization_id, 'construction.manage'::text)))
 ```
 
 #### MIEMBROS VEN SITE_LOG_TYPES
@@ -136,7 +136,7 @@ can_view_org(organization_id, 'projects.view'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((organization_id IS NULL) OR can_view_org(organization_id, 'sitelog.view'::text))
+((organization_id IS NULL) OR can_view_org(organization_id, 'construction.view'::text))
 ```
 
 ### `site_logs` (4 policies)
@@ -156,7 +156,7 @@ can_view_project(project_id)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'sitelog.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN SITE_LOGS
@@ -165,7 +165,7 @@ can_mutate_org(organization_id, 'sitelog.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'sitelog.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN SITE_LOGS
@@ -174,5 +174,5 @@ can_mutate_org(organization_id, 'sitelog.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'sitelog.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -149,11 +149,11 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'general_costs.manage'::text)))
+(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'finance.manage'::text)))
 ```
 - **WITH CHECK**:
 ```sql
-(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'general_costs.manage'::text)))
+(((is_system = true) AND is_admin()) OR ((is_system = false) AND can_mutate_org(organization_id, 'finance.manage'::text)))
 ```
 
 #### MIEMBROS CREAN GENERAL_COST_CATEGORIES
@@ -162,7 +162,7 @@ true
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-((is_system = false) AND can_mutate_org(organization_id, 'general_costs.manage'::text))
+((is_system = false) AND can_mutate_org(organization_id, 'finance.manage'::text))
 ```
 
 #### MIEMBROS VEN GENERAL_COST_CATEGORIES
@@ -171,7 +171,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-(is_admin() OR ((is_deleted = false) AND ((is_system = true) OR can_view_org(organization_id, 'general_costs.view'::text))))
+(is_admin() OR ((is_deleted = false) AND ((is_system = true) OR can_view_org(organization_id, 'finance.view'::text))))
 ```
 
 ### `general_costs` (3 policies)
@@ -182,7 +182,7 @@ true
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'general_costs.manage'::text)
+can_mutate_org(organization_id, 'finance.manage'::text)
 ```
 
 #### MIEMBROS CREAN GENERAL_COSTS
@@ -191,7 +191,7 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'general_costs.manage'::text)
+can_mutate_org(organization_id, 'finance.manage'::text)
 ```
 
 #### MIEMBROS VEN GENERAL_COSTS
@@ -200,7 +200,7 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_deleted = false) AND can_view_org(organization_id, 'general_costs.view'::text))
+((is_deleted = false) AND can_view_org(organization_id, 'finance.view'::text))
 ```
 
 ### `general_costs_payments` (4 policies)
@@ -211,11 +211,11 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'general_costs.manage'::text)
+can_mutate_org(organization_id, 'finance.manage'::text)
 ```
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'general_costs.manage'::text)
+can_mutate_org(organization_id, 'finance.manage'::text)
 ```
 
 #### MIEMBROS CREAN GENERAL_COSTS_PAYMENTS
@@ -224,7 +224,7 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'general_costs.manage'::text)
+can_mutate_org(organization_id, 'finance.manage'::text)
 ```
 
 #### MIEMBROS ELIMINAN GENERAL_COSTS_PAYMENTS
@@ -233,7 +233,7 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'general_costs.manage'::text)
+can_mutate_org(organization_id, 'finance.manage'::text)
 ```
 
 #### MIEMBROS VEN GENERAL_COSTS_PAYMENTS
@@ -242,7 +242,7 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-((is_deleted = false) AND can_view_org(organization_id, 'general_costs.view'::text))
+((is_deleted = false) AND can_view_org(organization_id, 'finance.view'::text))
 ```
 
 ### `labor_payments` (3 policies)
@@ -253,7 +253,7 @@ can_mutate_org(organization_id, 'general_costs.manage'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'labor.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN LABOR_PAYMENTS
@@ -262,7 +262,7 @@ can_mutate_org(organization_id, 'labor.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'labor.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN LABOR_PAYMENTS
@@ -271,7 +271,7 @@ can_mutate_org(organization_id, 'labor.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'labor.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `material_payments` (3 policies)
@@ -282,7 +282,7 @@ can_view_org(organization_id, 'labor.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'materials.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN MATERIAL_PAYMENTS
@@ -291,7 +291,7 @@ can_mutate_org(organization_id, 'materials.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'materials.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN MATERIAL_PAYMENTS
@@ -300,7 +300,7 @@ can_mutate_org(organization_id, 'materials.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'materials.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `quote_items` (4 policies)
@@ -391,7 +391,7 @@ can_view_org(organization_id, 'commercial.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'subcontracts.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN SUBCONTRACT_PAYMENTS
@@ -400,7 +400,7 @@ can_mutate_org(organization_id, 'subcontracts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'subcontracts.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN SUBCONTRACT_PAYMENTS
@@ -409,7 +409,7 @@ can_mutate_org(organization_id, 'subcontracts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'subcontracts.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `subcontracts` (3 policies)
@@ -420,7 +420,7 @@ can_view_org(organization_id, 'subcontracts.view'::text)
 - **Roles**: {public}
 - **WITH CHECK**:
 ```sql
-can_mutate_org(organization_id, 'subcontracts.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS EDITAN SUBCONTRACTS
@@ -429,7 +429,7 @@ can_mutate_org(organization_id, 'subcontracts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_mutate_org(organization_id, 'subcontracts.manage'::text)
+can_mutate_org(organization_id, 'construction.manage'::text)
 ```
 
 #### MIEMBROS VEN SUBCONTRACTS
@@ -438,7 +438,7 @@ can_mutate_org(organization_id, 'subcontracts.manage'::text)
 - **Roles**: {public}
 - **USING**:
 ```sql
-can_view_org(organization_id, 'subcontracts.view'::text)
+can_view_org(organization_id, 'construction.view'::text)
 ```
 
 ### `tax_labels` (2 policies)

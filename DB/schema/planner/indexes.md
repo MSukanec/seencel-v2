@@ -1,18 +1,21 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PLANNER] Indexes (16, excluding PKs)
+## [PLANNER] Indexes (19, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
 | attachments | idx_attachments_item | `CREATE INDEX idx_attachments_item ON planner.attachments USING btree (item_id)` |
+| attachments | idx_attachments_org | `CREATE INDEX idx_attachments_org ON planner.attachments USING btree (organiza...` |
 | attendees | attendees_item_id_member_id_key | `CREATE UNIQUE INDEX attendees_item_id_member_id_key ON planner.attendees USIN...` |
 | boards | idx_boards_org | `CREATE INDEX idx_boards_org ON planner.boards USING btree (organization_id) W...` |
 | checklist_items | idx_checklist_items_checklist | `CREATE INDEX idx_checklist_items_checklist ON planner.checklist_items USING b...` |
 | checklists | idx_checklists_item | `CREATE INDEX idx_checklists_item ON planner.checklists USING btree (item_id)` |
+| checklists | idx_checklists_org | `CREATE INDEX idx_checklists_org ON planner.checklists USING btree (organizati...` |
 | comments | idx_comments_item | `CREATE INDEX idx_comments_item ON planner.comments USING btree (item_id, crea...` |
+| comments | idx_comments_org | `CREATE INDEX idx_comments_org ON planner.comments USING btree (organization_i...` |
 | items | idx_items_assigned | `CREATE INDEX idx_items_assigned ON planner.items USING btree (assigned_to, du...` |
 | items | idx_items_board_list | `CREATE INDEX idx_items_board_list ON planner.items USING btree (board_id, lis...` |
 | items | idx_items_calendar | `CREATE INDEX idx_items_calendar ON planner.items USING btree (organization_id...` |

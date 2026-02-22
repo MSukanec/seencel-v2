@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -169,6 +169,101 @@ $function$
 ```
 </details>
 
+### `ops.fn_storage_overview(p_org_id uuid)` 🔐
+
+- **Returns**: TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb)
+- **Kind**: function | VOLATILE | SECURITY DEFINER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION ops.fn_storage_overview(p_org_id uuid)
+ RETURNS TABLE(total_bytes bigint, file_count bigint, folder_count bigint, max_storage_mb integer, by_type jsonb)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'ops', 'iam', 'billing', 'public'
+AS $function$
+DECLARE
+    v_plan_id UUID;
+    v_max_storage INT := 500;
+BEGIN
+    -- 1. Get plan storage limit
+    SELECT o.plan_id INTO v_plan_id
+    FROM organizations o
+    WHERE o.id = p_org_id;
+    
+    IF v_plan_id IS NOT NULL THEN
+        SELECT pf.max_storage_mb INTO v_max_storage
+        FROM plan_features pf
+        WHERE pf.plan_id = v_plan_id;
+    END IF;
+
+    -- 2. Single aggregation query
+    RETURN QUERY
+    WITH file_stats AS (
+        SELECT 
+            COALESCE(SUM(mf.file_size), 0)::BIGINT AS total_bytes,
+            COUNT(*)::BIGINT AS file_count,
+            COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'type', COALESCE(mf.file_type, 'other'),
+                        'count', type_count,
+                        'bytes', type_bytes
+                    )
+                ) FILTER (WHERE type_count IS NOT NULL),
+                '[]'::JSONB
+            ) AS by_type
+        FROM (
+            SELECT 
+                COALESCE(file_type, 'other') AS file_type,
+                file_size,
+                COUNT(*) OVER (PARTITION BY COALESCE(file_type, 'other')) AS type_count,
+                SUM(file_size) OVER (PARTITION BY COALESCE(file_type, 'other')) AS type_bytes
+            FROM media_files
+            WHERE organization_id = p_org_id
+              AND is_deleted = false
+        ) mf
+    ),
+    folder_stats AS (
+        SELECT COUNT(*)::BIGINT AS folder_count
+        FROM media_file_folders
+        WHERE organization_id = p_org_id
+    ),
+    type_breakdown AS (
+        SELECT 
+            jsonb_agg(
+                jsonb_build_object(
+                    'type', ft.file_type,
+                    'count', ft.cnt,
+                    'bytes', ft.total
+                )
+                ORDER BY ft.total DESC
+            ) AS by_type
+        FROM (
+            SELECT 
+                COALESCE(file_type, 'other') AS file_type,
+                COUNT(*) AS cnt,
+                COALESCE(SUM(file_size), 0) AS total
+            FROM media_files
+            WHERE organization_id = p_org_id
+              AND is_deleted = false
+            GROUP BY COALESCE(file_type, 'other')
+        ) ft
+    )
+    SELECT 
+        COALESCE((SELECT SUM(mf.file_size) FROM media_files mf WHERE mf.organization_id = p_org_id AND mf.is_deleted = false), 0)::BIGINT,
+        (SELECT COUNT(*) FROM media_files mf WHERE mf.organization_id = p_org_id AND mf.is_deleted = false)::BIGINT,
+        fs.folder_count,
+        v_max_storage,
+        COALESCE(tb.by_type, '[]'::JSONB)
+    FROM folder_stats fs
+    CROSS JOIN type_breakdown tb;
+END;
+$function$
+```
+</details>
+
 ### `ops.log_system_error(p_domain text, p_entity text, p_function_name text, p_error_message text, p_context jsonb DEFAULT NULL::jsonb, p_severity text DEFAULT 'error'::text)` 🔐
 
 - **Returns**: void
@@ -220,7 +315,7 @@ $function$
 CREATE OR REPLACE FUNCTION ops.ops_apply_plan_to_org(p_alert_id uuid, p_executed_by uuid)
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'iam', 'academy', 'finance', 'public'
 AS $function$
 DECLARE
   v_org_id UUID;
@@ -313,7 +408,7 @@ CREATE OR REPLACE FUNCTION ops.ops_detect_orgs_without_currency()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'iam', 'finance', 'academy', 'public'
 AS $function$
 DECLARE
   r record;
@@ -354,7 +449,7 @@ CREATE OR REPLACE FUNCTION ops.ops_detect_payment_entitlement_missing()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'iam', 'academy', 'public'
 AS $function$
 DECLARE
   r RECORD;
@@ -428,7 +523,7 @@ CREATE OR REPLACE FUNCTION ops.ops_detect_payment_not_applied()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'iam', 'academy', 'public'
 AS $function$
 BEGIN
   INSERT INTO ops_alerts (
@@ -503,7 +598,7 @@ $function$
 CREATE OR REPLACE FUNCTION ops.ops_detect_subscription_missing_course()
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'academy', 'public'
 AS $function$
 declare
   rec record;
@@ -576,7 +671,7 @@ $function$
 CREATE OR REPLACE FUNCTION ops.ops_execute_repair_action(p_alert_id uuid, p_action_id text, p_executed_by uuid)
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'iam', 'academy', 'public'
 AS $function$BEGIN
   -- Validar que la acción exista y esté activa
   IF NOT EXISTS (
@@ -622,7 +717,7 @@ END;$function$
 CREATE OR REPLACE FUNCTION ops.ops_retry_user_creation(p_alert_id uuid, p_executed_by uuid)
  RETURNS void
  LANGUAGE plpgsql
- SET search_path TO 'billing', 'academy', 'public'
+ SET search_path TO 'ops', 'billing', 'iam', 'academy', 'public'
 AS $function$
 DECLARE
   v_auth_user_id UUID;

@@ -1,12 +1,14 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PROJECTS] Indexes (50, excluding PKs)
+## [PROJECTS] Indexes (52, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
+| client_portal_branding | client_portal_branding_project_id_key | `CREATE UNIQUE INDEX client_portal_branding_project_id_key ON projects.client_...` |
+| client_portal_settings | idx_client_portal_settings_org | `CREATE INDEX idx_client_portal_settings_org ON projects.client_portal_setting...` |
 | contact_categories | idx_contact_categories_global_name_active | `CREATE UNIQUE INDEX idx_contact_categories_global_name_active ON projects.con...` |
 | contact_categories | idx_contact_categories_org_name_active | `CREATE UNIQUE INDEX idx_contact_categories_org_name_active ON projects.contac...` |
 | contact_category_links | contact_category_links_contact_id_contact_category_id_key | `CREATE UNIQUE INDEX contact_category_links_contact_id_contact_category_id_key...` |

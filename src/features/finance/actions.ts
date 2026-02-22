@@ -139,7 +139,7 @@ export async function deleteFinanceMovement(
     if (movementType === 'wallet_transfer' || movementType === 'currency_exchange') {
         // First get the financial_operation_id from the movement
         const { data: movement, error: fetchError } = await supabase
-            .from('financial_operation_movements')
+            .schema('finance').from('financial_operation_movements')
             .select('financial_operation_id')
             .eq('id', movementId)
             .single();
@@ -151,7 +151,7 @@ export async function deleteFinanceMovement(
 
         // Soft delete all movements for this operation
         const { error: movError } = await supabase
-            .from('financial_operation_movements')
+            .schema('finance').from('financial_operation_movements')
             .update({ is_deleted: true })
             .eq('financial_operation_id', movement.financial_operation_id);
 
@@ -162,7 +162,7 @@ export async function deleteFinanceMovement(
 
         // Soft delete the parent operation
         const { error } = await supabase
-            .from('financial_operations')
+            .schema('finance').from('financial_operations')
             .update({ is_deleted: true })
             .eq('id', movement.financial_operation_id);
 
@@ -233,7 +233,7 @@ export async function createCurrencyExchange(
     // 1. Create the parent financial_operation
     // NOTE: created_by is auto-populated by handle_updated_by trigger
     const { data: operation, error: opError } = await supabase
-        .from('financial_operations')
+        .schema('finance').from('financial_operations')
         .insert({
             organization_id: data.organization_id,
             project_id: data.project_id || null,
@@ -252,7 +252,7 @@ export async function createCurrencyExchange(
     // 2. Create the OUT movement (vendo)
     // NOTE: created_by is auto-populated by handle_updated_by trigger
     const { error: outError } = await supabase
-        .from('financial_operation_movements')
+        .schema('finance').from('financial_operation_movements')
         .insert({
             financial_operation_id: operation.id,
             organization_id: data.organization_id,
@@ -267,14 +267,14 @@ export async function createCurrencyExchange(
     if (outError) {
         console.error("Error creating OUT movement:", outError);
         // Rollback: delete the operation
-        await supabase.from('financial_operations').delete().eq('id', operation.id);
+        await supabase.schema('finance').from('financial_operations').delete().eq('id', operation.id);
         return { success: false, error: sanitizeError(outError) };
     }
 
     // 3. Create the IN movement (compro)
     // NOTE: created_by is auto-populated by handle_updated_by trigger
     const { error: inError } = await supabase
-        .from('financial_operation_movements')
+        .schema('finance').from('financial_operation_movements')
         .insert({
             financial_operation_id: operation.id,
             organization_id: data.organization_id,
@@ -289,7 +289,7 @@ export async function createCurrencyExchange(
     if (inError) {
         console.error("Error creating IN movement:", inError);
         // Rollback: delete the operation (cascade deletes movements)
-        await supabase.from('financial_operations').delete().eq('id', operation.id);
+        await supabase.schema('finance').from('financial_operations').delete().eq('id', operation.id);
         return { success: false, error: "Error al crear movimiento de entrada" };
     }
 
@@ -335,7 +335,7 @@ export async function createWalletTransfer(
 
     // 1. Create the parent financial_operation
     const { data: operation, error: opError } = await supabase
-        .from('financial_operations')
+        .schema('finance').from('financial_operations')
         .insert({
             organization_id: data.organization_id,
             project_id: data.project_id || null,
@@ -354,7 +354,7 @@ export async function createWalletTransfer(
 
     // 2. Create the OUT movement (from wallet)
     const { error: outError } = await supabase
-        .from('financial_operation_movements')
+        .schema('finance').from('financial_operation_movements')
         .insert({
             financial_operation_id: operation.id,
             organization_id: data.organization_id,
@@ -369,13 +369,13 @@ export async function createWalletTransfer(
 
     if (outError) {
         console.error("Error creating OUT movement:", outError);
-        await supabase.from('financial_operations').delete().eq('id', operation.id);
+        await supabase.schema('finance').from('financial_operations').delete().eq('id', operation.id);
         return { success: false, error: "Error al crear movimiento de salida" };
     }
 
     // 3. Create the IN movement (to wallet)
     const { error: inError } = await supabase
-        .from('financial_operation_movements')
+        .schema('finance').from('financial_operation_movements')
         .insert({
             financial_operation_id: operation.id,
             organization_id: data.organization_id,
@@ -390,7 +390,7 @@ export async function createWalletTransfer(
 
     if (inError) {
         console.error("Error creating IN movement:", inError);
-        await supabase.from('financial_operations').delete().eq('id', operation.id);
+        await supabase.schema('finance').from('financial_operations').delete().eq('id', operation.id);
         return { success: false, error: "Error al crear movimiento de entrada" };
     }
 

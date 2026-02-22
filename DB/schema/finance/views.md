@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [FINANCE] Views (21)
+## [FINANCE] Views (22)
 
 ### `finance.capital_ledger_view`
 
@@ -65,7 +65,7 @@ UNION ALL
     ca.created_by,
     ca.created_at,
     ca.is_deleted
-   FROM capital_adjustments ca
+   FROM finance.capital_adjustments ca
   WHERE ((ca.status = 'confirmed'::text) AND (ca.is_deleted = false));
 ```
 
@@ -96,7 +96,7 @@ SELECT org.id AS organization_id,
      LEFT JOIN ( SELECT capital_adjustments.organization_id,
             sum(capital_adjustments.amount) AS total,
             count(*) AS count
-           FROM capital_adjustments
+           FROM finance.capital_adjustments
           WHERE ((capital_adjustments.status = 'confirmed'::text) AND (capital_adjustments.is_deleted = false))
           GROUP BY capital_adjustments.organization_id) adjustments ON ((adjustments.organization_id = org.id)));
 ```
@@ -157,7 +157,7 @@ SELECT cp.id AS partner_id,
             sum(capital_adjustments.amount) AS total,
             count(*) AS count,
             max(capital_adjustments.adjustment_date) AS last_date
-           FROM capital_adjustments
+           FROM finance.capital_adjustments
           WHERE ((capital_adjustments.status = 'confirmed'::text) AND (capital_adjustments.is_deleted = false))
           GROUP BY capital_adjustments.partner_id) adjustments ON ((adjustments.partner_id = cp.id)))
   WHERE (cp.is_deleted = false);
@@ -548,7 +548,7 @@ SELECT mp.id,
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = mp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
      LEFT JOIN finance.currencies cur ON ((cur.id = mp.currency_id)))
-     LEFT JOIN material_types mt ON ((mt.id = mp.material_type_id)))
+     LEFT JOIN catalog.material_types mt ON ((mt.id = mp.material_type_id)))
   WHERE ((mp.is_deleted = false) OR (mp.is_deleted IS NULL));
 ```
 
@@ -624,6 +624,41 @@ SELECT ow.id,
     w.created_at AS wallet_created_at
    FROM (finance.organization_wallets ow
      LEFT JOIN finance.wallets w ON ((ow.wallet_id = w.id)));
+```
+
+### `finance.quotes_items_view`
+
+```sql
+SELECT bi.id,
+    bi.quote_id AS budget_id,
+    bi.organization_id,
+    bi.project_id,
+    bi.task_id,
+    bi.created_at,
+    bi.updated_at,
+    bi.created_by,
+    t.custom_name,
+    td.name AS division_name,
+    td."order" AS division_order,
+    u.name AS unit,
+    bi.description,
+    bi.quantity,
+    bi.unit_price,
+    bi.currency_id,
+    bi.markup_pct,
+    bi.tax_pct,
+    bi.cost_scope,
+        CASE bi.cost_scope
+            WHEN 'materials_and_labor'::cost_scope_enum THEN 'Materiales + Mano de obra'::text
+            WHEN 'materials_only'::cost_scope_enum THEN 'Sólo materiales'::text
+            WHEN 'labor_only'::cost_scope_enum THEN 'Sólo mano de obra'::text
+            ELSE initcap(replace((bi.cost_scope)::text, '_'::text, ' '::text))
+        END AS cost_scope_label,
+    bi.sort_key AS "position"
+   FROM (((finance.quote_items bi
+     LEFT JOIN catalog.tasks t ON ((t.id = bi.task_id)))
+     LEFT JOIN catalog.task_divisions td ON ((td.id = t.task_division_id)))
+     LEFT JOIN catalog.units u ON ((u.id = t.unit_id)));
 ```
 
 ### `finance.subcontract_payments_view`
@@ -785,7 +820,7 @@ UNION ALL
      LEFT JOIN finance.currencies cur ON ((cur.id = mp.currency_id)))
      LEFT JOIN finance.organization_wallets ow ON ((ow.id = mp.wallet_id)))
      LEFT JOIN finance.wallets w ON ((w.id = ow.wallet_id)))
-     LEFT JOIN material_types mt ON ((mt.id = mp.material_type_id)))
+     LEFT JOIN catalog.material_types mt ON ((mt.id = mp.material_type_id)))
      LEFT JOIN finance.material_invoices mi ON ((mi.id = mp.purchase_id)))
      LEFT JOIN projects.contacts prov ON ((prov.id = mi.provider_id)))
      LEFT JOIN iam.organization_members om_created ON ((om_created.id = mp.created_by)))
@@ -950,9 +985,9 @@ UNION ALL
     cur_in.code AS to_currency_code,
     cur_in.symbol AS to_currency_symbol,
     w_in.name AS to_wallet_name
-   FROM ((((((((((financial_operations fo
-     LEFT JOIN financial_operation_movements fom_out ON (((fom_out.financial_operation_id = fo.id) AND (fom_out.direction = 'out'::text) AND ((fom_out.is_deleted = false) OR (fom_out.is_deleted IS NULL)))))
-     LEFT JOIN financial_operation_movements fom_in ON (((fom_in.financial_operation_id = fo.id) AND (fom_in.direction = 'in'::text) AND ((fom_in.is_deleted = false) OR (fom_in.is_deleted IS NULL)))))
+   FROM ((((((((((finance.financial_operations fo
+     LEFT JOIN finance.financial_operation_movements fom_out ON (((fom_out.financial_operation_id = fo.id) AND (fom_out.direction = 'out'::text) AND ((fom_out.is_deleted = false) OR (fom_out.is_deleted IS NULL)))))
+     LEFT JOIN finance.financial_operation_movements fom_in ON (((fom_in.financial_operation_id = fo.id) AND (fom_in.direction = 'in'::text) AND ((fom_in.is_deleted = false) OR (fom_in.is_deleted IS NULL)))))
      LEFT JOIN finance.currencies cur_out ON ((cur_out.id = fom_out.currency_id)))
      LEFT JOIN finance.currencies cur_in ON ((cur_in.id = fom_in.currency_id)))
      LEFT JOIN finance.organization_wallets ow_out ON ((ow_out.id = fom_out.wallet_id)))
@@ -993,9 +1028,9 @@ UNION ALL
     cur.code AS to_currency_code,
     cur.symbol AS to_currency_symbol,
     w_in.name AS to_wallet_name
-   FROM (((((((((financial_operations fo
-     LEFT JOIN financial_operation_movements fom_out ON (((fom_out.financial_operation_id = fo.id) AND (fom_out.direction = 'out'::text) AND ((fom_out.is_deleted = false) OR (fom_out.is_deleted IS NULL)))))
-     LEFT JOIN financial_operation_movements fom_in ON (((fom_in.financial_operation_id = fo.id) AND (fom_in.direction = 'in'::text) AND ((fom_in.is_deleted = false) OR (fom_in.is_deleted IS NULL)))))
+   FROM (((((((((finance.financial_operations fo
+     LEFT JOIN finance.financial_operation_movements fom_out ON (((fom_out.financial_operation_id = fo.id) AND (fom_out.direction = 'out'::text) AND ((fom_out.is_deleted = false) OR (fom_out.is_deleted IS NULL)))))
+     LEFT JOIN finance.financial_operation_movements fom_in ON (((fom_in.financial_operation_id = fo.id) AND (fom_in.direction = 'in'::text) AND ((fom_in.is_deleted = false) OR (fom_in.is_deleted IS NULL)))))
      LEFT JOIN finance.currencies cur ON ((cur.id = fom_out.currency_id)))
      LEFT JOIN finance.organization_wallets ow_out ON ((ow_out.id = fom_out.wallet_id)))
      LEFT JOIN finance.wallets w_out ON ((w_out.id = ow_out.wallet_id)))

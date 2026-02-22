@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { MapPin } from "lucide-react";
-import { parseDateFromDB, formatDateTimeForDB } from "@/lib/timezone-data";
+
 
 import { FormFooter } from "@/components/shared/forms/form-footer";
 import { FormGroup } from "@/components/ui/form-group";
@@ -80,8 +80,9 @@ export function CalendarEventForm({
     // Determine initial values
     const getInitialValues = (): EventFormValues => {
         if (initialData) {
-            const startDate = parseDateFromDB(initialData.start_at) ?? new Date();
-            const endDate = initialData.end_at ? parseDateFromDB(initialData.end_at) ?? null : null;
+            // TIMESTAMPTZ columns → use new Date() to preserve time (not parseDateFromDB which strips to noon)
+            const startDate = initialData.start_at ? new Date(initialData.start_at) : new Date();
+            const endDate = initialData.end_at ? new Date(initialData.end_at) : null;
 
             return {
                 title: initialData.title,
@@ -122,29 +123,31 @@ export function CalendarEventForm({
     async function onSubmit(values: EventFormValues) {
         setIsLoading(true);
         try {
-            // Build start_at datetime
+            // Build start_at datetime (TIMESTAMPTZ → use ISO string with TZ)
             let startAt: string;
             if (values.is_all_day) {
-                startAt = formatDateTimeForDB(new Date(values.start_date.setHours(0, 0, 0, 0))) ?? new Date().toISOString();
+                const d = new Date(values.start_date);
+                d.setHours(0, 0, 0, 0);
+                startAt = d.toISOString();
             } else {
                 const [hours, minutes] = (values.start_time || "00:00").split(":").map(Number);
                 const startDate = new Date(values.start_date);
                 startDate.setHours(hours, minutes, 0, 0);
-                startAt = formatDateTimeForDB(startDate) ?? new Date().toISOString();
+                startAt = startDate.toISOString();
             }
 
-            // Build end_at datetime (optional)
+            // Build end_at datetime (optional, TIMESTAMPTZ)
             let endAt: string | null = null;
             if (values.end_date) {
                 if (values.is_all_day) {
                     const endDate = new Date(values.end_date);
                     endDate.setHours(23, 59, 59, 999);
-                    endAt = formatDateTimeForDB(endDate);
+                    endAt = endDate.toISOString();
                 } else {
                     const [hours, minutes] = (values.end_time || "23:59").split(":").map(Number);
                     const endDate = new Date(values.end_date);
                     endDate.setHours(hours, minutes, 0, 0);
-                    endAt = formatDateTimeForDB(endDate);
+                    endAt = endDate.toISOString();
                 }
             }
 

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [ACADEMY] Indexes (19, excluding PKs)
+## [ACADEMY] Indexes (24, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -26,3 +26,8 @@
 | course_modules | course_modules_not_deleted_idx | `CREATE INDEX course_modules_not_deleted_idx ON academy.course_modules USING b...` |
 | courses | courses_not_deleted_idx | `CREATE INDEX courses_not_deleted_idx ON academy.courses USING btree (is_delet...` |
 | courses | courses_slug_key | `CREATE UNIQUE INDEX courses_slug_key ON academy.courses USING btree (slug)` |
+| testimonials | idx_testimonials_active | `CREATE INDEX idx_testimonials_active ON academy.testimonials USING btree (is_...` |
+| testimonials | idx_testimonials_course | `CREATE INDEX idx_testimonials_course ON academy.testimonials USING btree (cou...` |
+| testimonials | idx_testimonials_course_user | `CREATE INDEX idx_testimonials_course_user ON academy.testimonials USING btree...` |
+| testimonials | idx_testimonials_org | `CREATE INDEX idx_testimonials_org ON academy.testimonials USING btree (organi...` |
+| testimonials | idx_testimonials_user | `CREATE INDEX idx_testimonials_user ON academy.testimonials USING btree (user_...` |

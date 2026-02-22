@@ -9,13 +9,13 @@ import {
 } from "@/components/ui/popover";
 import { useRouter } from "@/i18n/routing";
 import { usePathname } from "next/navigation";
-import { ChevronsUpDown, Check, Crown } from "lucide-react";
+import { ChevronDown, Check, Plus, Building2, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getStorageUrl } from "@/lib/storage-utils";
 import { useLayoutData } from "@/hooks/use-layout-data";
-import { useLayoutStore, useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
+import { useActiveProjectId, useLayoutActions } from "@/stores/layout-store";
 import { useThemeCustomization } from "@/stores/theme-store";
+import { switchOrganization, fetchUserOrganizationsLight } from "@/features/organization/actions";
 
 // Preset colors for projects
 const PROJECT_COLORS: Record<string, string> = {
@@ -59,25 +59,300 @@ function getInitials(name: string) {
 }
 
 // ============================================================================
-// HEADER ORG/PROJECT SELECTOR
+// LIGHTWEIGHT ORG TYPE
+// ============================================================================
+
+interface LightOrg {
+    id: string;
+    name: string;
+    logo_url: string | null;
+}
+
+// ============================================================================
+// ORG SELECTOR (Breadcrumb segment)
+// ============================================================================
+
+function OrgSelector({ currentOrg }: { currentOrg: { id: string; name: string; logo_url?: string | null } }) {
+    const [open, setOpen] = React.useState(false);
+    const [orgs, setOrgs] = React.useState<LightOrg[]>([]);
+    const [loaded, setLoaded] = React.useState(false);
+    const [isSwitching, setIsSwitching] = React.useState(false);
+    const router = useRouter();
+
+    // Fetch orgs lazily when popover opens
+    React.useEffect(() => {
+        if (open && !loaded) {
+            fetchUserOrganizationsLight().then(data => {
+                setOrgs(data);
+                setLoaded(true);
+            });
+        }
+    }, [open, loaded]);
+
+    const handleSelectOrg = async (orgId: string) => {
+        if (orgId === currentOrg.id) {
+            setOpen(false);
+            return;
+        }
+        setOpen(false);
+        setIsSwitching(true);
+        try {
+            await switchOrganization(orgId);
+        } catch {
+            // switchOrganization does a redirect, so this is expected
+        }
+    };
+
+    const handleNewOrg = () => {
+        setOpen(false);
+        router.push('/workspace-setup');
+    };
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    className={cn(
+                        "flex items-center gap-1.5 h-7 px-2 rounded-md transition-colors",
+                        "hover:bg-secondary/80 text-foreground",
+                        open && "bg-secondary/80"
+                    )}
+                >
+                    <Avatar className="h-4 w-4 rounded">
+                        {currentOrg.logo_url && <AvatarImage src={currentOrg.logo_url} alt={currentOrg.name} />}
+                        <AvatarFallback className="text-[7px] rounded bg-primary/10 text-primary font-semibold">
+                            {getInitials(currentOrg.name)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium whitespace-nowrap">
+                        {currentOrg.name}
+                    </span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                </button>
+            </PopoverTrigger>
+
+            <PopoverContent
+                side="bottom"
+                align="start"
+                sideOffset={8}
+                className="w-[240px] p-0"
+            >
+                <div className="flex flex-col max-h-[320px]">
+                    {/* Scrollable org list */}
+                    <div className="overflow-y-auto p-1.5 flex-1 min-h-0">
+                        {!loaded ? (
+                            <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                                Cargando...
+                            </div>
+                        ) : (
+                            orgs.map((org) => {
+                                const isActive = org.id === currentOrg.id;
+                                return (
+                                    <button
+                                        key={org.id}
+                                        disabled={isSwitching}
+                                        onClick={() => handleSelectOrg(org.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors",
+                                            isActive && "bg-secondary",
+                                            isSwitching && "opacity-50 cursor-wait"
+                                        )}
+                                    >
+                                        <Avatar className="h-5 w-5 rounded shrink-0">
+                                            {org.logo_url && <AvatarImage src={org.logo_url} alt={org.name} />}
+                                            <AvatarFallback className="text-[8px] rounded bg-primary/10 text-primary font-semibold">
+                                                {getInitials(org.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="truncate flex-1 text-left">{org.name}</span>
+                                        {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* Fixed bottom: New Org */}
+                    <div className="border-t p-1.5 shrink-0">
+                        <button
+                            onClick={handleNewOrg}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span>Nueva Organización</span>
+                        </button>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+// ============================================================================
+// PROJECT SELECTOR (Breadcrumb segment)
+// ============================================================================
+
+function ProjectSelector({
+    projects,
+    onProjectChange,
+}: {
+    projects: ProjectLike[];
+    onProjectChange: (projectId: string | null) => void;
+}) {
+    const [open, setOpen] = React.useState(false);
+    const activeProjectId = useActiveProjectId();
+    const router = useRouter();
+    const showProjectAvatar = true;
+
+    const activeProjects = (projects || []).filter((p) => !p.status || p.status === 'active');
+    const selectedProject = activeProjectId
+        ? activeProjects.find(p => p.id === activeProjectId) || null
+        : null;
+
+    const handleSelectGeneral = () => {
+        onProjectChange(null);
+        setOpen(false);
+    };
+
+    const handleSelectProject = (projectId: string) => {
+        onProjectChange(projectId);
+        setOpen(false);
+    };
+
+    const handleNewProject = () => {
+        setOpen(false);
+        router.push('/organization/projects');
+    };
+
+    const renderProjectAvatar = (project: ProjectLike) => {
+        const color = getProjectColor(project);
+        return (
+            <Avatar className="h-4 w-4 rounded">
+                {showProjectAvatar && project.image_path && (
+                    <AvatarImage src={project.image_path} alt={project.name} />
+                )}
+                <AvatarFallback
+                    delayMs={0}
+                    className="text-[7px] rounded font-bold"
+                    style={{
+                        backgroundColor: `${color}25`,
+                        color: color,
+                        border: `1px solid ${color}40`
+                    }}
+                >
+                    {getInitials(project.name)}
+                </AvatarFallback>
+            </Avatar>
+        );
+    };
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    className={cn(
+                        "flex items-center gap-1.5 h-7 px-2 rounded-md transition-colors",
+                        "hover:bg-secondary/80 text-foreground",
+                        open && "bg-secondary/80"
+                    )}
+                >
+                    {selectedProject ? (
+                        <>
+                            {renderProjectAvatar(selectedProject)}
+                            <span className="text-sm font-medium whitespace-nowrap">
+                                {selectedProject.name}
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm font-medium whitespace-nowrap text-muted-foreground">
+                                General
+                            </span>
+                        </>
+                    )}
+                    <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                </button>
+            </PopoverTrigger>
+
+            <PopoverContent
+                side="bottom"
+                align="start"
+                sideOffset={8}
+                className="w-[240px] p-0"
+            >
+                <div className="flex flex-col max-h-[320px]">
+                    {/* Scrollable: General + projects */}
+                    <div className="overflow-y-auto p-1.5 flex-1 min-h-0">
+                        {/* "General" option */}
+                        <button
+                            onClick={handleSelectGeneral}
+                            className={cn(
+                                "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors",
+                                !activeProjectId && "bg-secondary"
+                            )}
+                        >
+                            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                            <span className="flex-1 text-left">General</span>
+                            {!activeProjectId && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                        </button>
+
+                        {/* Project list */}
+                        {activeProjects.length > 0 && (
+                            <>
+                                <div className="border-t my-1" />
+                                {activeProjects.map((project) => {
+                                    const isActive = activeProjectId === project.id;
+                                    return (
+                                        <button
+                                            key={project.id}
+                                            onClick={() => handleSelectProject(project.id)}
+                                            className={cn(
+                                                "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors",
+                                                isActive && "bg-secondary"
+                                            )}
+                                        >
+                                            {renderProjectAvatar(project)}
+                                            <span className="truncate flex-1 text-left">{project.name}</span>
+                                            {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                                        </button>
+                                    );
+                                })}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Fixed bottom: New Project */}
+                    <div className="border-t p-1.5 shrink-0">
+                        <button
+                            onClick={handleNewProject}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span>Nuevo Proyecto</span>
+                        </button>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+// ============================================================================
+// HEADER BREADCRUMB SELECTOR (Exported)
 // ============================================================================
 
 export function HeaderOrgProjectSelector() {
-    const [open, setOpen] = React.useState(false);
     const pathname = usePathname();
 
     // Get org/project data
-    const { currentOrg, currentProject, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useLayoutData();
-    const showProjectAvatar = useLayoutStore(s => s.sidebarProjectAvatars);
+    const { currentOrg, projects, saveProjectPreference, handleProjectChange: sidebarProjectChange } = useLayoutData();
     const activeProjectId = useActiveProjectId();
     const { setActiveProjectId } = useLayoutActions();
     const { resolveThemeForProject, resetTheme } = useThemeCustomization();
     const router = useRouter();
 
-    // ── Org-only route prefixes (selector HIDDEN) ──
-    // These pages show org-wide data and the project context is irrelevant.
-    // All other /organization routes show the selector (Visión General, Finanzas, 
-    // Presupuestos, Construcción, Planner, Documentación, etc.)
+    // ── Org-only route prefixes (project selector HIDDEN) ──
     const ORG_ONLY_PREFIXES = [
         '/organization/settings', '/organizacion/configuracion',
         '/organization/contacts', '/organizacion/contactos',
@@ -91,173 +366,59 @@ export function HeaderOrgProjectSelector() {
     const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/)/, '');
     const isOrgRoute = pathWithoutLocale.startsWith('/organization') || pathWithoutLocale.startsWith('/organizacion');
 
-    // Project detail pages (/organization/projects/[id]) ARE project-scoped, so exclude from org-only
     const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/[^/]+/.test(pathWithoutLocale);
-
-    // Quote detail pages (/organization/quotes/[id]) hide the selector — project is implicit in the quote
     const isQuoteDetailPage = /\/(?:organization|organizacion)\/(?:quotes|cotizaciones)\/[^/]+/.test(pathWithoutLocale);
 
     const isOrgOnly = !isProjectDetailPage && ORG_ONLY_PREFIXES.some(prefix =>
         pathWithoutLocale === prefix || pathWithoutLocale.startsWith(prefix + '/')
     );
 
-    // Hide if: not an org route at all, org-only page, or quote detail page
-    if (!isOrgRoute || isOrgOnly || isQuoteDetailPage || !currentOrg) return null;
+    // Hide completely if not an org route or no current org
+    if (!isOrgRoute || !currentOrg) return null;
+
+    // Determine which selectors to show
+    const showProjectSelector = !isOrgOnly && !isQuoteDetailPage;
 
     const activeProjects = (projects || []).filter((p: ProjectLike) => !p.status || p.status === 'active');
-    const selectedProject = activeProjectId
-        ? activeProjects.find(p => p.id === activeProjectId) || null
-        : null;
 
-    const logoSrc = currentOrg?.logo_url || null;
+    const handleProjectChange = (projectId: string | null) => {
+        if (projectId === null) {
+            setActiveProjectId(null);
+            resetTheme();
+            return;
+        }
 
-    const handleSelectOrg = () => {
-        setActiveProjectId(null);
-        resetTheme();
-        setOpen(false);
-    };
-
-    const handleSelectProject = (projectId: string) => {
         setActiveProjectId(projectId);
         saveProjectPreference(projectId);
         sidebarProjectChange(projectId);
 
-        // Resolve theme for the selected project
         const project = activeProjects.find((p: ProjectLike) => p.id === projectId);
         if (project) {
             resolveThemeForProject(project);
         }
 
         // Context-aware redirect: if on project detail page, navigate to the new project
-        const isProjectDetailPage = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/([^/]+)/.test(pathname);
-        if (isProjectDetailPage) {
+        const isOnProjectDetail = /\/(?:organization|organizacion)\/(?:projects|proyectos)\/([^/]+)/.test(pathname);
+        if (isOnProjectDetail) {
             router.push({ pathname: '/organization/projects/[projectId]', params: { projectId } });
         }
-
-        setOpen(false);
-    };
-
-    const renderProjectAvatar = (project: ProjectLike | null, size: "sm" | "xs" = "sm") => {
-        const sizeClass = size === "xs" ? "h-4 w-4" : "h-5 w-5";
-        const textSize = size === "xs" ? "text-[7px]" : "text-[8px]";
-        const color = getProjectColor(project);
-
-        return (
-            <Avatar className={cn(sizeClass, "rounded")}>
-                {showProjectAvatar && project?.image_path && (
-                    <AvatarImage src={project.image_path} alt={project?.name || ""} />
-                )}
-                <AvatarFallback
-                    delayMs={0}
-                    className={cn(textSize, "rounded font-bold")}
-                    style={{
-                        backgroundColor: `${color}25`,
-                        color: color,
-                        border: `1px solid ${color}40`
-                    }}
-                >
-                    {getInitials(project?.name || "")}
-                </AvatarFallback>
-            </Avatar>
-        );
     };
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <button
-                    className={cn(
-                        "flex items-center gap-2 h-8 px-2.5 rounded-md transition-colors",
-                        "hover:bg-secondary/80 text-foreground",
-                        "border border-border/50",
-                        open && "bg-secondary/80"
-                    )}
-                >
-                    {/* Context label */}
-                    <span className="text-xs text-muted-foreground/70 mr-0.5">Contexto:</span>
+        <div className="flex items-center gap-0">
+            {/* Org Selector — always visible */}
+            <OrgSelector currentOrg={currentOrg} />
 
-                    {/* Org avatar */}
-                    <div className="relative">
-                        <Avatar className="h-5 w-5 rounded">
-                            {logoSrc && <AvatarImage src={logoSrc} alt={currentOrg.name} />}
-                            <AvatarFallback className="text-[8px] rounded bg-primary/10 text-primary font-semibold">
-                                {getInitials(currentOrg.name)}
-                            </AvatarFallback>
-                        </Avatar>
-                        {currentOrg.isFounder && (
-                            <Crown className="absolute -top-1 -right-1 h-2.5 w-2.5 text-amber-500 fill-amber-400" />
-                        )}
-                    </div>
-
-                    {/* Active selection name */}
-                    <span className="text-sm font-medium whitespace-nowrap">
-                        {selectedProject ? selectedProject.name : currentOrg.name}
-                    </span>
-
-                    <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                </button>
-            </PopoverTrigger>
-
-            <PopoverContent
-                side="bottom"
-                align="end"
-                sideOffset={8}
-                className="w-[240px] p-2"
-            >
-                {/* Organization option — clickeable */}
-                <button
-                    onClick={handleSelectOrg}
-                    className={cn(
-                        "flex items-center gap-2 w-full px-2 py-2 mb-1 rounded-md hover:bg-secondary transition-colors",
-                        !activeProjectId && "bg-secondary"
-                    )}
-                >
-                    <Avatar className="h-5 w-5 rounded">
-                        {logoSrc && <AvatarImage src={logoSrc} alt={currentOrg.name} />}
-                        <AvatarFallback className="text-[8px] rounded bg-primary/10 text-primary font-semibold">
-                            {getInitials(currentOrg.name)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col min-w-0 flex-1 text-left">
-                        <span className="text-xs text-muted-foreground">Organización</span>
-                        <span className="text-sm font-medium truncate">{currentOrg.name}</span>
-                    </div>
-                    {!activeProjectId && <Check className="h-4 w-4 text-primary shrink-0" />}
-                </button>
-
-                {/* Projects Section */}
-                <div>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Proyectos Activos
-                    </div>
-                    <ScrollArea className="max-h-[200px]">
-                        {activeProjects.length === 0 ? (
-                            <div className="px-2 py-3 text-sm text-muted-foreground text-center">
-                                No hay proyectos
-                            </div>
-                        ) : (
-                            activeProjects.map((project: ProjectLike) => {
-                                const isActive = activeProjectId === project.id;
-                                return (
-                                    <button
-                                        key={project.id}
-                                        onClick={() => handleSelectProject(project.id)}
-                                        className={cn(
-                                            "flex items-center gap-2 w-full px-2 py-2 text-sm rounded-md hover:bg-secondary transition-colors",
-                                            isActive && "bg-secondary"
-                                        )}
-                                    >
-                                        {renderProjectAvatar(project)}
-                                        <span className="truncate flex-1 text-left">{project.name}</span>
-                                        {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
-                                    </button>
-                                );
-                            })
-                        )}
-                    </ScrollArea>
-
-                </div>
-            </PopoverContent>
-        </Popover>
+            {/* Breadcrumb separator + Project Selector */}
+            {showProjectSelector && (
+                <>
+                    <span className="text-muted-foreground/40 text-sm select-none mx-0.5">/</span>
+                    <ProjectSelector
+                        projects={activeProjects}
+                        onProjectChange={handleProjectChange}
+                    />
+                </>
+            )}
+        </div>
     );
 }

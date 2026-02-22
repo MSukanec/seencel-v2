@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format, isToday, isTomorrow, compareDesc } from "date-fns";
+import { format, isToday, isTomorrow, compareDesc, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { PlannerItem } from "@/features/planner/types";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { PlannerEventActions } from "./planner-event-actions";
 import { ViewEmptyState } from "@/components/shared/empty-state";
+
 
 interface PlannerListProps {
     events: PlannerItem[];
@@ -26,16 +27,19 @@ interface PlannerListProps {
 export function PlannerList({ events, onEventClick, totalEvents, onCreateEvent, onResetFilters, onOptimisticDeleteEvent }: PlannerListProps) {
     // Group events by date category
     const groupedEvents = React.useMemo(() => {
-        const sorted = [...events].sort((a, b) =>
-            // Descending sort (Newest/Furthest first)
-            compareDesc(new Date(a.start_at!), new Date(b.start_at!))
-        );
+        const sorted = [...events].sort((a, b) => {
+            const dateA = a.start_at ? new Date(a.start_at) : new Date(0);
+            const dateB = b.start_at ? new Date(b.start_at) : new Date(0);
+            if (!isValid(dateA) || !isValid(dateB)) return 0;
+            return compareDesc(dateA, dateB);
+        });
 
         const groups: Record<string, PlannerItem[]> = {};
 
         sorted.forEach(event => {
             if (!event.start_at) return;
             const date = new Date(event.start_at);
+            if (!isValid(date)) return;
             let key = format(date, "yyyy-MM-dd");
 
             if (isToday(date)) key = "today";
@@ -56,7 +60,7 @@ export function PlannerList({ events, onEventClick, totalEvents, onCreateEvent, 
                 d.setDate(d.getDate() + 1);
                 return d;
             }
-            return new Date(key + "T00:00:00");
+            return new Date(key);
         };
 
         const dateA = getDate(a);

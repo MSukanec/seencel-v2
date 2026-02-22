@@ -1,9 +1,99 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [FINANCE] Tables (chunk 2: finance.personnel_rates — finance.wallets)
+## [FINANCE] Tables (chunk 2: finance.partner_contributions — finance.wallets)
+
+### `finance.partner_contributions`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  |  |
+| amount | numeric | ✗ |  |  |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| exchange_rate | numeric | ✗ |  |  |
+| contribution_date | date | ✗ | now() |  |
+| notes | text | ✓ |  |  |
+| reference | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
+| partner_id | uuid | ✓ |  | FK → capital_participants.id |
+| status | text | ✗ | 'confirmed'::text |  |
+| created_by | uuid | ✓ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `finance.partner_withdrawals`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| project_id | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  |  |
+| amount | numeric | ✗ |  |  |
+| currency_id | uuid | ✗ |  | FK → currencies.id |
+| exchange_rate | numeric | ✗ |  |  |
+| withdrawal_date | date | ✗ | now() |  |
+| notes | text | ✓ |  |  |
+| reference | text | ✓ |  |  |
+| created_at | timestamptz | ✗ | now() |  |
+| updated_at | timestamptz | ✗ | now() |  |
+| wallet_id | uuid | ✓ |  | FK → organization_wallets.id |
+| partner_id | uuid | ✓ |  | FK → capital_participants.id |
+| status | text | ✗ | 'confirmed'::text |  |
+| created_by | uuid | ✓ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+
+### `finance.pdf`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| created_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✓ |  |  |
+| updated_at | timestamptz | ✓ |  |  |
+| name | text | ✓ |  |  |
+| blocks | jsonb | ✓ |  |  |
+| config | jsonb | ✓ |  |  |
+
+### `finance.pdf_templates`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| name | text | ✗ | 'Plantilla por defecto'::text |  |
+| logo_width | int4 | ✓ | 80 |  |
+| logo_height | int4 | ✓ | 80 |  |
+| company_name_size | int4 | ✓ | 24 |  |
+| company_name_color | text | ✓ | '''#000000''::text'::text |  |
+| primary_color | text | ✓ | '''#000000''::text'::text |  |
+| secondary_color | text | ✓ | '#e5e7eb'::text |  |
+| text_color | text | ✓ | '#1f2937'::text |  |
+| font_family | text | ✓ | 'Arial'::text |  |
+| title_size | int4 | ✓ | 18 |  |
+| subtitle_size | int4 | ✓ | 14 |  |
+| body_size | int4 | ✓ | 12 |  |
+| margin_top | int4 | ✓ | 10 |  |
+| margin_bottom | int4 | ✓ | 10 |  |
+| margin_left | int4 | ✓ | 10 |  |
+| margin_right | int4 | ✓ | 10 |  |
+| footer_text | text | ✓ | 'Documento generado por Seencel. SEEN... |  |
+| footer_show_page_numbers | bool | ✓ | true |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| company_info_size | int4 | ✓ | 10 |  |
+| show_footer_info | bool | ✓ | true |  |
+| page_size | varchar(10) | ✓ | 'A4'::character varying |  |
+| page_orientation | text | ✓ | 'vertical'::text |  |
+| organization_id | uuid | ✓ |  |  |
+| pdf_logo_path | text | ✓ |  |  |
+| show_company_name | bool | ✓ | true |  |
+| show_company_address | bool | ✓ | true |  |
 
 ### `finance.personnel_rates`
 

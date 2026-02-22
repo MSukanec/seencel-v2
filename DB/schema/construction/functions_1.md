@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CONSTRUCTION] Functions (chunk 1: approve_quote_and_create_tasks — get_next_change_order_number)
+## [CONSTRUCTION] Functions (chunk 1: approve_quote_and_create_tasks — sync_task_status_progress)
 
 ### `construction.approve_quote_and_create_tasks(p_quote_id uuid, p_member_id uuid DEFAULT NULL::uuid)` 🔐
 
@@ -152,6 +152,54 @@ $function$
 ```
 </details>
 
+### `construction.create_construction_task_material_snapshot()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION construction.create_construction_task_material_snapshot()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'construction', 'catalog', 'public'
+AS $function$
+BEGIN
+    -- Only create snapshot if recipe_id is set
+    IF NEW.recipe_id IS NOT NULL THEN
+        INSERT INTO construction_task_material_snapshots (
+            construction_task_id,
+            material_id,
+            quantity_planned,
+            amount_per_unit,
+            unit_id,
+            source_task_id,
+            organization_id,
+            project_id,
+            snapshot_at
+        )
+        SELECT
+            NEW.id,
+            trm.material_id,
+            (COALESCE(NEW.quantity, 0) * COALESCE(trm.amount, 0))::NUMERIC(20, 4),
+            trm.amount,
+            m.unit_id,
+            NEW.task_id,
+            NEW.organization_id,
+            NEW.project_id,
+            NOW()
+        FROM task_recipe_materials trm
+        INNER JOIN materials m ON m.id = trm.material_id
+        WHERE trm.recipe_id = NEW.recipe_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$function$
+```
+</details>
+
 ### `construction.get_next_change_order_number(p_contract_id uuid)`
 
 - **Returns**: integer
@@ -175,6 +223,40 @@ BEGIN
       AND is_deleted = FALSE;
 
     RETURN next_number;
+END;
+$function$
+```
+</details>
+
+### `construction.sync_task_status_progress()`
+
+- **Returns**: trigger
+- **Kind**: function | VOLATILE | SECURITY INVOKER
+
+<details><summary>Source</summary>
+
+```sql
+CREATE OR REPLACE FUNCTION construction.sync_task_status_progress()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    -- Caso 1: Progress llega a 100 → marcar como completed
+    IF NEW.progress_percent = 100 AND OLD.progress_percent < 100 THEN
+        NEW.status := 'completed';
+    END IF;
+
+    -- Caso 2: Status cambia a completed → forzar progress a 100
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        NEW.progress_percent := 100;
+    END IF;
+
+    -- Caso 3: Progress baja de 100 y estaba completed → revertir a in_progress
+    IF NEW.progress_percent < 100 AND OLD.status = 'completed' AND NEW.status = 'completed' THEN
+        NEW.status := 'in_progress';
+    END IF;
+
+    RETURN NEW;
 END;
 $function$
 ```

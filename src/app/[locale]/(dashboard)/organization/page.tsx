@@ -93,7 +93,7 @@ export default async function OrganizationPage({ params, searchParams }: Props) 
             <Tabs defaultValue={defaultTab} syncUrl="view" className="h-full flex flex-col">
                 <PageWrapper
                     type="page"
-                    title={orgName}
+                    title="Visión General"
                     icon={<Building2 className="h-5 w-5" />}
                     tabs={
                         <TabsList className="bg-transparent p-0 gap-0 h-full flex items-center justify-start">

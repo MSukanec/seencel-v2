@@ -136,7 +136,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
 
     // 8. Fetch Testimonials (Real Data)
     const { data: testimonialsData } = await supabase
-        .from("testimonials")
+        .schema('academy').from("testimonials")
         .select("*")
         .eq("course_id", course.id)
         .eq("is_active", true)

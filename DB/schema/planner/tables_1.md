@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -17,6 +17,10 @@
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_by | uuid | ✓ |  |  |
 
 ### `planner.attendees`
 
@@ -27,6 +31,12 @@
 | member_id | uuid | ✗ |  | UNIQUE |
 | status | text | ✗ | 'pending'::text |  |
 | created_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
+| created_by | uuid | ✓ |  |  |
 
 ### `planner.board_permissions`
 
@@ -39,6 +49,11 @@
 | permission_level | text | ✗ | 'view'::text |  |
 | created_by | uuid | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| updated_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |
 
 ### `planner.boards`
 
@@ -79,6 +94,10 @@
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✗ | now() |  |
 | updated_by | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_by | uuid | ✓ |  |  |
 
 ### `planner.checklists`
 
@@ -92,6 +111,9 @@
 | updated_by | uuid | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 
 ### `planner.comments`
 
@@ -104,6 +126,9 @@
 | created_at | timestamptz | ✗ | now() |  |
 | updated_at | timestamptz | ✓ |  |  |
 | updated_by | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 
 ### `planner.item_labels`
 
@@ -113,6 +138,7 @@
 | label_id | uuid | ✗ |  | PK, FK → labels.id |
 | created_at | timestamptz | ✗ | now() |  |
 | created_by | uuid | ✓ |  |  |
+| organization_id | uuid | ✗ |  |  |
 
 ### `planner.item_watchers`
 
@@ -121,6 +147,9 @@
 | item_id | uuid | ✗ |  | PK, FK → items.id |
 | member_id | uuid | ✗ |  | PK |
 | created_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 
 ### `planner.items`
 
@@ -211,6 +240,9 @@
 | is_read | bool | ✗ | false |  |
 | read_at | timestamptz | ✓ |  |  |
 | created_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 
 ### `planner.reminders`
 
@@ -222,3 +254,9 @@
 | reminder_type | text | ✗ | 'notification'::text |  |
 | is_sent | bool | ✗ | false |  |
 | created_at | timestamptz | ✗ | now() |  |
+| organization_id | uuid | ✗ |  |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
+| created_by | uuid | ✓ |  |  |
+| updated_at | timestamptz | ✓ |  |  |
+| updated_by | uuid | ✓ |  |  |

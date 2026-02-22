@@ -1,19 +1,21 @@
 "use client";
 
 import { Role, Permission, RolePermission } from "@/features/team/types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ContentLayout } from "@/components/layout";
 import { useMemo, useState, useTransition, useOptimistic } from "react";
-import { Info, ShieldCheck, Database, Shield, Edit, Eye, User, Briefcase, Loader2 } from "lucide-react";
+import {
+    Info, ShieldCheck, Database, Shield, Edit, Eye, User, Briefcase, Loader2,
+    HardHat, Landmark, FolderKanban, Handshake, Building2, KeyRound
+} from "lucide-react";
 import { seedPermissions, toggleRolePermission } from "@/features/team/actions";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import type { LucideIcon } from "lucide-react";
 
 interface TeamPermissionsViewProps {
     organizationId: string;
@@ -22,63 +24,118 @@ interface TeamPermissionsViewProps {
     rolePermissions?: RolePermission[];
 }
 
-// Map technical keys to user-friendly Spanish titles
-const PermissionTranslations: Record<string, string> = {
+// ── Permission display config ──────────────────────────────────────────────
+interface PermissionDisplay {
+    label: string;
+    description: string;
+}
+
+const PermissionTranslations: Record<string, PermissionDisplay> = {
     // Admin
-    'admin.access': 'Acceso Administrativo',
-    'plans.view': 'Ver Planes',
-    'plans.manage': 'Gestionar Planes',
-    'billing.view': 'Ver Facturación',
-    'billing.manage': 'Gestionar Facturación',
+    'admin.access': {
+        label: 'Acceso Administrativo',
+        description: 'Control total del sistema: planes, facturación y configuración global.',
+    },
 
     // Organization
-    'organization.view': 'Ver Organización',
-    'organization.manage': 'Editar Organización',
-    'members.view': 'Ver Miembros',
-    'members.manage': 'Gestionar Miembros',
-    'roles.view': 'Ver Roles',
-    'roles.manage': 'Gestionar Roles',
-
-    // Commercial
-    'commercial.view': 'Ver Área Comercial',
-    'commercial.manage': 'Gestionar Área Comercial',
-
-    // Planner
-    'planner.view': 'Ver Planificador',
-    'planner.manage': 'Gestionar Planificador',
-
-    // Contacts
-    'contacts.view': 'Ver Contactos',
-    'contacts.manage': 'Gestionar Contactos',
-    'contact_categories.view': 'Ver Categorías de Contacto',
-    'contact_categories.manage': 'Gestionar Categorías de Contacto',
+    'organization.view': {
+        label: 'Ver Organización',
+        description: 'Puede ver miembros, roles y la configuración de la organización.',
+    },
+    'organization.manage': {
+        label: 'Gestionar Organización',
+        description: 'Puede invitar miembros, editar roles y gestionar invitaciones.',
+    },
 
     // Projects
-    'projects.view': 'Ver Proyectos',
-    'projects.manage': 'Gestionar Proyectos',
-    'project_types.view': 'Ver Tipos de Proyecto',
-    'project_types.manage': 'Gestionar Tipos de Proyecto',
+    'projects.view': {
+        label: 'Ver Proyectos',
+        description: 'Puede ver proyectos y su información general.',
+    },
+    'projects.manage': {
+        label: 'Gestionar Proyectos',
+        description: 'Puede crear, editar y archivar proyectos.',
+    },
 
-    // Finance / Costs
-    'general_costs.view': 'Ver Costos Generales',
-    'general_costs.manage': 'Gestionar Costos Generales',
-    'wallets.view': 'Ver Billeteras',
-    'wallets.manage': 'Gestionar Billeteras',
+    // Construction
+    'construction.view': {
+        label: 'Ver Construcción',
+        description: 'Puede ver materiales, mano de obra, tareas, subcontratos y bitácora de obra.',
+    },
+    'construction.manage': {
+        label: 'Gestionar Construcción',
+        description: 'Puede crear y editar materiales, mano de obra, tareas, subcontratos y bitácora.',
+    },
+
+    // Finance
+    'finance.view': {
+        label: 'Ver Finanzas',
+        description: 'Puede ver costos generales y la gestión financiera operativa.',
+    },
+    'finance.manage': {
+        label: 'Gestionar Finanzas',
+        description: 'Puede crear, editar y registrar pagos de costos generales.',
+    },
+
+    // Commercial
+    'commercial.view': {
+        label: 'Ver Área Comercial',
+        description: 'Puede ver presupuestos, clientes y el portal de clientes.',
+    },
+    'commercial.manage': {
+        label: 'Gestionar Área Comercial',
+        description: 'Puede crear y editar presupuestos, clientes y compromisos.',
+    },
 };
 
-// Map categories to user-friendly Spanish titles
-const CategoryTranslations: Record<string, string> = {
-    'admin': 'Administración del Sistema',
-    'organization': 'Configuración de Organización',
-    'commercial': 'Área Comercial (Presupuestos y Clientes)',
-    'planner': 'Planificador (Calendario y Kanban)',
-    'contacts': 'Gestión de Contactos',
-    'projects': 'Gestión de Proyectos',
-    'general_costs': 'Finanzas y Costos',
-    'system': 'Sistema'
+// ── Category display config ────────────────────────────────────────────────
+interface CategoryDisplay {
+    label: string;
+    icon: LucideIcon;
+    description: string;
+    order: number;
+}
+
+const CategoryConfig: Record<string, CategoryDisplay> = {
+    'admin': {
+        label: 'Administración',
+        icon: KeyRound,
+        description: 'Control del sistema, planes y facturación',
+        order: 0,
+    },
+    'organization': {
+        label: 'Organización',
+        icon: Building2,
+        description: 'Miembros, roles e invitaciones',
+        order: 1,
+    },
+    'projects': {
+        label: 'Proyectos',
+        icon: FolderKanban,
+        description: 'Gestión de proyectos',
+        order: 2,
+    },
+    'construction': {
+        label: 'Construcción',
+        icon: HardHat,
+        description: 'Materiales, mano de obra, tareas, subcontratos y bitácora',
+        order: 3,
+    },
+    'finance': {
+        label: 'Finanzas',
+        icon: Landmark,
+        description: 'Costos generales y operaciones financieras',
+        order: 4,
+    },
+    'commercial': {
+        label: 'Comercial',
+        icon: Handshake,
+        description: 'Presupuestos, clientes y portal',
+        order: 5,
+    },
 };
 
-// Helper to get icon for role
+// Helper to get icon for role badge
 const getRoleIcon = (roleName: string) => {
     const name = roleName.toLowerCase();
     if (name.includes('admin')) return Shield;
@@ -91,10 +148,9 @@ const getRoleIcon = (roleName: string) => {
 export function TeamPermissionsView({ organizationId, roles, permissions = [], rolePermissions = [] }: TeamPermissionsViewProps) {
     const router = useRouter();
     const [isSeeding, setIsSeeding] = useState(false);
-    const [isPending, startTransition] = useTransition();
+    const [, startTransition] = useTransition();
     const [pendingChanges, setPendingChanges] = useState<Set<string>>(new Set());
 
-    // Optimistic state for role permissions
     const [optimisticPermissions, setOptimisticPermissions] = useOptimistic(
         rolePermissions,
         (state, update: { roleId: string; permissionId: string; enabled: boolean }) => {
@@ -111,7 +167,6 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
         setPendingChanges(prev => new Set(prev).add(key));
 
         startTransition(async () => {
-            // Optimistic update
             setOptimisticPermissions({ roleId, permissionId, enabled: !currentValue });
 
             try {
@@ -119,7 +174,6 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                 router.refresh();
             } catch (error) {
                 toast.error('Error al actualizar permiso');
-                // Revert will happen automatically on refresh
                 router.refresh();
             } finally {
                 setPendingChanges(prev => {
@@ -131,15 +185,14 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
         });
     };
 
-    // Filter roles based on user request: type === 'organization' && !is_system
     const filteredRoles = useMemo(() => {
         const strictMatches = roles.filter(r => (r.type === 'organization' || r.type === 'ORGANIZATION') && !r.is_system);
         if (strictMatches.length > 0) return strictMatches;
         return roles.filter(r => !r.is_system);
     }, [roles]);
 
-    // Group permissions by category
-    const permissionsByCategory = useMemo(() => {
+    // Group permissions by category with proper ordering
+    const sortedCategories = useMemo(() => {
         const grouped: Record<string, Permission[]> = {};
         permissions.forEach(p => {
             if (!grouped[p.category]) {
@@ -147,8 +200,12 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
             }
             grouped[p.category].push(p);
         });
-        // Sort keys if needed, specific order
-        return grouped;
+
+        return Object.entries(grouped).sort(([a], [b]) => {
+            const orderA = CategoryConfig[a]?.order ?? 99;
+            const orderB = CategoryConfig[b]?.order ?? 99;
+            return orderA - orderB;
+        });
     }, [permissions]);
 
     const handleSeed = async () => {
@@ -165,16 +222,16 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
 
     const hasRoles = filteredRoles.length > 0;
     const hasPermissions = permissions.length > 0;
-    const firstCategory = Object.keys(permissionsByCategory)[0] || '';
 
     return (
         <ContentLayout variant="wide">
             <div className="space-y-6">
+                {/* Header */}
                 <div className="flex justify-between items-center px-1">
                     <div>
-                        <h2 className="text-xl font-semibold tracking-tight text-foreground">Matriz de Permisos</h2>
+                        <h2 className="text-xl font-semibold tracking-tight text-foreground">Permisos por Rol</h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Define con precisión qué acciones puede realizar cada rol en la organización.
+                            Configurá qué puede hacer cada rol en tu organización.
                         </p>
                     </div>
                     {!hasPermissions && (
@@ -185,12 +242,35 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                     )}
                 </div>
 
+                {/* Role badges header — sticky context */}
+                {hasPermissions && hasRoles && (
+                    <div className="flex items-center gap-3 px-1">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Roles:</span>
+                        <div className="flex gap-2 flex-wrap">
+                            {filteredRoles.map(role => {
+                                const RoleIcon = getRoleIcon(role.name);
+                                return (
+                                    <Badge
+                                        key={role.id}
+                                        variant="secondary"
+                                        className="bg-background border text-foreground font-medium px-3 py-1.5 text-xs flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <RoleIcon className="w-3 h-3 text-primary/80" />
+                                        {role.name}
+                                    </Badge>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Empty states */}
                 {!hasPermissions ? (
                     <div className="p-12 text-center border rounded-xl bg-muted/10 dashed border-2 border-dashed border-muted">
                         <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-foreground">No hay permisos definidos</h3>
                         <p className="text-muted-foreground mt-2 max-w-md mx-auto mb-6">
-                            La base de datos de permisos está vacía. Genera los permisos predeterminados para comenzar a configurar tu organización.
+                            La base de datos de permisos está vacía. Genera los permisos predeterminados para comenzar.
                         </p>
                         <Button onClick={handleSeed} disabled={isSeeding}>
                             {isSeeding ? "Generando..." : "Generar Permisos del Sistema"}
@@ -201,99 +281,133 @@ export function TeamPermissionsView({ organizationId, roles, permissions = [], r
                         <Info className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-foreground">No se encontraron roles personalizados</h3>
                         <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                            Crea un rol personalizado (ej. "Manager") para ver la matriz de permisos y empezar a configurar accesos.
+                            Crea un rol personalizado para ver la matriz de permisos.
                         </p>
                     </div>
                 ) : (
-                    <Card className="border shadow-none bg-card overflow-hidden rounded-xl">
-                        <Accordion type="single" collapsible defaultValue={firstCategory} className="w-full">
-                            {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
-                                <AccordionItem key={category} value={category} className="border-b last:border-0">
-                                    <AccordionTrigger className="hover:no-underline py-4 px-6 bg-muted/40 hover:bg-muted/50 transition-all border-b border-border/50">
-                                        <span className="font-bold text-sm uppercase tracking-wider text-foreground">
-                                            {CategoryTranslations[category] || category}
-                                        </span>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="p-0">
-                                        <Card className="border-0 shadow-none rounded-none bg-transparent">
-                                            <div className="overflow-x-auto">
-                                                <Table className="w-full">
-                                                    <TableHeader>
-                                                        <TableRow className="hover:bg-transparent border-b">
-                                                            <TableHead className="w-[45%] text-xs uppercase tracking-wider font-semibold text-muted-foreground py-3 pl-6">
-                                                                Permiso / Descripción
-                                                            </TableHead>
+                    /* Permission categories */
+                    <div className="space-y-6">
+                        {sortedCategories.map(([category, categoryPermissions]) => {
+                            const config = CategoryConfig[category];
+                            const CategoryIcon = config?.icon ?? ShieldCheck;
+
+                            return (
+                                <div key={category} className="space-y-2">
+                                    {/* Category header */}
+                                    <div className="flex items-center gap-2.5 px-1 pt-2">
+                                        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10">
+                                            <CategoryIcon className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-foreground">
+                                                {config?.label ?? category}
+                                            </h3>
+                                            {config?.description && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {config.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Permission items */}
+                                    <div className="space-y-1.5">
+                                        {categoryPermissions.map(permission => {
+                                            const display = PermissionTranslations[permission.key];
+                                            const isManageType = permission.key.endsWith('.manage');
+
+                                            return (
+                                                <Card
+                                                    key={permission.id}
+                                                    className={cn(
+                                                        "border shadow-none transition-colors",
+                                                        "hover:bg-muted/30"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center justify-between px-4 py-3">
+                                                        {/* Left: Permission info */}
+                                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                            <div className={cn(
+                                                                "mt-0.5 flex items-center justify-center w-6 h-6 rounded-md shrink-0",
+                                                                isManageType
+                                                                    ? "bg-amber-500/10 text-amber-500"
+                                                                    : "bg-blue-500/10 text-blue-500"
+                                                            )}>
+                                                                {isManageType
+                                                                    ? <Edit className="w-3.5 h-3.5" />
+                                                                    : <Eye className="w-3.5 h-3.5" />
+                                                                }
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium text-foreground">
+                                                                        {display?.label ?? permission.key}
+                                                                    </span>
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={cn(
+                                                                            "text-[10px] px-1.5 py-0 h-4 font-medium border",
+                                                                            isManageType
+                                                                                ? "text-amber-500 border-amber-500/30"
+                                                                                : "text-blue-500 border-blue-500/30"
+                                                                        )}
+                                                                    >
+                                                                        {isManageType ? 'Edición' : 'Lectura'}
+                                                                    </Badge>
+                                                                </div>
+                                                                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                                                    {display?.description ?? permission.description}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Right: Role checkboxes */}
+                                                        <div className="flex items-center gap-5 shrink-0 ml-4">
                                                             {filteredRoles.map(role => {
-                                                                const RoleIcon = getRoleIcon(role.name);
-                                                                return (
-                                                                    <TableHead key={role.id} className="text-center w-[150px] py-3 align-bottom">
-                                                                        <div className="flex flex-col items-center gap-1.5">
-                                                                            <Badge
-                                                                                variant="secondary"
-                                                                                className="bg-background border-border text-foreground font-medium px-4 py-1.5 text-xs whitespace-nowrap shadow-sm flex items-center gap-2"
-                                                                            >
-                                                                                <RoleIcon className="w-3 h-3 text-primary/80" />
-                                                                                {role.name}
-                                                                            </Badge>
-                                                                        </div>
-                                                                    </TableHead>
+                                                                const hasPermission = optimisticPermissions.some(
+                                                                    rp => rp.role_id === role.id && rp.permission_id === permission.id
                                                                 );
-                                                            })}
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {categoryPermissions.map(permission => (
-                                                            <TableRow key={permission.id} className="hover:bg-muted/50 transition-colors border-b last:border-0">
-                                                                <TableCell className="w-[45%] py-4 pl-6 align-top">
-                                                                    <div className="flex flex-col gap-1 pr-6">
-                                                                        <span className="font-semibold text-sm text-foreground hover:text-primary transition-colors">
-                                                                            {PermissionTranslations[permission.key] || permission.key}
-                                                                        </span>
-                                                                        <span className="text-xs text-muted-foreground leading-relaxed">
-                                                                            {permission.description}
+                                                                const isAdmin = role.name === 'Administrador';
+                                                                const isLoading = pendingChanges.has(`${role.id}-${permission.id}`);
+
+                                                                return (
+                                                                    <div
+                                                                        key={`${role.id}-${permission.id}`}
+                                                                        className="flex flex-col items-center gap-0.5 w-16"
+                                                                    >
+                                                                        {isLoading ? (
+                                                                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                                                        ) : (
+                                                                            <Checkbox
+                                                                                checked={hasPermission}
+                                                                                disabled={isAdmin}
+                                                                                onCheckedChange={() => !isAdmin && handleTogglePermission(role.id, permission.id, hasPermission)}
+                                                                                className={cn(
+                                                                                    "h-5 w-5 transition-all border-2 rounded-[4px]",
+                                                                                    isAdmin && "cursor-not-allowed opacity-60",
+                                                                                    !isAdmin && "cursor-pointer hover:border-primary",
+                                                                                    hasPermission
+                                                                                        ? "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
+                                                                                        : "border-input bg-card"
+                                                                                )}
+                                                                            />
+                                                                        )}
+                                                                        <span className="text-[10px] text-muted-foreground truncate max-w-full">
+                                                                            {role.name}
                                                                         </span>
                                                                     </div>
-                                                                </TableCell>
-                                                                {filteredRoles.map(role => {
-                                                                    const hasPermission = optimisticPermissions.some(rp => rp.role_id === role.id && rp.permission_id === permission.id);
-                                                                    const isAdmin = role.name === 'Administrador';
-                                                                    const isLoading = pendingChanges.has(`${role.id}-${permission.id}`);
-
-                                                                    return (
-                                                                        <TableCell key={`${role.id}-${permission.id}`} className="text-center p-0 align-middle">
-                                                                            <div className="flex items-center justify-center h-full w-full py-4 transition-colors">
-                                                                                {isLoading ? (
-                                                                                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                                                                                ) : (
-                                                                                    <Checkbox
-                                                                                        checked={hasPermission}
-                                                                                        disabled={isAdmin}
-                                                                                        onCheckedChange={() => !isAdmin && handleTogglePermission(role.id, permission.id, hasPermission)}
-                                                                                        className={cn(
-                                                                                            "h-5 w-5 transition-all border-2 rounded-[4px]",
-                                                                                            isAdmin && "cursor-not-allowed opacity-60",
-                                                                                            !isAdmin && "cursor-pointer hover:border-primary",
-                                                                                            hasPermission
-                                                                                                ? "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
-                                                                                                : "border-input bg-card"
-                                                                                        )}
-                                                                                    />
-                                                                                )}
-                                                                            </div>
-                                                                        </TableCell>
-                                                                    );
-                                                                })}
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        </Card>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
-                    </Card>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
         </ContentLayout>

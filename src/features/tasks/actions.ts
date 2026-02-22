@@ -1612,7 +1612,7 @@ export async function getRecipeExternalServices(
     // 3. Fetch desde public schema en paralelo
     const [pricesRes, currenciesRes, contactsRes] = await Promise.all([
         supabase
-            .from("external_service_prices")
+            .schema('catalog').from("external_service_prices")
             .select("recipe_external_service_id, valid_from")
             .in("recipe_external_service_id", serviceIds),
         currencyIds.length > 0

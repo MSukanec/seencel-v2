@@ -332,7 +332,7 @@ export async function getFinancialSummary(
     }
 
     // Use SQL function for aggregation (1 row instead of N rows)
-    const { data, error } = await supabase.rpc('fn_financial_kpi_summary', {
+    const { data, error } = await supabase.schema('finance').rpc('fn_financial_kpi_summary', {
         p_org_id: orgId,
         ...(scope === 'project' && projectId ? { p_project_id: projectId } : {}),
     });
@@ -376,7 +376,7 @@ export async function getStorageOverviewData(): Promise<StorageOverviewData> {
         const supabase = await createClient();
 
         // Use SQL function for aggregation (1 row instead of N rows)
-        const { data, error } = await supabase.rpc('fn_storage_overview', {
+        const { data, error } = await supabase.schema('ops').rpc('fn_storage_overview', {
             p_org_id: orgId,
         });
 
@@ -676,7 +676,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         // Team members with real presence via user_presence
         supabase
             .schema('iam').from('organization_members')
-            .select('id, role_id, users(full_name, avatar_url, email, user_presence(last_seen_at))')
+            .select('id, role_id, roles(name), users(full_name, avatar_url, email, user_presence(last_seen_at))')
             .eq('organization_id', orgId)
             .eq('is_active', true)
             .limit(10),
@@ -1002,11 +1002,11 @@ export async function getOverviewHeroData(
         if (projectId) {
             // ── PROJECT MODE ──
             const [projectResult, locationResult, membersAvatarResult] = await Promise.all([
-                supabase.from("projects")
+                supabase.schema('projects').from("projects")
                     .select("id, name, image_url, status, project_types(name), project_modalities(name)")
                     .eq("id", projectId)
                     .single(),
-                supabase.from("project_data")
+                supabase.schema('projects').from("project_data")
                     .select("lat, lng, city, country, address")
                     .eq("project_id", projectId)
                     .single(),
@@ -1063,11 +1063,11 @@ export async function getOverviewHeroData(
                 .select("id", { count: "exact", head: true })
                 .eq("organization_id", orgId)
                 .eq("is_active", true),
-            supabase.from("projects")
+            supabase.schema('projects').from("projects")
                 .select("id", { count: "exact", head: true })
                 .eq("organization_id", orgId)
                 .eq("is_deleted", false),
-            supabase.from("project_data")
+            supabase.schema('projects').from("project_data")
                 .select("lat, lng, city, country, address, projects!inner(id, name, status, is_deleted, image_url)")
                 .eq("organization_id", orgId)
                 .not("lat", "is", null)

@@ -13,6 +13,7 @@ import { Project } from "@/types/project";
 import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, addMonths, isSameMonth, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 
+
 // ============================================================================
 // UTILS
 // ============================================================================

@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T17:21:28.968Z
+> Generated: 2026-02-22T20:08:16.861Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [ACADEMY] Tables (chunk 1: academy.course_details — academy.courses)
+## [ACADEMY] Tables (chunk 1: academy.course_details — academy.testimonials)
 
 ### `academy.course_details`
 
@@ -147,3 +147,24 @@
 | deleted_at | timestamptz | ✓ |  |  |
 | status | text | ✗ | 'available'::text |  |
 | image_path | text | ✓ |  |  |
+
+### `academy.testimonials`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | ✗ | gen_random_uuid() | PK |
+| course_id | uuid | ✓ |  | FK → courses.id |
+| organization_id | uuid | ✓ |  |  |
+| product_id | uuid | ✓ |  |  |
+| author_name | text | ✗ |  |  |
+| author_title | text | ✓ |  |  |
+| author_avatar_url | text | ✓ |  |  |
+| content | text | ✗ |  |  |
+| rating | int4 | ✓ |  |  |
+| is_featured | bool | ✓ | false |  |
+| is_active | bool | ✓ | true |  |
+| sort_index | int4 | ✓ | 0 |  |
+| is_deleted | bool | ✓ | false |  |
+| created_at | timestamptz | ✓ | now() |  |
+| updated_at | timestamptz | ✓ | now() |  |
+| user_id | uuid | ✓ |  |  |
