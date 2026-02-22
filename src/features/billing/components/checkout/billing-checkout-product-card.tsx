@@ -214,17 +214,18 @@ export function BillingCheckoutProductCard({
                                     <div className="flex flex-wrap items-center gap-3">
                                         <Link
                                             href="/founders"
-                                            className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:underline"
+                                            className="inline-flex items-center gap-2 text-sm font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors"
                                         >
-                                            Conocer más sobre el Plan
+                                            Conoce más
                                             <ArrowRight className="h-4 w-4" />
                                         </Link>
                                         <span className="text-muted-foreground">|</span>
                                         <Link
                                             href="/checkout?product=plan-pro&cycle=annual"
-                                            className="inline-flex items-center gap-2 text-sm font-medium bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors"
+                                            className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:underline"
                                         >
-                                            Obtener Plan Fundadores
+                                            Obtener Plan
+                                            <ArrowRight className="h-4 w-4" />
                                         </Link>
                                     </div>
                                 </div>
