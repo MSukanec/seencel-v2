@@ -68,16 +68,24 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
     // Get board
     const { data: board, error: boardError } = await supabase
         .schema('planner').from('kanban_boards')
-        .select(`
-            *,
-            projects (name)
-        `)
+        .select('*')
         .eq('id', boardId)
         .single();
 
     if (boardError || !board) {
         console.error('Error fetching board:', boardError);
         return null;
+    }
+
+    // Get project name separately (cross-schema)
+    let boardProjectName: string | null = null;
+    if (board.project_id) {
+        const { data: projectData } = await supabase
+            .schema('projects').from('projects')
+            .select('name')
+            .eq('id', board.project_id)
+            .single();
+        boardProjectName = projectData?.name || null;
     }
 
     // Get lists with cards
@@ -147,7 +155,7 @@ export async function getBoardWithData(boardId: string, filterByProjectId?: stri
     return {
         board: {
             ...board,
-            project_name: board.projects?.name || null
+            project_name: boardProjectName
         } as KanbanBoard,
         lists: processedLists,
         labels: (labels || []) as KanbanLabel[],
@@ -215,10 +223,7 @@ export async function getCalendarEvents(
 
     let query = supabase
         .schema('planner').from('calendar_events')
-        .select(`
-            *,
-            projects (name)
-        `)
+        .select('*')
         .eq('organization_id', organizationId)
         .is('deleted_at', null)
         .order('start_at', { ascending: true });
@@ -245,9 +250,20 @@ export async function getCalendarEvents(
         return [];
     }
 
+    // Fetch project names separately (cross-schema)
+    const projectIds = [...new Set((data || []).map((e: any) => e.project_id).filter(Boolean))] as string[];
+    let projectMap: Record<string, string> = {};
+    if (projectIds.length > 0) {
+        const { data: projects } = await supabase
+            .schema('projects').from('projects')
+            .select('id, name')
+            .in('id', projectIds);
+        projectMap = Object.fromEntries((projects || []).map((p: any) => [p.id, p.name]));
+    }
+
     return (data || []).map((event: any) => ({
         ...event,
-        project_name: event.projects?.name || null
+        project_name: event.project_id ? projectMap[event.project_id] || null : null
     })) as CalendarEvent[];
 }
 
@@ -258,7 +274,6 @@ export async function getCalendarEvent(eventId: string): Promise<CalendarEvent |
         .schema('planner').from('calendar_events')
         .select(`
             *,
-            projects (name),
             calendar_event_attendees (
                 id,
                 member_id,
@@ -274,9 +289,20 @@ export async function getCalendarEvent(eventId: string): Promise<CalendarEvent |
         return null;
     }
 
+    // Fetch project name separately (cross-schema)
+    let eventProjectName: string | null = null;
+    if (data.project_id) {
+        const { data: projectData } = await supabase
+            .schema('projects').from('projects')
+            .select('name')
+            .eq('id', data.project_id)
+            .single();
+        eventProjectName = projectData?.name || null;
+    }
+
     return {
         ...data,
-        project_name: data.projects?.name || null,
+        project_name: eventProjectName,
         attendees: data.calendar_event_attendees || []
     } as CalendarEvent;
 }

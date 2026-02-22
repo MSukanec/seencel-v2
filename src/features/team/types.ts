@@ -84,7 +84,8 @@ export interface SeatStatus {
     billing_period: 'monthly' | 'annual' | null;
     expires_at: string | null;
     days_remaining: number;
-    prorated_price: number;
+    prorated_monthly: number | null;
+    prorated_annual: number | null;
 }
 
 export interface PurchaseSeatsInput {

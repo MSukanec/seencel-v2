@@ -25,7 +25,7 @@ export default async function WorkspaceSetupPage({
         getUserOrganizations(user.id),
         checkIsAdmin(),
         isNewOrg ? Promise.resolve(null) : checkPendingInvitation(user.email || ''),
-        supabase.from('feature_flags').select('status').eq('key', 'org_creation_enabled').single(),
+        supabase.schema('public').from('feature_flags').select('status').eq('key', 'org_creation_enabled').single(),
     ]);
 
     const orgCreationEnabled = orgCreationFlag?.data?.status === 'active';

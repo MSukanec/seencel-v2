@@ -117,43 +117,63 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
         );
     }
 
-    // Show purchase flow if no seats available
-    if (showPurchaseFlow && seatStatus && !seatStatus.can_invite) {
+    // Show purchase flow (triggered by no seats OR user clicks "buy more")
+    if (showPurchaseFlow && seatStatus) {
         return (
             <div className="flex flex-col h-full min-h-0">
                 <div className="flex-1 overflow-y-auto space-y-4">
-                    {/* Current Status */}
-                    <div className="rounded-lg border bg-muted/30 p-3">
+                    {/* Seat Balance */}
+                    <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1.5">
                         <div className="flex items-center gap-2 mb-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">Estado Actual</span>
+                            <span className="font-medium text-sm">Asientos</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <div>
-                                <span className="text-muted-foreground">Incluidos en plan:</span>
-                                <span className="ml-2 font-medium">{seatStatus.seats_included}</span>
+
+                        {/* Capacity */}
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Incluidos en el plan</span>
+                            <span className="font-medium tabular-nums">{seatStatus.seats_included}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Comprados</span>
+                            <span className="font-medium tabular-nums">{seatStatus.purchased}</span>
+                        </div>
+                        <Separator className="!my-1.5" />
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Capacidad total</span>
+                            <span className="font-semibold tabular-nums">{seatStatus.total_capacity}</span>
+                        </div>
+
+                        {/* Usage */}
+                        <div className="flex justify-between mt-1">
+                            <span className="text-muted-foreground">En uso</span>
+                            <span className="font-medium tabular-nums">−{seatStatus.used}</span>
+                        </div>
+                        {seatStatus.pending_invitations > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Invitaciones pendientes</span>
+                                <span className="font-medium tabular-nums">−{seatStatus.pending_invitations}</span>
                             </div>
-                            <div>
-                                <span className="text-muted-foreground">Comprados:</span>
-                                <span className="ml-2 font-medium">{seatStatus.purchased}</span>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground">En uso:</span>
-                                <span className="ml-2 font-medium">{seatStatus.used}</span>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground">Pendientes:</span>
-                                <span className="ml-2 font-medium">{seatStatus.pending_invitations}</span>
-                            </div>
+                        )}
+                        <Separator className="!my-1.5" />
+
+                        {/* Available */}
+                        <div className="flex justify-between">
+                            <span className="font-medium">Disponibles</span>
+                            <span className={`font-semibold tabular-nums ${seatStatus.available > 0 ? 'text-green-500' : 'text-destructive'}`}>
+                                {seatStatus.available}
+                            </span>
                         </div>
                     </div>
 
-                    <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10">
-                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        <AlertDescription className="text-sm">
-                            No tenés asientos disponibles. Para invitar nuevos miembros, primero debés comprar asientos adicionales.
-                        </AlertDescription>
-                    </Alert>
+                    {!seatStatus.can_invite && (
+                        <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            <AlertDescription className="text-sm">
+                                No tenés asientos disponibles. Para invitar nuevos miembros, primero debés comprar asientos adicionales.
+                            </AlertDescription>
+                        </Alert>
+                    )}
 
                     {/* Purchase Form */}
                     <div className="space-y-3">
@@ -209,7 +229,11 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
 
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Precio prorrateado por seat</span>
-                                <span className="text-green-500">{formatPrice(seatStatus.prorated_price)}</span>
+                                <span className="text-green-500">{formatPrice(
+                                    (seatStatus.billing_period === 'monthly'
+                                        ? seatStatus.prorated_monthly
+                                        : seatStatus.prorated_annual) ?? 0
+                                )}</span>
                             </div>
 
                             <div className="flex justify-between text-sm">
@@ -222,7 +246,11 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                             <div className="flex justify-between font-medium">
                                 <span>Total a pagar hoy</span>
                                 <span className="text-primary text-lg">
-                                    {formatPrice(seatStatus.prorated_price * seatsToBuy)}
+                                    {formatPrice(
+                                        ((seatStatus.billing_period === 'monthly'
+                                            ? seatStatus.prorated_monthly
+                                            : seatStatus.prorated_annual) ?? 0) * seatsToBuy
+                                    )}
                                 </span>
                             </div>
 
@@ -244,7 +272,8 @@ export function InviteMemberForm({ organizationId, planId, roles }: InviteMember
                     isLoading={false}
                     isForm={false}
                     submitLabel="Ir a Checkout"
-                    onCancel={handleCancel}
+                    cancelLabel={seatStatus.can_invite ? "Volver" : "Cancelar"}
+                    onCancel={seatStatus.can_invite ? () => setShowPurchaseFlow(false) : handleCancel}
                     onSubmit={handleGoToCheckout}
                 />
             </div>

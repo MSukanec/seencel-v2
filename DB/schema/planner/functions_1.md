@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T21:03:12.424Z
+> Generated: 2026-02-22T15:06:00.294Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [PLANNER] Functions (chunk 1: kanban_auto_complete_card — kanban_set_updated_at)
+## [PLANNER] Functions (chunk 1: kanban_auto_complete_card — kanban_set_card_board_id)
 
 ### `planner.kanban_auto_complete_card()`
 
@@ -53,26 +53,6 @@ BEGIN
     FROM planner.kanban_lists
     WHERE id = NEW.list_id;
   END IF;
-  RETURN NEW;
-END;
-$function$
-```
-</details>
-
-### `planner.kanban_set_updated_at()`
-
-- **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
-
-<details><summary>Source</summary>
-
-```sql
-CREATE OR REPLACE FUNCTION planner.kanban_set_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
   RETURN NEW;
 END;
 $function$

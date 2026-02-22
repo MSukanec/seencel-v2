@@ -311,8 +311,32 @@ export function AdminFinancePaymentsView({ payments, bankTransfers }: AdminFinan
             accessorFn: (row) => row.course?.title || row.product_type || "",
             header: ({ column }) => <DataTableColumnHeader column={column} title="Producto" />,
             cell: ({ row }) => {
-                const course = row.original.course;
-                if (course) return <span className="text-sm">{course.title}</span>;
+                const payment = row.original;
+                // If there's a course, show its title
+                if (payment.course) {
+                    return <span className="text-sm">{payment.course.title}</span>;
+                }
+                // For other product types, show a readable label
+                const productLabels: Record<string, string> = {
+                    subscription: "Suscripción",
+                    course: "Curso",
+                    seats: "Asientos",
+                    seat_purchase: "Asientos",
+                    upgrade: "Upgrade de Plan",
+                };
+                const label = payment.product_type
+                    ? productLabels[payment.product_type] || payment.product_type
+                    : null;
+                if (label) {
+                    return (
+                        <div className="flex flex-col">
+                            <span className="text-sm">{label}</span>
+                            {payment.organization && (
+                                <span className="text-xs text-muted-foreground">{payment.organization.name}</span>
+                            )}
+                        </div>
+                    );
+                }
                 return <span className="text-muted-foreground text-sm">—</span>;
             },
         },

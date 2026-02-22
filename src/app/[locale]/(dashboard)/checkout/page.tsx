@@ -71,7 +71,9 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
             seatsData = {
                 organizationId: params.org,
                 quantity: parseInt(params.quantity || "1", 10),
-                proratedPricePerSeat: s.prorated_price,
+                proratedPricePerSeat: (s.billing_period === 'monthly'
+                    ? s.prorated_monthly
+                    : s.prorated_annual) ?? 0,
                 daysRemaining: s.days_remaining,
                 expiresAt: s.expires_at || new Date().toISOString(),
                 billingPeriod: s.billing_period || "annual",

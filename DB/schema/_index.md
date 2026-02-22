@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T21:03:12.424Z
+> Generated: 2026-02-22T15:06:00.294Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -55,8 +55,8 @@
 - `can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(public/functions_1.md)*
-- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(public/functions_1.md)*
+- `can_view_org(p_organization_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `can_view_project(p_project_id uuid)` → boolean 🔐 *(public/functions_1.md)*
 - `cleanup_media_file_storage()` → trigger 🔐 *(public/functions_1.md)*
 - `create_construction_task_material_snapshot()` → trigger *(public/functions_1.md)*
@@ -139,7 +139,7 @@
 - **`iam.user_view_history`** (9 cols | FK: user_id → users, organization_id → organizations)
 - **`iam.users`** (11 cols | FK: role_id → roles)
 
-### Functions (53)
+### Functions (42)
 
 - `iam.accept_client_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
 - `iam.accept_external_invitation(p_token text, p_user_id uuid)` → jsonb 🔐 *(iam/functions_1.md)*
@@ -177,21 +177,10 @@
 - `iam.is_system_row(p_is_system boolean)` → boolean 🔐 *(iam/functions_2.md)*
 - `iam.merge_contacts(p_source_contact_id uuid, p_target_contact_id uuid, p_organization_id uuid)` → jsonb 🔐 *(iam/functions_2.md)*
 - `iam.protect_linked_contact_delete()` → trigger 🔐 *(iam/functions_2.md)*
-- `iam.step_add_org_member(p_user_id uuid, p_org_id uuid, p_role_id uuid)` → void 🔐 *(iam/functions_2.md)*
-- `iam.step_assign_org_role_permissions(p_org_id uuid)` → void 🔐 *(iam/functions_2.md)*
-- `iam.step_create_default_kanban_board(p_org_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid)` → uuid 🔐 *(iam/functions_2.md)*
-- `iam.step_create_organization(p_owner_id uuid, p_org_name text, p_plan_id uuid, p_business_mode text DEFAULT 'professional'::text)` → uuid 🔐 *(iam/functions_3.md)*
-- `iam.step_create_organization_currencies(p_org_id uuid, p_currency_id uuid)` → void 🔐 *(iam/functions_3.md)*
-- `iam.step_create_organization_data(p_org_id uuid)` → void 🔐 *(iam/functions_3.md)*
-- `iam.step_create_organization_preferences(p_org_id uuid, p_currency_id uuid, p_wallet_id uuid, p_pdf_template_id uuid)` → void 🔐 *(iam/functions_3.md)*
-- `iam.step_create_organization_roles(p_org_id uuid)` → jsonb 🔐 *(iam/functions_3.md)*
-- `iam.step_create_organization_wallets(p_org_id uuid, p_wallet_id uuid)` → void 🔐 *(iam/functions_3.md)*
-- `iam.step_create_user_organization_preferences(p_user_id uuid, p_org_id uuid)` → void 🔐 *(iam/functions_3.md)*
-- `iam.step_organization_increment_seats(p_organization_id uuid, p_seats_to_add integer)` → void 🔐 *(iam/functions_3.md)*
-- `iam.sync_contact_on_user_update()` → trigger 🔐 *(iam/functions_3.md)*
-- `iam.sync_role_permission_org_id()` → trigger *(iam/functions_3.md)*
-- `iam.tick_home_checklist(p_key text, p_value boolean)` → boolean 🔐 *(iam/functions_3.md)*
+- `iam.step_organization_increment_seats(p_organization_id uuid, p_seats_to_add integer)` → void 🔐 *(iam/functions_2.md)*
+- `iam.sync_contact_on_user_update()` → trigger 🔐 *(iam/functions_2.md)*
+- `iam.sync_role_permission_org_id()` → trigger *(iam/functions_2.md)*
+- `iam.tick_home_checklist(p_key text, p_value boolean)` → boolean 🔐 *(iam/functions_2.md)*
 - `iam.update_contact_category_links_updated_at()` → trigger *(iam/functions_3.md)*
 - `iam.users_normalize_email()` → trigger 🔐 *(iam/functions_3.md)*
 
@@ -627,11 +616,10 @@
 - **`planner.kanban_lists`** (15 cols | FK: board_id → kanban_boards)
 - **`planner.kanban_mentions`** (6 cols | FK: comment_id → kanban_comments)
 
-### Functions (3)
+### Functions (2)
 
 - `planner.kanban_auto_complete_card()` → trigger *(planner/functions_1.md)*
 - `planner.kanban_set_card_board_id()` → trigger *(planner/functions_1.md)*
-- `planner.kanban_set_updated_at()` → trigger *(planner/functions_1.md)*
 
 ### Views (2)
 

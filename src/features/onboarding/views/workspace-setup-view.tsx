@@ -260,15 +260,15 @@ export function WorkspaceSetupView({ pendingInvitation, isNewOrg, isAdmin, orgCr
                                 <ul className="mt-2 space-y-0.5 text-sm text-muted-foreground/80">
                                     <li className="flex items-center gap-1.5">
                                         <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
-                                        Estudio de arquitectura o ingeniería
+                                        Arquitectura, ingeniería, diseño de interiores o paisajismo
                                     </li>
                                     <li className="flex items-center gap-1.5">
                                         <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
-                                        Constructora o empresa de dirección de obra
+                                        Constructora, dirección de obra o project management
                                     </li>
                                     <li className="flex items-center gap-1.5">
                                         <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
-                                        Profesional independiente con equipo
+                                        Profesional independiente o estudio con equipo
                                     </li>
                                 </ul>
                             </div>

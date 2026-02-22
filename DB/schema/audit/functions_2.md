@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-21T21:03:12.424Z
+> Generated: 2026-02-22T15:06:00.294Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -537,17 +537,17 @@ CREATE OR REPLACE FUNCTION audit.log_member_billable_change()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'audit', 'public'
+ SET search_path TO 'audit', 'billing'
 AS $function$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO organization_member_events (organization_id, member_id, user_id, event_type, is_billable)
+    INSERT INTO billing.organization_member_events (organization_id, member_id, user_id, event_type, is_billable)
     VALUES (NEW.organization_id, NEW.id, NEW.user_id, 'member_added', NEW.is_billable);
   ELSIF TG_OP = 'UPDATE' AND OLD.is_billable IS DISTINCT FROM NEW.is_billable THEN
-    INSERT INTO organization_member_events (organization_id, member_id, user_id, event_type, was_billable, is_billable)
+    INSERT INTO billing.organization_member_events (organization_id, member_id, user_id, event_type, was_billable, is_billable)
     VALUES (NEW.organization_id, NEW.id, NEW.user_id, 'billable_changed', OLD.is_billable, NEW.is_billable);
   ELSIF TG_OP = 'DELETE' THEN
-    INSERT INTO organization_member_events (organization_id, member_id, user_id, event_type, was_billable)
+    INSERT INTO billing.organization_member_events (organization_id, member_id, user_id, event_type, was_billable)
     VALUES (OLD.organization_id, OLD.id, OLD.user_id, 'member_removed', OLD.is_billable);
   END IF;
   RETURN COALESCE(NEW, OLD);

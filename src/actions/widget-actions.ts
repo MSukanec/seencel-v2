@@ -207,7 +207,7 @@ export async function getUpcomingEvents(
         if (scope === 'all' || scope === 'calendar') {
             let calQuery = supabase
                 .schema('planner').from('calendar_events')
-                .select('id, title, start_at, color, is_all_day, status, projects(name)')
+                .select('id, title, start_at, color, is_all_day, status, project_id')
                 .eq('organization_id', orgId)
                 .eq('status', 'scheduled')
                 .is('deleted_at', null)
@@ -222,6 +222,17 @@ export async function getUpcomingEvents(
             const { data: events } = await calQuery;
 
             if (events) {
+                // Fetch project names separately (cross-schema)
+                const calProjectIds = [...new Set(events.map((e: any) => e.project_id).filter(Boolean))] as string[];
+                let calProjectMap: Record<string, string> = {};
+                if (calProjectIds.length > 0) {
+                    const { data: projects } = await supabase
+                        .schema('projects').from('projects')
+                        .select('id, name')
+                        .in('id', calProjectIds);
+                    calProjectMap = Object.fromEntries((projects || []).map((p: any) => [p.id, p.name]));
+                }
+
                 for (const e of events) {
                     items.push({
                         id: e.id,
@@ -231,7 +242,7 @@ export async function getUpcomingEvents(
                         color: e.color,
                         isAllDay: e.is_all_day,
                         priority: null,
-                        projectName: (e as any).projects?.name || null,
+                        projectName: e.project_id ? calProjectMap[e.project_id] || null : null,
                     });
                 }
             }
@@ -603,14 +614,14 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
 
         // Active project count
         supabase
-            .from("projects")
+            .schema('projects').from("projects")
             .select("id", { count: "exact", head: true })
             .eq("organization_id", orgId)
             .eq("is_deleted", false),
 
         // Project locations for map (only projects with coordinates)
         supabase
-            .from("project_data")
+            .schema('projects').from("project_data")
             .select("lat, lng, city, country, address, projects!inner(id, name, status, is_deleted, image_url)")
             .eq("organization_id", orgId)
             .not("lat", "is", null)
@@ -627,7 +638,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
         // Upcoming calendar events (next 14 days)
         supabase
             .schema('planner').from('calendar_events')
-            .select('id, title, start_at, color, is_all_day, status, projects(name)')
+            .select('id, title, start_at, color, is_all_day, status, project_id')
             .eq('organization_id', orgId)
             .eq('status', 'scheduled')
             .is('deleted_at', null)
@@ -744,6 +755,17 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
     // Build upcoming events (unified calendar + kanban)
     const upcomingItems: UpcomingEventItem[] = [];
     if (calendarResult.data) {
+        // Fetch project names separately (cross-schema)
+        const prefetchProjectIds = [...new Set(calendarResult.data.map((e: any) => e.project_id).filter(Boolean))] as string[];
+        let prefetchProjectMap: Record<string, string> = {};
+        if (prefetchProjectIds.length > 0) {
+            const { data: projects } = await supabase
+                .schema('projects').from('projects')
+                .select('id, name')
+                .in('id', prefetchProjectIds);
+            prefetchProjectMap = Object.fromEntries((projects || []).map((p: any) => [p.id, p.name]));
+        }
+
         for (const e of calendarResult.data) {
             upcomingItems.push({
                 id: e.id,
@@ -753,7 +775,7 @@ export async function prefetchOrgWidgetData(orgId: string): Promise<Record<strin
                 color: e.color,
                 isAllDay: e.is_all_day,
                 priority: null,
-                projectName: (e as any).projects?.name || null,
+                projectName: (e as any).project_id ? prefetchProjectMap[(e as any).project_id] || null : null,
             });
         }
     }
