@@ -1,9 +1,38 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:41:22.161Z
+> Generated: 2026-02-23T12:14:47.276Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] RLS Policies (62)
+## [CATALOG] RLS Policies (79)
+
+### `external_service_prices` (3 policies)
+
+#### MIEMBROS CREAN EXTERNAL_SERVICE_PRICES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS EDITAN EXTERNAL_SERVICE_PRICES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS VEN EXTERNAL_SERVICE_PRICES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
 
 ### `labor_categories` (3 policies)
 
@@ -264,6 +293,59 @@ is_org_member(organization_id)
 (((organization_id IS NULL) AND (is_system = true)) OR can_view_org(organization_id, 'construction.view'::text))
 ```
 
+### `organization_task_prices` (3 policies)
+
+#### MIEMBROS CREAN ORGANIZATION_TASK_PRICES
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS EDITAN ORGANIZATION_TASK_PRICES
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+can_mutate_org(organization_id, 'construction.manage'::text)
+```
+
+#### MIEMBROS VEN ORGANIZATION_TASK_PRICES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+### `task_action_categories` (2 policies)
+
+#### ADMINS GESTIONAN TASK_ACTION_CATEGORIES
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TASK_ACTION_CATEGORIES
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+true
+```
+
 ### `task_actions` (2 policies)
 
 #### ADMINS GESTIONAN TASK_KIND
@@ -276,6 +358,30 @@ is_admin()
 ```
 
 #### TODOS VEN TASK_KIND
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+true
+```
+
+### `task_construction_systems` (2 policies)
+
+#### ADMINS GESTIONAN TASK_CONSTRUCTION_SYSTEMS
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TASK_CONSTRUCTION_SYSTEMS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
@@ -325,6 +431,30 @@ is_admin()
 ```
 
 #### TODOS VEN TASK_KIND_ELEMENTS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+true
+```
+
+### `task_element_systems` (2 policies)
+
+#### ADMINS GESTIONAN TASK_ELEMENT_SYSTEMS
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TASK_ELEMENT_SYSTEMS
 
 - **Command**: SELECT | **Permissive**: PERMISSIVE
 - **Roles**: {public}
@@ -480,6 +610,35 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 can_view_org(organization_id, 'projects.view'::text)
 ```
 
+### `task_recipe_ratings` (3 policies)
+
+#### MIEMBROS CREAN TASK_RECIPE_RATINGS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **WITH CHECK**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MIEMBROS EDITAN TASK_RECIPE_RATINGS
+
+- **Command**: UPDATE | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
+#### MIEMBROS VEN TASK_RECIPE_RATINGS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_org_member(organization_id)
+```
+
 ### `task_recipes` (3 policies)
 
 #### MIEMBROS CREAN TASK_RECIPES
@@ -507,6 +666,30 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 - **USING**:
 ```sql
 (can_view_org(organization_id, 'projects.view'::text) OR ((is_public = true) AND (is_deleted = false)))
+```
+
+### `task_system_parameters` (2 policies)
+
+#### ADMINS GESTIONAN TASK_SYSTEM_PARAMETERS
+
+- **Command**: ALL | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+is_admin()
+```
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### TODOS VEN TASK_SYSTEM_PARAMETERS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {public}
+- **USING**:
+```sql
+true
 ```
 
 ### `task_template_parameters` (2 policies)

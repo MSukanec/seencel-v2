@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:41:22.161Z
+> Generated: 2026-02-23T12:14:47.276Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION construction.approve_quote_and_create_tasks(p_quote_i
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'construction', 'public'
+ SET search_path TO 'construction', 'finance', 'public'
 AS $function$
 DECLARE
     v_quote RECORD;
@@ -34,7 +34,7 @@ BEGIN
         q.organization_id,
         q.approved_at
     INTO v_quote
-    FROM construction.quotes q
+    FROM finance.quotes q
     WHERE q.id = p_quote_id
       AND q.is_deleted = false;
 
@@ -69,7 +69,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM construction.construction_tasks ct
-        INNER JOIN construction.quote_items qi ON ct.quote_item_id = qi.id
+        INNER JOIN finance.quote_items qi ON ct.quote_item_id = qi.id
         WHERE qi.quote_id = p_quote_id
           AND ct.is_deleted = false
     ) THEN
@@ -110,7 +110,7 @@ BEGIN
         'pending'::text,
         0,
         p_member_id
-    FROM construction.quote_items qi
+    FROM finance.quote_items qi
     WHERE qi.quote_id = p_quote_id;
 
     GET DIAGNOSTICS v_tasks_created = ROW_COUNT;
@@ -118,7 +118,7 @@ BEGIN
     -- ========================================
     -- 4. UPDATE QUOTE STATUS to approved
     -- ========================================
-    UPDATE construction.quotes
+    UPDATE finance.quotes
     SET
         status      = 'approved',
         approved_at = NOW(),
@@ -217,7 +217,7 @@ DECLARE
 BEGIN
     SELECT COALESCE(MAX(change_order_number), 0) + 1
     INTO next_number
-    FROM construction.quotes
+    FROM finance.quotes
     WHERE parent_quote_id = p_contract_id
       AND quote_type = 'change_order'
       AND is_deleted = FALSE;

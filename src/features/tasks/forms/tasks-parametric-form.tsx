@@ -216,6 +216,7 @@ export function TasksParametricForm({
                 .from("task_template_parameters")
                 .select('"parameter_id", "order", "is_required"')
                 .eq("template_id", selectedTemplateId)
+                .eq("is_deleted", false)
                 .order("order", { ascending: true, nullsFirst: false });
 
             if (!links || links.length === 0) {
@@ -235,13 +236,51 @@ export function TasksParametricForm({
             const { data: params } = await supabase
                 .schema("catalog")
                 .from("task_parameters")
-                .select("*, options:task_parameter_options(*)")
+                .select("*, options:task_parameter_options!parameter_id(*)")
                 .in("id", paramIds)
                 .eq("is_deleted", false);
 
+            // Fetch system-specific option filtering
+            // If (system_id, parameter_id) has linked options → only show those
+            // If no links → show all options (backwards compatible)
+            const systemId = selectedTemplate?.system_id;
+            let filteredParams = params || [];
+
+            if (systemId) {
+                const { data: linkedOptions } = await supabase
+                    .schema("catalog")
+                    .from("task_system_parameter_options")
+                    .select("parameter_id, option_id")
+                    .eq("system_id", systemId)
+                    .in("parameter_id", paramIds);
+
+                if (linkedOptions && linkedOptions.length > 0) {
+                    // Group linked option IDs by parameter_id
+                    const linkedByParam: Record<string, Set<string>> = {};
+                    linkedOptions.forEach((lo: { parameter_id: string; option_id: string }) => {
+                        if (!linkedByParam[lo.parameter_id]) {
+                            linkedByParam[lo.parameter_id] = new Set();
+                        }
+                        linkedByParam[lo.parameter_id].add(lo.option_id);
+                    });
+
+                    // Filter options for parameters that have linked options
+                    filteredParams = filteredParams.map((p: ParameterWithOptions) => {
+                        const allowedSet = linkedByParam[p.id];
+                        if (allowedSet) {
+                            return {
+                                ...p,
+                                options: p.options.filter((opt: TaskParameterOption) => allowedSet.has(opt.id)),
+                            };
+                        }
+                        return p; // No filtering for this parameter — show all
+                    });
+                }
+            }
+
             // Sort by template-defined order (not task_parameters.order)
-            const sorted = (params || []).sort(
-                (a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999)
+            const sorted = filteredParams.sort(
+                (a: ParameterWithOptions, b: ParameterWithOptions) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999)
             );
 
             setTemplateParameters((sorted as ParameterWithOptions[]) || []);
@@ -251,6 +290,7 @@ export function TasksParametricForm({
 
         load();
     }, [selectedTemplateId]);
+
 
     // Duplicate check
     useEffect(() => {

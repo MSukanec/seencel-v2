@@ -223,7 +223,7 @@ export async function getTaskParameters() {
         .schema('catalog').from('task_parameters')
         .select(`
             *,
-            options:task_parameter_options(*)
+            options:task_parameter_options!parameter_id(*)
         `)
         .eq('is_deleted', false)
         .order('label', { ascending: true });
@@ -599,10 +599,30 @@ export async function getSystemParameterLinks() {
 
     const { data, error } = await supabase
         .schema('catalog').from('task_system_parameters')
-        .select('system_id, parameter_id');
+        .select('system_id, parameter_id')
+        .eq('is_deleted', false);
 
     if (error) {
         console.error('Error fetching system-parameter links:', error);
+        return { data: [], error };
+    }
+
+    return { data: data || [], error: null };
+}
+
+/**
+ * Get all system-parameter-option links for the admin view
+ * Used to configure which options of a parameter are visible per system
+ */
+export async function getSystemParameterOptionLinks() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_system_parameter_options')
+        .select('system_id, parameter_id, option_id');
+
+    if (error) {
+        console.error('Error fetching system-parameter-option links:', JSON.stringify(error, null, 2));
         return { data: [], error };
     }
 
@@ -740,7 +760,8 @@ export async function getTemplateParameterLinks() {
 
     const { data, error } = await supabase
         .schema('catalog').from('task_template_parameters')
-        .select('template_id, parameter_id, "order", is_required, created_at');
+        .select('template_id, parameter_id, "order", is_required, created_at')
+        .eq('is_deleted', false);
 
     if (error) {
         console.error('Error fetching template-parameter links:', error);
@@ -785,7 +806,7 @@ export async function getTemplateWithParameters(templateId: string): Promise<Tas
 
     const { data: paramsData } = await supabase
         .schema('catalog').from('task_parameters')
-        .select(`*, options:task_parameter_options(*)`)
+        .select(`*, options:task_parameter_options!parameter_id(*)`)
         .in('id', paramIds)
         .eq('is_deleted', false);
 

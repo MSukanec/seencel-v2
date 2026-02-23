@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:41:22.161Z
+> Generated: 2026-02-23T12:14:47.276Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -112,7 +112,7 @@ CREATE OR REPLACE FUNCTION catalog.refresh_labor_avg_prices()
  SET search_path TO 'catalog', 'public'
 AS $function$
 begin
-  refresh materialized view public.labor_avg_prices;
+  refresh materialized view catalog.labor_avg_prices;
 end;
 $function$
 ```
@@ -171,10 +171,10 @@ $function$
 ```
 </details>
 
-### `catalog.set_task_labor_organization()`
+### `catalog.set_task_labor_organization()` 🔐
 
 - **Returns**: trigger
-- **Kind**: function | VOLATILE | SECURITY INVOKER
+- **Kind**: function | VOLATILE | SECURITY DEFINER
 
 <details><summary>Source</summary>
 
@@ -182,13 +182,14 @@ $function$
 CREATE OR REPLACE FUNCTION catalog.set_task_labor_organization()
  RETURNS trigger
  LANGUAGE plpgsql
+ SECURITY DEFINER
  SET search_path TO 'catalog', 'public'
 AS $function$
 BEGIN
     -- Si organization_id es null, heredarlo de la tarea padre
     IF NEW.organization_id IS NULL THEN
         SELECT organization_id INTO NEW.organization_id
-        FROM tasks
+        FROM catalog.tasks
         WHERE id = NEW.task_id;
     END IF;
     

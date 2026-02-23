@@ -826,7 +826,10 @@ export async function deleteParameterOption(id: string) {
 
     const { error } = await supabase
         .schema('catalog').from("task_parameter_options")
-        .delete()
+        .update({
+            is_deleted: true,
+            deleted_at: new Date().toISOString(),
+        })
         .eq("id", id);
 
     if (error) {
@@ -2095,7 +2098,7 @@ export async function deleteConstructionSystem(id: string) {
 
 /**
  * Toggle a parameter link for a construction system
- * Uses catalog.task_system_parameters
+ * Uses catalog.task_system_parameters (soft delete)
  */
 export async function toggleSystemParameter(
     systemId: string,
@@ -2105,20 +2108,23 @@ export async function toggleSystemParameter(
     const supabase = await createClient();
 
     if (shouldLink) {
+        // Upsert: re-link if previously soft-deleted, or insert new
         const { error } = await supabase
             .schema('catalog').from('task_system_parameters')
-            .insert({ system_id: systemId, parameter_id: parameterId });
+            .upsert(
+                { system_id: systemId, parameter_id: parameterId, is_deleted: false, deleted_at: null },
+                { onConflict: 'system_id,parameter_id' }
+            );
 
         if (error) {
-            if (!sanitizeError(error).includes("duplicate")) {
-                console.error("Error linking parameter to system:", error);
-                return { error: sanitizeError(error) };
-            }
+            console.error("Error linking parameter to system:", error);
+            return { error: sanitizeError(error) };
         }
     } else {
+        // Soft delete
         const { error } = await supabase
             .schema('catalog').from('task_system_parameters')
-            .delete()
+            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
             .eq("system_id", systemId)
             .eq("parameter_id", parameterId);
 
@@ -2331,7 +2337,7 @@ export async function deleteTaskTemplate(id: string) {
 
 /**
  * Toggle a parameter link for a template (task_template_parameters)
- * shouldLink = true → INSERT, false → DELETE
+ * shouldLink = true → UPSERT, false → SOFT DELETE
  */
 export async function toggleTemplateParameter(
     templateId: string,
@@ -2342,18 +2348,30 @@ export async function toggleTemplateParameter(
     const supabase = await createClient();
 
     if (shouldLink) {
+        // Upsert: re-link if previously soft-deleted, or insert new
         const { error } = await supabase
             .schema('catalog').from('task_template_parameters')
-            .insert({ template_id: templateId, parameter_id: parameterId, order: order ?? 0, is_required: true });
+            .upsert(
+                {
+                    template_id: templateId,
+                    parameter_id: parameterId,
+                    order: order ?? 0,
+                    is_required: true,
+                    is_deleted: false,
+                    deleted_at: null,
+                },
+                { onConflict: 'template_id,parameter_id' }
+            );
 
-        if (error && !sanitizeError(error).includes("duplicate")) {
+        if (error) {
             console.error("Error linking parameter to template:", error);
             return { error: sanitizeError(error) };
         }
     } else {
+        // Soft delete
         const { error } = await supabase
             .schema('catalog').from('task_template_parameters')
-            .delete()
+            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
             .eq("template_id", templateId)
             .eq("parameter_id", parameterId);
 
@@ -2391,6 +2409,123 @@ export async function reorderTemplateParameters(
     if (error) {
         console.error("Error reordering template parameters:", error);
         return { error: sanitizeError(error) };
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+// ============================================
+// SYSTEM PARAMETER OPTIONS (Option filtering per system)
+// ============================================
+
+/**
+ * Toggle an option link for a system-parameter pair.
+ * Uses catalog.task_system_parameter_options.
+ * Semantics: if (system_id, parameter_id) has NO rows → all options shown.
+ *            if it has at least 1 row → only linked options shown.
+ */
+export async function toggleSystemParameterOption(
+    systemId: string,
+    parameterId: string,
+    optionId: string,
+    shouldLink: boolean
+) {
+    const supabase = await createClient();
+
+    if (shouldLink) {
+        const { error } = await supabase
+            .schema('catalog').from('task_system_parameter_options')
+            .insert({ system_id: systemId, parameter_id: parameterId, option_id: optionId });
+
+        if (error) {
+            if (!sanitizeError(error).includes("duplicate")) {
+                console.error("Error linking option to system parameter:", error);
+                return { error: sanitizeError(error) };
+            }
+        }
+    } else {
+        const { error } = await supabase
+            .schema('catalog').from('task_system_parameter_options')
+            .delete()
+            .eq("system_id", systemId)
+            .eq("parameter_id", parameterId)
+            .eq("option_id", optionId);
+
+        if (error) {
+            console.error("Error unlinking option from system parameter:", error);
+            return { error: sanitizeError(error) };
+        }
+    }
+
+    revalidatePath("/admin/catalog");
+    return { success: true, error: null };
+}
+
+/**
+ * Get all linked option IDs for a system-parameter pair.
+ * Returns empty array if no options are linked (= show all).
+ */
+export async function getSystemParameterOptions(
+    systemId: string,
+    parameterId: string
+): Promise<string[]> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .schema('catalog').from('task_system_parameter_options')
+        .select('option_id')
+        .eq('system_id', systemId)
+        .eq('parameter_id', parameterId);
+
+    if (error) {
+        console.error("Error fetching system parameter options:", error);
+        return [];
+    }
+
+    return (data || []).map(row => row.option_id);
+}
+
+/**
+ * Bulk-set option links for a system-parameter pair.
+ * Replaces ALL existing links with the provided option IDs.
+ * If optionIds is empty, removes all links (= show all options).
+ */
+export async function setSystemParameterOptions(
+    systemId: string,
+    parameterId: string,
+    optionIds: string[]
+) {
+    const supabase = await createClient();
+
+    // 1. Delete all existing links for this system-parameter pair
+    const { error: deleteError } = await supabase
+        .schema('catalog').from('task_system_parameter_options')
+        .delete()
+        .eq("system_id", systemId)
+        .eq("parameter_id", parameterId);
+
+    if (deleteError) {
+        console.error("Error clearing system parameter options:", deleteError);
+        return { error: sanitizeError(deleteError) };
+    }
+
+    // 2. Insert new links (if any)
+    if (optionIds.length > 0) {
+        const rows = optionIds.map(optionId => ({
+            system_id: systemId,
+            parameter_id: parameterId,
+            option_id: optionId,
+        }));
+
+        const { error: insertError } = await supabase
+            .schema('catalog').from('task_system_parameter_options')
+            .insert(rows);
+
+        if (insertError) {
+            console.error("Error setting system parameter options:", insertError);
+            return { error: sanitizeError(insertError) };
+        }
     }
 
     revalidatePath("/admin/catalog");

@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-22T22:41:22.161Z
+> Generated: 2026-02-23T12:14:47.276Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -87,8 +87,8 @@
 - `iam.can_mutate_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_mutate_project(p_project_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_client_data(p_project_id uuid, p_client_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
-- `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_org(p_organization_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
+- `iam.can_view_org(p_organization_id uuid, p_permission_key text)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.can_view_project(p_project_id uuid)` → boolean 🔐 *(iam/functions_1.md)*
 - `iam.current_user_id()` → uuid 🔐 *(iam/functions_1.md)*
 - `iam.dismiss_home_banner()` → boolean 🔐 *(iam/functions_1.md)*
@@ -353,7 +353,7 @@
 - `catalog.refresh_labor_avg_prices()` → void 🔐 *(catalog/functions_1.md)*
 - `catalog.refresh_material_avg_prices()` → void 🔐 *(catalog/functions_1.md)*
 - `catalog.set_budget_task_organization()` → trigger 🔐 *(catalog/functions_1.md)*
-- `catalog.set_task_labor_organization()` → trigger *(catalog/functions_1.md)*
+- `catalog.set_task_labor_organization()` → trigger 🔐 *(catalog/functions_1.md)*
 - `catalog.set_task_material_organization()` → trigger 🔐 *(catalog/functions_1.md)*
 
 ### Views (6)

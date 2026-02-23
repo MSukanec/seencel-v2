@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getAllConstructionSystems, getTaskTemplates, getTemplateParameterLinks, getElementSystemLinks, getElementActionLinks } from "@/features/tasks/queries";
+import { getTasksGroupedByDivision, getUnits, getTaskDivisions, getTaskParameters, getTaskActions, getAllElements, getAllConstructionSystems, getTaskTemplates, getTemplateParameterLinks, getElementSystemLinks, getElementActionLinks, getSystemParameterLinks, getSystemParameterOptionLinks } from "@/features/tasks/queries";
 import { getSystemMaterials } from "@/features/admin/queries";
 import { TasksCatalogView } from "@/features/tasks/views/tasks-catalog-view";
 import { TasksDivisionsView } from "@/features/tasks/views/tasks-divisions-view";
@@ -63,6 +63,8 @@ export default async function AdminCatalogPage() {
             templateParameterLinksResult,
             elementSystemLinksResult,
             elementActionLinksResult,
+            systemParameterLinksResult,
+            systemParameterOptionLinksResult,
             systemMaterials,
         ] = await Promise.all([
             getTasksGroupedByDivision("__SYSTEM__"),
@@ -76,6 +78,8 @@ export default async function AdminCatalogPage() {
             getTemplateParameterLinks(),
             getElementSystemLinks(),
             getElementActionLinks(),
+            getSystemParameterLinks(),
+            getSystemParameterOptionLinks(),
             getSystemMaterials(),
         ]);
 
@@ -172,6 +176,9 @@ export default async function AdminCatalogPage() {
                         <ContentLayout variant="wide">
                             <TasksSistemasView
                                 systems={systemsResult.data}
+                                parameters={parametersResult.data}
+                                systemParameterLinks={systemParameterLinksResult.data}
+                                systemParameterOptionLinks={systemParameterOptionLinksResult.data}
                                 isAdminMode={true}
                             />
                         </ContentLayout>
