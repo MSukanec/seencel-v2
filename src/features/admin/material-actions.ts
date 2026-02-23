@@ -22,7 +22,7 @@ export async function createSystemMaterial(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .insert({
             name: name.trim(),
             unit_id: unit_id || null,
@@ -68,7 +68,7 @@ export async function updateSystemMaterial(formData: FormData) {
     }
 
     const { data, error } = await supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .update({
             name: name.trim(),
             unit_id: unit_id || null,
@@ -111,20 +111,20 @@ export async function deleteSystemMaterial(id: string, replacementId: string | n
 
         // organization_material_prices table
         await supabase
-            .from("organization_material_prices")
+            .schema('catalog').from("organization_material_prices")
             .update({ material_id: replacementId })
             .eq("material_id", id);
 
         // task_recipe_materials table
         await supabase
-            .from("task_recipe_materials")
+            .schema('catalog').from("task_recipe_materials")
             .update({ material_id: replacementId })
             .eq("material_id", id);
     }
 
     // Soft delete the material
     const { error } = await supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -156,7 +156,7 @@ export async function createMaterialCategory(name: string, parentId: string | nu
     }
 
     const { data, error } = await supabase
-        .from("material_categories")
+        .schema('catalog').from("material_categories")
         .insert({
             name: name.trim(),
             parent_id: parentId || null,
@@ -193,7 +193,7 @@ export async function updateMaterialCategory(id: string, name: string, parentId:
     }
 
     const { data, error } = await supabase
-        .from("material_categories")
+        .schema('catalog').from("material_categories")
         .update({
             name: name.trim(),
             parent_id: parentId || null,
@@ -219,13 +219,13 @@ export async function deleteMaterialCategory(id: string) {
 
     // First, update children to have no parent (orphan them at root level)
     await supabase
-        .from("material_categories")
+        .schema('catalog').from("material_categories")
         .update({ parent_id: null })
         .eq("parent_id", id);
 
     // Then delete the category
     const { error } = await supabase
-        .from("material_categories")
+        .schema('catalog').from("material_categories")
         .delete()
         .eq("id", id);
 

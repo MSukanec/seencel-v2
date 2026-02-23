@@ -19,7 +19,7 @@ export async function importDivisionsBatch(
 
     // Get current max order for this org's divisions
     const { data: existingDivisions } = await supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .select("order, name")
         .eq("organization_id", organizationId)
         .eq("is_system", false)
@@ -31,7 +31,7 @@ export async function importDivisionsBatch(
 
     // Get all existing names for duplicate detection
     const { data: allExisting } = await supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .select("name")
         .eq("organization_id", organizationId)
         .eq("is_system", false)
@@ -65,7 +65,7 @@ export async function importDivisionsBatch(
     }
 
     const { error } = await supabase
-        .from("task_divisions")
+        .schema('catalog').from("task_divisions")
         .insert(records);
 
     if (error) {

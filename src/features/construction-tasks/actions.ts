@@ -18,7 +18,7 @@ export async function createConstructionTask(
     const supabase = await createClient();
 
     const { data: result, error } = await supabase
-        .from("construction_tasks")
+        .schema('construction').from("construction_tasks")
         .insert({
             project_id: projectId,
             organization_id: organizationId,
@@ -62,7 +62,7 @@ export async function updateConstructionTask(
     const supabase = await createClient();
 
     const { data: result, error } = await supabase
-        .from("construction_tasks")
+        .schema('construction').from("construction_tasks")
         .update({
             task_id: data.task_id,
             recipe_id: data.recipe_id,
@@ -113,7 +113,7 @@ export async function updateConstructionTaskStatus(
     }
 
     const { error } = await supabase
-        .from("construction_tasks")
+        .schema('construction').from("construction_tasks")
         .update(updateData)
         .eq("id", taskId);
 
@@ -133,7 +133,7 @@ export async function deleteConstructionTask(taskId: string, projectId: string) 
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("construction_tasks")
+        .schema('construction').from("construction_tasks")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString()
@@ -165,7 +165,7 @@ export async function createConstructionDependency(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("construction_dependencies")
+        .schema('construction').from("construction_dependencies")
         .insert({
             organization_id: organizationId,
             predecessor_task_id: predecessorTaskId,
@@ -190,7 +190,7 @@ export async function deleteConstructionDependency(dependencyId: string) {
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("construction_dependencies")
+        .schema('construction').from("construction_dependencies")
         .delete()
         .eq("id", dependencyId);
 
@@ -217,7 +217,7 @@ export async function upsertProjectSettings(
     const supabase = await createClient();
 
     const { error } = await supabase
-        .from("project_settings")
+        .schema('projects').from("project_settings")
         .upsert(
             {
                 project_id: projectId,
@@ -245,7 +245,7 @@ export async function fetchProjectSettingsAction(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("project_settings")
+        .schema('projects').from("project_settings")
         .select("work_days")
         .eq("project_id", projectId)
         .maybeSingle();
@@ -273,7 +273,7 @@ export async function getRecipesForTask(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("task_recipes_view")
+        .schema('catalog').from("task_recipes_view")
         .select("*")
         .eq("task_id", taskId)
         .eq("is_deleted", false)

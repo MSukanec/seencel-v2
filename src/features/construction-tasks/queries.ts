@@ -13,7 +13,7 @@ export async function getOrganizationConstructionTasks(): Promise<ConstructionTa
     if (!activeOrgId) return [];
 
     const { data, error } = await supabase
-        .from("construction_tasks_view")
+        .schema('construction').from("construction_tasks_view")
         .select("*")
         .eq("organization_id", activeOrgId)
         .order("created_at", { ascending: false });
@@ -37,7 +37,7 @@ export async function getOrganizationConstructionDependencies(): Promise<Constru
     if (!activeOrgId) return [];
 
     const { data, error } = await supabase
-        .from("construction_dependencies")
+        .schema('construction').from("construction_dependencies")
         .select(`
             id,
             predecessor_task_id,
@@ -70,7 +70,7 @@ export async function getProjectConstructionTasks(projectId: string): Promise<Co
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("construction_tasks_view")
+        .schema('construction').from("construction_tasks_view")
         .select("*")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
@@ -90,7 +90,7 @@ export async function getConstructionTask(taskId: string): Promise<ConstructionT
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("construction_tasks_view")
+        .schema('construction').from("construction_tasks_view")
         .select("*")
         .eq("id", taskId)
         .single();
@@ -125,7 +125,7 @@ export async function getProjectConstructionDependencies(
 
     // Join through construction_tasks to scope by project
     const { data, error } = await supabase
-        .from("construction_dependencies")
+        .schema('construction').from("construction_dependencies")
         .select(`
             id,
             predecessor_task_id,
@@ -172,7 +172,7 @@ export async function getProjectSettings(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .from("project_settings")
+        .schema('projects').from("project_settings")
         .select("id, project_id, work_days")
         .eq("project_id", projectId)
         .maybeSingle();

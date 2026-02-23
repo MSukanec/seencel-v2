@@ -80,7 +80,7 @@ export function ClientForm({
 
             if (!projectId) {
                 const { data: projectsData } = await supabase
-                    .from("projects")
+                    .schema('projects').from("projects")
                     .select("id, name")
                     .eq("organization_id", orgId)
                     .eq("is_active", true)

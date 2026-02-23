@@ -98,7 +98,7 @@ export async function getQuoteItems(quoteId: string) {
 
     if (taskIds.length > 0) {
         const { data: tasks } = await supabase
-            .from("tasks")
+            .schema('catalog').from("tasks")
             .select(`
                 id,
                 name,

@@ -353,7 +353,7 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
     }
 
     const { data, error } = await supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .insert({
             name: name.trim(),
             code: code?.trim() || null,
@@ -380,7 +380,7 @@ export async function createMaterial(formData: FormData, isAdminMode: boolean = 
 
     // Fetch full material data from view for optimistic update
     const { data: fullMaterial } = await supabase
-        .from("materials_view")
+        .schema('catalog').from("materials_view")
         .select("*")
         .eq("id", data.id)
         .single();
@@ -418,7 +418,7 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
     }
 
     let query = supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .update({
             name: name.trim(),
             code: code?.trim() || null,
@@ -451,7 +451,7 @@ export async function updateMaterial(formData: FormData, isAdminMode: boolean = 
 
     // Fetch full material data from view for optimistic update
     const { data: fullMaterial } = await supabase
-        .from("materials_view")
+        .schema('catalog').from("materials_view")
         .select("*")
         .eq("id", id)
         .single();
@@ -478,19 +478,19 @@ export async function deleteMaterial(id: string, replacementId: string | null, i
 
         // organization_material_prices table
         await supabase
-            .from("organization_material_prices")
+            .schema('catalog').from("organization_material_prices")
             .update({ material_id: replacementId })
             .eq("material_id", id);
 
         // task_recipe_materials table
         await supabase
-            .from("task_recipe_materials")
+            .schema('catalog').from("task_recipe_materials")
             .update({ material_id: replacementId })
             .eq("material_id", id);
     }
 
     let query = supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
@@ -526,7 +526,7 @@ export async function deleteMaterialsBulk(ids: string[], isAdminMode: boolean = 
     const supabase = await createClient();
 
     let query = supabase
-        .from("materials")
+        .schema('catalog').from("materials")
         .update({
             is_deleted: true,
             deleted_at: new Date().toISOString(),
