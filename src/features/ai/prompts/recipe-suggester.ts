@@ -101,21 +101,30 @@ Before emitting any number, you MUST reason step by step:
 | Carpeta nivelación    | 0.40-0.55 h/m²  | 0.50-0.65 h/m² | |
 | Obra de hormigón      | 0.50-0.80 h/m²  | 0.50-0.80 h/m² | incluye encofrado simple |
 
-## CATALOG MATCHING RULES (STRICT)
+## CATALOG MATCHING RULES (FLEXIBLE — PREFER MATCHING OVER CREATING)
 
-The user will provide their material and labor catalog. Use it for matching AND for economic context:
+The user will provide their material and labor catalog. **Your PRIMARY goal is to match their existing items whenever reasonably possible.** Only suggest creating new items when there is truly no suitable match.
 
-1. **ONLY match if the catalog item is the exact same product** — same material type, same function.
-   - ✅ Match "Cemento Portland ARS" → catalog "Cemento Portland CPC30"
-   - ✅ Match "Ladrillo hueco 8cm" → catalog "Ladrillo hueco 8x18x33"
-   - ❌ NEVER match "Adhesivo para porcelanatos" into a revoque recipe
-   - ❌ NEVER include a material that doesn't genuinely belong
+### Matching Priority (most to least preferred):
+1. **Exact match**: Same product name → use it (e.g., "Cemento Portland" → catalog "Cemento Portland CPC30") ✅
+2. **Semantic match**: Same material type, different commercial name → use it (e.g., "Cal hidráulica" → catalog "Cal" or "Cal hidratada") ✅
+3. **Category match**: Same functional category, reasonable substitute → use it (e.g., "Arena fina" → catalog "Arena" or "Arena gruesa lavada") ✅
+4. **No match**: Truly different product or no catalog item in this category → set catalogId=null ⚠️
 
-2. **In ambiguous cases, do NOT match.** Set catalogId and catalogName to null.
+### Matching examples:
+- ✅ "Cemento" → catalog has "Cemento Portland CPC30" → MATCH (same base material)
+- ✅ "Ladrillo hueco 12x18x33" → catalog has "Ladrillo cerámico hueco 12x18x33" → MATCH
+- ✅ "Cal" → catalog has "Cal hidratada en polvo" → MATCH (same material)
+- ✅ "Arena" → catalog has "Arena gruesa" → MATCH (same material category)
+- ✅ "Oficial albañil" → catalog has "Oficial de albañilería (H)" → MATCH
+- ✅ "Ayudante" → catalog has "Ayudante de albañilería (H)" → MATCH
+- ❌ "Adhesivo para porcelanatos" when recipe is for revoque → DO NOT MATCH (wrong context)
+- ❌ "Pintura látex" → catalog only has "Cemento" → DO NOT MATCH (different product entirely)
 
-3. **If a catalog item has a price**, use it as economic signal to validate your quantities make sense given regional costs.
+### Key principle: **When in doubt, MATCH.** Users strongly prefer seeing their existing catalog items matched rather than being asked to create duplicates. Only leave catalogId=null when there is genuinely no reasonable catalog equivalent.
 
-4. **Ignore catalog items that don't belong** to this task type, even if they exist.
+If a catalog item has a price, use it as economic signal to validate your quantities make sense given regional costs.
+
 
 ## PARAMETER ADAPTATION RULES
 

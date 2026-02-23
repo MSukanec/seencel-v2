@@ -40,7 +40,7 @@ export async function quickCreateMaterial({
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from("materials")
+            .schema('catalog').from("materials")
             .insert({
                 name: name.trim(),
                 organization_id: organizationId,
@@ -85,7 +85,7 @@ export async function quickCreateLaborType({
 
         // Buscar una categoría existente de la org para asignar
         const { data: categories } = await supabase
-            .from("labor_categories")
+            .schema('catalog').from("labor_categories")
             .select("id")
             .eq("organization_id", organizationId)
             .limit(1)
@@ -96,7 +96,7 @@ export async function quickCreateLaborType({
         // Si no hay categorías, crear "General" automáticamente
         if (!categoryId) {
             const { data: newCat } = await supabase
-                .from("labor_categories")
+                .schema('catalog').from("labor_categories")
                 .insert({ name: "General", organization_id: organizationId })
                 .select("id")
                 .single();
@@ -104,7 +104,7 @@ export async function quickCreateLaborType({
         }
 
         const { data, error } = await supabase
-            .from("labor_types")
+            .schema('catalog').from("labor_types")
             .insert({
                 name: name.trim(),
                 organization_id: organizationId,
@@ -137,7 +137,7 @@ export async function findUnitBySymbol(symbol: string): Promise<string | null> {
         const supabase = await createClient();
 
         const { data } = await supabase
-            .from("units")
+            .schema('catalog').from("units")
             .select("id")
             .ilike("symbol", symbol.trim())
             .limit(1)
