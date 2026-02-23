@@ -10,25 +10,12 @@ import { SiteLog, SiteLogType } from "./types";
 export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
     const supabase = await createClient();
 
+    // 1. Fetch site_logs + same-schema join (site_log_types)
     const { data, error } = await supabase
         .schema('construction').from('site_logs')
         .select(`
             *,
-            entry_type:site_log_types(*),
-            author:created_by(
-                id,
-                user:users(full_name, email, avatar_url)
-            ),
-            media_links(
-                media_file:media_files(
-                    id,
-                    is_public,
-                    file_type,
-                    file_name,
-                    bucket,
-                    file_path
-                )
-            )
+            entry_type:site_log_types(*)
         `)
         .eq('project_id', projectId)
         .eq('is_deleted', false)
@@ -40,7 +27,7 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
         return [];
     }
 
-    return transformSiteLogs(supabase, data);
+    return enrichSiteLogs(supabase, data);
 }
 
 /**
@@ -50,26 +37,12 @@ export async function getSiteLogs(projectId: string): Promise<SiteLog[]> {
 export async function getSiteLogsForOrganization(organizationId: string): Promise<SiteLog[]> {
     const supabase = await createClient();
 
+    // 1. Fetch site_logs + same-schema join (site_log_types)
     const { data, error } = await supabase
         .schema('construction').from('site_logs')
         .select(`
             *,
-            entry_type:site_log_types(*),
-            author:created_by(
-                id,
-                user:users(full_name, email, avatar_url)
-            ),
-            project:projects!project_id(id, name),
-            media_links(
-                media_file:media_files(
-                    id,
-                    is_public,
-                    file_type,
-                    file_name,
-                    bucket,
-                    file_path
-                )
-            )
+            entry_type:site_log_types(*)
         `)
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
@@ -81,43 +54,96 @@ export async function getSiteLogsForOrganization(organizationId: string): Promis
         return [];
     }
 
-    return transformSiteLogs(supabase, data);
+    return enrichSiteLogs(supabase, data, { includeProjects: true });
 }
 
 /**
- * Shared transform: flatten media_links → media AND sign URLs
+ * Enrich site logs with cross-schema data:
+ * - Author info (iam.organization_members → iam.users)
+ * - Project info (projects.projects) — only if includeProjects
+ * - Media (public.media_links → public.media_files)
  */
-async function transformSiteLogs(supabase: any, data: any[]): Promise<SiteLog[]> {
-    const formattedData = await Promise.all(data.map(async (log: any) => {
-        const mediaItems = await Promise.all((log.media_links || []).map(async (link: any) => {
-            const file = link.media_file;
-            if (!file) return null;
+async function enrichSiteLogs(
+    supabase: any,
+    data: any[],
+    opts?: { includeProjects?: boolean }
+): Promise<SiteLog[]> {
+    if (!data.length) return [];
 
+    // Collect unique IDs for batch lookups
+    const logIds = data.map(l => l.id);
+    const memberIds = [...new Set(data.map(l => l.created_by).filter(Boolean))];
+    const projectIds = opts?.includeProjects
+        ? [...new Set(data.map(l => l.project_id).filter(Boolean))]
+        : [];
+
+    // 2. Batch fetch authors (iam schema)
+    const membersMap: Record<string, any> = {};
+    if (memberIds.length) {
+        const { data: members } = await supabase
+            .schema('iam').from('organization_members')
+            .select('id, user:users(full_name, email, avatar_url)')
+            .in('id', memberIds);
+        if (members) {
+            for (const m of members) membersMap[m.id] = m;
+        }
+    }
+
+    // 3. Batch fetch projects (projects schema)
+    const projectsMap: Record<string, any> = {};
+    if (projectIds.length) {
+        const { data: projects } = await supabase
+            .schema('projects').from('projects')
+            .select('id, name')
+            .in('id', projectIds);
+        if (projects) {
+            for (const p of projects) projectsMap[p.id] = p;
+        }
+    }
+
+    // 4. Batch fetch media links + files (public schema)
+    const mediaByLog: Record<string, any[]> = {};
+    if (logIds.length) {
+        const { data: links } = await supabase
+            .from('media_links')
+            .select(`
+                site_log_id,
+                media_file:media_files(
+                    id, is_public, file_type, file_name, bucket, file_path
+                )
+            `)
+            .in('site_log_id', logIds);
+        if (links) {
+            for (const link of links) {
+                if (!link.media_file) continue;
+                if (!mediaByLog[link.site_log_id]) mediaByLog[link.site_log_id] = [];
+                mediaByLog[link.site_log_id].push(link.media_file);
+            }
+        }
+    }
+
+    // 5. Assemble enriched logs + sign URLs
+    const enriched = await Promise.all(data.map(async (log: any) => {
+        // Sign media URLs
+        const rawMedia = mediaByLog[log.id] || [];
+        const mediaItems = await Promise.all(rawMedia.map(async (file: any) => {
             let finalUrl: string | null = null;
-
-            // Generate URL based on privacy
             if (file.bucket && file.file_path) {
                 if (file.is_public) {
                     const { data } = supabase.storage.from(file.bucket).getPublicUrl(file.file_path);
                     finalUrl = data.publicUrl;
                 } else {
                     try {
-                        // 1 hour expiry
                         const { data: signedData } = await supabase.storage
                             .from(file.bucket)
                             .createSignedUrl(file.file_path, 3600);
-
-                        if (signedData?.signedUrl) {
-                            finalUrl = signedData.signedUrl;
-                        }
+                        if (signedData?.signedUrl) finalUrl = signedData.signedUrl;
                     } catch (e) {
                         console.error("Failed to sign url for", file.id, e);
                     }
                 }
             }
-
             if (!finalUrl) return null;
-
             return {
                 id: file.id,
                 url: finalUrl,
@@ -130,11 +156,13 @@ async function transformSiteLogs(supabase: any, data: any[]): Promise<SiteLog[]>
 
         return {
             ...log,
+            author: membersMap[log.created_by] || null,
+            project: projectsMap[log.project_id] || null,
             media: mediaItems.filter((m: any) => m !== null)
         };
     }));
 
-    return formattedData as SiteLog[];
+    return enriched as SiteLog[];
 }
 
 // --- SITE LOG TYPES ---
