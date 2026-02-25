@@ -311,7 +311,7 @@ export async function approveQuote(quoteId: string) {
     // Verify quote belongs to this org before calling function
     // Also get quote_type to check if we need to freeze original_contract_value
     const { data: quote, error: fetchError } = await supabase
-        .schema("construction").from("quotes_view") // Use view to get total_with_tax
+        .schema("finance").from("quotes_view") // Use view to get total_with_tax
         .select("id, project_id, status, quote_type, total_with_tax, original_contract_value")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
@@ -621,7 +621,7 @@ export async function convertQuoteToContract(quoteId: string) {
 
     // 1. Get quote details (using view for totals)
     const { data: quote, error: fetchError } = await supabase
-        .schema("construction").from("quotes_view")
+        .schema("finance").from("quotes_view")
         .select("id, status, quote_type, project_id, total_with_tax")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)
@@ -789,7 +789,7 @@ export async function generateCommitmentsFromQuote(
 
     // Get quote with totals from view
     const { data: quote, error: quoteError } = await supabase
-        .schema("construction").from("quotes_view")
+        .schema("finance").from("quotes_view")
         .select("*")
         .eq("id", quoteId)
         .eq("organization_id", activeOrgId)

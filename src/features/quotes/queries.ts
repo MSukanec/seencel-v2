@@ -10,7 +10,7 @@ export async function getOrganizationQuotes(organizationId: string): Promise<Quo
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema("construction").from("quotes_view")
+        .schema("finance").from("quotes_view")
         .select("*")
         .eq("organization_id", organizationId)
         .eq("is_deleted", false)
@@ -33,7 +33,7 @@ export async function getProjectQuotes(projectId: string): Promise<QuoteView[]> 
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema("construction").from("quotes_view")
+        .schema("finance").from("quotes_view")
         .select("*")
         .eq("project_id", projectId)
         .eq("is_deleted", false)
@@ -56,7 +56,7 @@ export async function getQuote(quoteId: string): Promise<QuoteView | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema("construction").from("quotes_view")
+        .schema("finance").from("quotes_view")
         .select("*")
         .eq("id", quoteId)
         .eq("is_deleted", false)
@@ -142,7 +142,7 @@ export async function getChangeOrdersByContract(contractId: string): Promise<Quo
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema("construction").from("quotes_view")
+        .schema("finance").from("quotes_view")
         .select("*")
         .eq("parent_quote_id", contractId)
         .eq("quote_type", "change_order")
@@ -164,7 +164,7 @@ export async function getContractSummary(contractId: string) {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-        .schema("construction").from("contract_summary_view")
+        .schema("finance").from("contract_summary_view")
         .select("*")
         .eq("id", contractId)
         .single();

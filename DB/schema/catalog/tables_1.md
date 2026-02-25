@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-23T12:14:47.276Z
+> Generated: 2026-02-25T18:05:07.898Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Tables (chunk 1: catalog.external_service_prices — catalog.task_templates)
+## [CATALOG] Tables (chunk 1: catalog.external_service_prices — catalog.task_template_parameters)
 
 ### `catalog.external_service_prices`
 
@@ -436,6 +436,15 @@
 | execution_type | text | ✗ | 'own'::text |  |
 | status | task_catalog_status | ✗ | 'draft'::task_catalog_status |  |
 
+### `catalog.task_system_parameter_options`
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| system_id | uuid | ✗ |  | PK, FK → task_construction_systems.id |
+| parameter_id | uuid | ✗ |  | PK, FK → task_parameters.id |
+| option_id | uuid | ✗ |  | PK, FK → task_parameter_options.id |
+| created_at | timestamptz | ✗ | now() |  |
+
 ### `catalog.task_system_parameters`
 
 | Column | Type | Nullable | Default | Constraints |
@@ -445,6 +454,8 @@
 | order | int4 | ✓ | 0 |  |
 | is_required | bool | ✓ | true |  |
 | created_at | timestamptz | ✓ | now() |  |
+| is_deleted | bool | ✗ | false |  |
+| deleted_at | timestamptz | ✓ |  |  |
 
 ### `catalog.task_template_parameters`
 
@@ -456,25 +467,5 @@
 | is_required | bool | ✗ | true |  |
 | created_at | timestamptz | ✗ | now() |  |
 | default_value | text | ✓ |  |  |
-
-### `catalog.task_templates`
-
-| Column | Type | Nullable | Default | Constraints |
-|--------|------|----------|---------|-------------|
-| id | uuid | ✗ | gen_random_uuid() | PK |
-| name | text | ✗ |  |  |
-| description | text | ✓ |  |  |
-| task_action_id | uuid | ✗ |  | FK → task_actions.id |
-| task_element_id | uuid | ✗ |  | FK → task_elements.id |
-| task_construction_system_id | uuid | ✗ |  | FK → task_construction_systems.id |
-| task_division_id | uuid | ✓ |  | FK → task_divisions.id |
-| unit_id | uuid | ✗ |  | FK → units.id |
-| is_system | bool | ✗ | true |  |
-| status | task_catalog_status | ✗ | 'draft'::task_catalog_status |  |
 | is_deleted | bool | ✗ | false |  |
 | deleted_at | timestamptz | ✓ |  |  |
-| created_at | timestamptz | ✗ | now() |  |
-| updated_at | timestamptz | ✗ | now() |  |
-| created_by | uuid | ✓ |  |  |
-| updated_by | uuid | ✓ |  |  |
-| code | varchar(20) | ✓ |  |  |

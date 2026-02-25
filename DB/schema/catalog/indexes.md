@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-23T12:14:47.276Z
+> Generated: 2026-02-25T18:05:07.898Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] Indexes (86, excluding PKs)
+## [CATALOG] Indexes (89, excluding PKs)
 
 | Table | Index | Definition |
 |-------|-------|------------|
@@ -64,8 +64,11 @@
 | task_recipes | idx_task_recipes_org | `CREATE INDEX idx_task_recipes_org ON catalog.task_recipes USING btree (organi...` |
 | task_recipes | idx_task_recipes_public | `CREATE INDEX idx_task_recipes_public ON catalog.task_recipes USING btree (is_...` |
 | task_recipes | idx_task_recipes_task | `CREATE INDEX idx_task_recipes_task ON catalog.task_recipes USING btree (task_...` |
+| task_system_parameter_options | idx_tspo_system_parameter | `CREATE INDEX idx_tspo_system_parameter ON catalog.task_system_parameter_optio...` |
+| task_system_parameters | idx_task_system_parameters_active | `CREATE INDEX idx_task_system_parameters_active ON catalog.task_system_paramet...` |
 | task_system_parameters | idx_task_system_parameters_parameter_id | `CREATE INDEX idx_task_system_parameters_parameter_id ON catalog.task_system_p...` |
 | task_system_parameters | idx_task_system_parameters_system_id | `CREATE INDEX idx_task_system_parameters_system_id ON catalog.task_system_para...` |
+| task_template_parameters | idx_task_template_parameters_active | `CREATE INDEX idx_task_template_parameters_active ON catalog.task_template_par...` |
 | task_template_parameters | idx_task_template_parameters_template_id | `CREATE INDEX idx_task_template_parameters_template_id ON catalog.task_templat...` |
 | task_templates | idx_task_templates_action_id | `CREATE INDEX idx_task_templates_action_id ON catalog.task_templates USING btr...` |
 | task_templates | idx_task_templates_code | `CREATE UNIQUE INDEX idx_task_templates_code ON catalog.task_templates USING b...` |

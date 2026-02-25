@@ -1,5 +1,5 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-23T12:14:47.276Z
+> Generated: 2026-02-25T18:05:07.898Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
@@ -51,7 +51,7 @@
 
 ### Tables (25)
 
-- **`iam.dashboard_layouts`** (7 cols | FK: user_id → users, organization_id → organizations)
+- **`iam.dashboard_layouts`** (7 cols | FK: organization_id → organizations, user_id → users)
 - **`iam.debug_signup_log`** (4 cols)
 - **`iam.external_actor_scopes`** (4 cols | FK: external_actor_id → organization_external_actors)
 - **`iam.feedback`** (5 cols | FK: user_id → users)
@@ -137,7 +137,7 @@
 ### Tables (10)
 
 - **`construction.construction_dependencies`** (10 cols | FK: successor_task_id → construction_tasks, predecessor_task_id → construction_tasks)
-- **`construction.construction_phase_tasks`** (6 cols | FK: project_phase_id → construction_project_phases, construction_task_id → construction_tasks)
+- **`construction.construction_phase_tasks`** (6 cols | FK: construction_task_id → construction_tasks, project_phase_id → construction_project_phases)
 - **`construction.construction_phases`** (7 cols)
 - **`construction.construction_project_phases`** (9 cols | FK: phase_id → construction_phases)
 - **`construction.construction_task_material_snapshots`** (11 cols | FK: construction_task_id → construction_tasks)
@@ -154,13 +154,11 @@
 - `construction.get_next_change_order_number(p_contract_id uuid)` → integer *(construction/functions_1.md)*
 - `construction.sync_task_status_progress()` → trigger *(construction/functions_1.md)*
 
-### Views (5)
+### Views (3)
 
 - **`construction.construction_tasks_view`**
-- **`construction.contract_summary_view`**
 - **`construction.labor_insurance_view`**
 - **`construction.project_material_requirements_view`**
-- **`construction.quotes_view`**
 
 ---
 
@@ -210,48 +208,48 @@
 
 ### Tables (44)
 
-- **`finance.capital_adjustments`** (17 cols | FK: partner_id → capital_participants, currency_id → currencies)
+- **`finance.capital_adjustments`** (17 cols | FK: currency_id → currencies, partner_id → capital_participants)
 - **`finance.capital_participants`** (11 cols)
 - **`finance.client_commitments`** (18 cols | FK: currency_id → currencies, quote_id → quotes)
-- **`finance.client_payment_schedule`** (16 cols | FK: commitment_id → client_commitments, currency_id → currencies)
+- **`finance.client_payment_schedule`** (16 cols | FK: currency_id → currencies, commitment_id → client_commitments)
 - **`finance.client_payments`** (21 cols | FK: wallet_id → organization_wallets, commitment_id → client_commitments, currency_id → currencies, schedule_id → client_payment_schedule)
 - **`finance.currencies`** (8 cols)
 - **`finance.economic_index_components`** (8 cols | FK: index_type_id → economic_index_types)
 - **`finance.economic_index_types`** (11 cols)
 - **`finance.economic_index_values`** (10 cols | FK: index_type_id → economic_index_types)
 - **`finance.exchange_rates`** (7 cols)
-- **`finance.financial_operation_movements`** (15 cols | FK: financial_operation_id → financial_operations, wallet_id → organization_wallets, currency_id → currencies)
+- **`finance.financial_operation_movements`** (15 cols | FK: wallet_id → organization_wallets, financial_operation_id → financial_operations, currency_id → currencies)
 - **`finance.financial_operations`** (12 cols)
 - **`finance.general_cost_categories`** (11 cols)
 - **`finance.general_cost_payment_allocations`** (5 cols | FK: payment_id → general_costs_payments)
 - **`finance.general_costs`** (14 cols | FK: category_id → general_cost_categories)
-- **`finance.general_costs_payments`** (17 cols | FK: currency_id → currencies, general_cost_id → general_costs, wallet_id → organization_wallets)
+- **`finance.general_costs_payments`** (17 cols | FK: general_cost_id → general_costs, currency_id → currencies, wallet_id → organization_wallets)
 - **`finance.indirect_costs`** (7 cols)
-- **`finance.indirect_costs_payments`** (16 cols | FK: wallet_id → organization_wallets, currency_id → currencies, indirect_cost_id → indirect_costs)
+- **`finance.indirect_costs_payments`** (16 cols | FK: currency_id → currencies, wallet_id → organization_wallets, indirect_cost_id → indirect_costs)
 - **`finance.labor_payments`** (19 cols | FK: currency_id → currencies, wallet_id → organization_wallets)
 - **`finance.material_invoice_items`** (13 cols | FK: invoice_id → material_invoices)
 - **`finance.material_invoices`** (18 cols | FK: currency_id → currencies, purchase_order_id → material_purchase_orders)
-- **`finance.material_payments`** (20 cols | FK: purchase_id → material_invoices, wallet_id → organization_wallets, currency_id → currencies)
+- **`finance.material_payments`** (20 cols | FK: purchase_id → material_invoices, currency_id → currencies, wallet_id → organization_wallets)
 - **`finance.material_purchase_order_items`** (12 cols | FK: purchase_order_id → material_purchase_orders)
 - **`finance.material_purchase_orders`** (18 cols | FK: currency_id → currencies)
 - **`finance.movement_concepts`** (10 cols | FK: parent_id → movement_concepts)
 - **`finance.movement_indirects`** (4 cols | FK: movement_id → movements, indirect_id → indirect_costs)
-- **`finance.movements`** (22 cols | FK: category_id → movement_concepts, type_id → movement_concepts, subcategory_id → movement_concepts, currency_id → currencies, wallet_id → organization_wallets)
+- **`finance.movements`** (22 cols | FK: type_id → movement_concepts, wallet_id → organization_wallets, subcategory_id → movement_concepts, category_id → movement_concepts, currency_id → currencies)
 - **`finance.organization_currencies`** (9 cols | FK: currency_id → currencies)
 - **`finance.organization_wallets`** (10 cols | FK: wallet_id → wallets)
 - **`finance.partner_capital_balance`** (9 cols | FK: partner_id → capital_participants)
-- **`finance.partner_contributions`** (17 cols | FK: partner_id → capital_participants, currency_id → currencies, wallet_id → organization_wallets)
-- **`finance.partner_withdrawals`** (17 cols | FK: wallet_id → organization_wallets, currency_id → currencies, partner_id → capital_participants)
+- **`finance.partner_contributions`** (17 cols | FK: currency_id → currencies, partner_id → capital_participants, wallet_id → organization_wallets)
+- **`finance.partner_withdrawals`** (17 cols | FK: partner_id → capital_participants, wallet_id → organization_wallets, currency_id → currencies)
 - **`finance.pdf`** (7 cols)
 - **`finance.pdf_templates`** (29 cols)
 - **`finance.personnel_rates`** (15 cols | FK: currency_id → currencies)
 - **`finance.quote_items`** (19 cols | FK: currency_id → currencies, quote_id → quotes)
 - **`finance.quotes`** (27 cols | FK: parent_quote_id → quotes, currency_id → currencies)
-- **`finance.subcontract_bid_tasks`** (10 cols | FK: subcontract_task_id → subcontract_tasks, subcontract_bid_id → subcontract_bids)
+- **`finance.subcontract_bid_tasks`** (10 cols | FK: subcontract_bid_id → subcontract_bids, subcontract_task_id → subcontract_tasks)
 - **`finance.subcontract_bids`** (12 cols | FK: currency_id → currencies, subcontract_id → subcontracts)
-- **`finance.subcontract_payments`** (18 cols | FK: currency_id → currencies, wallet_id → organization_wallets, subcontract_id → subcontracts)
+- **`finance.subcontract_payments`** (18 cols | FK: currency_id → currencies, subcontract_id → subcontracts, wallet_id → organization_wallets)
 - **`finance.subcontract_tasks`** (8 cols | FK: subcontract_id → subcontracts)
-- **`finance.subcontracts`** (22 cols | FK: currency_id → currencies, winner_bid_id → subcontract_bids, adjustment_index_type_id → economic_index_types)
+- **`finance.subcontracts`** (22 cols | FK: currency_id → currencies, adjustment_index_type_id → economic_index_types, winner_bid_id → subcontract_bids)
 - **`finance.tax_labels`** (5 cols)
 - **`finance.wallets`** (5 cols)
 
@@ -265,7 +263,7 @@
 - `finance.recalculate_po_totals()` → trigger 🔐 *(finance/functions_1.md)*
 - `finance.update_partner_balance_after_capital_change()` → trigger *(finance/functions_1.md)*
 
-### Views (22)
+### Views (24)
 
 - **`finance.capital_ledger_view`**
 - **`finance.capital_organization_totals_view`**
@@ -274,6 +272,7 @@
 - **`finance.capital_partner_kpi_view`**
 - **`finance.client_financial_summary_view`**
 - **`finance.client_payments_view`**
+- **`finance.contract_summary_view`**
 - **`finance.general_costs_by_category_view`**
 - **`finance.general_costs_monthly_summary_view`**
 - **`finance.general_costs_payments_view`**
@@ -286,6 +285,7 @@
 - **`finance.organization_currencies_view`**
 - **`finance.organization_wallets_view`**
 - **`finance.quotes_items_view`**
+- **`finance.quotes_view`**
 - **`finance.subcontract_payments_view`**
 - **`finance.subcontracts_view`**
 - **`finance.unified_financial_movements_view`**
@@ -309,7 +309,7 @@
 
 ## Schema: `catalog`
 
-### Tables (33)
+### Tables (34)
 
 - **`catalog.external_service_prices`** (11 cols | FK: recipe_external_service_id → task_recipe_external_services)
 - **`catalog.indirect_cost_values`** (7 cols)
@@ -317,11 +317,11 @@
 - **`catalog.labor_levels`** (6 cols)
 - **`catalog.labor_prices`** (11 cols | FK: labor_type_id → labor_types)
 - **`catalog.labor_roles`** (10 cols)
-- **`catalog.labor_types`** (9 cols | FK: labor_category_id → labor_categories, labor_role_id → labor_roles, labor_level_id → labor_levels, unit_id → units)
+- **`catalog.labor_types`** (9 cols | FK: labor_category_id → labor_categories, unit_id → units, labor_role_id → labor_roles, labor_level_id → labor_levels)
 - **`catalog.material_categories`** (5 cols | FK: parent_id → material_categories)
 - **`catalog.material_prices`** (12 cols | FK: material_id → materials)
 - **`catalog.material_types`** (11 cols)
-- **`catalog.materials`** (20 cols | FK: unit_id → units, default_sale_unit_id → units, category_id → material_categories)
+- **`catalog.materials`** (20 cols | FK: default_sale_unit_id → units, unit_id → units, category_id → material_categories)
 - **`catalog.organization_material_prices`** (9 cols | FK: material_id → materials)
 - **`catalog.organization_task_prices`** (11 cols | FK: task_id → tasks)
 - **`catalog.task_action_categories`** (8 cols)
@@ -331,17 +331,18 @@
 - **`catalog.task_element_actions`** (3 cols | FK: action_id → task_actions, element_id → task_elements)
 - **`catalog.task_element_systems`** (3 cols | FK: system_id → task_construction_systems, element_id → task_elements)
 - **`catalog.task_elements`** (12 cols)
-- **`catalog.task_parameter_options`** (14 cols | FK: parameter_id → task_parameters, material_id → materials, unit_id → units)
+- **`catalog.task_parameter_options`** (14 cols | FK: material_id → materials, unit_id → units, parameter_id → task_parameters)
 - **`catalog.task_parameters`** (14 cols)
-- **`catalog.task_recipe_external_services`** (17 cols | FK: recipe_id → task_recipes, unit_id → units)
-- **`catalog.task_recipe_labor`** (14 cols | FK: labor_type_id → labor_types, unit_id → units, recipe_id → task_recipes)
-- **`catalog.task_recipe_materials`** (16 cols | FK: recipe_id → task_recipes, material_id → materials, unit_id → units)
+- **`catalog.task_recipe_external_services`** (17 cols | FK: unit_id → units, recipe_id → task_recipes)
+- **`catalog.task_recipe_labor`** (14 cols | FK: labor_type_id → labor_types, recipe_id → task_recipes, unit_id → units)
+- **`catalog.task_recipe_materials`** (16 cols | FK: unit_id → units, recipe_id → task_recipes, material_id → materials)
 - **`catalog.task_recipe_ratings`** (10 cols | FK: recipe_id → task_recipes)
 - **`catalog.task_recipes`** (18 cols | FK: task_id → tasks)
-- **`catalog.task_system_parameters`** (5 cols | FK: system_id → task_construction_systems, parameter_id → task_parameters)
-- **`catalog.task_template_parameters`** (6 cols | FK: parameter_id → task_parameters, template_id → task_templates)
-- **`catalog.task_templates`** (17 cols | FK: task_element_id → task_elements, task_division_id → task_divisions, task_construction_system_id → task_construction_systems, task_action_id → task_actions, unit_id → units)
-- **`catalog.tasks`** (24 cols | FK: task_action_id → task_actions, task_division_id → task_divisions, task_element_id → task_elements, task_construction_system_id → task_construction_systems, template_id → task_templates, unit_id → units)
+- **`catalog.task_system_parameter_options`** (4 cols | FK: system_id → task_construction_systems, parameter_id → task_parameters, option_id → task_parameter_options)
+- **`catalog.task_system_parameters`** (7 cols | FK: system_id → task_construction_systems, parameter_id → task_parameters)
+- **`catalog.task_template_parameters`** (8 cols | FK: parameter_id → task_parameters, template_id → task_templates)
+- **`catalog.task_templates`** (17 cols | FK: task_action_id → task_actions, task_construction_system_id → task_construction_systems, task_element_id → task_elements, task_division_id → task_divisions, unit_id → units)
+- **`catalog.tasks`** (24 cols | FK: task_construction_system_id → task_construction_systems, template_id → task_templates, unit_id → units, task_action_id → task_actions, task_element_id → task_elements, task_division_id → task_divisions)
 - **`catalog.unit_categories`** (6 cols)
 - **`catalog.units`** (13 cols | FK: unit_category_id → unit_categories)
 
@@ -406,17 +407,17 @@
 - **`billing.bank_transfer_payments`** (22 cols | FK: payment_id → payments, plan_id → plans)
 - **`billing.billing_profiles`** (12 cols)
 - **`billing.coupon_courses`** (2 cols | FK: coupon_id → coupons)
-- **`billing.coupon_plans`** (2 cols | FK: coupon_id → coupons, plan_id → plans)
-- **`billing.coupon_redemptions`** (10 cols | FK: coupon_id → coupons, plan_id → plans, subscription_id → organization_subscriptions)
+- **`billing.coupon_plans`** (2 cols | FK: plan_id → plans, coupon_id → coupons)
+- **`billing.coupon_redemptions`** (10 cols | FK: subscription_id → organization_subscriptions, plan_id → plans, coupon_id → coupons)
 - **`billing.coupons`** (16 cols)
-- **`billing.mp_preferences`** (31 cols | FK: coupon_id → coupons, plan_id → plans)
-- **`billing.organization_billing_cycles`** (22 cols | FK: subscription_id → organization_subscriptions, payment_uuid → payments, plan_id → plans)
+- **`billing.mp_preferences`** (31 cols | FK: plan_id → plans, coupon_id → coupons)
+- **`billing.organization_billing_cycles`** (22 cols | FK: plan_id → plans, subscription_id → organization_subscriptions, payment_uuid → payments)
 - **`billing.organization_member_events`** (11 cols | FK: subscription_id → organization_subscriptions)
-- **`billing.organization_subscriptions`** (18 cols | FK: scheduled_downgrade_plan_id → plans, plan_id → plans, payment_id → payments, coupon_id → coupons)
+- **`billing.organization_subscriptions`** (18 cols | FK: scheduled_downgrade_plan_id → plans, payment_id → payments, coupon_id → coupons, plan_id → plans)
 - **`billing.payment_events`** (16 cols)
 - **`billing.payment_plans`** (5 cols)
 - **`billing.payments`** (16 cols)
-- **`billing.paypal_preferences`** (21 cols | FK: coupon_id → coupons, plan_id → plans)
+- **`billing.paypal_preferences`** (21 cols | FK: plan_id → plans, coupon_id → coupons)
 - **`billing.plans`** (18 cols)
 - **`billing.subscription_notifications_log`** (4 cols | FK: subscription_id → organization_subscriptions)
 
@@ -617,7 +618,7 @@
 ### Tables (9)
 
 - **`community.forum_categories`** (12 cols)
-- **`community.forum_posts`** (10 cols | FK: thread_id → forum_threads, parent_id → forum_posts)
+- **`community.forum_posts`** (10 cols | FK: parent_id → forum_posts, thread_id → forum_threads)
 - **`community.forum_reactions`** (6 cols)
 - **`community.forum_threads`** (15 cols | FK: category_id → forum_categories)
 - **`community.founder_event_registrations`** (6 cols | FK: event_id → founder_portal_events)

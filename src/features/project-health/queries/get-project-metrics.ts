@@ -52,7 +52,7 @@ export async function getProjectMetrics(projectId: string): Promise<GetProjectMe
 
         // 3. Obtener presupuesto total (suma de quotes aprobados)
         const { data: quotes, error: quotesError } = await supabase
-            .schema('construction').from('quotes_view')
+            .schema('finance').from('quotes_view')
             .select('total_with_tax')
             .eq('project_id', projectId)
             .eq('is_deleted', false)

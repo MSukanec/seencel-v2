@@ -1,9 +1,9 @@
 # Database Schema (Auto-generated)
-> Generated: 2026-02-23T12:14:47.276Z
+> Generated: 2026-02-25T18:05:07.898Z
 > Source: Supabase PostgreSQL (read-only introspection)
 > ⚠️ This file is auto-generated. Do NOT edit manually.
 
-## [CATALOG] RLS Policies (79)
+## [CATALOG] RLS Policies (82)
 
 ### `external_service_prices` (3 policies)
 
@@ -666,6 +666,35 @@ can_mutate_org(organization_id, 'projects.manage'::text)
 - **USING**:
 ```sql
 (can_view_org(organization_id, 'projects.view'::text) OR ((is_public = true) AND (is_deleted = false)))
+```
+
+### `task_system_parameter_options` (3 policies)
+
+#### ADMIN CREA SYSTEM_PARAMETER_OPTIONS
+
+- **Command**: INSERT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **WITH CHECK**:
+```sql
+is_admin()
+```
+
+#### ADMIN ELIMINA SYSTEM_PARAMETER_OPTIONS
+
+- **Command**: DELETE | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+is_admin()
+```
+
+#### AUTENTICADOS VEN SYSTEM_PARAMETER_OPTIONS
+
+- **Command**: SELECT | **Permissive**: PERMISSIVE
+- **Roles**: {authenticated}
+- **USING**:
+```sql
+true
 ```
 
 ### `task_system_parameters` (2 policies)

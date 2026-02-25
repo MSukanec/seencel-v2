@@ -139,15 +139,11 @@ export async function getFinancialSummaryByOrganization(organizationId: string) 
 export async function getCommitmentsByOrganization(organizationId: string) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // Query base: commitments + currency (same schema: finance)
+    const { data: commitments, error } = await supabase
         .schema('finance').from('client_commitments')
         .select(`
             *,
-            project:projects(name),
-            client:project_clients(
-                id,
-                contact:contacts(full_name, company_name)
-            ),
             currency:currencies(symbol, code)
         `)
         .eq('organization_id', organizationId)
@@ -159,7 +155,62 @@ export async function getCommitmentsByOrganization(organizationId: string) {
         return { data: [], error };
     }
 
-    return { data, error: null };
+    if (!commitments || commitments.length === 0) return { data: [], error: null };
+
+    // Enrich: project names (projects schema)
+    const projectIds = [...new Set(commitments.map(c => c.project_id).filter(Boolean))];
+    let projectsMap: Record<string, string> = {};
+    if (projectIds.length > 0) {
+        const { data: projects } = await supabase
+            .schema('projects').from('projects')
+            .select('id, name')
+            .in('id', projectIds);
+        if (projects) {
+            projectsMap = Object.fromEntries(projects.map(p => [p.id, p.name]));
+        }
+    }
+
+    // Enrich: client info (projects schema -> contacts schema)
+    const clientIds = [...new Set(commitments.map(c => c.client_id).filter(Boolean))];
+    let clientsMap: Record<string, { id: string; contact_full_name: string | null; contact_company_name: string | null }> = {};
+    if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+            .schema('projects').from('project_clients')
+            .select('id, contact_id')
+            .in('id', clientIds);
+        if (clients && clients.length > 0) {
+            const contactIds = [...new Set(clients.map(c => c.contact_id).filter(Boolean))];
+            let contactsMap: Record<string, { full_name: string | null; company_name: string | null }> = {};
+            if (contactIds.length > 0) {
+                const { data: contacts } = await supabase
+                    .schema('contacts').from('contacts')
+                    .select('id, full_name, company_name')
+                    .in('id', contactIds);
+                if (contacts) {
+                    contactsMap = Object.fromEntries(contacts.map(c => [c.id, { full_name: c.full_name, company_name: c.company_name }]));
+                }
+            }
+            for (const cl of clients) {
+                const contact = contactsMap[cl.contact_id] || { full_name: null, company_name: null };
+                clientsMap[cl.id] = { id: cl.id, contact_full_name: contact.full_name, contact_company_name: contact.company_name };
+            }
+        }
+    }
+
+    // Compose enriched data
+    const enriched = commitments.map(c => ({
+        ...c,
+        project: projectsMap[c.project_id] ? { name: projectsMap[c.project_id] } : null,
+        client: clientsMap[c.client_id] ? {
+            id: clientsMap[c.client_id].id,
+            contact: {
+                full_name: clientsMap[c.client_id].contact_full_name,
+                company_name: clientsMap[c.client_id].contact_company_name,
+            }
+        } : null,
+    }));
+
+    return { data: enriched, error: null };
 }
 
 /**
@@ -293,20 +344,10 @@ export async function getPaymentsByOrganization(organizationId: string) {
 export async function getSchedulesByOrganization(organizationId: string) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // Query base: schedules only (public schema)
+    const { data: schedules, error } = await supabase
         .from('client_payment_schedule')
-        .select(`
-            *,
-            commitment:client_commitments(
-                id,
-                project_id,
-                client:project_clients(
-                    id,
-                    contact:contacts(full_name)
-                )
-            ),
-            currency:currencies(symbol, code)
-        `)
+        .select('*')
         .eq('organization_id', organizationId)
         .eq('is_deleted', false)
         .order('due_date', { ascending: true });
@@ -316,7 +357,79 @@ export async function getSchedulesByOrganization(organizationId: string) {
         return { data: [] as any[], error };
     }
 
-    return { data: data as any[], error: null };
+    if (!schedules || schedules.length === 0) return { data: [] as any[], error: null };
+
+    // Enrich: currencies (finance schema)
+    const currencyIds = [...new Set(schedules.map(s => s.currency_id).filter(Boolean))];
+    let currenciesMap: Record<string, { symbol: string; code: string }> = {};
+    if (currencyIds.length > 0) {
+        const { data: currencies } = await supabase
+            .schema('finance').from('currencies')
+            .select('id, symbol, code')
+            .in('id', currencyIds);
+        if (currencies) {
+            currenciesMap = Object.fromEntries(currencies.map(c => [c.id, { symbol: c.symbol, code: c.code }]));
+        }
+    }
+
+    // Enrich: commitments (finance schema)
+    const commitmentIds = [...new Set(schedules.map(s => s.commitment_id).filter(Boolean))];
+    let commitmentsMap: Record<string, { id: string; project_id: string | null; client_id: string | null }> = {};
+    if (commitmentIds.length > 0) {
+        const { data: commitments } = await supabase
+            .schema('finance').from('client_commitments')
+            .select('id, project_id, client_id')
+            .in('id', commitmentIds);
+        if (commitments) {
+            commitmentsMap = Object.fromEntries(commitments.map(c => [c.id, { id: c.id, project_id: c.project_id, client_id: c.client_id }]));
+        }
+    }
+
+    // Enrich: client contacts (projects -> contacts)
+    const clientIds = [...new Set(Object.values(commitmentsMap).map(c => c.client_id).filter(Boolean))] as string[];
+    let clientContactMap: Record<string, { id: string; contact_full_name: string | null }> = {};
+    if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+            .schema('projects').from('project_clients')
+            .select('id, contact_id')
+            .in('id', clientIds);
+        if (clients && clients.length > 0) {
+            const contactIds = [...new Set(clients.map(c => c.contact_id).filter(Boolean))];
+            let contactsMap: Record<string, string> = {};
+            if (contactIds.length > 0) {
+                const { data: contacts } = await supabase
+                    .schema('contacts').from('contacts')
+                    .select('id, full_name')
+                    .in('id', contactIds);
+                if (contacts) {
+                    contactsMap = Object.fromEntries(contacts.map(c => [c.id, c.full_name]));
+                }
+            }
+            for (const cl of clients) {
+                clientContactMap[cl.id] = { id: cl.id, contact_full_name: contactsMap[cl.contact_id] || null };
+            }
+        }
+    }
+
+    // Compose enriched data
+    const enriched = schedules.map(s => {
+        const commitment = commitmentsMap[s.commitment_id];
+        const client = commitment?.client_id ? clientContactMap[commitment.client_id] : null;
+        return {
+            ...s,
+            currency: currenciesMap[s.currency_id] || null,
+            commitment: commitment ? {
+                id: commitment.id,
+                project_id: commitment.project_id,
+                client: client ? {
+                    id: client.id,
+                    contact: { full_name: client.contact_full_name }
+                } : null,
+            } : null,
+        };
+    });
+
+    return { data: enriched as any[], error: null };
 }
 
 export async function getClientFinancialSummary(projectId: string | null) {
@@ -343,15 +456,11 @@ export async function getClientFinancialSummary(projectId: string | null) {
 export async function getClientCommitments(projectId: string | null) {
     const supabase = await createClient();
 
+    // Query base: commitments + currency (same schema: finance)
     let query = supabase
         .schema('finance').from('client_commitments')
         .select(`
             *,
-            project:projects(name),
-            client:project_clients(
-                id,
-                contact:contacts(full_name, company_name)
-            ),
             currency:currencies(symbol, code)
         `)
         .eq('is_deleted', false)
@@ -361,14 +470,69 @@ export async function getClientCommitments(projectId: string | null) {
         query = query.eq('project_id', projectId);
     }
 
-    const { data, error } = await query;
+    const { data: commitments, error } = await query;
 
     if (error) {
         console.error("Error fetching client commitments:", error);
         return { data: [], error };
     }
 
-    return { data, error: null };
+    if (!commitments || commitments.length === 0) return { data: [], error: null };
+
+    // Enrich: project names (projects schema)
+    const projectIds = [...new Set(commitments.map(c => c.project_id).filter(Boolean))];
+    let projectsMap: Record<string, string> = {};
+    if (projectIds.length > 0) {
+        const { data: projects } = await supabase
+            .schema('projects').from('projects')
+            .select('id, name')
+            .in('id', projectIds);
+        if (projects) {
+            projectsMap = Object.fromEntries(projects.map(p => [p.id, p.name]));
+        }
+    }
+
+    // Enrich: client info (projects -> contacts)
+    const clientIds = [...new Set(commitments.map(c => c.client_id).filter(Boolean))];
+    let clientsMap: Record<string, { id: string; contact_full_name: string | null; contact_company_name: string | null }> = {};
+    if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+            .schema('projects').from('project_clients')
+            .select('id, contact_id')
+            .in('id', clientIds);
+        if (clients && clients.length > 0) {
+            const contactIds = [...new Set(clients.map(c => c.contact_id).filter(Boolean))];
+            let contactsMap: Record<string, { full_name: string | null; company_name: string | null }> = {};
+            if (contactIds.length > 0) {
+                const { data: contacts } = await supabase
+                    .schema('contacts').from('contacts')
+                    .select('id, full_name, company_name')
+                    .in('id', contactIds);
+                if (contacts) {
+                    contactsMap = Object.fromEntries(contacts.map(c => [c.id, { full_name: c.full_name, company_name: c.company_name }]));
+                }
+            }
+            for (const cl of clients) {
+                const contact = contactsMap[cl.contact_id] || { full_name: null, company_name: null };
+                clientsMap[cl.id] = { id: cl.id, contact_full_name: contact.full_name, contact_company_name: contact.company_name };
+            }
+        }
+    }
+
+    // Compose enriched data
+    const enriched = commitments.map(c => ({
+        ...c,
+        project: projectsMap[c.project_id] ? { name: projectsMap[c.project_id] } : null,
+        client: clientsMap[c.client_id] ? {
+            id: clientsMap[c.client_id].id,
+            contact: {
+                full_name: clientsMap[c.client_id].contact_full_name,
+                company_name: clientsMap[c.client_id].contact_company_name,
+            }
+        } : null,
+    }));
+
+    return { data: enriched, error: null };
 }
 
 export async function getClientPayments(projectId: string | null) {
@@ -397,47 +561,10 @@ export async function getClientPayments(projectId: string | null) {
 export async function getClientPaymentSchedules(projectId: string | null) {
     const supabase = await createClient();
 
-    if (projectId) {
-        const { data, error } = await supabase
-            .from('client_payment_schedule')
-            .select(`
-                *,
-                commitment:client_commitments!inner(
-                    id,
-                    project_id,
-                    client:project_clients(
-                        id,
-                        contact:contacts(full_name)
-                    )
-                ),
-                currency:currencies(symbol, code)
-            `)
-            .eq('commitment.project_id', projectId)
-            .eq('is_deleted', false)
-            .order('due_date', { ascending: true });
-
-        if (error) {
-            console.error("Error fetching client payment schedules:", error);
-            return { data: [] as any[], error };
-        }
-        return { data: data as any[], error: null };
-    }
-
-    // No project filter — get all schedules
-    const { data, error } = await supabase
+    // Query base: schedules only (public schema)
+    const { data: schedules, error } = await supabase
         .from('client_payment_schedule')
-        .select(`
-            *,
-            commitment:client_commitments(
-                id,
-                project_id,
-                client:project_clients(
-                    id,
-                    contact:contacts(full_name)
-                )
-            ),
-            currency:currencies(symbol, code)
-        `)
+        .select('*')
         .eq('is_deleted', false)
         .order('due_date', { ascending: true });
 
@@ -445,7 +572,89 @@ export async function getClientPaymentSchedules(projectId: string | null) {
         console.error("Error fetching client payment schedules:", error);
         return { data: [] as any[], error };
     }
-    return { data: data as any[], error: null };
+
+    if (!schedules || schedules.length === 0) return { data: [] as any[], error: null };
+
+    // Enrich: currencies (finance schema)
+    const currencyIds = [...new Set(schedules.map(s => s.currency_id).filter(Boolean))];
+    let currenciesMap: Record<string, { symbol: string; code: string }> = {};
+    if (currencyIds.length > 0) {
+        const { data: currencies } = await supabase
+            .schema('finance').from('currencies')
+            .select('id, symbol, code')
+            .in('id', currencyIds);
+        if (currencies) {
+            currenciesMap = Object.fromEntries(currencies.map(c => [c.id, { symbol: c.symbol, code: c.code }]));
+        }
+    }
+
+    // Enrich: commitments (finance schema)
+    const commitmentIds = [...new Set(schedules.map(s => s.commitment_id).filter(Boolean))];
+    let commitmentsMap: Record<string, { id: string; project_id: string | null; client_id: string | null }> = {};
+    if (commitmentIds.length > 0) {
+        const { data: commitments } = await supabase
+            .schema('finance').from('client_commitments')
+            .select('id, project_id, client_id')
+            .in('id', commitmentIds);
+        if (commitments) {
+            commitmentsMap = Object.fromEntries(commitments.map(c => [c.id, { id: c.id, project_id: c.project_id, client_id: c.client_id }]));
+        }
+    }
+
+    // Filter by project if needed
+    let filteredSchedules = schedules;
+    if (projectId) {
+        const validCommitmentIds = Object.entries(commitmentsMap)
+            .filter(([_, c]) => c.project_id === projectId)
+            .map(([id]) => id);
+        filteredSchedules = schedules.filter(s => validCommitmentIds.includes(s.commitment_id));
+    }
+
+    // Enrich: client contacts (projects -> contacts)
+    const clientIds = [...new Set(Object.values(commitmentsMap).map(c => c.client_id).filter(Boolean))] as string[];
+    let clientContactMap: Record<string, { id: string; contact_full_name: string | null }> = {};
+    if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+            .schema('projects').from('project_clients')
+            .select('id, contact_id')
+            .in('id', clientIds);
+        if (clients && clients.length > 0) {
+            const contactIds = [...new Set(clients.map(c => c.contact_id).filter(Boolean))];
+            let contactsMap: Record<string, string> = {};
+            if (contactIds.length > 0) {
+                const { data: contacts } = await supabase
+                    .schema('contacts').from('contacts')
+                    .select('id, full_name')
+                    .in('id', contactIds);
+                if (contacts) {
+                    contactsMap = Object.fromEntries(contacts.map(c => [c.id, c.full_name]));
+                }
+            }
+            for (const cl of clients) {
+                clientContactMap[cl.id] = { id: cl.id, contact_full_name: contactsMap[cl.contact_id] || null };
+            }
+        }
+    }
+
+    // Compose enriched data
+    const enriched = filteredSchedules.map(s => {
+        const commitment = commitmentsMap[s.commitment_id];
+        const client = commitment?.client_id ? clientContactMap[commitment.client_id] : null;
+        return {
+            ...s,
+            currency: currenciesMap[s.currency_id] || null,
+            commitment: commitment ? {
+                id: commitment.id,
+                project_id: commitment.project_id,
+                client: client ? {
+                    id: client.id,
+                    contact: { full_name: client.contact_full_name }
+                } : null,
+            } : null,
+        };
+    });
+
+    return { data: enriched as any[], error: null };
 }
 
 export async function getClientRoles(orgId?: string) {
